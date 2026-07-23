@@ -28,6 +28,15 @@ Open a new terminal afterward. The installer is idempotent and preserves unrelat
 
 The installer installs Bun, Pi, the pinned extensions, `agent-browser`, and its Chrome runtime. It warns rather than failing if Chrome or `ffmpeg` setup needs manual attention.
 
+### Tested platforms
+
+The one-line installer has been tested in isolated homes on:
+
+- macOS on Apple Silicon
+- two Ubuntu 22.04 x86-64 servers
+
+The Linux validation included installing Chrome and an `agent-browser` open/title/close smoke test against `https://example.com`.
+
 ## Installed versions
 
 | Component | Version |
