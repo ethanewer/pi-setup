@@ -76,7 +76,7 @@ It explicitly reloads only Voice STT and a tiny local extension that removes Pi'
 - shares the main session directory
 - shares auth, model catalogs, and helper binaries
 
-`p` uses a small settings overlay at `~/.pi/agent-p/settings.json`; it is a configuration profile, not another Pi installation.
+`p` uses a small settings overlay at `~/.pi/agent-p/settings.json`; it is a configuration profile, not another Pi installation. The `pi` wrapper explicitly rejects an inherited lean-profile environment, so a tmux server started from `p` cannot accidentally turn later `pi` sessions into the lean configuration.
 
 ## Voice STT
 
