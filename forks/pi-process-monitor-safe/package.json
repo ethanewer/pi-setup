@@ -1,0 +1,57 @@
+{
+  "name": "pi-process-monitor-safe",
+  "version": "1.0.0",
+  "description": "Safety-hardened local fork of pi-process-monitor: non-blocking background watchers for pi with a 16-watcher cap, kill-all, aggregated model-triggering heartbeats, and safe session shutdown (no persistence, no restore).",
+  "type": "module",
+  "private": true,
+  "license": "MIT",
+  "author": "pi-process-monitor-safe maintainers",
+  "contributors": [
+    "Francesco Frapporti <effedue@gmail.com> (upstream pi-process-monitor)"
+  ],
+  "keywords": [
+    "pi-package",
+    "pi",
+    "pi-coding-agent",
+    "monitor",
+    "watcher",
+    "background",
+    "long-running",
+    "ssh",
+    "log-tail"
+  ],
+  "files": [
+    "extensions",
+    "skills",
+    "prompts",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "pi": {
+    "extensions": ["./extensions"],
+    "skills": ["./skills"],
+    "prompts": ["./prompts"]
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "tsx --test test/*.test.ts",
+    "check": "npm run typecheck && npm test"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*",
+    "@types/node": "^22.0.0",
+    "typebox": "*",
+    "tsx": "^4.20.0",
+    "typescript": "^5.6.0"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*",
+    "typebox": "*"
+  },
+  "engines": {
+    "node": ">=22.18"
+  }
+}
