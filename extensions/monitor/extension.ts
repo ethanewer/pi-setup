@@ -337,9 +337,11 @@ export function registerMonitorExtension(
         notify(ctx, "Usage: /monitor <command...>   (or /monitor --file <path>, /monitor --poll --every 30 -- <cmd>)", "info");
         return;
       }
-      const isPoll = /(^|\s)--poll(\s|$)/.test(a);
       const isFile = /(^|\s)--file(\s|$)/.test(a);
       const every = /--every\s+(\d+)/.exec(a);
+      // A bare --every implies poll mode: a cadence only makes sense for
+      // polling, and silently spawning once instead would surprise the user.
+      const isPoll = !isFile && (/(^|\s)--poll(\s|$)/.test(a) || every !== null);
       const timeout = /--timeout\s+(\d+)/.exec(a);
       const hasMonitorFlags = isPoll || isFile || every !== null || timeout !== null;
       // The " -- " separator only means anything when monitor flags precede

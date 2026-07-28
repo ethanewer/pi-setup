@@ -322,13 +322,17 @@ export function createMonitorRuntime(deps: RuntimeDeps): MonitorRuntime {
     // for the first consecutive failure; repeats stay silent until a poll
     // completes successfully again, which re-arms the latch.
     let errorLatched = false;
+    // Poll ticks never overlap: while a tick's child is still running (slow
+    // SSH, hung remote), subsequent ticks are skipped rather than piling up
+    // concurrent children whose diffs would interleave.
+    let inFlight = false;
     const reportFailure = (body: string): void => {
       if (errorLatched || !isActive(w)) return;
       errorLatched = true;
       emit(w, `${body} — suppressing repeats until a poll succeeds; retrying every tick`);
     };
     const tick = (): void => {
-      if (!isActive(w)) return;
+      if (!isActive(w) || inFlight) return;
       let handle: ChildHandle;
       try {
         handle = proc.spawn(command, cwd);
@@ -337,10 +341,16 @@ export function createMonitorRuntime(deps: RuntimeDeps): MonitorRuntime {
         return; // next tick retries
       }
       trackChild(w, handle);
+      inFlight = true;
       let out = "";
+      // Bounded retention truncates from the head, which can leave the first
+      // retained line partial; flag it so it is dropped before matching/dedup.
+      let headTruncated = false;
       let failed = false;
       const capture = (chunk: string): void => {
-        out = tailBytes(out + chunk, MAX_POLL_RETAINED_BYTES);
+        const combined = out + chunk;
+        out = tailBytes(combined, MAX_POLL_RETAINED_BYTES);
+        if (out.length < combined.length) headTruncated = true;
       };
       handle.onStdout(capture);
       handle.onStderr(capture);
@@ -349,13 +359,14 @@ export function createMonitorRuntime(deps: RuntimeDeps): MonitorRuntime {
         reportFailure(`POLL ERROR: ${error.message}`);
       });
       handle.onExit(() => {
+        inFlight = false;
         if (failed || !isActive(w)) return; // an errored poll neither diffs nor re-arms
         errorLatched = false;
         // Compare complete-line sets against the previous poll so identical
         // old log lines are not replayed every tick.
-        const current = new Set(
-          out.split("\n").map((l) => l.trim()).filter(Boolean),
-        );
+        const lines = out.split("\n");
+        if (headTruncated) lines.shift(); // potentially partial: never match or dedup on it
+        const current = new Set(lines.map((l) => l.trim()).filter(Boolean));
         for (const line of current) {
           if (!prevLines.has(line) && matcher(line)) push(line);
         }

@@ -80,7 +80,10 @@ class RealChildHandle implements ChildHandle {
   }
 
   kill(signal: KillSignal): void {
-    if (!this.child.killed && this.child.exitCode === null && this.child.signalCode === null) {
+    // Gate only on actual exit: `child.killed` merely records that a signal
+    // was sent, so checking it would swallow the SIGKILL escalation after a
+    // SIGTERM that the child trapped or ignored.
+    if (this.child.exitCode === null && this.child.signalCode === null) {
       this.child.kill(signal);
     }
   }

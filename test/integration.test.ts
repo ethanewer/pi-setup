@@ -58,6 +58,34 @@ test("real spawn: final unterminated output arrives before the exit event", { sk
   assert.equal(runtime.activeCount(), 0, "natural exit released the slot");
 });
 
+test("real kill fallback: direct-child SIGKILL is still delivered after SIGTERM", { skip: !isUnix }, async () => {
+  const proc = createRealProcessAdapter();
+  // The child installs the TERM trap before printing "ready", so the later
+  // SIGTERM is guaranteed to be ignored; only the SIGKILL escalation can end
+  // it. Regression: ChildProcess.killed is true after the first kill() and
+  // must not gate the second signal.
+  const handle = proc.spawn("trap '' TERM; echo ready; while :; do sleep 1; done", process.cwd());
+  let stdout = "";
+  let exited = false;
+  let exitSignal: string | null = null;
+  handle.onStdout((chunk) => (stdout += chunk));
+  handle.onExit((_code, signal) => {
+    exited = true;
+    exitSignal = signal;
+  });
+  try {
+    await waitFor(() => stdout.includes("ready"), "TERM trap installed");
+    handle.kill("SIGTERM");
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    assert.equal(exited, false, "child traps SIGTERM and keeps running");
+    handle.kill("SIGKILL");
+    await waitFor(() => exited, "SIGKILL delivered after SIGTERM");
+    assert.equal(exitSignal, "SIGKILL");
+  } finally {
+    if (handle.pid !== undefined) proc.killGroup(handle.pid, "SIGKILL");
+  }
+});
+
 test("real kill: stopping a watcher terminates the whole process group", { skip: !isUnix }, async () => {
   const { runtime } = makeRealRuntime();
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "pi-monitor-safe-"));

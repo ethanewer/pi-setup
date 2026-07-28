@@ -76,6 +76,7 @@ Stops every active watcher atomically and returns the consolidated list in the t
 ```bash
 /monitor ssh h100 'tail -n3 train.log; pgrep -fc axolotl'   # spawn watcher
 /monitor --poll --every 30 -- ssh h100 'tail -n3 train.log' # poll every 30s
+/monitor --every 30 -- ssh h100 'tail -n3 train.log'        # bare --every implies --poll
 /monitor --file /var/log/train.log                          # tail a log
 /monitor --timeout 3600 -- long-job.sh                      # auto-kill after 1h
 /monitors                                                   # list
@@ -85,7 +86,9 @@ Stops every active watcher atomically and returns the consolidated list in the t
 
 `/monitor-kill-all` shows one UI notification per stopped watcher and appends **one** consolidated custom message so the model knows the watchers are gone — without triggering a model turn.
 
-The ` -- ` separator is only interpreted when monitor flags (`--poll`, `--file`, `--every`, `--timeout`) are present; a plain `/monitor git log -- path` keeps its ` -- ` verbatim. All commands are UI-optional: in print/headless mode they still run, they just skip the notifications.
+The ` -- ` separator is only interpreted when monitor flags (`--poll`, `--file`, `--every`, `--timeout`) are present; a plain `/monitor git log -- path` keeps its ` -- ` verbatim. A bare `--every N` implies `--poll` (a cadence only makes sense for polling); `--file` takes precedence over both. All commands are UI-optional: in print/headless mode they still run, they just skip the notifications.
+
+Poll ticks never overlap: while a poll's child is still running (slow SSH, hung remote), due ticks are skipped until it finishes.
 
 ## Context semantics
 

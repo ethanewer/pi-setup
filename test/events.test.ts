@@ -91,6 +91,10 @@ test("group-kill falls back to direct child signaling when unavailable", () => {
   const child = h.proc.lastChild();
   h.runtime.stop(meta.id);
   assert.deepEqual(h.proc.kills, [{ pid: child.pid, group: false, signal: "SIGTERM" }]);
+  // The fallback path escalates too: a child that survives SIGTERM gets a
+  // direct-child SIGKILL after the bounded escalation window.
+  h.clock.advance(3000);
+  assert.deepEqual(h.proc.kills[1], { pid: child.pid, group: false, signal: "SIGKILL" });
 });
 
 test("timeout emits one TIMEOUT event, stops the watcher, and suppresses the exit message", () => {

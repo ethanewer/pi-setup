@@ -74,6 +74,56 @@ test("poll bounds retained output to the tail", () => {
   assert.match(events[0]!.message.content, /error tail/);
 });
 
+test("a head-truncated first retained line is discarded before matching and dedup", () => {
+  const h = makeHarness();
+  h.runtime.launch({
+    command: "chatty",
+    intervalSeconds: 30,
+    coalesceSeconds: 0,
+    notifyOn: ["error"],
+  });
+  const child = h.proc.lastChild();
+  // One ~280 KiB line: bounded retention truncates it from the head, so the
+  // first retained "line" is a partial tail that must never be matched.
+  child.pushStdout("x".repeat(280 * 1024) + "error partial\n");
+  child.pushStdout("error complete\n");
+  child.exit(0);
+  h.clock.advance(0);
+  const events = h.pi.sentOfType(MESSAGE_TYPE_EVENT);
+  assert.equal(events.length, 1);
+  assert.match(events[0]!.message.content, /error complete/);
+  assert.equal(events[0]!.message.content.includes("error partial"), false);
+});
+
+test("poll ticks do not overlap: ticks are skipped while the prior child is in flight", () => {
+  const h = makeHarness();
+  h.runtime.launch({
+    command: "slow-ssh-check",
+    intervalSeconds: 30,
+    coalesceSeconds: 0,
+    notifyOn: ["error"],
+  });
+  assert.equal(h.proc.spawned.length, 1);
+
+  // Three intervals elapse while the first poll child is still running:
+  // every tick is skipped, no concurrent children pile up.
+  h.clock.advance(90_000);
+  assert.equal(h.proc.spawned.length, 1);
+
+  // Once the child completes, the next tick polls again and diffing works.
+  h.proc.lastChild().pushStdout("error one\n");
+  h.proc.lastChild().exit(0);
+  h.clock.advance(0);
+  assert.equal(h.pi.sentOfType(MESSAGE_TYPE_EVENT).length, 1);
+  h.clock.advance(30_000);
+  assert.equal(h.proc.spawned.length, 2);
+
+  // An errored in-flight child also re-enables ticking.
+  h.proc.lastChild().fail(new Error("pipe burst"));
+  h.clock.advance(30_000);
+  assert.equal(h.proc.spawned.length, 3);
+});
+
 test("stopping a poll watcher terminates the in-flight poll child's process group", () => {
   const h = makeHarness();
   const meta = h.runtime.launch({ command: "slow-check", intervalSeconds: 30 });
@@ -105,6 +155,7 @@ test("poll interval is clamped to a 2s minimum", () => {
   const h = makeHarness();
   h.runtime.launch({ command: "check", intervalSeconds: 0.1 });
   assert.equal(h.proc.spawned.length, 1);
+  h.proc.lastChild().exit(0); // complete the first poll so no tick is overlap-skipped
   h.clock.advance(1999);
   assert.equal(h.proc.spawned.length, 1);
   h.clock.advance(1);

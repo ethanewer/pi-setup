@@ -36,7 +36,10 @@ loading both is unsupported (tool/command names collide).
   once (no 3s SIGKILL wait).
 - Teardown signals the child's process group (`detached` + negative-PID
   SIGTERM, bounded SIGKILL escalation after 3s), falling back to direct-child
-  signaling where groups are unavailable. In-flight poll children are
+  signaling where groups are unavailable. The fallback path escalates too:
+  the real child handle no longer gates signals on `ChildProcess.killed`
+  (which only records that a signal was sent), so a child that traps SIGTERM
+  still receives the direct-child SIGKILL. In-flight poll children are
   terminated too. On `quit` shutdown the SIGKILL follows SIGTERM immediately,
   because the Pi process exits before any escalation timer could fire.
 - Child exit handling waits for Node's `close` event (all stdio delivered)
@@ -47,7 +50,10 @@ loading both is unsupported (tool/command names collide).
   process-exit message; only natural exits do.
 - Poll mode assembles complete lines across chunks, bounds retained output,
   and diffs complete line sets against the previous poll instead of replaying
-  identical old lines. Repeated spawn/runtime failures are latched: only the
+  identical old lines. When bounded retention truncates from the head, the
+  potentially partial first retained line is discarded before matching/dedup.
+  Poll ticks never overlap: a tick due while the prior poll child is still
+  running is skipped. Repeated spawn/runtime failures are latched: only the
   first consecutive failure emits an event; the latch re-arms after a poll
   completes successfully.
 - File mode buffers a partial trailing line across reads until its newline
@@ -59,7 +65,12 @@ loading both is unsupported (tool/command names collide).
   `SPAWN ERROR` event and release the watcher.
 - `/monitor` only interprets the ` -- ` separator when monitor flags
   (`--poll`, `--file`, `--every`, `--timeout`) are present; plain commands
-  containing ` -- ` are preserved verbatim.
+  containing ` -- ` are preserved verbatim. A bare `--every N` implies
+  `--poll` (a cadence only makes sense for polling); `--file` takes
+  precedence over both.
+- `typebox` and `@earendil-works/pi-tui` (both imported by the extension and
+  resolved from the pi host at runtime) are declared as `*` peerDependencies
+  alongside `@earendil-works/pi-coding-agent`.
 - Watcher ids are guarded against random-id collisions (regenerate, then
   force a unique suffix).
 - Spawn mode now applies the `notifyOn` matcher (upstream pushed every line,

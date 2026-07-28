@@ -40,6 +40,36 @@ test("--timeout with a ' -- ' separator keeps the command intact and arms the ti
   assert.match(events[0]!.message.content, /TIMEOUT after 60s/);
 });
 
+test("a bare --every implies poll mode (with a ' -- ' separator)", async () => {
+  const h = makeHarness();
+  await h.pi.command("monitor").handler("--every 10 -- ssh box 'tail -n5 log'", makeCtx().ctx);
+  assert.equal(h.runtime.list()[0]!.mode, "poll");
+  assert.equal(h.proc.spawned[0]!.command, "ssh box 'tail -n5 log'");
+  // Poll cadence honors the bare --every.
+  h.proc.lastChild().exit(0);
+  h.clock.advance(10_000);
+  assert.equal(h.proc.spawned.length, 2);
+});
+
+test("a bare --every without a separator strips the flag and polls", async () => {
+  const h = makeHarness();
+  await h.pi.command("monitor").handler("--every 5 uptime", makeCtx().ctx);
+  assert.equal(h.runtime.list()[0]!.mode, "poll");
+  assert.equal(h.proc.spawned[0]!.command, "uptime");
+  h.proc.lastChild().exit(0);
+  h.clock.advance(5000);
+  assert.equal(h.proc.spawned.length, 2);
+});
+
+test("--file wins over --every: a file watcher is launched, not a poll", async () => {
+  const h = makeHarness();
+  h.files.set("/log/app", "");
+  await h.pi.command("monitor").handler("--file /log/app --every 30", makeCtx().ctx);
+  assert.equal(h.runtime.activeCount(), 1);
+  assert.equal(h.runtime.list()[0]!.mode, "file");
+  assert.equal(h.proc.spawned.length, 0);
+});
+
 test("/monitor --file still launches a file watcher", async () => {
   const h = makeHarness();
   h.files.set("/log/app", "");
