@@ -14,8 +14,10 @@ This fork **replaces** the upstream package. Do **not** load it alongside `npm:p
 | Session shutdown | best-effort `w.stop()`, killed spawn still emitted a "killed" exit turn | all watchers stopped atomically; one consolidated, reason-aware (`quit`/`reload`/`new`/`resume`/`fork`) custom message persisted synchronously; **never wakes the model** |
 | Fork | resumed watchers duplicated into forks | forks get one no-turn context note that source-session monitors were not carried over |
 | Heartbeats | one `setInterval` + turn per watcher | **one extension-level scheduler** (30s tick) aggregates all due watchers into a single turn-triggering `monitor-heartbeat` message; a real event within the preceding interval substitutes for that heartbeat |
-| Killed processes | `SIGTERM` to direct child only; exit event still woke the model | process-**group** SIGTERM with bounded SIGKILL escalation (3s); killed exits are silent; slots release immediately |
-| Poll mode | per-chunk line handling, unbounded rolling dedup churn, in-flight polls leaked on stop | complete-line assembly across chunks, bounded retained output, complete-line-set diff vs the previous poll, in-flight poll children terminated on stop |
+| Killed processes | `SIGTERM` to direct child only; exit event still woke the model | process-**group** SIGTERM with bounded SIGKILL escalation (3s) — immediate SIGKILL on `quit` shutdown, where Pi exits before any timer; killed exits are silent; slots release immediately |
+| Poll mode | per-chunk line handling, unbounded rolling dedup churn, in-flight polls leaked on stop | complete-line assembly across chunks, bounded retained output, complete-line-set diff vs the previous poll, in-flight poll children terminated on stop; repeated poll failures are latched to **one** event until a poll succeeds again |
+| File mode | trailing partial lines pushed immediately, unbounded reads | partial lines buffered across reads until the newline arrives; per-read and retained partial-line bytes bounded |
+| Exit events | fired on Node `exit`, racing (and sometimes dropping) final pipe output | fired on Node `close`, after all stdio has been delivered |
 | Spawn matching | every stdout/stderr line was pushed (ignored `notifyOn`) | `notifyOn` matcher applied in spawn mode too, as documented |
 | Stopped watchers | lingered in the status map | map membership *is* liveness: stopped/exited watchers disappear from `monitor_status` and free their slot |
 
@@ -58,6 +60,8 @@ Starting a 17th watcher fails with an **error** tool result:
 16 active monitors; use monitor_status, then monitor_kill (or monitor_kill_all) before starting another.
 ```
 
+A command that fails to spawn synchronously also fails the `monitor` call itself (error tool result, slot released) — a watcher that never started is never reported as running. Asynchronous spawn errors emit one `SPAWN ERROR` event and release the watcher.
+
 ### `monitor_status` — list active watchers
 Only *active* watchers appear; stopped and exited watchers free their slot immediately.
 
@@ -81,6 +85,8 @@ Stops every active watcher atomically and returns the consolidated list in the t
 
 `/monitor-kill-all` shows one UI notification per stopped watcher and appends **one** consolidated custom message so the model knows the watchers are gone — without triggering a model turn.
 
+The ` -- ` separator is only interpreted when monitor flags (`--poll`, `--file`, `--every`, `--timeout`) are present; a plain `/monitor git log -- path` keeps its ` -- ` verbatim. All commands are UI-optional: in print/headless mode they still run, they just skip the notifications.
+
 ## Context semantics
 
 - **Turn-triggering** (`triggerTurn: true`, delivered as steer): matched lines (coalesced), natural process exits, timeouts, and requested heartbeat aggregates.
@@ -93,7 +99,7 @@ Off unless `heartbeatMinutes` is set. One extension-level scheduler ticks every 
 
 ## Session lifecycle (breaking change vs upstream)
 
-**Watchers do not survive session shutdown, `/reload`, `/new`, `/resume`, or `/fork` — by design.** Watcher definitions are executable state and are never written to the session file, so nothing can be restored (or resurrected unexpectedly) later. On shutdown, every watcher is stopped and one reason-aware summary is persisted into model context, so a later resume of the session knows the watchers no longer exist and can restart them. On idle shutdown the summary goes through `pi.sendMessage` (no `triggerTurn`); if shutdown happens mid-stream it is appended directly through the session manager so it cannot be stranded in the steer queue. A hard process crash cannot append a summary, but nothing restarts either way.
+**Watchers do not survive session shutdown, `/reload`, `/new`, `/resume`, or `/fork` — by design.** Watcher definitions are executable state and are never written to the session file, so nothing can be restored (or resurrected unexpectedly) later. On shutdown, every watcher is stopped — on `quit`, child process groups get SIGTERM followed by an **immediate** SIGKILL, since the Pi process exits before the usual 3s escalation timer could fire; every other stop path keeps the bounded escalation — and one reason-aware summary is persisted into model context, so a later resume of the session knows the watchers no longer exist and can restart them. On idle shutdown the summary goes through `pi.sendMessage` (no `triggerTurn`); if shutdown happens mid-stream it is appended directly through the session manager so it cannot be stranded in the steer queue. A hard process crash cannot append a summary, but nothing restarts either way.
 
 ## Pitfalls
 
@@ -107,7 +113,7 @@ Off unless `heartbeatMinutes` is set. One extension-level scheduler ticks every 
 ```bash
 npm install        # dev/peer deps
 npm run typecheck  # tsc --noEmit
-npm test           # node --test (deterministic fakes + one real-child smoke test)
+npm test           # node --test (deterministic fakes + real-child smoke tests)
 ```
 
 The runtime is built around injected clock, process (spawn/group-kill), and filesystem adapters (`extensions/monitor/types.ts`), so the entire lifecycle — limits, kills, coalescing, heartbeats, shutdown — is unit-tested with fake timers and scripted children in `test/`.

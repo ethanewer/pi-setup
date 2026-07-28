@@ -124,3 +124,70 @@ test("a failed poll spawn reports once and retries next tick", () => {
   h.clock.advance(30_000);
   assert.equal(h.proc.spawned.length, 1);
 });
+
+test("consecutive poll spawn failures are latched to one event until a poll succeeds", () => {
+  const h = makeHarness();
+  h.proc.spawnError = new Error("ssh gone");
+  h.runtime.launch({ command: "check", intervalSeconds: 30, coalesceSeconds: 0 });
+  assert.equal(h.pi.sentOfType(MESSAGE_TYPE_EVENT).length, 1);
+
+  // Three more failing ticks: still just the first event.
+  h.clock.advance(90_000);
+  assert.equal(h.pi.sentOfType(MESSAGE_TYPE_EVENT).length, 1);
+
+  // A successfully completed poll re-arms the latch…
+  h.proc.spawnError = null;
+  h.clock.advance(30_000);
+  h.proc.lastChild().exit(0);
+  h.clock.advance(0);
+  assert.equal(h.pi.sentOfType(MESSAGE_TYPE_EVENT).length, 1);
+
+  // …so the next failure streak reports exactly once more.
+  h.proc.spawnError = new Error("ssh gone again");
+  h.clock.advance(60_000);
+  const events = h.pi.sentOfType(MESSAGE_TYPE_EVENT);
+  assert.equal(events.length, 2);
+  assert.match(events[1]!.message.content, /POLL SPAWN ERROR: ssh gone again/);
+});
+
+test("poll runtime errors are latched, and an errored poll neither diffs output nor re-arms", () => {
+  const h = makeHarness();
+  h.runtime.launch({ command: "check", intervalSeconds: 30, coalesceSeconds: 0, notifyOn: ["error"] });
+  // Tick 1 completes and establishes the baseline line set.
+  h.proc.spawned[0]!.child.pushStdout("error one\n");
+  h.proc.spawned[0]!.child.exit(0);
+  h.clock.advance(0);
+  assert.equal(h.pi.sentOfType(MESSAGE_TYPE_EVENT).length, 1);
+
+  // Ticks 2 and 3 error mid-run: exactly one POLL ERROR event total.
+  h.clock.advance(30_000);
+  h.proc.spawned[1]!.child.pushStdout("truncated garbage that must not be diffed");
+  h.proc.spawned[1]!.child.fail(new Error("pipe burst"));
+  h.clock.advance(30_000);
+  h.proc.spawned[2]!.child.fail(new Error("pipe burst"));
+  const events = h.pi.sentOfType(MESSAGE_TYPE_EVENT);
+  assert.equal(events.length, 2);
+  assert.match(events[1]!.message.content, /POLL ERROR: pipe burst/);
+
+  // Tick 4 succeeds with the same old line: not replayed, because the
+  // baseline from tick 1 survived the errored ticks; the latch re-arms.
+  h.clock.advance(30_000);
+  h.proc.spawned[3]!.child.pushStdout("error one\n");
+  h.proc.spawned[3]!.child.exit(0);
+  h.clock.advance(0);
+  assert.equal(h.pi.sentOfType(MESSAGE_TYPE_EVENT).length, 2);
+
+  h.clock.advance(30_000);
+  h.proc.spawned[4]!.child.fail(new Error("burst again"));
+  assert.equal(h.pi.sentOfType(MESSAGE_TYPE_EVENT).length, 3);
+});
+
+test("an errored poll child is untracked and never signaled by a later stop", () => {
+  const h = makeHarness();
+  const meta = h.runtime.launch({ command: "check", intervalSeconds: 30 });
+  h.proc.lastChild().fail(new Error("boom"));
+  h.runtime.stop(meta.id);
+  assert.equal(h.proc.kills.length, 0, "failed child handle was removed from tracking");
+  h.clock.advance(10_000);
+  assert.equal(h.clock.pendingCount(), 0, "no escalation timer for a dead child");
+});

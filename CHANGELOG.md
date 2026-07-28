@@ -26,7 +26,9 @@ loading both is unsupported (tool/command names collide).
   context note that source-session monitors were not carried over.
 - Injected clock/process/filesystem adapters plus a comprehensive
   deterministic test suite (fake timers, scripted children, mock
-  ExtensionAPI) and a real-child integration smoke test.
+  ExtensionAPI) and real-child integration smoke tests (final output is
+  delivered before the exit event; stopping a watcher kills the whole
+  process group).
 
 ### Changed
 - Stopped and naturally exited watchers are removed from the active map
@@ -35,12 +37,31 @@ loading both is unsupported (tool/command names collide).
 - Teardown signals the child's process group (`detached` + negative-PID
   SIGTERM, bounded SIGKILL escalation after 3s), falling back to direct-child
   signaling where groups are unavailable. In-flight poll children are
-  terminated too.
+  terminated too. On `quit` shutdown the SIGKILL follows SIGTERM immediately,
+  because the Pi process exits before any escalation timer could fire.
+- Child exit handling waits for Node's `close` event (all stdio delivered)
+  instead of `exit`, so final output written just before termination is never
+  dropped; exit code/signal are tracked and exit callbacks fire exactly once.
+  Errored children are always untracked, so failed handles cannot accumulate.
 - Killed/timeout/shutdown process exits no longer emit a second
   process-exit message; only natural exits do.
 - Poll mode assembles complete lines across chunks, bounds retained output,
   and diffs complete line sets against the previous poll instead of replaying
-  identical old lines.
+  identical old lines. Repeated spawn/runtime failures are latched: only the
+  first consecutive failure emits an event; the latch re-arms after a poll
+  completes successfully.
+- File mode buffers a partial trailing line across reads until its newline
+  arrives (bounded to 64 KiB), reads at most 256 KiB per pass (larger bursts
+  skip ahead to the tail), and drops the held partial line on rotation.
+- A synchronous spawn failure makes `launch()` clean up the reserved slot and
+  throw — the `monitor` tool returns an error result instead of reporting a
+  never-started watcher as running. Asynchronous spawn errors still emit one
+  `SPAWN ERROR` event and release the watcher.
+- `/monitor` only interprets the ` -- ` separator when monitor flags
+  (`--poll`, `--file`, `--every`, `--timeout`) are present; plain commands
+  containing ` -- ` are preserved verbatim.
+- Watcher ids are guarded against random-id collisions (regenerate, then
+  force a unique suffix).
 - Spawn mode now applies the `notifyOn` matcher (upstream pushed every line,
   contradicting its own documentation).
 - Every timer/child/file callback re-checks watcher liveness before emitting,

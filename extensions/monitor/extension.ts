@@ -158,7 +158,10 @@ export function registerMonitorExtension(
   });
 
   pi.on("session_shutdown", async (event, ctx) => {
-    const stopped = runtime.stopAll();
+    // On quit the Pi process exits immediately, so the 3s SIGKILL escalation
+    // timer would never fire; SIGKILL the process groups right away instead.
+    // Every other stop path keeps the bounded escalation.
+    const stopped = runtime.stopAll({ immediateKill: event.reason === "quit" });
     if (!stopped.length) return;
     persistNoTurnMessage(
       pi,
@@ -338,14 +341,23 @@ export function registerMonitorExtension(
       const isFile = /(^|\s)--file(\s|$)/.test(a);
       const every = /--every\s+(\d+)/.exec(a);
       const timeout = /--timeout\s+(\d+)/.exec(a);
-      const afterDD = a.includes(" -- ")
-        ? a.slice(a.indexOf(" -- ") + 4)
-        : a
-            .replace(/(^|\s)--(?:poll|file)(\s+\S+)?/g, "")
-            .replace(/--every\s+\d+/g, "")
-            .replace(/--timeout\s+\d+/g, "")
-            .trim();
-      const command = afterDD.replace(/^\s*--\s*/, "").trim();
+      const hasMonitorFlags = isPoll || isFile || every !== null || timeout !== null;
+      // The " -- " separator only means anything when monitor flags precede
+      // it; a plain command keeps every " -- " it contains verbatim
+      // (e.g. `/monitor git log -- path`).
+      let command: string;
+      if (!hasMonitorFlags) {
+        command = a.replace(/^--\s+/, "").trim();
+      } else if (a.includes(" -- ")) {
+        command = a.slice(a.indexOf(" -- ") + 4).trim();
+      } else {
+        command = a
+          .replace(/(^|\s)--file\s+\S+/g, " ")
+          .replace(/(^|\s)--poll(?=\s|$)/g, " ")
+          .replace(/(^|\s)--every\s+\d+/g, " ")
+          .replace(/(^|\s)--timeout\s+\d+/g, " ")
+          .trim();
+      }
       const timeoutSeconds = timeout ? Number(timeout[1]) : undefined;
 
       let watcher: WatcherMeta;

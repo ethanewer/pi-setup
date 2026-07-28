@@ -85,6 +85,42 @@ test("shutdown with no active watchers appends nothing", async () => {
   assert.equal(directAppends.length, 0);
 });
 
+test("quit shutdown SIGKILLs process groups immediately after SIGTERM (no timers left)", async () => {
+  const h = makeHarness();
+  h.runtime.launch({ command: "spawned" });
+  const child = h.proc.lastChild();
+
+  await h.pi.emit(
+    "session_shutdown",
+    { type: "session_shutdown", reason: "quit" },
+    makeCtx({ idle: true }).ctx,
+  );
+
+  // Pi's process exits right after quit shutdown: the 3s escalation timer
+  // would never fire, so SIGKILL must already have been sent.
+  assert.deepEqual(h.proc.kills, [
+    { pid: child.pid, group: true, signal: "SIGTERM" },
+    { pid: child.pid, group: true, signal: "SIGKILL" },
+  ]);
+  assert.equal(h.clock.pendingCount(), 0, "no escalation timer is pending");
+});
+
+test("non-quit shutdown keeps the bounded SIGTERM→SIGKILL escalation", async () => {
+  const h = makeHarness();
+  h.runtime.launch({ command: "spawned" });
+  const child = h.proc.lastChild();
+
+  await h.pi.emit(
+    "session_shutdown",
+    { type: "session_shutdown", reason: "reload" },
+    makeCtx({ idle: true }).ctx,
+  );
+
+  assert.deepEqual(h.proc.kills, [{ pid: child.pid, group: true, signal: "SIGTERM" }]);
+  h.clock.advance(3000);
+  assert.deepEqual(h.proc.kills[1], { pid: child.pid, group: true, signal: "SIGKILL" });
+});
+
 test("children killed by shutdown never produce a process-exit turn", async () => {
   const h = makeHarness();
   h.runtime.launch({ command: "spawned" });

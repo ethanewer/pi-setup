@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { makeHarness } from "./helpers.ts";
+import { makeCtx, makeHarness } from "./helpers.ts";
 import { MESSAGE_TYPE_EVENT } from "../extensions/monitor/types.ts";
 
 test("spawn mode applies the notifyOn matcher and coalesces matched lines", () => {
@@ -122,13 +122,39 @@ test("a stopped watcher's timeout never fires", () => {
   assert.equal(h.pi.sentOfType(MESSAGE_TYPE_EVENT).length, 0);
 });
 
-test("synchronous spawn failure reports once and releases the slot", () => {
+test("synchronous spawn failure throws from launch and releases the slot", () => {
   const h = makeHarness();
   h.proc.spawnError = new Error("bash not found");
-  const meta = h.runtime.launch({ command: "job" });
+  // A watcher that never started must fail the launch, not report "running".
+  assert.throws(() => h.runtime.launch({ command: "job" }), /bash not found/);
+  assert.equal(h.runtime.activeCount(), 0);
+  assert.equal(h.pi.sentOfType(MESSAGE_TYPE_EVENT).length, 0, "error surfaces to the caller");
+  h.clock.advance(120_000);
+  assert.equal(h.clock.pendingCount(), 0, "the reserved slot's timers were cleaned up");
+});
+
+test("synchronous spawn failure via the monitor tool rejects instead of returning a watcher", async () => {
+  const h = makeHarness();
+  h.proc.spawnError = new Error("bash not found");
+  await assert.rejects(
+    h.pi.tool("monitor").execute("t1", { command: "job" }, undefined, undefined, makeCtx().ctx),
+    /bash not found/,
+  );
+  assert.equal(h.runtime.activeCount(), 0);
+});
+
+test("an asynchronous spawn error reports once, releases the watcher, and untracks the child", () => {
+  const h = makeHarness();
+  const meta = h.runtime.launch({ command: "job", coalesceSeconds: 0 });
+  const child = h.proc.lastChild();
+  child.fail(new Error("EACCES"));
   const events = h.pi.sentOfType(MESSAGE_TYPE_EVENT);
   assert.equal(events.length, 1);
-  assert.match(events[0]!.message.content, /FAILED TO SPAWN: bash not found/);
-  assert.equal(h.runtime.activeCount(), 0);
+  assert.match(events[0]!.message.content, /SPAWN ERROR: EACCES/);
   assert.equal(h.runtime.get(meta.id), undefined);
+  assert.equal(h.runtime.activeCount(), 0);
+  // The finalized handle emitted no additional PROCESS EXITED event.
+  h.clock.advance(60_000);
+  assert.equal(h.pi.sentOfType(MESSAGE_TYPE_EVENT).length, 1);
+  assert.equal(h.clock.pendingCount(), 0);
 });

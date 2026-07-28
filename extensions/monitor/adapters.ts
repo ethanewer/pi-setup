@@ -24,7 +24,36 @@ export function createRealClock(): Clock {
 }
 
 class RealChildHandle implements ChildHandle {
-  constructor(private readonly child: ChildProcess) {}
+  private code: number | null = null;
+  private signal: string | null = null;
+  private finalized = false;
+  private readonly exitCbs: Array<(code: number | null, signal: string | null) => void> = [];
+  private readonly errorCbs: Array<(error: Error) => void> = [];
+
+  constructor(private readonly child: ChildProcess) {
+    child.on("exit", (code, signal) => {
+      this.code = code;
+      this.signal = signal;
+    });
+    // Finalize on `close`, not `exit`: `close` fires only after both stdio
+    // pipes have delivered everything, so exit callbacks can never race (and
+    // drop) the final output chunks.
+    child.on("close", (code, signal) => this.finalize(code ?? this.code, signal ?? this.signal));
+    child.on("error", (error) => {
+      for (const cb of [...this.errorCbs]) cb(error);
+      // A child that failed to spawn may never reach `close`; finalize here
+      // (after the error callbacks) so callers can always untrack it.
+      this.finalize(this.code, this.signal);
+    });
+  }
+
+  private finalize(code: number | null, signal: string | null): void {
+    if (this.finalized) return;
+    this.finalized = true;
+    this.code = code;
+    this.signal = signal;
+    for (const cb of [...this.exitCbs]) cb(code, signal);
+  }
 
   get pid(): number | undefined {
     return this.child.pid;
@@ -39,11 +68,15 @@ class RealChildHandle implements ChildHandle {
   }
 
   onExit(cb: (code: number | null, signal: string | null) => void): void {
-    this.child.on("exit", (code, signal) => cb(code, signal));
+    if (this.finalized) {
+      cb(this.code, this.signal);
+      return;
+    }
+    this.exitCbs.push(cb);
   }
 
   onError(cb: (error: Error) => void): void {
-    this.child.on("error", cb);
+    this.errorCbs.push(cb);
   }
 
   kill(signal: KillSignal): void {

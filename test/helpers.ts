@@ -140,8 +140,15 @@ export class FakeChild implements ChildHandle {
     this.exitedNaturally = true;
     for (const cb of this.exitCbs) cb(code, signal);
   }
+  /**
+   * Mirrors the real adapter contract: error callbacks fire first, then exit
+   * callbacks finalize exactly once (an errored child never reaches `close`).
+   */
   fail(error: Error): void {
     for (const cb of this.errorCbs) cb(error);
+    if (this.done) return;
+    this.done = true;
+    for (const cb of this.exitCbs) cb(null, null);
   }
   get hasExited(): boolean {
     return this.done;

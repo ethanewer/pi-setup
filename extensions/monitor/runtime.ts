@@ -11,7 +11,8 @@
  *   any process, timer, or file watcher is created.
  * - `stopWatcher()` is synchronous and idempotent: it flags the watcher dead,
  *   cancels every timer/watcher/buffer it owns, then terminates in-flight
- *   child process groups (SIGTERM with a bounded SIGKILL escalation).
+ *   child process groups (SIGTERM with a bounded SIGKILL escalation; `quit`
+ *   shutdown uses an immediate SIGKILL because Pi exits before any timer).
  * - Every asynchronous callback re-checks that its watcher is still active
  *   before emitting, so no message can escape after a kill or shutdown.
  * - Heartbeats are aggregated by one extension-level scheduler that ticks
@@ -33,6 +34,8 @@ import {
   type LaunchOptions,
   MAX_ACTIVE_WATCHERS,
   MAX_EMIT_BYTES,
+  MAX_FILE_PENDING_BYTES,
+  MAX_FILE_READ_BYTES,
   MAX_POLL_RETAINED_BYTES,
   MAX_SUMMARY_LINES,
   MESSAGE_TYPE_EVENT,
@@ -43,6 +46,7 @@ import {
   MonitorLimitError,
   type RuntimeDeps,
   SIGKILL_ESCALATION_MS,
+  type StopAllOptions,
   type TimerHandle,
   type WatcherMeta,
 } from "./types.ts";
@@ -155,8 +159,8 @@ export function createMonitorRuntime(deps: RuntimeDeps): MonitorRuntime {
   }
 
   /**
-   * Release a watcher whose work ended naturally (process exit, spawn
-   * failure). `killed` stays false so callers can distinguish the paths.
+   * Release a watcher whose work ended naturally (process exit, async spawn
+   * error). `killed` stays false so callers can distinguish the paths.
    */
   function releaseWatcher(w: WatcherState): void {
     if (watchers.get(w.id) === w) watchers.delete(w.id);
@@ -169,20 +173,26 @@ export function createMonitorRuntime(deps: RuntimeDeps): MonitorRuntime {
    * Forcibly stop a watcher. Synchronous and idempotent; frees the slot
    * immediately rather than waiting for SIGKILL escalation.
    */
-  function stopWatcher(w: WatcherState): boolean {
+  function stopWatcher(w: WatcherState, immediateKill = false): boolean {
     if (watchers.get(w.id) !== w) return false;
     w.killed = true;
     w.alive = false;
     watchers.delete(w.id);
     runCleanups(w);
-    for (const child of [...w.children]) terminateChild(child);
+    for (const child of [...w.children]) terminateChild(child, immediateKill);
     maybeStopHeartbeatScheduler();
     return true;
   }
 
-  function terminateChild(child: ChildRef): void {
+  function terminateChild(child: ChildRef, immediateKill: boolean): void {
     if (child.exited) return;
     signalChild(child, "SIGTERM");
+    if (immediateKill) {
+      // `quit` shutdown: Pi's process exits before an escalation timer could
+      // ever fire, so follow up with SIGKILL right away.
+      if (!child.exited) signalChild(child, "SIGKILL");
+      return;
+    }
     child.killTimer = clock.setTimeout(() => {
       child.killTimer = null;
       if (!child.exited) signalChild(child, "SIGKILL");
@@ -204,14 +214,18 @@ export function createMonitorRuntime(deps: RuntimeDeps): MonitorRuntime {
   function trackChild(w: WatcherState, handle: ChildHandle): ChildRef {
     const child: ChildRef = { handle, pid: handle.pid, exited: false, killTimer: null };
     w.children.add(child);
-    handle.onExit(() => {
+    const untrack = (): void => {
       child.exited = true;
       if (child.killTimer !== null) {
         clock.clearTimeout(child.killTimer);
         child.killTimer = null;
       }
       w.children.delete(child);
-    });
+    };
+    handle.onExit(untrack);
+    // A child that errors may never reach exit; untrack it here too so failed
+    // handles cannot accumulate in `w.children`.
+    handle.onError(untrack);
     return child;
   }
 
@@ -261,14 +275,10 @@ export function createMonitorRuntime(deps: RuntimeDeps): MonitorRuntime {
     matcher: (line: string) => boolean,
     push: (line: string) => void,
   ): void {
-    let handle: ChildHandle;
-    try {
-      handle = proc.spawn(command, cwd);
-    } catch (error) {
-      emit(w, `FAILED TO SPAWN: ${(error as Error).message}`);
-      releaseWatcher(w);
-      return;
-    }
+    // A synchronous spawn failure propagates to launch(), which tears the
+    // reserved slot down and rethrows — a watcher that never started must
+    // surface as a failed launch, not as a running watcher.
+    const handle = proc.spawn(command, cwd);
     trackChild(w, handle);
     let pending = "";
     const onChunk = (chunk: string): void => {
@@ -308,27 +318,39 @@ export function createMonitorRuntime(deps: RuntimeDeps): MonitorRuntime {
     push: (line: string) => void,
   ): void {
     let prevLines = new Set<string>();
+    // Persistent failures (SSH box down, command gone) emit exactly one event
+    // for the first consecutive failure; repeats stay silent until a poll
+    // completes successfully again, which re-arms the latch.
+    let errorLatched = false;
+    const reportFailure = (body: string): void => {
+      if (errorLatched || !isActive(w)) return;
+      errorLatched = true;
+      emit(w, `${body} — suppressing repeats until a poll succeeds; retrying every tick`);
+    };
     const tick = (): void => {
       if (!isActive(w)) return;
       let handle: ChildHandle;
       try {
         handle = proc.spawn(command, cwd);
       } catch (error) {
-        emit(w, `POLL SPAWN ERROR: ${(error as Error).message}`);
+        reportFailure(`POLL SPAWN ERROR: ${(error as Error).message}`);
         return; // next tick retries
       }
       trackChild(w, handle);
       let out = "";
+      let failed = false;
       const capture = (chunk: string): void => {
         out = tailBytes(out + chunk, MAX_POLL_RETAINED_BYTES);
       };
       handle.onStdout(capture);
       handle.onStderr(capture);
       handle.onError((error) => {
-        if (isActive(w)) emit(w, `POLL ERROR: ${error.message}`);
+        failed = true;
+        reportFailure(`POLL ERROR: ${error.message}`);
       });
       handle.onExit(() => {
-        if (!isActive(w)) return;
+        if (failed || !isActive(w)) return; // an errored poll neither diffs nor re-arms
+        errorLatched = false;
         // Compare complete-line sets against the previous poll so identical
         // old log lines are not replayed every tick.
         const current = new Set(
@@ -356,12 +378,24 @@ export function createMonitorRuntime(deps: RuntimeDeps): MonitorRuntime {
     push: (line: string) => void,
   ): void {
     let size = files.statSize(logFile) ?? 0;
+    // Unterminated trailing data is held (bounded) until its newline arrives,
+    // so a line flushed to disk in two writes is matched once, assembled.
+    let pending = "";
     const readNew = (): void => {
       if (!isActive(w)) return;
       const current = files.statSize(logFile);
       if (current === null) return; // may appear later
-      if (current < size) size = 0; // truncated/rotated
+      if (current < size) {
+        size = 0; // truncated/rotated: the old partial line is gone
+        pending = "";
+      }
       if (current === size) return;
+      if (current - size > MAX_FILE_READ_BYTES) {
+        // Bound per-read allocation: skip ahead and keep only the tail of a
+        // huge burst (mirrors poll mode's bounded retention).
+        size = current - MAX_FILE_READ_BYTES;
+        pending = "";
+      }
       let text: string;
       try {
         text = files.readSlice(logFile, size, current);
@@ -369,7 +403,9 @@ export function createMonitorRuntime(deps: RuntimeDeps): MonitorRuntime {
         return; // transient read failure; backstop retries
       }
       size = current;
-      for (const line of text.split("\n")) {
+      const parts = (pending + text).split("\n");
+      pending = tailBytes(parts.pop() ?? "", MAX_FILE_PENDING_BYTES);
+      for (const line of parts) {
         if (line.trim() && matcher(line)) push(line);
       }
     };
@@ -469,8 +505,15 @@ export function createMonitorRuntime(deps: RuntimeDeps): MonitorRuntime {
         ? opts.notifyOn.join(" | ")
         : "milestones/failures (default)") + (mode === "spawn" ? " + exit" : "");
 
+    // Guard against random-id collisions: a duplicate key would silently
+    // orphan the incumbent watcher's map slot. Retry, then force uniqueness.
+    let id = deps.randomId();
+    for (let attempt = 0; watchers.has(id) && attempt < 8; attempt++) id = deps.randomId();
+    const base = id;
+    for (let n = 2; watchers.has(id); n++) id = `${base}-${n}`;
+
     const w: WatcherState = {
-      id: deps.randomId(),
+      id,
       label: opts.label ?? "",
       mode,
       watchingFor,
@@ -530,10 +573,10 @@ export function createMonitorRuntime(deps: RuntimeDeps): MonitorRuntime {
       stopWatcher(w);
       return toMeta(w);
     },
-    stopAll: () => {
+    stopAll: (options?: StopAllOptions) => {
       const stopped: WatcherMeta[] = [];
       for (const w of [...watchers.values()]) {
-        if (stopWatcher(w)) stopped.push(toMeta(w));
+        if (stopWatcher(w, options?.immediateKill ?? false)) stopped.push(toMeta(w));
       }
       return stopped;
     },

@@ -34,6 +34,12 @@ export const MAX_SUMMARY_LINES = 64;
 /** Poll mode bounds retained per-tick output to this many bytes (tail-kept). */
 export const MAX_POLL_RETAINED_BYTES = 256 * 1024;
 
+/** File mode reads at most this many bytes per pass; larger bursts skip ahead to the tail. */
+export const MAX_FILE_READ_BYTES = 256 * 1024;
+
+/** File mode retains at most this many bytes of an unterminated partial line. */
+export const MAX_FILE_PENDING_BYTES = 64 * 1024;
+
 export const DEFAULT_COALESCE_SECONDS = 2;
 export const DEFAULT_MAX_LINES = 20;
 
@@ -67,7 +73,9 @@ export interface Clock {
 
 /**
  * Handle over one spawned child. Multiple callbacks may be registered per
- * event; adapters must invoke exit callbacks at most once.
+ * event. Adapters must invoke exit callbacks exactly once, only after the
+ * child has fully finished — all stdio has been delivered (Node `close`, not
+ * `exit`) or the child errored and will never produce more events.
  */
 export interface ChildHandle {
   readonly pid: number | undefined;
@@ -167,10 +175,19 @@ export interface MonitorRuntime {
   /** Stop one watcher. Returns its meta, or undefined when not active. */
   stop(id: string): WatcherMeta | undefined;
   /** Stop every active watcher atomically; returns the stopped metas. */
-  stopAll(): WatcherMeta[];
+  stopAll(options?: StopAllOptions): WatcherMeta[];
   activeCount(): number;
   /** Whether the shared heartbeat scheduler currently has a live timer. */
   heartbeatSchedulerActive(): boolean;
+}
+
+export interface StopAllOptions {
+  /**
+   * Follow SIGTERM with an immediate SIGKILL instead of the bounded 3s
+   * escalation timer. Used for `quit` shutdown: the Pi process exits before
+   * any escalation timer could ever fire, so waiting would leak children.
+   */
+  immediateKill?: boolean;
 }
 
 /** Thrown by `launch()` when the active-watcher cap is reached. */
