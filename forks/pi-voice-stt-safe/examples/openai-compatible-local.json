@@ -1,0 +1,10 @@
+{
+  "keybind": "ctrl+r",
+  "provider": {
+    "type": "openai-compatible",
+    "endpoint": "http://localhost:10301/v1/audio/transcriptions",
+    "model": "whisper-1",
+    "apiKeyEnv": "",
+    "language": "en"
+  }
+}
