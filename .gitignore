@@ -1,3 +1,9 @@
 .DS_Store
 *.log
 .env
+
+# Fork dependencies are installed by install.sh, not committed.
+forks/*/node_modules/
+
+# Scratch space used by bin/pi-setup-vendor.
+.vendor-tmp/

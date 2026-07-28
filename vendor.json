@@ -1,0 +1,42 @@
+{
+  "comment": "Provenance for every fork in forks/. bin/pi-setup-doctor reads this to report upstream drift; bin/pi-setup-vendor reads it to re-vendor a fork onto a newer upstream release.",
+  "forks": {
+    "pi-voice-stt-safe": {
+      "upstream": "pi-voice-stt",
+      "version": "0.4.0",
+      "live": "src/index.ts",
+      "liveTree": "src",
+      "patch": "patches/pi-voice-stt@0.4.0.patch"
+    },
+    "pi-agent-browser-native-safe": {
+      "upstream": "pi-agent-browser-native",
+      "version": "0.2.71",
+      "live": "dist/extensions/agent-browser/index.js",
+      "liveTree": "dist",
+      "patch": "patches/pi-agent-browser-native@0.2.71.patch"
+    },
+    "pi-dynamic-workflows-safe": {
+      "upstream": "@quintinshaw/pi-dynamic-workflows",
+      "version": "3.4.1",
+      "live": "extensions/workflow.ts",
+      "liveTree": "src",
+      "patch": "patches/@quintinshaw+pi-dynamic-workflows@3.4.1.patch",
+      "note": "extensions/workflow.ts imports ../src/*.js, so src/ is the tree Pi loads. dist/ is a compiled mirror reachable only through the package exports field."
+    },
+    "pi-continue-safe": {
+      "upstream": "pi-continue",
+      "version": "0.9.3",
+      "live": "extensions/continue/index.ts",
+      "liveTree": "extensions/continue",
+      "patch": "patches/pi-continue@0.9.3.patch"
+    },
+    "pi-process-monitor-safe": {
+      "upstream": "pi-process-monitor",
+      "version": "1.2.0",
+      "live": "extensions/monitor/index.ts",
+      "liveTree": "extensions/monitor",
+      "patch": null,
+      "note": "Hand-written rewrite rather than a patch of upstream, imported into this repository with its original commit history. Not re-vendorable with bin/pi-setup-vendor."
+    }
+  }
+}

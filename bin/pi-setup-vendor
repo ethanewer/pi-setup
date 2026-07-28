@@ -1,0 +1,220 @@
+#!/usr/bin/env bash
+# Maintain the hardened forks in forks/ against their upstream npm releases.
+#
+#   bin/pi-setup-vendor --regenerate-patch <fork>
+#       Diff forks/<fork> against the pristine upstream release it is pinned to and
+#       rewrite its patch file. Run this after hand-editing a fork so the patch stays
+#       the reviewable record of every local change.
+#
+#   bin/pi-setup-vendor --regenerate-patch --all
+#       Regenerate every patch.
+#
+#   bin/pi-setup-vendor <fork> <new-upstream-version>
+#       Re-vendor the fork onto a newer upstream release: download it, apply the
+#       existing patch, and replace forks/<fork> on success. Conflicts are left as
+#       .rej files in a scratch tree for you to resolve by hand.
+#
+#   bin/pi-setup-vendor --verify <fork>
+#       Check that applying the patch to pristine upstream reproduces forks/<fork>
+#       byte for byte.
+set -uo pipefail
+
+REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+TMP_ROOT="$REPO_DIR/.vendor-tmp"
+
+die() { printf 'pi-setup-vendor: %s\n' "$*" >&2; exit 1; }
+say() { printf '==> %s\n' "$*"; }
+
+command -v npm >/dev/null 2>&1 || die "npm is required"
+command -v node >/dev/null 2>&1 || die "node is required"
+command -v patch >/dev/null 2>&1 || die "patch is required"
+
+meta() { # meta <fork> <field>
+  node -e '
+const forks = require(process.argv[1] + "/vendor.json").forks;
+const fork = forks[process.argv[2]];
+if (!fork) { console.error("unknown fork: " + process.argv[2]); process.exit(1); }
+const value = fork[process.argv[3]];
+console.log(value === null || value === undefined ? "" : value);
+' "$REPO_DIR" "$1" "$2"
+}
+
+all_forks() {
+  node -e 'console.log(Object.keys(require(process.argv[1] + "/vendor.json").forks).join("\n"))' "$REPO_DIR"
+}
+
+# Extract <upstream>@<version> into a fresh directory and echo its path.
+fetch_pristine() { # fetch_pristine <upstream> <version> <label>
+  local upstream="$1" version="$2" label="$3"
+  local dest="$TMP_ROOT/$label"
+  rm -rf "$dest"
+  mkdir -p "$dest"
+  local tarball
+  tarball="$(cd "$TMP_ROOT" && npm pack "$upstream@$version" --silent 2>/dev/null | tail -1)"
+  [[ -n "$tarball" && -f "$TMP_ROOT/$tarball" ]] || die "could not download $upstream@$version from npm"
+  tar xzf "$TMP_ROOT/$tarball" -C "$dest" --strip-components=1 || die "could not extract $tarball"
+  rm -f "$TMP_ROOT/$tarball"
+  printf '%s\n' "$dest"
+}
+
+regenerate_patch() { # regenerate_patch <fork>
+  local fork="$1"
+  local upstream version patch_rel
+  upstream="$(meta "$fork" upstream)" || exit 1
+  version="$(meta "$fork" version)"
+  patch_rel="$(meta "$fork" patch)"
+  [[ -d "$REPO_DIR/forks/$fork" ]] || die "forks/$fork does not exist"
+  if [[ -z "$patch_rel" ]]; then
+    say "$fork is hand-maintained (no patch file); skipping"
+    return 0
+  fi
+  say "Regenerating $patch_rel from $upstream@$version"
+  local pristine
+  pristine="$(fetch_pristine "$upstream" "$version" "pristine-$fork")" || exit 1
+  mkdir -p "$REPO_DIR/$(dirname "$patch_rel")"
+  # diff exits 1 when files differ, which is the normal case here.
+  ( cd "$TMP_ROOT" && diff -ruN \
+      --exclude=node_modules \
+      --label "a/$fork" --label "b/$fork" \
+      "pristine-$fork" "$REPO_DIR/forks/$fork" ) > "$REPO_DIR/$patch_rel.tmp"
+  local status=$?
+  if [[ "$status" -gt 1 ]]; then
+    rm -f "$REPO_DIR/$patch_rel.tmp"
+    die "diff failed for $fork"
+  fi
+  mv "$REPO_DIR/$patch_rel.tmp" "$REPO_DIR/$patch_rel"
+  local changed
+  changed="$(grep -c '^--- ' "$REPO_DIR/$patch_rel" 2>/dev/null || printf '0')"
+  say "  wrote $patch_rel ($changed file(s) changed)"
+  rm -rf "$pristine"
+}
+
+apply_patch_into() { # apply_patch_into <fork> <target-dir>
+  local fork="$1" target="$2"
+  local patch_rel
+  patch_rel="$(meta "$fork" patch)"
+  [[ -n "$patch_rel" ]] || die "$fork has no patch file"
+  [[ -f "$REPO_DIR/$patch_rel" ]] || die "missing $patch_rel"
+  ( cd "$target" && patch -p1 --forward --no-backup-if-mismatch < "$REPO_DIR/$patch_rel" )
+}
+
+case "${1:-}" in
+  --regenerate-patch)
+    shift
+    [[ $# -ge 1 ]] || die "usage: pi-setup-vendor --regenerate-patch <fork>|--all"
+    mkdir -p "$TMP_ROOT"
+    if [[ "$1" == "--all" ]]; then
+      while read -r fork; do
+        [[ -z "$fork" ]] && continue
+        regenerate_patch "$fork"
+      done < <(all_forks)
+    else
+      regenerate_patch "$1"
+    fi
+    say "Done."
+    ;;
+
+  --verify)
+    shift
+    [[ $# -eq 1 ]] || die "usage: pi-setup-vendor --verify <fork>"
+    fork="$1"
+    mkdir -p "$TMP_ROOT"
+    upstream="$(meta "$fork" upstream)" || exit 1
+    version="$(meta "$fork" version)"
+    patch_rel="$(meta "$fork" patch)"
+    if [[ -z "$patch_rel" ]]; then
+      say "$fork is hand-maintained (no patch file); nothing to verify"
+      exit 0
+    fi
+    say "Verifying $patch_rel reproduces forks/$fork from $upstream@$version"
+    work="$(fetch_pristine "$upstream" "$version" "verify-$fork")" || exit 1
+    if ! apply_patch_into "$fork" "$work"; then
+      die "patch did not apply cleanly to pristine $upstream@$version"
+    fi
+    if diff -rq --exclude=node_modules "$work" "$REPO_DIR/forks/$fork" >/dev/null 2>&1; then
+      say "  reproduced exactly"
+      rm -rf "$work"
+      exit 0
+    fi
+    printf 'pi-setup-vendor: patch does not reproduce forks/%s:\n' "$fork" >&2
+    diff -rq --exclude=node_modules "$work" "$REPO_DIR/forks/$fork" 2>&1 | sed 's/^/  /' >&2
+    printf '\nRun: bin/pi-setup-vendor --regenerate-patch %s\n' "$fork" >&2
+    exit 1
+    ;;
+
+  ""|-h|--help)
+    sed -n '2,26p' "$0" | sed 's/^# \{0,1\}//'
+    exit 0
+    ;;
+
+  *)
+    [[ $# -eq 2 ]] || die "usage: pi-setup-vendor <fork> <new-upstream-version>"
+    fork="$1"
+    new_version="$2"
+    mkdir -p "$TMP_ROOT"
+    upstream="$(meta "$fork" upstream)" || exit 1
+    old_version="$(meta "$fork" version)"
+    patch_rel="$(meta "$fork" patch)"
+    [[ -n "$patch_rel" ]] || die "$fork is hand-maintained; re-vendor it by hand"
+    [[ "$new_version" != "$old_version" ]] || die "$fork is already based on $old_version"
+
+    say "Re-vendoring $fork: $upstream@$old_version -> $upstream@$new_version"
+    work="$(fetch_pristine "$upstream" "$new_version" "revendor-$fork")" || exit 1
+
+    say "Applying $patch_rel"
+    if apply_patch_into "$fork" "$work"; then
+      rm -rf "$REPO_DIR/forks/$fork"
+      mkdir -p "$REPO_DIR/forks/$fork"
+      ( cd "$work" && tar cf - --exclude=node_modules . ) | ( cd "$REPO_DIR/forks/$fork" && tar xf - )
+      node -e '
+const { readFileSync, writeFileSync } = require("node:fs");
+const [repoDir, fork, version] = process.argv.slice(1);
+const path = repoDir + "/vendor.json";
+const data = JSON.parse(readFileSync(path, "utf8"));
+data.forks[fork].version = version;
+const oldPatch = data.forks[fork].patch;
+if (oldPatch) {
+  data.forks[fork].patch = oldPatch.replace(/@[^@/]+\.patch$/, "@" + version + ".patch");
+}
+writeFileSync(path, JSON.stringify(data, null, 2) + "\n");
+console.log(data.forks[fork].patch ?? "");
+' "$REPO_DIR" "$fork" "$new_version" > "$TMP_ROOT/newpatch"
+      new_patch_rel="$(cat "$TMP_ROOT/newpatch")"
+      if [[ -n "$new_patch_rel" && "$new_patch_rel" != "$patch_rel" ]]; then
+        mkdir -p "$REPO_DIR/$(dirname "$new_patch_rel")"
+        git -C "$REPO_DIR" mv "$patch_rel" "$new_patch_rel" 2>/dev/null \
+          || mv "$REPO_DIR/$patch_rel" "$REPO_DIR/$new_patch_rel"
+      fi
+      rm -rf "$work" "$TMP_ROOT/newpatch"
+      regenerate_patch "$fork"
+      cat <<EOF
+
+Re-vendored forks/$fork onto $upstream@$new_version.
+
+Next:
+  1. Review the diff:            git -C "$REPO_DIR" diff -- forks/$fork
+  2. Re-read the upstream CHANGELOG for changes that affect the hardening.
+  3. Reinstall and check:        ./install.sh && bin/pi-setup-doctor
+  4. Update the version table in README.md.
+EOF
+      exit 0
+    fi
+
+    cat <<EOF >&2
+
+The patch did not apply cleanly to $upstream@$new_version.
+
+The partially patched tree, including .rej files for every rejected hunk, is at:
+  $work
+
+Resolve it by hand, then:
+  rm -rf "$REPO_DIR/forks/$fork"
+  mkdir -p "$REPO_DIR/forks/$fork"
+  ( cd "$work" && tar cf - --exclude=node_modules --exclude='*.rej' --exclude='*.orig' . ) \\
+    | ( cd "$REPO_DIR/forks/$fork" && tar xf - )
+  # set forks.$fork.version to $new_version in vendor.json, then:
+  bin/pi-setup-vendor --regenerate-patch $fork
+EOF
+    exit 1
+    ;;
+esac
