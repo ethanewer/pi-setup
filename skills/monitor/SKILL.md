@@ -1,0 +1,123 @@
+---
+name: monitor
+description: Non-blocking background watcher for pi (safe fork). Start a long-running process (training, dev server, CI), poll a remote SSH command, or tail a log file, and get pinged in-session the moment a milestone hits, a failure occurs, or the process dies — without blocking the session. Use when a job may run minutes-to-hours and you need to keep working while it runs.
+user-invokable: true
+tested_date: 2026-07-28
+tested_with: pi-process-monitor-safe 1.0.0, @earendil-works/pi-coding-agent (peer)
+---
+
+# monitor — non-blocking background watcher (safe fork)
+
+Conditional delivery: only lines matching `notifyOn` (default: milestones +
+failures) plus process-exit get pushed to the session, instead of one LLM turn
+per stdout line. Rapid matches are coalesced. Keeps context lean and the
+session unblocked.
+
+## When to use this
+
+Any task that could plausibly run **longer than a few seconds** AND you want to
+keep chatting / doing other work instead of blocking:
+
+- **ML training** (axolotl, vLLM, accelerate, torchrun) — ping on adapter-saved / OOM / step walls
+- **Remote SSH jobs** — poll a box every N seconds (`ssh h100 'tail; pgrep'`)
+- **Dev servers / builds** — ping on "listening", crash, or first error
+- **CI / long tests / migrations**
+- **Log tails** — watch a file for appended milestone/error lines
+
+If it's under ~10s, just run it inline (bash). If it might run
+minutes-to-hours, use `monitor`.
+
+## Three sources (pick one)
+
+| mode | tool params | command equivalent | use case |
+|------|-------------|--------------------|----------|
+| `spawn` | `command` | `/monitor <cmd>` | local long job — spawned once, tailed until exit |
+| `poll` | `command` + `intervalSeconds` | `/monitor --poll --every 30 -- <cmd>` | **remote/SSH** — re-run a check on a cadence |
+| `file` | `logFile` | `/monitor --file <path>` | tail appended lines of a log |
+
+## The default `notifyOn` (regex, case-insensitive)
+
+milestones: `saved`, `checkpoint`, `complete(d)`, `done`, `finished`, `ready`,
+`started`, `listening`, `success`, `ok`, `✓`, `✔`
+failures: `error`, `fail(ed)`, `oom`, `out of memory`, `killed`, `traceback`,
+`exception`, `fatal`, `abort`, `panic`, `segfault`
+
+Override per-call with `notifyOn: [...]` (regexes). Always include a
+death/exit signal for poll mode, e.g. an `ALIVE=0` sentinel.
+
+## Limits (important)
+
+At most **16 watchers** can be active at once. The 17th `monitor` call fails
+with an error telling you to run `monitor_status`, then `monitor_kill` (or
+`monitor_kill_all`) before starting another. Stopped and exited watchers free
+their slot immediately, so clean up watchers you no longer need.
+
+## Recipes
+
+### ML training on a remote H100 (the canonical case)
+```json
+{ "command": "ssh h100 'tail -n3 /root/train.log; echo ALIVE=$(pgrep -fc axolotl)'",
+  "intervalSeconds": 30, "label": "h100-qlora", "heartbeatMinutes": 10,
+  "notifyOn": ["adapter.*saved", "step (6[0-9]|[1-9][0-9][0-9]) ", "error|oom|killed|traceback", "ALIVE=0"] }
+```
+Returns at once (`Watcher <id> running`). You keep working. The session is
+pinged when the adapter saves, when step 60+ lands, on OOM, or when the
+process dies. Heartbeat status every 10 min even if silent.
+
+### Local dev server (spawn)
+```json
+{ "command": "cd app && npm run dev", "label": "dev",
+  "notifyOn": ["listening|ready|started", "error|EADDR|crash"] }
+```
+
+### Tail an existing log
+```json
+{ "logFile": "/var/log/train.log", "notifyOn": ["loss=", "OutOfMemory", "Killed"] }
+```
+
+## Timeout
+
+Pass `timeoutSeconds` to auto-kill a watcher after N seconds. Fires a
+`TIMEOUT after Ns` ping and stops the watcher cleanly. Works in all three
+modes. Also available as `--timeout N` in the `/monitor` command.
+
+## Heartbeats
+
+Off unless `heartbeatMinutes` is set. Due heartbeats from all watchers are
+aggregated into a single `monitor-heartbeat` message that wakes the session
+once. A real event during the preceding interval substitutes for that
+watcher's heartbeat, and heartbeats never count as real events in status.
+
+## Lifecycle
+
+- `monitor_status` / `/monitors` — list ACTIVE watchers (id, mode, events,
+  last ping). Stopped/exited watchers are removed immediately.
+- `monitor_kill {id}` / `/monitor-kill <id>` — stop one (`/monitor-kill <TAB>`
+  autocompletes live ids; the child's process group gets SIGTERM, then
+  SIGKILL after 3s). Killed processes do not produce an exit ping.
+- `monitor_kill_all` / `/monitor-kill-all` — stop everything atomically and
+  report the consolidated list.
+- **No restart-resume (differs from upstream):** watchers are never persisted
+  and never restored. Session shutdown, `/reload`, `/new`, `/resume`, and
+  `/fork` stop all watchers and record one context summary naming the reason.
+  Recreate any monitor you still need afterwards.
+
+## How the ping works (don't fight it)
+
+- Idle agent → the matching message triggers a fresh turn (agent wakes, reads
+  the pushed lines, acts).
+- Mid-stream agent → the message queues as a steer, delivered after the
+  current turn's tool calls, before the next LLM call.
+- Rapid matching lines are **coalesced** into one message (default 2s window,
+  max 20 lines) so a chatty log doesn't flood context.
+
+## Pitfalls
+
+- **Don't** wrap a `monitor` call in a blocking `bash` wait — that defeats the
+  point. `monitor` returns immediately; trust the ping.
+- For poll mode, your `command` must be **idempotent and fast** (a tail + a
+  process check). Don't put the actual long job in the poll command.
+- Always include a death signal in `notifyOn` for poll/file mode (e.g.
+  `ALIVE=0`), otherwise a silently-dead remote job won't ping you.
+- Default `notifyOn` is broad. For chatty logs, pass a tight `notifyOn`.
+- After `/reload` or a session switch, monitors are gone — restart them.
