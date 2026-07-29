@@ -164,8 +164,12 @@ function sourceLooksLikeThisPackage(source, cwd, sourceBaseDir = cwd) {
 	if (text === PACKAGE_NAME) return true;
 	if (text.includes(REPO_URL_FRAGMENT)) return true;
 
-	if (!isPathLikeSource(text)) return false;
-	const resolvedSource = resolve(sourceBaseDir, expandUserPath(text));
+	// Pi resolves a `local/<dir>` source against the agent directory, so compare it as a
+	// path. Without this a local install reads as "no configured source", and the advice
+	// that follows would tell the operator to install the unpatched npm package.
+	const pathText = text.startsWith("local/") ? `./${text}` : text;
+	if (!isPathLikeSource(pathText)) return false;
+	const resolvedSource = resolve(sourceBaseDir, expandUserPath(pathText));
 	const cwdEntrypoints = EXTENSION_ENTRYPOINTS.map((entrypoint) => resolve(cwd, entrypoint));
 	const packageEntrypoints = EXTENSION_ENTRYPOINTS.map((entrypoint) => resolve(THIS_PACKAGE_ROOT, entrypoint));
 	return (
@@ -392,7 +396,7 @@ async function checkPiSources({ cwd, agentDir, settingsPaths, readText, pathExis
 				"Detected sources:",
 				...sources.map((source) => `- ${source.source} from ${source.location}`),
 				"Keep exactly one active source:",
-				"- for normal use: keep `pi install npm:pi-agent-browser-native` and remove/disable checkout paths from Pi settings",
+				"- for normal use: keep the single configured source (a `local/` fork or the npm package) and remove/disable checkout paths from Pi settings",
 				"- for temporary package or checkout trials: use `pi --approve --no-extensions -e <source>` when you intentionally trust the current project, or omit `--approve` to let Pi prompt in interactive mode",
 				"- for configured-source lifecycle validation: keep exactly one checkout or package source, then launch plain `pi`",
 			],
@@ -411,7 +415,7 @@ async function checkPiSources({ cwd, agentDir, settingsPaths, readText, pathExis
 		status: "warn",
 		title: "No configured pi-agent-browser-native source was found in inspected Pi settings.",
 		lines: [
-			"This is OK for isolated runs such as `pi --no-extensions -e npm:pi-agent-browser-native`, but normal package use should install exactly one source with `pi install npm:pi-agent-browser-native`.",
+			"This is OK for isolated runs such as `pi --no-extensions -e <source>`, but normal use should have exactly one configured source: a `local/<dir>` entry for a vendored fork, or `pi install npm:pi-agent-browser-native` for the upstream package.",
 		],
 		warnings,
 	};

@@ -47,7 +47,7 @@ P_DIR="$HOME/.pi/agent-p"
 LOCAL_BIN="$HOME/.local/bin"
 NPM_DIR="$MAIN_DIR/npm"
 LOCAL_PKG_DIR="$MAIN_DIR/local"
-mkdir -p "$LOCAL_BIN" "$MAIN_DIR/bin" "$MAIN_DIR/p" "$NPM_DIR" "$LOCAL_PKG_DIR" "$P_DIR"
+mkdir -p "$LOCAL_BIN" "$MAIN_DIR/bin" "$MAIN_DIR/p" "$NPM_DIR" "$LOCAL_PKG_DIR" "$P_DIR" "$P_DIR/npm"
 
 # Locate forks/. When this script runs from a checkout we use it directly; when it is
 # piped from curl we clone the repository so the forks are available.
@@ -98,7 +98,9 @@ for fork in $FORKS; do
     process.exit(Object.keys(pkg.dependencies ?? {}).length > 0 ? 0 : 1);
   ' "$LOCAL_PKG_DIR/$fork" 2>/dev/null; then
     printf '    installing dependencies for %s\n' "$fork"
-    (cd "$LOCAL_PKG_DIR/$fork" && "$BUN_BIN" install --production --silent)
+    # Only real runtime dependencies. Pi supplies the peer packages at load time, and
+    # installing them here would pull in ~180MB of provider SDKs per fork.
+    (cd "$LOCAL_PKG_DIR/$fork" && "$BUN_BIN" install --omit=dev --omit=peer --silent)
   fi
 done
 
@@ -211,7 +213,7 @@ log "Writing Pi configuration"
 CONFIG_SCRIPT="$(mktemp)"
 cat > "$CONFIG_SCRIPT" <<'JS'
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-const [mainPath, pPath, sttPath, npmPkgPath, piVersion] = process.argv.slice(2);
+const [mainPath, pPath, sttPath, npmPkgPath, pNpmPkgPath, piVersion] = process.argv.slice(2);
 const read = (path) => existsSync(path) ? JSON.parse(readFileSync(path, "utf8")) : {};
 const writeJson = (path, value) => writeFileSync(path, JSON.stringify(value, null, 2) + "\n");
 
@@ -278,20 +280,25 @@ stt.provider = {
 };
 writeJson(sttPath, stt);
 
-// Drop the extensions from the npm manifest so `bun install` prunes the old copies,
-// while leaving any unrelated package the user added in place.
-const npmPkg = read(npmPkgPath);
-const deps = npmPkg.dependencies ?? {};
+// Drop the extensions from the npm manifests so the old, unpatched copies are pruned,
+// while leaving any unrelated package the user added in place. The lean profile keeps its
+// own agent dir and npm tree, and an unreferenced copy there is still unpatched code on
+// disk, so clean both.
 let removed = false;
-for (const name of Object.keys(deps)) {
-  if (managed.has(name)) {
-    delete deps[name];
-    removed = true;
+for (const path of [npmPkgPath, pNpmPkgPath]) {
+  if (!path) continue;
+  const pkg = read(path);
+  const deps = pkg.dependencies ?? {};
+  for (const name of Object.keys(deps)) {
+    if (managed.has(name)) {
+      delete deps[name];
+      removed = true;
+    }
   }
+  pkg.private = true;
+  pkg.dependencies = deps;
+  writeJson(path, pkg);
 }
-npmPkg.private = true;
-npmPkg.dependencies = deps;
-writeJson(npmPkgPath, npmPkg);
 if (removed) console.log("    pruned npm-installed extension copies");
 JS
 "$BUN_BIN" "$CONFIG_SCRIPT" \
@@ -299,6 +306,7 @@ JS
   "$P_DIR/settings.json" \
   "$MAIN_DIR/stt.json" \
   "$NPM_DIR/package.json" \
+  "$P_DIR/npm/package.json" \
   "$PI_VERSION"
 rm -f "$CONFIG_SCRIPT"
 
