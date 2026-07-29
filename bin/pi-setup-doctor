@@ -50,7 +50,9 @@ for fork in $FORK_NAMES; do
     bad "$fork is not installed at $DST (run install.sh)"
     continue
   fi
-  DIFF="$(diff -rq --exclude=node_modules "$SRC" "$DST" 2>&1)"
+  # .git is present when a fork was installed from its own checkout; node_modules is
+  # installed rather than committed. Neither is part of the fork's content.
+  DIFF="$(diff -rq --exclude=node_modules --exclude=.git "$SRC" "$DST" 2>&1)"
   if [[ -z "$DIFF" ]]; then
     ok "$fork matches the installed copy"
   else

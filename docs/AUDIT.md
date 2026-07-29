@@ -252,12 +252,48 @@ repository with its original commit history. It adds a watcher cap, kill-all, ag
 heartbeats, and safe session shutdown with no persistence or restore. The unpatched
 `pi-process-monitor@1.2.0` is no longer installed or referenced.
 
+## Found while fixing
+
+Three findings did not come from the original audit. They surfaced when adversarial
+verifiers attacked the first round of fixes, and they are recorded here because each one
+defeated a fix that looked correct.
+
+- **The browser wrapper's privileged-flag gate was moot on its own.** Gating
+  `--executable-path`, `--init-script`, `--proxy`, `--allow-file-access`, `--extension`,
+  `--args`, and then `--config` still left the capability reachable with **no flag at
+  all**: upstream `agent-browser` auto-discovers `./agent-browser.json` in its process
+  working directory, and its own `--help` documents that project-level file as
+  *overriding* user-level defaults. A repository that merely ships that file supplies
+  `executablePath`, `initScripts`, `proxy`, and `allowFileAccess`. Confining the flags
+  without also controlling the child's configuration discovery would have been security
+  theatre.
+- **Path confinement by string comparison is not confinement.** Both the browser fork's
+  write-path policy and `pi-continue`'s guide-path check initially compared `resolve()`d
+  paths, which a symlink inside the workspace walks straight through. Only a `realpath` of
+  the deepest existing ancestor actually contains the write.
+- **A regression repair can reopen the hole it was meant to work around.** Instructing the
+  fix pass to "allow reading a symlinked agent guide by default" — to restore a legitimate
+  dotfiles workflow — reopened the injection path in full: with default configuration in an
+  untrusted repository, `AGENTS.md -> ~/.ssh/id_ed25519` fed that file into the summarizer
+  prompt. Reading is not the safe half of a file operation when the content lands in a
+  model's context. That instruction was mine, and the verifier caught it.
+
 ## Method
 
 Findings were produced by four independent per-package audits and then re-verified by
 hand against the shipped code before being fixed: the trust-inheritance behaviour, the
 `vm` bridge-function escape, the stub credential check, the unconfined `outputPath`
 write, the provider host-pinning gap, and the absence of any `isProjectTrusted` call
-were each confirmed directly rather than taken from a report. Every fix was then
-adversarially re-reviewed by an agent instructed to refute it and to hunt for feature
-regressions; see `docs/FORKS.md` for the per-fork outcome, including residual risk.
+were each confirmed directly rather than taken from a report.
+
+Fixing then took three rounds, because each round was adversarially re-reviewed by an
+independent agent instructed to *refute* the fixes and to hunt for feature regressions,
+rather than to confirm them. Round one closed most findings; verification found four
+security gaps that had survived and one blocking regression. Round two closed those and
+introduced two reopened holes of its own. Round three closed those. Findings were treated
+as closed only with traced evidence, and many were settled by executing the code — a
+differential harness for the microphone-orphan race, measured `ffmpeg` output for the
+duration cap, a live exploit for the browser config discovery — rather than by reading it.
+
+`docs/FORKS.md` records the per-fork outcome, including the residual risk that remains and
+the capabilities that are now gated behind an explicit opt-in.
