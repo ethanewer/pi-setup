@@ -4,7 +4,7 @@
     "pi-voice-stt-safe": {
       "upstream": "pi-voice-stt",
       "version": "0.4.0",
-      "live": "src/index.ts",
+      "live": "extensions/voice-stt/index.ts",
       "liveTree": "src",
       "patch": "patches/pi-voice-stt@0.4.0.patch"
     },
@@ -18,10 +18,10 @@
     "pi-dynamic-workflows-safe": {
       "upstream": "@quintinshaw/pi-dynamic-workflows",
       "version": "3.4.1",
-      "live": "extensions/workflow.ts",
+      "live": "extensions/workflow/index.ts",
       "liveTree": "src",
       "patch": "patches/@quintinshaw+pi-dynamic-workflows@3.4.1.patch",
-      "note": "extensions/workflow.ts imports ../src/*.js, so src/ is the tree Pi loads. dist/ is a compiled mirror reachable only through the package exports field."
+      "note": "extensions/workflow/index.ts imports ../../src/*.js, so src/ is the tree Pi loads. dist/ is a compiled mirror reachable only through the package exports field; rebuild it with npm run build."
     },
     "pi-continue-safe": {
       "upstream": "pi-continue",

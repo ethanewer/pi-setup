@@ -199,7 +199,7 @@ do
     exec "$BUN_BIN" "$ROOT/dist/bun/cli.js" \
       --no-extensions \
       --no-skills \
-      --extension "$MAIN_DIR/local/pi-voice-stt-safe/src/index.ts" \
+      --extension "$MAIN_DIR/local/pi-voice-stt-safe/extensions/voice-stt/index.ts" \
       --extension "$MAIN_DIR/p/remove-pi-documentation.js" \
       "$@"
   fi

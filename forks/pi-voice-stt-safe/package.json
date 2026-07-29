@@ -39,11 +39,12 @@
     "assets",
     "README.md",
     "LICENSE",
-    "SECURITY.md"
+    "SECURITY.md",
+    "extensions/"
   ],
   "pi": {
     "extensions": [
-      "./src/index.ts"
+      "./extensions/voice-stt/index.ts"
     ],
     "image": "https://raw.githubusercontent.com/cgarrot/pi-voice-stt/main/assets/preview.gif"
   },

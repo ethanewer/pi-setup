@@ -6,7 +6,7 @@ import {
   pauseStrandedWorkflowRuntime,
   WORKFLOW_EXTENSION_VERSION,
   type WorkflowReloadRuntime,
-} from "../src/extension-reload.js";
+} from "../../src/extension-reload.js";
 import {
   createEffortState,
   createWebTools,
@@ -25,7 +25,7 @@ import {
   saveWorkflowSettingsForCwd,
   UsageLimitScheduler,
   WorkflowManager,
-} from "../src/index.js";
+} from "../../src/index.js";
 
 /** Where the web tools may fetch, from settings (see WebFetchPolicy). */
 function webFetchPolicy(settings: {

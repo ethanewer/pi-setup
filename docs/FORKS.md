@@ -188,6 +188,28 @@ original commit history. It adds a watcher cap, kill-all, aggregated heartbeats,
 session shutdown with no persistence or restore. Not re-vendorable with
 `bin/pi-setup-vendor`; maintained directly.
 
+## Startup labels
+
+Pi labels an extension by the directory holding its index file, falling back to the bare
+filename when the entry is not an `index.*` (`modes/interactive/interactive-mode.js:891`).
+Upstream `pi-voice-stt` points at `src/index.ts` and upstream dynamic-workflows at
+`extensions/workflow.ts`, so the startup listing read `src` and `workflow.ts`. Both forks
+now use the `extensions/<name>/index.ts` convention the other three already followed, so
+the listing identifies every extension by name:
+
+```text
+[Extensions]
+  agent-browser, continue, monitor, voice-stt, workflow
+```
+
+For voice-stt that entry is a one-line re-export; `src/` is still the implementation. For
+dynamic-workflows the entry file moved into its own directory and its two relative imports
+were repointed. Nothing else changed.
+
+A stray upstream package is still distinguishable at a glance: Pi prefixes `npm:` and
+`git:` sources with the package spec (`pi-voice-stt@0.4.0:src`) and leaves `local/`
+sources bare, so anything showing a version prefix is not one of these forks.
+
 ## Now needs an opt-in
 
 Every capability below still works — it just requires a deliberate setting, because it was

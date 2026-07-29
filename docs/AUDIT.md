@@ -30,8 +30,8 @@ Two facts that make several findings below much sharper than they first look:
 
 ## @quintinshaw/pi-dynamic-workflows 3.4.1
 
-Note on line references: `extensions/workflow.ts` imports `../src/*.js`, so `src/` is
-the tree Pi actually loads. `dist/` is a compiled mirror reachable only through the
+Note on line references: the extension entry point imports `../../src/*.js`, so `src/`
+is the tree Pi actually loads. `dist/` is a compiled mirror reachable only through the
 package `exports` field. Findings were located in `dist/` and fixed in `src/`.
 
 ### CRITICAL — zero-click remote code execution from a cloned repository
@@ -97,7 +97,7 @@ with no trust gate (`agent-registry.js:113,124`); plus an unhandled rejection
 unbounded auto-resume retry (`usage-limit-scheduler.js:299-306`), an unbounded in-flight
 drain (`workflow.js:886-897`), `git` argument injection in `/code-review`
 (`builtin-commands.js:172-181`), tools force-reactivated every session
-(`extensions/workflow.ts:125-128`), destructive rewriting of submitted user input
+(extension entry point), destructive rewriting of submitted user input
 (`workflow-editor.js:252-291`), and a pid-only lease check (`run-persistence.js:49-61`).
 
 ## pi-agent-browser-native 0.2.71

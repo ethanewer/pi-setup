@@ -297,9 +297,22 @@ diff -ruN --exclude=node_modules a/docs/macos-bridge.md b/docs/macos-bridge.md
 +
 +Then remove the `<vps>-voice-tunnel` block from `~/.ssh/config` if you no longer
 +need it, and drop `capture.type: "bridge"` from the config on the VPS.
+diff -ruN --exclude=node_modules a/extensions/voice-stt/index.ts b/extensions/voice-stt/index.ts
+--- a/extensions/voice-stt/index.ts	1969-12-31 18:00:00
++++ b/extensions/voice-stt/index.ts	2026-07-29 12:06:05
+@@ -0,0 +1,9 @@
++/**
++ * Extension entry point.
++ *
++ * The implementation lives in src/. This file exists so that the entry path ends in
++ * extensions/voice-stt/index.ts: Pi labels an extension by the directory holding its
++ * index file, so pointing pi.extensions straight at src/index.ts made this package
++ * appear as "src" in the startup listing.
++ */
++export { default } from "../../src/index.js";
 diff -ruN --exclude=node_modules a/package.json b/package.json
 --- a/package.json	1985-10-26 03:15:00
-+++ b/package.json	2026-07-28 23:50:52
++++ b/package.json	2026-07-29 12:06:12
 @@ -1,6 +1,7 @@
  {
    "name": "pi-voice-stt",
@@ -308,7 +321,7 @@ diff -ruN --exclude=node_modules a/package.json b/package.json
    "description": "Provider-agnostic speech-to-text dictation extension for the Pi TUI.",
    "license": "MIT",
    "type": "module",
-@@ -34,6 +35,7 @@
+@@ -34,14 +35,16 @@
      "src",
      "examples",
      "tools",
@@ -316,6 +329,17 @@ diff -ruN --exclude=node_modules a/package.json b/package.json
      "assets",
      "README.md",
      "LICENSE",
+-    "SECURITY.md"
++    "SECURITY.md",
++    "extensions/"
+   ],
+   "pi": {
+     "extensions": [
+-      "./src/index.ts"
++      "./extensions/voice-stt/index.ts"
+     ],
+     "image": "https://raw.githubusercontent.com/cgarrot/pi-voice-stt/main/assets/preview.gif"
+   },
 diff -ruN --exclude=node_modules a/src/audio/bridge-recorder.ts b/src/audio/bridge-recorder.ts
 --- a/src/audio/bridge-recorder.ts	1985-10-26 03:15:00
 +++ b/src/audio/bridge-recorder.ts	2026-07-28 19:03:43

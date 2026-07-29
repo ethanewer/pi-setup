@@ -4153,13 +4153,39 @@ diff -ruN --exclude=node_modules a/dist/worktree.js b/dist/worktree.js
      const branch = `pi/wf/${id}`;
      try {
          await exec("git", ["-C", repoRoot, "worktree", "add", "-b", branch, path, "HEAD"]);
-diff -ruN --exclude=node_modules a/extensions/workflow.ts b/extensions/workflow.ts
---- a/extensions/workflow.ts	1985-10-26 03:15:00
-+++ b/extensions/workflow.ts	2026-07-28 21:25:25
-@@ -27,6 +27,17 @@
-   WorkflowManager,
- } from "../src/index.js";
- 
+diff -ruN --exclude=node_modules a/extensions/workflow/index.ts b/extensions/workflow/index.ts
+--- a/extensions/workflow/index.ts	1969-12-31 18:00:00
++++ b/extensions/workflow/index.ts	2026-07-29 12:06:00
+@@ -0,0 +1,204 @@
++import { createCodingTools, type ExtensionAPI, type ExtensionContext } from "@earendil-works/pi-coding-agent";
++import {
++  claimWorkflowRuntime,
++  discardWorkflowRuntime,
++  handoffWorkflowRuntime,
++  pauseStrandedWorkflowRuntime,
++  WORKFLOW_EXTENSION_VERSION,
++  type WorkflowReloadRuntime,
++} from "../../src/extension-reload.js";
++import {
++  createEffortState,
++  createWebTools,
++  createWorkflowControlTool,
++  createWorkflowStorage,
++  createWorkflowTool,
++  installResultDelivery,
++  installTaskPanel,
++  installWorkflowKeywordArming,
++  loadWorkflowSettings,
++  registerAllSavedWorkflows,
++  registerBuiltinWorkflows,
++  registerEffortCommand,
++  registerWorkflowCommands,
++  registerWorkflowModelsCommand,
++  saveWorkflowSettingsForCwd,
++  UsageLimitScheduler,
++  WorkflowManager,
++} from "../../src/index.js";
++
 +/** Where the web tools may fetch, from settings (see WebFetchPolicy). */
 +function webFetchPolicy(settings: {
 +  webFetchAllowedHosts?: string[];
@@ -4171,42 +4197,42 @@ diff -ruN --exclude=node_modules a/extensions/workflow.ts b/extensions/workflow.
 +  };
 +}
 +
- export default function extension(pi: ExtensionAPI) {
-   // Single manager shared by the workflow tool and /workflows command. Pi loads
-   // a fresh extension factory for /reload, so explicitly claim the old live
-@@ -36,22 +47,54 @@
-   const cwd = process.cwd();
-   const storage = createWorkflowStorage(cwd);
-   const settings = loadWorkflowSettings({ cwd });
++export default function extension(pi: ExtensionAPI) {
++  // Single manager shared by the workflow tool and /workflows command. Pi loads
++  // a fresh extension factory for /reload, so explicitly claim the old live
++  // manager when session_shutdown staged one; otherwise in-flight promises,
++  // controls, event delivery, and live UI updates would stay on an unreachable
++  // manager even though their persisted snapshots remained visible on disk.
++  const cwd = process.cwd();
++  const storage = createWorkflowStorage(cwd);
++  const settings = loadWorkflowSettings({ cwd });
 +  // Set at session_start (the first point a UI exists) and used by the
 +  // foreign-run gate below, which can be reached long after registration.
 +  let sessionConfirm: ((title: string, message: string) => Promise<boolean>) | undefined;
-   const managerOptions = {
-     loadSavedWorkflow: (name: string) => storage.load(name)?.script,
-     // Named toolsets survive on the persisted run (the tag, not the functions),
-     // so a resumed run re-resolves the tools it started with — e.g. a paused
-     // /deep-research keeps web access instead of degrading to coding tools.
-     toolsets: {
--      "web-research": () => [...createCodingTools(cwd), ...createWebTools()],
++  const managerOptions = {
++    loadSavedWorkflow: (name: string) => storage.load(name)?.script,
++    // Named toolsets survive on the persisted run (the tag, not the functions),
++    // so a resumed run re-resolves the tools it started with — e.g. a paused
++    // /deep-research keeps web access instead of degrading to coding tools.
++    toolsets: {
 +      "web-research": () => [
 +        ...createCodingTools(cwd),
 +        // Re-read per execution so a settings change takes effect without a
 +        // restart; the web tools refuse local/private targets unless told not to.
 +        ...createWebTools(webFetchPolicy(loadWorkflowSettings({ cwd }))),
 +      ],
-     },
-     // On top of the always-on workflow/workflow_control denial in subagents
-     // (#107), let users block additional recursive-orchestration tools.
-     excludeSubagentTools: settings.excludeSubagentTools,
--    defaultAgentTimeoutMs: settings.defaultAgentTimeoutMs ?? null,
++    },
++    // On top of the always-on workflow/workflow_control denial in subagents
++    // (#107), let users block additional recursive-orchestration tools.
++    excludeSubagentTools: settings.excludeSubagentTools,
 +    // Left undefined when unset so the manager applies DEFAULT_AGENT_TIMEOUT_MS;
 +    // an explicit null in settings still means "no hard timeout".
 +    defaultAgentTimeoutMs: settings.defaultAgentTimeoutMs,
-     defaultTokenBudget: settings.defaultTokenBudget ?? null,
-     concurrency: settings.defaultConcurrency,
++    defaultTokenBudget: settings.defaultTokenBudget ?? null,
++    concurrency: settings.defaultConcurrency,
 +    defaultMaxAgents: settings.defaultMaxAgents,
-     defaultAgentRetries: settings.defaultAgentRetries,
-     persistAgentSessions: settings.persistAgentSessions,
++    defaultAgentRetries: settings.defaultAgentRetries,
++    persistAgentSessions: settings.persistAgentSessions,
 +    // Unset means "error" inside a repository: an agent that asked for worktree
 +    // isolation fails (only that agent) instead of quietly editing the shared
 +    // working tree next to its siblings. Outside a repository it degrades with a
@@ -4228,33 +4254,83 @@ diff -ruN --exclude=node_modules a/extensions/workflow.ts b/extensions/workflow.
 +          "It will run subagents with your tools and permissions. Only continue if you trust its source.",
 +      );
 +    },
-   };
-   const runtimeClaim = claimWorkflowRuntime(cwd);
-   const previousRuntime = runtimeClaim.compatible;
-@@ -105,8 +148,15 @@
-   // time. Installed once (guarded below) inside session_start alongside the
-   // other per-session installers.
-   let armingInstalled = false;
++  };
++  const runtimeClaim = claimWorkflowRuntime(cwd);
++  const previousRuntime = runtimeClaim.compatible;
++  const pausedForVersionChange = runtimeClaim.versionMismatch
++    ? pauseStrandedWorkflowRuntime(runtimeClaim.versionMismatch)
++    : 0;
++  const manager = previousRuntime?.manager ?? new WorkflowManager({ cwd, ...managerOptions });
++  if (previousRuntime) manager.reconfigureAfterReload(managerOptions);
++  // /effort is independent of the manager implementation and can safely
++  // survive an extension-version fallback to a fresh manager.
++  const effort = (previousRuntime ?? runtimeClaim.versionMismatch)?.effort ?? createEffortState();
++  const runtime: WorkflowReloadRuntime = {
++    cwd,
++    extensionVersion: WORKFLOW_EXTENSION_VERSION,
++    manager,
++    effort,
++  };
++  // Refresh the delivery holder immediately after claiming the manager. On a
++  // reload handoff its listener survives, but Pi invalidates the old ExtensionAPI
++  // before loading this generation.
++  installResultDelivery(pi, manager, { loadSettings: () => loadWorkflowSettings({ cwd }) });
++
++  const workflowTool = createWorkflowTool({ cwd, manager, storage });
++  const workflowControlTool = createWorkflowControlTool({ manager });
++  pi.registerTool(workflowTool);
++  pi.registerTool(workflowControlTool);
++  // Auto-resume runs that paused on a provider usage limit once the quota is
++  // likely refilled. Standalone: only consumes the manager's public surface, so
++  // it stays decoupled from manager/persistence internals. Its constructor also
++  // re-arms any run that was already paused-on-usage_limit before this process
++  // started (cold start), so restarting pi doesn't strand a paused run.
++  const usageLimitScheduler = new UsageLimitScheduler(manager);
++  pi.on("session_shutdown", (event?: { reason?: string }) => {
++    usageLimitScheduler.dispose();
++    if (event?.reason === "reload") {
++      handoffWorkflowRuntime(runtime);
++    } else {
++      discardWorkflowRuntime(cwd, runtime);
++    }
++  });
++  // Standing /effort opt-in (off|high|ultra): auto-arms a workflow for substantive
++  // messages, like CC's ultracode. Shared with the editor's input hook below and
++  // with the explicit /workflows run <prompt> manual trigger. It is part of the
++  // reload handoff so /reload does not silently turn the selected effort off.
++  registerWorkflowCommands(pi, manager, { storage, cwd, effort });
++  registerWorkflowModelsCommand(pi);
++  registerBuiltinWorkflows(pi, { cwd, manager, storage });
++  registerAllSavedWorkflows(pi, cwd, storage, manager);
++  registerEffortCommand(pi, effort);
++  // "Workflows mode": type `workflow(s)` to arm a forced workflow at submit
++  // time. Installed once (guarded below) inside session_start alongside the
++  // other per-session installers.
++  let armingInstalled = false;
 +  // Registration of the workflow tools into the active set happens on the FIRST
 +  // session_start only. Re-adding them on every session would override a user
 +  // who deactivated them on purpose (their absence at a later session_start is
 +  // the only signal of that choice the host gives us). /workflows run still
 +  // reactivates on demand, and says so.
 +  let workflowToolsRegistered = false;
- 
-   pi.on("session_start", (_event: unknown, ctx: ExtensionContext) => {
++
++  pi.on("session_start", (_event: unknown, ctx: ExtensionContext) => {
 +    sessionConfirm = (title, message) => ctx.ui.confirm(title, message);
-     if (pausedForVersionChange > 0) {
-       ctx.ui.notify(
-         `Workflow extension updated during /reload; paused ${pausedForVersionChange} active workflow(s) for safe resume.`,
-@@ -122,10 +172,13 @@
-     // manager's registry lazily, so tool-registry refreshes from here on
-     // advertise the shared registry's models.
-     manager.setModelRegistry(ctx.modelRegistry);
--    const active = pi.getActiveTools();
--    const workflowTools = [workflowTool.name, workflowControlTool.name];
--    const missing = workflowTools.filter((name) => !active.includes(name));
--    if (missing.length) pi.setActiveTools([...active, ...missing]);
++    if (pausedForVersionChange > 0) {
++      ctx.ui.notify(
++        `Workflow extension updated during /reload; paused ${pausedForVersionChange} active workflow(s) for safe resume.`,
++        "warning",
++      );
++    }
++    // Tell the manager the session's main model so "explore" agents auto-tier
++    // down to a lighter same-family sibling (e.g. Claude → Haiku).
++    manager.setMainModel(ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : undefined);
++    // Share the host session's model registry so tier/phase routing resolves
++    // extension-registered providers (e.g. ollama-cloud) consistently. Set it
++    // before activating the tool: the tool's promptGuidelines read the
++    // manager's registry lazily, so tool-registry refreshes from here on
++    // advertise the shared registry's models.
++    manager.setModelRegistry(ctx.modelRegistry);
 +    if (!workflowToolsRegistered) {
 +      const active = pi.getActiveTools();
 +      const workflowTools = [workflowTool.name, workflowControlTool.name];
@@ -4262,12 +4338,187 @@ diff -ruN --exclude=node_modules a/extensions/workflow.ts b/extensions/workflow.
 +      if (missing.length) pi.setActiveTools([...active, ...missing]);
 +      workflowToolsRegistered = true;
 +    }
-     // Scope the /workflows history to this session: runs persist on disk across
-     // sessions, but the navigator/task panel show only the current session's runs.
-     // Switching back to a previous session re-shows that session's runs.
++    // Scope the /workflows history to this session: runs persist on disk across
++    // sessions, but the navigator/task panel show only the current session's runs.
++    // Switching back to a previous session re-shows that session's runs.
++    try {
++      manager.setSessionId(ctx.sessionManager?.getSessionId());
++    } catch {
++      // sessionManager may be unavailable in some contexts — fall back to global history.
++    }
++    // Live "workflows running" panel below the input (focus + enter to open).
++    // Pass a live settings loader so /workflows-progress (compact|detailed) takes
++    // effect without a restart.
++    installTaskPanel(pi, manager, ctx.ui, { storage, cwd, loadSettings: () => loadWorkflowSettings({ cwd }) });
++    if (!armingInstalled) {
++      installWorkflowKeywordArming(pi, effort, {
++        settingsStore: {
++          load: () => loadWorkflowSettings({ cwd }),
++          save: (nextSettings) => saveWorkflowSettingsForCwd(nextSettings, cwd),
++        },
++      });
++      armingInstalled = true;
++    }
++  });
++}
+diff -ruN --exclude=node_modules a/extensions/workflow.ts b/extensions/workflow.ts
+--- a/extensions/workflow.ts	1985-10-26 03:15:00
++++ b/extensions/workflow.ts	1969-12-31 18:00:00
+@@ -1,151 +0,0 @@
+-import { createCodingTools, type ExtensionAPI, type ExtensionContext } from "@earendil-works/pi-coding-agent";
+-import {
+-  claimWorkflowRuntime,
+-  discardWorkflowRuntime,
+-  handoffWorkflowRuntime,
+-  pauseStrandedWorkflowRuntime,
+-  WORKFLOW_EXTENSION_VERSION,
+-  type WorkflowReloadRuntime,
+-} from "../src/extension-reload.js";
+-import {
+-  createEffortState,
+-  createWebTools,
+-  createWorkflowControlTool,
+-  createWorkflowStorage,
+-  createWorkflowTool,
+-  installResultDelivery,
+-  installTaskPanel,
+-  installWorkflowKeywordArming,
+-  loadWorkflowSettings,
+-  registerAllSavedWorkflows,
+-  registerBuiltinWorkflows,
+-  registerEffortCommand,
+-  registerWorkflowCommands,
+-  registerWorkflowModelsCommand,
+-  saveWorkflowSettingsForCwd,
+-  UsageLimitScheduler,
+-  WorkflowManager,
+-} from "../src/index.js";
+-
+-export default function extension(pi: ExtensionAPI) {
+-  // Single manager shared by the workflow tool and /workflows command. Pi loads
+-  // a fresh extension factory for /reload, so explicitly claim the old live
+-  // manager when session_shutdown staged one; otherwise in-flight promises,
+-  // controls, event delivery, and live UI updates would stay on an unreachable
+-  // manager even though their persisted snapshots remained visible on disk.
+-  const cwd = process.cwd();
+-  const storage = createWorkflowStorage(cwd);
+-  const settings = loadWorkflowSettings({ cwd });
+-  const managerOptions = {
+-    loadSavedWorkflow: (name: string) => storage.load(name)?.script,
+-    // Named toolsets survive on the persisted run (the tag, not the functions),
+-    // so a resumed run re-resolves the tools it started with — e.g. a paused
+-    // /deep-research keeps web access instead of degrading to coding tools.
+-    toolsets: {
+-      "web-research": () => [...createCodingTools(cwd), ...createWebTools()],
+-    },
+-    // On top of the always-on workflow/workflow_control denial in subagents
+-    // (#107), let users block additional recursive-orchestration tools.
+-    excludeSubagentTools: settings.excludeSubagentTools,
+-    defaultAgentTimeoutMs: settings.defaultAgentTimeoutMs ?? null,
+-    defaultTokenBudget: settings.defaultTokenBudget ?? null,
+-    concurrency: settings.defaultConcurrency,
+-    defaultAgentRetries: settings.defaultAgentRetries,
+-    persistAgentSessions: settings.persistAgentSessions,
+-  };
+-  const runtimeClaim = claimWorkflowRuntime(cwd);
+-  const previousRuntime = runtimeClaim.compatible;
+-  const pausedForVersionChange = runtimeClaim.versionMismatch
+-    ? pauseStrandedWorkflowRuntime(runtimeClaim.versionMismatch)
+-    : 0;
+-  const manager = previousRuntime?.manager ?? new WorkflowManager({ cwd, ...managerOptions });
+-  if (previousRuntime) manager.reconfigureAfterReload(managerOptions);
+-  // /effort is independent of the manager implementation and can safely
+-  // survive an extension-version fallback to a fresh manager.
+-  const effort = (previousRuntime ?? runtimeClaim.versionMismatch)?.effort ?? createEffortState();
+-  const runtime: WorkflowReloadRuntime = {
+-    cwd,
+-    extensionVersion: WORKFLOW_EXTENSION_VERSION,
+-    manager,
+-    effort,
+-  };
+-  // Refresh the delivery holder immediately after claiming the manager. On a
+-  // reload handoff its listener survives, but Pi invalidates the old ExtensionAPI
+-  // before loading this generation.
+-  installResultDelivery(pi, manager, { loadSettings: () => loadWorkflowSettings({ cwd }) });
+-
+-  const workflowTool = createWorkflowTool({ cwd, manager, storage });
+-  const workflowControlTool = createWorkflowControlTool({ manager });
+-  pi.registerTool(workflowTool);
+-  pi.registerTool(workflowControlTool);
+-  // Auto-resume runs that paused on a provider usage limit once the quota is
+-  // likely refilled. Standalone: only consumes the manager's public surface, so
+-  // it stays decoupled from manager/persistence internals. Its constructor also
+-  // re-arms any run that was already paused-on-usage_limit before this process
+-  // started (cold start), so restarting pi doesn't strand a paused run.
+-  const usageLimitScheduler = new UsageLimitScheduler(manager);
+-  pi.on("session_shutdown", (event?: { reason?: string }) => {
+-    usageLimitScheduler.dispose();
+-    if (event?.reason === "reload") {
+-      handoffWorkflowRuntime(runtime);
+-    } else {
+-      discardWorkflowRuntime(cwd, runtime);
+-    }
+-  });
+-  // Standing /effort opt-in (off|high|ultra): auto-arms a workflow for substantive
+-  // messages, like CC's ultracode. Shared with the editor's input hook below and
+-  // with the explicit /workflows run <prompt> manual trigger. It is part of the
+-  // reload handoff so /reload does not silently turn the selected effort off.
+-  registerWorkflowCommands(pi, manager, { storage, cwd, effort });
+-  registerWorkflowModelsCommand(pi);
+-  registerBuiltinWorkflows(pi, { cwd, manager, storage });
+-  registerAllSavedWorkflows(pi, cwd, storage, manager);
+-  registerEffortCommand(pi, effort);
+-  // "Workflows mode": type `workflow(s)` to arm a forced workflow at submit
+-  // time. Installed once (guarded below) inside session_start alongside the
+-  // other per-session installers.
+-  let armingInstalled = false;
+-
+-  pi.on("session_start", (_event: unknown, ctx: ExtensionContext) => {
+-    if (pausedForVersionChange > 0) {
+-      ctx.ui.notify(
+-        `Workflow extension updated during /reload; paused ${pausedForVersionChange} active workflow(s) for safe resume.`,
+-        "warning",
+-      );
+-    }
+-    // Tell the manager the session's main model so "explore" agents auto-tier
+-    // down to a lighter same-family sibling (e.g. Claude → Haiku).
+-    manager.setMainModel(ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : undefined);
+-    // Share the host session's model registry so tier/phase routing resolves
+-    // extension-registered providers (e.g. ollama-cloud) consistently. Set it
+-    // before activating the tool: the tool's promptGuidelines read the
+-    // manager's registry lazily, so tool-registry refreshes from here on
+-    // advertise the shared registry's models.
+-    manager.setModelRegistry(ctx.modelRegistry);
+-    const active = pi.getActiveTools();
+-    const workflowTools = [workflowTool.name, workflowControlTool.name];
+-    const missing = workflowTools.filter((name) => !active.includes(name));
+-    if (missing.length) pi.setActiveTools([...active, ...missing]);
+-    // Scope the /workflows history to this session: runs persist on disk across
+-    // sessions, but the navigator/task panel show only the current session's runs.
+-    // Switching back to a previous session re-shows that session's runs.
+-    try {
+-      manager.setSessionId(ctx.sessionManager?.getSessionId());
+-    } catch {
+-      // sessionManager may be unavailable in some contexts — fall back to global history.
+-    }
+-    // Live "workflows running" panel below the input (focus + enter to open).
+-    // Pass a live settings loader so /workflows-progress (compact|detailed) takes
+-    // effect without a restart.
+-    installTaskPanel(pi, manager, ctx.ui, { storage, cwd, loadSettings: () => loadWorkflowSettings({ cwd }) });
+-    if (!armingInstalled) {
+-      installWorkflowKeywordArming(pi, effort, {
+-        settingsStore: {
+-          load: () => loadWorkflowSettings({ cwd }),
+-          save: (nextSettings) => saveWorkflowSettingsForCwd(nextSettings, cwd),
+-        },
+-      });
+-      armingInstalled = true;
+-    }
+-  });
+-}
 diff -ruN --exclude=node_modules a/package.json b/package.json
 --- a/package.json	1985-10-26 03:15:00
-+++ b/package.json	2026-07-28 23:50:52
++++ b/package.json	2026-07-29 12:06:12
 @@ -1,6 +1,7 @@
  {
    "name": "@quintinshaw/pi-dynamic-workflows",
@@ -4276,6 +4527,15 @@ diff -ruN --exclude=node_modules a/package.json b/package.json
    "description": "Claude-Code-style dynamic workflows for Pi — fan a task out across 100s of subagents with real model routing, token/cost accounting, resume, git-worktree isolation, an interactive /workflows TUI, and a real /deep-research.",
    "type": "module",
    "main": "./dist/index.js",
+@@ -65,7 +66,7 @@
+   ],
+   "pi": {
+     "extensions": [
+-      "extensions/workflow.ts"
++      "extensions/workflow/index.ts"
+     ],
+     "skills": [
+       "skills/workflow-authoring",
 diff -ruN --exclude=node_modules a/skills/workflow-authoring/references/capabilities.md b/skills/workflow-authoring/references/capabilities.md
 --- a/skills/workflow-authoring/references/capabilities.md	1985-10-26 03:15:00
 +++ b/skills/workflow-authoring/references/capabilities.md	2026-07-28 19:12:01

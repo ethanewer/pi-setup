@@ -100,7 +100,7 @@ apply_patch_into() { # apply_patch_into <fork> <target-dir>
   patch_rel="$(meta "$fork" patch)"
   [[ -n "$patch_rel" ]] || die "$fork has no patch file"
   [[ -f "$REPO_DIR/$patch_rel" ]] || die "missing $patch_rel"
-  ( cd "$target" && patch -p1 --forward --no-backup-if-mismatch < "$REPO_DIR/$patch_rel" )
+  ( cd "$target" && patch -p1 --forward --remove-empty-files --no-backup-if-mismatch < "$REPO_DIR/$patch_rel" )
 }
 
 case "${1:-}" in
