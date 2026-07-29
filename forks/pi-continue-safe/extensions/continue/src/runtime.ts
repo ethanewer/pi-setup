@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { AssistantMessage } from "@earendil-works/pi-ai";
 import type { ExtensionCommandContext, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { CONTINUATION_PROMPT } from "./continuation-prompt.ts";
@@ -9,6 +10,7 @@ import {
 	recordBlockedContinuationEvent,
 	settleContinuationResume,
 } from "./continuation-event.ts";
+import { warnInputOnce } from "./input-warnings.ts";
 import type {
 	ContinuationEventSource,
 	ContinuationLatestEvent,
@@ -35,9 +37,30 @@ export { acceptContinuationCompactionProof, armDeferredResumeStartTimeout, clear
 export type ContinuationRequestMode = "steer" | "queue";
 export type ContinuationRequestSource = ContinuationEventSource;
 
+/** One-shot correlation record for a compaction this package asked Pi to run. */
+export interface ContinuationCompactionRequest {
+	eventId: string;
+	nonce: string;
+}
+
+/** A compaction request marker split from the operator instructions it travelled with. */
+export interface ContinuationCompactionInstructions {
+	nonce: string | undefined;
+	instructions: string | undefined;
+}
+
 export interface ContinuationRuntimeState extends ResumeProofRuntimeState {
 	latestLedger: ContinuationLedgerSnapshot | undefined;
 	lastNoCompactableGuardKey: string | undefined;
+	pendingCompactionRequest: ContinuationCompactionRequest | undefined;
+	chainedContinuationCount: number;
+	chainedSynthesisCostUsd: number;
+}
+
+/** Ceilings on automatic continuations chained without new operator input. */
+export interface ContinuationChainLimits {
+	maxChainedContinuations: number;
+	maxChainedSynthesisCostUsd: number;
 }
 
 export interface ContinuationRequest {
@@ -51,10 +74,11 @@ export interface StartContinuationCompactionOptions {
 	trigger: MidRunGuardTrigger | undefined;
 	abortActiveRun: boolean;
 	continueAfterComplete: boolean;
-	sendContinuation: (prompt: string) => void;
+	sendContinuation: (prompt: string) => void | Promise<void>;
 	onContinuationFailed?: (eventId: string) => void;
 	resumeStartTimeoutMs?: number;
 	compactionProofTimeoutMs?: number;
+	chainLimits?: ContinuationChainLimits;
 }
 
 export interface ContinuationResumeSettlement {
@@ -63,8 +87,13 @@ export interface ContinuationResumeSettlement {
 }
 
 const MODE_TOKENS = new Set<string>(["steer", "queue"]);
+// Pi reports no id on session_before_compact, so a package-requested compaction carries its own
+// one-shot marker through the custom instructions it was started with.
+const COMPACTION_REQUEST_MARKER = "pi-continue-compaction-request";
+const COMPACTION_REQUEST_MARKER_PATTERN = new RegExp(`^${COMPACTION_REQUEST_MARKER}:\\s*(\\S+)$`);
 const RESUME_START_TIMEOUT_MS = 30_000;
 const BLOCKED_RETRY_FAILURE = "Repeated over-limit retry was blocked after a failed continuation.";
+const QUEUED_MESSAGES_MOVED_WARNING = "pi-continue stopped the running turn; Pi moved any queued messages into the editor draft, so they were not sent.";
 const COMPACTION_FAILURE = "Continuation handoff failed.";
 const RESUME_ABORTED_FAILURE = "Continuation resume was aborted.";
 const RESUME_LIMIT_FAILURE = "Continuation resume stopped before completing because a model limit was reached.";
@@ -106,13 +135,53 @@ export function createContinuationRuntimeState(): ContinuationRuntimeState {
 		awaitingResumeStart: undefined,
 		resumeStartTimeout: undefined,
 		compactionProofTimeout: undefined,
+		resumeDispatchTimeout: undefined,
 		pendingResumeDispatch: undefined,
+		resumeStartTimeoutIsBackstop: false,
 		latestLedger: undefined,
 		lastNoCompactableGuardKey: undefined,
+		pendingCompactionRequest: undefined,
+		chainedContinuationCount: 0,
+		chainedSynthesisCostUsd: 0,
 		latestEvent: undefined,
 		activeEventId: undefined,
 		nextEventSequence: 0,
 	};
+}
+
+/** Tag the custom instructions of a compaction this package is about to request. */
+export function buildContinuationCompactionInstructions(instructions: string | undefined, nonce: string): string {
+	const marker = `${COMPACTION_REQUEST_MARKER}: ${nonce}`;
+	return mergeInstructions([instructions, marker]) ?? marker;
+}
+
+/** Split the package request marker from the operator instructions a compaction carries. */
+export function parseContinuationCompactionInstructions(customInstructions: string | undefined): ContinuationCompactionInstructions {
+	if (customInstructions === undefined) return { nonce: undefined, instructions: undefined };
+	let nonce: string | undefined;
+	const kept: string[] = [];
+	for (const line of customInstructions.split("\n")) {
+		const match = COMPACTION_REQUEST_MARKER_PATTERN.exec(line.trim());
+		if (match) {
+			nonce = match[1];
+			continue;
+		}
+		kept.push(line);
+	}
+	const instructions = kept.join("\n").trim();
+	return { nonce, instructions: instructions.length > 0 ? instructions : undefined };
+}
+
+/**
+ * Claim ownership of the compaction Pi is starting, consuming the one-shot request this
+ * package registered. A compaction that does not carry that request's marker is Pi's or the
+ * user's, so the request is left pending for the compaction it was registered for.
+ */
+export function claimContinuationCompactionRequest(runtime: ContinuationRuntimeState, requestNonce?: string): string | undefined {
+	const request = runtime.pendingCompactionRequest;
+	if (!request || requestNonce !== request.nonce) return undefined;
+	runtime.pendingCompactionRequest = undefined;
+	return isActiveRunningContinuationEvent(runtime, request.eventId) ? request.eventId : undefined;
 }
 
 /** Return the runtime-local latest event rendered by /continue status. */
@@ -153,6 +222,42 @@ function sourceLabel(source: ContinuationRequestSource): string {
 	if (source === "command-queue") return "queued /continue";
 	if (source === "command-steer") return "/continue steer";
 	return "automatic continuation";
+}
+
+// Pi's TUI empties the message queue into the editor draft when an extension aborts, so a
+// queued follow-up silently stops being sent and the user has to be told where it went.
+function abortActiveTurn(ctx: ExtensionContext): void {
+	const hadQueuedMessages = typeof ctx.hasPendingMessages === "function" ? ctx.hasPendingMessages() : undefined;
+	ctx.abort();
+	if (hadQueuedMessages === false) return;
+	if (hadQueuedMessages) {
+		notify(ctx, QUEUED_MESSAGES_MOVED_WARNING, "warning");
+		return;
+	}
+	warnInputOnce(ctx, "abort-restored-queue", QUEUED_MESSAGES_MOVED_WARNING);
+}
+
+function chainBudgetRefusal(runtime: ContinuationRuntimeState, limits: ContinuationChainLimits | undefined): string | undefined {
+	if (!limits) return undefined;
+	if (limits.maxChainedContinuations > 0 && runtime.chainedContinuationCount >= limits.maxChainedContinuations) {
+		return `${runtime.chainedContinuationCount} automatic continuations already ran without new input (maxChainedContinuations ${limits.maxChainedContinuations}).`;
+	}
+	if (limits.maxChainedSynthesisCostUsd > 0 && runtime.chainedSynthesisCostUsd >= limits.maxChainedSynthesisCostUsd) {
+		return `chained automatic continuations already spent $${runtime.chainedSynthesisCostUsd.toFixed(4)} on handoff synthesis (maxChainedSynthesisCostUsd ${limits.maxChainedSynthesisCostUsd}).`;
+	}
+	return undefined;
+}
+
+/** Add paid handoff synthesis to the automatic-continuation chain budget. */
+export function recordContinuationSynthesisSpend(runtime: ContinuationRuntimeState, costUsd: number | undefined): void {
+	if (costUsd === undefined || !Number.isFinite(costUsd) || costUsd <= 0) return;
+	runtime.chainedSynthesisCostUsd += costUsd;
+}
+
+/** Clear the automatic-continuation chain budget once new operator input arrives. */
+export function resetContinuationChainBudget(runtime: ContinuationRuntimeState): void {
+	runtime.chainedContinuationCount = 0;
+	runtime.chainedSynthesisCostUsd = 0;
 }
 
 function isAwaitingResumeEventCurrent(runtime: ContinuationRuntimeState): boolean {
@@ -203,7 +308,7 @@ export function startContinuationCompaction(
 ): boolean {
 	clearStaleAwaitingContinuationResume(runtime);
 	if (runtime.compactionRunning) {
-		if (options.abortActiveRun && options.source === "mid-run-guard") ctx.abort();
+		if (options.abortActiveRun && options.source === "mid-run-guard") abortActiveTurn(ctx);
 		notify(ctx, "A continuation handoff is already being saved.", "warning");
 		return false;
 	}
@@ -211,13 +316,13 @@ export function startContinuationCompaction(
 		finishRunningResumeForChainedContinuation(runtime);
 	}
 	if (hasActiveContinuationSettlement(runtime)) {
-		if (options.source === "mid-run-guard" && options.abortActiveRun) ctx.abort();
+		if (options.source === "mid-run-guard" && options.abortActiveRun) abortActiveTurn(ctx);
 		notify(ctx, "The previous continuation is still resuming; no new handoff was started.", "warning");
 		return false;
 	}
 	const guardKey = options.trigger ? buildGuardFailureKey(options.trigger) : undefined;
 	if (options.source === "mid-run-guard" && guardKey && runtime.guardFailureKey === guardKey) {
-		ctx.abort();
+		abortActiveTurn(ctx);
 		recordBlockedContinuationEvent(
 			runtime,
 			options.source,
@@ -227,6 +332,22 @@ export function startContinuationCompaction(
 		notify(ctx, "pi-continue paused before another over-limit model request. Review /continue status before retrying.", "error");
 		return false;
 	}
+	const chainRefusal = options.source === "mid-run-guard" ? chainBudgetRefusal(runtime, options.chainLimits) : undefined;
+	if (chainRefusal) {
+		abortActiveTurn(ctx);
+		recordBlockedContinuationEvent(
+			runtime,
+			options.source,
+			options.trigger,
+			`Automatic continuation stopped by the chain budget: ${chainRefusal}`,
+		);
+		notify(
+			ctx,
+			`pi-continue stopped automatic continuation: ${chainRefusal} Send a message or run /continue to resume, or raise the limit in /continue settings.`,
+			"error",
+		);
+		return false;
+	}
 	runtime.compactionRunning = true;
 	const event = beginContinuationEvent(
 		runtime,
@@ -234,15 +355,20 @@ export function startContinuationCompaction(
 		options.trigger,
 		options.continueAfterComplete ? "pending" : "not-requested",
 	);
+	if (options.source === "mid-run-guard") runtime.chainedContinuationCount += 1;
 	beginWorkingVisuals(ctx, runtime, event.id, "pi-continue saving handoff");
-	if (options.abortActiveRun) ctx.abort();
+	if (options.abortActiveRun) abortActiveTurn(ctx);
 	const label = sourceLabel(options.source);
 	const triggerText = options.trigger ? ` (${describeGuardTrigger(options.trigger)})` : "";
 	notify(ctx, `${label}: saving handoff${triggerText}.`, "info");
-	const customInstructions = mergeInstructions([
-		options.instructions,
-		options.trigger ? buildGuardInstructions(options.trigger) : undefined,
-	]);
+	const requestNonce = randomUUID();
+	const customInstructions = buildContinuationCompactionInstructions(
+		mergeInstructions([
+			options.instructions,
+			options.trigger ? buildGuardInstructions(options.trigger) : undefined,
+		]),
+		requestNonce,
+	);
 	let compactionCallbackSettled = false;
 	function claimCompactionCallback(): boolean {
 		if (compactionCallbackSettled) return false;
@@ -262,6 +388,7 @@ export function startContinuationCompaction(
 	}
 	function failCompaction(reason: string): void {
 		runtime.compactionRunning = false;
+		runtime.pendingCompactionRequest = undefined;
 		if (guardKey) runtime.guardFailureKey = guardKey;
 		options.onContinuationFailed?.(event.id);
 		finishContinuationEvent(runtime, event.id, "failed", reason);
@@ -271,6 +398,8 @@ export function startContinuationCompaction(
 		settleWorkingVisuals(ctx, runtime, event.id);
 		notify(ctx, `${label}: handoff failed: ${reason}`, "error");
 	}
+	// Registered as late as possible, immediately before the request it correlates with.
+	runtime.pendingCompactionRequest = { eventId: event.id, nonce: requestNonce };
 	try {
 		ctx.compact({
 			customInstructions,
@@ -388,10 +517,11 @@ export async function runContinuationCommand(
 	ctx: ExtensionCommandContext,
 	runtime: ContinuationRuntimeState,
 	args: string | undefined,
-	sendContinuation: (prompt: string) => void,
+	sendContinuation: (prompt: string) => void | Promise<void>,
 	onContinuationFailed?: (eventId: string) => void,
 ): Promise<void> {
 	const request = parseContinuationRequest(args);
+	resetContinuationChainBudget(runtime);
 	if (request.mode === "queue") {
 		notify(ctx, "Queued continuation for the next idle point.", "info");
 		await ctx.waitForIdle();

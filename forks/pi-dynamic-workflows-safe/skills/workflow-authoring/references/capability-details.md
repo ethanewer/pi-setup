@@ -28,7 +28,7 @@ Every exact fact below is projected from the installed extension's capability co
 - Constraint: resume replays only the longest unchanged prefix; the first miss and every later call execute live
 - Constraint: selector priority is explicit model > agentType model > tier > phase model > metadata model > implicit medium > session default
 - Constraint: if the selected model or route is unavailable, execution falls directly to the session default rather than trying lower-priority selectors
-- Constraint: worktree isolation is best-effort; failure logs that isolation was ignored and continues without an isolated working directory
+- Constraint: worktree isolation must succeed when requested; a failure fails that agent instead of silently running it in the shared working tree (opt in to the old fallback with isolationFallback / worktreeIsolationFallback)
 
 <a id="parallel"></a>
 ## parallel
@@ -252,8 +252,8 @@ Every exact fact below is projected from the installed extension's capability co
 
 - Classification: `workflow-tool-input`
 - Support: `supported`
-- Signature: `maxAgents?: number = 1000`
-- Constraint: default, not a hard product maximum
+- Signature: `maxAgents?: number = 100`
+- Constraint: configurable default; runtime clamps to a 1000 ceiling
 
 <a id="tool-input-concurrency"></a>
 ## concurrency
@@ -276,7 +276,7 @@ Every exact fact below is projected from the installed extension's capability co
 
 - Classification: `workflow-tool-input`
 - Support: `supported`
-- Signature: `agentTimeoutMs?: number = configured default or unbounded`
+- Signature: `agentTimeoutMs?: number = configured default, else 15m`
 
 <a id="tool-input-tokenbudget"></a>
 ## tokenBudget

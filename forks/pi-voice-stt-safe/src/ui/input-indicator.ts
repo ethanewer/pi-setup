@@ -164,8 +164,15 @@ class VoiceEditorWrapper implements EditorComponent {
     this.base.addToHistory?.(text);
   }
 
+  // Always effective: falls back to an append when the wrapped editor has no
+  // cursor-aware insertion, so a transcript can never be silently dropped.
   insertTextAtCursor(text: string): void {
-    this.base.insertTextAtCursor?.(text);
+    this.syncBase();
+    if (this.base.insertTextAtCursor) {
+      this.base.insertTextAtCursor(text);
+      return;
+    }
+    this.base.setText(`${this.base.getText()}${text}`);
   }
 
   getExpandedText(): string {
@@ -259,11 +266,13 @@ export const createInputIndicator = (keybind: string, strings: Strings) => {
 
 export const createVoiceEditorFactory = (
   previousFactory: ((tui: TUI, theme: EditorTheme, keybindings: KeybindingsManager) => EditorComponent) | undefined,
-  options: VoiceEditorOptions & { attachTui(tui: TUI): void },
+  options: VoiceEditorOptions & { attachTui(tui: TUI): void; attachEditor?(editor: EditorComponent): void },
 ) => {
   return (tui: TUI, theme: EditorTheme, keybindings: KeybindingsManager): EditorComponent => {
     options.attachTui(tui);
     const base = previousFactory?.(tui, theme, keybindings) ?? new CustomEditor(tui, theme, keybindings);
-    return new VoiceEditorWrapper(base, options);
+    const editor = new VoiceEditorWrapper(base, options);
+    options.attachEditor?.(editor);
+    return editor;
   };
 };

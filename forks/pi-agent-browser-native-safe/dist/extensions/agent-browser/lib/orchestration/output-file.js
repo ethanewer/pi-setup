@@ -1,6 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, resolve } from "node:path";
 import { isRecord } from "../parsing.js";
+import { getWritePathConfinementError } from "../write-path-policy.js";
 function normalizeRequestedOutputPath(path) {
     return path.startsWith("@") ? path.slice(1) : path;
 }
@@ -36,6 +37,9 @@ export async function applyAgentBrowserOutputPath(options) {
     const absolutePath = isAbsolute(requestedPath) ? requestedPath : resolve(options.cwd, requestedPath);
     const payload = getOutputPayload(options.result);
     try {
+        const confinementError = getWritePathConfinementError(requestedPath, options.cwd, "outputPath");
+        if (confinementError)
+            throw new Error(confinementError);
         const serialized = serializeOutputPayload(payload.value);
         await mkdir(dirname(absolutePath), { recursive: true });
         await writeFile(absolutePath, serialized, "utf8");

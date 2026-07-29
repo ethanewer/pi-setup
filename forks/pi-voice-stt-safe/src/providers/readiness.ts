@@ -1,5 +1,6 @@
 import { endpointRequiresAuth } from "../config/endpoint";
 import type { ProviderConfig } from "../config/types";
+import { isDeclaredKeyless } from "../secrets/resolve-api-key";
 
 const providerDisplayName = (type: ProviderConfig["type"]): string => {
   switch (type) {
@@ -20,8 +21,11 @@ const providerDisplayName = (type: ProviderConfig["type"]): string => {
 
 export const assertProviderReady = (config: ProviderConfig): void => {
   if (config.type === "openai-compatible") {
-    if (endpointRequiresAuth(config.endpoint) && !config.apiKey) {
-      throw new Error("Missing STT API key for non-local OpenAI-compatible endpoint. Set provider.apiKeyEnv, provider.apiKeyFile, or provider.apiKey.");
+    if (endpointRequiresAuth(config.endpoint) && !config.apiKey && !isDeclaredKeyless(config)) {
+      throw new Error(
+        "Missing STT API key for non-local OpenAI-compatible endpoint. Set provider.apiKeyEnv, provider.apiKeyFile, or provider.apiKey, " +
+          "or provider.apiKeyEnv \"\" for an endpoint that takes no key.",
+      );
     }
     return;
   }

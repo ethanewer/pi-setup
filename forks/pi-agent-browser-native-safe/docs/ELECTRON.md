@@ -155,7 +155,7 @@ Handoff selection (`handoff` field):
 
 Optional `timeoutMs` on `electron.launch` bounds host-side CDP readiness (waiting for `DevToolsActivePort` and attach). When omitted, the default is **15 seconds** with a hard maximum of **120 seconds**, matching `ELECTRON_LAUNCH_DEFAULT_TIMEOUT_MS` and `ELECTRON_LAUNCH_MAX_TIMEOUT_MS` in `extensions/agent-browser/lib/electron/launch.ts`.
 
-Wrapper-owned launches **always** use an isolated temp profile and an OS-chosen port. `--user-data-dir`, `--remote-debugging-port`, `--remote-debugging-address`, `--remote-debugging-pipe`, and bare `--` in `appArgs` are rejected. There is no caller-supplied port and no way to make `electron.launch` reuse the app's normal signed-in profile or attach to an already-running app — by design. Use the manual path described above when those are the actual requirements.
+Wrapper-owned launches **always** use an isolated temp profile and an OS-chosen port. `--user-data-dir`, `--remote-debugging-port`, `--remote-debugging-address`, `--remote-debugging-pipe`, and bare `--` in `appArgs` are rejected, as are code-execution and sandbox-disabling switches; other dashed switches must be in the known-safe list unless `PI_AGENT_BROWSER_ELECTRON_EXTRA_APP_ARGS=1` is set (see [`TOOL_CONTRACT.md`](TOOL_CONTRACT.md#electron)). There is no caller-supplied port and no way to make `electron.launch` reuse the app's normal signed-in profile or attach to an already-running app — by design. Use the manual path described above when those are the actual requirements.
 
 ### `electron.status` — liveness and targets
 
@@ -201,6 +201,8 @@ Closes the tracked managed session, stops only the wrapper-tracked process, veri
 For manual launches, close commands (`close`, `quit`, or `exit`) only close the browser/CDP session. Close the app yourself and clean its profile/temp files with normal host tools.
 
 On Pi `quit`, active wrapper-owned Electron launches are best-effort cleaned. On `/reload`, the current branch-visible active Electron launch and its isolated temp `userDataDir` are preserved for continuity while off-branch owned Electron launches are cleaned before process-local ownership is cleared. If cleanup is partial and skips or fails `user-data-dir` removal because the process or debug port is still live, the generic temp sweep preserves that profile path across reload, quit, repeated temp cleanup, process-exit cleanup, and stale temp-root pruning after restart rather than deleting it out from under the remaining host resource. If `electron.cleanup` closes the attached managed session but host process/profile cleanup is partial, later default browser calls still rotate away from that closed wrapper-managed session. Stale restored records (PID gone, port dead) are **reported** instead of guessed at or killed.
+
+Because `session_shutdown` and the process-exit hook cannot run when Pi itself is killed, every wrapper-owned launch also writes an adoption record (`.pi-agent-browser-electron-launch.json`) inside its isolated temp profile. On the next `session_start`, the wrapper reads those records from temp roots whose owner process is **provably gone** (same uid, dead owner PID with a non-matching process start identity counted as dead) and routes them through the same verified cleanup path: a PID is only signaled when its live command line still contains that wrapper-owned `--user-data-dir`, and a profile directory is only removed when it is a prefix-matched child of a wrapper-owned temp root. Launches still visible as active on the restored branch are left running, so the deliberate `/reload` preservation above is unchanged. Set `PI_AGENT_BROWSER_SKIP_ORPHAN_ELECTRON_ADOPTION=1` to skip the sweep entirely.
 
 ### `timeoutMs` by action (quick reference)
 
@@ -257,9 +259,9 @@ Remote debugging exposes app content (DOM, network, JavaScript) to the attached 
 
 - Launches with `--user-data-dir=<wrapper-created-temp>` and `--remote-debugging-port=0`.
 - Reads the OS-chosen port from `DevToolsActivePort`.
-- Adds `--disable-extensions`, `--no-first-run`, and `--no-default-browser-check` alongside sanitized caller `appArgs`.
-- Rejects `appArgs` that try to override lifecycle/debug flags.
-- Refuses to launch non-Electron targets (correctness gate, not a security gate).
+- Adds `--disable-extensions`, `--no-first-run`, and `--no-default-browser-check` alongside allowlist-checked caller `appArgs`.
+- Rejects `appArgs` that try to override lifecycle/debug flags, that run a caller-supplied command (`*-launcher`, `*-cmd-prefix`), or that disable sandboxing/web security (`--no-sandbox`, `--load-extension`, `--disable-web-security`, and related forms). Other dashed switches must be in the known-safe list unless the user sets `PI_AGENT_BROWSER_ELECTRON_EXTRA_APP_ARGS=1`; the rejected forms above stay rejected regardless.
+- Refuses to launch targets without binary-level Electron evidence (real Mach-O/ELF/PE image plus framework or pak/app payload) and resolves macOS launch targets only to an executable regular file inside `Contents/MacOS`.
 - Treats `electron.cleanup` as wrapper-owned only; never touches manually launched apps.
 
 ### What the **caller** owns

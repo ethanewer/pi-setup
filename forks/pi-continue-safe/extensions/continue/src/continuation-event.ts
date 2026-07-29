@@ -269,10 +269,13 @@ export function recordOutputWriteResult(
 ): void {
 	const event = latestMatching(store, eventId);
 	if (!event) return;
+	// A write that lands after the event settled still reports its own status, but it must not
+	// restate the terminal outcome of a continuation that already completed.
+	const failureOwnsEvent = event.status === "running" && status === "failed" && reason !== undefined;
 	replaceLatest(store, {
 		...event,
 		outputWrites: updateOutputTarget(event.outputWrites, target, status),
-		failureReason: status === "failed" && reason ? reason : event.failureReason,
+		failureReason: failureOwnsEvent ? reason : event.failureReason,
 	});
 }
 
@@ -417,7 +420,7 @@ export function failPendingOutputWritesForEvent(store: ContinuationEventStore, e
 	replaceLatest(store, {
 		...event,
 		outputWrites: failPendingOutputWrites(event.outputWrites),
-		failureReason: reason,
+		failureReason: event.status === "running" ? reason : event.failureReason,
 	});
 }
 

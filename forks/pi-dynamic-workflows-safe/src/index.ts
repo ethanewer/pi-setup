@@ -36,9 +36,11 @@ export {
   registerEffortCommand,
 } from "./effort-command.js";
 export {
+  adoptForeignWorkflowError,
   isAbortError,
   isTimeoutError,
   isWorkflowError,
+  WORKFLOW_ERROR_BRAND,
   WorkflowError,
   WorkflowErrorCode,
   wrapError,
@@ -67,8 +69,17 @@ export {
   sortedTierNames,
 } from "./model-tier-config.js";
 export type { PersistedRunState, RunPersistence, RunStatus } from "./run-persistence.js";
-export { createRunPersistence, generateRunId } from "./run-persistence.js";
 export {
+  createRunPersistence,
+  generateRunId,
+  isAutoResumeEligibleRun,
+  isInstallOwnedRun,
+  isSafeRunId,
+  runScriptOrigin,
+  validatePersistedRunState,
+} from "./run-persistence.js";
+export {
+  confirmRepoLocalWorkflow,
   parseCommandArgs,
   registerAllSavedWorkflows,
   registerSavedWorkflow,
@@ -76,7 +87,13 @@ export {
 export { SharedStore } from "./shared-store.js";
 export type { StructuredOutputCapture, StructuredOutputToolOptions } from "./structured-output.js";
 export { createStructuredOutputTool } from "./structured-output.js";
-export { deliverText, installResultDelivery, installTaskPanel, type TaskPanelOptions } from "./task-panel.js";
+export {
+  deliverText,
+  fenceUntrusted,
+  installResultDelivery,
+  installTaskPanel,
+  type TaskPanelOptions,
+} from "./task-panel.js";
 export type {
   AutoResumeDelayParams,
   SchedulableWorkflowManager,
@@ -84,7 +101,14 @@ export type {
   UsageLimitSchedulerOptions,
 } from "./usage-limit-scheduler.js";
 export { computeAutoResumeDelayMs, parseResetHintMs, UsageLimitScheduler } from "./usage-limit-scheduler.js";
-export { createWebFetchTool, createWebSearchTool, createWebTools } from "./web-tools.js";
+export type { WebFetchPolicy } from "./web-tools.js";
+export {
+  assertUrlAllowed,
+  createWebFetchTool,
+  createWebSearchTool,
+  createWebTools,
+  isPrivateAddress,
+} from "./web-tools.js";
 export type {
   AgentOptions,
   JournalEntry,
@@ -139,18 +163,20 @@ export {
   registerWorkflowTriggerCommand,
   type WorkflowModeState,
 } from "./workflow-editor.js";
-export type { ManagedRun, WorkflowManagerOptions } from "./workflow-manager.js";
+export type { ForeignRunConfirmation, ManagedRun, WorkflowManagerOptions } from "./workflow-manager.js";
 export { WorkflowManager } from "./workflow-manager.js";
 export type { WorkflowProjectPaths } from "./workflow-paths.js";
 export {
   WORKFLOW_HOME_RELATIVE_DIR,
+  WORKFLOW_INSTALL_ID_FILE,
   WORKFLOW_PROJECTS_SUBDIR,
   workflowHomeDir,
+  workflowInstallId,
   workflowProjectKey,
   workflowProjectPaths,
   workflowUserSavedDir,
 } from "./workflow-paths.js";
-export type { SavedWorkflow, WorkflowStorage } from "./workflow-saved.js";
+export type { SavedWorkflow, WorkflowStorage, WorkflowStorageOptions } from "./workflow-saved.js";
 export { assertSafeSavedWorkflowName, createWorkflowStorage, isSafeSavedWorkflowName } from "./workflow-saved.js";
 export type { WorkflowSettings, WorkflowSettingsOptions, WorkflowSettingsStore } from "./workflow-settings.js";
 export {
@@ -173,4 +199,4 @@ export {
 } from "./workflow-ui.js";
 export { registerWorkflowModelsCommand } from "./workflows-models-command.js";
 export type { Worktree } from "./worktree.js";
-export { createWorktree, removeWorktree } from "./worktree.js";
+export { createWorktree, removeWorktree, worktreeId } from "./worktree.js";

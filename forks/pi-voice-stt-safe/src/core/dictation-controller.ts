@@ -35,9 +35,11 @@ type StopRecordingOptions = {
   submitAfterAppend?: boolean;
 };
 
-const PROMPT_APPEND_FLUSH_DELAY_MS = 30;
+const MAX_DURATION_RETRY_MS = 1000;
 
-const waitForPromptAppendFlush = () => new Promise<void>((resolve) => setTimeout(resolve, PROMPT_APPEND_FLUSH_DELAY_MS));
+// Yield one event-loop turn so the append is applied before the submit reads
+// the prompt, instead of a fixed delay whose window swallows typed keystrokes.
+const waitForPromptAppendFlush = () => new Promise<void>((resolve) => setImmediate(resolve));
 
 export const createDictationController = (options: DictationControllerOptions) => {
   let recording: RecordingHandle | undefined;
@@ -46,6 +48,8 @@ export const createDictationController = (options: DictationControllerOptions) =
   let activeOperation: Promise<void> | undefined;
   let transcriptionController: AbortController | undefined;
   let processing = false;
+  let starting = false;
+  let startCancelled = false;
   let cancelRequested = false;
   let mode: DictationMode = "idle";
   let disposed = false;
@@ -116,9 +120,15 @@ export const createDictationController = (options: DictationControllerOptions) =
         if (cancelRequested || disposed) return;
       }
 
-      await appendPrompt(ctx, formatTranscriptForPrompt(text, config.output));
-      if (voice.command === "newline") await appendPrompt(ctx, "\n");
       const shouldSubmit = stopOptions.submitAfterAppend || voice.command === "send";
+      const formatted = formatTranscriptForPrompt(text, config.output);
+      if (!formatted && !shouldSubmit) {
+        notify(ctx, { title: "Pi Voice STT", message: options.strings.toast.emptyTranscript, variant: "warning" });
+        return;
+      }
+
+      await appendPrompt(ctx, formatted);
+      if (voice.command === "newline") await appendPrompt(ctx, "\n");
       if (shouldSubmit) {
         await waitForPromptAppendFlush();
         await submitPrompt(ctx);
@@ -173,14 +183,43 @@ export const createDictationController = (options: DictationControllerOptions) =
     }
   };
 
+  const armMaxDuration = (handle: RecordingHandle, delayMs: number) => {
+    handle.timeout = setTimeout(() => {
+      if (recording !== handle || disposed) return;
+      const timeoutContext = lastContext;
+      // Capture itself already stopped at capture.maxSeconds (ffmpeg -t, or the
+      // bridge daemon), so retry instead of dropping the transcribe trigger
+      // when the session is momentarily busy.
+      if (processing || !timeoutContext) {
+        armMaxDuration(handle, MAX_DURATION_RETRY_MS);
+        return;
+      }
+      void stopRecording(timeoutContext).catch((error) => options.onError(timeoutContext, error));
+    }, delayMs);
+  };
+
   const cancelActiveRecording = async (active: RecordingHandle) => {
     if (active.timeout) clearTimeout(active.timeout);
     await active.dispose();
   };
 
+  const releaseRecording = async (active: RecordingHandle) => {
+    if (active.timeout) clearTimeout(active.timeout);
+    await active.dispose().catch(() => {});
+  };
+
   const cancel = async (ctx?: ExtensionContext) => {
     rememberContext(ctx);
     if (disposed) return;
+
+    // Esc while start() is still awaiting: there is nothing to abort yet, so
+    // mark the pending recorder for release. Latching cancelRequested here
+    // would instead discard the *next* recording's transcript.
+    if (starting) {
+      startCancelled = true;
+      notify(ctx, { title: "Pi Voice STT", message: options.strings.toast.recordingCancelled, variant: "info" });
+      return;
+    }
 
     if (recording && !processing) {
       cancelRequested = true;
@@ -212,19 +251,26 @@ export const createDictationController = (options: DictationControllerOptions) =
   const startRecording = async (ctx: ExtensionContext) => {
     if (disposed) return;
     processing = true;
+    starting = true;
+    startCancelled = false;
+    let started: RecordingHandle | undefined;
     try {
       const config = await options.loadConfig();
       if (disposed) return;
       assertProviderReady(config.provider);
       const recorder = options.createRecorder(config);
-      recording = await recorder.start();
+      started = await recorder.start();
+      // start() can take seconds (permission prompt, bridge HTTP), so the
+      // session may already be gone or the user may have cancelled: never
+      // leave an unowned live microphone.
+      if (disposed || startCancelled) {
+        await releaseRecording(started);
+        setMode("idle", ctx);
+        return;
+      }
+      recording = started;
       recordingConfig = config;
-      recording.timeout = setTimeout(() => {
-        if (!recording || processing || disposed) return;
-        const timeoutContext = lastContext;
-        if (!timeoutContext) return;
-        void stopRecording(timeoutContext).catch((error) => options.onError(timeoutContext, error));
-      }, config.capture.maxSeconds * 1000);
+      armMaxDuration(started, config.capture.maxSeconds * 1000);
       setMode("recording", ctx);
       notify(ctx, {
         title: "Pi Voice STT",
@@ -232,8 +278,19 @@ export const createDictationController = (options: DictationControllerOptions) =
         variant: "info",
         duration: 5000,
       });
+    } catch (error) {
+      if (started) {
+        if (recording === started) {
+          recording = undefined;
+          recordingConfig = undefined;
+        }
+        await releaseRecording(started);
+        setMode("idle", ctx);
+      }
+      throw error;
     } finally {
       processing = false;
+      starting = false;
     }
   };
 
@@ -250,18 +307,16 @@ export const createDictationController = (options: DictationControllerOptions) =
     disposed = true;
     transcriptionController?.abort();
     const operation = activeOperation;
-    if (!recording) {
-      const active = activeRecordingHandle;
-      if (active) await active.dispose().catch(() => {});
-      await operation?.catch(() => {});
-      setMode("idle", lastContext);
-      return;
+    // Loop: a recorder whose start() was already in flight can still be
+    // handed over while we await, and it must not outlive the session.
+    while (recording) {
+      const active = recording;
+      recording = undefined;
+      recordingConfig = undefined;
+      await releaseRecording(active);
     }
-    const active = recording;
-    recording = undefined;
-    recordingConfig = undefined;
-    if (active.timeout) clearTimeout(active.timeout);
-    await active.dispose();
+    const active = activeRecordingHandle;
+    if (active) await active.dispose().catch(() => {});
     await operation?.catch(() => {});
     setMode("idle", lastContext);
   };

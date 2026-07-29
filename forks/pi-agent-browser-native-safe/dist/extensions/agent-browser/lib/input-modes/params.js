@@ -14,7 +14,7 @@ function electronLaunchVariant(Type, StringEnum, targetField) {
     return Type.Object({
         action: StringEnum(["launch"], { description: "Launch an Electron app with an isolated wrapper-owned profile." }),
         ...targetField,
-        appArgs: Type.Optional(Type.Array(Type.String({ description: "Argument passed to the Electron application.", minLength: 1 }), { description: "Optional Electron app argv. Wrapper-owned lifecycle/debug flags are rejected." })),
+        appArgs: Type.Optional(Type.Array(Type.String({ description: "Argument passed to the Electron application.", minLength: 1 }), { description: "Optional Electron app argv. Wrapper-owned lifecycle/debug flags, launcher/command-prefix switches, and sandbox/web-security switches are rejected; other dashed switches must be known-safe Chromium/Electron switches." })),
         handoff: Type.Optional(StringEnum(AGENT_BROWSER_ELECTRON_HANDOFFS, { description: "Post-launch handoff depth. Defaults to snapshot." })),
         targetType: Type.Optional(StringEnum(AGENT_BROWSER_ELECTRON_TARGET_TYPES, { description: "Preferred CDP target type. Defaults to page." })),
         timeoutMs: Type.Optional(Type.Integer({ description: "Bounded launch timeout in milliseconds.", minimum: 1 })),

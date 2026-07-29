@@ -13,7 +13,7 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { findBuiltinWorkflow } from "./builtin-workflows.js";
 import { MAX_DIFF_CHARS } from "./code-review.js";
-import { parseCommandArgs } from "./saved-commands.js";
+import { confirmRepoLocalWorkflow, parseCommandArgs } from "./saved-commands.js";
 import { createWorkflowStorage } from "./workflow-saved.js";
 const execFileAsync = promisify(execFile);
 /**
@@ -102,10 +102,18 @@ export function registerBuiltinWorkflows(pi, opts) {
      * context) so a shadowed command behaves identically to how it would if the
      * saved workflow itself had been registered under this name.
      */
-    function runSavedShadowIfPresent(name, rawArgs, ctx) {
-        const saved = storage.load(name);
+    async function runSavedShadowIfPresent(name, rawArgs, ctx) {
+        // load() resolves a project-local file only for a trusted project, so look
+        // through the listing too: a repo-supplied `.pi/workflows/saved/<name>.json`
+        // must not take over a built-in command silently. It may still take over —
+        // that is the documented precedence — but only after a prompt naming the
+        // file, and declining falls through to the built-in rather than failing.
+        const saved = storage.load(name) ?? storage.list().find((candidate) => candidate.name === name);
         if (!saved)
             return false;
+        if (!(await confirmRepoLocalWorkflow(ctx, saved, cwd, `Run the project's own /${name} instead of the built-in?`))) {
+            return false;
+        }
         startBackground(manager, ctx, name, saved.script, parseCommandArgs(rawArgs, saved.parameters));
         return true;
     }
@@ -113,7 +121,7 @@ export function registerBuiltinWorkflows(pi, opts) {
         pi.registerCommand("deep-research", {
             description: "Research a question across the web with cross-checked sources",
             async handler(args, ctx) {
-                if (runSavedShadowIfPresent("deep-research", args, ctx))
+                if (await runSavedShadowIfPresent("deep-research", args, ctx))
                     return;
                 const question = args.trim();
                 if (!question)
@@ -135,7 +143,7 @@ export function registerBuiltinWorkflows(pi, opts) {
         pi.registerCommand("adversarial-review", {
             description: "Investigate a task, then cross-check each finding with skeptical reviewers",
             async handler(args, ctx) {
-                if (runSavedShadowIfPresent("adversarial-review", args, ctx))
+                if (await runSavedShadowIfPresent("adversarial-review", args, ctx))
                     return;
                 const task = args.trim();
                 if (!task)
@@ -151,11 +159,18 @@ export function registerBuiltinWorkflows(pi, opts) {
         pi.registerCommand("code-review", {
             description: "Multi-angle parallel code review: 7 specialized finders (correctness, reuse, simplification, efficiency, altitude) + verify pass → ranked findings",
             async handler(args, ctx) {
-                if (runSavedShadowIfPresent("code-review", args, ctx))
+                if (await runSavedShadowIfPresent("code-review", args, ctx))
                     return;
                 const input = args.trim();
                 let diffSource = "git diff HEAD";
                 let diff = "";
+                // execFile keeps a shell out of it, but the input still lands in git's
+                // OWN argument list: an option-shaped value reaches flags that write
+                // files (--output=…) or run a configured external diff command
+                // (--ext-diff), which is not what a revision/path argument may do.
+                if (input.startsWith("-")) {
+                    return ctx.ui.notify(`/code-review: "${input}" looks like a command-line option. Pass a PR number, a revision range (a..b), or a path.`, "warning");
+                }
                 try {
                     let cmd;
                     let cmdArgs;
@@ -170,9 +185,11 @@ export function registerBuiltinWorkflows(pi, opts) {
                         cmdArgs = ["pr", "diff", input];
                     }
                     else if (input.includes("..")) {
-                        diffSource = `git diff ${input}`;
+                        diffSource = `git diff ${input} --`;
                         cmd = "git";
-                        cmdArgs = ["diff", input];
+                        // Trailing "--": everything before it is a revision, and nothing
+                        // after it, so the range can't be re-read as an option or a path.
+                        cmdArgs = ["diff", input, "--"];
                     }
                     else {
                         diffSource = `git diff HEAD -- ${input}`;
@@ -216,7 +233,7 @@ export function registerBuiltinWorkflows(pi, opts) {
         pi.registerCommand("multi-perspective", {
             description: "Analyze a topic from several independent perspectives in parallel, then synthesize",
             async handler(args, ctx) {
-                if (runSavedShadowIfPresent("multi-perspective", args, ctx))
+                if (await runSavedShadowIfPresent("multi-perspective", args, ctx))
                     return;
                 const [topic, ...rest] = tokenizeArgs(args);
                 if (!topic) {
@@ -235,7 +252,7 @@ export function registerBuiltinWorkflows(pi, opts) {
         pi.registerCommand("codebase-audit", {
             description: "Run parallel checks against a codebase scope, then cross-validate and report",
             async handler(args, ctx) {
-                if (runSavedShadowIfPresent("codebase-audit", args, ctx))
+                if (await runSavedShadowIfPresent("codebase-audit", args, ctx))
                     return;
                 const [scope, ...checks] = tokenizeArgs(args);
                 if (!scope || checks.length === 0) {

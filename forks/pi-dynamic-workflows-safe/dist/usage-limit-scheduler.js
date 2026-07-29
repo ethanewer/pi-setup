@@ -15,10 +15,13 @@
  * (in-memory, best-effort persisted) — it does not rely on manager.stop(), which
  * only operates on in-memory runs.
  */
+import { isAutoResumeEligibleRun, } from "./run-persistence.js";
+import { workflowInstallId } from "./workflow-paths.js";
 const DEFAULT_MAX_ATTEMPTS = 5;
 const DEFAULT_MIN_DELAY_MS = 60_000;
 const DEFAULT_FALLBACK_DELAY_MS = 300_000;
 const DEFAULT_MAX_DELAY_MS = 6 * 60 * 60 * 1000;
+const DEFAULT_MAX_BUSY_RETRIES = 10;
 /**
  * Best-effort parse of a provider's human reset hint ("Resets in ~3h",
  * "resets in 5m", "in 90s", "1h30m") into milliseconds. Sums every
@@ -75,8 +78,10 @@ export function computeAutoResumeDelayMs(params) {
  * usage_limit pause (live via the "paused" event, or once at cold start for a
  * run that was already paused), never when a resume is merely fired. When an
  * armed timer fires, resume() is called; if it returns false (lease busy, run
- * already gone, etc.) no attempt is consumed and a short un-backed-off retry is
- * armed instead, unless the run has reached a terminal state on disk. If resume()
+ * already gone, etc.) no attempt is consumed and a backed-off retry is armed
+ * instead — bounded by maxBusyRetries, so a run whose lease another live pi
+ * process holds is eventually left alone rather than retried for the life of
+ * this process — unless the run has reached a terminal state on disk. If resume()
  * returns true, this scheduler steps back — the existing "paused" subscription
  * re-arms with backoff if the run hits the wall again, and "complete"/"error"/
  * "stopped" clean up its timer.
@@ -87,10 +92,12 @@ export class UsageLimitScheduler {
     setTimer;
     clearTimer;
     maxAttempts;
+    maxBusyRetries;
     minDelayMs;
     fallbackDelayMs;
     maxDelayMs;
     diagnostic;
+    installId;
     state = new Map();
     disposed = false;
     /**
@@ -114,9 +121,11 @@ export class UsageLimitScheduler {
         this.setTimer = options.setTimer ?? ((fn, ms) => setTimeout(fn, ms));
         this.clearTimer = options.clearTimer ?? ((handle) => clearTimeout(handle));
         this.maxAttempts = options.maxAttempts ?? DEFAULT_MAX_ATTEMPTS;
+        this.maxBusyRetries = options.maxBusyRetries ?? DEFAULT_MAX_BUSY_RETRIES;
         this.minDelayMs = options.minDelayMs ?? DEFAULT_MIN_DELAY_MS;
         this.fallbackDelayMs = options.fallbackDelayMs ?? DEFAULT_FALLBACK_DELAY_MS;
         this.maxDelayMs = options.maxDelayMs ?? DEFAULT_MAX_DELAY_MS;
+        this.installId = options.installId ?? workflowInstallId();
         this.diagnostic =
             options.onDiagnostic ??
                 ((message, detail) => {
@@ -172,6 +181,11 @@ export class UsageLimitScheduler {
             this.diagnostic(`[usage-limit-scheduler] ${runId}: autoResume is disabled for this run, not arming`);
             return;
         }
+        if (!persisted || !isAutoResumeEligibleRun(persisted, this.installId)) {
+            this.diagnostic(`[usage-limit-scheduler] ${runId}: state at ${persisted?.sourcePath ?? "an unreadable path"} was not written ` +
+                `by this install; not arming — resume it explicitly to run it`);
+            return;
+        }
         const priorAttempts = this.state.get(runId)?.attempts ?? persisted?.autoResumeAttempts ?? 0;
         this.arm(runId, {
             attempts: priorAttempts + 1,
@@ -212,6 +226,15 @@ export class UsageLimitScheduler {
                 continue;
             if (this.state.has(run.runId))
                 continue;
+            // Cold start is the one path that arms a timer for a run nobody in this
+            // process ever started, from a run store that may have arrived with the
+            // checked-out project. Only this install's own runs qualify; the rest
+            // stay paused and visible in /workflows for an explicit resume.
+            if (!isAutoResumeEligibleRun(run, this.installId)) {
+                this.diagnostic(`[usage-limit-scheduler] ${run.runId}: paused run at ${run.sourcePath ?? "an unknown path"} was not ` +
+                    `written by this install; leaving it for an explicit resume`);
+                continue;
+            }
             const priorAttempts = run.autoResumeAttempts ?? 0;
             const updatedAtMs = Date.parse(run.updatedAt);
             const elapsedMs = Number.isFinite(updatedAtMs) ? Math.max(0, this.now() - updatedAtMs) : 0;
@@ -289,6 +312,9 @@ export class UsageLimitScheduler {
             // Don't consume/advance anything further here — the existing "paused"
             // subscription re-arms (with backoff) if this run hits the wall again,
             // and "complete"/"error"/"stopped" clean up on any terminal outcome.
+            const settled = this.state.get(runId);
+            if (settled)
+                this.state.set(runId, { ...settled, busyRetries: 0 });
             return;
         }
         // resume() returned false without throwing: it refused for a structural
@@ -302,8 +328,22 @@ export class UsageLimitScheduler {
             return;
         }
         const current = this.state.get(runId) ?? entry;
-        const timer = this.setTimer(() => this.safe(() => this.onTimerFire(runId)), this.minDelayMs);
-        this.state.set(runId, { attempts: current.attempts, timer });
+        const busyRetries = (current.busyRetries ?? 0) + 1;
+        if (busyRetries > this.maxBusyRetries) {
+            // Still structurally un-resumable after the ceiling — most plausibly the
+            // lease belongs to another live pi process that is running this very run,
+            // so retrying is pointless work. Leave it paused and visible; a manual
+            // resume (or the next "paused" event) starts a fresh cycle.
+            this.diagnostic(`[usage-limit-scheduler] ${runId}: resume() refused ${this.maxBusyRetries} time(s) in a row ` +
+                `(lease held elsewhere, or the run is not resumable from here); leaving it paused for manual resume`);
+            this.cleanup(runId);
+            return;
+        }
+        // Back the retries off from minDelayMs so reaching the ceiling takes hours,
+        // not minutes, while a briefly-held lease is still picked up quickly.
+        const delay = Math.min(this.maxDelayMs, this.minDelayMs * 2 ** Math.min(busyRetries - 1, 10));
+        const timer = this.setTimer(() => this.safe(() => this.onTimerFire(runId)), delay);
+        this.state.set(runId, { attempts: current.attempts, busyRetries, timer });
     }
     // ---- helpers --------------------------------------------------------------
     safeLoad(runId) {

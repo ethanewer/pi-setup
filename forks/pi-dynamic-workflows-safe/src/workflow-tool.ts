@@ -2,6 +2,7 @@ import { defineTool, type ToolDefinition } from "@earendil-works/pi-coding-agent
 import { Text } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 import { BUILTIN_WORKFLOW_NAMES, resolveWorkflowInvocation } from "./builtin-workflows.js";
+import { DEFAULT_AGENT_TIMEOUT_MS, DEFAULT_MAX_AGENTS_PER_RUN, MAX_AGENTS_PER_RUN } from "./config.js";
 import {
   createToolUpdateWorkflowDisplay,
   createWorkflowSnapshot,
@@ -76,7 +77,9 @@ const workflowToolSchema = Type.Object({
   maxAgents: Type.Optional(
     Type.Number({
       description:
-        "Maximum number of agents allowed in this run. Default: 1000; this is a safety ceiling, not a target. Set a lower limit for dynamic or exploratory fan-out, and reserve large fan-outs for explicit user intent.",
+        `Maximum number of agents allowed in this run. Default: ${DEFAULT_MAX_AGENTS_PER_RUN}, clamped to a hard ceiling of ` +
+        `${MAX_AGENTS_PER_RUN}; this is a safety ceiling, not a target. Set a lower limit for dynamic or exploratory fan-out, ` +
+        "and reserve large fan-outs for explicit user intent.",
     }),
   ),
   concurrency: Type.Optional(
@@ -94,7 +97,7 @@ const workflowToolSchema = Type.Object({
   agentTimeoutMs: Type.Optional(
     Type.Number({
       description:
-        "Timeout per agent in milliseconds. Omit to use configured `defaultAgentTimeoutMs`; without one, there is no hard timeout. Set only when the user asks to bound time.",
+        "Timeout per agent in milliseconds. Omit to use configured `defaultAgentTimeoutMs`; without one, a default per-agent timeout applies. Set only when the user asks to bound time.",
     }),
   ),
   tokenBudget: Type.Optional(
@@ -366,7 +369,9 @@ function resolveWorkflowToolDefaults(
     agentTimeoutMs:
       options.defaultAgentTimeoutMs !== undefined
         ? options.defaultAgentTimeoutMs
-        : (settings.defaultAgentTimeoutMs ?? null),
+        : settings.defaultAgentTimeoutMs !== undefined
+          ? settings.defaultAgentTimeoutMs
+          : DEFAULT_AGENT_TIMEOUT_MS,
     concurrency: options.defaultConcurrency ?? options.concurrency ?? settings.defaultConcurrency,
     agentRetries: options.defaultAgentRetries ?? settings.defaultAgentRetries ?? 0,
   };

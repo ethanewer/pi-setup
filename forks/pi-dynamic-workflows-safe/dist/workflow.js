@@ -1,11 +1,11 @@
 import { AsyncLocalStorage } from "node:async_hooks";
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import vm from "node:vm";
 import { parse } from "acorn";
 import { WorkflowAgent } from "./agent.js";
 import { agentDefinitionKey, loadAgentRegistry, resolveAgentType, } from "./agent-registry.js";
-import { DEFAULT_AGENT_TIMEOUT_MS, MAX_AGENT_RETRIES, MAX_AGENTS_PER_RUN, MAX_CONCURRENCY } from "./config.js";
-import { WorkflowError, WorkflowErrorCode, wrapError } from "./errors.js";
+import { DEFAULT_AGENT_TIMEOUT_MS, DEFAULT_DRAIN_TIMEOUT_MS, DEFAULT_MAX_AGENTS_PER_RUN, DEFAULT_SCRIPT_TIMEOUT_MS, DRAIN_GRACE_MS, MAX_AGENT_RETRIES, MAX_AGENTS_PER_RUN, MAX_CONCURRENCY, } from "./config.js";
+import { adoptForeignWorkflowError, isWorkflowError, WORKFLOW_ERROR_BRAND, WorkflowError, WorkflowErrorCode, wrapError, } from "./errors.js";
 import { createWorkflowLogger } from "./logger.js";
 import { parseModelRoutingFromMeta, resolveModelForPhase } from "./model-routing.js";
 import { createAgentStoreTools, SharedStore } from "./shared-store.js";
@@ -31,6 +31,27 @@ import { createWorktree, removeWorktree } from "./worktree.js";
  * the breaching fan-out's own queue is short-circuited.
  */
 const fanoutScope = new AsyncLocalStorage();
+/**
+ * Requested label per in-flight agent() promise, so the bounded drain can name
+ * the calls it gives up on. Module-scoped (not on SharedRuntime) so a nested
+ * workflow()'s calls — tracked in the same shared inFlight set — are named too,
+ * and weak so a settled call is not retained.
+ */
+const inFlightLabels = new WeakMap();
+/**
+ * Name for an in-flight agent() call, used only in the drain's give-up message.
+ * Total by construction: `prompt` and `agentOptions.label` are whatever the
+ * script passed (a non-string of either is a script bug, not a host one), and
+ * throwing while recording a label would abandon the agentImpl promise this
+ * label belongs to — untracked by the drain and with nothing attached to swallow
+ * its eventual rejection.
+ */
+function describeRequestedAgent(prompt, agentOptions) {
+    const label = agentOptions && typeof agentOptions.label === "string" ? agentOptions.label.trim() : "";
+    if (label)
+        return label;
+    return typeof prompt === "string" ? `${prompt.slice(0, 40)}…` : "unlabeled agent";
+}
 // Parse-time author hint (fast feedback). The real enforcement is DETERMINISM_PRELUDE.
 const DETERMINISM_BLOCKLIST = /\bDate\s*\.\s*now\b|\bMath\s*\.\s*random\b|\bnew\s+Date\s*\(\s*\)/;
 /**
@@ -41,10 +62,13 @@ const DETERMINISM_BLOCKLIST = /\bDate\s*\.\s*now\b|\bMath\s*\.\s*random\b|\bnew\
  *   - Date.now()           -> throws
  *   - Date() / new Date()  -> throws (no-arg); new Date(arg) still works
  * Using the vm realm's own Math/Date/Reflect (not host objects) means this adds
- * no host-`Function` escape. Note: vm is not a security sandbox — an injected
- * bridge function's `.constructor` is still the host Function, so a determined
- * script could bypass this. The guard is best-effort against ACCIDENTAL
- * nondeterminism from trusted (user / guided-LLM) scripts, not a security wall.
+ * no host-`Function` escape. Note: vm is not a security sandbox. The realm's
+ * globals are now realm-native throughout (see buildRealmBootstrap), so the
+ * short path out — a host function's `.constructor` — is closed, but a
+ * determined script can still reach the pre-neutering Date through
+ * `Date.prototype.constructor`, and the guard remains best-effort against
+ * ACCIDENTAL nondeterminism from trusted (user / guided-LLM) scripts rather
+ * than a security wall.
  */
 const DETERMINISM_PRELUDE = [
     '"use strict";',
@@ -64,12 +88,222 @@ const DETERMINISM_PRELUDE = [
     "  globalThis.Date = SafeDate;",
     "}",
 ].join("\n");
+/** Base name of the hidden global the realm bootstrap reads the host bridge from. */
+const REALM_BRIDGE_PREFIX = "__workflowHostBridge";
+/**
+ * Read one property of a host error without letting the read itself escape: a
+ * getter or Proxy trap on the failing object may throw, and anything thrown here
+ * would leave the bridge carrying a raw host value into the realm.
+ */
+function readHostProperty(source, key) {
+    try {
+        return source[key];
+    }
+    catch {
+        return undefined;
+    }
+}
+/** Stringify a host value, or give up and say so. Never throws, never returns non-primitive. */
+function stringifyHostValue(value, fallback) {
+    try {
+        const text = String(value);
+        return typeof text === "string" ? text : fallback;
+    }
+    catch {
+        return fallback;
+    }
+}
+/**
+ * Only the fields a workflow script is documented to read (`.code` on a budget
+ * or agent-limit failure) plus enough to render the message. Nothing else about
+ * a host error — `details`, which can hold arbitrary host objects, least of all
+ * — crosses into the realm.
+ *
+ * Total by construction: it is the only thing standing between a host failure
+ * and the realm, so a host object with a throwing `Symbol.toPrimitive`/`toString`
+ * (or a throwing property getter) must still come out as this flat record of
+ * primitives rather than propagating out of bridge.call — where it would land in
+ * the realm as a live host value, prototype chain and all.
+ */
+function describeHostError(error) {
+    let source = {};
+    if (error !== null && (typeof error === "object" || typeof error === "function")) {
+        source = error;
+    }
+    const message = readHostProperty(source, "message");
+    const name = readHostProperty(source, "name");
+    const code = readHostProperty(source, "code");
+    const recoverable = readHostProperty(source, "recoverable");
+    const agentLabel = readHostProperty(source, "agentLabel");
+    const resetHint = readHostProperty(source, "resetHint");
+    const shape = {
+        message: typeof message === "string" ? message : stringifyHostValue(error, "workflow runtime error"),
+        name: typeof name === "string" ? name : "Error",
+    };
+    if (typeof code === "string")
+        shape.code = code;
+    if (typeof recoverable === "boolean")
+        shape.recoverable = recoverable;
+    if (typeof agentLabel === "string")
+        shape.agentLabel = agentLabel;
+    if (typeof resetHint === "string")
+        shape.resetHint = resetHint;
+    // Carry the brand across so the classification survives the round trip (see
+    // adoptForeignWorkflowError): the realm rebuilds this as a realm-native Error,
+    // for which `instanceof WorkflowError` can never hold again.
+    // `instanceof` is itself a host operation on a host value: a Proxy whose
+    // getPrototypeOf trap throws would throw from HERE, out of bridge.call, and
+    // land the trap's raw host value in the realm — the exact leak this function
+    // exists to prevent. Unbrandable therefore means unbranded, never a throw.
+    try {
+        if (isWorkflowError(error))
+            shape[WORKFLOW_ERROR_BRAND] = true;
+    }
+    catch {
+        // Not identifiable as one of ours; treat it as a foreign error.
+    }
+    return shape;
+}
+/**
+ * Realm-side prologue that turns the host bridge into the documented globals.
+ *
+ * The bindings must NOT be installed as the host closures themselves: inside
+ * the realm a host function's `.constructor` is the host `Function`, which
+ * compiles code against the host's globals (process, module loading, the lot),
+ * so `log.constructor("return process")()` would be a complete escape. So the
+ * bridge is injected under an unguessable name, this prologue builds wrapper
+ * functions over it — realm functions, whose `.constructor` is the realm's own
+ * `Function` — and then deletes the bridge from the realm's global, leaving the
+ * host objects reachable only from this prologue's closures. Values crossing
+ * back inward are rebuilt with the realm's constructors for the same reason: a
+ * host plain object's `.constructor.constructor` is the host `Function` too.
+ *
+ * This shrinks the escape surface; it does not make the realm a security
+ * boundary (see DETERMINISM_PRELUDE). A workflow script still commands
+ * subagents that hold real tools.
+ */
+function buildRealmBootstrap(bridgeKey, shapes) {
+    return [
+        '"use strict";',
+        "(() => {",
+        `  const bridge = globalThis[${JSON.stringify(bridgeKey)}];`,
+        `  delete globalThis[${JSON.stringify(bridgeKey)}];`,
+        `  const shapes = JSON.parse(${JSON.stringify(shapes)});`,
+        "  const MAX_DEPTH = 64;",
+        "  const adopt = (value, seen, depth) => {",
+        "    if (value === null) return null;",
+        '    const type = typeof value;',
+        '    if (type !== "object" && type !== "function") return value;',
+        "    if (value instanceof Object) return value;",
+        '    if (type === "function") return undefined;',
+        "    if (depth >= MAX_DEPTH) return null;",
+        "    const known = seen.get(value);",
+        "    if (known !== undefined) return known;",
+        "    if (Array.isArray(value)) {",
+        "      const copy = [];",
+        "      seen.set(value, copy);",
+        "      for (let i = 0; i < value.length; i++) copy[i] = adopt(value[i], seen, depth + 1);",
+        "      return copy;",
+        "    }",
+        '    if (typeof value.message === "string" && typeof value.stack === "string") {',
+        "      const error = new Error(value.message);",
+        "      seen.set(value, error);",
+        "      for (const key of Object.keys(value)) error[key] = adopt(value[key], seen, depth + 1);",
+        "      return error;",
+        "    }",
+        '    if (typeof value.toISOString === "function" && typeof value.getTime === "function") {',
+        "      return String(value.toISOString());",
+        "    }",
+        "    const copy = {};",
+        "    seen.set(value, copy);",
+        "    for (const key of Object.keys(value)) copy[key] = adopt(value[key], seen, depth + 1);",
+        "    return copy;",
+        "  };",
+        "  const take = (value) => adopt(value, new Map(), 0);",
+        "  const toRealmError = (shape) => {",
+        "    const data = take(shape) || {};",
+        '    const error = new Error(typeof data.message === "string" ? data.message : "workflow runtime error");',
+        '    if (typeof data.name === "string") error.name = data.name;',
+        `    for (const key of ["code", "recoverable", "agentLabel", "resetHint", ${JSON.stringify(WORKFLOW_ERROR_BRAND)}]) {`,
+        "      if (data[key] !== undefined) error[key] = data[key];",
+        "    }",
+        "    return error;",
+        "  };",
+        "  const shield = (fn) =>",
+        "    function (...args) {",
+        "      const safe = [];",
+        "      for (let i = 0; i < args.length; i++) safe[i] = take(args[i]);",
+        "      return fn.apply(this, safe);",
+        "    };",
+        // Only a container that actually holds a callback is rebuilt; every other
+        // value is passed by reference so a script's own objects keep their identity
+        // across a round trip (pipeline() hands each stage the very item it was
+        // given).
+        "  const shieldArgs = (value, depth) => {",
+        '    if (typeof value === "function") return shield(value);',
+        '    if (depth >= 4 || value === null || typeof value !== "object") return value;',
+        "    const array = Array.isArray(value);",
+        "    if (!array) {",
+        "      const proto = Object.getPrototypeOf(value);",
+        "      if (proto !== Object.prototype && proto !== null) return value;",
+        "    }",
+        "    const copy = array ? [] : {};",
+        "    let changed = false;",
+        "    for (const key of Object.keys(value)) {",
+        "      const next = shieldArgs(value[key], depth + 1);",
+        "      copy[key] = next;",
+        "      if (next !== value[key]) changed = true;",
+        "    }",
+        "    return changed ? copy : value;",
+        "  };",
+        "  const settle = async (pending) => {",
+        "    const outcome = await pending;",
+        "    if (outcome.e !== undefined) throw toRealmError(outcome.e);",
+        "    return take(outcome.v);",
+        "  };",
+        "  const invoke = (path, args) => {",
+        "    const outcome = bridge.call(path, shieldArgs(args, 0));",
+        "    if (outcome.p !== undefined) {",
+        "      const settled = settle(outcome.p);",
+        "      settled.catch(() => {});",
+        "      return settled;",
+        "    }",
+        "    if (outcome.e !== undefined) throw toRealmError(outcome.e);",
+        "    return take(outcome.v);",
+        "  };",
+        "  const bind = (name, path) => {",
+        "    const wrapper = function (...args) {",
+        "      return invoke(path, args);",
+        "    };",
+        '    Object.defineProperty(wrapper, "name", { value: name, configurable: true });',
+        "    return wrapper;",
+        "  };",
+        "  for (const name of Object.keys(shapes)) {",
+        "    const shape = shapes[name];",
+        "    let value;",
+        '    if (shape.kind === "function") {',
+        "      value = bind(name, name);",
+        '    } else if (shape.kind === "namespace") {',
+        "      value = {};",
+        '      for (const key of shape.methods) value[key] = bind(key, name + "." + key);',
+        '      for (const key of shape.data) value[key] = take(bridge.read(name + "." + key));',
+        "      if (shape.frozen) Object.freeze(value);",
+        "    } else {",
+        "      value = take(bridge.read(name));",
+        "    }",
+        "    Object.defineProperty(globalThis, name, { value, writable: true, enumerable: true, configurable: true });",
+        "  }",
+        "})();",
+    ].join("\n");
+}
 export async function runWorkflow(script, options = {}) {
     const started = Date.now();
     const { meta, body } = parseWorkflowScript(script);
     // Per-phase model routing from meta.phases[].model, with meta.model as the default.
     const routingConfig = parseModelRoutingFromMeta(meta.phases, meta.model);
-    const maxAgents = options.maxAgents ?? MAX_AGENTS_PER_RUN;
+    // An explicit per-run cap is honored up to the hard ceiling; the default is
+    // deliberately far below it (see DEFAULT_MAX_AGENTS_PER_RUN).
+    const maxAgents = Math.min(MAX_AGENTS_PER_RUN, Math.max(1, options.maxAgents ?? DEFAULT_MAX_AGENTS_PER_RUN));
     const agentTimeoutMs = options.agentTimeoutMs !== undefined ? options.agentTimeoutMs : DEFAULT_AGENT_TIMEOUT_MS;
     const runId = options.runId ?? `run-${started.toString(36)}`;
     const baseCwd = options.cwd ?? process.cwd();
@@ -187,6 +421,11 @@ export async function runWorkflow(script, options = {}) {
         // with the returned promise) also means an un-awaited call's eventual
         // rejection never becomes a process-crashing unhandled rejection.
         call.catch(() => { }).finally(() => shared.inFlight.delete(call));
+        // The drain names whatever is still outstanding when it gives up; the real
+        // label is minted inside agentImpl (async), so record the requested one now.
+        // After the tracking above, and via a total helper: nothing about naming a
+        // call may leave it untracked (see describeRequestedAgent).
+        inFlightLabels.set(call, describeRequestedAgent(prompt, agentOptions));
         return call;
     };
     const agentImpl = async (prompt, agentOptions = {}) => {
@@ -314,8 +553,43 @@ export async function runWorkflow(script, options = {}) {
             const resolvedIsolation = agentOptions.isolation ?? agentDef?.isolation;
             if (resolvedIsolation === "worktree") {
                 worktree = await createWorktree(baseCwd, `${runId}-${callIndex}-${label}`);
-                if (!worktree.isolated)
+                if (!worktree.isolated) {
+                    // Running in the shared tree is not a degraded form of isolation, it
+                    // is the concurrent-edit corruption isolation was requested to avoid,
+                    // so it takes an explicit opt-in (see isolationFallback) — except
+                    // outside a git repository, where a worktree was never obtainable in
+                    // the first place and erroring would only ever mean "this directory
+                    // isn't a repo". That case degrades, loudly, unless the caller has
+                    // asked for an error explicitly.
+                    const fallback = options.isolationFallback ?? (worktree.noRepository ? "shared-tree" : "error");
+                    if (fallback !== "shared-tree") {
+                        const isolationError = new WorkflowError(`agent "${label}" requested worktree isolation but no worktree could be created (${worktree.reason}); ` +
+                            `refusing to run it in the shared working tree — pass isolationFallback: "shared-tree" ` +
+                            `(or set worktreeIsolationFallback in ~/.pi/workflows/settings.json) to allow that`, WorkflowErrorCode.AGENT_EXECUTION_ERROR, 
+                        // Recoverable: this is one agent's precondition failing, not the
+                        // run's. parallel()/pipeline() therefore degrade THIS item to null
+                        // and let its siblings finish, instead of halting the whole run
+                        // (see parallel()'s non-recoverable contract).
+                        { recoverable: true, agentLabel: label });
+                        logger.error(isolationError.message);
+                        options.onAgentEnd?.({
+                            id: deltaKey,
+                            label,
+                            phase: assignedPhase,
+                            result: null,
+                            tokens: 0,
+                            model: displayModel,
+                            error: isolationError.message,
+                            errorCode: isolationError.code,
+                            recoverable: isolationError.recoverable,
+                        });
+                        throw isolationError;
+                    }
+                    // Degrading is never silent: it goes to the run log AND the logger, so
+                    // "ran unisolated" is visible without diffing the working tree.
+                    logger.warn(`isolation unavailable for "${label}" (${worktree.reason}); running in the shared working tree`);
                     log(`isolation ignored for "${label}" (${worktree.reason})`);
+                }
             }
             const runCwd = worktree?.isolated ? worktree.cwd : undefined;
             // Captured from the subagent's real session usage; falls back to an
@@ -818,16 +1092,84 @@ export async function runWorkflow(script, options = {}) {
     const { globals: projectGlobals, diagnostics: bindingDiagnostics } = WORKFLOW_CAPABILITY_CONTRACT.assembleRuntimeBindings(runtimeImplementations);
     for (const diagnostic of bindingDiagnostics)
         logger.warn(diagnostic.message);
-    const context = vm.createContext({
-        ...projectGlobals,
-        // Object/Array/JSON/Math/Date/Promise/Set/Map/etc. come from the vm realm
-        // itself — we deliberately do NOT inject host built-ins, whose .constructor
-        // would be the host Function (a determinism-guard bypass). Math/Date are
-        // neutered in-realm by DETERMINISM_PRELUDE below.
-    });
+    const bindings = projectGlobals;
+    const resolveBinding = (path) => {
+        const separator = path.indexOf(".");
+        if (separator < 0)
+            return { self: undefined, member: bindings[path] };
+        const root = bindings[path.slice(0, separator)];
+        if (!root || typeof root !== "object")
+            return { self: undefined, member: undefined };
+        return { self: root, member: root[path.slice(separator + 1)] };
+    };
+    // The realm reaches every binding through these two methods and nothing else
+    // (see buildRealmBootstrap): `call` applies a host implementation and reports
+    // the outcome, `read` returns a data binding's current value. Both are removed
+    // from the realm's global before any script code runs.
+    const bridge = {
+        call(path, callArgs) {
+            const target = resolveBinding(path);
+            if (typeof target.member !== "function") {
+                return { e: describeHostError(new TypeError(`${path} is not available in a workflow`)) };
+            }
+            try {
+                const produced = target.member.apply(target.self, callArgs);
+                if (produced && typeof produced.then === "function") {
+                    // Resolve into an outcome envelope so the host promise itself never
+                    // rejects — the realm side rethrows as a realm-native Error.
+                    return {
+                        p: Promise.resolve(produced).then((v) => ({ v }), (e) => ({ e: describeHostError(e) })),
+                    };
+                }
+                return { v: produced };
+            }
+            catch (error) {
+                return { e: describeHostError(error) };
+            }
+        },
+        read(path) {
+            return resolveBinding(path).member;
+        },
+    };
+    const bindingShapes = {};
+    for (const [name, value] of Object.entries(bindings)) {
+        if (typeof value === "function") {
+            bindingShapes[name] = { kind: "function", methods: [], data: [], frozen: false };
+            continue;
+        }
+        const keys = value && typeof value === "object" && !Array.isArray(value) ? Object.keys(value) : [];
+        const methods = keys.filter((key) => typeof value[key] === "function");
+        // A binding with no callable member (`args`, `cwd`) is pure data and is
+        // deep-copied in; one with methods (`budget`, `process`, `console`) is
+        // rebuilt as a namespace of wrappers plus its data properties.
+        bindingShapes[name] =
+            methods.length === 0
+                ? { kind: "value", methods: [], data: [], frozen: false }
+                : {
+                    kind: "namespace",
+                    methods,
+                    data: keys.filter((key) => !methods.includes(key)),
+                    frozen: Object.isFrozen(value),
+                };
+    }
+    const bridgeKey = `${REALM_BRIDGE_PREFIX}_${randomUUID().replace(/-/g, "")}`;
+    // Object/Array/JSON/Math/Date/Promise/Set/Map/etc. come from the vm realm
+    // itself — we deliberately do NOT inject host built-ins, whose .constructor
+    // would be the host Function. Math/Date are neutered in-realm by
+    // DETERMINISM_PRELUDE below.
+    const context = vm.createContext({ [bridgeKey]: bridge });
+    // vm timeouts bound synchronous execution only, which is exactly the case
+    // nothing else bounds: an awaiting script is already held by agentTimeoutMs
+    // and the token budget.
+    const scriptTimeoutMs = Math.max(1, Math.floor(options.scriptTimeoutMs ?? DEFAULT_SCRIPT_TIMEOUT_MS));
+    new vm.Script(buildRealmBootstrap(bridgeKey, JSON.stringify(bindingShapes)), {
+        filename: "workflow-runtime.js",
+    }).runInContext(context, { timeout: scriptTimeoutMs });
     const wrapped = `${DETERMINISM_PRELUDE}\n(async () => {\n${body}\n})()`;
     try {
-        const result = await new vm.Script(wrapped, { filename: `${meta.name || "workflow"}.js` }).runInContext(context);
+        const result = await new vm.Script(wrapped, { filename: `${meta.name || "workflow"}.js` }).runInContext(context, {
+            timeout: scriptTimeoutMs,
+        });
         // Persist logs
         const logFile = logger.persist();
         if (logFile) {
@@ -872,7 +1214,10 @@ export async function runWorkflow(script, options = {}) {
         // the paused run resumes (it was never journaled, so it isn't cached).
         if (isTopLevelRun)
             shared.runFatalController.abort();
-        throw error;
+        // What escapes the realm is a realm-native Error (see the realm bootstrap),
+        // so re-classify it here — callers upstream (executeRun's usage-limit
+        // checkpoint, the tool's abort handling) test for WorkflowError instances.
+        throw adoptForeignWorkflowError(error) ?? error;
     }
     finally {
         // Only the top-level frame drains/disposes (see isTopLevelRun) — a nested
@@ -886,20 +1231,45 @@ export async function runWorkflow(script, options = {}) {
             // (not a single Promise.allSettled) because draining can itself let a
             // still-running call schedule further work that adds to the set.
             //
-            // Caveat: this can block indefinitely. A run-fatal abort (see the catch
-            // above) aborts the AbortSignal passed to each in-flight agent, but that
-            // is cooperative — an agent runner that ignores its signal (or one still
-            // waiting out a real subagent process that won't die) never settles on
-            // its own. Combined with agentTimeoutMs: null (no hard timeout, the
-            // default), a single hung, signal-ignoring, un-awaited agent() call can
-            // wedge this drain — and therefore the whole run's completion — forever.
-            // Configure a finite agentTimeoutMs (run- or per-agent-level) for any
-            // workflow where this is a real risk; there is no drain-side timeout.
+            // The wait is bounded (see drainTimeoutMs): a run-fatal abort aborts the
+            // AbortSignal passed to each in-flight agent, but that is cooperative —
+            // an agent runner that ignores its signal (or one still waiting out a
+            // real subagent process that won't die) never settles on its own, and an
+            // unbounded loop here would keep the run "running", its lease held and
+            // the caller's promise pending forever. On expiry the stragglers are
+            // named and abandoned; nothing else can wake them.
             if (shared.inFlight.size > 0) {
                 log(`waiting for ${shared.inFlight.size} outstanding agent() call(s) to settle before this run completes`);
             }
+            const drainWindowMs = options.drainTimeoutMs === null
+                ? null
+                : (options.drainTimeoutMs ??
+                    (typeof agentTimeoutMs === "number" ? agentTimeoutMs + DRAIN_GRACE_MS : DEFAULT_DRAIN_TIMEOUT_MS));
+            const drainDeadline = drainWindowMs === null ? null : Date.now() + Math.max(1, drainWindowMs);
+            // Signal the stragglers only once the window is nearly spent: an
+            // un-awaited call on a run that finished cleanly is allowed to run to
+            // completion, it just may not do so unboundedly.
+            const signalAt = drainDeadline === null ? null : drainDeadline - Math.min(DRAIN_GRACE_MS, drainWindowMs ?? 0) / 2;
+            let signalled = false;
             while (shared.inFlight.size > 0) {
-                await Promise.allSettled(Array.from(shared.inFlight));
+                const pending = Array.from(shared.inFlight);
+                if (drainDeadline === null || signalAt === null) {
+                    await Promise.allSettled(pending);
+                    continue;
+                }
+                const now = Date.now();
+                if (now >= drainDeadline) {
+                    const stragglers = pending.map((call) => inFlightLabels.get(call) ?? "unlabeled agent");
+                    log(`gave up waiting for ${pending.length} un-awaited agent() call(s) after ${drainWindowMs}ms: ` +
+                        `${stragglers.join(", ")} — they were signalled to abort and are no longer tracked by this run`);
+                    break;
+                }
+                if (!signalled && now >= signalAt) {
+                    signalled = true;
+                    shared.runFatalController.abort();
+                }
+                const wakeAt = signalled ? drainDeadline : Math.min(signalAt, drainDeadline);
+                await Promise.race([Promise.allSettled(pending), sleep(Math.max(1, wakeAt - now))]);
             }
             store.dispose();
         }
@@ -1126,6 +1496,13 @@ function normalizeAgentRetries(value) {
  * background with the whole session graph (messages, etc.) retained (#109). The
  * losing promise still settles later; the caller must swallow its rejection.
  */
+/** Resolve after `ms`, without keeping the process alive on its own. */
+function sleep(ms) {
+    return new Promise((resolve) => {
+        const timer = setTimeout(resolve, ms);
+        timer.unref?.();
+    });
+}
 async function withTimeout(promise, ms, label, onTimeout) {
     if (ms === null)
         return promise;

@@ -17,6 +17,12 @@ export interface WorkflowSettings {
     defaultTokenBudget?: number | null;
     /** Default max concurrent agents per run. Clamped to the runtime maximum. */
     defaultConcurrency?: number;
+    /**
+     * Default cap on total agents per run when the caller passes no `maxAgents`
+     * (default DEFAULT_MAX_AGENTS_PER_RUN). Clamped to MAX_AGENTS_PER_RUN, so the
+     * 1000 ceiling stays reachable for anyone who wants it.
+     */
+    defaultMaxAgents?: number;
     /** Default retry attempts after recoverable agent failures. */
     defaultAgentRetries?: number;
     /** Bottom task-panel display mode: "compact" (default, one line per run) | "detailed". */
@@ -43,6 +49,41 @@ export interface WorkflowSettings {
      * tool) so a subagent can't fan out through them.
      */
     excludeSubagentTools?: string[];
+    /**
+     * Trust workflow files stored inside the project directory itself
+     * (`<cwd>/.pi/workflows/saved`, the pre-3.x location). Whatever repository is
+     * checked out can supply those, and a saved workflow becomes a `/<name>`
+     * command whose script runs subagents with tools — so by default they are
+     * confirmed at invocation instead of resolved silently, and are not resolved
+     * at all where no one can be asked (a `workflow` tool `name`, a nested
+     * `workflow('name')`). Set true to restore unprompted resolution. Put it in
+     * the project override (`~/.pi/workflows/projects/<key>/settings.json`) to
+     * trust one project only.
+     */
+    trustProjectLocalWorkflows?: boolean;
+    /**
+     * Hosts the web tools may fetch even though they resolve to a local or
+     * private-network address, e.g. `["localhost:3000", "dev.internal"]`. Matched
+     * case-insensitively against the URL's host and port; an entry with no port
+     * matches only the scheme's default port (see WebFetchPolicy.allowedHosts).
+     */
+    webFetchAllowedHosts?: string[];
+    /**
+     * Allow the web tools to fetch ANY loopback/link-local/private-range target
+     * (default false). `webFetchAllowedHosts` is the narrower knob; this one is
+     * for a machine where reaching the local network is the point.
+     */
+    webFetchAllowPrivateNetwork?: boolean;
+    /**
+     * What an agent that asked for `isolation: "worktree"` should do when the
+     * worktree cannot be created: "error" (the default when `git worktree add`
+     * fails) fails that agent — recoverably, so only that agent is lost, not the
+     * run — instead of running it in the shared working tree; "shared-tree"
+     * restores the pre-3.4 logged fallback. A cwd that is not a git repository at
+     * all defaults to "shared-tree" with a warning, since isolation was never
+     * available there; set "error" here to fail those agents too.
+     */
+    worktreeIsolationFallback?: "error" | "shared-tree";
 }
 export interface WorkflowSettingsStore {
     load(): WorkflowSettings;

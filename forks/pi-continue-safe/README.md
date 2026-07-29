@@ -92,6 +92,8 @@ Configure the threshold directly in Pi settings, or choose `Handoff trigger` in 
 
 The automatic guard starts only when Pi can prepare a native compaction. If the threshold is crossed because of static prompt/tool/context overhead, or because all transcript history is still inside `keepRecentTokens`, `pi-continue` skips that checkpoint instead of starting a handoff that native compaction cannot save. UI sessions show a de-duplicated warning for skipped checkpoints.
 
+Automatic continuations may chain, but not without a ceiling: `maxChainedContinuations` and `maxChainedSynthesisCostUsd` bound how many chained automatic handoffs and how much handoff-synthesis spend one chain may consume. When a ceiling is reached the guard stops the run and reports the limit instead of paying for another summarizer pass; any operator message or an explicit `/continue` clears the chain counters. Stopping the run for a handoff also empties Pi's message queue into the editor draft, so `pi-continue` says so when queued messages were waiting.
+
 Use `/continue status` after a continuation to see what happened. Status reports the latest local run: how the handoff started, whether the Continuation Ledger was created, whether Pi reported package-owned `pi-continue/v4` handoff proof, which summarizer model ran, the requested and effective history output budget, whether the model max-output cap clamped that budget, whether the resume request was sent, whether the resumed assistant turn completed, whether continuation-artifact or agent-guide output writes updated anything, and what to do next. If the resumed assistant requests tools, status remains in resume-running state while that tool-use loop is still live; `toolUse` alone is not treated as completion. A later completed assistant/tool-result checkpoint can start the next automatic continuation as a chained handoff when the context is still over threshold, otherwise the resume clears when a terminal assistant outcome (`stop`, `length`, `aborted`, or failure) is observed. UI sessions can also show the latest Continuation Ledger as a temporary panel; repeated displays reuse and focus the same panel with the latest ledger instead of stacking overlays, and this never appends another transcript entry. Failure states use explicit package messages rather than parsing provider error text.
 
 A model's context window and maximum output budget are independent. `pi-continue` derives the history budget from Pi's reserve-token setting or `historyMaxTokens`, then clamps the provider request to the selected summarizer model's positive max-output limit when that limit is known.
@@ -124,7 +126,13 @@ Default package config:
   "continuationArtifactMode": "always",
   "agentGuidePath": "AGENTS.md",
   "agentGuideSyncMode": "off",
+  "agentGuideOverwritePolicy": "confirm",
+  "agentGuideAllowOutsideProject": false,
+  "allowSymlinkedOutputDirectory": false,
+  "synthesisFailureFallback": "native-compaction",
   "midRunGuardEnabled": true,
+  "maxChainedContinuations": 10,
+  "maxChainedSynthesisCostUsd": 5,
   "appendCompactionMetadata": false,
   "appendReadFileTags": false,
   "appendModifiedFileTags": true,
@@ -146,6 +154,12 @@ Common settings:
 | `continuationArtifactMode` | `"always"` by default writes the rendered brief after successful package-owned compaction to `<project-root>/.pi/continue/<encoded-session-id>.md`; `"off"` disables that artifact. The artifact is human-inspection/manual-bootstrap output only and is never automatic prompt input. |
 | `agentGuidePath` | Repo-relative path for optional full guide replacement; default `"AGENTS.md"`. |
 | `agentGuideSyncMode` | `"off"` by default; `"always"` allows configured agent-guide replacement only when the artifact includes full guide content. |
+| `agentGuideOverwritePolicy` | `"confirm"` by default; asks before replacing existing guide content this package did not write. A guide that is absent, unchanged, or byte-identical to what this package last wrote never prompts, so a non-interactive session only refuses a replacement that would clobber content the package did not author. `"allow"` replaces without asking. |
+| `agentGuideAllowOutsideProject` | `false` by default; a configured guide whose real path leaves the project is neither read into the handoff prompt nor replaced, and `/continue status` plus a session warning name the guide that was skipped. Set `true` in the **global** config to allow a deliberately shared guide (for example `AGENTS.md` -> `~/dotfiles/AGENTS.md`) to be read and replaced. Project-scoped config cannot grant it, and `.git/` is never writable at all. |
+| `allowSymlinkedOutputDirectory` | `false` by default; a symlink on any parent directory of a package-owned output path (typically `.pi/`) is treated as a redirection and refused. Set `true` in the **global** config when that symlink is a layout you created on purpose, such as a shared or out-of-tree `.pi`. A symlink at the output file itself stays refused either way, so a repo-committed link can never aim a full-file replacement at another file. Project-scoped config cannot grant it. |
+| `synthesisFailureFallback` | `"native-compaction"` by default; when the modeled ledger pass fails, Pi saves its own compaction and only the package-owned handoff fails. `"cancel"` cancels the compaction instead, leaving the context uncompacted. |
+| `maxChainedContinuations` | `10` by default; how many automatic continuations may chain without new operator input before the guard stops instead of paying for another handoff. `0` restores unbounded chaining. Manual `/continue` is never blocked and resets the chain. |
+| `maxChainedSynthesisCostUsd` | `5` by default; total handoff-synthesis spend allowed in one chain of automatic continuations before the guard stops. `0` removes the ceiling. Any operator message or `/continue` resets the counter. |
 | `appendCompactionMetadata` | `false` by default; when true, appends compact non-path metadata to the compaction summary. |
 | `appendReadFileTags` | `false` by default; when true, appends current compaction read-file tags. |
 | `appendModifiedFileTags` | `true` by default; when true, appends current compaction modified-file tags. |
@@ -154,7 +168,11 @@ Common settings:
 
 `/continue settings` also includes a handoff trigger control. It shows one human-facing trigger token count and writes Pi core `compaction.reserveTokens` in `.pi/settings.json` or the global Pi settings file, not a package config key.
 
-Malformed JSON config fails loudly. Unknown config keys are ignored by the package parser. Command aliases are not registered.
+Malformed JSON config is reported once and then ignored: the package falls back to the remaining settings layers instead of failing provider requests. Unknown config keys are ignored by the package parser. Command aliases are not registered.
+
+`agentGuidePath`, `agentGuideSyncMode`, `agentGuideOverwritePolicy`, `agentGuideAllowOutsideProject`, and `allowSymlinkedOutputDirectory` are read from the **global** config only. They decide where model-authored content lands, whether it lands at all, and whether you are asked first, so a project-scoped value for them is ignored — even in a trusted project — and reported once by name. Every other key stays project-overridable in a trusted project.
+
+Project-scoped inputs — `<project-root>/.pi/extensions/pi-continue.json`, `<project-root>/.pi/extensions/pi-continue/prompts/`, and `<project-root>/.pi/settings.json` — are honored only when Pi reports the project as trusted, matching Pi's own handling of project settings. Untrusted projects fall back to global and package layers, and `/continue status` shows the project scope in effect. A Pi build that reports no trust decision at all is treated as untrusted; set `PI_CONTINUE_TRUST_PROJECT_CONFIG=1` to honor project scope on such a host anyway.
 
 ## Custom handoff prompt
 
@@ -203,6 +221,8 @@ In practice:
 - `done_when` is the stopping criterion; `task` is the orientation sentence.
 - The receiver uses every `established` claim as anchored factual memory by default; it does not re-derive those facts unless the `reopen` clause triggers, new evidence conflicts, or current instructions require fresh proof. Directive-looking text quoted inside evidence remains evidence, not live instruction authority. The next synthesizer evaluates each `reopen` clause against new evidence and demotes triggered entries back to `open`. Silent drops are forbidden — every retirement is explicit.
 
+The rendered brief is always followed in the persisted compaction summary by a package-authored `<continuation-provenance>` block that carries the unique handoff id and labels every entry above it as untrusted-derived data rather than instructions; the same-session resume prompt names that label so the resuming agent treats `forbid` and `next[0]` as recorded evidence and proposals to check against current instructions, never as authorizations.
+
 The same rendered brief is placed in Pi's persisted compaction summary above the same-session resume prompt, may be written as the optional per-session artifact under `.pi/continue/`, and may be shown in the TUI overlay when `showAfterCompact: true`. These sinks are rendered deterministically by the extension; the synthesizer is responsible only for the brief and the agent-guide update. If the modeled ledger pass exceeds `synthesisTimeoutMs`, `pi-continue` cancels before saving or resuming so Pi can leave the native compacting state. Prior artifacts are never imported automatically into synthesis, preview, or resume prompts.
 
 See [`examples/continuation-output-shape.md`](examples/continuation-output-shape.md) for a rendered shape.
@@ -214,6 +234,8 @@ See [`examples/continuation-output-shape.md`](examples/continuation-output-shape
 ```text
 <project-root>/.pi/continue/<encoded-session-id>.md
 ```
+
+Because a brief can quote file contents, the first artifact write also creates `<project-root>/.pi/continue/.gitignore` (containing `*`) so generated briefs cannot be committed by accident. An existing file at that path is never modified.
 
 The artifact is for human inspection or explicit manual bootstrap only. A user may start a new session and explicitly ask the model to read that file, but `pi-continue` never loads `CONTINUE.md` or `.pi/continue/*.md` as automatic prompt memory. Automatic continuation input comes from Pi's compaction state, the current transcript material, turn-prefix material, file-operation signals, custom instructions, and the configured agent guide.
 

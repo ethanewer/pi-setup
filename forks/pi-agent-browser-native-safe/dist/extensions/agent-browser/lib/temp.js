@@ -1,6 +1,6 @@
 /**
  * Purpose: Create private temporary and persisted spill files for the pi-agent-browser extension without leaking artifacts broadly on disk.
- * Responsibilities: Maintain a process-private temp root, stamp explicit ownership/protected-child markers, enforce an aggregate temp-artifact disk budget, create securely permissioned temp files, create session-scoped persisted spill files for resumable sessions, prune explicitly owned stale temp roots from prior runs without deleting protected children, and best-effort clean all owned roots on process exit.
+ * Responsibilities: Maintain a process-private temp root, stamp explicit ownership/protected-child markers, enforce an aggregate temp-artifact disk budget, create securely permissioned temp files, create session-scoped persisted spill files for resumable sessions, prune explicitly owned stale temp roots from prior runs without deleting protected children, list child directories left behind by owner processes that are provably gone so callers can adopt them, and best-effort clean all owned roots on process exit.
  * Scope: Artifact lifecycle helpers only; callers decide what data to write and when to delete or retain long-lived references.
  * Usage: Imported by result/process helpers when they need secure spill files instead of world-readable shared tmp paths.
  * Invariants/Assumptions: Temp artifacts live under the OS temp directory, each active run uses a dedicated 0700 directory, files are created with exclusive 0600 permissions, session-scoped persisted artifacts stay under the pi session directory, and stale pruning only touches roots with an explicit pi-agent-browser ownership marker.
@@ -453,6 +453,37 @@ export async function createSecureTempDirectory(prefix) {
     await chmod(directory, 0o700).catch(() => undefined);
     await refreshSecureTempRootLease(tempRoot).catch(() => undefined);
     return directory;
+}
+/**
+ * Lists prefix-matched child directories under owned temp roots whose owner process is provably gone, so
+ * long-lived resources created by a killed run can be adopted instead of leaking. Roots whose owner is alive or
+ * whose liveness cannot be proven are never reported.
+ */
+export async function listAbandonedSecureTempChildDirectories(childPrefix) {
+    const entries = await readdir(tmpdir(), { withFileTypes: true }).catch(() => []);
+    const currentTempRoot = await sessionTempRootPromise?.catch(() => undefined);
+    const currentUid = getCurrentProcessUid();
+    const childDirectories = [];
+    for (const entry of entries) {
+        if (!entry.isDirectory() || !entry.name.startsWith(TEMP_ROOT_PREFIX))
+            continue;
+        const tempRoot = join(tmpdir(), entry.name);
+        if (tempRoot === currentTempRoot || ownedTempRoots.has(tempRoot))
+            continue;
+        const ownershipMarker = await readTempRootOwnershipMarker(tempRoot);
+        if (!ownershipMarker || ownershipMarker.ownerPid === process.pid)
+            continue;
+        if (currentUid !== undefined && ownershipMarker.ownerUid !== undefined && ownershipMarker.ownerUid !== currentUid)
+            continue;
+        if ((await getMarkerOwnerLiveness(ownershipMarker)) !== "dead")
+            continue;
+        const rootEntries = await readdir(tempRoot, { withFileTypes: true }).catch(() => []);
+        for (const rootEntry of rootEntries) {
+            if (rootEntry.isDirectory() && rootEntry.name.startsWith(childPrefix))
+                childDirectories.push(join(tempRoot, rootEntry.name));
+        }
+    }
+    return childDirectories.sort();
 }
 export async function getSecureTempChildDirectoryValidationError(path, childPrefix) {
     const parentDirectory = dirname(path);

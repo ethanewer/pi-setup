@@ -27,6 +27,17 @@ import {
   WorkflowManager,
 } from "../src/index.js";
 
+/** Where the web tools may fetch, from settings (see WebFetchPolicy). */
+function webFetchPolicy(settings: {
+  webFetchAllowedHosts?: string[];
+  webFetchAllowPrivateNetwork?: boolean;
+}): { allowedHosts?: string[]; allowPrivateNetwork?: boolean } {
+  return {
+    allowedHosts: settings.webFetchAllowedHosts,
+    allowPrivateNetwork: settings.webFetchAllowPrivateNetwork,
+  };
+}
+
 export default function extension(pi: ExtensionAPI) {
   // Single manager shared by the workflow tool and /workflows command. Pi loads
   // a fresh extension factory for /reload, so explicitly claim the old live
@@ -36,22 +47,54 @@ export default function extension(pi: ExtensionAPI) {
   const cwd = process.cwd();
   const storage = createWorkflowStorage(cwd);
   const settings = loadWorkflowSettings({ cwd });
+  // Set at session_start (the first point a UI exists) and used by the
+  // foreign-run gate below, which can be reached long after registration.
+  let sessionConfirm: ((title: string, message: string) => Promise<boolean>) | undefined;
   const managerOptions = {
     loadSavedWorkflow: (name: string) => storage.load(name)?.script,
     // Named toolsets survive on the persisted run (the tag, not the functions),
     // so a resumed run re-resolves the tools it started with — e.g. a paused
     // /deep-research keeps web access instead of degrading to coding tools.
     toolsets: {
-      "web-research": () => [...createCodingTools(cwd), ...createWebTools()],
+      "web-research": () => [
+        ...createCodingTools(cwd),
+        // Re-read per execution so a settings change takes effect without a
+        // restart; the web tools refuse local/private targets unless told not to.
+        ...createWebTools(webFetchPolicy(loadWorkflowSettings({ cwd }))),
+      ],
     },
     // On top of the always-on workflow/workflow_control denial in subagents
     // (#107), let users block additional recursive-orchestration tools.
     excludeSubagentTools: settings.excludeSubagentTools,
-    defaultAgentTimeoutMs: settings.defaultAgentTimeoutMs ?? null,
+    // Left undefined when unset so the manager applies DEFAULT_AGENT_TIMEOUT_MS;
+    // an explicit null in settings still means "no hard timeout".
+    defaultAgentTimeoutMs: settings.defaultAgentTimeoutMs,
     defaultTokenBudget: settings.defaultTokenBudget ?? null,
     concurrency: settings.defaultConcurrency,
+    defaultMaxAgents: settings.defaultMaxAgents,
     defaultAgentRetries: settings.defaultAgentRetries,
     persistAgentSessions: settings.persistAgentSessions,
+    // Unset means "error" inside a repository: an agent that asked for worktree
+    // isolation fails (only that agent) instead of quietly editing the shared
+    // working tree next to its siblings. Outside a repository it degrades with a
+    // warning — see WorkflowRunOptions.isolationFallback.
+    isolationFallback: settings.worktreeIsolationFallback,
+    // Resuming a run record this install never wrote executes a script that
+    // came from somewhere else — most plausibly the checked-out project. Ask,
+    // naming the file. Auto-resume never asks: it skips such runs entirely.
+    confirmForeignRun: async (info: {
+      runId: string;
+      workflowName: string;
+      path: string;
+      projectLocal: boolean;
+    }) => {
+      if (!sessionConfirm) return false;
+      return sessionConfirm(
+        info.projectLocal ? "Project-supplied workflow run" : "Workflow run from another install",
+        `Resume ${info.workflowName || info.runId}?\n\nIts script comes from:\n${info.path}\n\n` +
+          "It will run subagents with your tools and permissions. Only continue if you trust its source.",
+      );
+    },
   };
   const runtimeClaim = claimWorkflowRuntime(cwd);
   const previousRuntime = runtimeClaim.compatible;
@@ -105,8 +148,15 @@ export default function extension(pi: ExtensionAPI) {
   // time. Installed once (guarded below) inside session_start alongside the
   // other per-session installers.
   let armingInstalled = false;
+  // Registration of the workflow tools into the active set happens on the FIRST
+  // session_start only. Re-adding them on every session would override a user
+  // who deactivated them on purpose (their absence at a later session_start is
+  // the only signal of that choice the host gives us). /workflows run still
+  // reactivates on demand, and says so.
+  let workflowToolsRegistered = false;
 
   pi.on("session_start", (_event: unknown, ctx: ExtensionContext) => {
+    sessionConfirm = (title, message) => ctx.ui.confirm(title, message);
     if (pausedForVersionChange > 0) {
       ctx.ui.notify(
         `Workflow extension updated during /reload; paused ${pausedForVersionChange} active workflow(s) for safe resume.`,
@@ -122,10 +172,13 @@ export default function extension(pi: ExtensionAPI) {
     // manager's registry lazily, so tool-registry refreshes from here on
     // advertise the shared registry's models.
     manager.setModelRegistry(ctx.modelRegistry);
-    const active = pi.getActiveTools();
-    const workflowTools = [workflowTool.name, workflowControlTool.name];
-    const missing = workflowTools.filter((name) => !active.includes(name));
-    if (missing.length) pi.setActiveTools([...active, ...missing]);
+    if (!workflowToolsRegistered) {
+      const active = pi.getActiveTools();
+      const workflowTools = [workflowTool.name, workflowControlTool.name];
+      const missing = workflowTools.filter((name) => !active.includes(name));
+      if (missing.length) pi.setActiveTools([...active, ...missing]);
+      workflowToolsRegistered = true;
+    }
     // Scope the /workflows history to this session: runs persist on disk across
     // sessions, but the navigator/task panel show only the current session's runs.
     // Switching back to a previous session re-shows that session's runs.

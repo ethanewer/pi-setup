@@ -1,8 +1,10 @@
 import { existsSync, readFileSync } from "node:fs";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import type { ConfigScope, PiCompactionSettings } from "./types.ts";
 import { resolveAgentDir } from "./agent-dir.ts";
+import { writeFileAtomic } from "./atomic-write.ts";
+import { queueInputWarning } from "./input-warnings.ts";
 
 // Mirrors Pi core DEFAULT_COMPACTION_SETTINGS in @earendil-works/pi-coding-agent 0.74+.
 const DEFAULT_PI_COMPACTION_SETTINGS: PiCompactionSettings = {
@@ -67,8 +69,16 @@ function getPiSettingsPath(scope: ConfigScope, projectRoot: string): string {
 	return scope === "global" ? join(resolveAgentDir(), "settings.json") : join(projectRoot, ".pi", "settings.json");
 }
 
+// Runtime readers must never take the session down over an unreadable settings file, so
+// they degrade to Pi's defaults and report the failure once.
 function readCompactionConfig(path: string): Partial<PiCompactionSettings> {
-	const payload = readJson(path);
+	let payload: unknown;
+	try {
+		payload = readJson(path);
+	} catch (error) {
+		queueInputWarning(`pi-settings:${path}`, `${errorMessage(error)}. pi-continue is using Pi's default compaction settings instead.`);
+		return {};
+	}
 	if (!isRecord(payload) || !isRecord(payload.compaction)) return {};
 	return {
 		enabled: typeof payload.compaction.enabled === "boolean" ? payload.compaction.enabled : undefined,
@@ -98,17 +108,17 @@ function mergeCompactionSettings(configs: Partial<PiCompactionSettings>[]): PiCo
 	return { enabled, reserveTokens, keepRecentTokens };
 }
 
-/** Read Pi core compaction settings as they apply to the selected settings scope. */
-export function readPiCompactionSettingsForScope(scope: ConfigScope, projectRoot: string): PiCompactionSettings {
+/** Read Pi core compaction settings as they apply to the selected scope; project scope needs trust. */
+export function readPiCompactionSettingsForScope(scope: ConfigScope, projectRoot: string, projectTrusted = false): PiCompactionSettings {
 	const globalConfig = readCompactionConfig(getPiSettingsPath("global", projectRoot));
-	if (scope === "global") return mergeCompactionSettings([globalConfig]);
+	if (scope === "global" || !projectTrusted) return mergeCompactionSettings([globalConfig]);
 	const projectConfig = readCompactionConfig(getPiSettingsPath("project", projectRoot));
 	return mergeCompactionSettings([globalConfig, projectConfig]);
 }
 
-/** Read effective Pi core compaction settings from global and project settings files. */
-export function readEffectivePiCompactionSettings(projectRoot: string): PiCompactionSettings {
-	return readPiCompactionSettingsForScope("project", projectRoot);
+/** Read effective Pi core compaction settings from global and trusted-project settings files. */
+export function readEffectivePiCompactionSettings(projectRoot: string, projectTrusted = false): PiCompactionSettings {
+	return readPiCompactionSettingsForScope("project", projectRoot, projectTrusted);
 }
 
 /** Patch Pi-owned compaction settings at the selected scope while preserving unrelated settings. */
@@ -132,6 +142,6 @@ export async function patchPiCompactionSettings(scope: ConfigScope, projectRoot:
 		}
 		if (!hadFile && Object.keys(settings).length === 0) return;
 		await mkdir(dirname(targetPath), { recursive: true });
-		await writeFile(targetPath, `${JSON.stringify(settings, null, 2)}\n`, "utf8");
+		await writeFileAtomic(targetPath, `${JSON.stringify(settings, null, 2)}\n`);
 	});
 }

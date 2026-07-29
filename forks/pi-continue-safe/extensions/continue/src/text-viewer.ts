@@ -1,11 +1,16 @@
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import type { Focusable } from "@earendil-works/pi-tui";
 import { keyRepeat } from "./key-input.ts";
-import { padVisible, stripAnsi, truncateAnsi, visibleWidth } from "./tui-text.ts";
+import { padVisible, plainCharWidth, stripAnsi, truncateAnsi, visibleWidth } from "./tui-text.ts";
 
 const MIN_WIDTH = 48;
 const TARGET_WIDTH = 92;
 const MAX_HEIGHT = 24;
+// The brief schema allows very long single-line fields, so the overlay renders a bounded prefix
+// instead of wrapping an unbounded string on every compaction. This also bounds status and
+// prompt-preview panels, so the notice can only speak for what this panel shows.
+const MAX_RENDERED_CONTENT = 64_000;
+const CONTENT_TRUNCATED_NOTICE = `[only the first ${MAX_RENDERED_CONTENT.toLocaleString()} characters are rendered here, and scrolling will not reach the rest; the remainder is intact in the source this panel was given - the saved continuation artifact, the compaction entry, or the composed prompt]`;
 const CONTROL_CHARACTER_PATTERN = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f]/g;
 const ESCAPE_CHARACTER_PATTERN = /\u001b/g;
 
@@ -57,17 +62,22 @@ function frame(theme: ViewerTheme, width: number, content: string, focused: bool
 	return `${theme.fg(borderColor(focused), "|")}${safe}${theme.fg(borderColor(focused), "|")}`;
 }
 
+// Sanitized content carries no escape sequences, so widths accumulate per character instead of
+// re-measuring the whole accumulated chunk.
 function wrapPlainLine(line: string, width: number): string[] {
 	if (width <= 0) return [""];
-	if (visibleWidth(line) <= width) return [line];
 	const chunks: string[] = [];
 	let current = "";
-	for (const char of Array.from(line)) {
-		if (visibleWidth(current + char) > width) {
+	let currentWidth = 0;
+	for (const char of line) {
+		const charWidth = plainCharWidth(char);
+		if (currentWidth + charWidth > width) {
 			chunks.push(current);
 			current = char;
+			currentWidth = charWidth;
 		} else {
 			current += char;
+			currentWidth += charWidth;
 		}
 	}
 	chunks.push(current);
@@ -76,7 +86,11 @@ function wrapPlainLine(line: string, width: number): string[] {
 
 function prepareTextLines(content: string, width: number): string[] {
 	const inner = Math.max(1, width - 4);
-	const cleaned = sanitizeOverlayText(content).trimEnd();
+	const sanitized = sanitizeOverlayText(content);
+	const clipped = sanitized.length > MAX_RENDERED_CONTENT
+		? `${sanitized.slice(0, MAX_RENDERED_CONTENT)}\n\n${CONTENT_TRUNCATED_NOTICE}`
+		: sanitized;
+	const cleaned = clipped.trimEnd();
 	if (cleaned.trim().length === 0) return ["(empty)"];
 	const result: string[] = [];
 	for (const line of cleaned.split("\n")) {

@@ -383,6 +383,33 @@ export function stripCompactionPreparationMessages<T extends ContinuationCompact
 	};
 }
 
+/**
+ * Re-anchor a keep-nothing cut against entries appended while synthesis was running.
+ *
+ * Pi keeps pre-compaction entries only from `firstKeptEntryId` onward, so the keep-nothing
+ * sentinel would also drop entries that arrived after the snapshot and were never summarized.
+ */
+export function resolveKeptEntryBoundary(
+	firstKeptEntryId: string,
+	preparedBranchEntries: unknown[],
+	currentBranchEntries: unknown[],
+): string {
+	if (firstKeptEntryId !== NO_PRE_COMPACTION_MESSAGES_KEPT_ENTRY_ID) return firstKeptEntryId;
+	const preparedIds = new Set<string>();
+	for (const entry of preparedBranchEntries) {
+		const record = asEntry(entry);
+		if (record) preparedIds.add(record.id);
+	}
+	const entries = currentBranchEntries.map(asEntry).filter((entry): entry is EntryRecord => entry !== undefined);
+	for (let index = 0; index < entries.length; index++) {
+		if (preparedIds.has(entries[index].id)) continue;
+		if (!canStartKeptSuffixAt(entries[index])) continue;
+		if (!suffixIsProviderSafe(entries, index)) continue;
+		return entries[index].id;
+	}
+	return firstKeptEntryId;
+}
+
 export function normalizeCompactionPreparation(
 	preparation: ContinuationCompactionPreparation,
 	branchEntries: unknown[],

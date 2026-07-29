@@ -15,6 +15,7 @@ export const AGENT_BROWSER_ELECTRON_TARGET_TYPES = ["page", "webview", "any"];
 export const AGENT_BROWSER_ELECTRON_LIST_FIELDS = new Set(["action", "query", "maxResults"]);
 export const AGENT_BROWSER_ELECTRON_PROBE_FIELDS = new Set(["action", "launchId", "timeoutMs"]);
 export const AGENT_BROWSER_ELECTRON_RESERVED_APP_ARGS = ["--user-data-dir", "--remote-debugging-port", "--remote-debugging-address", "--remote-debugging-pipe"];
+export const AGENT_BROWSER_ELECTRON_APP_ARG_TERMINATOR = "--";
 export const SOURCE_LOOKUP_WORKSPACE_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".jsx"]);
 export const SOURCE_LOOKUP_IGNORED_DIRECTORIES = new Set([".git", "node_modules", "dist", "build", "coverage", ".next", "out", "tmp", "temp"]);
 export const SOURCE_LOOKUP_DEFAULT_MAX_WORKSPACE_FILES = 2_000;

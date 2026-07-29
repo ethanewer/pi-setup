@@ -68,6 +68,7 @@ Notes:
   Project config: .pi/config/pi-agent-browser-native/config.json
   Override:       ${AGENT_BROWSER_CONFIG_ENV}=/path/to/config.json
   Loaded config may use plaintext, environment interpolation, or !command credential sources; displayed status redacts resolved keys.
+  Credential commands run without a shell: name the shell for a pipeline (/bin/sh -c "pass show key | head -1") or pass an exact JSON argv array (["/bin/sh", "-c", "pass show key | head -1"]).
   Use --provider for set-key, set-command, and clear; set-env infers exa/brave from ${EXA_API_KEY_ENV} or ${BRAVE_API_KEY_ENV}.
 `;
 }

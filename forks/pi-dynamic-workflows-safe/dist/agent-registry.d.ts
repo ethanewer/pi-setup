@@ -12,7 +12,8 @@
  * a deprecated fallback (with a one-time warning) so users who followed this repo's
  * earlier docs are not silently broken; the new location wins on a name collision.
  * Frontmatter binds the subagent's tools, model, and a body prompt; project
- * definitions win over both user-level locations on a name collision. This mirrors
+ * definitions win over both user-level locations on a name collision, and are
+ * read only for a project the user trusts (see loadAgentRegistry). This mirrors
  * Claude Code's `.claude/agents` registry: agentType is a real binding of
  * tools+model+system-prompt, not a prose hint.
  *
@@ -54,12 +55,20 @@ export declare function parseAgentDefinition(content: string, source: "project" 
  * the new user dir), a single deprecation warning is logged for this call
  * telling the user to move their files — not one warning per legacy file.
  *
- * `opts` overrides the scanned directories (used by tests).
+ * The PROJECT directory is part of whatever repository is checked out, and a
+ * definition binds a subagent's whole system prompt plus its model and tool
+ * policy — so project definitions are read only for a trusted project (see
+ * WorkflowSettings.trustProjectLocalWorkflows, the same knob that gates
+ * project-local saved workflows). Untrusted, they are skipped with a one-line
+ * notice naming the directory, and the user-level definitions still load.
+ *
+ * `opts` overrides the scanned directories and the trust decision (used by tests).
  */
 export declare function loadAgentRegistry(cwd: string, opts?: {
     projectDir?: string;
     userDir?: string;
     legacyUserDir?: string;
+    trustProject?: boolean;
 }): AgentRegistry;
 /** Resolve an agentType name to its definition, or undefined if not registered. */
 export declare function resolveAgentType(name: string | undefined, registry: AgentRegistry): AgentDefinition | undefined;

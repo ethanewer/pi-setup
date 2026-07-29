@@ -154,6 +154,24 @@ export interface WorkflowRunOptions extends WorkflowAgentOptions {
     agentTimeoutMs?: number | null;
     /** Whether to persist logs to disk. Default: true */
     persistLogs?: boolean;
+    /**
+     * What an agent that asked for `isolation: "worktree"` does when the worktree
+     * cannot be created. "error" fails THAT agent (recoverably: parallel() and
+     * pipeline() yield null for it and its siblings still run); "shared-tree" logs
+     * the reason and runs it in the shared working tree — which means concurrent
+     * agents edit the same files, the corruption worktree isolation exists to
+     * prevent, so it is opt-in. Default: "error", except when the cwd is not a git
+     * repository at all — worktree isolation was never possible there, so that
+     * case degrades to "shared-tree" with a warning unless "error" is set here.
+     */
+    isolationFallback?: "error" | "shared-tree";
+    /**
+     * Ceiling on the post-script drain of un-awaited agent() calls (see the drain
+     * in runWorkflow's finally). Defaults to `agentTimeoutMs + DRAIN_GRACE_MS`
+     * when a finite per-agent timeout is in force, else DEFAULT_DRAIN_TIMEOUT_MS.
+     * Explicit null restores an unbounded wait.
+     */
+    drainTimeoutMs?: number | null;
     /** Run ID for persistence. Auto-generated if not provided. */
     runId?: string;
     /**
@@ -263,6 +281,13 @@ export interface WorkflowRunOptions extends WorkflowAgentOptions {
         cacheRead?: number;
         cacheWrite?: number;
     }) => void;
+    /**
+     * Ceiling on one synchronous stretch of script execution inside the realm
+     * (default DEFAULT_SCRIPT_TIMEOUT_MS). A vm timeout only bounds synchronous
+     * work, so this is what stops a script that never yields; awaited work is
+     * bounded by agentTimeoutMs and the token budget instead.
+     */
+    scriptTimeoutMs?: number;
 }
 export interface WorkflowRunResult<T = unknown> {
     meta: WorkflowMeta;

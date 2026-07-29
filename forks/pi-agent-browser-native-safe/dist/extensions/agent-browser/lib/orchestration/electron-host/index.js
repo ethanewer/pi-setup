@@ -1,9 +1,10 @@
 /**
  * Purpose: Own wrapper-side Electron host orchestration for agent_browser structured electron input.
- * Responsibilities: Discover Electron apps, inspect/probe/cleanup wrapper-tracked Electron launches, and build Pi-facing Electron host results.
+ * Responsibilities: Discover Electron apps, inspect/probe/cleanup wrapper-tracked Electron launches, adopt launches orphaned by a killed run, and build Pi-facing Electron host results.
  * Scope: Electron host actions that do not spawn the main upstream browser command; generic agent_browser execution stays in browser-run.
  */
 import { cleanupElectronLaunchResources, inspectElectronLaunchStatus } from "../../electron/cleanup.js";
+export { adoptOrphanedElectronLaunches } from "../../electron/orphans.js";
 import { discoverElectronApps } from "../../electron/discovery.js";
 import { boundElectronProbeString } from "../../electron/text.js";
 import { isRecord } from "../../parsing.js";

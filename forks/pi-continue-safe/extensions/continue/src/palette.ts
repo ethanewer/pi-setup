@@ -3,6 +3,7 @@ import { loadContinuationConfig } from "./config.ts";
 import { keyMatches, palettePrintableInput, paletteShortcutMatches } from "./key-input.ts";
 import { readEffectivePiCompactionSettings } from "./pi-settings.ts";
 import { resolveProjectContext } from "./project.ts";
+import { isProjectScopeTrusted } from "./project-trust.ts";
 import type { ContinuationRuntimeState } from "./runtime.ts";
 import { padVisible, truncateAnsi, visibleWidth } from "./tui-text.ts";
 import type { ContinuationConfig } from "./types.ts";
@@ -124,9 +125,10 @@ function renderUsage(ctx: ExtensionCommandContext): string {
 
 async function buildPaletteSnapshot(pi: ExtensionAPI, ctx: ExtensionCommandContext, runtime: ContinuationRuntimeState): Promise<ContinuePaletteSnapshot> {
 	const initialProjectContext = await resolveProjectContext(pi, ctx.cwd, ctx.sessionManager.getSessionId());
-	const config = loadContinuationConfig(initialProjectContext.projectRoot);
-	const projectContext = await resolveProjectContext(pi, ctx.cwd, ctx.sessionManager.getSessionId(), config.agentGuidePath);
-	const compaction = readEffectivePiCompactionSettings(projectContext.projectRoot);
+	const projectTrusted = isProjectScopeTrusted(ctx, initialProjectContext.projectRoot);
+	const config = loadContinuationConfig(initialProjectContext.projectRoot, projectTrusted);
+	const projectContext = await resolveProjectContext(pi, ctx.cwd, ctx.sessionManager.getSessionId(), config.agentGuidePath, config.agentGuideAllowOutsideProject);
+	const compaction = readEffectivePiCompactionSettings(projectContext.projectRoot, projectTrusted);
 	const contextWindow = ctx.model?.contextWindow ?? ctx.getContextUsage()?.contextWindow;
 	return {
 		enabled: config.enabled,

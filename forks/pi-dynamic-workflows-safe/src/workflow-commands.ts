@@ -13,7 +13,7 @@ import {
   type WorkflowSnapshot,
 } from "./display.js";
 import { type EffortState, effortDirective } from "./effort-command.js";
-import type { PersistedRunState } from "./run-persistence.js";
+import { type PersistedRunState, runScriptOrigin } from "./run-persistence.js";
 import { registerSavedWorkflow } from "./saved-commands.js";
 import { buildForcedWorkflowPrompt, WORKFLOW_TOOL_NAME } from "./workflow-editor.js";
 import type { WorkflowManager } from "./workflow-manager.js";
@@ -84,11 +84,19 @@ function watchRun(manager: WorkflowManager, pi: ExtensionAPI, ctx: ExtensionComm
     ctx.ui.setStatus(key, undefined);
     const run = manager.getRun(id);
     if (run) {
-      void pi.sendMessage({
-        customType: "workflows",
-        content: renderWorkflowText(recomputeWorkflowSnapshot(run.snapshot), true),
-        display: true,
-      });
+      try {
+        const sent = pi.sendMessage({
+          customType: "workflows",
+          content: renderWorkflowText(recomputeWorkflowSnapshot(run.snapshot), true),
+          display: true,
+        });
+        // This runs from an event listener, so a rejection (a stale ctx after
+        // /reload is the expected one) would otherwise be unhandled — the run is
+        // still visible via /workflows either way. Mirrors installResultDelivery.
+        void Promise.resolve(sent).catch(() => {});
+      } catch {
+        // Synchronous failure (e.g. stale ctx) — nothing to recover here.
+      }
     }
   };
   for (const ev of progressEvents) manager.on(ev, onEvent);
@@ -155,9 +163,15 @@ export function registerWorkflowCommands(
 
           // Best-effort: ensure the workflow tool is active (session_start usually has).
           // Add-only so this does not interfere with the keyword hook's save/restore state.
+          // The user may have deactivated it deliberately; running this command is
+          // an explicit request for a workflow, so reactivate — but say so, rather
+          // than silently undoing their choice.
           try {
             const active = pi.getActiveTools?.() ?? [];
-            if (!active.includes(WORKFLOW_TOOL_NAME)) pi.setActiveTools?.([...active, WORKFLOW_TOOL_NAME]);
+            if (!active.includes(WORKFLOW_TOOL_NAME)) {
+              pi.setActiveTools?.([...active, WORKFLOW_TOOL_NAME]);
+              ctx.ui.notify(`The "${WORKFLOW_TOOL_NAME}" tool was inactive — reactivated for this request.`, "warning");
+            }
           } catch {
             // ignore — the forced directive is the real forcing primitive
           }
@@ -245,7 +259,17 @@ export function registerWorkflowCommands(
         }
         case "rm": {
           if (!id) return ctx.ui.notify(USAGE, "warning");
-          ctx.ui.notify(manager.deleteRun(id) ? `Removed ${id}` : `No run ${id}`, "info");
+          if (manager.deleteRun(id)) {
+            ctx.ui.notify(`Removed ${id}`, "info");
+            return;
+          }
+          // Deletion also refuses a run whose lease is held — i.e. one another
+          // pi process is executing right now — so say which case this is.
+          const known = manager.listAllRuns().some((r) => r.runId === id);
+          ctx.ui.notify(
+            known ? `Cannot remove ${id} (it is running in another session or process)` : `No run ${id}`,
+            known ? "warning" : "info",
+          );
           return;
         }
         case "save": {
@@ -261,6 +285,24 @@ export function registerWorkflowCommands(
             ctx.ui.notify(runIdArg ? `No run ${runIdArg} with a script` : "No saved run to save", "error");
             return;
           }
+          // Saving copies the run's script into the user's own storage, where it
+          // becomes a `/<name>` command. A script that came from the project's
+          // own run store must not be laundered into a trusted one by that move,
+          // so its origin is confirmed here (when a UI can ask) and recorded on
+          // the saved workflow either way — `/<name>` then keeps asking.
+          const scriptOrigin = runScriptOrigin(run);
+          if (scriptOrigin && ctx.hasUI) {
+            const confirmed = await ctx.ui.confirm(
+              "Project-supplied workflow",
+              `Save ${run.workflowName || "this run"}'s script as /${name}?\n\nIts script comes from:\n${scriptOrigin}\n\n` +
+                "Saving keeps that origin on record, so running it will ask again. " +
+                "Only continue if you trust this repository.",
+            );
+            if (!confirmed) {
+              ctx.ui.notify(`/${name} was not saved (project-supplied script declined).`, "info");
+              return;
+            }
+          }
           let saved: ReturnType<WorkflowStorage["save"]>;
           try {
             saved = storage.save({
@@ -268,6 +310,7 @@ export function registerWorkflowCommands(
               description: run.workflowName,
               script: run.script,
               location: "project",
+              scriptOrigin,
             });
           } catch (error) {
             ctx.ui.notify(error instanceof Error ? error.message : String(error), "error");
@@ -276,7 +319,12 @@ export function registerWorkflowCommands(
           registerSavedWorkflow(pi, opts.cwd ?? process.cwd(), saved, undefined, () =>
             storage.list().some((w) => w.name === saved.name),
           );
-          ctx.ui.notify(`Saved /${name} (from ${run.runId})`, "info");
+          ctx.ui.notify(
+            scriptOrigin
+              ? `Saved /${name} (from ${run.runId}; script came from ${scriptOrigin}, recorded on the saved workflow)`
+              : `Saved /${name} (from ${run.runId})`,
+            "info",
+          );
           return;
         }
         default:

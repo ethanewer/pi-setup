@@ -10,12 +10,16 @@ const BROWSER_PROMPT_PATTERNS = [
     /\bbrowser\b.*\b(?:automation|click|fill|navigate|open|page|screenshot|site|snapshot|tab|url|visit|web(?:site| page)?)\b/i,
     /\b(?:browse|click|fill|login|navigate|open|visit)\b.*\b(?:https?:\/\/\S+|page|site|tab|url|web(?:site| page)?)\b/i,
 ];
+// Every allowance must name agent-browser in the same sentence: a generic "use bash" aside must not turn the
+// direct-launch guard off for the rest of the turn.
+const LEGACY_BASH_REQUEST_SOURCE = "(?:bash[- ]oriented workflow|bash workflow|(?:use|using|via|through|with|in|from)\\s+bash)";
+const AGENT_BROWSER_MENTION_SOURCE = "agent[_ -]?browser";
 const LEGACY_BASH_ALLOW_PATTERNS = [
-    /\b(?:bash-oriented workflow|bash workflow)\b/i,
-    /\b(?:use|via|through|with)\s+bash\b/i,
+    new RegExp(`\\b${AGENT_BROWSER_MENTION_SOURCE}\\b[^.\\n]*\\b${LEGACY_BASH_REQUEST_SOURCE}\\b`, "i"),
+    new RegExp(`\\b${LEGACY_BASH_REQUEST_SOURCE}\\b[^.\\n]*\\b${AGENT_BROWSER_MENTION_SOURCE}\\b`, "i"),
     /\bnpx\s+agent-browser\b/i,
     /\bagent-browser\s+--(?:help|version)\b/i,
-    /\bdebug(?:ging)?\b.*\b(?:agent[_ -]?browser|agent_browser|browser integration)\b/i,
+    /\bdebug(?:ging)?\b[^.\n]*\b(?:agent[_ -]?browser|browser integration)\b/i,
 ];
 const PROMPT_ARTIFACT_PATH_PATTERN = /(?:^|[\s"'`(:])((?:\/[^\s"'`),;]+|[A-Za-z]:[\\/][^\s"'`),;]+|\.{1,2}[\\/][^\s"'`),;]+|[^\s"'`),;:\\/]+(?:[\\/][^\s"'`),;]+)+|[^\s"'`),;:\\/]+)\.(?:png|jpe?g|webp|gif|webm|mp4|har|pdf|trace|json))(?:[\s"'`),;.]|$)/gi;
 function inferPromptArtifactKind(line, path) {

@@ -13,8 +13,12 @@
  *  3. A missing or unreadable directory degrades to "no files" rather than
  *     throwing — a listing must never crash because one storage location is
  *     temporarily inaccessible (not yet created, deleted mid-race, EACCES).
+ *  4. Owner-only permissions. A run record holds the workflow script, every
+ *     agent prompt and every agent result verbatim, and a saved workflow holds
+ *     a script — none of it is redacted, so on a shared machine the file mode
+ *     is the whole protection. Directories are created 0700 and files 0600.
  *
- * This module is the single implementation of all three; run-persistence.ts
+ * This module is the single implementation of all four; run-persistence.ts
  * and workflow-saved.ts both call into it rather than maintaining parallel
  * copies.
  */
@@ -34,7 +38,15 @@ export type PersistenceFsLayer = {
 export declare function defaultPersistenceFs(): PersistenceFsLayer;
 /** Merge a partial test override on top of the real node:fs implementations. */
 export declare function resolvePersistenceFs(overrides?: Partial<PersistenceFsLayer>): PersistenceFsLayer;
-/** Ensure `dir` exists (recursive mkdir), idempotent. */
+/** Owner-only directory mode for every store this module creates. */
+export declare const PRIVATE_DIR_MODE = 448;
+/** Owner-only file mode for every record this module writes. */
+export declare const PRIVATE_FILE_MODE = 384;
+/**
+ * Ensure `dir` exists (recursive mkdir, owner-only), idempotent. A directory
+ * that already exists is left alone — its mode is the user's to choose once it
+ * is there; only what this module creates is forced to 0700.
+ */
 export declare function ensureDir(fs: PersistenceFsLayer, dir: string): void;
 /**
  * Atomically write JSON to `path`: tmp-write + rename (atomic on the same

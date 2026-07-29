@@ -10,7 +10,8 @@
 import { createHash, randomUUID } from "node:crypto";
 import { basename } from "node:path";
 import { findCommandStartIndex, parseArgvDescriptor, parseCommandInfo, } from "./argv-descriptor.js";
-import { GLOBAL_VALUE_FLAGS_ALLOWING_DASH_VALUE, PREVALIDATED_VALUE_FLAGS, optionalGlobalValueFlagConsumesNext, } from "./argv-grammar.js";
+import { GLOBAL_VALUE_FLAGS_ALLOWING_DASH_VALUE, PREVALIDATED_VALUE_FLAGS, getFlagName, optionalGlobalValueFlagConsumesNext, } from "./argv-grammar.js";
+import { PRIVILEGED_ARGV_FLAGS, PRIVILEGED_ARGV_FLAGS_ENV, findCodeExecutionLaunchFlag, isPrivilegedArgvFlagValueAllowed, } from "./launch-flag-policy.js";
 import { needsManagedSession } from "./command-policy.js";
 import { isCloseCommand, isOpenNavigationCommand } from "./command-taxonomy.js";
 import { LAUNCH_SCOPED_FLAG_DEFINITIONS, LAUNCH_SCOPED_FLAG_LABEL } from "./launch-scoped-flags.js";
@@ -548,6 +549,51 @@ function getBareMcpValidationError(args) {
         return undefined;
     return "agent-browser mcp starts a stdio MCP server for external MCP clients, not a one-shot native agent_browser tool workflow. Use the native agent_browser tool modes directly, or configure an MCP client to launch `agent-browser mcp`. Use `mcp --help` for help.";
 }
+function getArgvFlagValues(args, flag) {
+    const values = [];
+    for (const [index, token] of args.entries()) {
+        if (getFlagName(token) !== flag)
+            continue;
+        const value = token.includes("=") ? token.slice(token.indexOf("=") + 1) : args[index + 1];
+        if (value !== undefined)
+            values.push(value);
+    }
+    return values;
+}
+function getBrowserArgsValidationError(args) {
+    for (const value of getArgvFlagValues(args, "--args")) {
+        const unsafeFlag = findCodeExecutionLaunchFlag(value.split(/[\s,]+/));
+        if (unsafeFlag) {
+            return `Do not pass \`${unsafeFlag}\` through \`--args\`; that switch lets Chromium run a caller-supplied command or drop sandboxing. Pass ordinary browser switches instead.`;
+        }
+    }
+    return undefined;
+}
+// Flags that grant host code execution, page-wide script injection, local-file reads, or launch settings loaded
+// from a file stay usable, but only after the user opts in for this pi process, or, for --executable-path, already
+// configured that exact executable in user scope; the model cannot grant itself the capability.
+function getPrivilegedFlagValidationError(args) {
+    for (const [index, token] of args.entries()) {
+        if (!token.startsWith("-"))
+            continue;
+        const flag = getFlagName(token);
+        if (!PRIVILEGED_ARGV_FLAGS.includes(flag))
+            continue;
+        const value = token.includes("=") ? token.slice(token.indexOf("=") + 1) : args[index + 1];
+        if (isPrivilegedArgvFlagValueAllowed(flag, value))
+            continue;
+        if (flag === "--allow-file-access" && !isBooleanFlagEnabled(args, flag))
+            continue;
+        const capability = flag === "--config"
+            ? "loads launch settings such as a browser executable, init scripts, a proxy, or local-file access from a file"
+            : "can execute host code, inject scripts into every page, or expose local files";
+        const alternative = flag === "--executable-path"
+            ? ` A path the user set as \`browser.executablePath\` in global config (or a PI_AGENT_BROWSER_CONFIG override) is already approved, so use that exact value when it is the intended browser.`
+            : "";
+        return `Flag \`${flag}\` ${capability}, so agent_browser requires explicit user approval before forwarding it. Ask the user to restart pi with ${PRIVILEGED_ARGV_FLAGS_ENV}=${flag} (or =1 for every gated flag), then retry.${alternative}`;
+    }
+    return getBrowserArgsValidationError(args);
+}
 export function validateToolArgs(args) {
     if (args.length === 0) {
         return "`args` must contain at least one agent-browser command token.";
@@ -560,7 +606,7 @@ export function validateToolArgs(args) {
     if (sessionModeArg) {
         return "Do not pass `--session-mode` in args. Use the top-level agent_browser `sessionMode` field instead, for example { args: [\"--profile\", \"Default\", \"open\", \"https://example.com\"], sessionMode: \"fresh\" }.";
     }
-    return getBareMcpValidationError(args) ?? getSingleKeyCommandValidationError(args);
+    return getPrivilegedFlagValidationError(args) ?? getBareMcpValidationError(args) ?? getSingleKeyCommandValidationError(args);
 }
 function getInvalidValueFlagDetails(args) {
     for (let index = 0; index < args.length; index += 1) {

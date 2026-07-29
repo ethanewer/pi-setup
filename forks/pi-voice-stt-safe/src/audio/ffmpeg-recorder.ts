@@ -4,6 +4,7 @@ import { rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { FfmpegCaptureConfig } from "../config/types";
+import { assertExecutablePath } from "../utils/executable";
 import { formatError, truncate } from "../utils/text";
 import type { AudioRecorder, RecordingHandle } from "./types";
 
@@ -30,6 +31,10 @@ const waitForExit = (process: ChildProcess): Promise<string> => {
 
 export const createFfmpegRecorder = (config: FfmpegCaptureConfig): AudioRecorder => ({
   start() {
+    // Config load only reports an unresolvable path so the diagnostics still
+    // run; nothing is spawned until it resolves to an absolute executable.
+    if (config.ffmpegPathError) throw new Error(config.ffmpegPathError);
+    assertExecutablePath(config.ffmpegPath, "STT capture.ffmpegPath");
     const tempDir = mkdtempSync(join(tmpdir(), "pi-voice-stt-"));
     const outputPath = join(tempDir, "recording.wav");
     const process = spawn(config.ffmpegPath, [
@@ -48,6 +53,10 @@ export const createFfmpegRecorder = (config: FfmpegCaptureConfig): AudioRecorder
       String(config.sampleRate),
       "-ac",
       String(config.channels),
+      // ffmpeg enforces the cap itself: the controller timer is only the
+      // transcribe trigger and can be blocked by a busy session.
+      "-t",
+      String(config.maxSeconds),
       "-y",
       outputPath,
     ], {

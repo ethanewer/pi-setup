@@ -2,7 +2,7 @@ import { readFile, rm } from "node:fs/promises";
 import { isCloseCommand, isNavigationObservableCommandName, isOpenNavigationCommand } from "../../command-taxonomy.js";
 import { OPEN_RESULT_TAB_CORRECTION_FLAGS } from "../../launch-scoped-flags.js";
 import { cleanupElectronLaunchResources, inspectElectronLaunchStatus } from "../../electron/cleanup.js";
-import { getAllowedDomainsViolation, parseAllowedDomainsPolicyFromArgs } from "../../navigation-policy.js";
+import { getAllowedDomainsViolation, getLocalAppFileRootsForLaunch, parseAllowedDomainsPolicyFromArgs } from "../../navigation-policy.js";
 import { analyzeNetworkSourceLookupResults, analyzeQaPresetResults, analyzeQaPresetTimeout, analyzeSourceLookupResults, buildQaCompactPassText, extractQaPageContext, redactNetworkSourceLookupAnalysis, } from "../../input-modes.js";
 import { applyNetworkRouteRecords, buildNetworkRouteDiagnostics, buildToolPresentation, getAgentBrowserErrorText, parseAgentBrowserEnvelope, } from "../../results.js";
 import { buildEvictedSessionArtifactEntries, formatSessionArtifactRetentionSummary, mergeSessionArtifactManifest, } from "../../results/artifact-manifest.js";
@@ -184,7 +184,9 @@ export async function processBrowserOutput(input) {
             ? parsedAllowedDomainsPolicy ?? allowedDomainsBySession.get(sessionStateKey)
             : parsedAllowedDomainsPolicy;
         const shouldCaptureAllowedDomainNavigationSummary = sessionAllowedDomainsPolicy !== undefined && !cssClickWithoutHref && (prepared.executionPlan.commandInfo.command === "batch" || isNavigationObservableCommandName(prepared.executionPlan.commandInfo.command));
-        if (succeeded &&
+        // A failed command can still have navigated, so an active allowlist reads the page even without success.
+        const shouldCaptureFailedAllowedDomainNavigationSummary = !succeeded && shouldCaptureAllowedDomainNavigationSummary && !processResult.aborted;
+        if ((succeeded || shouldCaptureFailedAllowedDomainNavigationSummary) &&
             !navigationSummary &&
             (shouldCaptureNavigationSummary(prepared.executionPlan.commandInfo.command, presentationEnvelope?.data) ||
                 shouldCaptureSemanticActionNavigationSummary(prepared.compiledSemanticAction, presentationEnvelope?.data) ||
@@ -241,15 +243,26 @@ export async function processBrowserOutput(input) {
             allowedDomainsBySession = new Map(allowedDomainsBySession);
             allowedDomainsBySession.set(sessionStateKey, parsedAllowedDomainsPolicy);
         }
-        const allowedDomainsViolation = succeeded ? getAllowedDomainsViolation({
+        const electronRecordForCommand = findElectronLaunchRecordForSession(prepared.executionPlan.sessionName, electronLaunchRecords);
+        const allowedDomainsViolation = getAllowedDomainsViolation({
+            allowLocalAppUrls: electronRecordForCommand !== undefined || prepared.electronLaunch !== undefined,
+            // Only the resource roots of the Electron apps this wrapper launched can exempt a file: URL.
+            localAppFileRoots: [
+                ...getLocalAppFileRootsForLaunch(electronRecordForCommand),
+                ...getLocalAppFileRootsForLaunch(prepared.electronLaunch?.record),
+            ],
             policy: sessionAllowedDomainsPolicy,
             url: currentSessionTabTarget?.url ?? observedSessionTabTarget?.url ?? navigationSummary?.url,
-        }) : undefined;
+        });
         if (allowedDomainsViolation) {
+            const failureErrorText = succeeded ? undefined : getEnvelopeErrorString(presentationEnvelope);
             succeeded = false;
-            presentationEnvelope = { ...(presentationEnvelope ?? {}), error: allowedDomainsViolation.summary, success: false };
+            presentationEnvelope = {
+                ...(presentationEnvelope ?? {}),
+                error: failureErrorText ? `${allowedDomainsViolation.summary}\n${failureErrorText}` : allowedDomainsViolation.summary,
+                success: false,
+            };
         }
-        const electronRecordForCommand = findElectronLaunchRecordForSession(prepared.executionPlan.sessionName, electronLaunchRecords);
         if (succeeded && electronRecordForCommand && shouldInspectElectronPostCommandHealth(prepared.executionPlan.commandInfo.command)) {
             electronStatusAfterCommand ??= await inspectElectronLaunchStatus(electronRecordForCommand);
             electronPostCommandHealth = buildElectronPostCommandHealthDiagnostic({ command: prepared.executionPlan.commandInfo.command, record: electronRecordForCommand, status: electronStatusAfterCommand, target: observedSessionTabTarget ?? currentSessionTabTarget });

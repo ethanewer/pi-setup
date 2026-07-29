@@ -13,7 +13,7 @@ import {
   defaultOutputConfig,
   defaultVoiceCommandsConfig,
 } from "./defaults";
-import { secureEndpointFrom } from "./endpoint";
+import { isLoopbackEndpoint, isVendorEndpoint, secureEndpointFrom } from "./endpoint";
 import type {
   AssemblyAiProviderConfig,
   BridgeCaptureConfig,
@@ -31,6 +31,7 @@ import type {
 } from "./types";
 import { resolveApiKey } from "../secrets/resolve-api-key";
 import { booleanFrom, objectFrom, positiveIntegerFrom, stringArrayFrom, stringMapFrom, textFrom } from "../utils/coerce";
+import { resolveExecutablePath } from "../utils/executable";
 import { resolvePath } from "../utils/path";
 import { deepMerge } from "../utils/merge";
 import { modeOverrideFrom } from "../core/modes";
@@ -69,6 +70,19 @@ const envNameFrom = (value: unknown, fallback: string): string => {
   return fallback;
 };
 
+/**
+ * Both accepted values return a JSON body with a `text` field, which is what
+ * the provider parses; anything else is refused instead of silently ignored.
+ */
+const responseFormatFrom = (
+  value: unknown,
+  fallback: OpenAiCompatibleProviderConfig["responseFormat"],
+): OpenAiCompatibleProviderConfig["responseFormat"] => {
+  const format = textFrom(value, fallback).toLowerCase();
+  if (format === "json" || format === "verbose_json") return format;
+  throw new Error(`Unsupported STT provider.responseFormat: ${format}. Use "json" or "verbose_json".`);
+};
+
 const commonCaptureFields = (
   capture: Record<string, unknown>,
   merged: Record<string, unknown>,
@@ -78,9 +92,22 @@ const commonCaptureFields = (
   minBytes: Math.max(44, positiveIntegerFrom(capture.minBytes ?? merged.minBytes, defaults.minBytes)),
 });
 
-const ffmpegCaptureFrom = (merged: Record<string, unknown>, capture: Record<string, unknown>): FfmpegCaptureConfig => ({
+/**
+ * A missing ffmpeg is a run-time problem, not a config syntax error: the
+ * failure is reported so `/stt status` and `/stt doctor` still load, and the
+ * recorder refuses to spawn anything until capture.ffmpegPath resolves.
+ */
+const ffmpegPathFrom = async (command: string): Promise<Pick<FfmpegCaptureConfig, "ffmpegPath" | "ffmpegPathError">> => {
+  try {
+    return { ffmpegPath: await resolveExecutablePath(command, "STT capture.ffmpegPath"), ffmpegPathError: "" };
+  } catch (error) {
+    return { ffmpegPath: command, ffmpegPathError: formatError(error) };
+  }
+};
+
+const ffmpegCaptureFrom = async (merged: Record<string, unknown>, capture: Record<string, unknown>): Promise<FfmpegCaptureConfig> => ({
   type: "ffmpeg",
-  ffmpegPath: textFrom(capture.ffmpegPath, textFrom(capture.ffmpeg, textFrom(merged.ffmpeg, defaultFfmpegCaptureConfig.ffmpegPath))),
+  ...(await ffmpegPathFrom(textFrom(capture.ffmpegPath, textFrom(capture.ffmpeg, textFrom(merged.ffmpeg, defaultFfmpegCaptureConfig.ffmpegPath))))),
   inputFormat: textFrom(capture.inputFormat, textFrom(merged.inputFormat, defaultFfmpegCaptureConfig.inputFormat)),
   input: textFrom(capture.input, textFrom(merged.input, defaultFfmpegCaptureConfig.input)),
   sampleRate: positiveIntegerFrom(capture.sampleRate ?? merged.sampleRate, defaultFfmpegCaptureConfig.sampleRate),
@@ -127,6 +154,52 @@ const secretSourceFrom = (merged: Record<string, unknown>, provider: Record<stri
   keychainAccount: provider.keychainAccount ?? merged.keychainAccount,
 });
 
+/**
+ * An explicit apiKeyEnv counts even when empty: `"apiKeyEnv": ""` is how a
+ * config says "this endpoint is deliberately keyless".
+ */
+const namesSecretExplicitly = (secrets: Record<string, unknown>): boolean =>
+  typeof secrets.apiKeyEnv === "string" ||
+  Boolean(textFrom(secrets.apiKey) || textFrom(secrets.apiKeyFile) || textFrom(secrets.keychainService));
+
+/**
+ * `openai-compatible`, `local` and cleanup.endpoint accept arbitrary hosts, so
+ * the defaulted OpenAI credential may only follow an OpenAI host: any other
+ * host has to name the secret it is allowed to receive, which keeps a
+ * redirected endpoint from inheriting OPENAI_API_KEY along with the audio.
+ * A loopback endpoint needs no credential of its own and gets no default, on
+ * http and https alike — an https local server still loads without one.
+ */
+const openAiKeyEnvDefault = (endpoint: string, secrets: Record<string, unknown>, defaultEnv: string, label: string): string => {
+  if (!defaultEnv || isVendorEndpoint(endpoint, "openai")) return defaultEnv;
+  if (namesSecretExplicitly(secrets) || isLoopbackEndpoint(endpoint)) return "";
+
+  throw new Error(
+    `STT ${label}.endpoint ${new URL(endpoint).hostname} is not an OpenAI host, so it needs its own credential: ` +
+      `set ${label}.apiKeyEnv (or ${label}.apiKey, ${label}.apiKeyFile, ${label}.keychainService), ` +
+      `or ${label}.apiKeyEnv "" for an endpoint that takes no key. ` +
+      `The ${defaultEnv} default applies to OpenAI endpoints only.`,
+  );
+};
+
+/**
+ * `local` names a server on this machine and defaults to no credential at all,
+ * so its endpoint pointing somewhere else is surprising enough to have to be
+ * meant: the config declares which credential that host receives, or
+ * `apiKeyEnv: ""` to keep sending it audio with none. Without that opt-in the
+ * type and the endpoint disagree, and the audio leaves the machine anyway.
+ */
+const assertLocalProviderStaysLocal = (endpoint: string, secrets: Record<string, unknown>): void => {
+  if (isLoopbackEndpoint(endpoint) || namesSecretExplicitly(secrets)) return;
+
+  throw new Error(
+    `STT provider.type "local" points at ${new URL(endpoint).hostname}, which is not this machine, so the remote host has to be deliberate: ` +
+      `set provider.apiKeyEnv (or provider.apiKey, provider.apiKeyFile, provider.keychainService) to name the credential it receives, ` +
+      `or provider.apiKeyEnv "" to send it audio with no credential on purpose. ` +
+      `provider.type "openai-compatible" is the type for a remote OpenAI-compatible server.`,
+  );
+};
+
 const commonProviderFields = async <TDefault extends { apiKeyEnv: string; timeoutSeconds: number }>(
   merged: Record<string, unknown>,
   provider: Record<string, unknown>,
@@ -145,7 +218,7 @@ const commonProviderFields = async <TDefault extends { apiKeyEnv: string; timeou
 
 const mistralProviderFrom = async (merged: Record<string, unknown>, provider: Record<string, unknown>): Promise<MistralProviderConfig> => ({
   type: "mistral",
-  endpoint: secureEndpointFrom(provider.endpoint ?? merged.endpoint, defaultMistralProviderConfig.endpoint),
+  endpoint: secureEndpointFrom(provider.endpoint ?? merged.endpoint, defaultMistralProviderConfig.endpoint, "mistral"),
   model: textFrom(provider.model, textFrom(merged.model, defaultMistralProviderConfig.model)),
   language: textFrom(provider.language, textFrom(merged.language, defaultMistralProviderConfig.language)),
   ...(await commonProviderFields(merged, provider, defaultMistralProviderConfig)),
@@ -154,18 +227,44 @@ const mistralProviderFrom = async (merged: Record<string, unknown>, provider: Re
 const openAiCompatibleProviderFrom = async (
   merged: Record<string, unknown>,
   provider: Record<string, unknown>,
-): Promise<OpenAiCompatibleProviderConfig> => ({
-  type: "openai-compatible",
-  endpoint: secureEndpointFrom(provider.endpoint ?? merged.endpoint, defaultOpenAiCompatibleProviderConfig.endpoint),
-  model: textFrom(provider.model, textFrom(merged.model, defaultOpenAiCompatibleProviderConfig.model)),
-  language: textFrom(provider.language, textFrom(merged.language, defaultOpenAiCompatibleProviderConfig.language)),
-  responseFormat: "json",
-  ...(await commonProviderFields(merged, provider, defaultOpenAiCompatibleProviderConfig)),
-});
+  vendor = "",
+): Promise<OpenAiCompatibleProviderConfig> => {
+  // A provider.endpoint that is present but unusable (`""`, blank, not a
+  // string) means "this type's default", so it falls back to the endpoint the
+  // type already put in `merged` rather than to OpenAI's: a blank endpoint must
+  // not retarget `local` or `groq` at api.openai.com behind the checks below.
+  const endpoint = secureEndpointFrom(
+    provider.endpoint ?? merged.endpoint,
+    textFrom(merged.endpoint, defaultOpenAiCompatibleProviderConfig.endpoint),
+    vendor,
+  );
+  // A named vendor is already pinned to its own domain; an unpinned host only
+  // gets a credential it named itself (or the OpenAI default on OpenAI hosts).
+  const defaults = vendor
+    ? defaultOpenAiCompatibleProviderConfig
+    : {
+        ...defaultOpenAiCompatibleProviderConfig,
+        apiKeyEnv: openAiKeyEnvDefault(
+          endpoint,
+          secretSourceFrom(merged, provider),
+          defaultOpenAiCompatibleProviderConfig.apiKeyEnv,
+          "provider",
+        ),
+      };
+
+  return {
+    type: "openai-compatible",
+    endpoint,
+    model: textFrom(provider.model, textFrom(merged.model, defaultOpenAiCompatibleProviderConfig.model)),
+    language: textFrom(provider.language, textFrom(merged.language, defaultOpenAiCompatibleProviderConfig.language)),
+    responseFormat: responseFormatFrom(provider.responseFormat ?? merged.responseFormat, defaultOpenAiCompatibleProviderConfig.responseFormat),
+    ...(await commonProviderFields(merged, provider, defaults)),
+  };
+};
 
 const deepgramProviderFrom = async (merged: Record<string, unknown>, provider: Record<string, unknown>): Promise<DeepgramProviderConfig> => ({
   type: "deepgram",
-  endpoint: secureEndpointFrom(provider.endpoint ?? merged.endpoint, defaultDeepgramProviderConfig.endpoint),
+  endpoint: secureEndpointFrom(provider.endpoint ?? merged.endpoint, defaultDeepgramProviderConfig.endpoint, "deepgram"),
   model: textFrom(provider.model, textFrom(merged.model, defaultDeepgramProviderConfig.model)),
   language: textFrom(provider.language, textFrom(merged.language, defaultDeepgramProviderConfig.language)),
   smartFormat: booleanFrom(provider.smartFormat ?? merged.smartFormat, defaultDeepgramProviderConfig.smartFormat),
@@ -177,7 +276,7 @@ const elevenLabsProviderFrom = async (
   provider: Record<string, unknown>,
 ): Promise<ElevenLabsProviderConfig> => ({
   type: "elevenlabs",
-  endpoint: secureEndpointFrom(provider.endpoint ?? merged.endpoint, defaultElevenLabsProviderConfig.endpoint),
+  endpoint: secureEndpointFrom(provider.endpoint ?? merged.endpoint, defaultElevenLabsProviderConfig.endpoint, "elevenlabs"),
   model: textFrom(provider.model, textFrom(merged.model, defaultElevenLabsProviderConfig.model)),
   language: textFrom(provider.language, textFrom(merged.language, defaultElevenLabsProviderConfig.language)),
   ...(await commonProviderFields(merged, provider, defaultElevenLabsProviderConfig)),
@@ -185,10 +284,11 @@ const elevenLabsProviderFrom = async (
 
 const gladiaProviderFrom = async (merged: Record<string, unknown>, provider: Record<string, unknown>): Promise<GladiaProviderConfig> => ({
   type: "gladia",
-  uploadEndpoint: secureEndpointFrom(provider.uploadEndpoint ?? provider.upload_endpoint ?? merged.uploadEndpoint, defaultGladiaProviderConfig.uploadEndpoint),
+  uploadEndpoint: secureEndpointFrom(provider.uploadEndpoint ?? provider.upload_endpoint ?? merged.uploadEndpoint, defaultGladiaProviderConfig.uploadEndpoint, "gladia"),
   transcriptionEndpoint: secureEndpointFrom(
     provider.transcriptionEndpoint ?? provider.transcription_endpoint ?? merged.transcriptionEndpoint,
     defaultGladiaProviderConfig.transcriptionEndpoint,
+    "gladia",
   ),
   model: textFrom(provider.model, textFrom(merged.model, defaultGladiaProviderConfig.model)),
   language: textFrom(provider.language, textFrom(merged.language, defaultGladiaProviderConfig.language)),
@@ -201,16 +301,24 @@ const assemblyAiProviderFrom = async (
   provider: Record<string, unknown>,
 ): Promise<AssemblyAiProviderConfig> => ({
   type: "assemblyai",
-  uploadEndpoint: secureEndpointFrom(provider.uploadEndpoint ?? provider.upload_endpoint ?? merged.uploadEndpoint, defaultAssemblyAiProviderConfig.uploadEndpoint),
+  uploadEndpoint: secureEndpointFrom(provider.uploadEndpoint ?? provider.upload_endpoint ?? merged.uploadEndpoint, defaultAssemblyAiProviderConfig.uploadEndpoint, "assemblyai"),
   transcriptEndpoint: secureEndpointFrom(
     provider.transcriptEndpoint ?? provider.transcript_endpoint ?? merged.transcriptEndpoint,
     defaultAssemblyAiProviderConfig.transcriptEndpoint,
+    "assemblyai",
   ),
   model: textFrom(provider.model, textFrom(merged.model, defaultAssemblyAiProviderConfig.model)),
   language: textFrom(provider.language, textFrom(merged.language, defaultAssemblyAiProviderConfig.language)),
   pollIntervalMs: positiveIntegerFrom(provider.pollIntervalMs ?? merged.pollIntervalMs, defaultAssemblyAiProviderConfig.pollIntervalMs),
   ...(await commonProviderFields(merged, provider, defaultAssemblyAiProviderConfig)),
 });
+
+/**
+ * `local` is `openai-compatible` aimed at this machine, and its `apiKeyEnv: ""`
+ * is an implicit "this server takes no key" — which is why the endpoint is
+ * checked against what the config itself named, before this is merged in.
+ */
+const localProviderDefaults = { endpoint: "http://localhost:10301/v1/audio/transcriptions", model: "whisper-1", apiKeyEnv: "" };
 
 const providerFrom = async (merged: Record<string, unknown>): Promise<ProviderConfig> => {
   const provider = objectFrom(merged.provider);
@@ -222,11 +330,21 @@ const providerFrom = async (merged: Record<string, unknown>): Promise<ProviderCo
     const providerDefaults = providerType === "groq"
       ? { endpoint: "https://api.groq.com/openai/v1/audio/transcriptions", model: "whisper-large-v3-turbo", apiKeyEnv: "GROQ_API_KEY" }
       : providerType === "local"
-        ? { endpoint: "http://localhost:10301/v1/audio/transcriptions", model: "whisper-1", apiKeyEnv: "" }
+        ? localProviderDefaults
         : providerType === "openai"
           ? { endpoint: "https://api.openai.com/v1/audio/transcriptions", model: "gpt-4o-mini-transcribe", apiKeyEnv: "OPENAI_API_KEY" }
           : {};
-    return openAiCompatibleProviderFrom({ ...merged, ...providerDefaults }, provider);
+    const vendor = providerType === "openai" || providerType === "groq" ? providerType : "";
+    // The type defaults win over a top-level `endpoint`, so the endpoint judged
+    // here is the one the provider is actually built with, and the secrets are
+    // read before `apiKeyEnv: ""` is merged in as the type's own default.
+    if (providerType === "local") {
+      assertLocalProviderStaysLocal(
+        secureEndpointFrom(provider.endpoint, localProviderDefaults.endpoint),
+        secretSourceFrom(merged, provider),
+      );
+    }
+    return openAiCompatibleProviderFrom({ ...merged, ...providerDefaults }, provider, vendor);
   }
 
   if (providerType === "deepgram") return deepgramProviderFrom(merged, provider);
@@ -248,9 +366,20 @@ const outputFrom = (merged: Record<string, unknown>) => {
 
 const cleanupFrom = async (merged: Record<string, unknown>): Promise<CleanupConfig> => {
   const cleanup = objectFrom(merged.cleanup);
+  const enabled = booleanFrom(cleanup.enabled, defaultCleanupConfig.enabled);
+  const endpoint = secureEndpointFrom(cleanup.endpoint, defaultCleanupConfig.endpoint);
+  // cleanup.endpoint is the generic OpenAI-compatible chat escape hatch, so the
+  // OPENAI_API_KEY default may only follow it to OpenAI's own hosts. A disabled
+  // cleanup is never called, so it is not worth refusing to load over.
+  const apiKeyEnvDefault = enabled
+    ? openAiKeyEnvDefault(endpoint, cleanup, defaultCleanupConfig.apiKeyEnv, "cleanup")
+    : isVendorEndpoint(endpoint, "openai")
+      ? defaultCleanupConfig.apiKeyEnv
+      : "";
+
   return {
-    enabled: booleanFrom(cleanup.enabled, defaultCleanupConfig.enabled),
-    endpoint: secureEndpointFrom(cleanup.endpoint, defaultCleanupConfig.endpoint),
+    enabled,
+    endpoint,
     model: textFrom(cleanup.model, defaultCleanupConfig.model),
     language: textFrom(cleanup.language, defaultCleanupConfig.language),
     prompt: textFrom(cleanup.prompt, defaultCleanupConfig.prompt),
@@ -258,8 +387,8 @@ const cleanupFrom = async (merged: Record<string, unknown>): Promise<CleanupConf
     useRepoContext: booleanFrom(cleanup.useRepoContext, defaultCleanupConfig.useRepoContext),
     maxTokens: positiveIntegerFrom(cleanup.maxTokens, defaultCleanupConfig.maxTokens),
     timeoutSeconds: positiveIntegerFrom(cleanup.timeoutSeconds, defaultCleanupConfig.timeoutSeconds),
-    apiKey: await resolveApiKey(cleanup, defaultCleanupConfig.apiKeyEnv),
-    apiKeyEnv: textFrom(cleanup.apiKeyEnv, defaultCleanupConfig.apiKeyEnv),
+    apiKey: await resolveApiKey(cleanup, apiKeyEnvDefault),
+    apiKeyEnv: envNameFrom(cleanup.apiKeyEnv, apiKeyEnvDefault),
     apiKeyFile: textFrom(cleanup.apiKeyFile),
     keychainService: textFrom(cleanup.keychainService),
     keychainAccount: textFrom(cleanup.keychainAccount),

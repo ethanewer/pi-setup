@@ -22,6 +22,7 @@ const platformCaptureDefaults = (): Pick<FfmpegCaptureConfig, "inputFormat" | "i
 export const defaultFfmpegCaptureConfig = {
   type: "ffmpeg",
   ffmpegPath: "ffmpeg",
+  ffmpegPathError: "",
   ...platformCaptureDefaults(),
   sampleRate: 16000,
   channels: 1,

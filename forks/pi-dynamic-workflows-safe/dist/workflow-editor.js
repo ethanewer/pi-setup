@@ -236,15 +236,18 @@ export function installWorkflowKeywordArming(pi, effort, options = {}) {
     };
     registerWorkflowTriggerCommand(pi, state, settingsStore);
     registerWorkflowProgressCommands(pi, settingsStore);
-    // Active tools saved while a turn is restricted to `workflow`; restored on turn_end.
-    let savedTools;
+    // Whether THIS hook added the workflow tool for the current turn, so turn_end
+    // can undo exactly that. A snapshot of the whole active set can't be restored
+    // wholesale: anything else that changed the set during the turn (another
+    // extension, a /tools edit by the user) would be reverted with it.
+    let armedToolAdded = false;
     // When armed at submit time, rewrite the user's message to force a workflow AND
     // ensure the `workflow` tool is in the active tool set, so the model can call it.
     // We keep all existing tools (bash, read, edit, write, web_search, etc.) because
     // the model often needs them BEFORE writing the workflow script (e.g. exploring
     // the codebase, reading files, searching for context). This only ADDS the
-    // workflow tool to the active set; no tools are removed (the original set is
-    // saved in `savedTools` and restored elsewhere).
+    // workflow tool to the active set; no tools are removed, and turn_end removes
+    // just that one addition again (see armedToolAdded).
     //
     // NOTE: we check event.text directly (hasTrigger) rather than state.active from
     // the editor, because the editor's state is reset synchronously by submitValue()
@@ -263,13 +266,10 @@ export function installWorkflowKeywordArming(pi, effort, options = {}) {
         if (!triggered && !byEffort)
             return { action: "continue" };
         try {
-            if (savedTools === undefined) {
-                savedTools = pi.getActiveTools?.() ?? [];
-                const current = [...savedTools];
-                if (!current.includes(WORKFLOW_TOOL_NAME)) {
-                    current.push(WORKFLOW_TOOL_NAME);
-                }
-                pi.setActiveTools?.(current);
+            const current = pi.getActiveTools?.() ?? [];
+            if (!current.includes(WORKFLOW_TOOL_NAME)) {
+                pi.setActiveTools?.([...current, WORKFLOW_TOOL_NAME]);
+                armedToolAdded = true;
             }
         }
         catch {
@@ -289,17 +289,20 @@ export function installWorkflowKeywordArming(pi, effort, options = {}) {
             text: buildArmedWorkflowPrompt(event.text, { reason, extraDirective: extra }),
         };
     });
-    // Restore the user's full tool set once the forced turn completes.
+    // Undo only this hook's own addition once the armed turn completes, leaving
+    // every other change made during the turn in place.
     pi.on("turn_end", () => {
-        if (savedTools === undefined)
+        if (!armedToolAdded)
             return;
-        const restore = savedTools;
-        savedTools = undefined;
+        armedToolAdded = false;
         try {
-            pi.setActiveTools?.(restore);
+            const current = pi.getActiveTools?.() ?? [];
+            if (current.includes(WORKFLOW_TOOL_NAME)) {
+                pi.setActiveTools?.(current.filter((name) => name !== WORKFLOW_TOOL_NAME));
+            }
         }
         catch {
-            // ignore — nothing we can do if the host rejects the restore
+            // ignore — nothing we can do if the host rejects the change
         }
     });
     return state;

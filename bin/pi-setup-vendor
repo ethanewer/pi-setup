@@ -72,17 +72,22 @@ regenerate_patch() { # regenerate_patch <fork>
   local pristine
   pristine="$(fetch_pristine "$upstream" "$version" "pristine-$fork")" || exit 1
   mkdir -p "$REPO_DIR/$(dirname "$patch_rel")"
+  # Both trees must sit side by side under one parent as a/ and b/ so that every
+  # hunk header carries its own relative path and `patch -p1` can route it.
+  local work="$TMP_ROOT/diff-$fork"
+  rm -rf "$work"
+  mkdir -p "$work/a" "$work/b"
+  ( cd "$pristine" && tar cf - --exclude=node_modules . ) | ( cd "$work/a" && tar xf - )
+  ( cd "$REPO_DIR/forks/$fork" && tar cf - --exclude=node_modules . ) | ( cd "$work/b" && tar xf - )
   # diff exits 1 when files differ, which is the normal case here.
-  ( cd "$TMP_ROOT" && diff -ruN \
-      --exclude=node_modules \
-      --label "a/$fork" --label "b/$fork" \
-      "pristine-$fork" "$REPO_DIR/forks/$fork" ) > "$REPO_DIR/$patch_rel.tmp"
+  ( cd "$work" && diff -ruN --exclude=node_modules a b ) > "$REPO_DIR/$patch_rel.tmp"
   local status=$?
   if [[ "$status" -gt 1 ]]; then
     rm -f "$REPO_DIR/$patch_rel.tmp"
     die "diff failed for $fork"
   fi
   mv "$REPO_DIR/$patch_rel.tmp" "$REPO_DIR/$patch_rel"
+  rm -rf "$work"
   local changed
   changed="$(grep -c '^--- ' "$REPO_DIR/$patch_rel" 2>/dev/null || printf '0')"
   say "  wrote $patch_rel ($changed file(s) changed)"

@@ -7,6 +7,7 @@ import { createCodingTools, type ExtensionAPI, type ExtensionCommandContext } fr
 import { runWorkflow, type WorkflowRunResult } from "./workflow.js";
 import type { WorkflowManager } from "./workflow-manager.js";
 import type { SavedWorkflow, WorkflowStorage } from "./workflow-saved.js";
+import { loadWorkflowSettings } from "./workflow-settings.js";
 
 function isRegistered(pi: ExtensionAPI, name: string): boolean {
   try {
@@ -14,6 +15,36 @@ function isRegistered(pi: ExtensionAPI, name: string): boolean {
   } catch {
     return false;
   }
+}
+
+/**
+ * Ask before running a workflow whose script came from the project rather than
+ * from the user. The prompt names the exact source: a repository can ship
+ * `.pi/workflows/saved/<name>.json`, and cloning it must not be enough to make
+ * `/<name>` start subagents — nor must copying a project-supplied run's script
+ * into the user's own storage (see SavedWorkflow.scriptOrigin), which is why a
+ * recorded origin gates the same way a repo-local file does. Declining is not an
+ * error — it just doesn't run. Answered yes-by-configuration via
+ * trustProjectLocalWorkflows.
+ */
+export async function confirmRepoLocalWorkflow(
+  ctx: ExtensionCommandContext,
+  wf: Pick<SavedWorkflow, "name" | "path" | "repoLocal" | "scriptOrigin">,
+  cwd: string,
+  purpose = `Run /${wf.name}?`,
+): Promise<boolean> {
+  if (!wf.repoLocal && !wf.scriptOrigin) return true;
+  if (loadWorkflowSettings({ cwd }).trustProjectLocalWorkflows === true) return true;
+  const source = wf.repoLocal ? wf.path : (wf.scriptOrigin as string);
+  const confirmed = await ctx.ui.confirm(
+    "Project-supplied workflow",
+    `${purpose}\n\nIts script comes from this project's own directory:\n${source}\n\n` +
+      "It will run subagents with your tools and permissions. Only continue if you trust this repository.",
+  );
+  if (!confirmed) {
+    ctx.ui.notify(`/${wf.name} was not run (project-supplied workflow declined).`, "info");
+  }
+  return confirmed;
 }
 
 function reportText(result: WorkflowRunResult): string {
@@ -68,6 +99,7 @@ export function registerSavedWorkflow(
         ctx.ui.notify(`/${wf.name} was deleted — reload the session to remove this command.`, "warning");
         return;
       }
+      if (!(await confirmRepoLocalWorkflow(ctx, wf, cwd))) return;
       try {
         if (manager) {
           // Run through the WorkflowManager's background path: the handler

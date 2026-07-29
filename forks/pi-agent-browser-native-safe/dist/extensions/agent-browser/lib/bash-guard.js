@@ -1,9 +1,12 @@
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { readFile, realpath } from "node:fs/promises";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 const DIRECT_AGENT_BROWSER_BASH_BYPASS_ENV = "PI_AGENT_BROWSER_ALLOW_DIRECT_BASH";
 const DIRECT_AGENT_BROWSER_EXECUTABLE_PATTERN = /^(?:[.~]|\.\.?|\/)?(?:[^\s;&|]+\/)?agent-browser$/;
 const HARMLESS_AGENT_BROWSER_INSPECTION_PATTERN = /^\s*(?:command\s+-v|which|type\s+-P)\s+agent-browser\s*$/;
 const PACKAGE_NAME = "pi-agent-browser-native";
+/** This module ships at <packageRoot>/dist/extensions/agent-browser/lib/bash-guard.js. */
+const EXTENSION_PACKAGE_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 function isShellAssignmentToken(token) {
     return /^[A-Za-z_][A-Za-z0-9_]*=/.test(token);
 }
@@ -12,6 +15,44 @@ function stripOuterQuotes(token) {
         return token.slice(1, -1);
     }
     return token;
+}
+/** Quote and backslash removal so quoted spellings resolve to the same executable token bash would run. */
+function unquoteShellToken(token) {
+    let unquoted = "";
+    let quoteState;
+    for (let index = 0; index < token.length; index += 1) {
+        const char = token[index];
+        if (quoteState === "single") {
+            if (char === "'")
+                quoteState = undefined;
+            else
+                unquoted += char;
+            continue;
+        }
+        if (quoteState === "double") {
+            if (char === "\\" && index + 1 < token.length) {
+                unquoted += token[index + 1];
+                index += 1;
+                continue;
+            }
+            if (char === '"')
+                quoteState = undefined;
+            else
+                unquoted += char;
+            continue;
+        }
+        if (char === "'" || char === '"') {
+            quoteState = char === "'" ? "single" : "double";
+            continue;
+        }
+        if (char === "\\" && index + 1 < token.length) {
+            unquoted += token[index + 1];
+            index += 1;
+            continue;
+        }
+        unquoted += char;
+    }
+    return unquoted;
 }
 function segmentLaunchesAgentBrowser(tokens) {
     let index = 0;
@@ -70,7 +111,11 @@ export function looksLikeDirectAgentBrowserBash(command) {
             awaitingHeredocDelimiter = undefined;
             return;
         }
-        segmentTokens.push(token);
+        const unquotedToken = unquoteShellToken(token);
+        if (unquotedToken.length === 0) {
+            return;
+        }
+        segmentTokens.push(unquotedToken);
     };
     const flushToken = () => {
         acceptToken(currentToken);
@@ -176,9 +221,15 @@ export function isHarmlessAgentBrowserInspectionCommand(command) {
 function isTruthyEnvValue(value) {
     return value === "1" || value?.toLowerCase() === "true" || value?.toLowerCase() === "yes";
 }
+// Only the checkout that provides the running extension counts as the development cwd; any other repository
+// could otherwise disable the guard by naming itself pi-agent-browser-native.
 async function isPackageDevelopmentCwd(cwd) {
     try {
-        const packageJson = JSON.parse(await readFile(join(cwd, "package.json"), "utf8"));
+        const packageRoot = await realpath(resolve(cwd));
+        if (packageRoot !== await realpath(EXTENSION_PACKAGE_ROOT)) {
+            return false;
+        }
+        const packageJson = JSON.parse(await readFile(join(packageRoot, "package.json"), "utf8"));
         return packageJson.name === PACKAGE_NAME;
     }
     catch {

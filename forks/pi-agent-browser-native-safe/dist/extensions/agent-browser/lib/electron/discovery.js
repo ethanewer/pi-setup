@@ -6,15 +6,20 @@
  * Invariants/Assumptions: Discovery is best-effort, missing scan roots are ignored, malformed .desktop files are skipped, and results are capped before they reach model-visible output.
  */
 import { constants as fsConstants } from "node:fs";
-import { access, readdir, readFile, realpath, stat } from "node:fs/promises";
+import { access, open, readdir, readFile, realpath, stat } from "node:fs/promises";
 import { homedir } from "node:os";
-import { basename, dirname, extname, isAbsolute, join, relative, resolve } from "node:path";
+import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { pathExists } from "../fs-utils.js";
 export const ELECTRON_DISCOVERY_DEFAULT_MAX_RESULTS = 50;
 export const ELECTRON_DISCOVERY_MAX_RESULTS = 200;
 const LINUX_ELECTRON_CANDIDATE_MAX_DEPTH = 7;
 const LINUX_ELECTRON_CANDIDATE_MAX_ENTRIES = 5_000;
 const LINUX_NON_EXECUTABLE_CANDIDATE_EXTENSIONS = new Set([".asar", ".dat", ".desktop", ".json", ".md", ".pak", ".png", ".so", ".txt"]);
+const DARWIN_ELECTRON_FRAMEWORK_DIRECTORY_NAME = "Electron Framework.framework";
+const DARWIN_ELECTRON_FRAMEWORK_BINARY_NAME = "Electron Framework";
+const MACH_O_MAGIC_NUMBERS = new Set([0xfeedface, 0xfeedfacf, 0xcefaedfe, 0xcffaedfe, 0xcafebabe, 0xbebafeca]);
+const ELF_MAGIC_NUMBERS = new Set([0x7f454c46]);
+const PORTABLE_EXECUTABLE_MAGIC_NUMBERS = new Set([0x4d5a]);
 const ELECTRON_SENSITIVE_APP_CATEGORY_PATTERNS = [
     { category: "notes", patterns: [/\bobsidian\b/i, /\bnotion\b/i, /\blogseq\b/i] },
     { category: "chat", patterns: [/\bslack\b/i, /\bdiscord\b/i, /\bteams\b/i, /\bsignal\b/i, /\btelegram\b/i, /\bwhatsapp\b/i] },
@@ -97,6 +102,55 @@ async function isExecutableFile(path) {
         return false;
     }
 }
+async function readFileMagicNumber(path, byteLength) {
+    let handle;
+    try {
+        handle = await open(path, "r");
+        const buffer = Buffer.alloc(byteLength);
+        const { bytesRead } = await handle.read(buffer, 0, byteLength, 0);
+        return bytesRead === byteLength ? buffer.readUIntBE(0, byteLength) : undefined;
+    }
+    catch {
+        return undefined;
+    }
+    finally {
+        await handle?.close();
+    }
+}
+async function hasNativeBinaryMagic(path, magicNumbers, byteLength) {
+    if (!await isFile(path))
+        return false;
+    const magicNumber = await readFileMagicNumber(path, byteLength);
+    return magicNumber !== undefined && magicNumbers.has(magicNumber);
+}
+async function isMachOBinary(path) {
+    return hasNativeBinaryMagic(path, MACH_O_MAGIC_NUMBERS, 4);
+}
+async function isElfBinary(path) {
+    return hasNativeBinaryMagic(path, ELF_MAGIC_NUMBERS, 4);
+}
+async function isPortableExecutableBinary(path) {
+    return hasNativeBinaryMagic(path, PORTABLE_EXECUTABLE_MAGIC_NUMBERS, 2);
+}
+async function hasDarwinElectronFrameworkBinary(frameworkPath) {
+    const versionsDirectory = join(frameworkPath, "Versions");
+    if (await isMachOBinary(join(frameworkPath, DARWIN_ELECTRON_FRAMEWORK_BINARY_NAME)))
+        return true;
+    let versions;
+    try {
+        versions = await readdir(versionsDirectory, { withFileTypes: true });
+    }
+    catch {
+        return false;
+    }
+    for (const version of versions) {
+        if (!version.isDirectory() && !version.isSymbolicLink())
+            continue;
+        if (await isMachOBinary(join(versionsDirectory, version.name, DARWIN_ELECTRON_FRAMEWORK_BINARY_NAME)))
+            return true;
+    }
+    return false;
+}
 async function resolveRealPath(path) {
     try {
         return await realpath(path);
@@ -135,26 +189,38 @@ async function readMacInfoPlist(appPath) {
         return {};
     }
 }
+async function isLaunchableMacExecutable(executablePath, macOsDirectory) {
+    if (!pathIsWithin(executablePath, macOsDirectory))
+        return false;
+    return await isExecutableFile(executablePath) && await isMachOBinary(executablePath);
+}
 async function resolveMacExecutablePath(appPath, executableName, fallbackName) {
     const macOsDirectory = join(appPath, "Contents", "MacOS");
-    if (executableName && executableName.trim().length > 0) {
-        const executablePath = join(macOsDirectory, executableName);
-        return await pathExists(executablePath) ? executablePath : undefined;
+    const declaredName = executableName?.trim();
+    if (declaredName && declaredName.length > 0) {
+        // CFBundleExecutable is bundle-controlled text, so it may only name a direct child of Contents/MacOS.
+        if (declaredName.includes("/") || declaredName.includes(sep) || declaredName === "." || declaredName === "..")
+            return undefined;
+        const executablePath = join(macOsDirectory, declaredName);
+        return await isLaunchableMacExecutable(executablePath, macOsDirectory) ? executablePath : undefined;
     }
     try {
         const entries = await readdir(macOsDirectory, { withFileTypes: true });
         const exact = entries.find((entry) => entry.isFile() && entry.name === fallbackName);
         const candidate = exact ?? entries.find((entry) => entry.isFile());
-        return candidate ? join(macOsDirectory, candidate.name) : undefined;
+        if (!candidate)
+            return undefined;
+        const candidatePath = join(macOsDirectory, candidate.name);
+        return await isLaunchableMacExecutable(candidatePath, macOsDirectory) ? candidatePath : undefined;
     }
     catch {
         return undefined;
     }
 }
 export async function inspectDarwinApp(appPath) {
-    const frameworkPath = join(appPath, "Contents", "Frameworks", "Electron Framework.framework");
+    const frameworkPath = join(appPath, "Contents", "Frameworks", DARWIN_ELECTRON_FRAMEWORK_DIRECTORY_NAME);
     const resourcesPath = join(appPath, "Contents", "Resources");
-    const hasElectronFramework = await isDirectory(frameworkPath);
+    const hasElectronFramework = await isDirectory(frameworkPath) && await hasDarwinElectronFrameworkBinary(frameworkPath);
     const hasAppPayload = await pathExists(join(resourcesPath, "app.asar")) || await isDirectory(join(resourcesPath, "app"));
     if (!hasElectronFramework || !hasAppPayload)
         return undefined;
@@ -326,7 +392,7 @@ async function directoryContainsChromePak(directory) {
 }
 export async function hasLinuxElectronEvidence(executablePath) {
     const resolvedExecutablePath = await resolveRealPath(executablePath);
-    if (!await isExecutableFile(resolvedExecutablePath))
+    if (!await isExecutableFile(resolvedExecutablePath) || !await isElfBinary(resolvedExecutablePath))
         return false;
     const executableDirectory = dirname(resolvedExecutablePath);
     if (!await directoryContainsChromePak(executableDirectory))
@@ -565,7 +631,7 @@ function findMacAppBundleAncestor(path) {
 }
 async function inspectWin32Executable(executablePath) {
     const resolvedExecutablePath = await resolveRealPath(executablePath);
-    if (!await isExecutableFile(resolvedExecutablePath))
+    if (!await isExecutableFile(resolvedExecutablePath) || !await isPortableExecutableBinary(resolvedExecutablePath))
         return undefined;
     const executableDirectory = dirname(resolvedExecutablePath);
     const resourcesDirectory = join(executableDirectory, "resources");

@@ -22,6 +22,25 @@ export interface SavedWorkflow {
     path: string;
     /** When it was saved. */
     savedAt: string;
+    /**
+     * True when this workflow was read from the project directory itself
+     * (`<cwd>/.pi/workflows/saved`) rather than the user's workflow home, i.e. it
+     * came with whatever repository is checked out. Assigned by the reader, never
+     * taken from the file. Such a workflow stays listable and runnable, but only
+     * behind a confirmation that names this `path` (see
+     * WorkflowSettings.trustProjectLocalWorkflows).
+     */
+    repoLocal?: boolean;
+    /**
+     * Where this script came from when it was not authored in this install —
+     * `/workflows save` and the navigator's save action copy the script out of a
+     * run record, and that record may itself have come from the project's own run
+     * store (see runScriptOrigin). Unlike `repoLocal`, which describes where the
+     * saved FILE was read from, this travels WITH the record: landing in the
+     * user's own storage is not what makes a repo-supplied script trustworthy, so
+     * the command it becomes stays gated on a confirmation naming this origin.
+     */
+    scriptOrigin?: string;
 }
 export interface WorkflowStorage {
     /** Save a workflow. */
@@ -35,4 +54,12 @@ export interface WorkflowStorage {
 }
 export declare function isSafeSavedWorkflowName(name: string): boolean;
 export declare function assertSafeSavedWorkflowName(name: string): void;
-export declare function createWorkflowStorage(cwd: string, fsOverride?: Partial<PersistenceFsLayer>): WorkflowStorage;
+export interface WorkflowStorageOptions {
+    /**
+     * Resolve project-local saved workflows (`<cwd>/.pi/workflows/saved`) by name
+     * without asking anyone. Defaults to WorkflowSettings.trustProjectLocalWorkflows
+     * for this cwd, which defaults to false.
+     */
+    trustRepoLocal?: boolean;
+}
+export declare function createWorkflowStorage(cwd: string, fsOverride?: Partial<PersistenceFsLayer>, options?: WorkflowStorageOptions): WorkflowStorage;

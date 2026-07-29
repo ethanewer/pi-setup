@@ -75,10 +75,10 @@ return await agent(
 
 ## Why use it
 
-- **Real parallel orchestration** — fan out up to 16 concurrent and 1000 total subagents from one orchestration script.
+- **Real parallel orchestration** — fan out up to 16 concurrent subagents from one orchestration script, 100 per run by default and up to 1000 when you raise the cap.
 - **Per-agent model routing** — use `small`, `medium`, or `big` tiers, or choose an exact provider/model and thinking level.
 - **Journaled resume** — replay completed agents after interruption without rerunning them or spending their tokens again. The orchestrator can also resume with an **edited script** (`resumeFromRunId`): unchanged `agent()` calls replay from cache and only edited/new ones re-run — so a single bad prompt no longer means paying to re-run the whole workflow.
-- **Git worktree isolation** — let parallel agents edit safely on throwaway branches with `isolation: "worktree"`.
+- **Git worktree isolation** — let parallel agents edit safely on throwaway branches with `isolation: "worktree"`. Each agent gets its own worktree, and an agent that asks for one and cannot get it fails instead of quietly editing the shared tree next to its siblings (`worktreeIsolationFallback: "shared-tree"` restores the old fallback).
 - **Measured usage** — report real tokens and cost from each subagent session; add run, phase, or agent budgets only when you want them.
 - **Visible background runs** — track phases, agents, models, fresh/cache tokens, cost, and live tok/s from the progress panel or `/workflows` navigator.
 - **Quality patterns** — compose `verify()`, `judgePanel()`, `loopUntilDry()`, and `completenessCheck()` instead of rebuilding review loops.
@@ -112,10 +112,10 @@ The installed extension generates this compact index from its executable capabil
 | name | workflow-tool-input | `name?: string` | — |
 | args | workflow-tool-input | `args?: unknown` | — |
 | background | workflow-tool-input | `background?: boolean = true` | — |
-| maxAgents | workflow-tool-input | `maxAgents?: number = 1000` | — |
+| maxAgents | workflow-tool-input | `maxAgents?: number = 100` | — |
 | concurrency | workflow-tool-input | `concurrency?: number` | — |
 | agentRetries | workflow-tool-input | `agentRetries?: number = configured value or 0` | — |
-| agentTimeoutMs | workflow-tool-input | `agentTimeoutMs?: number = configured default or unbounded` | — |
+| agentTimeoutMs | workflow-tool-input | `agentTimeoutMs?: number = configured default, else 15m` | — |
 | tokenBudget | workflow-tool-input | `tokenBudget?: number = configured default or unlimited` | — |
 | resumeFromRunId | workflow-tool-input | `resumeFromRunId?: string` | — |
 <!-- END GENERATED SUPPORTED WORKFLOW CAPABILITIES -->
@@ -216,7 +216,7 @@ Model tiers live at `~/.pi/workflows/model-tiers.json` and accept Pi CLI-style t
 
 Use `/workflows-models` to edit them interactively. Without a config, the extension ranks authenticated models by capability hints and assigns distinct models when possible.
 
-Omitted `tokenBudget` and `agentTimeoutMs` values use configured `defaultTokenBudget` and `defaultAgentTimeoutMs` settings; without them, runs are unlimited and have no hard per-agent timeout. Add per-run or per-agent values when you need explicit gates. `concurrency` is clamped to 16; `agentRetries` retries only recoverable failures. Defaults live in `~/.pi/workflows/settings.json`; `defaultTokenBudget` is a soft pre-call gate, and a project-level override of `null` cancels a global budget.
+Omitted `tokenBudget` and `agentTimeoutMs` values use configured `defaultTokenBudget` and `defaultAgentTimeoutMs` settings; without them, runs are unlimited on spend and each agent gets the default 15-minute timeout (set `defaultAgentTimeoutMs: null` for none). Add per-run or per-agent values when you need explicit gates. `concurrency` is clamped to 16; `agentRetries` retries only recoverable failures. A run allows 100 agents unless it asks for more (`maxAgents`, or `defaultMaxAgents` in settings), clamped to the 1000 ceiling. Defaults live in `~/.pi/workflows/settings.json`; `defaultTokenBudget` is a soft pre-call gate, and a project-level override of `null` cancels a global budget.
 
 Pausing and resuming a run keeps the limits it started with — `maxAgents`, `agentTimeoutMs`, `concurrency`, and `agentRetries` carry over instead of falling back to defaults, and `tokenBudget` tracking is cumulative across the pause, so a run can't reset its spend by pausing and resuming.
 
@@ -231,6 +231,18 @@ Extension state lives outside the repository under `~/.pi/workflows`:
 - project runs, journals, locks, and saved overrides: `~/.pi/workflows/projects/<project>/`
 - older project-local `.pi/workflows/runs` and `.pi/workflows/saved` remain readable as fallbacks
 
+Those project-local fallbacks live inside the repository, so a repository can supply them. They stay fully readable — listed in `/workflows`, inspectable, runnable — but they are treated as untrusted input:
+
+- a run file there is never auto-resumed, and resuming (or restarting) it asks first, naming the file
+- a saved workflow there does not resolve by name for the `workflow` tool or a nested `workflow('name')`, and its `/<name>` command confirms at invocation, naming the file — including when it shadows a built-in like `/code-review`
+- set `trustProjectLocalWorkflows: true` (globally, or per project in `~/.pi/workflows/projects/<project>/settings.json`) to resolve them without prompting
+- run files are schema-validated on read; a malformed or ill-typed record is reported and skipped rather than trusted
+- project agent definitions (`<cwd>/.pi/agents/*.md`) bind a subagent's system prompt, model, and tool policy, so they load only under the same `trustProjectLocalWorkflows` setting; your `~/.pi/agent/agents/*.md` definitions always load
+
+A run record holds the workflow script, every agent prompt and every agent result verbatim, and nothing is redacted — so run/saved files are written `0600` inside `0700` directories. Worktrees created inside the repository (`.pi/worktrees/`) get a `.gitignore` so they cannot be committed by accident.
+
+A finished background run's result is delivered back into the conversation inside an `<untrusted-workflow-output>` fence: subagents routinely return text they read from the web or from files, and that text is data for the model to evaluate, not instructions for it to follow.
+
 Subagents are in-memory by default. Set `persistAgentSessions: true` to retain full transcripts in Pi's standard session directory. This creates one file per agent and may store sensitive material that an agent read, so enable it deliberately.
 
 Completed background runs persist their full result in the project run JSON. The conversation delivery includes a pointer to that file when the visible summary is shortened.
@@ -238,6 +250,24 @@ Completed background runs persist their full result in the project run JSON. The
 Pi's `/reload` keeps the live workflow manager in-process when the installed extension version has not changed. Active background runs therefore continue streaming progress, remain controllable, and deliver their result through the freshly loaded extension; session-local `/effort` also survives the reload. If the package version changes, active runs are paused and a fresh manager loads, leaving them safely resumable through the journal instead of mixing extension versions. This handoff applies only to `/reload`. A process restart still uses the same durable journal path, recovering an interrupted running workflow as paused so it can be resumed safely.
 
 Finished runs (completed, failed, or aborted) are retained in full on disk, capped at the 300 most recent per project — older ones are evicted first, and a running or paused run is never touched. Only a smaller number (20 by default) also stay fully loaded in memory for instant access right after they finish; older finished runs still show up in `/workflows` and `workflow_control list`, just read back from disk instead of memory. Library embedders can tune both caps — `maxTerminalRunsInMemory` on `WorkflowManager` and `maxTerminalRunsOnDisk` on the run-persistence layer.
+
+</details>
+
+<details>
+<summary><strong>Web access (/deep-research and the `web-research` toolset)</strong></summary>
+
+`web_search` scrapes Bing's HTML result page (`https://www.bing.com/search?q=…`), sent with a desktop-Chrome user-agent string because Bing serves a script-only page otherwise. `web_fetch` fetches the URL it is given and returns the readable text.
+
+Both run in the extension host process, and the URL usually comes from a page an agent just read, so the target is resolved before the request and refused when it is on this machine or this network — loopback, link-local (including `169.254.169.254`), RFC1918, CGNAT, and unique-local addresses. Redirects are followed one hop at a time and each new target is checked the same way. To fetch something local on purpose:
+
+```json
+{
+  "webFetchAllowedHosts": ["localhost:3000", "dev.internal"],
+  "webFetchAllowPrivateNetwork": false
+}
+```
+
+`webFetchAllowedHosts` is the narrow knob (exact host, with or without port); `webFetchAllowPrivateNetwork: true` allows the whole private range.
 
 </details>
 
@@ -274,7 +304,17 @@ The default `workflow` also matches `workflows`; a custom word matches exactly. 
 
 ## Determinism and limits
 
-Workflow scripts run in a Node `vm` sandbox. `Date.now()`, `Math.random()`, `new Date()`, `require`, `import`, filesystem access, and network access are unavailable inside the orchestration script. Subagents use their assigned tools; keeping the orchestrator deterministic is what makes journal replay reliable.
+Workflow scripts run in a Node `vm` realm. The realm exists for determinism, **not** as a security boundary — treat a workflow script as code you are running yourself.
+
+What the realm actually gives you:
+
+- `Date.now()`, `Math.random()`, and no-argument `Date()`/`new Date()` throw, because nondeterminism would break journal replay.
+- There is no `require`, no `import`, no module loader, and no `fs`/`net`/`process` beyond `process.cwd()`: the realm's globals are the JavaScript built-ins plus the documented workflow bindings, so a script cannot reach Node's APIs by simply naming them.
+- Runtime bindings (`agent`, `parallel`, `log`, …) are wrappers created inside the realm over a hidden bridge, and values handed back to a script are rebuilt with the realm's own constructors. That is what keeps a script from reaching a host function object — and through its `constructor`, the host's `Function` and everything Node exposes.
+
+What it does **not** give you: isolation from your machine. The mitigations above are defense in depth against accidents and casual reach-arounds, not a sandbox — Node's `vm` is not designed to contain hostile code, and a workflow script commands subagents that hold real tools (read, bash, edit, write) in your working directory. So the trust boundary is the *source* of the script: your own workflows, and workflows you have read. Files that arrive with a cloned repository (`<cwd>/.pi/workflows/`) are gated on a confirmation naming the file, and are never auto-resumed.
+
+Subagents use their assigned tools; keeping the orchestrator deterministic is what makes journal replay reliable.
 
 Journal replay — including edit-and-resume via `resumeFromRunId` — matches cached agent results by **positional call index** (the order in which `agent()` calls execute), the same contract Claude Code uses. Editing an `agent()` prompt in place reuses the cache up to that call and re-runs it and everything after. Inserting, removing, or reordering an `agent()` call before others shifts their positions and invalidates the cache from that point on (mismatched calls simply re-run — no crash). To preserve the cached prefix, keep the earlier still-good `agent()` calls unchanged and in the same order.
 

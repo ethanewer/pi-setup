@@ -21,11 +21,12 @@ import { parseAllowedDomainsPolicyFromArgs } from "./lib/navigation-policy.js";
 import { closeManagedSession, getSessionContextKey, runAgentBrowserTool } from "./lib/orchestration/browser-run/index.js";
 import { findElectronLaunchRecordForSession, getActiveElectronRecords } from "./lib/orchestration/browser-run/session-state.js";
 import { parseBatchStdinJsonArray } from "./lib/orchestration/batch-stdin.js";
-import { ELECTRON_POST_COMMAND_STATUS_SETTLE_MS, ELECTRON_PROFILE_ISOLATION_DETAILS, cleanupActiveElectronHostLaunches, handleElectronHostInput, restoreElectronLaunchRecordsFromBranch, } from "./lib/orchestration/electron-host/index.js";
+import { ELECTRON_POST_COMMAND_STATUS_SETTLE_MS, ELECTRON_PROFILE_ISOLATION_DETAILS, adoptOrphanedElectronLaunches, cleanupActiveElectronHostLaunches, handleElectronHostInput, restoreElectronLaunchRecordsFromBranch, } from "./lib/orchestration/electron-host/index.js";
 import { buildValidationFailureResult, resolveAgentBrowserInput } from "./lib/orchestration/input-plan.js";
 import { applyAgentBrowserOutputPath } from "./lib/orchestration/output-file.js";
 import { isSessionArtifactManifest } from "./lib/results/artifact-manifest.js";
 import { canRegisterWebSearchTool, loadAgentBrowserConfigSync } from "./lib/config.js";
+import { getUpstreamProjectConfigIgnoredNotice, planUpstreamConfigPin } from "./lib/upstream-config-policy.js";
 import { createAgentBrowserWebSearchTool } from "./lib/web-search.js";
 import { isDirectAgentBrowserBashAllowed, isHarmlessAgentBrowserInspectionCommand, looksLikeDirectAgentBrowserBash, } from "./lib/bash-guard.js";
 import { AgentBrowserResultComponent, buildAgentBrowserToolResultPatch, formatAgentBrowserRenderCall, formatAgentBrowserRenderResult, } from "./lib/pi-tool-rendering.js";
@@ -170,12 +171,12 @@ function syncOwnedManagedSessionsFromResult(sessions, result, cwd) {
     const status = typeof outcome.status === "string" ? outcome.status : undefined;
     const currentSessionName = typeof outcome.currentSessionName === "string" ? outcome.currentSessionName : undefined;
     const attemptedSessionName = typeof outcome.attemptedSessionName === "string" ? outcome.attemptedSessionName : undefined;
+    const namespace = isRecord(details) && typeof details.namespace === "string" ? details.namespace : undefined;
     if (outcome.activeAfter === true && (status === "created" || status === "replaced" || status === "unchanged")) {
-        const namespace = isRecord(details) && typeof details.namespace === "string" ? details.namespace : undefined;
         trackOwnedManagedSession(sessions, currentSessionName, cwd, { namespace });
     }
     if (succeeded && status === "closed") {
-        untrackOwnedManagedSession(sessions, attemptedSessionName ?? currentSessionName);
+        untrackOwnedManagedSession(sessions, attemptedSessionName ?? currentSessionName, namespace);
     }
 }
 function getTouchedElectronLaunchIds(sessionName, records) {
@@ -446,13 +447,23 @@ class AsyncExecutionQueue {
         })();
     }
 }
+function readPackageJson(packageJsonPath) {
+    try {
+        const parsed = JSON.parse(readFileSync(packageJsonPath, "utf8"));
+        return isRecord(parsed) ? parsed : undefined;
+    }
+    catch {
+        return undefined;
+    }
+}
 function findPackageRoot(startDir) {
     let currentDir = startDir;
     while (true) {
         const packageJsonPath = join(currentDir, "package.json");
         if (existsSync(packageJsonPath)) {
-            const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf8"));
-            if (packageJson.name === "pi-agent-browser-native")
+            // An unrelated malformed package.json above the install dir must not fail extension load.
+            const packageJson = readPackageJson(packageJsonPath);
+            if (packageJson?.name === "pi-agent-browser-native")
                 return currentDir;
         }
         const parentDir = dirname(currentDir);
@@ -469,13 +480,21 @@ function getInstalledDocsPaths() {
         toolContractPath: join(packageRoot, "docs", "TOOL_CONTRACT.md"),
     };
 }
+const PROJECT_CONFIG_TRUST_ENV = "PI_AGENT_BROWSER_TRUST_PROJECT_CONFIG";
 function hasArgvFlag(argv, longFlag, shortFlag) {
     return argv.includes(longFlag) || argv.includes(shortFlag);
 }
-function shouldIncludeProjectConfig(ctx, argv = process.argv) {
+function isTruthyEnvValue(value) {
+    const normalized = value?.trim().toLowerCase();
+    return normalized === "1" || normalized === "true" || normalized === "yes";
+}
+function shouldIncludeProjectConfig(ctx, argv = process.argv, env = process.env) {
     if (hasArgvFlag(argv, "--no-approve", "-na"))
         return false;
-    return ctx?.isProjectTrusted?.() ?? true;
+    if (typeof ctx?.isProjectTrusted === "function")
+        return ctx.isProjectTrusted() === true;
+    // Project config can name a browser executable and credential sources, so an unknown trust state is untrusted.
+    return isTruthyEnvValue(env[PROJECT_CONFIG_TRUST_ENV]);
 }
 export default function agentBrowserExtension(pi) {
     const ephemeralSessionSeed = createEphemeralSessionSeed();
@@ -487,6 +506,7 @@ export default function agentBrowserExtension(pi) {
     const toolPromptGuidelines = buildToolPromptGuidelines({
         browserDefaultProfile: agentBrowserConfig.trustedBrowserDefaultProfile,
         browserExecutablePath: agentBrowserConfig.trustedBrowserExecutablePath,
+        browserExecutablePathScope: agentBrowserConfig.trustedBrowserExecutablePathScope,
         includeWebSearch: webSearchToolAvailable,
         docs: getInstalledDocsPaths(),
     });
@@ -589,6 +609,11 @@ export default function agentBrowserExtension(pi) {
     pi.on("session_start", async (_event, ctx) => {
         restoreBranchBackedState(ctx, { resetRuntimeOwnership: true });
         electronChildProcesses = new Map();
+        // Launches still visible on this branch stay live; only profiles left by a process that is gone are reaped.
+        void adoptOrphanedElectronLaunches({
+            preserveLaunchIds: new Set(getActiveElectronRecords(electronLaunchRecords).map((record) => record.launchId)),
+            timeoutMs: implicitSessionCloseTimeoutMs,
+        }).catch(() => undefined);
         registerWebSearchToolIfAvailable(loadAgentBrowserConfigSync({
             cwd: ctx.cwd,
             includeProjectConfig: shouldIncludeProjectConfig(ctx),
@@ -650,9 +675,15 @@ export default function agentBrowserExtension(pi) {
             cwd: ctx.cwd,
             includeProjectConfig: shouldIncludeProjectConfig(ctx),
         });
+        // Upstream's own `./agent-browser.json` is dropped rather than applied in an untrusted repo, so say so
+        // instead of leaving the model to wonder why a project file it can read has no effect.
+        const upstreamProjectConfigPin = planUpstreamConfigPin({ cwd: ctx.cwd });
         const browserGuidance = [
+            upstreamProjectConfigPin.kind === "pin"
+                ? getUpstreamProjectConfigIgnoredNotice(upstreamProjectConfigPin)
+                : undefined,
             runtimeConfig.browserExecutablePathScope === "project"
-                ? buildBrowserExecutablePathGuideline(runtimeConfig.browserExecutablePath)
+                ? buildBrowserExecutablePathGuideline(runtimeConfig.browserExecutablePath, "project")
                 : undefined,
             runtimeConfig.browserDefaultProfileScope === "project"
                 ? buildBrowserDefaultProfileGuideline(runtimeConfig.browserDefaultProfile)
@@ -674,7 +705,7 @@ export default function agentBrowserExtension(pi) {
             !(await isDirectAgentBrowserBashAllowed(ctx.cwd))) {
             return {
                 block: true,
-                reason: "Use the native agent_browser tool instead of bash for agent-browser in this environment.",
+                reason: "Use the native agent_browser tool instead of bash for agent-browser in this environment. Direct bash launches stay available when the user starts pi with PI_AGENT_BROWSER_ALLOW_DIRECT_BASH=1.",
             };
         }
     });

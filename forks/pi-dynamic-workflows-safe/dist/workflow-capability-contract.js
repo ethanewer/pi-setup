@@ -131,7 +131,7 @@ const capabilities = [
             "resume replays only the longest unchanged prefix; the first miss and every later call execute live",
             "selector priority is explicit model > agentType model > tier > phase model > metadata model > implicit medium > session default",
             "if the selected model or route is unavailable, execution falls directly to the session default rather than trying lower-priority selectors",
-            "worktree isolation is best-effort; failure logs that isolation was ignored and continues without an isolated working directory",
+            "worktree isolation must succeed when requested; a failure fails that agent instead of silently running it in the shared working tree (opt in to the old fallback with isolationFallback / worktreeIsolationFallback)",
         ],
         evidence: ["tests/workflow-runtime.test.ts", "tests/agent-registry.test.ts", "tests/structured-output.test.ts"],
     }),
@@ -274,10 +274,10 @@ const capabilities = [
     toolInput("background", "background?: boolean = true", [
         "background workflows are headless; use background false when checkpoint must show foreground confirmation",
     ]),
-    toolInput("maxAgents", "maxAgents?: number = 1000", ["default, not a hard product maximum"]),
+    toolInput("maxAgents", "maxAgents?: number = 100", ["configurable default; runtime clamps to a 1000 ceiling"]),
     toolInput("concurrency", "concurrency?: number", ["runtime clamps to 1..16"]),
     toolInput("agentRetries", "agentRetries?: number = configured value or 0", ["floored and clamped to 0..3"]),
-    toolInput("agentTimeoutMs", "agentTimeoutMs?: number = configured default or unbounded"),
+    toolInput("agentTimeoutMs", "agentTimeoutMs?: number = configured default, else 15m"),
     toolInput("tokenBudget", "tokenBudget?: number = configured default or unlimited", [
         "soft pre-call gate; in-flight work can overshoot",
     ]),

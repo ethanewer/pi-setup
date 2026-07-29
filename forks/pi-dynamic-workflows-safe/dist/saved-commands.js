@@ -4,6 +4,7 @@
  */
 import { createCodingTools } from "@earendil-works/pi-coding-agent";
 import { runWorkflow } from "./workflow.js";
+import { loadWorkflowSettings } from "./workflow-settings.js";
 function isRegistered(pi, name) {
     try {
         return (pi.getCommands?.() ?? []).some((c) => c.name === name);
@@ -11,6 +12,29 @@ function isRegistered(pi, name) {
     catch {
         return false;
     }
+}
+/**
+ * Ask before running a workflow whose script came from the project rather than
+ * from the user. The prompt names the exact source: a repository can ship
+ * `.pi/workflows/saved/<name>.json`, and cloning it must not be enough to make
+ * `/<name>` start subagents — nor must copying a project-supplied run's script
+ * into the user's own storage (see SavedWorkflow.scriptOrigin), which is why a
+ * recorded origin gates the same way a repo-local file does. Declining is not an
+ * error — it just doesn't run. Answered yes-by-configuration via
+ * trustProjectLocalWorkflows.
+ */
+export async function confirmRepoLocalWorkflow(ctx, wf, cwd, purpose = `Run /${wf.name}?`) {
+    if (!wf.repoLocal && !wf.scriptOrigin)
+        return true;
+    if (loadWorkflowSettings({ cwd }).trustProjectLocalWorkflows === true)
+        return true;
+    const source = wf.repoLocal ? wf.path : wf.scriptOrigin;
+    const confirmed = await ctx.ui.confirm("Project-supplied workflow", `${purpose}\n\nIts script comes from this project's own directory:\n${source}\n\n` +
+        "It will run subagents with your tools and permissions. Only continue if you trust this repository.");
+    if (!confirmed) {
+        ctx.ui.notify(`/${wf.name} was not run (project-supplied workflow declined).`, "info");
+    }
+    return confirmed;
 }
 function reportText(result) {
     const r = result.result;
@@ -61,6 +85,8 @@ export function registerSavedWorkflow(pi, cwd, wf, manager, exists) {
                 ctx.ui.notify(`/${wf.name} was deleted — reload the session to remove this command.`, "warning");
                 return;
             }
+            if (!(await confirmRepoLocalWorkflow(ctx, wf, cwd)))
+                return;
             try {
                 if (manager) {
                     // Run through the WorkflowManager's background path: the handler

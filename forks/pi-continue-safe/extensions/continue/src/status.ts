@@ -253,8 +253,9 @@ export function renderStatus(
 	agentGuidePath: string,
 	payload: PreviewPayload | undefined,
 	latestEvent: ContinuationLatestEvent | undefined,
+	projectTrusted = false,
 ): string {
-	const piCompactionSettings = readEffectivePiCompactionSettings(projectRoot);
+	const piCompactionSettings = readEffectivePiCompactionSettings(projectRoot, projectTrusted);
 	const modelDescription = describeModel(config, ctx);
 	const historyBudget = renderConfiguredOutputBudget(config, ctx, piCompactionSettings.reserveTokens);
 	const lines = [
@@ -273,7 +274,14 @@ export function renderStatus(
 		`- Agent guide: ${agentGuidePath}`,
 		`- Agent guide updates: ${config.agentGuideSyncMode}`,
 		`- Agent guide writes: ${config.agentGuideSyncMode === "always" ? "full replacement only" : "off"}`,
+		`- Agent guide overwrite policy: ${config.agentGuideOverwritePolicy}`,
+		`- Agent guide outside the project: ${config.agentGuideAllowOutsideProject ? "allowed by global config" : "refused"}`,
+		`- Symlinked output directory: ${config.allowSymlinkedOutputDirectory ? "allowed by global config" : "refused"}`,
+		`- Output-targeting settings scope: global config only (agentGuidePath, agentGuideSyncMode, agentGuideOverwritePolicy, agentGuideAllowOutsideProject, allowSymlinkedOutputDirectory)`,
+		`- Synthesis failure fallback: ${config.synthesisFailureFallback}`,
 		`- Automatic mid-run continuation: ${config.midRunGuardEnabled ? "yes" : "no"}`,
+		`- Chained continuation limit: ${config.maxChainedContinuations > 0 ? `${config.maxChainedContinuations} automatic continuations without new input` : "no limit"}`,
+		`- Chained synthesis cost limit: ${config.maxChainedSynthesisCostUsd > 0 ? `$${config.maxChainedSynthesisCostUsd} per chain` : "no limit"}`,
 		`- Append compaction metadata: ${config.appendCompactionMetadata ? "yes" : "no"}`,
 		`- Append read file tags: ${config.appendReadFileTags ? "yes" : "no"}`,
 		`- Append modified file tags: ${config.appendModifiedFileTags ? "yes" : "no"}`,
@@ -294,6 +302,7 @@ export function renderStatus(
 		``,
 		`## Project`,
 		`- Root: ${projectRoot}`,
+		`- Project scope: ${projectTrusted ? "trusted; project settings and prompt overrides apply" : "untrusted; project settings and prompt overrides are ignored"}`,
 		payload ? `- Scenario: ${payload.scenario}` : `- Scenario: unavailable`,
 		payload ? `- Split now: ${payload.isSplitTurn ? "yes" : "no"}` : `- Split now: unavailable`,
 		payload ? `- History prompt system: ${payload.history.sources.system}` : undefined,

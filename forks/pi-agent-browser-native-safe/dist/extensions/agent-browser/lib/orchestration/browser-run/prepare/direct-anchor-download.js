@@ -4,6 +4,7 @@ import { isRecord } from "../../../parsing.js";
 import { buildAgentBrowserResultCategoryDetails } from "../../../results.js";
 import { formatSessionArtifactRetentionSummary, mergeSessionArtifactManifest } from "../../../results/artifact-manifest.js";
 import { redactSensitiveText } from "../../../runtime.js";
+import { getWritePathConfinementError } from "../../../write-path-policy.js";
 import { buildSessionDetailFields, runSessionCommandData } from "../session-state.js";
 const DIRECT_ANCHOR_DOWNLOAD_MAX_BYTES = 2 * 1024 * 1024;
 function getDirectDownloadRequest(commandTokens) {
@@ -24,6 +25,8 @@ function isLoopbackHttpUrl(url) {
 export async function tryDirectAnchorDownload(options) {
     const request = getDirectDownloadRequest(options.commandTokens);
     if (!request || !options.sessionName)
+        return undefined;
+    if (getWritePathConfinementError(request.path, options.cwd, "download path"))
         return undefined;
     try {
         const probeData = await runSessionCommandData({

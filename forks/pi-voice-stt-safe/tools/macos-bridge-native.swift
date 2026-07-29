@@ -12,6 +12,37 @@ let sampleRate = Double(env["PI_STT_BRIDGE_SAMPLE_RATE"] ?? "16000") ?? 16000
 let channels = Int(env["PI_STT_BRIDGE_CHANNELS"] ?? "1") ?? 1
 let minBytes = Int(env["PI_STT_BRIDGE_MIN_BYTES"] ?? "4096") ?? 4096
 let maxSeconds = TimeInterval(env["PI_STT_BRIDGE_MAX_SECONDS"] ?? "120") ?? 120
+let allowRemote = env["PI_STT_BRIDGE_ALLOW_REMOTE"] == "1"
+let loopbackAliases = ["localhost", "::1", "[::1]"]
+
+func fail(_ message: String) -> Never {
+  FileHandle.standardError.write(Data("[pi-voice-stt-bridge] \(message)\n".utf8))
+  exit(1)
+}
+
+// The daemon can switch the microphone on, so it never runs unauthenticated:
+// without a token every local process (and any web page able to send a CORS
+// simple request) could start a recording.
+if token.isEmpty {
+  fail("refusing to start without a token: set PI_STT_BRIDGE_TOKEN or PI_STT_BRIDGE_TOKEN_FILE (see tools/install-macos-bridge.sh).")
+}
+
+// The listener is AF_INET, so the host is parsed into the address that is
+// actually bound before it is judged: inet_addr's shorthand forms and its
+// INADDR_NONE fallback would otherwise bind something the check never saw.
+func ipv4Address(_ host: String) -> in_addr {
+  var address = in_addr()
+  guard inet_pton(AF_INET, host, &address) == 1 else {
+    fail("refusing to bind \(host): PI_STT_BRIDGE_HOST must be an IPv4 address such as 127.0.0.1, or localhost.")
+  }
+  return address
+}
+
+let bindAddress = ipv4Address(loopbackAliases.contains(host.lowercased()) ? "127.0.0.1" : host)
+let bindsLoopback = UInt32(bigEndian: bindAddress.s_addr) >> 24 == 127
+if !bindsLoopback && !allowRemote {
+  fail("refusing to bind \(host): reach the daemon through the SSH tunnel, or set PI_STT_BRIDGE_ALLOW_REMOTE=1 to bind a non-loopback address on purpose.")
+}
 
 final class RecordingState {
   private let lock = NSLock()
@@ -270,8 +301,21 @@ func parseRequest(_ fd: Int32) -> HttpRequest? {
   return HttpRequest(method: parts[0], path: parts[1].split(separator: "?").first.map(String.init) ?? parts[1], headers: headers)
 }
 
+// Compared over the expected length with the differences accumulated, so a
+// wrong token cannot be recovered one byte at a time from response timing.
+func constantTimeEquals(_ presented: String, _ expected: String) -> Bool {
+  let presentedBytes = Array(presented.utf8)
+  let expectedBytes = Array(expected.utf8)
+  var difference = presentedBytes.count ^ expectedBytes.count
+  for index in expectedBytes.indices {
+    let presentedByte = index < presentedBytes.count ? presentedBytes[index] : 0
+    difference |= Int(presentedByte ^ expectedBytes[index])
+  }
+  return difference == 0
+}
+
 func isAuthorized(_ request: HttpRequest) -> Bool {
-  token.isEmpty || request.headers["authorization"] == "Bearer \(token)"
+  !token.isEmpty && constantTimeEquals(request.headers["authorization"] ?? "", "Bearer \(token)")
 }
 
 func handleClient(_ fd: Int32) {
@@ -330,7 +374,7 @@ func createServerSocket() -> Int32 {
   var address = sockaddr_in()
   address.sin_family = sa_family_t(AF_INET)
   address.sin_port = port.bigEndian
-  address.sin_addr = in_addr(s_addr: inet_addr(host))
+  address.sin_addr = bindAddress
 
   let bindResult = withUnsafePointer(to: &address) { pointer in
     pointer.withMemoryRebound(to: sockaddr.self, capacity: 1) { sockaddrPointer in

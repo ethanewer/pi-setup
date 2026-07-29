@@ -16,7 +16,7 @@ import type { ExtensionAPI, ExtensionCommandContext, ToolDefinition } from "@ear
 import type { BuiltinWorkflowInvocation } from "./builtin-workflows.js";
 import { findBuiltinWorkflow } from "./builtin-workflows.js";
 import { MAX_DIFF_CHARS } from "./code-review.js";
-import { parseCommandArgs } from "./saved-commands.js";
+import { confirmRepoLocalWorkflow, parseCommandArgs } from "./saved-commands.js";
 import type { WorkflowManager } from "./workflow-manager.js";
 import { createWorkflowStorage, type WorkflowStorage } from "./workflow-saved.js";
 
@@ -129,9 +129,21 @@ export function registerBuiltinWorkflows(
    * context) so a shadowed command behaves identically to how it would if the
    * saved workflow itself had been registered under this name.
    */
-  function runSavedShadowIfPresent(name: string, rawArgs: string, ctx: ExtensionCommandContext): boolean {
-    const saved = storage.load(name);
+  async function runSavedShadowIfPresent(
+    name: string,
+    rawArgs: string,
+    ctx: ExtensionCommandContext,
+  ): Promise<boolean> {
+    // load() resolves a project-local file only for a trusted project, so look
+    // through the listing too: a repo-supplied `.pi/workflows/saved/<name>.json`
+    // must not take over a built-in command silently. It may still take over —
+    // that is the documented precedence — but only after a prompt naming the
+    // file, and declining falls through to the built-in rather than failing.
+    const saved = storage.load(name) ?? storage.list().find((candidate) => candidate.name === name);
     if (!saved) return false;
+    if (!(await confirmRepoLocalWorkflow(ctx, saved, cwd, `Run the project's own /${name} instead of the built-in?`))) {
+      return false;
+    }
     startBackground(manager, ctx, name, saved.script, parseCommandArgs(rawArgs, saved.parameters));
     return true;
   }
@@ -140,7 +152,7 @@ export function registerBuiltinWorkflows(
     pi.registerCommand("deep-research", {
       description: "Research a question across the web with cross-checked sources",
       async handler(args: string, ctx: ExtensionCommandContext) {
-        if (runSavedShadowIfPresent("deep-research", args, ctx)) return;
+        if (await runSavedShadowIfPresent("deep-research", args, ctx)) return;
         const question = args.trim();
         if (!question) return ctx.ui.notify("Usage: /deep-research <question>", "warning");
         // Resolve through the shared builtin registry (builtin-workflows.ts) so
@@ -167,7 +179,7 @@ export function registerBuiltinWorkflows(
     pi.registerCommand("adversarial-review", {
       description: "Investigate a task, then cross-check each finding with skeptical reviewers",
       async handler(args: string, ctx: ExtensionCommandContext) {
-        if (runSavedShadowIfPresent("adversarial-review", args, ctx)) return;
+        if (await runSavedShadowIfPresent("adversarial-review", args, ctx)) return;
         const task = args.trim();
         if (!task) return ctx.ui.notify("Usage: /adversarial-review <task or question>", "warning");
         const resolved = resolveBuiltinOrNotify("adversarial-review", cwd, { task }, ctx);
@@ -182,10 +194,21 @@ export function registerBuiltinWorkflows(
       description:
         "Multi-angle parallel code review: 7 specialized finders (correctness, reuse, simplification, efficiency, altitude) + verify pass → ranked findings",
       async handler(args: string, ctx: ExtensionCommandContext) {
-        if (runSavedShadowIfPresent("code-review", args, ctx)) return;
+        if (await runSavedShadowIfPresent("code-review", args, ctx)) return;
         const input = args.trim();
         let diffSource = "git diff HEAD";
         let diff = "";
+
+        // execFile keeps a shell out of it, but the input still lands in git's
+        // OWN argument list: an option-shaped value reaches flags that write
+        // files (--output=…) or run a configured external diff command
+        // (--ext-diff), which is not what a revision/path argument may do.
+        if (input.startsWith("-")) {
+          return ctx.ui.notify(
+            `/code-review: "${input}" looks like a command-line option. Pass a PR number, a revision range (a..b), or a path.`,
+            "warning",
+          );
+        }
 
         try {
           let cmd: string;
@@ -199,9 +222,11 @@ export function registerBuiltinWorkflows(
             cmd = "gh";
             cmdArgs = ["pr", "diff", input];
           } else if (input.includes("..")) {
-            diffSource = `git diff ${input}`;
+            diffSource = `git diff ${input} --`;
             cmd = "git";
-            cmdArgs = ["diff", input];
+            // Trailing "--": everything before it is a revision, and nothing
+            // after it, so the range can't be re-read as an option or a path.
+            cmdArgs = ["diff", input, "--"];
           } else {
             diffSource = `git diff HEAD -- ${input}`;
             cmd = "git";
@@ -254,7 +279,7 @@ export function registerBuiltinWorkflows(
     pi.registerCommand("multi-perspective", {
       description: "Analyze a topic from several independent perspectives in parallel, then synthesize",
       async handler(args: string, ctx: ExtensionCommandContext) {
-        if (runSavedShadowIfPresent("multi-perspective", args, ctx)) return;
+        if (await runSavedShadowIfPresent("multi-perspective", args, ctx)) return;
         const [topic, ...rest] = tokenizeArgs(args);
         if (!topic) {
           return ctx.ui.notify('Usage: /multi-perspective "<topic>" [perspective1] [perspective2] …', "warning");
@@ -272,7 +297,7 @@ export function registerBuiltinWorkflows(
     pi.registerCommand("codebase-audit", {
       description: "Run parallel checks against a codebase scope, then cross-validate and report",
       async handler(args: string, ctx: ExtensionCommandContext) {
-        if (runSavedShadowIfPresent("codebase-audit", args, ctx)) return;
+        if (await runSavedShadowIfPresent("codebase-audit", args, ctx)) return;
         const [scope, ...checks] = tokenizeArgs(args);
         if (!scope || checks.length === 0) {
           return ctx.ui.notify('Usage: /codebase-audit <scope> "<check1>" ["<check2>" …]', "warning");

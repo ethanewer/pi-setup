@@ -37,6 +37,13 @@ export interface ManagedRun {
      */
     autoResume?: boolean;
     /**
+     * Set when this run was adopted from a run store outside the user's workflow
+     * home (a confirmed resume of a project-supplied record). Persisted so the
+     * run keeps needing an explicit confirmation and never becomes auto-resumable
+     * (see PersistedRunState.foreignSource).
+     */
+    foreignSource?: string;
+    /**
      * The run's resolved hard token budget (per-run value, else the manager
      * default), fixed at run start and carried through resume() — a resumed run
      * must keep the budget it started with, not re-resolve against the current
@@ -76,7 +83,7 @@ export interface ManagedRun {
     agentsById: Map<string, WorkflowAgentSnapshot>;
     /**
      * The run's cap on total agents (per-run value, else left undefined so
-     * runWorkflow applies its own MAX_AGENTS_PER_RUN default), fixed at run
+     * runWorkflow applies its own DEFAULT_MAX_AGENTS_PER_RUN), fixed at run
      * start/resume and carried through resume() — mirrors ManagedRun.tokenBudget
      * exactly: a resumed run must keep the cap it started with, not silently
      * regain the (much larger) default because ExecOptions.maxAgents isn't
@@ -213,11 +220,45 @@ export interface WorkflowManagerOptions {
      * to observe eviction without creating dozens of runs.
      */
     maxTerminalRunsInMemory?: number;
+    /**
+     * Default cap on total agents when a run does not pass maxAgents. Omitted
+     * means runWorkflow's own default (DEFAULT_MAX_AGENTS_PER_RUN); the hard
+     * ceiling MAX_AGENTS_PER_RUN still applies to any explicit value.
+     */
+    defaultMaxAgents?: number;
+    /**
+     * Gate consulted before resuming a run whose record this install did not
+     * write — typically one read out of `<cwd>/.pi/workflows/runs`, i.e. supplied
+     * by whatever repository is checked out. resume() executes the record's
+     * script, so such a run is resumable only when this returns true. Without a
+     * gate wired up, those runs stay listable and inspectable but are not
+     * resumed. Runs this install created never reach it.
+     */
+    confirmForeignRun?: (info: ForeignRunConfirmation) => Promise<boolean> | boolean;
+    /**
+     * What an agent that asked for `isolation: "worktree"` does when no worktree
+     * can be created. Omitted means "error" (that agent fails — recoverably, so a
+     * fan-out yields null for it and its siblings still finish — rather than
+     * editing the shared working tree alongside them), except outside a git
+     * repository, where isolation was never possible and the run degrades with a
+     * warning instead; "shared-tree" restores the logged fallback everywhere. Host
+     * wiring passes settings.worktreeIsolationFallback.
+     */
+    isolationFallback?: "error" | "shared-tree";
+}
+/** What a foreign-run confirmation prompt must be able to name (see confirmForeignRun). */
+export interface ForeignRunConfirmation {
+    runId: string;
+    workflowName: string;
+    /** Absolute path of the run file the script would be taken from. */
+    path: string;
+    /** Whether that path is inside the project directory rather than the user's workflow home. */
+    projectLocal: boolean;
 }
 /** Options that a fresh extension generation may safely refresh on a live
  * manager handed across `/reload`. Execution identity (`cwd`, persistence,
  * injected agent, and in-memory runs) is intentionally excluded. */
-export type WorkflowManagerReloadOptions = Pick<WorkflowManagerOptions, "concurrency" | "loadSavedWorkflow" | "defaultAgentTimeoutMs" | "defaultAgentRetries" | "defaultTokenBudget" | "toolsets" | "excludeSubagentTools" | "persistAgentSessions">;
+export type WorkflowManagerReloadOptions = Pick<WorkflowManagerOptions, "concurrency" | "loadSavedWorkflow" | "defaultAgentTimeoutMs" | "defaultAgentRetries" | "defaultTokenBudget" | "toolsets" | "excludeSubagentTools" | "persistAgentSessions" | "defaultMaxAgents" | "confirmForeignRun" | "isolationFallback">;
 export declare class WorkflowManager extends EventEmitter {
     /**
      * Lifecycle contract for `runs`:
@@ -286,6 +327,11 @@ export declare class WorkflowManager extends EventEmitter {
     private toolsets?;
     private excludeSubagentTools?;
     private persistAgentSessions;
+    private defaultMaxAgents?;
+    private confirmForeignRun?;
+    private isolationFallback?;
+    /** Provenance stamped on every run this manager writes (see PersistedRunState.installId). */
+    private readonly installId;
     constructor(options?: WorkflowManagerOptions);
     /** Bind the manager to the current pi session, so new runs are tagged with it and
      * the navigator/task-panel show only this session's runs (set on session_start). */
@@ -295,6 +341,23 @@ export declare class WorkflowManager extends EventEmitter {
      * that died mid-run (this fresh manager has it nowhere in memory). Reconcile it
      * to "paused" — never "failed" — so its journal is preserved and resume() can
      * replay the completed prefix and finish the rest.
+     *
+     * A run that a DIFFERENT live pi process is executing right now also looks
+     * like this from here (it is in that process's memory, not ours), so the run
+     * lease — not the record's status or session — is what decides: that process
+     * holds the lease for the whole execution, so acquireRunLease() returns null
+     * and its file is left exactly as it is. Only a lease nobody live owns is
+     * reconciled (see LockFile.processStartedAt for how "live" is established
+     * without trusting a recycled pid).
+     *
+     * This is also where a run that predates provenance stamping is adopted. Such
+     * a record carries no installId, yet it sits in the global run store under
+     * this workflow home — a location nothing but this extension writes — so it is
+     * this user's own earlier run, and leaving it unstamped would make their own
+     * paused work prompt "from another install" at every resume and stay out of
+     * auto-resume forever. Adoption is deliberately narrow: a record from a
+     * project-local/legacy path, or one stamped by a DIFFERENT install, is never
+     * adopted and keeps prompting with its origin named (see authorizeForeignRun).
      */
     private recoverStaleRuns;
     /**
@@ -432,6 +495,18 @@ export declare class WorkflowManager extends EventEmitter {
         script?: string;
         args?: unknown;
     }): Promise<boolean>;
+    /**
+     * Ask the host whether a run record this install did not write may be
+     * executed, naming the file the script comes from.
+     *
+     * With no gate wired up the answer depends on where the record lives: the
+     * global run store under the user's workflow home is only ever written by
+     * this extension, so a record there (e.g. one from an earlier release, before
+     * provenance was stamped) still resumes, with a warning. A project-local
+     * store travels with whatever repository is checked out, so without a way to
+     * ask a human the answer is no — the run stays listable and inspectable.
+     */
+    private authorizeForeignRun;
     /**
      * Stop a running workflow.
      *

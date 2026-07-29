@@ -3,12 +3,12 @@
  * Responsibilities: Resolve Electron targets, enforce caller-owned allow/deny policy, create isolated userDataDir profiles, launch with remote debugging on an OS-chosen port, poll DevToolsActivePort, and read bounded CDP version/target metadata.
  * Scope: Host-side Electron lifecycle setup only; upstream agent-browser attach/presentation stays in the extension entrypoint.
  * Usage: Called by the agent_browser electron.launch shorthand before routing through upstream `connect`.
- * Invariants/Assumptions: The wrapper only launches targets with Electron framework evidence, always uses an isolated temp profile, and never accepts a caller-supplied remote debugging port.
+ * Invariants/Assumptions: The wrapper only launches targets with Electron framework evidence, always uses an isolated temp profile, never accepts a caller-supplied remote debugging port, and leaves an adoption record inside the profile so a later run can reap the launch if this process dies without cleaning up.
  */
 import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { readFile, rm } from "node:fs/promises";
-import { dirname } from "node:path";
+import { readFile, rm, writeFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
 import { fetchCdpJson, parseCdpTargets, parseCdpVersion, } from "./cdp.js";
 import { discoverElectronApps, inspectElectronAppPath, inspectElectronExecutablePath, } from "./discovery.js";
 import { createSecureTempDirectory } from "../temp.js";
@@ -17,6 +17,7 @@ export const ELECTRON_LAUNCH_DEFAULT_TIMEOUT_MS = 15_000;
 export const ELECTRON_LAUNCH_MAX_TIMEOUT_MS = 120_000;
 const DEVTOOLS_ACTIVE_PORT_FILE = "DevToolsActivePort";
 export const ELECTRON_PROFILE_DIR_PREFIX = "electron-profile-";
+export const ELECTRON_LAUNCH_ADOPTION_FILE_NAME = ".pi-agent-browser-electron-launch.json";
 const ELECTRON_DEFAULT_APP_ARGS = ["--disable-extensions", "--no-first-run", "--no-default-browser-check"];
 const ELECTRON_DEVTOOLS_POLL_INTERVAL_MS = 100;
 function normalizeTimeoutMs(timeoutMs) {
@@ -185,6 +186,21 @@ async function terminateLaunchChild(child) {
         return undefined;
     return `PID ${child.pid} remained alive after failed Electron launch cleanup.`;
 }
+/**
+ * Records enough launch identity inside the isolated profile that a later run can adopt and clean up this
+ * launch when the current process is killed before its shutdown hook runs.
+ */
+export async function writeElectronLaunchAdoptionRecord(userDataDir, record) {
+    if (!record.pid)
+        return false;
+    try {
+        await writeFile(join(userDataDir, ELECTRON_LAUNCH_ADOPTION_FILE_NAME), JSON.stringify(record, null, 2), { encoding: "utf8", mode: 0o600 });
+        return true;
+    }
+    catch {
+        return false;
+    }
+}
 function buildLaunchRecord(options) {
     return {
         appName: options.target.name,
@@ -194,7 +210,7 @@ function buildLaunchRecord(options) {
         createdAtMs: options.createdAtMs,
         desktopId: options.target.desktopId,
         executablePath: options.target.executablePath,
-        launchId: `electron-${randomUUID()}`,
+        launchId: options.launchId,
         launchedByWrapper: true,
         packageSource: options.target.packageSource,
         pid: options.pid,
@@ -253,6 +269,7 @@ export async function launchElectronApp(options) {
     const timeoutMs = normalizeTimeoutMs(options.timeoutMs);
     const startedAtMs = Date.now();
     const deadlineMs = startedAtMs + timeoutMs;
+    const launchId = `electron-${randomUUID()}`;
     const userDataDir = await createSecureTempDirectory(ELECTRON_PROFILE_DIR_PREFIX);
     let cleanupError;
     let spawnError;
@@ -272,6 +289,25 @@ export async function launchElectronApp(options) {
         exitSignal = signal;
     });
     child.unref();
+    await writeElectronLaunchAdoptionRecord(userDataDir, {
+        appName: target.name,
+        appPath: target.appPath,
+        bundleId: target.bundleId,
+        cleanupState: "active",
+        createdAtMs: startedAtMs,
+        desktopId: target.desktopId,
+        executablePath: target.executablePath,
+        launchId,
+        launchedByWrapper: true,
+        packageSource: target.packageSource,
+        pid: child.pid,
+        platform: target.platform,
+        port: 0,
+        processGroupId: process.platform === "win32" ? undefined : child.pid,
+        targetType: options.targetType,
+        userDataDir,
+        version: ELECTRON_LAUNCH_RECORD_VERSION,
+    });
     const buildFailureDiagnostics = (options = {}) => ({
         cdpVersionReached: options.cdpVersionReached,
         devToolsActivePort: options.devToolsActivePort,
@@ -323,6 +359,7 @@ export async function launchElectronApp(options) {
     }
     const record = buildLaunchRecord({
         createdAtMs: Date.now(),
+        launchId,
         pid: child.pid,
         port: portResult.port,
         target,
@@ -330,6 +367,7 @@ export async function launchElectronApp(options) {
         userDataDir,
         version: metadata.version,
     });
+    await writeElectronLaunchAdoptionRecord(userDataDir, record);
     const connectArg = selectElectronConnectArg({
         port: portResult.port,
         targets: metadata.targets,

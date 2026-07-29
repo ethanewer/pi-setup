@@ -1,5 +1,6 @@
 import { endpointRequiresAuth } from "../config/endpoint";
 import type { OpenAiCompatibleProviderConfig } from "../config/types";
+import { isDeclaredKeyless } from "../secrets/resolve-api-key";
 import { objectFrom, textFrom } from "../utils/coerce";
 import { normalizeLanguage } from "./helpers";
 import { postMultipartTranscription } from "./multipart";
@@ -8,7 +9,7 @@ import type { SttProvider } from "./types";
 export const createOpenAiCompatibleProvider = (config: OpenAiCompatibleProviderConfig): SttProvider => ({
   id: "openai-compatible",
   async transcribe(input) {
-    const needsAuth = endpointRequiresAuth(config.endpoint);
+    const needsAuth = endpointRequiresAuth(config.endpoint) && !isDeclaredKeyless(config);
     const payload = await postMultipartTranscription({
       endpoint: config.endpoint,
       apiKey: config.apiKey,

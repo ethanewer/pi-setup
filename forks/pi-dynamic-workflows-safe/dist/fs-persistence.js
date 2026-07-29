@@ -13,8 +13,12 @@
  *  3. A missing or unreadable directory degrades to "no files" rather than
  *     throwing — a listing must never crash because one storage location is
  *     temporarily inaccessible (not yet created, deleted mid-race, EACCES).
+ *  4. Owner-only permissions. A run record holds the workflow script, every
+ *     agent prompt and every agent result verbatim, and a saved workflow holds
+ *     a script — none of it is redacted, so on a shared machine the file mode
+ *     is the whole protection. Directories are created 0700 and files 0600.
  *
- * This module is the single implementation of all three; run-persistence.ts
+ * This module is the single implementation of all four; run-persistence.ts
  * and workflow-saved.ts both call into it rather than maintaining parallel
  * copies.
  */
@@ -28,10 +32,18 @@ export function resolvePersistenceFs(overrides) {
     const base = defaultPersistenceFs();
     return overrides ? { ...base, ...overrides } : base;
 }
-/** Ensure `dir` exists (recursive mkdir), idempotent. */
+/** Owner-only directory mode for every store this module creates. */
+export const PRIVATE_DIR_MODE = 0o700;
+/** Owner-only file mode for every record this module writes. */
+export const PRIVATE_FILE_MODE = 0o600;
+/**
+ * Ensure `dir` exists (recursive mkdir, owner-only), idempotent. A directory
+ * that already exists is left alone — its mode is the user's to choose once it
+ * is there; only what this module creates is forced to 0700.
+ */
 export function ensureDir(fs, dir) {
     if (!fs.existsSync(dir))
-        fs.mkdirSync(dir, { recursive: true });
+        fs.mkdirSync(dir, { recursive: true, mode: PRIVATE_DIR_MODE });
 }
 /**
  * Atomically write JSON to `path`: tmp-write + rename (atomic on the same
@@ -43,10 +55,12 @@ export function ensureDir(fs, dir) {
  */
 export function writeJsonAtomicWithBackup(fs, path, data) {
     const json = JSON.stringify(data, null, 2);
-    fs.writeFileSync(`${path}.tmp`, json);
+    // mode applies on creation, and the tmp file is always created fresh, so the
+    // renamed-into-place record carries 0600 even when the destination existed.
+    fs.writeFileSync(`${path}.tmp`, json, { mode: PRIVATE_FILE_MODE });
     fs.renameSync(`${path}.tmp`, path);
     try {
-        fs.writeFileSync(`${path}.bak`, json);
+        fs.writeFileSync(`${path}.bak`, json, { mode: PRIVATE_FILE_MODE });
     }
     catch {
         // Backup is best-effort; the primary write already succeeded.

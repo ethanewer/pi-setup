@@ -2,9 +2,20 @@
  * Saved workflows as `/<name>` slash commands. Each saved workflow becomes a
  * command that runs its script, passing parsed arguments through as `args`.
  */
-import { type ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { type ExtensionAPI, type ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
 import type { WorkflowManager } from "./workflow-manager.js";
 import type { SavedWorkflow, WorkflowStorage } from "./workflow-saved.js";
+/**
+ * Ask before running a workflow whose script came from the project rather than
+ * from the user. The prompt names the exact source: a repository can ship
+ * `.pi/workflows/saved/<name>.json`, and cloning it must not be enough to make
+ * `/<name>` start subagents — nor must copying a project-supplied run's script
+ * into the user's own storage (see SavedWorkflow.scriptOrigin), which is why a
+ * recorded origin gates the same way a repo-local file does. Declining is not an
+ * error — it just doesn't run. Answered yes-by-configuration via
+ * trustProjectLocalWorkflows.
+ */
+export declare function confirmRepoLocalWorkflow(ctx: ExtensionCommandContext, wf: Pick<SavedWorkflow, "name" | "path" | "repoLocal" | "scriptOrigin">, cwd: string, purpose?: string): Promise<boolean>;
 /**
  * Parse a command argument string into an `args` object for the script.
  * Supports `key=value` tokens; everything else collects into `_` (and `_raw`).

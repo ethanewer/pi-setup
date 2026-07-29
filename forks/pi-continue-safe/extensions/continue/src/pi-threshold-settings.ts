@@ -10,8 +10,8 @@ function resolveContextWindow(ctx: ExtensionCommandContext): number | undefined 
 }
 
 /** Render the selected-scope handoff trigger as the single human-facing token count. */
-export function renderHandoffTrigger(ctx: ExtensionCommandContext, scope: ConfigScope, projectRoot: string): string {
-	const compaction = readPiCompactionSettingsForScope(scope, projectRoot);
+export function renderHandoffTrigger(ctx: ExtensionCommandContext, scope: ConfigScope, projectRoot: string, projectTrusted = false): string {
+	const compaction = readPiCompactionSettingsForScope(scope, projectRoot, projectTrusted);
 	const contextWindow = resolveContextWindow(ctx);
 	if (contextWindow === undefined || contextWindow <= compaction.reserveTokens) return "unavailable";
 	return `${(contextWindow - compaction.reserveTokens).toLocaleString()} tokens`;
@@ -30,10 +30,11 @@ async function chooseHandoffTriggerReserveTokens(
 	ctx: ExtensionCommandContext,
 	scope: ConfigScope,
 	projectRoot: string,
+	projectTrusted: boolean,
 ): Promise<number | null | undefined> {
 	const contextWindow = resolveContextWindow(ctx);
 	const options = [
-		`Keep current (${renderHandoffTrigger(ctx, scope, projectRoot)})`,
+		`Keep current (${renderHandoffTrigger(ctx, scope, projectRoot, projectTrusted)})`,
 		contextWindow === undefined ? undefined : "Set trigger token count",
 		"Use inherited/default trigger for this scope",
 	].filter((option): option is string => option !== undefined);
@@ -57,8 +58,9 @@ export async function updateHandoffTriggerFromDialog(
 	ctx: ExtensionCommandContext,
 	scope: ConfigScope,
 	projectRoot: string,
+	projectTrusted = false,
 ): Promise<void> {
-	const reserveTokens = await chooseHandoffTriggerReserveTokens(ctx, scope, projectRoot);
+	const reserveTokens = await chooseHandoffTriggerReserveTokens(ctx, scope, projectRoot, projectTrusted);
 	if (reserveTokens === undefined) return;
 	await patchPiCompactionSettings(scope, projectRoot, { reserveTokens });
 	ctx.ui.notify(

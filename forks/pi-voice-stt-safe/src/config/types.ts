@@ -1,6 +1,13 @@
 export type FfmpegCaptureConfig = {
   type: "ffmpeg";
+  /** Absolute realpath once resolved; the configured value when resolution failed. */
   ffmpegPath: string;
+  /**
+   * Why capture.ffmpegPath could not be resolved, empty when it resolved. The
+   * failure is carried instead of thrown so status/doctor can report it, and
+   * the recorder refuses to start while it is set.
+   */
+  ffmpegPathError: string;
   inputFormat: string;
   input: string;
   sampleRate: number;
@@ -44,7 +51,7 @@ export type OpenAiCompatibleProviderConfig = SecretConfig & {
   model: string;
   language: string;
   timeoutSeconds: number;
-  responseFormat: "json";
+  responseFormat: "json" | "verbose_json";
 };
 
 export type DeepgramProviderConfig = SecretConfig & {

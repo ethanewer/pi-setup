@@ -19,9 +19,11 @@ export function messageRole(value: unknown): string | undefined {
 	return asMessageRecord(value)?.role;
 }
 
+// An assistant message always carries an array of content blocks, so anything else is
+// malformed and must read as malformed for callers that cut the kept suffix on it.
 export function assistantToolCallIds(message: unknown): string[] | undefined {
 	const record = asMessageRecord(message);
-	if (!record || record.role !== "assistant" || !Array.isArray(record.content)) return [];
+	if (!record || record.role !== "assistant" || !Array.isArray(record.content)) return undefined;
 	const ids: string[] = [];
 	for (const block of record.content) {
 		if (!isRecord(block) || block.type !== "toolCall") continue;

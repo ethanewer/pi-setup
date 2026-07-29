@@ -2,10 +2,12 @@
  * Workflow manager for background execution, pause/resume, and run management.
  */
 import { EventEmitter } from "node:events";
+import { DEFAULT_AGENT_TIMEOUT_MS } from "./config.js";
 import { preview } from "./display.js";
 import { isProviderUsageLimit, WorkflowError, WorkflowErrorCode } from "./errors.js";
-import { createRunPersistence, generateRunId, } from "./run-persistence.js";
+import { createRunPersistence, generateRunId, isInstallOwnedRun, } from "./run-persistence.js";
 import { parseWorkflowScript, runWorkflow } from "./workflow.js";
+import { workflowInstallId } from "./workflow-paths.js";
 /**
  * Statuses in which a run's execution has genuinely settled — no promise is
  * still pending, no lease is still held, nothing will asynchronously mutate
@@ -96,6 +98,11 @@ export class WorkflowManager extends EventEmitter {
     toolsets;
     excludeSubagentTools;
     persistAgentSessions;
+    defaultMaxAgents;
+    confirmForeignRun;
+    isolationFallback;
+    /** Provenance stamped on every run this manager writes (see PersistedRunState.installId). */
+    installId = workflowInstallId();
     constructor(options = {}) {
         super();
         this.cwd = options.cwd ?? process.cwd();
@@ -105,12 +112,18 @@ export class WorkflowManager extends EventEmitter {
         this.mainModel = options.mainModel;
         this.modelRegistry = options.modelRegistry;
         this.sessionId = options.sessionId;
-        this.defaultAgentTimeoutMs = options.defaultAgentTimeoutMs ?? null;
+        // Explicit null means "no hard timeout" and is honored; only an omitted
+        // value falls back to the finite default (see DEFAULT_AGENT_TIMEOUT_MS).
+        this.defaultAgentTimeoutMs =
+            options.defaultAgentTimeoutMs !== undefined ? options.defaultAgentTimeoutMs : DEFAULT_AGENT_TIMEOUT_MS;
         this.defaultAgentRetries = options.defaultAgentRetries ?? 0;
         this.defaultTokenBudget = options.defaultTokenBudget ?? null;
         this.toolsets = options.toolsets;
         this.excludeSubagentTools = options.excludeSubagentTools;
         this.persistAgentSessions = options.persistAgentSessions ?? false;
+        this.defaultMaxAgents = options.defaultMaxAgents;
+        this.confirmForeignRun = options.confirmForeignRun;
+        this.isolationFallback = options.isolationFallback;
         this.maxTerminalRunsInMemory = options.maxTerminalRunsInMemory ?? DEFAULT_MAX_TERMINAL_RUNS_IN_MEMORY;
         this.persistence = createRunPersistence(this.cwd);
         this.recoverStaleRuns();
@@ -125,20 +138,64 @@ export class WorkflowManager extends EventEmitter {
      * that died mid-run (this fresh manager has it nowhere in memory). Reconcile it
      * to "paused" — never "failed" — so its journal is preserved and resume() can
      * replay the completed prefix and finish the rest.
+     *
+     * A run that a DIFFERENT live pi process is executing right now also looks
+     * like this from here (it is in that process's memory, not ours), so the run
+     * lease — not the record's status or session — is what decides: that process
+     * holds the lease for the whole execution, so acquireRunLease() returns null
+     * and its file is left exactly as it is. Only a lease nobody live owns is
+     * reconciled (see LockFile.processStartedAt for how "live" is established
+     * without trusting a recycled pid).
+     *
+     * This is also where a run that predates provenance stamping is adopted. Such
+     * a record carries no installId, yet it sits in the global run store under
+     * this workflow home — a location nothing but this extension writes — so it is
+     * this user's own earlier run, and leaving it unstamped would make their own
+     * paused work prompt "from another install" at every resume and stay out of
+     * auto-resume forever. Adoption is deliberately narrow: a record from a
+     * project-local/legacy path, or one stamped by a DIFFERENT install, is never
+     * adopted and keeps prompting with its origin named (see authorizeForeignRun).
      */
     recoverStaleRuns() {
         try {
-            for (const p of this.listAllRuns()) {
-                if (p.status === "running" && !this.runs.has(p.runId)) {
-                    const lease = this.persistence.acquireRunLease(p.runId);
-                    if (!lease)
-                        continue;
-                    try {
-                        this.persistence.save({ ...p, status: "paused" });
-                    }
-                    finally {
-                        this.persistence.releaseRunLease(lease);
-                    }
+            // Oldest first. Every write here restamps `updatedAt` (save() owns that
+            // field), and listAllRuns() is newest-first, so walking it as given would
+            // hand the newest run the earliest new timestamp and invert the whole
+            // run list on the one cold start that adopts pre-existing records.
+            // Ascending order keeps their relative recency intact.
+            for (const p of [...this.listAllRuns()].reverse()) {
+                // Only reconcile records in the store this extension owns. A "running"
+                // record in a project-local store belongs to no process of ours, and
+                // rewriting it would copy a project-supplied script into the user's own
+                // run store (every save lands there) — see PersistedRunState.sourceStore.
+                if (p.sourceStore === "legacy" || p.foreignSource)
+                    continue;
+                const stale = p.status === "running" && !this.runs.has(p.runId);
+                // Only records resume() would still accept are worth adopting; a
+                // completed/aborted one is history, so leave its file (and its place in
+                // the updatedAt ordering) untouched.
+                const adoptable = p.installId === undefined && p.status !== "completed" && p.status !== "aborted";
+                if (!stale && !adoptable)
+                    continue;
+                const lease = this.persistence.acquireRunLease(p.runId);
+                if (!lease)
+                    continue;
+                try {
+                    this.persistence.save({
+                        ...p,
+                        status: stale ? "paused" : p.status,
+                        installId: adoptable ? this.installId : p.installId,
+                    }, 
+                    // Reconciling a dead "running" run to "paused" is a real state
+                    // change and dates from now. Stamping provenance on a record that
+                    // predates it is not: restamping every such record on one cold
+                    // start would rewrite the whole run history's recency (and with it
+                    // the listing order, the navigator, and which terminal run the
+                    // retention cap evicts first).
+                    { preserveUpdatedAt: !stale });
+                }
+                finally {
+                    this.persistence.releaseRunLease(lease);
                 }
             }
         }
@@ -155,12 +212,16 @@ export class WorkflowManager extends EventEmitter {
     reconfigureAfterReload(options) {
         this.concurrency = options.concurrency ?? 8;
         this.loadSavedWorkflow = options.loadSavedWorkflow;
-        this.defaultAgentTimeoutMs = options.defaultAgentTimeoutMs ?? null;
+        this.defaultAgentTimeoutMs =
+            options.defaultAgentTimeoutMs !== undefined ? options.defaultAgentTimeoutMs : DEFAULT_AGENT_TIMEOUT_MS;
         this.defaultAgentRetries = options.defaultAgentRetries ?? 0;
         this.defaultTokenBudget = options.defaultTokenBudget ?? null;
         this.toolsets = options.toolsets;
         this.excludeSubagentTools = options.excludeSubagentTools;
         this.persistAgentSessions = options.persistAgentSessions ?? false;
+        this.defaultMaxAgents = options.defaultMaxAgents;
+        this.confirmForeignRun = options.confirmForeignRun;
+        this.isolationFallback = options.isolationFallback;
     }
     /** Set the session's main model (provider/id). Used to auto-tier explore agents. */
     setMainModel(spec) {
@@ -224,7 +285,7 @@ export class WorkflowManager extends EventEmitter {
             // Same freeze-at-start pattern as tokenBudget, for the same reason: a
             // resumed run must keep these values, not re-resolve against the
             // manager's current defaults (see ManagedRun doc comments).
-            maxAgents: exec.maxAgents,
+            maxAgents: exec.maxAgents !== undefined ? exec.maxAgents : this.defaultMaxAgents,
             agentTimeoutMs: exec.agentTimeoutMs !== undefined ? exec.agentTimeoutMs : this.defaultAgentTimeoutMs,
             concurrency: exec.concurrency !== undefined ? exec.concurrency : this.concurrency,
             agentRetries: exec.agentRetries !== undefined ? exec.agentRetries : this.defaultAgentRetries,
@@ -240,6 +301,7 @@ export class WorkflowManager extends EventEmitter {
                 script,
                 args,
                 sessionId: this.sessionId,
+                installId: this.installId,
                 status: "running",
                 phases: managed.snapshot.phases,
                 agents: [],
@@ -285,7 +347,7 @@ export class WorkflowManager extends EventEmitter {
         managed.tokenBudget = exec.tokenBudget !== undefined ? exec.tokenBudget : this.defaultTokenBudget;
         managed.toolset = exec.toolset;
         // Same freeze-at-start pattern as tokenBudget (see startInBackground/ManagedRun).
-        managed.maxAgents = exec.maxAgents;
+        managed.maxAgents = exec.maxAgents !== undefined ? exec.maxAgents : this.defaultMaxAgents;
         managed.agentTimeoutMs = exec.agentTimeoutMs !== undefined ? exec.agentTimeoutMs : this.defaultAgentTimeoutMs;
         managed.concurrency = exec.concurrency !== undefined ? exec.concurrency : this.concurrency;
         managed.agentRetries = exec.agentRetries !== undefined ? exec.agentRetries : this.defaultAgentRetries;
@@ -392,6 +454,7 @@ export class WorkflowManager extends EventEmitter {
                 tokenBudget: resolvedTokenBudget,
                 tools: resolvedTools,
                 excludeTools: this.excludeSubagentTools,
+                isolationFallback: this.isolationFallback,
                 confirm,
                 loadSavedWorkflow: this.loadSavedWorkflow,
                 resumeJournal,
@@ -770,10 +833,17 @@ export class WorkflowManager extends EventEmitter {
                 runId: managed.runId,
                 workflowName: managed.snapshot.name,
                 // Persist the real script + journal so the run can be resumed. Runs live
-                // in workflow run storage — protect via directory permissions, not blanking.
+                // in workflow run storage, written 0600 under a 0700 directory (see
+                // fs-persistence.ts) — protected by file permissions, not by blanking.
                 script: managed.script,
                 args: managed.args,
                 sessionId: this.sessionId,
+                // Provenance: this install wrote this record, so auto-resume may pick it
+                // up later (see PersistedRunState.installId). A run adopted from a
+                // project-local store keeps its foreignSource marker instead, which
+                // persistence preserves ahead of this stamp.
+                installId: this.installId,
+                foreignSource: managed.foreignSource,
                 journal: keepsResumeJournal ? managed.journal : undefined,
                 status: managed.status,
                 // Persisted every write (not just at pause) so a stale read during the
@@ -872,6 +942,13 @@ export class WorkflowManager extends EventEmitter {
         const persisted = this.persistence.load(runId);
         if (!persisted?.script || persisted.status === "completed" || persisted.status === "aborted")
             return false;
+        // Resuming executes persisted.script. A record this install never wrote —
+        // most plausibly one sitting in `<cwd>/.pi/workflows/runs`, i.e. shipped
+        // inside the checked-out project — is therefore gated on a human who is
+        // shown the exact file it would run. Auto-resume never gets here (see
+        // UsageLimitScheduler); this covers the explicit resume paths.
+        if (!isInstallOwnedRun(persisted, this.installId) && !(await this.authorizeForeignRun(persisted)))
+            return false;
         const lease = this.persistence.acquireRunLease(runId);
         if (!lease)
             return false;
@@ -922,6 +999,11 @@ export class WorkflowManager extends EventEmitter {
             // Carry the original opt-out forward across resumes; it's fixed at
             // run-start and persistRun() re-persists it on every subsequent write.
             autoResume: persisted.autoResume,
+            // A confirmed resume of a project-supplied record does not turn it into
+            // one of ours: the marker follows the run so every later resume asks
+            // again and auto-resume keeps skipping it.
+            foreignSource: persisted.foreignSource ??
+                (persisted.sourceStore === "legacy" ? (persisted.sourcePath ?? "project store") : undefined),
             // Restore start-time execution context: the budget the run started with
             // (legacy runs without one resume unbudgeted — never re-apply the current
             // default to a run that predates it) and the toolset tag executeRun
@@ -932,7 +1014,7 @@ export class WorkflowManager extends EventEmitter {
             // per-run knobs (see ManagedRun doc comments) — same rationale as
             // tokenBudget: never re-resolve against the manager's CURRENT defaults.
             // maxAgents: legacy/never-set runs resume with no cap carried forward
-            // (runWorkflow's own MAX_AGENTS_PER_RUN default applies), exactly as if
+            // (runWorkflow's own DEFAULT_MAX_AGENTS_PER_RUN applies), exactly as if
             // maxAgents had never been passed at all.
             maxAgents: persisted.maxAgents,
             // agentTimeoutMs: unlike tokenBudget, a legacy run's real timeout at
@@ -986,6 +1068,42 @@ export class WorkflowManager extends EventEmitter {
         // cumulative cap across resume with no extra seeding required.
         void this.executeRun(managed, script, args, { resumeJournal, initialTokenUsage: priorTokenUsage }).catch(() => { });
         return true;
+    }
+    /**
+     * Ask the host whether a run record this install did not write may be
+     * executed, naming the file the script comes from.
+     *
+     * With no gate wired up the answer depends on where the record lives: the
+     * global run store under the user's workflow home is only ever written by
+     * this extension, so a record there (e.g. one from an earlier release, before
+     * provenance was stamped) still resumes, with a warning. A project-local
+     * store travels with whatever repository is checked out, so without a way to
+     * ask a human the answer is no — the run stays listable and inspectable.
+     */
+    async authorizeForeignRun(persisted) {
+        const path = persisted.sourcePath ?? persisted.foreignSource ?? "an unknown run file";
+        const projectLocal = persisted.sourceStore === "legacy" || Boolean(persisted.foreignSource);
+        if (!this.confirmForeignRun) {
+            if (!projectLocal) {
+                console.warn(`[workflow-manager] resuming ${persisted.runId} from ${path}, which carries no provenance from this install`);
+                return true;
+            }
+            console.warn(`[workflow-manager] refusing to resume ${persisted.runId}: its script comes from ${path}, inside the project ` +
+                `rather than your workflow home, and no confirmation prompt is available`);
+            return false;
+        }
+        try {
+            return Boolean(await this.confirmForeignRun({
+                runId: persisted.runId,
+                workflowName: persisted.workflowName,
+                path,
+                projectLocal,
+            }));
+        }
+        catch (err) {
+            console.warn("[workflow-manager] foreign-run confirmation failed:", err);
+            return false;
+        }
     }
     /**
      * Stop a running workflow.

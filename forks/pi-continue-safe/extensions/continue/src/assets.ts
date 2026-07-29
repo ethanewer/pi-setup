@@ -19,20 +19,22 @@ function projectOverrideRoot(projectRoot: string): string {
 	return join(projectRoot, ".pi", "extensions", "pi-continue", "prompts");
 }
 
-function candidateRoots(projectRoot: string, policy: PromptOverridePolicy): string[] {
+function candidateRoots(projectRoot: string, policy: PromptOverridePolicy, projectTrusted: boolean): string[] {
 	switch (policy) {
 		case "package-default":
 			return [PACKAGE_ASSETS_ROOT];
 		case "global-override":
 			return [globalOverrideRoot(), PACKAGE_ASSETS_ROOT];
 		case "project-override":
-			return [projectOverrideRoot(projectRoot), globalOverrideRoot(), PACKAGE_ASSETS_ROOT];
+			return projectTrusted
+				? [projectOverrideRoot(projectRoot), globalOverrideRoot(), PACKAGE_ASSETS_ROOT]
+				: [globalOverrideRoot(), PACKAGE_ASSETS_ROOT];
 	}
 }
 
-/** Load a prompt asset, honoring project and global overrides before package defaults. */
-export function loadPromptAsset(projectRoot: string, policy: PromptOverridePolicy, relativePath: string): LoadedPromptAsset {
-	for (const root of candidateRoots(projectRoot, policy)) {
+/** Load a prompt asset, honoring trusted-project and global overrides before package defaults. */
+export function loadPromptAsset(projectRoot: string, policy: PromptOverridePolicy, relativePath: string, projectTrusted = false): LoadedPromptAsset {
+	for (const root of candidateRoots(projectRoot, policy, projectTrusted)) {
 		const candidate = join(root, relativePath);
 		if (existsSync(candidate)) {
 			return {
@@ -53,10 +55,11 @@ export function loadHistoryPromptAssets(
 	projectRoot: string,
 	policy: PromptOverridePolicy,
 	scenario: HistoryScenario,
+	projectTrusted = false,
 ): HistoryPromptAssets {
 	return {
-		system: loadPromptAsset(projectRoot, policy, `system/history_${scenario}.md`),
-		baseUser: loadPromptAsset(projectRoot, policy, "user/continuation_base.md"),
-		scenarioUser: loadPromptAsset(projectRoot, policy, `user/history_${scenario}.md`),
+		system: loadPromptAsset(projectRoot, policy, `system/history_${scenario}.md`, projectTrusted),
+		baseUser: loadPromptAsset(projectRoot, policy, "user/continuation_base.md", projectTrusted),
+		scenarioUser: loadPromptAsset(projectRoot, policy, `user/history_${scenario}.md`, projectTrusted),
 	};
 }

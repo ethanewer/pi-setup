@@ -51,6 +51,7 @@ const requestBridge = async (config: BridgeCaptureConfig, path: string, options:
       method: options.method,
       headers: headersFrom(config),
       signal: controller.signal,
+      redirect: "error",
     });
     if (!response.ok) {
       const body = await response.text().catch(() => "");

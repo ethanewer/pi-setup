@@ -1,5 +1,6 @@
 import { endpointRequiresAuth } from "../config/endpoint";
 import type { CleanupConfig } from "../config/types";
+import { isDeclaredKeyless } from "../secrets/resolve-api-key";
 import { objectFrom, textFrom } from "../utils/coerce";
 import { buildCleanupSystemPrompt } from "./prompt";
 import { gatherRepoContext } from "./repo-context";
@@ -11,9 +12,12 @@ import type { CleanupClient } from "./types";
  */
 export const createOpenAiCompatibleCleanup = (config: CleanupConfig): CleanupClient => ({
   async clean({ text, signal }) {
-    const needsAuth = endpointRequiresAuth(config.endpoint);
+    const needsAuth = endpointRequiresAuth(config.endpoint) && !isDeclaredKeyless(config);
     if (needsAuth && !config.apiKey) {
-      throw new Error("Missing API key for cleanup endpoint. Set cleanup.apiKeyEnv or use a localhost endpoint.");
+      throw new Error(
+        "Missing API key for cleanup endpoint. Set cleanup.apiKeyEnv, use a localhost endpoint, " +
+          "or set cleanup.apiKeyEnv \"\" for an endpoint that takes no key.",
+      );
     }
 
     const context = await gatherRepoContext(config);
@@ -26,6 +30,7 @@ export const createOpenAiCompatibleCleanup = (config: CleanupConfig): CleanupCli
       method: "POST",
       headers,
       signal,
+      redirect: "error",
       body: JSON.stringify({
         model: config.model,
         max_tokens: config.maxTokens,

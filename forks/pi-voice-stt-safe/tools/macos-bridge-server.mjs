@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 import { createServer } from "node:http";
 import { spawn } from "node:child_process";
+import { timingSafeEqual } from "node:crypto";
+import { isIP } from "node:net";
 import { mkdtempSync } from "node:fs";
 import { readFile, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -18,7 +20,35 @@ const MIN_BYTES = Number.parseInt(env.PI_STT_BRIDGE_MIN_BYTES || "4096", 10);
 const MAX_SECONDS = Number.parseInt(env.PI_STT_BRIDGE_MAX_SECONDS || "120", 10);
 const TOKEN_FILE = env.PI_STT_BRIDGE_TOKEN_FILE || "";
 const TOKEN = (env.PI_STT_BRIDGE_TOKEN || (TOKEN_FILE ? await readFile(TOKEN_FILE, "utf8").catch(() => "") : "")).trim();
+const ALLOW_REMOTE = env.PI_STT_BRIDGE_ALLOW_REMOTE === "1";
 const MAX_STDERR_BYTES = 24 * 1024;
+const LOOPBACK_ALIASES = ["localhost", "::1", "[::1]"];
+// The check has to describe the address that is actually bound: a bare hostname
+// is resolved by DNS after the check, so the aliases are mapped to the loopback
+// literal and anything else must already be an IP address.
+const BIND_HOST = LOOPBACK_ALIASES.includes(HOST.toLowerCase()) ? "127.0.0.1" : HOST;
+const BIND_FAMILY = isIP(BIND_HOST);
+const BINDS_LOOPBACK = BIND_FAMILY === 4
+  ? BIND_HOST.startsWith("127.")
+  : ["::1", "::ffff:127.0.0.1"].includes(BIND_HOST.toLowerCase());
+
+// The daemon can switch the microphone on, so it never runs unauthenticated:
+// without a token every local process (and any web page able to send a CORS
+// simple request) could start a recording.
+if (!TOKEN) {
+  console.error("[pi-voice-stt-bridge] refusing to start without a token: set PI_STT_BRIDGE_TOKEN or PI_STT_BRIDGE_TOKEN_FILE (see tools/install-macos-bridge.sh).");
+  process.exit(1);
+}
+
+if (!BIND_FAMILY) {
+  console.error(`[pi-voice-stt-bridge] refusing to bind ${HOST}: PI_STT_BRIDGE_HOST must be an IP address such as 127.0.0.1, or localhost.`);
+  process.exit(1);
+}
+
+if (!BINDS_LOOPBACK && !ALLOW_REMOTE) {
+  console.error(`[pi-voice-stt-bridge] refusing to bind ${HOST}: reach the daemon through the SSH tunnel, or set PI_STT_BRIDGE_ALLOW_REMOTE=1 to bind a non-loopback address on purpose.`);
+  process.exit(1);
+}
 
 let active;
 
@@ -52,9 +82,10 @@ const waitForExit = (process) => new Promise((resolve) => {
 });
 
 const isAuthorized = (req) => {
-  if (!TOKEN) return true;
-  const header = req.headers.authorization || "";
-  return header === `Bearer ${TOKEN}`;
+  if (!TOKEN) return false;
+  const presented = Buffer.from(req.headers.authorization || "", "utf8");
+  const expected = Buffer.from(`Bearer ${TOKEN}`, "utf8");
+  return presented.length === expected.length && timingSafeEqual(presented, expected);
 };
 
 const terminate = (recording) => {
@@ -215,6 +246,6 @@ const shutdown = async () => {
 process.on("SIGTERM", () => void shutdown());
 process.on("SIGINT", () => void shutdown());
 
-server.listen(PORT, HOST, () => {
-  console.log(`[pi-voice-stt-bridge] listening on http://${HOST}:${PORT} (${INPUT_FORMAT} ${INPUT})`);
+server.listen(PORT, BIND_HOST, () => {
+  console.log(`[pi-voice-stt-bridge] listening on http://${BIND_HOST}:${PORT} (${INPUT_FORMAT} ${INPUT})`);
 });

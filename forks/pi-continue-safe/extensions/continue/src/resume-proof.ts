@@ -17,11 +17,21 @@ export const COMPACTION_PROOF_TIMEOUT_FAILURE = "Pi did not report a saved packa
 export const NATIVE_COMPACTION_FALLBACK_FAILURE = "Pi saved a native compaction instead of a package-owned continuation handoff.";
 export const INVALID_COMPACTION_PROOF_FAILURE = "Pi saved a compaction without valid pi-continue/v4 handoff details.";
 export const STALE_COMPACTION_PROOF_FAILURE = "Pi saved a continuation handoff for a different run; resume was stopped.";
+export const RESUME_DISPATCH_TIMEOUT_FAILURE = "Continuation resume was never dispatched after Pi saved the handoff.";
+
+// Backstop for a verified handoff whose resume dispatch never ran, for example when a
+// post-compaction side effect threw. Without it the event stays running forever and every
+// later /continue answers "still resuming".
+const RESUME_DISPATCH_TIMEOUT_MS = 120_000;
+// A resume queued while the parent turn is still settling only starts after that turn ends, so
+// it gets this longer backstop instead of no timer at all; `agent_end` replaces it with the
+// exact resume-start window.
+const RESUME_START_BACKSTOP_TIMEOUT_MS = 120_000;
 
 export interface PendingResumeDispatch {
 	eventId: string;
 	label: string;
-	sendContinuation: (prompt: string) => void;
+	sendContinuation: (prompt: string) => void | Promise<void>;
 	onContinuationFailed: ((eventId: string) => void) | undefined;
 	resumeStartTimeoutMs: number;
 	compactionProofTimeoutMs: number;
@@ -43,14 +53,16 @@ export interface ResumeProofRuntimeState extends ContinuationEventStore {
 	awaitingResumeEventId: string | undefined;
 	awaitingResumeStart: AwaitingResumeStart | undefined;
 	resumeStartTimeout: ReturnType<typeof setTimeout> | undefined;
+	resumeStartTimeoutIsBackstop: boolean;
 	compactionProofTimeout: ReturnType<typeof setTimeout> | undefined;
+	resumeDispatchTimeout: ReturnType<typeof setTimeout> | undefined;
 	pendingResumeDispatch: PendingResumeDispatch | undefined;
 }
 
 export interface PendingResumeDispatchOptions {
 	eventId: string;
 	label: string;
-	sendContinuation: (prompt: string) => void;
+	sendContinuation: (prompt: string) => void | Promise<void>;
 	onContinuationFailed: ((eventId: string) => void) | undefined;
 	resumeStartTimeoutMs: number;
 	compactionProofTimeoutMs: number;
@@ -62,11 +74,16 @@ export function notify(ctx: ExtensionContext, message: string, type: "info" | "w
 	ctx.ui.notify(message, type);
 }
 
+function isThenable(value: unknown): value is PromiseLike<unknown> {
+	return typeof value === "object" && value !== null && typeof (value as { then?: unknown }).then === "function";
+}
+
 function unrefTimer(timer: ReturnType<typeof setTimeout>): void {
 	if (typeof timer === "object" && timer !== null) timer.unref?.();
 }
 
 function clearResumeStartTimer(runtime: ResumeProofRuntimeState): void {
+	runtime.resumeStartTimeoutIsBackstop = false;
 	if (!runtime.resumeStartTimeout) return;
 	clearTimeout(runtime.resumeStartTimeout);
 	runtime.resumeStartTimeout = undefined;
@@ -83,9 +100,16 @@ export function clearCompactionProofTimeout(runtime: ResumeProofRuntimeState): v
 	runtime.compactionProofTimeout = undefined;
 }
 
+export function clearResumeDispatchTimeout(runtime: ResumeProofRuntimeState): void {
+	if (!runtime.resumeDispatchTimeout) return;
+	clearTimeout(runtime.resumeDispatchTimeout);
+	runtime.resumeDispatchTimeout = undefined;
+}
+
 export function clearPendingResumeDispatch(runtime: ResumeProofRuntimeState): void {
 	runtime.pendingResumeDispatch = undefined;
 	clearCompactionProofTimeout(runtime);
+	clearResumeDispatchTimeout(runtime);
 }
 
 export function preparePendingResumeDispatch(runtime: ResumeProofRuntimeState, options: PendingResumeDispatchOptions): void {
@@ -102,9 +126,17 @@ export function preparePendingResumeDispatch(runtime: ResumeProofRuntimeState, o
 	};
 }
 
-function scheduleResumeStartTimeout(ctx: ExtensionContext, runtime: ResumeProofRuntimeState, resumeStart: AwaitingResumeStart): void {
+function scheduleResumeStartTimeout(
+	ctx: ExtensionContext,
+	runtime: ResumeProofRuntimeState,
+	resumeStart: AwaitingResumeStart,
+	isBackstop = false,
+): void {
 	clearResumeStartTimer(runtime);
 	runtime.awaitingResumeStart = resumeStart;
+	const delayMs = isBackstop
+		? Math.max(resumeStart.resumeStartTimeoutMs, RESUME_START_BACKSTOP_TIMEOUT_MS)
+		: resumeStart.resumeStartTimeoutMs;
 	const timeout = setTimeout(() => {
 		if (runtime.awaitingResumeEventId !== resumeStart.eventId) return;
 		const failed = failContinuationResumeStart(runtime, resumeStart.eventId, RESUME_START_TIMEOUT_FAILURE);
@@ -112,8 +144,9 @@ function scheduleResumeStartTimeout(ctx: ExtensionContext, runtime: ResumeProofR
 		resumeStart.onContinuationFailed?.(resumeStart.eventId);
 		settleWorkingVisuals(ctx, runtime, resumeStart.eventId);
 		notify(ctx, `${resumeStart.label}: resume request failed.`, "error");
-	}, Math.max(0, resumeStart.resumeStartTimeoutMs));
+	}, Math.max(0, delayMs));
 	runtime.resumeStartTimeout = timeout;
+	runtime.resumeStartTimeoutIsBackstop = isBackstop;
 	unrefTimer(timeout);
 }
 
@@ -125,6 +158,33 @@ function scheduleCompactionProofTimeout(ctx: ExtensionContext, runtime: ResumePr
 	}, Math.max(0, pending.compactionProofTimeoutMs));
 	runtime.compactionProofTimeout = timeout;
 	unrefTimer(timeout);
+}
+
+function scheduleResumeDispatchTimeout(ctx: ExtensionContext, runtime: ResumeProofRuntimeState, pending: PendingResumeDispatch): void {
+	clearResumeDispatchTimeout(runtime);
+	const timeout = setTimeout(() => {
+		if (runtime.pendingResumeDispatch?.eventId !== pending.eventId) return;
+		if (!isActiveRunningContinuationEvent(runtime, pending.eventId)) return;
+		settleStalledContinuation(ctx, runtime, pending.eventId, RESUME_DISPATCH_TIMEOUT_FAILURE);
+	}, RESUME_DISPATCH_TIMEOUT_MS);
+	runtime.resumeDispatchTimeout = timeout;
+	unrefTimer(timeout);
+}
+
+function settleStalledContinuation(ctx: ExtensionContext, runtime: ResumeProofRuntimeState, eventId: string, reason: string): boolean {
+	const pending = runtime.pendingResumeDispatch;
+	if (pending?.eventId === eventId) {
+		pending.onContinuationFailed?.(eventId);
+		if (pending.failureGuardKey) runtime.guardFailureKey = pending.failureGuardKey;
+	}
+	clearPendingResumeDispatch(runtime);
+	clearResumeStartTimeout(runtime);
+	runtime.awaitingResumeEventId = undefined;
+	runtime.compactionRunning = false;
+	if (!finishContinuationEvent(runtime, eventId, "failed", reason)) return false;
+	settleWorkingVisuals(ctx, runtime, eventId);
+	notify(ctx, `pi-continue: handoff failed: ${reason}`, "error");
+	return true;
 }
 
 function failContinuationResumeStart(runtime: ResumeProofRuntimeState, eventId: string, reason: string): boolean {
@@ -143,7 +203,8 @@ function isAwaitingResumeStartPending(runtime: ResumeProofRuntimeState, eventId:
 /** Arm the resume-start timeout after an active parent turn had a chance to deliver queued follow-up. */
 export function armDeferredResumeStartTimeout(ctx: ExtensionContext, runtime: ResumeProofRuntimeState): boolean {
 	const resumeStart = runtime.awaitingResumeStart;
-	if (!resumeStart || runtime.resumeStartTimeout) return false;
+	if (!resumeStart) return false;
+	if (runtime.resumeStartTimeout && !runtime.resumeStartTimeoutIsBackstop) return false;
 	if (!isAwaitingResumeStartPending(runtime, resumeStart.eventId)) return false;
 	scheduleResumeStartTimeout(ctx, runtime, resumeStart);
 	return true;
@@ -154,6 +215,7 @@ function dispatchIfReady(ctx: ExtensionContext, runtime: ResumeProofRuntimeState
 	if (!pending || pending.eventId !== eventId || !pending.compactionCompleted || !pending.proofVerified) return false;
 	if (!isActiveRunningContinuationEvent(runtime, eventId)) return false;
 	clearCompactionProofTimeout(runtime);
+	clearResumeDispatchTimeout(runtime);
 	runtime.pendingResumeDispatch = undefined;
 	updateWorkingVisuals(ctx, runtime, eventId, "pi-continue resuming this session");
 	markContinuationResumePending(runtime, eventId);
@@ -165,22 +227,35 @@ function dispatchIfReady(ctx: ExtensionContext, runtime: ResumeProofRuntimeState
 		resumeStartTimeoutMs: pending.resumeStartTimeoutMs,
 	};
 	runtime.awaitingResumeStart = resumeStart;
-	try {
-		pending.sendContinuation(CONTINUATION_PROMPT);
-		markContinuationPromptSent(runtime, eventId);
-		if (ctx.isIdle() && isAwaitingResumeStartPending(runtime, eventId)) {
-			scheduleResumeStartTimeout(ctx, runtime, resumeStart);
-		}
-		notify(ctx, `${pending.label}: resume request sent.`, "info");
-	} catch {
-		pending.onContinuationFailed?.(eventId);
+	const label = pending.label;
+	const onContinuationFailed = pending.onContinuationFailed;
+	function failDispatch(): void {
+		if (!isActiveRunningContinuationEvent(runtime, eventId)) return;
+		if (!isAwaitingResumeStartPending(runtime, eventId)) return;
+		onContinuationFailed?.(eventId);
 		finishContinuationEvent(runtime, eventId, "failed", PROMPT_DISPATCH_FAILURE);
 		clearResumeStartTimeout(runtime);
 		runtime.awaitingResumeEventId = undefined;
 		settleWorkingVisuals(ctx, runtime, eventId);
-		notify(ctx, `${pending.label}: resume request failed: ${PROMPT_DISPATCH_FAILURE}`, "error");
+		notify(ctx, `${label}: resume request failed: ${PROMPT_DISPATCH_FAILURE}`, "error");
+	}
+	let dispatch: unknown;
+	try {
+		dispatch = pending.sendContinuation(CONTINUATION_PROMPT);
+	} catch {
+		failDispatch();
 		return false;
 	}
+	markContinuationPromptSent(runtime, eventId);
+	// The host may hand back a promise for the queued send; a rejection there is the only direct
+	// signal that the resume never reached Pi, so it must fail the event instead of being dropped.
+	if (isThenable(dispatch)) void Promise.resolve(dispatch).catch(() => failDispatch());
+	// Every dispatch arms a timer: an already-ended parent turn means `agent_end` will not come
+	// back to arm one, and a resume that never starts must still settle.
+	if (isAwaitingResumeStartPending(runtime, eventId)) {
+		scheduleResumeStartTimeout(ctx, runtime, resumeStart, !ctx.isIdle());
+	}
+	notify(ctx, `${label}: resume request sent.`, "info");
 	return true;
 }
 
@@ -203,6 +278,7 @@ export function verifyContinuationCompactionProof(ctx: ExtensionContext, runtime
 	}
 	pending.proofVerified = true;
 	clearCompactionProofTimeout(runtime);
+	scheduleResumeDispatchTimeout(ctx, runtime, pending);
 	return true;
 }
 
@@ -218,17 +294,5 @@ export function acceptContinuationCompactionProof(ctx: ExtensionContext, runtime
 
 export function failContinuationCompactionProof(ctx: ExtensionContext, runtime: ResumeProofRuntimeState, eventId: string, reason: string): boolean {
 	markContinuationCompactionProofFailed(runtime, eventId, reason);
-	const pending = runtime.pendingResumeDispatch;
-	if (pending?.eventId === eventId) {
-		pending.onContinuationFailed?.(eventId);
-		if (pending.failureGuardKey) runtime.guardFailureKey = pending.failureGuardKey;
-	}
-	clearPendingResumeDispatch(runtime);
-	clearResumeStartTimeout(runtime);
-	runtime.awaitingResumeEventId = undefined;
-	runtime.compactionRunning = false;
-	if (!finishContinuationEvent(runtime, eventId, "failed", reason)) return false;
-	settleWorkingVisuals(ctx, runtime, eventId);
-	notify(ctx, `pi-continue: handoff failed: ${reason}`, "error");
-	return true;
+	return settleStalledContinuation(ctx, runtime, eventId, reason);
 }

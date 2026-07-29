@@ -1,3 +1,4 @@
+import { isSameSiteEndpoint, secureEndpointFrom } from "../config/endpoint";
 import type { GladiaProviderConfig } from "../config/types";
 import { audioBlobFromPath, fetchJson, normalizeLanguage, objectAt, sleep, textAt } from "./helpers";
 import type { SttProvider } from "./types";
@@ -7,9 +8,24 @@ const gladiaHeaders = (apiKey: string): Record<string, string> => ({
   "x-gladia-key": apiKey,
 });
 
+const configuredEndpoints = (config: GladiaProviderConfig): string[] => [config.transcriptionEndpoint, config.uploadEndpoint];
+
+/**
+ * result_url comes from the response body, so it is only followed (with the API
+ * key attached) when it is a secure URL on the configured Gladia endpoints'
+ * own site — regional hosts included. Anything else falls back to the id-based
+ * URL.
+ */
 const resultUrlFrom = (payload: unknown, config: GladiaProviderConfig): string => {
   const resultUrl = textAt(payload, "result_url");
-  if (resultUrl) return resultUrl;
+  if (resultUrl) {
+    try {
+      const secure = secureEndpointFrom(resultUrl, "");
+      if (isSameSiteEndpoint(secure, configuredEndpoints(config))) return secure;
+    } catch {
+      // Untrusted result_url: use the id-based URL below.
+    }
+  }
 
   const id = textAt(payload, "id");
   if (!id) return "";

@@ -4,6 +4,7 @@ import { normalizeCompactionPreparation, type ContinuationCompactionPreparation 
 import { readEffectivePiCompactionSettings } from "./pi-settings.ts";
 import { loadPiInternals } from "./pi-internals.ts";
 import { resolveProjectContext } from "./project.ts";
+import { isProjectScopeTrusted } from "./project-trust.ts";
 import { sendContinuationPrompt } from "./prompt-dispatch.ts";
 import { startContinuationCompaction, type ContinuationRuntimeState } from "./runtime.ts";
 import { endsWithCompleteToolResultBatch } from "./tool-batches.ts";
@@ -175,9 +176,10 @@ export async function runMidRunGuard(
 ): Promise<void> {
 	if (!shouldEvaluateMidRunContext(messages) || !ctx.model) return;
 	const initialProjectContext = await resolveProjectContext(pi, ctx.cwd, ctx.sessionManager.getSessionId());
-	const config = loadContinuationConfig(initialProjectContext.projectRoot);
+	const projectTrusted = isProjectScopeTrusted(ctx, initialProjectContext.projectRoot);
+	const config = loadContinuationConfig(initialProjectContext.projectRoot, projectTrusted);
 	if (!config.enabled || !config.midRunGuardEnabled) return;
-	const piSettings = readEffectivePiCompactionSettings(initialProjectContext.projectRoot);
+	const piSettings = readEffectivePiCompactionSettings(initialProjectContext.projectRoot, projectTrusted);
 	const internals = await loadPiInternals();
 	const estimate = internals.estimateContextTokens(messages);
 	const trigger = decideMidRunGuardTrigger({
@@ -202,5 +204,9 @@ export async function runMidRunGuard(
 		continueAfterComplete: true,
 		sendContinuation: (prompt) => sendContinuationPrompt(pi, prompt),
 		onContinuationFailed,
+		chainLimits: {
+			maxChainedContinuations: config.maxChainedContinuations,
+			maxChainedSynthesisCostUsd: config.maxChainedSynthesisCostUsd,
+		},
 	});
 }

@@ -12,7 +12,8 @@
  * a deprecated fallback (with a one-time warning) so users who followed this repo's
  * earlier docs are not silently broken; the new location wins on a name collision.
  * Frontmatter binds the subagent's tools, model, and a body prompt; project
- * definitions win over both user-level locations on a name collision. This mirrors
+ * definitions win over both user-level locations on a name collision, and are
+ * read only for a project the user trusts (see loadAgentRegistry). This mirrors
  * Claude Code's `.claude/agents` registry: agentType is a real binding of
  * tools+model+system-prompt, not a prose hint.
  *
@@ -25,6 +26,7 @@ import { homedir } from "node:os";
 import { basename, join } from "node:path";
 import { getAgentDir, parseFrontmatter } from "@earendil-works/pi-coding-agent";
 import { AGENTS_DIR } from "./config.js";
+import { loadWorkflowSettings } from "./workflow-settings.js";
 function toStringArray(value) {
     if (value == null)
         return undefined;
@@ -74,6 +76,17 @@ export function parseAgentDefinition(content, source, fileName) {
         source,
     };
 }
+/** Whether this project's own `.pi/agents` definitions may be bound. */
+function projectTrusted(cwd, override) {
+    if (override !== undefined)
+        return override;
+    try {
+        return loadWorkflowSettings({ cwd }).trustProjectLocalWorkflows === true;
+    }
+    catch {
+        return false;
+    }
+}
 function readDefsFromDir(dir, source) {
     if (!existsSync(dir))
         return [];
@@ -107,7 +120,14 @@ function readDefsFromDir(dir, source) {
  * the new user dir), a single deprecation warning is logged for this call
  * telling the user to move their files — not one warning per legacy file.
  *
- * `opts` overrides the scanned directories (used by tests).
+ * The PROJECT directory is part of whatever repository is checked out, and a
+ * definition binds a subagent's whole system prompt plus its model and tool
+ * policy — so project definitions are read only for a trusted project (see
+ * WorkflowSettings.trustProjectLocalWorkflows, the same knob that gates
+ * project-local saved workflows). Untrusted, they are skipped with a one-line
+ * notice naming the directory, and the user-level definitions still load.
+ *
+ * `opts` overrides the scanned directories and the trust decision (used by tests).
  */
 export function loadAgentRegistry(cwd, opts) {
     const projectDir = opts?.projectDir ?? join(cwd, AGENTS_DIR);
@@ -121,9 +141,17 @@ export function loadAgentRegistry(cwd, opts) {
     // it as a fallback so those files don't silently stop resolving.
     const legacyUserDir = opts?.legacyUserDir ?? join(homedir(), AGENTS_DIR);
     const registry = new Map();
-    for (const def of readDefsFromDir(projectDir, "project")) {
-        if (def.name && !registry.has(def.name))
-            registry.set(def.name, def);
+    const projectDefs = readDefsFromDir(projectDir, "project");
+    if (projectDefs.length > 0 && projectTrusted(cwd, opts?.trustProject)) {
+        for (const def of projectDefs) {
+            if (def.name && !registry.has(def.name))
+                registry.set(def.name, def);
+        }
+    }
+    else if (projectDefs.length > 0) {
+        console.warn(`[agent-registry] Ignoring ${projectDefs.length} agent definition(s) in "${projectDir}": they come with the ` +
+            `project and bind a subagent's system prompt, model, and tools. Set trustProjectLocalWorkflows: true ` +
+            `(globally, or for this project only) to use them.`);
     }
     if (userDir !== projectDir) {
         for (const def of readDefsFromDir(userDir, "user")) {

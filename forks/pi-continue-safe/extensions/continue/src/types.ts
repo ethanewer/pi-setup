@@ -9,6 +9,8 @@ export type ContinuationReasoning =
 
 export type PromptOverridePolicy = "package-default" | "global-override" | "project-override";
 export type WriteMode = "always" | "off";
+export type AgentGuideOverwritePolicy = "confirm" | "allow";
+export type SynthesisFailureFallback = "native-compaction" | "cancel";
 export type ConfigScope = "global" | "project";
 export type HistoryScenario = "initial" | "update";
 
@@ -21,7 +23,13 @@ export interface ContinuationConfig {
 	continuationArtifactMode: WriteMode;
 	agentGuidePath: string;
 	agentGuideSyncMode: WriteMode;
+	agentGuideOverwritePolicy: AgentGuideOverwritePolicy;
+	agentGuideAllowOutsideProject: boolean;
+	allowSymlinkedOutputDirectory: boolean;
+	synthesisFailureFallback: SynthesisFailureFallback;
 	midRunGuardEnabled: boolean;
+	maxChainedContinuations: number;
+	maxChainedSynthesisCostUsd: number;
 	appendCompactionMetadata: boolean;
 	appendReadFileTags: boolean;
 	appendModifiedFileTags: boolean;
@@ -34,6 +42,8 @@ export interface ResolvedProjectContext {
 	continuationArtifactPath: string;
 	agentGuidePath: string;
 	existingAgentGuide: string | undefined;
+	/** Why the configured guide was not read, when it exists but could not be used. */
+	agentGuideReadRefusal: string | undefined;
 }
 
 export interface LoadedPromptAsset {
@@ -223,6 +233,10 @@ export interface PendingOutputWrite {
 	label: string;
 	target: ContinuationOutputWriteTarget;
 	eventId: string;
+	projectRoot: string;
+	confirmOverwrite: boolean;
+	allowOutsideRoot: boolean;
+	allowSymlinkedAncestor: boolean;
 }
 
 export interface PiCompactionSettings {

@@ -88,10 +88,19 @@ export const RUNTIME_PROMPT_GUIDELINES = [
     "When agent_browser details.nextActions exists, use exact payloads over guessed selectors/prose. Dense snapshots: check Omitted high-value controls/highValueControlRefIds. Dashboards: verify scroll with screenshot/snapshot.",
     "For agent_browser extraction: read <url> for docs/text; read for active-tab DOM; get title/url; get text/html/value/count <selector>; get attr <selector> <name>; eval --stdin for targeted state. Batch 3+ getters; heed visibility warnings.",
 ];
-export function buildBrowserExecutablePathGuideline(executablePath) {
+/**
+ * A user-scope `browser.executablePath` is pre-approved for `--executable-path`, so its guidance must not send the
+ * agent through the opt-in; a project-scope value stays gated and its guidance has to say so.
+ * @param {string | undefined} executablePath
+ * @param {string} [scope]
+ */
+export function buildBrowserExecutablePathGuideline(executablePath, scope) {
     if (!executablePath)
         return undefined;
-    return `agent_browser config sets browser.executablePath to ${JSON.stringify(executablePath)}; for fresh browser launches that should use that Chromium-compatible executable, add --executable-path ${JSON.stringify(executablePath)} with sessionMode:fresh. The upstream profiles command still lists Chrome profiles only; for non-Chrome Chromium login state, ask the user for an explicit profile/user-data directory path or inspect local setup with profiles/doctor before recommending a profile value.`;
+    const approval = scope === "project"
+        ? `That value comes from project config, which stays gated, so if the tool reports --executable-path as needing approval, tell the user to restart pi with PI_AGENT_BROWSER_ALLOW_PRIVILEGED_FLAGS=--executable-path instead of retrying.`
+        : `That exact configured value is pre-approved and needs no opt-in; any other executable path is gated, so for a different browser tell the user to restart pi with PI_AGENT_BROWSER_ALLOW_PRIVILEGED_FLAGS=--executable-path instead of retrying.`;
+    return `agent_browser config sets browser.executablePath to ${JSON.stringify(executablePath)}; for fresh browser launches that should use that Chromium-compatible executable, add --executable-path ${JSON.stringify(executablePath)} with sessionMode:fresh. ${approval} The upstream profiles command still lists Chrome profiles only; for non-Chrome Chromium login state, ask the user for an explicit profile/user-data directory path or inspect local setup with profiles/doctor before recommending a profile value.`;
 }
 export function buildBrowserDefaultProfileGuideline(profile) {
     if (!profile || profile.policy === "explicit-only")
@@ -103,7 +112,7 @@ export function buildBrowserDefaultProfileGuideline(profile) {
 }
 export function buildToolPromptGuidelines(options) {
     const browserDefaultProfileGuideline = buildBrowserDefaultProfileGuideline(options.browserDefaultProfile);
-    const browserExecutablePathGuideline = buildBrowserExecutablePathGuideline(options.browserExecutablePath);
+    const browserExecutablePathGuideline = buildBrowserExecutablePathGuideline(options.browserExecutablePath, options.browserExecutablePathScope);
     return [
         ...TOOL_PROMPT_GUIDELINES_PREFIX,
         ...(options.docs ? [buildInstalledDocsGuideline(options.docs)] : []),

@@ -6,13 +6,16 @@
  * by a stable cwd-derived namespace.
  */
 
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, join, resolve } from "node:path";
 import { WORKFLOW_RUNS_DIR, WORKFLOW_SAVED_DIR } from "./config.js";
+import { PRIVATE_DIR_MODE, PRIVATE_FILE_MODE } from "./fs-persistence.js";
 
 export const WORKFLOW_HOME_RELATIVE_DIR = ".pi/workflows";
 export const WORKFLOW_PROJECTS_SUBDIR = "projects";
+export const WORKFLOW_INSTALL_ID_FILE = "install-id";
 
 export interface WorkflowProjectPaths {
   key: string;
@@ -39,6 +42,45 @@ export function workflowProjectKey(cwd: string): string {
   return `${slug}-${hash}`;
 }
 
+/**
+ * Opaque identity of this workflow home, generated once and kept in
+ * `~/.pi/workflows/install-id`. Run files record it so state this install never
+ * wrote — a run store that arrived inside a cloned repository, say — is never
+ * mistaken for a run of ours and auto-resumed. Unguessable by design: a value
+ * derived from public facts (username, paths) could be reproduced by whoever
+ * authored such a file. Falls back to a path-derived digest, and never throws,
+ * when the home directory is not writable; a fallback id is still stable for
+ * this install and still differs from "absent".
+ */
+export function workflowInstallId(): string {
+  if (cachedInstallId) return cachedInstallId;
+  const path = join(workflowHomeDir(), WORKFLOW_INSTALL_ID_FILE);
+  try {
+    if (existsSync(path)) {
+      const existing = readFileSync(path, "utf-8").trim();
+      if (existing.length > 0 && existing.length <= 200) {
+        cachedInstallId = existing;
+        return existing;
+      }
+    }
+    const minted = randomUUID();
+    // The workflow home is usually created here first, so it gets the same
+    // owner-only mode as the run/saved stores nested inside it — otherwise a
+    // fresh install left the directory holding scripts, prompts and results
+    // world-readable (mode applies only to what this call creates).
+    mkdirSync(workflowHomeDir(), { recursive: true, mode: PRIVATE_DIR_MODE });
+    // Owner-only: the id is a capability (it is what marks a run as ours and
+    // therefore auto-resumable), so it must not be readable by other accounts —
+    // same reason every record this package writes is 0600 (fs-persistence.ts).
+    writeFileSync(path, `${minted}\n`, { encoding: "utf-8", mode: PRIVATE_FILE_MODE });
+    cachedInstallId = minted;
+    return minted;
+  } catch {
+    cachedInstallId = `derived-${createHash("sha256").update(`${homedir()} ${path}`).digest("hex").slice(0, 32)}`;
+    return cachedInstallId;
+  }
+}
+
 export function workflowProjectPaths(cwd: string): WorkflowProjectPaths {
   const key = workflowProjectKey(cwd);
   const rootDir = join(workflowHomeDir(), WORKFLOW_PROJECTS_SUBDIR, key);
@@ -52,6 +94,8 @@ export function workflowProjectPaths(cwd: string): WorkflowProjectPaths {
     legacySavedDir: resolve(cwd, WORKFLOW_SAVED_DIR),
   };
 }
+
+let cachedInstallId: string | undefined;
 
 function sanitizePathSegment(value: string): string {
   const sanitized = value

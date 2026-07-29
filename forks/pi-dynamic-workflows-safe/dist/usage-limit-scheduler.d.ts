@@ -15,7 +15,7 @@
  * (in-memory, best-effort persisted) — it does not rely on manager.stop(), which
  * only operates on in-memory runs.
  */
-import type { PersistedRunState, RunPersistence } from "./run-persistence.js";
+import { type PersistedRunState, type RunPersistence } from "./run-persistence.js";
 /** Narrow surface this scheduler depends on — satisfied by WorkflowManager. */
 export interface SchedulableWorkflowManager {
     on(event: string, listener: (...args: any[]) => void): unknown;
@@ -35,6 +35,12 @@ export interface UsageLimitSchedulerOptions {
     clearTimer?: (handle: TimerHandle) => void;
     /** Max auto-resume attempts per pause-cycle before giving up. Default 5. */
     maxAttempts?: number;
+    /**
+     * Max consecutive "resume() refused for a structural reason" retries before
+     * the run is left paused for a human. Default 10; each retry backs off from
+     * minDelayMs so the ceiling is reached in hours, not minutes.
+     */
+    maxBusyRetries?: number;
     /** Delay floor — never arm sooner than this. Default 60_000 (1m). */
     minDelayMs?: number;
     /** Delay used when the provider's resetHint can't be parsed. Default 300_000 (5m). */
@@ -43,6 +49,14 @@ export interface UsageLimitSchedulerOptions {
     maxDelayMs?: number;
     /** Diagnostics sink; defaults to console.warn. Never throws back into the caller. */
     onDiagnostic?: (message: string, detail?: unknown) => void;
+    /**
+     * Provenance this scheduler will auto-resume (default: this install's id, see
+     * workflowInstallId). A run whose record does not carry it — or that was read
+     * from a project-local run store — is left paused for an explicit resume,
+     * because arming a timer for it would execute a script this install never
+     * wrote with nobody watching.
+     */
+    installId?: string;
 }
 /**
  * Best-effort parse of a provider's human reset hint ("Resets in ~3h",
@@ -78,8 +92,10 @@ export declare function computeAutoResumeDelayMs(params: AutoResumeDelayParams):
  * usage_limit pause (live via the "paused" event, or once at cold start for a
  * run that was already paused), never when a resume is merely fired. When an
  * armed timer fires, resume() is called; if it returns false (lease busy, run
- * already gone, etc.) no attempt is consumed and a short un-backed-off retry is
- * armed instead, unless the run has reached a terminal state on disk. If resume()
+ * already gone, etc.) no attempt is consumed and a backed-off retry is armed
+ * instead — bounded by maxBusyRetries, so a run whose lease another live pi
+ * process holds is eventually left alone rather than retried for the life of
+ * this process — unless the run has reached a terminal state on disk. If resume()
  * returns true, this scheduler steps back — the existing "paused" subscription
  * re-arms with backoff if the run hits the wall again, and "complete"/"error"/
  * "stopped" clean up its timer.
@@ -90,10 +106,12 @@ export declare class UsageLimitScheduler {
     private readonly setTimer;
     private readonly clearTimer;
     private readonly maxAttempts;
+    private readonly maxBusyRetries;
     private readonly minDelayMs;
     private readonly fallbackDelayMs;
     private readonly maxDelayMs;
     private readonly diagnostic;
+    private readonly installId;
     private readonly state;
     private disposed;
     /**

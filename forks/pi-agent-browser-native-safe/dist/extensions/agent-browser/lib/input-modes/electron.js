@@ -4,7 +4,9 @@
  * Scope: Electron input-mode validation only; launch/probe/cleanup execution stays in the extension entrypoint.
  */
 import { isRecord } from "../parsing.js";
-import { AGENT_BROWSER_ELECTRON_ACTIONS, AGENT_BROWSER_ELECTRON_HANDOFFS, AGENT_BROWSER_ELECTRON_LIST_FIELDS, AGENT_BROWSER_ELECTRON_PROBE_FIELDS, AGENT_BROWSER_ELECTRON_RESERVED_APP_ARGS, AGENT_BROWSER_ELECTRON_TARGET_TYPES, } from "./types.js";
+import { getFlagName } from "../argv-grammar.js";
+import { ELECTRON_EXTRA_APP_ARGS_ENV, isAllowedElectronAppArgFlag, isCodeExecutionLaunchFlag, isElectronExtraAppArgsAllowed, normalizeLaunchFlag, } from "../launch-flag-policy.js";
+import { AGENT_BROWSER_ELECTRON_ACTIONS, AGENT_BROWSER_ELECTRON_APP_ARG_TERMINATOR, AGENT_BROWSER_ELECTRON_HANDOFFS, AGENT_BROWSER_ELECTRON_LIST_FIELDS, AGENT_BROWSER_ELECTRON_PROBE_FIELDS, AGENT_BROWSER_ELECTRON_RESERVED_APP_ARGS, AGENT_BROWSER_ELECTRON_TARGET_TYPES, } from "./types.js";
 function validateOptionalNonEmptyString(input, fieldName) {
     const value = input[fieldName];
     if (value === undefined)
@@ -32,17 +34,31 @@ function validateOptionalElectronEnum(input, fieldName, values) {
     }
     return undefined;
 }
-function getReservedElectronAppArg(appArgs) {
-    return appArgs?.find((arg) => {
-        const trimmed = arg.trim();
-        return trimmed === "--" || AGENT_BROWSER_ELECTRON_RESERVED_APP_ARGS.some((reserved) => trimmed === reserved || trimmed.startsWith(`${reserved}=`));
-    });
+function isReservedElectronAppArgFlag(flag) {
+    // Chromium also accepts single-dash and (on Windows) mixed-case spellings of the wrapper-owned switches.
+    return AGENT_BROWSER_ELECTRON_RESERVED_APP_ARGS.includes(normalizeLaunchFlag(flag));
 }
 function validateElectronLaunchAppArgs(appArgs) {
-    const reservedArg = getReservedElectronAppArg(appArgs);
-    return reservedArg
-        ? `electron.appArgs must not include wrapper-owned launch flag ${reservedArg}.`
-        : undefined;
+    const extraAppArgsAllowed = isElectronExtraAppArgsAllowed();
+    for (const arg of appArgs ?? []) {
+        const trimmed = arg.trim();
+        if (trimmed === AGENT_BROWSER_ELECTRON_APP_ARG_TERMINATOR) {
+            return `electron.appArgs must not include wrapper-owned launch flag ${trimmed}.`;
+        }
+        if (!trimmed.startsWith("-"))
+            continue;
+        const flag = getFlagName(trimmed);
+        if (isCodeExecutionLaunchFlag(flag)) {
+            return `electron.appArgs must not include ${flag}; that switch lets the Electron runtime execute a caller-supplied command or drop sandboxing.`;
+        }
+        if (isReservedElectronAppArgFlag(flag)) {
+            return `electron.appArgs must not include wrapper-owned launch flag ${flag}.`;
+        }
+        if (!isAllowedElectronAppArgFlag(flag) && !extraAppArgsAllowed) {
+            return `electron.appArgs flag ${flag} is not in the wrapper's known-safe Electron switch list. Pass app arguments without a leading dash, or have the user start pi with ${ELECTRON_EXTRA_APP_ARGS_ENV}=1 to allow additional switches.`;
+        }
+    }
+    return undefined;
 }
 function validateOptionalElectronPositiveInteger(input, fieldName) {
     const value = input[fieldName];

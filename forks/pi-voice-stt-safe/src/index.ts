@@ -1,4 +1,5 @@
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
+import type { EditorComponent } from "@earendil-works/pi-tui";
 import { checkBridgeRecorderHealth } from "./audio/bridge-recorder";
 import { createRecorder } from "./audio/factory";
 import { loadConfig, readConfigFile } from "./config/load-config";
@@ -10,7 +11,7 @@ import { createCleanup } from "./cleanup/factory";
 import { assertProviderReady } from "./providers/readiness";
 import { createInputIndicator, createVoiceEditorFactory } from "./ui/input-indicator";
 import { resolveStrings } from "./i18n/strings";
-import { formatError } from "./utils/text";
+import { containsPasteMarker, formatError } from "./utils/text";
 
 const toastType = (variant: DictationToast["variant"]): "info" | "warning" | "error" => {
   if (variant === "error") return "error";
@@ -34,6 +35,13 @@ export default function piVoiceSttExtension(pi: ExtensionAPI) {
   const strings = resolveStrings(startup.locale);
   const inputIndicator = createInputIndicator(keybind, strings);
   let activeMode = startup.mode || DEFAULT_MODE;
+  let activeEditor: EditorComponent | undefined;
+  // Prompt as it stood right after the transcript was inserted. Anything typed
+  // afterwards stays in the editor instead of being swept into the sent message.
+  // Kept in both forms: getEditorText() expands pi paste markers, the editor's
+  // own text still holds them.
+  let insertedPrompt: string | undefined;
+  let insertedEditorText: string | undefined;
 
   const getConfig = () => loadConfig({ configPath: startup.configPath, mode: activeMode });
 
@@ -41,21 +49,52 @@ export default function piVoiceSttExtension(pi: ExtensionAPI) {
     keybind,
     strings,
     loadConfig: getConfig,
-    createRecorder: (config) => createRecorder(config.capture),
+    createRecorder: (config) => {
+      // A new dictation invalidates the previous insertion snapshot.
+      insertedPrompt = undefined;
+      insertedEditorText = undefined;
+      return createRecorder(config.capture);
+    },
     createProvider: (config) => createProvider(config.provider),
     createCleanup: (config) => createCleanup(config.cleanup),
     appendPrompt: async (ctx, text) => {
-      const current = ctx.ui.getEditorText();
-      ctx.ui.setEditorText(`${current}${text}`);
+      if (activeEditor?.insertTextAtCursor) activeEditor.insertTextAtCursor(text);
+      else ctx.ui.setEditorText(`${ctx.ui.getEditorText()}${text}`);
+      insertedPrompt = ctx.ui.getEditorText();
+      insertedEditorText = activeEditor?.getText();
     },
     submitPrompt: async (ctx) => {
-      const prompt = ctx.ui.getEditorText().trimEnd();
+      const current = ctx.ui.getEditorText();
+      const editorText = activeEditor?.getText();
+      const snapshot = insertedPrompt;
+      const editorSnapshot = insertedEditorText;
+      insertedPrompt = undefined;
+      insertedEditorText = undefined;
+      const submitted = snapshot !== undefined && current.startsWith(snapshot) ? snapshot : current;
+      const prompt = submitted.trimEnd();
       if (!prompt) {
         notify(ctx, { title: "Pi Voice STT", message: strings.toast.emptyTranscript, variant: "warning" });
         return;
       }
 
-      ctx.ui.setEditorText("");
+      // setEditorText writes raw editor text, so the leftover is preferably cut
+      // from the editor's own text rather than from the expanded text. It may
+      // only be used when the two agree character for character: setEditorText
+      // lands on the editor's setText, which drops its paste map, so a raw
+      // leftover that still holds a paste marker would be left with nothing to
+      // expand to and its content would be gone. Writing the expanded leftover
+      // instead is verbose but loses nothing, and an exact comparison decides
+      // that without depending on how the editor words its markers.
+      const expandedRemainder = current.slice(submitted.length);
+      const rawRemainder = editorText !== undefined && editorSnapshot !== undefined && editorText.startsWith(editorSnapshot)
+        ? editorText.slice(editorSnapshot.length)
+        : undefined;
+      const remainder = submitted === current
+        ? ""
+        : rawRemainder === expandedRemainder && !containsPasteMarker(expandedRemainder)
+          ? rawRemainder
+          : expandedRemainder;
+      ctx.ui.setEditorText(remainder);
       if (ctx.isIdle()) pi.sendUserMessage(prompt);
       else pi.sendUserMessage(prompt, { deliverAs: "followUp" });
     },
@@ -120,13 +159,18 @@ export default function piVoiceSttExtension(pi: ExtensionAPI) {
         try {
           const config = await getConfig();
           assertProviderReady(config.provider);
+          let capture: string = config.capture.type;
           if (config.capture.type === "bridge") {
             await checkBridgeRecorderHealth(config.capture);
+            capture = `bridge ${config.capture.endpoint}`;
+          } else if (config.capture.ffmpegPathError) {
+            throw new Error(config.capture.ffmpegPathError);
           } else {
             const ffmpeg = await pi.exec(config.capture.ffmpegPath, ["-version"], { timeout: 5000 });
             if (ffmpeg.code !== 0) throw new Error(`ffmpeg check failed: ${ffmpeg.stderr || ffmpeg.stdout}`);
+            capture = `ffmpeg ${config.capture.ffmpegPath}`;
           }
-          ctx.ui.notify(`Pi Voice STT ready (${config.capture.type}, ${config.provider.type}/${config.provider.model}).`, "info");
+          ctx.ui.notify(`Pi Voice STT ready (${capture}, ${config.provider.type}/${config.provider.model}).`, "info");
         } catch (error) {
           reportError(ctx, error);
         }
@@ -139,7 +183,17 @@ export default function piVoiceSttExtension(pi: ExtensionAPI) {
       }
 
       const configPath = startup.configPath || "defaults only (set PI_STT_CONFIG or ~/.pi/agent/stt.json)";
-      ctx.ui.notify(`Pi Voice STT: ${controller.getMode()} · mode ${activeMode} · keybind ${keybind} · config ${configPath}`, "info");
+      // Status stays cheap and side-effect free: parsing the config file is the
+      // only I/O, so no PATH scan for ffmpeg, no key file read and no Keychain
+      // lookup happens here. Resolving those lives in `/stt doctor`.
+      const problem = startup.configPath
+        ? await readConfigFile(startup.configPath).then(() => "").catch((error: unknown) => formatError(error))
+        : "";
+      const status = `Pi Voice STT: ${controller.getMode()} · mode ${activeMode} · keybind ${keybind} · config ${configPath}`;
+      ctx.ui.notify(
+        problem ? `${status} · problem: ${problem}` : `${status} · run /stt doctor to check capture and provider`,
+        problem ? "warning" : "info",
+      );
     },
   });
 
@@ -153,6 +207,9 @@ export default function piVoiceSttExtension(pi: ExtensionAPI) {
       getMode: () => controller.getMode(),
       renderLabel: (theme) => inputIndicator.renderLabel(theme),
       attachTui: (tui) => inputIndicator.attach(tui),
+      attachEditor: (editor) => {
+        activeEditor = editor;
+      },
       onToggle: (handlerCtx) => {
         void (async () => {
           // Idle -> start recording. While recording/processing -> stop. The
@@ -182,5 +239,6 @@ export default function piVoiceSttExtension(pi: ExtensionAPI) {
   pi.on("session_shutdown", async () => {
     await controller.dispose();
     inputIndicator.dispose();
+    activeEditor = undefined;
   });
 }

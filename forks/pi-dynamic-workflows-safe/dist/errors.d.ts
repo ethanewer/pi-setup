@@ -55,6 +55,14 @@ export declare enum WorkflowErrorCode {
     /** Unknown error. */
     UNKNOWN = "UNKNOWN"
 }
+/**
+ * Property that marks a value as one of THIS package's WorkflowErrors across a
+ * boundary where `instanceof` cannot hold — the `vm` realm a workflow script
+ * runs in rebuilds host failures as realm-native Errors (see workflow.ts). It is
+ * the brand adoptForeignWorkflowError trusts; a matching `code` alone is not
+ * enough, since any error object can carry one.
+ */
+export declare const WORKFLOW_ERROR_BRAND = "__piWorkflowError";
 /** Classified workflow failure with recoverability and optional agent/provider context. */
 export declare class WorkflowError extends Error {
     readonly code: WorkflowErrorCode;
@@ -105,6 +113,23 @@ export declare function classifyProviderLimit(text: string | undefined): {
 export declare function isAbortError(error: unknown): boolean;
 /** Recognize timeout-like errors by name or message. */
 export declare function isTimeoutError(error: unknown): boolean;
+/**
+ * Rebuild a WorkflowError from a structurally-equivalent error raised in another
+ * realm — a workflow script's `vm` realm re-throwing what a runtime binding
+ * failed with. Such an error is a realm-native Error carrying the classification
+ * as plain properties (see workflow.ts's realm bootstrap), so neither
+ * `instanceof WorkflowError` nor `instanceof Error` holds for it here, and
+ * without this a token-budget or agent-limit failure would be reclassified as a
+ * generic recoverable one. Returns undefined for anything that isn't one.
+ *
+ * Only a BRANDED error (WORKFLOW_ERROR_BRAND, stamped on the way out through the
+ * realm) is taken at its word about `recoverable`. A `code` matching one of the
+ * enum values is not proof of origin — any library's error may carry, say,
+ * `code: "PROVIDER_USAGE_LIMIT"` — and recoverable:false is the classification
+ * that halts a whole run, so an unbranded error is adopted as recoverable
+ * instead: its code still classifies it, but it cannot claim to be fatal.
+ */
+export declare function adoptForeignWorkflowError(error: unknown): WorkflowError | undefined;
 /**
  * Wrap an unknown error into a WorkflowError with appropriate classification.
  */

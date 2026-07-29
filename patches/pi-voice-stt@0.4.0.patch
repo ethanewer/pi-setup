@@ -1,0 +1,1811 @@
+diff -ruN --exclude=node_modules a/README.md b/README.md
+--- a/README.md	1985-10-26 03:15:00
++++ b/README.md	2026-07-28 23:33:47
+@@ -14,19 +14,19 @@
+ - `Enter`-to-send and `Esc`-to-cancel while recording.
+ - Pi-native animated input indicator, right-aligned in the prompt border (`voice ctrl+r`, `● recording`, `• transcribing`).
+ - `ffmpeg` microphone capture to temporary WAV files.
+-- Optional Mac microphone bridge for Pi sessions running on a VPS over SSH.
++- Optional Mac microphone bridge for Pi sessions running on a VPS over SSH, token-authenticated and loopback-bound by default.
+ - Mistral Voxtral provider.
+ - OpenAI / Groq / generic OpenAI-compatible provider for hosted and local Whisper-style endpoints.
+ - Native provider integrations for Deepgram, ElevenLabs Scribe, Gladia, and AssemblyAI.
+ - Environment variable and macOS Keychain secret lookup.
+-- HTTPS-by-default endpoint policy; plain HTTP is allowed only for loopback hosts.
++- HTTPS-by-default endpoint policy; plain HTTP is allowed only for loopback hosts, and named vendor providers are pinned to their own domain.
+ - TypeScript source loaded directly by Pi; no build step required for runtime.
+ 
+ ## Requirements
+ 
+ - Pi `>= 0.75`.
+ - Node.js `>= 20` when developing locally.
+-- `ffmpeg` available in `PATH` or configured with `capture.ffmpegPath`.
++- `ffmpeg` available in `PATH` or configured with `capture.ffmpegPath`; the value is resolved to an absolute executable path before it is spawned. A missing or non-executable `ffmpeg` is reported by `/stt doctor` and only fails a recording, so the diagnostics still work.
+ - Microphone permission for the terminal app running Pi, or for the Mac bridge daemon when using `capture.type: "bridge"`.
+ - A transcription backend (Mistral, OpenAI/Groq, Deepgram, ElevenLabs, Gladia, AssemblyAI, or a local OpenAI-compatible server).
+ 
+@@ -93,7 +93,7 @@
+ 
+ - `appendTrailingSpace` (default `true`): append a space after the inserted transcript.
+ - `submitOnStop` (default `false`): when `true`, stopping a recording with the `Ctrl+R` toggle also sends the transcript to chat (same as pressing `Enter` while recording) instead of only inserting it into the prompt. Hands-free dictation: `Ctrl+R` to start, `Ctrl+R` to stop-and-send, `Esc` to cancel.
+-- `replacements` (default `{}`): a literal dictionary applied to the raw transcript before cleanup. Case-insensitive and word-boundary aware; longer keys win. Handy for terms the recognizer mishears:
++- `replacements` (default `{}`): a literal dictionary applied to the raw transcript before cleanup. Case-insensitive and word-boundary aware (Unicode-aware, so accented or punctuated keys such as `"café"` or `"c++"` match); longer keys win. Keys and values are treated as literal text. Handy for terms the recognizer mishears:
+ 
+ ```json
+ {
+@@ -172,7 +172,7 @@
+ ```
+ 
+ - `enabled` (default `false`): turn the cleanup pass on.
+-- `endpoint` / `model` / `apiKeyEnv` / `keychainService` / `keychainAccount`: same secret handling as STT providers; HTTPS required unless the endpoint is localhost.
++- `endpoint` / `model` / `apiKeyEnv` / `keychainService` / `keychainAccount`: same secret handling as STT providers; HTTPS required unless the endpoint is loopback. `apiKeyEnv` defaults to `OPENAI_API_KEY` only while `endpoint` stays on OpenAI's own domain; point cleanup at another host (Groq, Mistral, a gateway) and it must name its own credential — or `apiKeyEnv: ""` for a host that takes no key — so the OpenAI key is never sent to a third party. A localhost cleanup endpoint still needs no key at all.
+ - `language` (default `"auto"`): `"auto"` keeps the spoken language; set e.g. `"fr"` to normalize the output.
+ - `prompt`: override the base system prompt.
+ - `projectTerms`: glossary of terms the model should spell correctly (e.g. `"super base"` → `Supabase`).
+@@ -248,11 +248,14 @@
+     "endpoint": "https://api.openai.com/v1/audio/transcriptions",
+     "model": "whisper-1",
+     "apiKeyEnv": "OPENAI_API_KEY",
++    "responseFormat": "json",
+     "language": "en"
+   }
+ }
+ ```
+ 
++`responseFormat` (default `"json"`) accepts `"json"` or `"verbose_json"`; any other value is rejected at load time rather than ignored, because the transcript is read from the JSON `text` field.
++
+ ### Deepgram
+ 
+ ```json
+@@ -323,8 +326,12 @@
+ }
+ ```
+ 
+-Plain HTTP is accepted only for `localhost`, `127.0.0.1`, or `::1`.
++Plain HTTP is accepted only for loopback: `localhost` (trailing dot included), any `127.0.0.0/8` address, `::1` in any spelling, or IPv4-mapped loopback such as `::ffff:127.0.0.1`. A host that only looks local, such as `localhost.evil.com` or `127.0.0.1.evil.com`, is not loopback and still needs HTTPS.
+ 
++Named vendor providers (`openai`, `groq`, `mistral`/`voxtral`, `deepgram`, `elevenlabs`/`scribe`, `gladia`, `assemblyai`) inject that vendor's API key, so their `endpoint` must stay on the vendor's own domain. Use `openai-compatible` (or `local`) for any other host, which is the supported way to point at a gateway, proxy or self-hosted server. If you must keep a vendor protocol while routing through your own host, list that host in `PI_STT_ALLOWED_ENDPOINT_HOSTS` (comma-separated exact hostnames, no wildcards, empty by default). A host listed there counts as that vendor everywhere, including for the `OPENAI_API_KEY` default, so list only hosts you run yourself — it still has to be HTTPS.
++
++`openai-compatible` accepts any HTTPS host by design, but the `OPENAI_API_KEY` default only follows it while `endpoint` stays on OpenAI's own domain. For any other host, name the credential that host may receive — `apiKeyEnv`, `apiKeyFile`, `keychainService`, or `apiKeyEnv: ""` for a server that takes no key — otherwise the config is rejected instead of shipping the OpenAI key along with the audio. `local` defaults to no key at all, and a loopback endpoint never needs one. Because `local` names a server on this machine, pointing its `endpoint` off loopback is refused until the config says so on purpose — name the credential that host receives, or set `apiKeyEnv: ""` to keep sending it audio with none. `openai-compatible` is the type for a remote OpenAI-compatible server.
++
+ ### Mac microphone bridge for VPS usage
+ 
+ Use this when Pi runs on a VPS but your real microphone is on your Mac. The extension keeps the same `Ctrl+R` UX, but audio capture is delegated to a small local Mac daemon through a reverse SSH tunnel. The bridge is **opt-in**: it only activates when you set `capture.type: "bridge"` — the default `ffmpeg` recorder is unchanged.
+@@ -368,6 +375,8 @@
+ 
+ Run `/stt doctor` in Pi to verify the bridge health. The daemon only accesses the microphone when Pi calls `/start` after `Ctrl+R`; `/stop` returns the WAV to the VPS for transcription by your configured provider. On macOS the installer prefers a tiny native background app (`Pi Voice STT Bridge.app`) so microphone permission works without keeping a terminal open — the first `/start` may trigger a permission prompt.
+ 
++The daemon refuses to start without a bearer token (`PI_STT_BRIDGE_TOKEN` or `PI_STT_BRIDGE_TOKEN_FILE`, both written by the installer) and every request, `/health` included, must present it: otherwise any local process could switch the microphone on. `PI_STT_BRIDGE_HOST` still chooses the bind address, but a non-loopback address additionally requires `PI_STT_BRIDGE_ALLOW_REMOTE=1` — the supported route to a remote Pi is the SSH tunnel above.
++
+ ## Audio capture notes
+ 
+ With `capture.type: "ffmpeg"`, the extension records through `ffmpeg`. Platform defaults are:
+@@ -378,6 +387,8 @@
+ | Linux | `pulse` | `default` |
+ | Windows | `dshow` | `audio=Microphone` |
+ 
++`capture.maxSeconds` (default `120`) is passed to the recorder itself (`ffmpeg -t`, or the bridge daemon's own limit), so capture always stops at the cap even if the session is busy; the extension then transcribes what was recorded.
++
+ On macOS, list devices with:
+ 
+ ```bash
+@@ -417,8 +428,8 @@
+ | `Ctrl+R` while recording | Stop, transcribe, insert transcript into the prompt (or send it directly when `output.submitOnStop` is `true`) |
+ | `Enter` while recording | Stop, transcribe, insert transcript, send prompt to chat |
+ | `Esc` while recording/processing | Cancel recording or transcription |
+-| `/stt status` | Show current mode and config source |
+-| `/stt doctor` | Check config, provider readiness, and local `ffmpeg` or bridge health |
++| `/stt status` | Show current mode and config source, plus a config file that cannot be parsed; reads nothing else, so no key or `ffmpeg` lookup happens |
++| `/stt doctor` | Check config, provider readiness, and local `ffmpeg` or bridge health; prints the resolved `ffmpeg` binary path, or the reason it could not be resolved |
+ | `/stt start` | Start recording |
+ | `/stt stop` | Stop and insert transcript |
+ | `/stt send` | Stop and send to chat |
+@@ -438,6 +449,8 @@
+ export GLADIA_API_KEY=...
+ export ASSEMBLYAI_API_KEY=...
+ ```
++
++Whatever the source (`apiKey`, `apiKeyEnv`, `apiKeyFile`, Keychain), the resolved value must still look like a credential: a single line, no whitespace, at most 4096 characters. A variable or file holding something else (a private key, a whole dotenv dump) is refused with an explicit error instead of being sent as a `Bearer` token.
+ 
+ You can also point at a file containing either the raw key or an env-style line such as `export MISTRAL_API_KEY=...`:
+ 
+diff -ruN --exclude=node_modules a/SECURITY.md b/SECURITY.md
+--- a/SECURITY.md	1985-10-26 03:15:00
++++ b/SECURITY.md	2026-07-28 23:35:24
+@@ -6,9 +6,19 @@
+ 
+ Pi Voice STT never intentionally writes API keys to session history. Prefer environment variables or macOS Keychain for secrets. Do not commit config files containing `apiKey`.
+ 
++A resolved key must look like a credential (single line, no whitespace, at most 4096 characters), so `apiKeyEnv` / `apiKeyFile` cannot turn an unrelated variable or file into a `Bearer` header. The `OPENAI_API_KEY` default (`provider` for `openai-compatible`/`local`, and `cleanup`) applies to OpenAI endpoints only — plus any host you list yourself in `PI_STT_ALLOWED_ENDPOINT_HOSTS`, which counts as that vendor on purpose and lives outside the config file for exactly that reason. Any other host has to name its own credential, or name none at all with `apiKeyEnv: ""`. A loopback endpoint is treated as keyless on `http` and `https` alike: it gets no defaulted key and needs none. A key it names itself is still sent over `https`; over plain `http` the request carries no `Authorization` header at all, so a local server that insists on a key has to be reached over `https`.
++
+ ## Endpoint policy
+ 
+-Non-local transcription endpoints must use HTTPS. Plain HTTP is accepted only for loopback hosts (`localhost`, `127.0.0.1`, `::1`) to support local STT servers.
++Non-local transcription endpoints must use HTTPS. Plain HTTP is accepted only for loopback hosts — `localhost` (with or without a trailing dot), any address in `127.0.0.0/8`, `::1` in any spelling, and IPv4-mapped loopback such as `::ffff:127.0.0.1` — to support local STT servers and the Mac bridge. Hosts that merely look local (`localhost.evil.com`, `127.0.0.1.evil.com`) and the `0.0.0.0` wildcard are not loopback. The decision is made on the hostname after URL parsing has normalized it, so shorthand literals that parse to a loopback address (`http://127.1/` and `http://0x7f000001/` both become `http://127.0.0.1/`) count as loopback as well. The bridge daemon judges its own bind address by the same `127.0.0.0/8` rule, except that a bind address has to be an IP literal or the name `localhost` / `::1` — it is never resolved through DNS. See [docs/macos-bridge.md](docs/macos-bridge.md).
++
++Named vendor providers (`openai`, `groq`, `mistral`, `deepgram`, `elevenlabs`, `gladia`, `assemblyai`) inject that vendor's key, so their endpoint is pinned to the vendor's own domain unless the host is listed in `PI_STT_ALLOWED_ENDPOINT_HOSTS`. The `openai-compatible` and `local` types remain the escape hatch for arbitrary hosts: they send the recorded audio wherever `endpoint` points, but they never carry a defaulted `OPENAI_API_KEY` there unless that host is listed in `PI_STT_ALLOWED_ENDPOINT_HOSTS`. For `openai-compatible`, a host that is neither OpenAI's nor loopback must name the secret it receives (`apiKeyEnv`, `apiKeyFile`, `keychainService`, or `apiKeyEnv: ""` for a keyless server) or loading fails; a loopback endpoint needs nothing, since it cannot hand a credential to a third party.
++
++`local` means a server on this machine and defaults to no credential at all, so an `endpoint` off loopback is refused until the config says it is meant: name the credential that host receives, or `apiKeyEnv: ""` to keep sending it audio with none. The capability is intact — it just has to be written down, because `local` pointed at a remote host would otherwise ship the microphone off the machine under a type named for staying on it. Review these fields whenever a config file was not written by you.
++
++## Mac microphone bridge
++
++The bridge daemon refuses to start without a bearer token and requires it on every request, and it only binds a non-loopback address when `PI_STT_BRIDGE_ALLOW_REMOTE=1` is set explicitly. See [docs/macos-bridge.md](docs/macos-bridge.md).
+ 
+ ## Reporting issues
+ 
+diff -ruN --exclude=node_modules a/docs/macos-bridge.md b/docs/macos-bridge.md
+--- a/docs/macos-bridge.md	1969-12-31 18:00:00
++++ b/docs/macos-bridge.md	2026-07-28 23:31:44
+@@ -0,0 +1,160 @@
++# Mac microphone bridge
++
++Use this when Pi runs on a VPS but your real microphone is on your Mac. The
++`Ctrl+R` UX is unchanged; only audio capture moves to a small daemon on the Mac,
++reached through a reverse SSH tunnel. The bridge is **opt-in**: it is only used
++when the config sets `capture.type: "bridge"`.
++
++## Architecture
++
++```
++Pi on the VPS                       your Mac
++┌──────────────────────────┐        ┌──────────────────────────────────┐
++│ capture.type "bridge"    │        │ app.pi-voice-stt.bridge          │
++│ POST /start /stop /cancel│──ssh──▶│ 127.0.0.1:18765 (loopback only)  │
++│ GET  /health             │ tunnel │ AVFoundation or ffmpeg capture    │
++└──────────────────────────┘        └──────────────────────────────────┘
++```
++
++- The VPS never reaches the Mac directly: `RemoteForward 127.0.0.1:18765` on the
++  Mac-initiated SSH connection exposes the daemon on the VPS loopback.
++- `/start` begins recording, `/stop` returns the WAV to the VPS (which then
++  transcribes it with the configured provider), `/cancel` throws it away.
++- Two LaunchAgents keep it running: `app.pi-voice-stt.bridge` (daemon) and
++  `app.pi-voice-stt.tunnel` (tunnel).
++
++Two daemon flavors ship in `tools/`:
++
++| Flavor | File | Used when |
++| --- | --- | --- |
++| Native macOS app | `macos-bridge-native.swift` | `swiftc` is available; records with AVFoundation, so microphone permission is granted to `Pi Voice STT Bridge.app` and no terminal has to stay open |
++| Node fallback | `macos-bridge-server.mjs` | no `swiftc`; records with `ffmpeg -f avfoundation` and inherits microphone permission from whatever launched it (Terminal/cmux) |
++
++## Prerequisites
++
++- macOS with an SSH alias for the VPS in `~/.ssh/config` (with `HostName`).
++- `node` and `ffmpeg` on the Mac (`PI_STT_BRIDGE_NODE` / `PI_STT_BRIDGE_FFMPEG`
++  override the binaries used).
++- `swiftc` (Xcode command line tools) for the native app; optional.
++- Key-based SSH from the Mac to the VPS (the tunnel runs unattended).
++
++## Install
++
++On the **Mac**:
++
++```bash
++tools/install-macos-bridge.sh my-vps
++```
++
++This installs the daemon under `~/.local/share/pi-voice-stt-bridge/`, generates
++`~/.config/pi-voice-stt-bridge/token` (chmod 600), builds
++`~/Applications/Pi Voice STT Bridge.app` when `swiftc` is present, writes both
++LaunchAgents, and appends a `<vps>-voice-tunnel` SSH host with `RemoteForward`.
++See the header of `tools/install-macos-bridge.sh` for the environment overrides.
++
++Copy the token to the **VPS**:
++
++```bash
++scp ~/.config/pi-voice-stt-bridge/token my-vps:~/.pi/agent/pi-voice-stt-bridge.token
++```
++
++Point Pi at the bridge on the VPS (e.g. `~/.pi/agent/stt.json`):
++
++```json
++{
++  "capture": {
++    "type": "bridge",
++    "endpoint": "http://127.0.0.1:18765",
++    "tokenFile": "~/.pi/agent/pi-voice-stt-bridge.token",
++    "requestTimeoutSeconds": 30,
++    "maxSeconds": 120,
++    "minBytes": 4096
++  },
++  "provider": {
++    "type": "groq",
++    "model": "whisper-large-v3-turbo",
++    "apiKeyEnv": "GROQ_API_KEY",
++    "language": "fr"
++  }
++}
++```
++
++Then run `/stt doctor` in Pi: it reports `bridge http://127.0.0.1:18765` when the
++health check succeeds.
++
++## Security model
++
++- **A token is mandatory.** The daemon can switch the microphone on, so it
++  refuses to start without `PI_STT_BRIDGE_TOKEN` or a non-empty
++  `PI_STT_BRIDGE_TOKEN_FILE`, and every endpoint (including `/health`) requires
++  `Authorization: Bearer <token>`. Without it, any local process — or any web
++  page able to send a CORS simple request to `127.0.0.1` — could start a
++  recording.
++- **Loopback by default.** `PI_STT_BRIDGE_HOST` still selects the bind address,
++  but a non-loopback value is refused unless `PI_STT_BRIDGE_ALLOW_REMOTE=1` is
++  set as well. The supported path to a remote Pi is the SSH tunnel, which needs
++  no LAN exposure. The native daemon judges the address it actually binds, so it
++  takes an IPv4 address (any `127.0.0.0/8` address counts as loopback) or the
++  names `localhost` / `::1`, and refuses anything else it cannot parse.
++  `capture.endpoint` on the Pi side enforces the same range, so a bridge reached
++  over plain `http` may use any `127.0.0.0/8` address, `localhost` (trailing dot
++  included), `::1` in any spelling, or IPv4-mapped loopback such as
++  `::ffff:127.0.0.1` — and nothing outside it. A bridge somewhere else has to be
++  reached over `https`.
++- **Tokens are compared in constant time** in both daemons, so a wrong token
++  cannot be recovered byte by byte from response timing.
++- The token file is `chmod 600`, and the copy on the VPS should be too.
++- Rotate the token by writing a new value into the file on both machines and
++  restarting the daemon
++  (`launchctl kickstart -k gui/$(id -u)/app.pi-voice-stt.bridge`).
++- Recording only happens between `/start` and `/stop`; the daemon also stops on
++  its own after `PI_STT_BRIDGE_MAX_SECONDS` (default 120).
++
++## Daemon environment
++
++| Variable | Default | Meaning |
++| --- | --- | --- |
++| `PI_STT_BRIDGE_HOST` | `127.0.0.1` | bind address, IPv4 or `localhost` (non-loopback needs `PI_STT_BRIDGE_ALLOW_REMOTE=1`) |
++| `PI_STT_BRIDGE_ALLOW_REMOTE` | unset | set to `1` to allow a non-loopback bind on purpose |
++| `PI_STT_BRIDGE_PORT` | `18765` | bind port |
++| `PI_STT_BRIDGE_TOKEN` | unset | bearer token (required, unless a token file is used) |
++| `PI_STT_BRIDGE_TOKEN_FILE` | `~/.config/pi-voice-stt-bridge/token` (native) | file holding the bearer token |
++| `PI_STT_BRIDGE_FFMPEG` | `ffmpeg` | ffmpeg binary (Node fallback only) |
++| `PI_STT_BRIDGE_INPUT_FORMAT` | `avfoundation` | ffmpeg input format (Node fallback only) |
++| `PI_STT_BRIDGE_INPUT` | `:0` | ffmpeg input device (Node fallback only) |
++| `PI_STT_BRIDGE_SAMPLE_RATE` | `16000` | capture sample rate |
++| `PI_STT_BRIDGE_CHANNELS` | `1` | capture channels |
++| `PI_STT_BRIDGE_MIN_BYTES` | `4096` | reject recordings smaller than this |
++| `PI_STT_BRIDGE_MAX_SECONDS` | `120` | hard stop for a single recording |
++
++## Troubleshooting
++
++- **`/stt doctor` reports 401** — the VPS token does not match the Mac token.
++  Re-copy `~/.config/pi-voice-stt-bridge/token` and check `capture.tokenFile`.
++- **`/stt doctor` cannot connect** — the tunnel is down. On the Mac:
++  `launchctl kickstart -k gui/$(id -u)/app.pi-voice-stt.tunnel`, then check
++  `~/Library/Logs/pi-voice-stt-tunnel.err.log`. A stale sshd listener on the VPS
++  is cleaned up by `tunnel.sh` on each start.
++- **Daemon exits immediately** — check
++  `~/Library/Logs/pi-voice-stt-bridge.err.log`: a missing token and a refused
++  non-loopback bind are both logged there.
++- **"Bridge recording is silent"** — microphone permission. With the native app,
++  allow *Pi Voice STT Bridge* under System Settings → Privacy & Security →
++  Microphone; with the Node fallback, grant it to the app that launched the
++  daemon (Terminal/cmux) and make sure `PI_STT_BRIDGE_INPUT` names a real device
++  (`ffmpeg -f avfoundation -list_devices true -i ""`).
++- **"recording already active"** — a previous `/start` was never stopped; send
++  `/cancel` (Esc in Pi) or restart the daemon.
++
++## Uninstall
++
++```bash
++launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/app.pi-voice-stt.bridge.plist 2>/dev/null
++launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/app.pi-voice-stt.tunnel.plist 2>/dev/null
++rm -rf ~/.local/share/pi-voice-stt-bridge ~/.config/pi-voice-stt-bridge \
++       ~/Library/LaunchAgents/app.pi-voice-stt.{bridge,tunnel}.plist \
++       ~/Applications/"Pi Voice STT Bridge.app"
++```
++
++Then remove the `<vps>-voice-tunnel` block from `~/.ssh/config` if you no longer
++need it, and drop `capture.type: "bridge"` from the config on the VPS.
+diff -ruN --exclude=node_modules a/package.json b/package.json
+--- a/package.json	1985-10-26 03:15:00
++++ b/package.json	2026-07-28 23:50:52
+@@ -1,6 +1,7 @@
+ {
+   "name": "pi-voice-stt",
+   "version": "0.4.0",
++  "private": true,
+   "description": "Provider-agnostic speech-to-text dictation extension for the Pi TUI.",
+   "license": "MIT",
+   "type": "module",
+@@ -34,6 +35,7 @@
+     "src",
+     "examples",
+     "tools",
++    "docs",
+     "assets",
+     "README.md",
+     "LICENSE",
+diff -ruN --exclude=node_modules a/src/audio/bridge-recorder.ts b/src/audio/bridge-recorder.ts
+--- a/src/audio/bridge-recorder.ts	1985-10-26 03:15:00
++++ b/src/audio/bridge-recorder.ts	2026-07-28 19:03:43
+@@ -51,6 +51,7 @@
+       method: options.method,
+       headers: headersFrom(config),
+       signal: controller.signal,
++      redirect: "error",
+     });
+     if (!response.ok) {
+       const body = await response.text().catch(() => "");
+diff -ruN --exclude=node_modules a/src/audio/ffmpeg-recorder.ts b/src/audio/ffmpeg-recorder.ts
+--- a/src/audio/ffmpeg-recorder.ts	1985-10-26 03:15:00
++++ b/src/audio/ffmpeg-recorder.ts	2026-07-28 21:20:35
+@@ -4,6 +4,7 @@
+ import { tmpdir } from "node:os";
+ import { join } from "node:path";
+ import type { FfmpegCaptureConfig } from "../config/types";
++import { assertExecutablePath } from "../utils/executable";
+ import { formatError, truncate } from "../utils/text";
+ import type { AudioRecorder, RecordingHandle } from "./types";
+ 
+@@ -30,6 +31,10 @@
+ 
+ export const createFfmpegRecorder = (config: FfmpegCaptureConfig): AudioRecorder => ({
+   start() {
++    // Config load only reports an unresolvable path so the diagnostics still
++    // run; nothing is spawned until it resolves to an absolute executable.
++    if (config.ffmpegPathError) throw new Error(config.ffmpegPathError);
++    assertExecutablePath(config.ffmpegPath, "STT capture.ffmpegPath");
+     const tempDir = mkdtempSync(join(tmpdir(), "pi-voice-stt-"));
+     const outputPath = join(tempDir, "recording.wav");
+     const process = spawn(config.ffmpegPath, [
+@@ -48,6 +53,10 @@
+       String(config.sampleRate),
+       "-ac",
+       String(config.channels),
++      // ffmpeg enforces the cap itself: the controller timer is only the
++      // transcribe trigger and can be blocked by a busy session.
++      "-t",
++      String(config.maxSeconds),
+       "-y",
+       outputPath,
+     ], {
+diff -ruN --exclude=node_modules a/src/cleanup/openai-compatible.ts b/src/cleanup/openai-compatible.ts
+--- a/src/cleanup/openai-compatible.ts	1985-10-26 03:15:00
++++ b/src/cleanup/openai-compatible.ts	2026-07-28 21:20:30
+@@ -1,5 +1,6 @@
+ import { endpointRequiresAuth } from "../config/endpoint";
+ import type { CleanupConfig } from "../config/types";
++import { isDeclaredKeyless } from "../secrets/resolve-api-key";
+ import { objectFrom, textFrom } from "../utils/coerce";
+ import { buildCleanupSystemPrompt } from "./prompt";
+ import { gatherRepoContext } from "./repo-context";
+@@ -11,9 +12,12 @@
+  */
+ export const createOpenAiCompatibleCleanup = (config: CleanupConfig): CleanupClient => ({
+   async clean({ text, signal }) {
+-    const needsAuth = endpointRequiresAuth(config.endpoint);
++    const needsAuth = endpointRequiresAuth(config.endpoint) && !isDeclaredKeyless(config);
+     if (needsAuth && !config.apiKey) {
+-      throw new Error("Missing API key for cleanup endpoint. Set cleanup.apiKeyEnv or use a localhost endpoint.");
++      throw new Error(
++        "Missing API key for cleanup endpoint. Set cleanup.apiKeyEnv, use a localhost endpoint, " +
++          "or set cleanup.apiKeyEnv \"\" for an endpoint that takes no key.",
++      );
+     }
+ 
+     const context = await gatherRepoContext(config);
+@@ -26,6 +30,7 @@
+       method: "POST",
+       headers,
+       signal,
++      redirect: "error",
+       body: JSON.stringify({
+         model: config.model,
+         max_tokens: config.maxTokens,
+diff -ruN --exclude=node_modules a/src/config/defaults.ts b/src/config/defaults.ts
+--- a/src/config/defaults.ts	1985-10-26 03:15:00
++++ b/src/config/defaults.ts	2026-07-28 21:17:11
+@@ -22,6 +22,7 @@
+ export const defaultFfmpegCaptureConfig = {
+   type: "ffmpeg",
+   ffmpegPath: "ffmpeg",
++  ffmpegPathError: "",
+   ...platformCaptureDefaults(),
+   sampleRate: 16000,
+   channels: 1,
+diff -ruN --exclude=node_modules a/src/config/endpoint.ts b/src/config/endpoint.ts
+--- a/src/config/endpoint.ts	1985-10-26 03:15:00
++++ b/src/config/endpoint.ts	2026-07-28 23:16:05
+@@ -1,25 +1,231 @@
+ import { textFrom } from "../utils/coerce";
+ 
++/**
++ * Octets of a dotted-quad IPv4 literal in the one canonical form a URL hostname
++ * keeps: four decimal octets, no `inet_aton` shorthand and no leading zeros, so
++ * `127.1` or `0177.0.0.1` are not read as loopback by this predicate.
++ */
++const ipv4Octets = (literal: string): number[] | null => {
++  const parts = literal.split(".");
++  if (parts.length !== 4) return null;
++
++  const octets: number[] = [];
++  for (const part of parts) {
++    if (!/^\d{1,3}$/.test(part)) return null;
++    if (part.length > 1 && part.startsWith("0")) return null;
++    const octet = Number(part);
++    if (octet > 255) return null;
++    octets.push(octet);
++  }
++  return octets;
++};
++
++/**
++ * The eight 16-bit groups of an IPv6 literal, so every spelling of one address
++ * compares equal: `::1`, `0:0:0:0:0:0:0:1` and `::ffff:127.0.0.1` all expand
++ * here instead of being matched as text.
++ */
++const ipv6Groups = (literal: string): number[] | null => {
++  const halves = literal.split("::");
++  if (halves.length > 2) return null;
++
++  const groupsFrom = (half: string): number[] | null => {
++    if (!half) return [];
++    const parts = half.split(":");
++    const groups: number[] = [];
++    for (const [index, part] of parts.entries()) {
++      if (index === parts.length - 1 && part.includes(".")) {
++        const octets = ipv4Octets(part);
++        if (!octets) return null;
++        groups.push((octets[0] << 8) | octets[1], (octets[2] << 8) | octets[3]);
++        continue;
++      }
++      if (!/^[0-9a-f]{1,4}$/.test(part)) return null;
++      groups.push(Number.parseInt(part, 16));
++    }
++    return groups;
++  };
++
++  const head = groupsFrom(halves[0]);
++  const tail = halves.length === 2 ? groupsFrom(halves[1]) : [];
++  if (!head || !tail) return null;
++
++  if (halves.length === 1) return head.length === 8 ? head : null;
++  // "::" has to stand for at least one omitted zero group.
++  if (head.length + tail.length > 7) return null;
++  return [...head, ...Array(8 - head.length - tail.length).fill(0), ...tail];
++};
++
++/** `::1` in any spelling, or an IPv4-mapped address inside 127.0.0.0/8. */
++const isLoopbackIpv6 = (literal: string): boolean => {
++  const groups = ipv6Groups(literal);
++  if (!groups || groups.slice(0, 5).some(Boolean)) return false;
++  if (groups[5] === 0xffff) return groups[6] >>> 8 === 127;
++  return groups[5] === 0 && groups[6] === 0 && groups[7] === 1;
++};
++
++/**
++ * Whether a hostname names this machine and nothing else: the whole loopback
++ * space — `localhost` (with or without the fully qualified trailing dot), any
++ * 127.0.0.0/8 literal, `::1`, and IPv4-mapped loopback — and nothing outside
++ * it. Names that merely start with one of those labels (`localhost.evil.com`,
++ * `127.0.0.1.evil.com`) resolve wherever their owner points them, so they are
++ * not loopback; neither is `0.0.0.0`, which is a wildcard rather than a
++ * destination.
++ */
+ export const isLoopbackHostname = (hostname: string): boolean => {
+-  return ["localhost", "127.0.0.1", "::1", "[::1]"].includes(hostname);
++  const host = hostname.trim().toLowerCase();
++  if (host.startsWith("[") && host.endsWith("]")) return isLoopbackIpv6(host.slice(1, -1));
++  if (host.includes(":")) return isLoopbackIpv6(host);
++
++  const name = host.endsWith(".") ? host.slice(0, -1) : host;
++  if (name === "localhost") return true;
++
++  const octets = ipv4Octets(name);
++  return octets !== null && octets[0] === 127;
+ };
+ 
+-export const secureEndpointFrom = (value: unknown, fallback: string): string => {
+-  const endpoint = textFrom(value, fallback);
++/**
++ * Whether an endpoint stays on this machine, whatever its scheme. A loopback
++ * host cannot hand a credential to a third party, so it never needs one
++ * defaulted for it — endpointRequiresAuth is stricter on purpose, since it also
++ * decides whether an already configured key is sent as a header.
++ */
++export const isLoopbackEndpoint = (endpoint: string): boolean => {
++  try {
++    return isLoopbackHostname(new URL(endpoint).hostname.toLowerCase());
++  } catch {
++    return false;
++  }
++};
+ 
++/**
++ * Domain each named vendor alias is pinned to. A named alias injects that
++ * vendor's API key, so its endpoint may not be redirected to a third-party
++ * host: arbitrary hosts belong to `openai-compatible` / `local`. Extra hosts
++ * (vendor-protocol gateways, proxies) can be allowed through the
++ * PI_STT_ALLOWED_ENDPOINT_HOSTS environment variable, which lives outside the
++ * config file on purpose.
++ */
++export const VENDOR_ENDPOINT_DOMAINS: Record<string, string> = {
++  openai: "openai.com",
++  groq: "groq.com",
++  mistral: "mistral.ai",
++  deepgram: "deepgram.com",
++  elevenlabs: "elevenlabs.io",
++  gladia: "gladia.io",
++  assemblyai: "assemblyai.com",
++};
++
++const allowedEndpointHosts = (): string[] =>
++  textFrom(process.env.PI_STT_ALLOWED_ENDPOINT_HOSTS)
++    .split(",")
++    .map((host) => host.trim().toLowerCase())
++    .filter(Boolean);
++
++const matchesDomain = (hostname: string, domain: string): boolean => hostname === domain || hostname.endsWith(`.${domain}`);
++
++/** Endpoints reach user-visible toasts, so any userinfo is masked first. */
++const redactEndpoint = (endpoint: string): string => endpoint.replace(/^([a-z][a-z0-9+.-]*:\/\/)[^/?#]*@/i, "$1***@");
++
++/**
++ * Whether an already validated endpoint belongs to a named vendor, so a
++ * vendor-specific default (e.g. the OpenAI key) may be applied to it. Hosts
++ * listed in PI_STT_ALLOWED_ENDPOINT_HOSTS count as that vendor too, matching
++ * how secureEndpointFrom treats them.
++ */
++export const isVendorEndpoint = (endpoint: string, vendor: string): boolean => {
++  const domain = VENDOR_ENDPOINT_DOMAINS[vendor] ?? "";
++  if (!domain) return false;
++
++  let hostname: string;
+   try {
+-    const url = new URL(endpoint);
+-    if (url.username || url.password) throw new Error("credentials");
+-    if (url.protocol === "https:") return endpoint;
+-    if (url.protocol === "http:" && isLoopbackHostname(url.hostname)) return endpoint;
+-  } catch (error) {
+-    if (error instanceof Error && error.message === "credentials") {
+-      throw new Error("STT endpoint must not include credentials. Use apiKeyEnv or Keychain instead.");
++    hostname = new URL(endpoint).hostname.toLowerCase();
++  } catch {
++    return false;
++  }
++
++  return matchesDomain(hostname, domain) || allowedEndpointHosts().includes(hostname);
++};
++
++/**
++ * Registrable domain of a hostname, approximated as its last two labels
++ * because no public suffix list is available here. Bare IP literals have none,
++ * so they only ever match themselves.
++ */
++const registrableDomain = (hostname: string): string => {
++  if (hostname.includes(":") || /^[\d.]+$/.test(hostname)) return "";
++  const labels = hostname.split(".");
++  if (labels.length < 2 || labels.some((label) => !label)) return "";
++  return labels.slice(-2).join(".");
++};
++
++/**
++ * Whether a URL taken from a provider response may be followed with the API key
++ * attached: the same origin as a configured endpoint, or an HTTPS host in the
++ * same registrable domain (regional API hosts such as eu.api.<vendor>).
++ * Anything else — another domain, a bare IP, plain HTTP off loopback — is not.
++ */
++export const isSameSiteEndpoint = (endpoint: string, configuredEndpoints: string[]): boolean => {
++  let url: URL;
++  try {
++    url = new URL(endpoint);
++  } catch {
++    return false;
++  }
++
++  const hostname = url.hostname.toLowerCase();
++  const domain = registrableDomain(hostname);
++
++  return configuredEndpoints.some((configured) => {
++    let configuredUrl: URL;
++    try {
++      configuredUrl = new URL(configured);
++    } catch {
++      return false;
+     }
+-    throw new Error(`Invalid STT endpoint: ${endpoint}`);
++
++    if (url.origin === configuredUrl.origin) return true;
++    if (url.protocol !== "https:") return false;
++
++    const configuredHost = configuredUrl.hostname.toLowerCase();
++    if (hostname === configuredHost) return true;
++    return Boolean(domain) && domain === registrableDomain(configuredHost);
++  });
++};
++
++export const secureEndpointFrom = (value: unknown, fallback: string, vendor = ""): string => {
++  const endpoint = textFrom(value, fallback);
++
++  let url: URL;
++  try {
++    url = new URL(endpoint);
++  } catch {
++    throw new Error(`Invalid STT endpoint: ${redactEndpoint(endpoint)}`);
+   }
+ 
+-  throw new Error("STT endpoint must use HTTPS unless it points to localhost.");
++  if (url.username || url.password) {
++    throw new Error("STT endpoint must not include credentials. Use apiKeyEnv or Keychain instead.");
++  }
++
++  if (url.protocol !== "https:" && !(url.protocol === "http:" && isLoopbackHostname(url.hostname))) {
++    throw new Error(
++      `STT endpoint must use HTTPS unless it points at this machine, got ${redactEndpoint(endpoint)}. ` +
++        `Plain http is accepted for loopback only: localhost, any 127.0.0.0/8 address, or ::1.`,
++    );
++  }
++
++  const domain = vendor ? VENDOR_ENDPOINT_DOMAINS[vendor] ?? "" : "";
++  const hostname = url.hostname.toLowerCase();
++  if (domain && !matchesDomain(hostname, domain) && !allowedEndpointHosts().includes(hostname)) {
++    throw new Error(
++      `STT provider "${vendor}" only accepts endpoints on ${domain}, got ${hostname}. ` +
++        `Use provider.type "openai-compatible" (or "local") for a custom host, ` +
++        `or list the host in PI_STT_ALLOWED_ENDPOINT_HOSTS.`,
++    );
++  }
++
++  return endpoint;
+ };
+ 
+ export const endpointRequiresAuth = (endpoint: string): boolean => {
+diff -ruN --exclude=node_modules a/src/config/load-config.ts b/src/config/load-config.ts
+--- a/src/config/load-config.ts	1985-10-26 03:15:00
++++ b/src/config/load-config.ts	2026-07-28 23:31:27
+@@ -13,7 +13,7 @@
+   defaultOutputConfig,
+   defaultVoiceCommandsConfig,
+ } from "./defaults";
+-import { secureEndpointFrom } from "./endpoint";
++import { isLoopbackEndpoint, isVendorEndpoint, secureEndpointFrom } from "./endpoint";
+ import type {
+   AssemblyAiProviderConfig,
+   BridgeCaptureConfig,
+@@ -31,6 +31,7 @@
+ } from "./types";
+ import { resolveApiKey } from "../secrets/resolve-api-key";
+ import { booleanFrom, objectFrom, positiveIntegerFrom, stringArrayFrom, stringMapFrom, textFrom } from "../utils/coerce";
++import { resolveExecutablePath } from "../utils/executable";
+ import { resolvePath } from "../utils/path";
+ import { deepMerge } from "../utils/merge";
+ import { modeOverrideFrom } from "../core/modes";
+@@ -69,6 +70,19 @@
+   return fallback;
+ };
+ 
++/**
++ * Both accepted values return a JSON body with a `text` field, which is what
++ * the provider parses; anything else is refused instead of silently ignored.
++ */
++const responseFormatFrom = (
++  value: unknown,
++  fallback: OpenAiCompatibleProviderConfig["responseFormat"],
++): OpenAiCompatibleProviderConfig["responseFormat"] => {
++  const format = textFrom(value, fallback).toLowerCase();
++  if (format === "json" || format === "verbose_json") return format;
++  throw new Error(`Unsupported STT provider.responseFormat: ${format}. Use "json" or "verbose_json".`);
++};
++
+ const commonCaptureFields = (
+   capture: Record<string, unknown>,
+   merged: Record<string, unknown>,
+@@ -78,9 +92,22 @@
+   minBytes: Math.max(44, positiveIntegerFrom(capture.minBytes ?? merged.minBytes, defaults.minBytes)),
+ });
+ 
+-const ffmpegCaptureFrom = (merged: Record<string, unknown>, capture: Record<string, unknown>): FfmpegCaptureConfig => ({
++/**
++ * A missing ffmpeg is a run-time problem, not a config syntax error: the
++ * failure is reported so `/stt status` and `/stt doctor` still load, and the
++ * recorder refuses to spawn anything until capture.ffmpegPath resolves.
++ */
++const ffmpegPathFrom = async (command: string): Promise<Pick<FfmpegCaptureConfig, "ffmpegPath" | "ffmpegPathError">> => {
++  try {
++    return { ffmpegPath: await resolveExecutablePath(command, "STT capture.ffmpegPath"), ffmpegPathError: "" };
++  } catch (error) {
++    return { ffmpegPath: command, ffmpegPathError: formatError(error) };
++  }
++};
++
++const ffmpegCaptureFrom = async (merged: Record<string, unknown>, capture: Record<string, unknown>): Promise<FfmpegCaptureConfig> => ({
+   type: "ffmpeg",
+-  ffmpegPath: textFrom(capture.ffmpegPath, textFrom(capture.ffmpeg, textFrom(merged.ffmpeg, defaultFfmpegCaptureConfig.ffmpegPath))),
++  ...(await ffmpegPathFrom(textFrom(capture.ffmpegPath, textFrom(capture.ffmpeg, textFrom(merged.ffmpeg, defaultFfmpegCaptureConfig.ffmpegPath))))),
+   inputFormat: textFrom(capture.inputFormat, textFrom(merged.inputFormat, defaultFfmpegCaptureConfig.inputFormat)),
+   input: textFrom(capture.input, textFrom(merged.input, defaultFfmpegCaptureConfig.input)),
+   sampleRate: positiveIntegerFrom(capture.sampleRate ?? merged.sampleRate, defaultFfmpegCaptureConfig.sampleRate),
+@@ -127,6 +154,52 @@
+   keychainAccount: provider.keychainAccount ?? merged.keychainAccount,
+ });
+ 
++/**
++ * An explicit apiKeyEnv counts even when empty: `"apiKeyEnv": ""` is how a
++ * config says "this endpoint is deliberately keyless".
++ */
++const namesSecretExplicitly = (secrets: Record<string, unknown>): boolean =>
++  typeof secrets.apiKeyEnv === "string" ||
++  Boolean(textFrom(secrets.apiKey) || textFrom(secrets.apiKeyFile) || textFrom(secrets.keychainService));
++
++/**
++ * `openai-compatible`, `local` and cleanup.endpoint accept arbitrary hosts, so
++ * the defaulted OpenAI credential may only follow an OpenAI host: any other
++ * host has to name the secret it is allowed to receive, which keeps a
++ * redirected endpoint from inheriting OPENAI_API_KEY along with the audio.
++ * A loopback endpoint needs no credential of its own and gets no default, on
++ * http and https alike — an https local server still loads without one.
++ */
++const openAiKeyEnvDefault = (endpoint: string, secrets: Record<string, unknown>, defaultEnv: string, label: string): string => {
++  if (!defaultEnv || isVendorEndpoint(endpoint, "openai")) return defaultEnv;
++  if (namesSecretExplicitly(secrets) || isLoopbackEndpoint(endpoint)) return "";
++
++  throw new Error(
++    `STT ${label}.endpoint ${new URL(endpoint).hostname} is not an OpenAI host, so it needs its own credential: ` +
++      `set ${label}.apiKeyEnv (or ${label}.apiKey, ${label}.apiKeyFile, ${label}.keychainService), ` +
++      `or ${label}.apiKeyEnv "" for an endpoint that takes no key. ` +
++      `The ${defaultEnv} default applies to OpenAI endpoints only.`,
++  );
++};
++
++/**
++ * `local` names a server on this machine and defaults to no credential at all,
++ * so its endpoint pointing somewhere else is surprising enough to have to be
++ * meant: the config declares which credential that host receives, or
++ * `apiKeyEnv: ""` to keep sending it audio with none. Without that opt-in the
++ * type and the endpoint disagree, and the audio leaves the machine anyway.
++ */
++const assertLocalProviderStaysLocal = (endpoint: string, secrets: Record<string, unknown>): void => {
++  if (isLoopbackEndpoint(endpoint) || namesSecretExplicitly(secrets)) return;
++
++  throw new Error(
++    `STT provider.type "local" points at ${new URL(endpoint).hostname}, which is not this machine, so the remote host has to be deliberate: ` +
++      `set provider.apiKeyEnv (or provider.apiKey, provider.apiKeyFile, provider.keychainService) to name the credential it receives, ` +
++      `or provider.apiKeyEnv "" to send it audio with no credential on purpose. ` +
++      `provider.type "openai-compatible" is the type for a remote OpenAI-compatible server.`,
++  );
++};
++
+ const commonProviderFields = async <TDefault extends { apiKeyEnv: string; timeoutSeconds: number }>(
+   merged: Record<string, unknown>,
+   provider: Record<string, unknown>,
+@@ -145,7 +218,7 @@
+ 
+ const mistralProviderFrom = async (merged: Record<string, unknown>, provider: Record<string, unknown>): Promise<MistralProviderConfig> => ({
+   type: "mistral",
+-  endpoint: secureEndpointFrom(provider.endpoint ?? merged.endpoint, defaultMistralProviderConfig.endpoint),
++  endpoint: secureEndpointFrom(provider.endpoint ?? merged.endpoint, defaultMistralProviderConfig.endpoint, "mistral"),
+   model: textFrom(provider.model, textFrom(merged.model, defaultMistralProviderConfig.model)),
+   language: textFrom(provider.language, textFrom(merged.language, defaultMistralProviderConfig.language)),
+   ...(await commonProviderFields(merged, provider, defaultMistralProviderConfig)),
+@@ -154,18 +227,44 @@
+ const openAiCompatibleProviderFrom = async (
+   merged: Record<string, unknown>,
+   provider: Record<string, unknown>,
+-): Promise<OpenAiCompatibleProviderConfig> => ({
+-  type: "openai-compatible",
+-  endpoint: secureEndpointFrom(provider.endpoint ?? merged.endpoint, defaultOpenAiCompatibleProviderConfig.endpoint),
+-  model: textFrom(provider.model, textFrom(merged.model, defaultOpenAiCompatibleProviderConfig.model)),
+-  language: textFrom(provider.language, textFrom(merged.language, defaultOpenAiCompatibleProviderConfig.language)),
+-  responseFormat: "json",
+-  ...(await commonProviderFields(merged, provider, defaultOpenAiCompatibleProviderConfig)),
+-});
++  vendor = "",
++): Promise<OpenAiCompatibleProviderConfig> => {
++  // A provider.endpoint that is present but unusable (`""`, blank, not a
++  // string) means "this type's default", so it falls back to the endpoint the
++  // type already put in `merged` rather than to OpenAI's: a blank endpoint must
++  // not retarget `local` or `groq` at api.openai.com behind the checks below.
++  const endpoint = secureEndpointFrom(
++    provider.endpoint ?? merged.endpoint,
++    textFrom(merged.endpoint, defaultOpenAiCompatibleProviderConfig.endpoint),
++    vendor,
++  );
++  // A named vendor is already pinned to its own domain; an unpinned host only
++  // gets a credential it named itself (or the OpenAI default on OpenAI hosts).
++  const defaults = vendor
++    ? defaultOpenAiCompatibleProviderConfig
++    : {
++        ...defaultOpenAiCompatibleProviderConfig,
++        apiKeyEnv: openAiKeyEnvDefault(
++          endpoint,
++          secretSourceFrom(merged, provider),
++          defaultOpenAiCompatibleProviderConfig.apiKeyEnv,
++          "provider",
++        ),
++      };
+ 
++  return {
++    type: "openai-compatible",
++    endpoint,
++    model: textFrom(provider.model, textFrom(merged.model, defaultOpenAiCompatibleProviderConfig.model)),
++    language: textFrom(provider.language, textFrom(merged.language, defaultOpenAiCompatibleProviderConfig.language)),
++    responseFormat: responseFormatFrom(provider.responseFormat ?? merged.responseFormat, defaultOpenAiCompatibleProviderConfig.responseFormat),
++    ...(await commonProviderFields(merged, provider, defaults)),
++  };
++};
++
+ const deepgramProviderFrom = async (merged: Record<string, unknown>, provider: Record<string, unknown>): Promise<DeepgramProviderConfig> => ({
+   type: "deepgram",
+-  endpoint: secureEndpointFrom(provider.endpoint ?? merged.endpoint, defaultDeepgramProviderConfig.endpoint),
++  endpoint: secureEndpointFrom(provider.endpoint ?? merged.endpoint, defaultDeepgramProviderConfig.endpoint, "deepgram"),
+   model: textFrom(provider.model, textFrom(merged.model, defaultDeepgramProviderConfig.model)),
+   language: textFrom(provider.language, textFrom(merged.language, defaultDeepgramProviderConfig.language)),
+   smartFormat: booleanFrom(provider.smartFormat ?? merged.smartFormat, defaultDeepgramProviderConfig.smartFormat),
+@@ -177,7 +276,7 @@
+   provider: Record<string, unknown>,
+ ): Promise<ElevenLabsProviderConfig> => ({
+   type: "elevenlabs",
+-  endpoint: secureEndpointFrom(provider.endpoint ?? merged.endpoint, defaultElevenLabsProviderConfig.endpoint),
++  endpoint: secureEndpointFrom(provider.endpoint ?? merged.endpoint, defaultElevenLabsProviderConfig.endpoint, "elevenlabs"),
+   model: textFrom(provider.model, textFrom(merged.model, defaultElevenLabsProviderConfig.model)),
+   language: textFrom(provider.language, textFrom(merged.language, defaultElevenLabsProviderConfig.language)),
+   ...(await commonProviderFields(merged, provider, defaultElevenLabsProviderConfig)),
+@@ -185,10 +284,11 @@
+ 
+ const gladiaProviderFrom = async (merged: Record<string, unknown>, provider: Record<string, unknown>): Promise<GladiaProviderConfig> => ({
+   type: "gladia",
+-  uploadEndpoint: secureEndpointFrom(provider.uploadEndpoint ?? provider.upload_endpoint ?? merged.uploadEndpoint, defaultGladiaProviderConfig.uploadEndpoint),
++  uploadEndpoint: secureEndpointFrom(provider.uploadEndpoint ?? provider.upload_endpoint ?? merged.uploadEndpoint, defaultGladiaProviderConfig.uploadEndpoint, "gladia"),
+   transcriptionEndpoint: secureEndpointFrom(
+     provider.transcriptionEndpoint ?? provider.transcription_endpoint ?? merged.transcriptionEndpoint,
+     defaultGladiaProviderConfig.transcriptionEndpoint,
++    "gladia",
+   ),
+   model: textFrom(provider.model, textFrom(merged.model, defaultGladiaProviderConfig.model)),
+   language: textFrom(provider.language, textFrom(merged.language, defaultGladiaProviderConfig.language)),
+@@ -201,10 +301,11 @@
+   provider: Record<string, unknown>,
+ ): Promise<AssemblyAiProviderConfig> => ({
+   type: "assemblyai",
+-  uploadEndpoint: secureEndpointFrom(provider.uploadEndpoint ?? provider.upload_endpoint ?? merged.uploadEndpoint, defaultAssemblyAiProviderConfig.uploadEndpoint),
++  uploadEndpoint: secureEndpointFrom(provider.uploadEndpoint ?? provider.upload_endpoint ?? merged.uploadEndpoint, defaultAssemblyAiProviderConfig.uploadEndpoint, "assemblyai"),
+   transcriptEndpoint: secureEndpointFrom(
+     provider.transcriptEndpoint ?? provider.transcript_endpoint ?? merged.transcriptEndpoint,
+     defaultAssemblyAiProviderConfig.transcriptEndpoint,
++    "assemblyai",
+   ),
+   model: textFrom(provider.model, textFrom(merged.model, defaultAssemblyAiProviderConfig.model)),
+   language: textFrom(provider.language, textFrom(merged.language, defaultAssemblyAiProviderConfig.language)),
+@@ -212,6 +313,13 @@
+   ...(await commonProviderFields(merged, provider, defaultAssemblyAiProviderConfig)),
+ });
+ 
++/**
++ * `local` is `openai-compatible` aimed at this machine, and its `apiKeyEnv: ""`
++ * is an implicit "this server takes no key" — which is why the endpoint is
++ * checked against what the config itself named, before this is merged in.
++ */
++const localProviderDefaults = { endpoint: "http://localhost:10301/v1/audio/transcriptions", model: "whisper-1", apiKeyEnv: "" };
++
+ const providerFrom = async (merged: Record<string, unknown>): Promise<ProviderConfig> => {
+   const provider = objectFrom(merged.provider);
+   const providerType = textFrom(provider.type, textFrom(merged.provider, defaultMistralProviderConfig.type)).toLowerCase();
+@@ -222,11 +330,21 @@
+     const providerDefaults = providerType === "groq"
+       ? { endpoint: "https://api.groq.com/openai/v1/audio/transcriptions", model: "whisper-large-v3-turbo", apiKeyEnv: "GROQ_API_KEY" }
+       : providerType === "local"
+-        ? { endpoint: "http://localhost:10301/v1/audio/transcriptions", model: "whisper-1", apiKeyEnv: "" }
++        ? localProviderDefaults
+         : providerType === "openai"
+           ? { endpoint: "https://api.openai.com/v1/audio/transcriptions", model: "gpt-4o-mini-transcribe", apiKeyEnv: "OPENAI_API_KEY" }
+           : {};
+-    return openAiCompatibleProviderFrom({ ...merged, ...providerDefaults }, provider);
++    const vendor = providerType === "openai" || providerType === "groq" ? providerType : "";
++    // The type defaults win over a top-level `endpoint`, so the endpoint judged
++    // here is the one the provider is actually built with, and the secrets are
++    // read before `apiKeyEnv: ""` is merged in as the type's own default.
++    if (providerType === "local") {
++      assertLocalProviderStaysLocal(
++        secureEndpointFrom(provider.endpoint, localProviderDefaults.endpoint),
++        secretSourceFrom(merged, provider),
++      );
++    }
++    return openAiCompatibleProviderFrom({ ...merged, ...providerDefaults }, provider, vendor);
+   }
+ 
+   if (providerType === "deepgram") return deepgramProviderFrom(merged, provider);
+@@ -248,9 +366,20 @@
+ 
+ const cleanupFrom = async (merged: Record<string, unknown>): Promise<CleanupConfig> => {
+   const cleanup = objectFrom(merged.cleanup);
++  const enabled = booleanFrom(cleanup.enabled, defaultCleanupConfig.enabled);
++  const endpoint = secureEndpointFrom(cleanup.endpoint, defaultCleanupConfig.endpoint);
++  // cleanup.endpoint is the generic OpenAI-compatible chat escape hatch, so the
++  // OPENAI_API_KEY default may only follow it to OpenAI's own hosts. A disabled
++  // cleanup is never called, so it is not worth refusing to load over.
++  const apiKeyEnvDefault = enabled
++    ? openAiKeyEnvDefault(endpoint, cleanup, defaultCleanupConfig.apiKeyEnv, "cleanup")
++    : isVendorEndpoint(endpoint, "openai")
++      ? defaultCleanupConfig.apiKeyEnv
++      : "";
++
+   return {
+-    enabled: booleanFrom(cleanup.enabled, defaultCleanupConfig.enabled),
+-    endpoint: secureEndpointFrom(cleanup.endpoint, defaultCleanupConfig.endpoint),
++    enabled,
++    endpoint,
+     model: textFrom(cleanup.model, defaultCleanupConfig.model),
+     language: textFrom(cleanup.language, defaultCleanupConfig.language),
+     prompt: textFrom(cleanup.prompt, defaultCleanupConfig.prompt),
+@@ -258,8 +387,8 @@
+     useRepoContext: booleanFrom(cleanup.useRepoContext, defaultCleanupConfig.useRepoContext),
+     maxTokens: positiveIntegerFrom(cleanup.maxTokens, defaultCleanupConfig.maxTokens),
+     timeoutSeconds: positiveIntegerFrom(cleanup.timeoutSeconds, defaultCleanupConfig.timeoutSeconds),
+-    apiKey: await resolveApiKey(cleanup, defaultCleanupConfig.apiKeyEnv),
+-    apiKeyEnv: textFrom(cleanup.apiKeyEnv, defaultCleanupConfig.apiKeyEnv),
++    apiKey: await resolveApiKey(cleanup, apiKeyEnvDefault),
++    apiKeyEnv: envNameFrom(cleanup.apiKeyEnv, apiKeyEnvDefault),
+     apiKeyFile: textFrom(cleanup.apiKeyFile),
+     keychainService: textFrom(cleanup.keychainService),
+     keychainAccount: textFrom(cleanup.keychainAccount),
+diff -ruN --exclude=node_modules a/src/config/types.ts b/src/config/types.ts
+--- a/src/config/types.ts	1985-10-26 03:15:00
++++ b/src/config/types.ts	2026-07-28 21:17:06
+@@ -1,6 +1,13 @@
+ export type FfmpegCaptureConfig = {
+   type: "ffmpeg";
++  /** Absolute realpath once resolved; the configured value when resolution failed. */
+   ffmpegPath: string;
++  /**
++   * Why capture.ffmpegPath could not be resolved, empty when it resolved. The
++   * failure is carried instead of thrown so status/doctor can report it, and
++   * the recorder refuses to start while it is set.
++   */
++  ffmpegPathError: string;
+   inputFormat: string;
+   input: string;
+   sampleRate: number;
+@@ -44,7 +51,7 @@
+   model: string;
+   language: string;
+   timeoutSeconds: number;
+-  responseFormat: "json";
++  responseFormat: "json" | "verbose_json";
+ };
+ 
+ export type DeepgramProviderConfig = SecretConfig & {
+diff -ruN --exclude=node_modules a/src/core/dictation-controller.ts b/src/core/dictation-controller.ts
+--- a/src/core/dictation-controller.ts	1985-10-26 03:15:00
++++ b/src/core/dictation-controller.ts	2026-07-28 19:04:58
+@@ -35,9 +35,11 @@
+   submitAfterAppend?: boolean;
+ };
+ 
+-const PROMPT_APPEND_FLUSH_DELAY_MS = 30;
++const MAX_DURATION_RETRY_MS = 1000;
+ 
+-const waitForPromptAppendFlush = () => new Promise<void>((resolve) => setTimeout(resolve, PROMPT_APPEND_FLUSH_DELAY_MS));
++// Yield one event-loop turn so the append is applied before the submit reads
++// the prompt, instead of a fixed delay whose window swallows typed keystrokes.
++const waitForPromptAppendFlush = () => new Promise<void>((resolve) => setImmediate(resolve));
+ 
+ export const createDictationController = (options: DictationControllerOptions) => {
+   let recording: RecordingHandle | undefined;
+@@ -46,6 +48,8 @@
+   let activeOperation: Promise<void> | undefined;
+   let transcriptionController: AbortController | undefined;
+   let processing = false;
++  let starting = false;
++  let startCancelled = false;
+   let cancelRequested = false;
+   let mode: DictationMode = "idle";
+   let disposed = false;
+@@ -116,9 +120,15 @@
+         if (cancelRequested || disposed) return;
+       }
+ 
+-      await appendPrompt(ctx, formatTranscriptForPrompt(text, config.output));
+-      if (voice.command === "newline") await appendPrompt(ctx, "\n");
+       const shouldSubmit = stopOptions.submitAfterAppend || voice.command === "send";
++      const formatted = formatTranscriptForPrompt(text, config.output);
++      if (!formatted && !shouldSubmit) {
++        notify(ctx, { title: "Pi Voice STT", message: options.strings.toast.emptyTranscript, variant: "warning" });
++        return;
++      }
++
++      await appendPrompt(ctx, formatted);
++      if (voice.command === "newline") await appendPrompt(ctx, "\n");
+       if (shouldSubmit) {
+         await waitForPromptAppendFlush();
+         await submitPrompt(ctx);
+@@ -173,15 +183,44 @@
+     }
+   };
+ 
++  const armMaxDuration = (handle: RecordingHandle, delayMs: number) => {
++    handle.timeout = setTimeout(() => {
++      if (recording !== handle || disposed) return;
++      const timeoutContext = lastContext;
++      // Capture itself already stopped at capture.maxSeconds (ffmpeg -t, or the
++      // bridge daemon), so retry instead of dropping the transcribe trigger
++      // when the session is momentarily busy.
++      if (processing || !timeoutContext) {
++        armMaxDuration(handle, MAX_DURATION_RETRY_MS);
++        return;
++      }
++      void stopRecording(timeoutContext).catch((error) => options.onError(timeoutContext, error));
++    }, delayMs);
++  };
++
+   const cancelActiveRecording = async (active: RecordingHandle) => {
+     if (active.timeout) clearTimeout(active.timeout);
+     await active.dispose();
+   };
+ 
++  const releaseRecording = async (active: RecordingHandle) => {
++    if (active.timeout) clearTimeout(active.timeout);
++    await active.dispose().catch(() => {});
++  };
++
+   const cancel = async (ctx?: ExtensionContext) => {
+     rememberContext(ctx);
+     if (disposed) return;
+ 
++    // Esc while start() is still awaiting: there is nothing to abort yet, so
++    // mark the pending recorder for release. Latching cancelRequested here
++    // would instead discard the *next* recording's transcript.
++    if (starting) {
++      startCancelled = true;
++      notify(ctx, { title: "Pi Voice STT", message: options.strings.toast.recordingCancelled, variant: "info" });
++      return;
++    }
++
+     if (recording && !processing) {
+       cancelRequested = true;
+       const active = recording;
+@@ -212,19 +251,26 @@
+   const startRecording = async (ctx: ExtensionContext) => {
+     if (disposed) return;
+     processing = true;
++    starting = true;
++    startCancelled = false;
++    let started: RecordingHandle | undefined;
+     try {
+       const config = await options.loadConfig();
+       if (disposed) return;
+       assertProviderReady(config.provider);
+       const recorder = options.createRecorder(config);
+-      recording = await recorder.start();
++      started = await recorder.start();
++      // start() can take seconds (permission prompt, bridge HTTP), so the
++      // session may already be gone or the user may have cancelled: never
++      // leave an unowned live microphone.
++      if (disposed || startCancelled) {
++        await releaseRecording(started);
++        setMode("idle", ctx);
++        return;
++      }
++      recording = started;
+       recordingConfig = config;
+-      recording.timeout = setTimeout(() => {
+-        if (!recording || processing || disposed) return;
+-        const timeoutContext = lastContext;
+-        if (!timeoutContext) return;
+-        void stopRecording(timeoutContext).catch((error) => options.onError(timeoutContext, error));
+-      }, config.capture.maxSeconds * 1000);
++      armMaxDuration(started, config.capture.maxSeconds * 1000);
+       setMode("recording", ctx);
+       notify(ctx, {
+         title: "Pi Voice STT",
+@@ -232,8 +278,19 @@
+         variant: "info",
+         duration: 5000,
+       });
++    } catch (error) {
++      if (started) {
++        if (recording === started) {
++          recording = undefined;
++          recordingConfig = undefined;
++        }
++        await releaseRecording(started);
++        setMode("idle", ctx);
++      }
++      throw error;
+     } finally {
+       processing = false;
++      starting = false;
+     }
+   };
+ 
+@@ -250,18 +307,16 @@
+     disposed = true;
+     transcriptionController?.abort();
+     const operation = activeOperation;
+-    if (!recording) {
+-      const active = activeRecordingHandle;
+-      if (active) await active.dispose().catch(() => {});
+-      await operation?.catch(() => {});
+-      setMode("idle", lastContext);
+-      return;
++    // Loop: a recorder whose start() was already in flight can still be
++    // handed over while we await, and it must not outlive the session.
++    while (recording) {
++      const active = recording;
++      recording = undefined;
++      recordingConfig = undefined;
++      await releaseRecording(active);
+     }
+-    const active = recording;
+-    recording = undefined;
+-    recordingConfig = undefined;
+-    if (active.timeout) clearTimeout(active.timeout);
+-    await active.dispose();
++    const active = activeRecordingHandle;
++    if (active) await active.dispose().catch(() => {});
+     await operation?.catch(() => {});
+     setMode("idle", lastContext);
+   };
+diff -ruN --exclude=node_modules a/src/core/replacements.ts b/src/core/replacements.ts
+--- a/src/core/replacements.ts	1985-10-26 03:15:00
++++ b/src/core/replacements.ts	2026-07-28 19:17:00
+@@ -6,6 +6,22 @@
+  */
+ const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+ 
++const WORD_CHARACTER = /[\p{L}\p{N}_]/u;
++const WORD_CHARACTER_CLASS = "[\\p{L}\\p{N}_]";
++
++/**
++ * `\b` is ASCII-only, so keys such as "café" or "c++" would never match. The
++ * boundary is asserted with a Unicode word class instead, and only on the sides
++ * where the key itself starts or ends with a word character: that keeps "café"
++ * from matching inside "cafés" while letting "c++" match at all.
++ */
++const boundedPattern = (key: string): RegExp => {
++  const characters = [...key];
++  const before = WORD_CHARACTER.test(characters[0] ?? "") ? `(?<!${WORD_CHARACTER_CLASS})` : "";
++  const after = WORD_CHARACTER.test(characters[characters.length - 1] ?? "") ? `(?!${WORD_CHARACTER_CLASS})` : "";
++  return new RegExp(`${before}${escapeRegExp(key)}${after}`, "giu");
++};
++
+ export const applyReplacements = (text: string, replacements: Record<string, string>): string => {
+   if (!text) return text;
+   const keys = Object.keys(replacements)
+@@ -14,8 +30,10 @@
+ 
+   let result = text;
+   for (const key of keys) {
+-    const pattern = new RegExp(`\\b${escapeRegExp(key)}\\b`, "gi");
+-    result = result.replace(pattern, replacements[key] ?? "");
++    const value = replacements[key] ?? "";
++    // Replacer function: the configured value is a literal, so "$&" or "$1"
++    // must not expand as a substitution pattern.
++    result = result.replace(boundedPattern(key), () => value);
+   }
+   return result;
+ };
+diff -ruN --exclude=node_modules a/src/core/voice-commands.ts b/src/core/voice-commands.ts
+--- a/src/core/voice-commands.ts	1985-10-26 03:15:00
++++ b/src/core/voice-commands.ts	2026-07-28 19:06:36
+@@ -10,6 +10,21 @@
+ const TRAILING_PUNCTUATION = /[\s.!?,;:]+$/u;
+ 
+ /**
++ * Offset in `text` that corresponds to an offset in `text.toLowerCase()`.
++ * Case folding can change length (e.g. "İ" lowercases to two code units), so
++ * the original offset is walked instead of derived from the phrase length.
++ */
++const originalOffsetFor = (text: string, loweredOffset: number): number => {
++  let lowered = 0;
++  let index = 0;
++  while (index < text.length && lowered < loweredOffset) {
++    lowered += (text[index] ?? "").toLowerCase().length;
++    index += 1;
++  }
++  return index;
++};
++
++/**
+  * Detect a trailing voice command keyword in a transcript. Matching is
+  * case-insensitive, ignores trailing punctuation (whisper often adds a period)
+  * and requires a word boundary before the phrase. Returns the matched command
+@@ -28,7 +43,7 @@
+       const lowerPhrase = phrase.toLowerCase();
+       if (lower === lowerPhrase) return { command, text: "" };
+       if (lower.endsWith(lowerPhrase)) {
+-        const start = stripped.length - phrase.length;
++        const start = originalOffsetFor(stripped, lower.length - lowerPhrase.length);
+         const before = stripped[start - 1];
+         if (before === undefined || /\s/u.test(before)) {
+           return { command, text: stripped.slice(0, start).replace(TRAILING_PUNCTUATION, "") };
+diff -ruN --exclude=node_modules a/src/index.ts b/src/index.ts
+--- a/src/index.ts	1985-10-26 03:15:00
++++ b/src/index.ts	2026-07-28 22:56:26
+@@ -1,4 +1,5 @@
+ import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
++import type { EditorComponent } from "@earendil-works/pi-tui";
+ import { checkBridgeRecorderHealth } from "./audio/bridge-recorder";
+ import { createRecorder } from "./audio/factory";
+ import { loadConfig, readConfigFile } from "./config/load-config";
+@@ -10,7 +11,7 @@
+ import { assertProviderReady } from "./providers/readiness";
+ import { createInputIndicator, createVoiceEditorFactory } from "./ui/input-indicator";
+ import { resolveStrings } from "./i18n/strings";
+-import { formatError } from "./utils/text";
++import { containsPasteMarker, formatError } from "./utils/text";
+ 
+ const toastType = (variant: DictationToast["variant"]): "info" | "warning" | "error" => {
+   if (variant === "error") return "error";
+@@ -34,6 +35,13 @@
+   const strings = resolveStrings(startup.locale);
+   const inputIndicator = createInputIndicator(keybind, strings);
+   let activeMode = startup.mode || DEFAULT_MODE;
++  let activeEditor: EditorComponent | undefined;
++  // Prompt as it stood right after the transcript was inserted. Anything typed
++  // afterwards stays in the editor instead of being swept into the sent message.
++  // Kept in both forms: getEditorText() expands pi paste markers, the editor's
++  // own text still holds them.
++  let insertedPrompt: string | undefined;
++  let insertedEditorText: string | undefined;
+ 
+   const getConfig = () => loadConfig({ configPath: startup.configPath, mode: activeMode });
+ 
+@@ -41,21 +49,52 @@
+     keybind,
+     strings,
+     loadConfig: getConfig,
+-    createRecorder: (config) => createRecorder(config.capture),
++    createRecorder: (config) => {
++      // A new dictation invalidates the previous insertion snapshot.
++      insertedPrompt = undefined;
++      insertedEditorText = undefined;
++      return createRecorder(config.capture);
++    },
+     createProvider: (config) => createProvider(config.provider),
+     createCleanup: (config) => createCleanup(config.cleanup),
+     appendPrompt: async (ctx, text) => {
+-      const current = ctx.ui.getEditorText();
+-      ctx.ui.setEditorText(`${current}${text}`);
++      if (activeEditor?.insertTextAtCursor) activeEditor.insertTextAtCursor(text);
++      else ctx.ui.setEditorText(`${ctx.ui.getEditorText()}${text}`);
++      insertedPrompt = ctx.ui.getEditorText();
++      insertedEditorText = activeEditor?.getText();
+     },
+     submitPrompt: async (ctx) => {
+-      const prompt = ctx.ui.getEditorText().trimEnd();
++      const current = ctx.ui.getEditorText();
++      const editorText = activeEditor?.getText();
++      const snapshot = insertedPrompt;
++      const editorSnapshot = insertedEditorText;
++      insertedPrompt = undefined;
++      insertedEditorText = undefined;
++      const submitted = snapshot !== undefined && current.startsWith(snapshot) ? snapshot : current;
++      const prompt = submitted.trimEnd();
+       if (!prompt) {
+         notify(ctx, { title: "Pi Voice STT", message: strings.toast.emptyTranscript, variant: "warning" });
+         return;
+       }
+ 
+-      ctx.ui.setEditorText("");
++      // setEditorText writes raw editor text, so the leftover is preferably cut
++      // from the editor's own text rather than from the expanded text. It may
++      // only be used when the two agree character for character: setEditorText
++      // lands on the editor's setText, which drops its paste map, so a raw
++      // leftover that still holds a paste marker would be left with nothing to
++      // expand to and its content would be gone. Writing the expanded leftover
++      // instead is verbose but loses nothing, and an exact comparison decides
++      // that without depending on how the editor words its markers.
++      const expandedRemainder = current.slice(submitted.length);
++      const rawRemainder = editorText !== undefined && editorSnapshot !== undefined && editorText.startsWith(editorSnapshot)
++        ? editorText.slice(editorSnapshot.length)
++        : undefined;
++      const remainder = submitted === current
++        ? ""
++        : rawRemainder === expandedRemainder && !containsPasteMarker(expandedRemainder)
++          ? rawRemainder
++          : expandedRemainder;
++      ctx.ui.setEditorText(remainder);
+       if (ctx.isIdle()) pi.sendUserMessage(prompt);
+       else pi.sendUserMessage(prompt, { deliverAs: "followUp" });
+     },
+@@ -120,13 +159,18 @@
+         try {
+           const config = await getConfig();
+           assertProviderReady(config.provider);
++          let capture: string = config.capture.type;
+           if (config.capture.type === "bridge") {
+             await checkBridgeRecorderHealth(config.capture);
++            capture = `bridge ${config.capture.endpoint}`;
++          } else if (config.capture.ffmpegPathError) {
++            throw new Error(config.capture.ffmpegPathError);
+           } else {
+             const ffmpeg = await pi.exec(config.capture.ffmpegPath, ["-version"], { timeout: 5000 });
+             if (ffmpeg.code !== 0) throw new Error(`ffmpeg check failed: ${ffmpeg.stderr || ffmpeg.stdout}`);
++            capture = `ffmpeg ${config.capture.ffmpegPath}`;
+           }
+-          ctx.ui.notify(`Pi Voice STT ready (${config.capture.type}, ${config.provider.type}/${config.provider.model}).`, "info");
++          ctx.ui.notify(`Pi Voice STT ready (${capture}, ${config.provider.type}/${config.provider.model}).`, "info");
+         } catch (error) {
+           reportError(ctx, error);
+         }
+@@ -139,7 +183,17 @@
+       }
+ 
+       const configPath = startup.configPath || "defaults only (set PI_STT_CONFIG or ~/.pi/agent/stt.json)";
+-      ctx.ui.notify(`Pi Voice STT: ${controller.getMode()} · mode ${activeMode} · keybind ${keybind} · config ${configPath}`, "info");
++      // Status stays cheap and side-effect free: parsing the config file is the
++      // only I/O, so no PATH scan for ffmpeg, no key file read and no Keychain
++      // lookup happens here. Resolving those lives in `/stt doctor`.
++      const problem = startup.configPath
++        ? await readConfigFile(startup.configPath).then(() => "").catch((error: unknown) => formatError(error))
++        : "";
++      const status = `Pi Voice STT: ${controller.getMode()} · mode ${activeMode} · keybind ${keybind} · config ${configPath}`;
++      ctx.ui.notify(
++        problem ? `${status} · problem: ${problem}` : `${status} · run /stt doctor to check capture and provider`,
++        problem ? "warning" : "info",
++      );
+     },
+   });
+ 
+@@ -153,6 +207,9 @@
+       getMode: () => controller.getMode(),
+       renderLabel: (theme) => inputIndicator.renderLabel(theme),
+       attachTui: (tui) => inputIndicator.attach(tui),
++      attachEditor: (editor) => {
++        activeEditor = editor;
++      },
+       onToggle: (handlerCtx) => {
+         void (async () => {
+           // Idle -> start recording. While recording/processing -> stop. The
+@@ -182,5 +239,6 @@
+   pi.on("session_shutdown", async () => {
+     await controller.dispose();
+     inputIndicator.dispose();
++    activeEditor = undefined;
+   });
+ }
+diff -ruN --exclude=node_modules a/src/providers/gladia.ts b/src/providers/gladia.ts
+--- a/src/providers/gladia.ts	1985-10-26 03:15:00
++++ b/src/providers/gladia.ts	2026-07-28 21:22:04
+@@ -1,3 +1,4 @@
++import { isSameSiteEndpoint, secureEndpointFrom } from "../config/endpoint";
+ import type { GladiaProviderConfig } from "../config/types";
+ import { audioBlobFromPath, fetchJson, normalizeLanguage, objectAt, sleep, textAt } from "./helpers";
+ import type { SttProvider } from "./types";
+@@ -7,9 +8,24 @@
+   "x-gladia-key": apiKey,
+ });
+ 
++const configuredEndpoints = (config: GladiaProviderConfig): string[] => [config.transcriptionEndpoint, config.uploadEndpoint];
++
++/**
++ * result_url comes from the response body, so it is only followed (with the API
++ * key attached) when it is a secure URL on the configured Gladia endpoints'
++ * own site — regional hosts included. Anything else falls back to the id-based
++ * URL.
++ */
+ const resultUrlFrom = (payload: unknown, config: GladiaProviderConfig): string => {
+   const resultUrl = textAt(payload, "result_url");
+-  if (resultUrl) return resultUrl;
++  if (resultUrl) {
++    try {
++      const secure = secureEndpointFrom(resultUrl, "");
++      if (isSameSiteEndpoint(secure, configuredEndpoints(config))) return secure;
++    } catch {
++      // Untrusted result_url: use the id-based URL below.
++    }
++  }
+ 
+   const id = textAt(payload, "id");
+   if (!id) return "";
+diff -ruN --exclude=node_modules a/src/providers/openai-compatible.ts b/src/providers/openai-compatible.ts
+--- a/src/providers/openai-compatible.ts	1985-10-26 03:15:00
++++ b/src/providers/openai-compatible.ts	2026-07-28 21:20:19
+@@ -1,5 +1,6 @@
+ import { endpointRequiresAuth } from "../config/endpoint";
+ import type { OpenAiCompatibleProviderConfig } from "../config/types";
++import { isDeclaredKeyless } from "../secrets/resolve-api-key";
+ import { objectFrom, textFrom } from "../utils/coerce";
+ import { normalizeLanguage } from "./helpers";
+ import { postMultipartTranscription } from "./multipart";
+@@ -8,7 +9,7 @@
+ export const createOpenAiCompatibleProvider = (config: OpenAiCompatibleProviderConfig): SttProvider => ({
+   id: "openai-compatible",
+   async transcribe(input) {
+-    const needsAuth = endpointRequiresAuth(config.endpoint);
++    const needsAuth = endpointRequiresAuth(config.endpoint) && !isDeclaredKeyless(config);
+     const payload = await postMultipartTranscription({
+       endpoint: config.endpoint,
+       apiKey: config.apiKey,
+diff -ruN --exclude=node_modules a/src/providers/readiness.ts b/src/providers/readiness.ts
+--- a/src/providers/readiness.ts	1985-10-26 03:15:00
++++ b/src/providers/readiness.ts	2026-07-28 21:20:06
+@@ -1,5 +1,6 @@
+ import { endpointRequiresAuth } from "../config/endpoint";
+ import type { ProviderConfig } from "../config/types";
++import { isDeclaredKeyless } from "../secrets/resolve-api-key";
+ 
+ const providerDisplayName = (type: ProviderConfig["type"]): string => {
+   switch (type) {
+@@ -20,8 +21,11 @@
+ 
+ export const assertProviderReady = (config: ProviderConfig): void => {
+   if (config.type === "openai-compatible") {
+-    if (endpointRequiresAuth(config.endpoint) && !config.apiKey) {
+-      throw new Error("Missing STT API key for non-local OpenAI-compatible endpoint. Set provider.apiKeyEnv, provider.apiKeyFile, or provider.apiKey.");
++    if (endpointRequiresAuth(config.endpoint) && !config.apiKey && !isDeclaredKeyless(config)) {
++      throw new Error(
++        "Missing STT API key for non-local OpenAI-compatible endpoint. Set provider.apiKeyEnv, provider.apiKeyFile, or provider.apiKey, " +
++          "or provider.apiKeyEnv \"\" for an endpoint that takes no key.",
++      );
+     }
+     return;
+   }
+diff -ruN --exclude=node_modules a/src/secrets/keychain.ts b/src/secrets/keychain.ts
+--- a/src/secrets/keychain.ts	1985-10-26 03:15:00
++++ b/src/secrets/keychain.ts	2026-07-28 19:03:35
+@@ -1,6 +1,10 @@
+ import { spawn } from "node:child_process";
+ import { textFrom } from "../utils/coerce";
++import { formatError, truncate } from "../utils/text";
+ 
++/** `security` exit code for "the item is simply not in the Keychain". */
++const ITEM_NOT_FOUND = 44;
++
+ const readStream = async (stream: NodeJS.ReadableStream | null): Promise<string> => {
+   if (!stream) return "";
+   const chunks: Buffer[] = [];
+@@ -23,11 +27,23 @@
+     stdio: ["ignore", "pipe", "pipe"],
+   });
+ 
+-  const [code, stdout] = await Promise.all([
+-    new Promise<number | null>((resolve) => child.on("close", resolve)),
++  const [outcome, stdout, stderr] = await Promise.all([
++    // spawn() reports ENOENT/EAGAIN through an 'error' event: without this
++    // listener Node rethrows it and takes the whole host process down.
++    new Promise<{ code: number | null; error?: unknown }>((resolve) => {
++      child.once("error", (error) => resolve({ code: null, error }));
++      child.once("close", (code) => resolve({ code }));
++    }),
+     readStream(child.stdout),
+     readStream(child.stderr),
+   ]);
+ 
+-  return code === 0 ? textFrom(stdout) : "";
++  if (outcome.error) {
++    throw new Error(`Cannot run /usr/bin/security to read the Keychain: ${formatError(outcome.error)}`);
++  }
++  if (outcome.code === 0) return textFrom(stdout);
++  if (outcome.code === ITEM_NOT_FOUND) return "";
++
++  const detail = truncate(stderr.trim()) || `exit ${outcome.code ?? "unknown"}`;
++  throw new Error(`Keychain lookup failed for service "${service}"${account ? ` account "${account}"` : ""}: ${detail}`);
+ };
+diff -ruN --exclude=node_modules a/src/secrets/resolve-api-key.ts b/src/secrets/resolve-api-key.ts
+--- a/src/secrets/resolve-api-key.ts	1985-10-26 03:15:00
++++ b/src/secrets/resolve-api-key.ts	2026-07-28 21:42:42
+@@ -1,9 +1,29 @@
+ import { readFile } from "node:fs/promises";
++import type { SecretConfig } from "../config/types";
+ import { textFrom } from "../utils/coerce";
+ import { resolvePath } from "../utils/path";
+ import { formatError } from "../utils/text";
+ import { readKeychainSecret } from "./keychain";
+ 
++const MAX_API_KEY_LENGTH = 4096;
++const NON_KEY_CHARACTER = /[\s\p{Cc}]/u;
++
++/**
++ * apiKeyEnv/apiKeyFile can name any variable or file, and a file without an
++ * `=` is read whole, so the value is checked to still look like a single
++ * credential token before it can be sent as a Bearer header.
++ */
++const usableApiKey = (value: string, source: string): string => {
++  if (!value) return "";
++  if (value.length > MAX_API_KEY_LENGTH) {
++    throw new Error(`API key from ${source} is too long (${value.length} characters, limit ${MAX_API_KEY_LENGTH}).`);
++  }
++  if (NON_KEY_CHARACTER.test(value)) {
++    throw new Error(`API key from ${source} is not a single-line token; it must contain the key only.`);
++  }
++  return value;
++};
++
+ const unquote = (value: string): string => {
+   const trimmed = value.trim();
+   if ((trimmed.startsWith("\"") && trimmed.endsWith("\"")) || (trimmed.startsWith("'") && trimmed.endsWith("'"))) {
+@@ -41,17 +61,28 @@
+   }
+ };
+ 
++/**
++ * Config that names no secret source at all — including an inline `apiKey`,
++ * which is a named credential like any other and must still be sent. Loading
++ * refuses a non-loopback endpoint that named none, so reaching run time in this
++ * state means the endpoint was declared keyless on purpose (`apiKeyEnv: ""`):
++ * it is called without an Authorization header rather than with a borrowed key.
++ */
++export const isDeclaredKeyless = (config: Pick<SecretConfig, "apiKey" | "apiKeyEnv" | "apiKeyFile" | "keychainService">): boolean =>
++  !config.apiKey && !config.apiKeyEnv && !config.apiKeyFile && !config.keychainService;
++
+ export const resolveApiKey = async (input: Record<string, unknown>, defaultEnv: string): Promise<string> => {
+   const explicitKey = textFrom(input.apiKey);
+-  if (explicitKey) return explicitKey;
++  if (explicitKey) return usableApiKey(explicitKey, "apiKey");
+ 
+   const apiKeyEnv = typeof input.apiKeyEnv === "string" ? input.apiKeyEnv.trim() : defaultEnv;
+   const envKey = apiKeyEnv ? textFrom(process.env[apiKeyEnv]) : "";
+-  if (envKey) return envKey;
++  if (envKey) return usableApiKey(envKey, `environment variable ${apiKeyEnv}`);
+ 
+   const apiKeyFile = textFrom(input.apiKeyFile);
+   const fileKey = apiKeyFile ? textFrom(await readApiKeyFile(apiKeyFile, apiKeyEnv)) : "";
+-  if (fileKey) return fileKey;
++  if (fileKey) return usableApiKey(fileKey, `file ${resolvePath(apiKeyFile)}`);
+ 
+-  return readKeychainSecret(textFrom(input.keychainService), textFrom(input.keychainAccount));
++  const keychainKey = await readKeychainSecret(textFrom(input.keychainService), textFrom(input.keychainAccount));
++  return usableApiKey(keychainKey, "the macOS Keychain");
+ };
+diff -ruN --exclude=node_modules a/src/ui/input-indicator.ts b/src/ui/input-indicator.ts
+--- a/src/ui/input-indicator.ts	1985-10-26 03:15:00
++++ b/src/ui/input-indicator.ts	2026-07-28 19:05:25
+@@ -164,8 +164,15 @@
+     this.base.addToHistory?.(text);
+   }
+ 
++  // Always effective: falls back to an append when the wrapped editor has no
++  // cursor-aware insertion, so a transcript can never be silently dropped.
+   insertTextAtCursor(text: string): void {
+-    this.base.insertTextAtCursor?.(text);
++    this.syncBase();
++    if (this.base.insertTextAtCursor) {
++      this.base.insertTextAtCursor(text);
++      return;
++    }
++    this.base.setText(`${this.base.getText()}${text}`);
+   }
+ 
+   getExpandedText(): string {
+@@ -259,11 +266,13 @@
+ 
+ export const createVoiceEditorFactory = (
+   previousFactory: ((tui: TUI, theme: EditorTheme, keybindings: KeybindingsManager) => EditorComponent) | undefined,
+-  options: VoiceEditorOptions & { attachTui(tui: TUI): void },
++  options: VoiceEditorOptions & { attachTui(tui: TUI): void; attachEditor?(editor: EditorComponent): void },
+ ) => {
+   return (tui: TUI, theme: EditorTheme, keybindings: KeybindingsManager): EditorComponent => {
+     options.attachTui(tui);
+     const base = previousFactory?.(tui, theme, keybindings) ?? new CustomEditor(tui, theme, keybindings);
+-    return new VoiceEditorWrapper(base, options);
++    const editor = new VoiceEditorWrapper(base, options);
++    options.attachEditor?.(editor);
++    return editor;
+   };
+ };
+diff -ruN --exclude=node_modules a/src/utils/executable.ts b/src/utils/executable.ts
+--- a/src/utils/executable.ts	1969-12-31 18:00:00
++++ b/src/utils/executable.ts	2026-07-28 18:47:47
+@@ -0,0 +1,63 @@
++import { accessSync, constants, statSync } from "node:fs";
++import { access, realpath, stat } from "node:fs/promises";
++import { delimiter, extname, isAbsolute, resolve } from "node:path";
++import { textFrom } from "./coerce";
++import { resolvePath } from "./path";
++
++const looksLikePath = (command: string): boolean => command.includes("/") || command.includes("\\") || command.startsWith("~");
++
++const withWindowsExtensions = (candidate: string): string[] => {
++  if (process.platform !== "win32" || extname(candidate)) return [candidate];
++  const extensions = textFrom(process.env.PATHEXT, ".COM;.EXE;.BAT;.CMD")
++    .split(";")
++    .map((extension) => extension.trim())
++    .filter(Boolean);
++  return [candidate, ...extensions.map((extension) => `${candidate}${extension}`)];
++};
++
++const candidatesFor = (command: string): string[] => {
++  const bases = looksLikePath(command)
++    ? [resolvePath(command)]
++    : textFrom(process.env.PATH).split(delimiter).filter(Boolean).map((directory) => resolve(directory, command));
++  return bases.flatMap(withWindowsExtensions);
++};
++
++const isExecutableFile = async (candidate: string): Promise<boolean> => {
++  try {
++    if (!(await stat(candidate)).isFile()) return false;
++    await access(candidate, constants.X_OK);
++    return true;
++  } catch {
++    return false;
++  }
++};
++
++/**
++ * Resolve a configured program name or path to an absolute realpath that exists
++ * and is a regular executable file, so callers spawn a known binary instead of
++ * whatever the name happens to hit at run time.
++ */
++export const resolveExecutablePath = async (command: string, label: string): Promise<string> => {
++  if (!command) throw new Error(`${label} is empty.`);
++
++  for (const candidate of candidatesFor(command)) {
++    if (await isExecutableFile(candidate)) return realpath(candidate);
++  }
++
++  if (looksLikePath(command)) {
++    throw new Error(`${label} is not an executable file: ${resolvePath(command)}`);
++  }
++  throw new Error(`${label} was not found as an executable in PATH: ${command}`);
++};
++
++/** Synchronous re-check at spawn time for an already resolved absolute path. */
++export const assertExecutablePath = (command: string, label: string): void => {
++  if (!isAbsolute(command)) throw new Error(`${label} must be an absolute path, got: ${command}`);
++
++  try {
++    if (!statSync(command).isFile()) throw new Error("not a regular file");
++    accessSync(command, constants.X_OK);
++  } catch {
++    throw new Error(`${label} is not an executable file: ${command}`);
++  }
++};
+diff -ruN --exclude=node_modules a/src/utils/text.ts b/src/utils/text.ts
+--- a/src/utils/text.ts	1985-10-26 03:15:00
++++ b/src/utils/text.ts	2026-07-28 22:37:20
+@@ -4,6 +4,17 @@
+   return String(error);
+ };
+ 
++/**
++ * Placeholder the pi editor leaves in its raw text for a large paste, e.g.
++ * `[paste #1 +90 lines]` or `[paste #2 1234 chars]`. Kept looser than the
++ * editor's own matcher (pi-tui PASTE_MARKER_REGEX) so a reworded suffix still
++ * counts: the caller uses this to avoid writing a marker back through
++ * setEditorText, which clears the map the marker would have expanded from.
++ */
++const PASTE_MARKER = /\[paste(?:d text)? #\d+/i;
++
++export const containsPasteMarker = (value: string): boolean => PASTE_MARKER.test(value);
++
+ export const truncate = (value: string, length = 360): string => {
+   if (value.length <= length) return value;
+   return `${value.slice(0, length)}…`;
+diff -ruN --exclude=node_modules a/tools/macos-bridge-native.swift b/tools/macos-bridge-native.swift
+--- a/tools/macos-bridge-native.swift	1985-10-26 03:15:00
++++ b/tools/macos-bridge-native.swift	2026-07-28 21:25:25
+@@ -12,7 +12,38 @@
+ let channels = Int(env["PI_STT_BRIDGE_CHANNELS"] ?? "1") ?? 1
+ let minBytes = Int(env["PI_STT_BRIDGE_MIN_BYTES"] ?? "4096") ?? 4096
+ let maxSeconds = TimeInterval(env["PI_STT_BRIDGE_MAX_SECONDS"] ?? "120") ?? 120
++let allowRemote = env["PI_STT_BRIDGE_ALLOW_REMOTE"] == "1"
++let loopbackAliases = ["localhost", "::1", "[::1]"]
+ 
++func fail(_ message: String) -> Never {
++  FileHandle.standardError.write(Data("[pi-voice-stt-bridge] \(message)\n".utf8))
++  exit(1)
++}
++
++// The daemon can switch the microphone on, so it never runs unauthenticated:
++// without a token every local process (and any web page able to send a CORS
++// simple request) could start a recording.
++if token.isEmpty {
++  fail("refusing to start without a token: set PI_STT_BRIDGE_TOKEN or PI_STT_BRIDGE_TOKEN_FILE (see tools/install-macos-bridge.sh).")
++}
++
++// The listener is AF_INET, so the host is parsed into the address that is
++// actually bound before it is judged: inet_addr's shorthand forms and its
++// INADDR_NONE fallback would otherwise bind something the check never saw.
++func ipv4Address(_ host: String) -> in_addr {
++  var address = in_addr()
++  guard inet_pton(AF_INET, host, &address) == 1 else {
++    fail("refusing to bind \(host): PI_STT_BRIDGE_HOST must be an IPv4 address such as 127.0.0.1, or localhost.")
++  }
++  return address
++}
++
++let bindAddress = ipv4Address(loopbackAliases.contains(host.lowercased()) ? "127.0.0.1" : host)
++let bindsLoopback = UInt32(bigEndian: bindAddress.s_addr) >> 24 == 127
++if !bindsLoopback && !allowRemote {
++  fail("refusing to bind \(host): reach the daemon through the SSH tunnel, or set PI_STT_BRIDGE_ALLOW_REMOTE=1 to bind a non-loopback address on purpose.")
++}
++
+ final class RecordingState {
+   private let lock = NSLock()
+   private var recorder: AVAudioRecorder?
+@@ -270,8 +301,21 @@
+   return HttpRequest(method: parts[0], path: parts[1].split(separator: "?").first.map(String.init) ?? parts[1], headers: headers)
+ }
+ 
++// Compared over the expected length with the differences accumulated, so a
++// wrong token cannot be recovered one byte at a time from response timing.
++func constantTimeEquals(_ presented: String, _ expected: String) -> Bool {
++  let presentedBytes = Array(presented.utf8)
++  let expectedBytes = Array(expected.utf8)
++  var difference = presentedBytes.count ^ expectedBytes.count
++  for index in expectedBytes.indices {
++    let presentedByte = index < presentedBytes.count ? presentedBytes[index] : 0
++    difference |= Int(presentedByte ^ expectedBytes[index])
++  }
++  return difference == 0
++}
++
+ func isAuthorized(_ request: HttpRequest) -> Bool {
+-  token.isEmpty || request.headers["authorization"] == "Bearer \(token)"
++  !token.isEmpty && constantTimeEquals(request.headers["authorization"] ?? "", "Bearer \(token)")
+ }
+ 
+ func handleClient(_ fd: Int32) {
+@@ -330,7 +374,7 @@
+   var address = sockaddr_in()
+   address.sin_family = sa_family_t(AF_INET)
+   address.sin_port = port.bigEndian
+-  address.sin_addr = in_addr(s_addr: inet_addr(host))
++  address.sin_addr = bindAddress
+ 
+   let bindResult = withUnsafePointer(to: &address) { pointer in
+     pointer.withMemoryRebound(to: sockaddr.self, capacity: 1) { sockaddrPointer in
+diff -ruN --exclude=node_modules a/tools/macos-bridge-server.mjs b/tools/macos-bridge-server.mjs
+--- a/tools/macos-bridge-server.mjs	1985-10-26 03:15:00
++++ b/tools/macos-bridge-server.mjs	2026-07-28 21:29:55
+@@ -1,6 +1,8 @@
+ #!/usr/bin/env node
+ import { createServer } from "node:http";
+ import { spawn } from "node:child_process";
++import { timingSafeEqual } from "node:crypto";
++import { isIP } from "node:net";
+ import { mkdtempSync } from "node:fs";
+ import { readFile, rm, stat } from "node:fs/promises";
+ import { tmpdir } from "node:os";
+@@ -18,8 +20,36 @@
+ const MAX_SECONDS = Number.parseInt(env.PI_STT_BRIDGE_MAX_SECONDS || "120", 10);
+ const TOKEN_FILE = env.PI_STT_BRIDGE_TOKEN_FILE || "";
+ const TOKEN = (env.PI_STT_BRIDGE_TOKEN || (TOKEN_FILE ? await readFile(TOKEN_FILE, "utf8").catch(() => "") : "")).trim();
++const ALLOW_REMOTE = env.PI_STT_BRIDGE_ALLOW_REMOTE === "1";
+ const MAX_STDERR_BYTES = 24 * 1024;
++const LOOPBACK_ALIASES = ["localhost", "::1", "[::1]"];
++// The check has to describe the address that is actually bound: a bare hostname
++// is resolved by DNS after the check, so the aliases are mapped to the loopback
++// literal and anything else must already be an IP address.
++const BIND_HOST = LOOPBACK_ALIASES.includes(HOST.toLowerCase()) ? "127.0.0.1" : HOST;
++const BIND_FAMILY = isIP(BIND_HOST);
++const BINDS_LOOPBACK = BIND_FAMILY === 4
++  ? BIND_HOST.startsWith("127.")
++  : ["::1", "::ffff:127.0.0.1"].includes(BIND_HOST.toLowerCase());
+ 
++// The daemon can switch the microphone on, so it never runs unauthenticated:
++// without a token every local process (and any web page able to send a CORS
++// simple request) could start a recording.
++if (!TOKEN) {
++  console.error("[pi-voice-stt-bridge] refusing to start without a token: set PI_STT_BRIDGE_TOKEN or PI_STT_BRIDGE_TOKEN_FILE (see tools/install-macos-bridge.sh).");
++  process.exit(1);
++}
++
++if (!BIND_FAMILY) {
++  console.error(`[pi-voice-stt-bridge] refusing to bind ${HOST}: PI_STT_BRIDGE_HOST must be an IP address such as 127.0.0.1, or localhost.`);
++  process.exit(1);
++}
++
++if (!BINDS_LOOPBACK && !ALLOW_REMOTE) {
++  console.error(`[pi-voice-stt-bridge] refusing to bind ${HOST}: reach the daemon through the SSH tunnel, or set PI_STT_BRIDGE_ALLOW_REMOTE=1 to bind a non-loopback address on purpose.`);
++  process.exit(1);
++}
++
+ let active;
+ 
+ const json = (res, status, payload) => {
+@@ -52,9 +82,10 @@
+ });
+ 
+ const isAuthorized = (req) => {
+-  if (!TOKEN) return true;
+-  const header = req.headers.authorization || "";
+-  return header === `Bearer ${TOKEN}`;
++  if (!TOKEN) return false;
++  const presented = Buffer.from(req.headers.authorization || "", "utf8");
++  const expected = Buffer.from(`Bearer ${TOKEN}`, "utf8");
++  return presented.length === expected.length && timingSafeEqual(presented, expected);
+ };
+ 
+ const terminate = (recording) => {
+@@ -215,6 +246,6 @@
+ process.on("SIGTERM", () => void shutdown());
+ process.on("SIGINT", () => void shutdown());
+ 
+-server.listen(PORT, HOST, () => {
+-  console.log(`[pi-voice-stt-bridge] listening on http://${HOST}:${PORT} (${INPUT_FORMAT} ${INPUT})`);
++server.listen(PORT, BIND_HOST, () => {
++  console.log(`[pi-voice-stt-bridge] listening on http://${BIND_HOST}:${PORT} (${INPUT_FORMAT} ${INPUT})`);
+ });

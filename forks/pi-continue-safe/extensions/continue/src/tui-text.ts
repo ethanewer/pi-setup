@@ -47,6 +47,11 @@ export function visibleWidth(value: string): number {
 	return width;
 }
 
+/** Return the display width of one already ANSI-free character. */
+export function plainCharWidth(char: string): number {
+	return charWidth(char);
+}
+
 /** Truncate styled text to a display width while preserving ANSI escape sequences. */
 export function truncateAnsi(value: string, maxWidth: number): string {
 	if (maxWidth <= 0) return "";

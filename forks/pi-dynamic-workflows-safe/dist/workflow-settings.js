@@ -6,7 +6,7 @@
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { MAX_AGENT_RETRIES, MAX_CONCURRENCY, normalizeKeywordTriggerWord } from "./config.js";
+import { MAX_AGENT_RETRIES, MAX_AGENTS_PER_RUN, MAX_CONCURRENCY, normalizeKeywordTriggerWord } from "./config.js";
 import { workflowHomeDir, workflowProjectPaths } from "./workflow-paths.js";
 /** Path to the user-level workflow settings JSON file (~/.pi/workflows/settings.json). */
 export function getWorkflowSettingsPath() {
@@ -89,6 +89,9 @@ function normalizeSettings(value) {
     const defaultConcurrency = normalizeInteger(raw.defaultConcurrency, 1, MAX_CONCURRENCY);
     if (defaultConcurrency !== undefined)
         settings.defaultConcurrency = defaultConcurrency;
+    const defaultMaxAgents = normalizeInteger(raw.defaultMaxAgents, 1, MAX_AGENTS_PER_RUN);
+    if (defaultMaxAgents !== undefined)
+        settings.defaultMaxAgents = defaultMaxAgents;
     const defaultAgentRetries = normalizeInteger(raw.defaultAgentRetries, 0, MAX_AGENT_RETRIES);
     if (defaultAgentRetries !== undefined)
         settings.defaultAgentRetries = defaultAgentRetries;
@@ -102,6 +105,20 @@ function normalizeSettings(value) {
     }
     if (typeof raw.persistAgentSessions === "boolean") {
         settings.persistAgentSessions = raw.persistAgentSessions;
+    }
+    if (typeof raw.trustProjectLocalWorkflows === "boolean") {
+        settings.trustProjectLocalWorkflows = raw.trustProjectLocalWorkflows;
+    }
+    if (typeof raw.webFetchAllowPrivateNetwork === "boolean") {
+        settings.webFetchAllowPrivateNetwork = raw.webFetchAllowPrivateNetwork;
+    }
+    if (Array.isArray(raw.webFetchAllowedHosts)) {
+        const hosts = raw.webFetchAllowedHosts.filter((h) => typeof h === "string" && h.trim().length > 0);
+        if (hosts.length)
+            settings.webFetchAllowedHosts = hosts;
+    }
+    if (raw.worktreeIsolationFallback === "error" || raw.worktreeIsolationFallback === "shared-tree") {
+        settings.worktreeIsolationFallback = raw.worktreeIsolationFallback;
     }
     const deliveredResultMaxChars = normalizeInteger(raw.deliveredResultMaxChars, 1, 1_000_000);
     if (deliveredResultMaxChars !== undefined)

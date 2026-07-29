@@ -1,9 +1,10 @@
 import type { UserMessage } from "@earendil-works/pi-ai";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { CONTINUATION_PROMPT_MARKER } from "./continuation-prompt.ts";
 
 /** Queue the continuation resume prompt safely if the parent agent is still settling. */
-export function sendContinuationPrompt(pi: ExtensionAPI, prompt: string): void {
-	pi.sendUserMessage(prompt, { deliverAs: "followUp" });
+export function sendContinuationPrompt(pi: ExtensionAPI, prompt: string): void | Promise<void> {
+	return pi.sendUserMessage(prompt, { deliverAs: "followUp" });
 }
 
 function isUserMessage(message: unknown): message is UserMessage {
@@ -29,7 +30,12 @@ function userMessageText(message: UserMessage): string {
 		.join("\n");
 }
 
+/** Return true for delivered prompt text that carries this package's resume correlation marker. */
+export function isContinuationPromptText(text: string, prompt: string): boolean {
+	return text === prompt || text.includes(CONTINUATION_PROMPT_MARKER);
+}
+
 /** Return true only for the delivered user message that starts the continuation resume turn. */
 export function isContinuationPromptUserMessage(message: unknown, prompt: string): boolean {
-	return isUserMessage(message) && userMessageText(message) === prompt;
+	return isUserMessage(message) && isContinuationPromptText(userMessageText(message), prompt);
 }

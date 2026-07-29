@@ -19,6 +19,7 @@ export interface TaskPanelOptions {
      */
     loadSettings?: () => WorkflowSettings;
 }
+export declare function fenceUntrusted(text: string): string;
 export declare function deliverText(run: ManagedRun, opts?: {
     resultPath?: string;
     maxChars?: number;
@@ -56,6 +57,8 @@ export declare function renderPanelDetailed(manager: WorkflowManager, theme: The
 /**
  * Install the live "workflows running" panel below the editor. Re-rendered on
  * every manager event. Informational only — the user opens the navigator with
- * /workflows. (`_pi` is kept for signature stability.)
+ * /workflows. Safe to call on every session_start: the widget is (re)registered
+ * for the current UI, while the manager subscriptions are installed once.
+ * (`_pi` is kept for signature stability.)
  */
 export declare function installTaskPanel(_pi: ExtensionAPI, manager: WorkflowManager, ui: ExtensionUIContext, opts?: TaskPanelOptions): void;

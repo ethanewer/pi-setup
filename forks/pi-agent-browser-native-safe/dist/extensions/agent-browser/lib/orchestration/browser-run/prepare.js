@@ -2,6 +2,8 @@ import { copyFile, mkdir } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { launchElectronApp } from "../../electron/launch.js";
 import { pathExists } from "../../fs-utils.js";
+import { getFlagName } from "../../argv-grammar.js";
+import { getGitMetadataWriteError, getWritePathConfinementError } from "../../write-path-policy.js";
 import { getCompiledSemanticActionSessionPrefix } from "../../input-modes.js";
 import { tryDirectAnchorDownload } from "./prepare/direct-anchor-download.js";
 import { tryNetworkRequestsPageFilter } from "./prepare/network-page-filter.js";
@@ -20,7 +22,7 @@ import { parseBatchStdinJsonArray } from "../batch-stdin.js";
 import { buildElectronHostFailureResult, getElectronLaunchFailureCategory, redactRecoveryHint } from "./final-result.js";
 import { prepareClickDispatchProbe } from "./click-dispatch.js";
 import { collectScrollPositionSnapshot, validateQaAttachedPrecondition } from "./diagnostics.js";
-import { getScreenshotPathTokenIndex } from "./artifact-paths.js";
+import { getDiagnosticArtifactWritePaths, getScreenshotPathTokenIndex } from "./artifact-paths.js";
 import { findRequestedArtifactCloseViolation } from "./prompt-guards.js";
 export function normalizeRunInput(input) {
     const base = { redactedArgs: input.redactedArgs, toolArgs: input.toolArgs, toolStdin: input.toolStdin };
@@ -68,6 +70,124 @@ async function ensureArtifactParentDirectory(commandTokens, cwd) {
     if (!requestedPath)
         return;
     await mkdir(dirname(resolve(cwd, requestedPath)), { recursive: true });
+}
+function getCommandArtifactPathConfinementError(commandTokens, cwd) {
+    const pathIndices = [getArtifactParentPathTokenIndex(commandTokens), getScreenshotPathTokenIndex(commandTokens)];
+    const requestedPaths = [
+        ...pathIndices.flatMap((pathIndex) => (pathIndex === undefined ? [] : [commandTokens[pathIndex]])),
+        ...getDiagnosticArtifactWritePaths(commandTokens),
+    ];
+    for (const requestedPath of requestedPaths) {
+        if (!requestedPath)
+            continue;
+        const confinementError = getWritePathConfinementError(requestedPath, cwd, `${commandTokens[0]} artifact path`);
+        if (confinementError)
+            return confinementError;
+    }
+    return undefined;
+}
+/**
+ * Upstream, not the wrapper, names the files it drops in these directories, and a page can influence a download
+ * name, so the directory itself has to stay out of `.git`.
+ */
+const ARTIFACT_DIRECTORY_VALUE_FLAGS = ["--download-path", "--screenshot-dir"];
+function getArtifactDirectoryGitMetadataError(args, cwd) {
+    for (const [index, token] of args.entries()) {
+        const flagName = getFlagName(token);
+        if (!ARTIFACT_DIRECTORY_VALUE_FLAGS.includes(flagName))
+            continue;
+        const value = token.includes("=") ? token.slice(token.indexOf("=") + 1) : args[index + 1];
+        if (value === undefined || value.startsWith("-"))
+            continue;
+        const gitMetadataError = getGitMetadataWriteError(value, cwd, `${flagName} directory`);
+        if (gitMetadataError)
+            return gitMetadataError;
+    }
+    return undefined;
+}
+/**
+ * Upstream `batch` also takes each step as one quoted command string in argv, and that form carries the same
+ * artifact paths as the JSON stdin form, so the step strings are tokenized the way upstream tokenizes them before
+ * the write-path guards run: tokens are separated by plain spaces only, single and double quotes group without
+ * being kept, a backslash escapes the next character everywhere except inside single quotes, and empty tokens are
+ * dropped. Matching upstream matters in both directions - a looser split would refuse paths upstream never writes,
+ * and a stricter one would let an escaped `.git` path through. Without this the argument form would be the one way a
+ * caller-named write escapes the guards entirely.
+ * @param {string} commandString
+ * @returns {string[]}
+ */
+function tokenizeBatchArgumentModeStep(commandString) {
+    const tokens = [];
+    let current = "";
+    let quote;
+    for (let index = 0; index < commandString.length; index += 1) {
+        const char = commandString[index];
+        if (quote === "'") {
+            if (char === quote)
+                quote = undefined;
+            else
+                current += char;
+            continue;
+        }
+        if (char === "\\" && index + 1 < commandString.length) {
+            current += commandString[index + 1];
+            index += 1;
+            continue;
+        }
+        if (quote) {
+            if (char === quote)
+                quote = undefined;
+            else
+                current += char;
+            continue;
+        }
+        if (char === '"' || char === "'") {
+            quote = char;
+            continue;
+        }
+        if (char === " ") {
+            if (current.length > 0)
+                tokens.push(current);
+            current = "";
+            continue;
+        }
+        current += char;
+    }
+    if (current.length > 0)
+        tokens.push(current);
+    return tokens;
+}
+/** @param {readonly string[]} commandTokens */
+function getBatchArgumentModeSteps(commandTokens) {
+    if (commandTokens[0] !== "batch")
+        return [];
+    return commandTokens
+        .slice(1)
+        .filter((token) => !token.startsWith("-"))
+        .map((token) => tokenizeBatchArgumentModeStep(token))
+        .filter((step) => step.length > 0);
+}
+export function getArtifactPathConfinementError(args, stdin, cwd) {
+    const directoryGitMetadataError = getArtifactDirectoryGitMetadataError(args, cwd);
+    if (directoryGitMetadataError)
+        return directoryGitMetadataError;
+    const commandTokens = extractCommandTokens(args);
+    for (const step of getBatchArgumentModeSteps(commandTokens)) {
+        const stepConfinementError = getCommandArtifactPathConfinementError(step, cwd);
+        if (stepConfinementError)
+            return stepConfinementError;
+    }
+    if (commandTokens[0] === "batch" && stdin !== undefined) {
+        const parsed = parseBatchStdinJsonArray(stdin);
+        for (const step of parsed.steps ?? []) {
+            if (!Array.isArray(step) || !step.every((item) => typeof item === "string"))
+                continue;
+            const stepConfinementError = getCommandArtifactPathConfinementError(step, cwd);
+            if (stepConfinementError)
+                return stepConfinementError;
+        }
+    }
+    return getCommandArtifactPathConfinementError(commandTokens, cwd);
 }
 async function normalizeScreenshotPathInTokens(commandTokens, cwd) {
     const screenshotPathTokenIndex = getScreenshotPathTokenIndex(commandTokens);
@@ -315,6 +435,24 @@ export async function prepareBrowserRun(options) {
     let runtimeToolArgs = toolArgs;
     let runtimeToolStdin = toolStdin;
     let electronLaunch;
+    const artifactPathConfinementError = getArtifactPathConfinementError(toolArgs, toolStdin, cwd);
+    if (artifactPathConfinementError) {
+        return { kind: "early-result", result: {
+                content: [{ type: "text", text: artifactPathConfinementError }],
+                details: {
+                    args: redactedArgs,
+                    compiledElectron: redactedCompiledElectron,
+                    compiledJob: redactedCompiledJob,
+                    compiledNetworkSourceLookup: redactedCompiledNetworkSourceLookup,
+                    compiledQaPreset: redactedCompiledQaPreset,
+                    compiledSemanticAction: redactedCompiledSemanticAction,
+                    compiledSourceLookup: redactedCompiledSourceLookup,
+                    ...buildAgentBrowserResultCategoryDetails({ args: redactedArgs, errorText: artifactPathConfinementError, failureCategory: "policy-blocked", succeeded: false, validationError: artifactPathConfinementError }),
+                    validationError: artifactPathConfinementError,
+                },
+                isError: true,
+            } };
+    }
     const sessionMode = compiledElectron?.action === "launch" ? "fresh" : params.sessionMode ?? "auto";
     const freshSessionName = createFreshSessionName(managedSessionBaseName, ephemeralSessionSeed, freshSessionOrdinal + 1);
     if (compiledElectron?.action === "launch") {

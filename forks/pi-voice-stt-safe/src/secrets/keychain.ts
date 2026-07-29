@@ -1,5 +1,9 @@
 import { spawn } from "node:child_process";
 import { textFrom } from "../utils/coerce";
+import { formatError, truncate } from "../utils/text";
+
+/** `security` exit code for "the item is simply not in the Keychain". */
+const ITEM_NOT_FOUND = 44;
 
 const readStream = async (stream: NodeJS.ReadableStream | null): Promise<string> => {
   if (!stream) return "";
@@ -23,11 +27,23 @@ export const readKeychainSecret = async (service: string, account: string): Prom
     stdio: ["ignore", "pipe", "pipe"],
   });
 
-  const [code, stdout] = await Promise.all([
-    new Promise<number | null>((resolve) => child.on("close", resolve)),
+  const [outcome, stdout, stderr] = await Promise.all([
+    // spawn() reports ENOENT/EAGAIN through an 'error' event: without this
+    // listener Node rethrows it and takes the whole host process down.
+    new Promise<{ code: number | null; error?: unknown }>((resolve) => {
+      child.once("error", (error) => resolve({ code: null, error }));
+      child.once("close", (code) => resolve({ code }));
+    }),
     readStream(child.stdout),
     readStream(child.stderr),
   ]);
 
-  return code === 0 ? textFrom(stdout) : "";
+  if (outcome.error) {
+    throw new Error(`Cannot run /usr/bin/security to read the Keychain: ${formatError(outcome.error)}`);
+  }
+  if (outcome.code === 0) return textFrom(stdout);
+  if (outcome.code === ITEM_NOT_FOUND) return "";
+
+  const detail = truncate(stderr.trim()) || `exit ${outcome.code ?? "unknown"}`;
+  throw new Error(`Keychain lookup failed for service "${service}"${account ? ` account "${account}"` : ""}: ${detail}`);
 };

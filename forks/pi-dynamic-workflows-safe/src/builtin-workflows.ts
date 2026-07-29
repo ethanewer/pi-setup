@@ -18,6 +18,7 @@ import { generateCodeReviewWorkflow } from "./code-review.js";
 import { generateCodebaseAuditWorkflow, generateDeepResearchWorkflow } from "./deep-research.js";
 import { createWebTools } from "./web-tools.js";
 import type { WorkflowStorage } from "./workflow-saved.js";
+import { loadWorkflowSettings } from "./workflow-settings.js";
 
 /** Default perspective set used when a caller gives fewer than two. */
 export const DEFAULT_MULTI_PERSPECTIVES: readonly string[] = [
@@ -70,12 +71,20 @@ export const BUILTIN_WORKFLOWS: readonly BuiltinWorkflowDescriptor[] = [
     description: "Research a question across the web with cross-checked sources. args: { question: string }.",
     resolve(cwd, args) {
       requireNonEmptyString(asRecord(args).question, "question", "deep-research");
+      const settings = loadWorkflowSettings({ cwd });
       return {
         script: generateDeepResearchWorkflow(),
         // Research agents need real web access on top of the coding tools; the
         // "web-research" tag is what a resumed run re-resolves (see
-        // WorkflowManagerOptions.toolsets).
-        tools: [...createCodingTools(cwd), ...createWebTools()],
+        // WorkflowManagerOptions.toolsets). The fetch policy comes from this
+        // project's settings, same as the toolset the host registers.
+        tools: [
+          ...createCodingTools(cwd),
+          ...createWebTools({
+            allowedHosts: settings.webFetchAllowedHosts,
+            allowPrivateNetwork: settings.webFetchAllowPrivateNetwork,
+          }),
+        ],
         toolset: "web-research",
       };
     },

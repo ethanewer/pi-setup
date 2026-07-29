@@ -14,19 +14,19 @@ This project is intentionally small and hackable: a Pi extension, local/bridge a
 - `Enter`-to-send and `Esc`-to-cancel while recording.
 - Pi-native animated input indicator, right-aligned in the prompt border (`voice ctrl+r`, `● recording`, `• transcribing`).
 - `ffmpeg` microphone capture to temporary WAV files.
-- Optional Mac microphone bridge for Pi sessions running on a VPS over SSH.
+- Optional Mac microphone bridge for Pi sessions running on a VPS over SSH, token-authenticated and loopback-bound by default.
 - Mistral Voxtral provider.
 - OpenAI / Groq / generic OpenAI-compatible provider for hosted and local Whisper-style endpoints.
 - Native provider integrations for Deepgram, ElevenLabs Scribe, Gladia, and AssemblyAI.
 - Environment variable and macOS Keychain secret lookup.
-- HTTPS-by-default endpoint policy; plain HTTP is allowed only for loopback hosts.
+- HTTPS-by-default endpoint policy; plain HTTP is allowed only for loopback hosts, and named vendor providers are pinned to their own domain.
 - TypeScript source loaded directly by Pi; no build step required for runtime.
 
 ## Requirements
 
 - Pi `>= 0.75`.
 - Node.js `>= 20` when developing locally.
-- `ffmpeg` available in `PATH` or configured with `capture.ffmpegPath`.
+- `ffmpeg` available in `PATH` or configured with `capture.ffmpegPath`; the value is resolved to an absolute executable path before it is spawned. A missing or non-executable `ffmpeg` is reported by `/stt doctor` and only fails a recording, so the diagnostics still work.
 - Microphone permission for the terminal app running Pi, or for the Mac bridge daemon when using `capture.type: "bridge"`.
 - A transcription backend (Mistral, OpenAI/Groq, Deepgram, ElevenLabs, Gladia, AssemblyAI, or a local OpenAI-compatible server).
 
@@ -93,7 +93,7 @@ or a top-level `keybind` in the config file. Environment wins at startup.
 
 - `appendTrailingSpace` (default `true`): append a space after the inserted transcript.
 - `submitOnStop` (default `false`): when `true`, stopping a recording with the `Ctrl+R` toggle also sends the transcript to chat (same as pressing `Enter` while recording) instead of only inserting it into the prompt. Hands-free dictation: `Ctrl+R` to start, `Ctrl+R` to stop-and-send, `Esc` to cancel.
-- `replacements` (default `{}`): a literal dictionary applied to the raw transcript before cleanup. Case-insensitive and word-boundary aware; longer keys win. Handy for terms the recognizer mishears:
+- `replacements` (default `{}`): a literal dictionary applied to the raw transcript before cleanup. Case-insensitive and word-boundary aware (Unicode-aware, so accented or punctuated keys such as `"café"` or `"c++"` match); longer keys win. Keys and values are treated as literal text. Handy for terms the recognizer mishears:
 
 ```json
 {
@@ -172,7 +172,7 @@ Optionally run the raw transcript through an LLM before it is inserted, to fix p
 ```
 
 - `enabled` (default `false`): turn the cleanup pass on.
-- `endpoint` / `model` / `apiKeyEnv` / `keychainService` / `keychainAccount`: same secret handling as STT providers; HTTPS required unless the endpoint is localhost.
+- `endpoint` / `model` / `apiKeyEnv` / `keychainService` / `keychainAccount`: same secret handling as STT providers; HTTPS required unless the endpoint is loopback. `apiKeyEnv` defaults to `OPENAI_API_KEY` only while `endpoint` stays on OpenAI's own domain; point cleanup at another host (Groq, Mistral, a gateway) and it must name its own credential — or `apiKeyEnv: ""` for a host that takes no key — so the OpenAI key is never sent to a third party. A localhost cleanup endpoint still needs no key at all.
 - `language` (default `"auto"`): `"auto"` keeps the spoken language; set e.g. `"fr"` to normalize the output.
 - `prompt`: override the base system prompt.
 - `projectTerms`: glossary of terms the model should spell correctly (e.g. `"super base"` → `Supabase`).
@@ -248,10 +248,13 @@ You can also use `model: "whisper-1"` or any OpenAI transcription model supporte
     "endpoint": "https://api.openai.com/v1/audio/transcriptions",
     "model": "whisper-1",
     "apiKeyEnv": "OPENAI_API_KEY",
+    "responseFormat": "json",
     "language": "en"
   }
 }
 ```
+
+`responseFormat` (default `"json"`) accepts `"json"` or `"verbose_json"`; any other value is rejected at load time rather than ignored, because the transcript is read from the JSON `text` field.
 
 ### Deepgram
 
@@ -323,7 +326,11 @@ You can also use `model: "whisper-1"` or any OpenAI transcription model supporte
 }
 ```
 
-Plain HTTP is accepted only for `localhost`, `127.0.0.1`, or `::1`.
+Plain HTTP is accepted only for loopback: `localhost` (trailing dot included), any `127.0.0.0/8` address, `::1` in any spelling, or IPv4-mapped loopback such as `::ffff:127.0.0.1`. A host that only looks local, such as `localhost.evil.com` or `127.0.0.1.evil.com`, is not loopback and still needs HTTPS.
+
+Named vendor providers (`openai`, `groq`, `mistral`/`voxtral`, `deepgram`, `elevenlabs`/`scribe`, `gladia`, `assemblyai`) inject that vendor's API key, so their `endpoint` must stay on the vendor's own domain. Use `openai-compatible` (or `local`) for any other host, which is the supported way to point at a gateway, proxy or self-hosted server. If you must keep a vendor protocol while routing through your own host, list that host in `PI_STT_ALLOWED_ENDPOINT_HOSTS` (comma-separated exact hostnames, no wildcards, empty by default). A host listed there counts as that vendor everywhere, including for the `OPENAI_API_KEY` default, so list only hosts you run yourself — it still has to be HTTPS.
+
+`openai-compatible` accepts any HTTPS host by design, but the `OPENAI_API_KEY` default only follows it while `endpoint` stays on OpenAI's own domain. For any other host, name the credential that host may receive — `apiKeyEnv`, `apiKeyFile`, `keychainService`, or `apiKeyEnv: ""` for a server that takes no key — otherwise the config is rejected instead of shipping the OpenAI key along with the audio. `local` defaults to no key at all, and a loopback endpoint never needs one. Because `local` names a server on this machine, pointing its `endpoint` off loopback is refused until the config says so on purpose — name the credential that host receives, or set `apiKeyEnv: ""` to keep sending it audio with none. `openai-compatible` is the type for a remote OpenAI-compatible server.
 
 ### Mac microphone bridge for VPS usage
 
@@ -368,6 +375,8 @@ scp ~/.config/pi-voice-stt-bridge/token my-vps:~/.pi/agent/pi-voice-stt-bridge.t
 
 Run `/stt doctor` in Pi to verify the bridge health. The daemon only accesses the microphone when Pi calls `/start` after `Ctrl+R`; `/stop` returns the WAV to the VPS for transcription by your configured provider. On macOS the installer prefers a tiny native background app (`Pi Voice STT Bridge.app`) so microphone permission works without keeping a terminal open — the first `/start` may trigger a permission prompt.
 
+The daemon refuses to start without a bearer token (`PI_STT_BRIDGE_TOKEN` or `PI_STT_BRIDGE_TOKEN_FILE`, both written by the installer) and every request, `/health` included, must present it: otherwise any local process could switch the microphone on. `PI_STT_BRIDGE_HOST` still chooses the bind address, but a non-loopback address additionally requires `PI_STT_BRIDGE_ALLOW_REMOTE=1` — the supported route to a remote Pi is the SSH tunnel above.
+
 ## Audio capture notes
 
 With `capture.type: "ffmpeg"`, the extension records through `ffmpeg`. Platform defaults are:
@@ -377,6 +386,8 @@ With `capture.type: "ffmpeg"`, the extension records through `ffmpeg`. Platform 
 | macOS | `avfoundation` | `:0` |
 | Linux | `pulse` | `default` |
 | Windows | `dshow` | `audio=Microphone` |
+
+`capture.maxSeconds` (default `120`) is passed to the recorder itself (`ffmpeg -t`, or the bridge daemon's own limit), so capture always stops at the cap even if the session is busy; the extension then transcribes what was recorded.
 
 On macOS, list devices with:
 
@@ -417,8 +428,8 @@ The voice state is displayed inside the input area, right-aligned on the prompt 
 | `Ctrl+R` while recording | Stop, transcribe, insert transcript into the prompt (or send it directly when `output.submitOnStop` is `true`) |
 | `Enter` while recording | Stop, transcribe, insert transcript, send prompt to chat |
 | `Esc` while recording/processing | Cancel recording or transcription |
-| `/stt status` | Show current mode and config source |
-| `/stt doctor` | Check config, provider readiness, and local `ffmpeg` or bridge health |
+| `/stt status` | Show current mode and config source, plus a config file that cannot be parsed; reads nothing else, so no key or `ffmpeg` lookup happens |
+| `/stt doctor` | Check config, provider readiness, and local `ffmpeg` or bridge health; prints the resolved `ffmpeg` binary path, or the reason it could not be resolved |
 | `/stt start` | Start recording |
 | `/stt stop` | Stop and insert transcript |
 | `/stt send` | Stop and send to chat |
@@ -438,6 +449,8 @@ export ELEVENLABS_API_KEY=...
 export GLADIA_API_KEY=...
 export ASSEMBLYAI_API_KEY=...
 ```
+
+Whatever the source (`apiKey`, `apiKeyEnv`, `apiKeyFile`, Keychain), the resolved value must still look like a credential: a single line, no whitespace, at most 4096 characters. A variable or file holding something else (a private key, a whole dotenv dump) is refused with an explicit error instead of being sent as a `Bearer` token.
 
 You can also point at a file containing either the raw key or an env-style line such as `export MISTRAL_API_KEY=...`:
 

@@ -15,6 +15,7 @@
 import { getLanguageFromPath, getMarkdownTheme, renderDiff, } from "@earendil-works/pi-coding-agent";
 import { Markdown, parseKey, truncateToWidth, visibleWidth, wrapTextWithAnsi } from "@earendil-works/pi-tui";
 import { aggregateAgentUsage, fmtCost, fmtTokenSegment, tokenFigures } from "./display.js";
+import { runScriptOrigin } from "./run-persistence.js";
 import { registerSavedWorkflow } from "./saved-commands.js";
 const STATUS_ICON = {
     pending: "·",
@@ -1481,13 +1482,32 @@ export function openWorkflowNavigator(pi, manager, ui, opts = {}) {
                             ui.notify(id ? `Cannot restart ${id} (no script saved)` : "No run selected to restart", "warning");
                             break;
                         }
-                        try {
-                            const { runId: newId } = manager.startInBackground(run.script, run.args);
-                            ui.notify(`Restarted ${run.workflowName || "workflow"} as ${newId}`, "info");
+                        const restart = () => {
+                            try {
+                                const { runId: newId } = manager.startInBackground(run.script, run.args);
+                                ui.notify(`Restarted ${run.workflowName || "workflow"} as ${newId}`, "info");
+                            }
+                            catch (error) {
+                                ui.notify(`Failed to restart ${run.workflowName || "workflow"}: ${error instanceof Error ? error.message : error}`, "error");
+                            }
+                        };
+                        // The listing includes runs read from the project's own run store,
+                        // which arrive with whatever repository is checked out. Restarting
+                        // one executes its script, so name the file first — the same gate
+                        // resume() applies (see WorkflowManagerOptions.confirmForeignRun).
+                        if (run.sourceStore === "legacy" || run.foreignSource) {
+                            const path = run.sourcePath ?? run.foreignSource ?? "a run file inside this project";
+                            void (async () => {
+                                const confirmed = await ui.confirm("Project-supplied workflow", `Restart ${run.workflowName || "workflow"}?\n\nIts script comes from:\n${path}\n\n` +
+                                    "It will run subagents with your tools and permissions. Only continue if you trust this repository.");
+                                if (confirmed)
+                                    restart();
+                                else
+                                    ui.notify(`${run.runId} was not restarted.`, "info");
+                            })();
+                            break;
                         }
-                        catch (error) {
-                            ui.notify(`Failed to restart ${run.workflowName || "workflow"}: ${error instanceof Error ? error.message : error}`, "error");
-                        }
+                        restart();
                         break;
                     }
                     case "save": {
@@ -1502,21 +1522,44 @@ export function openWorkflowNavigator(pi, manager, ui, opts = {}) {
                         else {
                             const storage = opts.storage;
                             const name = run.workflowName || "workflow";
-                            let saved;
-                            try {
-                                saved = storage.save({
-                                    name,
-                                    description: run.workflowName,
-                                    script: run.script,
-                                    location: "project",
-                                });
-                            }
-                            catch (error) {
-                                ui.notify(error instanceof Error ? error.message : String(error), "error");
+                            const scriptOrigin = runScriptOrigin(run);
+                            const persist = () => {
+                                let saved;
+                                try {
+                                    saved = storage.save({
+                                        name,
+                                        description: run.workflowName,
+                                        script: run.script,
+                                        location: "project",
+                                        scriptOrigin,
+                                    });
+                                }
+                                catch (error) {
+                                    ui.notify(error instanceof Error ? error.message : String(error), "error");
+                                    return;
+                                }
+                                registerSavedWorkflow(pi, opts.cwd ?? process.cwd(), saved, undefined, () => storage.list().some((w) => w.name === saved.name));
+                                ui.notify(scriptOrigin ? `Saved /${name} (script came from ${scriptOrigin}, recorded)` : `Saved /${name}`, "info");
+                            };
+                            // The listing includes runs read from the project's own run
+                            // store. Saving one copies its script into the user's own
+                            // storage as a `/<name>` command, so name the origin first —
+                            // and keep it on the saved record either way, so running it
+                            // asks again (see SavedWorkflow.scriptOrigin).
+                            if (scriptOrigin) {
+                                void (async () => {
+                                    const confirmed = await ui.confirm("Project-supplied workflow", `Save ${run.workflowName || "this run"}'s script as /${name}?\n\nIts script comes from:\n${scriptOrigin}\n\n` +
+                                        "Saving keeps that origin on record, so running it will ask again. " +
+                                        "Only continue if you trust this repository.");
+                                    if (confirmed)
+                                        persist();
+                                    else
+                                        ui.notify(`/${name} was not saved.`, "info");
+                                    rerender();
+                                })();
                                 break;
                             }
-                            registerSavedWorkflow(pi, opts.cwd ?? process.cwd(), saved, undefined, () => storage.list().some((w) => w.name === saved.name));
-                            ui.notify(`Saved /${name}`, "info");
+                            persist();
                         }
                         break;
                     }

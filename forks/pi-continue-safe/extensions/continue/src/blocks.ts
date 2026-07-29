@@ -1,6 +1,7 @@
 import type { HistoryArtifactParseResult, ParsedHistoryArtifacts } from "./types.ts";
 
 const HISTORY_ARTIFACT_VERSION = "pi-continue-artifacts/v4";
+const MAX_ENTRY_FIELD_LENGTH = 4000;
 
 const ESTABLISHED_BASIS = new Set<string>([
 	"observed",
@@ -64,11 +65,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function hasExactKeys(value: Record<string, unknown>, expectedKeys: readonly string[]): boolean {
-	const keys = Object.keys(value);
-	if (keys.length !== expectedKeys.length) return false;
-	const expected = new Set<string>(expectedKeys);
-	return keys.every((key) => expected.has(key));
+// Every field the package renders must be present, but a synthesizer that adds its own
+// extra keys still produces a usable artifact, so unknown keys are ignored.
+function hasRequiredKeys(value: Record<string, unknown>, expectedKeys: readonly string[]): boolean {
+	return expectedKeys.every((key) => key in value);
 }
 
 function nonEmptyString(value: unknown): string | undefined {
@@ -84,6 +84,8 @@ function nullableString(value: unknown): string | undefined {
 // Collapse any newlines and embedded markdown bullet markers in a per-entry field
 // to a single space, so the rendered brief stays one-bullet-per-entry and the next
 // synthesizer cannot re-atomize sub-lines the synthesizer accidentally embedded.
+// One entry field is a single bullet, so it is clipped rather than allowed to carry a
+// document-sized string into every later prompt and overlay render.
 function singleLineString(value: unknown): string | undefined {
 	if (typeof value !== "string") return undefined;
 	const collapsed = value
@@ -93,11 +95,12 @@ function singleLineString(value: unknown): string | undefined {
 		.join(" ")
 		.replace(/\s+/g, " ")
 		.trim();
-	return collapsed.length > 0 ? collapsed : undefined;
+	if (collapsed.length === 0) return undefined;
+	return collapsed.length <= MAX_ENTRY_FIELD_LENGTH ? collapsed : `${collapsed.slice(0, MAX_ENTRY_FIELD_LENGTH - 3)}...`;
 }
 
 function parseForbidEntry(value: unknown): ForbidEntry | undefined {
-	if (!isRecord(value) || !hasExactKeys(value, FORBID_KEYS)) return undefined;
+	if (!isRecord(value) || !hasRequiredKeys(value, FORBID_KEYS)) return undefined;
 	const rule = singleLineString(value.rule);
 	const source = singleLineString(value.source);
 	if (!rule || !source) return undefined;
@@ -105,7 +108,7 @@ function parseForbidEntry(value: unknown): ForbidEntry | undefined {
 }
 
 function parseEstablishedEntry(value: unknown): EstablishedEntry | undefined {
-	if (!isRecord(value) || !hasExactKeys(value, ESTABLISHED_KEYS)) return undefined;
+	if (!isRecord(value) || !hasRequiredKeys(value, ESTABLISHED_KEYS)) return undefined;
 	const claim = singleLineString(value.claim);
 	const evidence = singleLineString(value.evidence);
 	const basis = singleLineString(value.basis);
@@ -116,7 +119,7 @@ function parseEstablishedEntry(value: unknown): EstablishedEntry | undefined {
 }
 
 function parseLearnedEntry(value: unknown): LearnedEntry | undefined {
-	if (!isRecord(value) || !hasExactKeys(value, LEARNED_KEYS)) return undefined;
+	if (!isRecord(value) || !hasRequiredKeys(value, LEARNED_KEYS)) return undefined;
 	const lesson = singleLineString(value.lesson);
 	const source = singleLineString(value.source);
 	if (!lesson || !source) return undefined;
@@ -124,7 +127,7 @@ function parseLearnedEntry(value: unknown): LearnedEntry | undefined {
 }
 
 function parseOpenEntry(value: unknown): OpenEntry | undefined {
-	if (!isRecord(value) || !hasExactKeys(value, OPEN_KEYS)) return undefined;
+	if (!isRecord(value) || !hasRequiredKeys(value, OPEN_KEYS)) return undefined;
 	const question = singleLineString(value.question);
 	const verifies = singleLineString(value.verifies);
 	if (!question || !verifies) return undefined;
@@ -132,7 +135,7 @@ function parseOpenEntry(value: unknown): OpenEntry | undefined {
 }
 
 function parseNextEntry(value: unknown): NextEntry | undefined {
-	if (!isRecord(value) || !hasExactKeys(value, NEXT_KEYS)) return undefined;
+	if (!isRecord(value) || !hasRequiredKeys(value, NEXT_KEYS)) return undefined;
 	const action = singleLineString(value.action);
 	const outcome = singleLineString(value.outcome);
 	if (!action || !outcome) return undefined;
@@ -151,7 +154,7 @@ function parseEntryArray<T>(value: unknown, parseEntry: (entry: unknown) => T | 
 }
 
 function parseBriefEnvelope(value: unknown): BriefEnvelope | undefined {
-	if (!isRecord(value) || !hasExactKeys(value, BRIEF_KEYS)) return undefined;
+	if (!isRecord(value) || !hasRequiredKeys(value, BRIEF_KEYS)) return undefined;
 	const task = singleLineString(value.task);
 	const done_when = singleLineString(value.done_when);
 	if (!task || !done_when) return undefined;
@@ -210,9 +213,16 @@ export function extractTaggedBlock(text: string, tag: string): string | undefine
 	return content && content.length > 0 ? content : undefined;
 }
 
+// Providers routinely wrap JSON responses in a markdown fence even when asked not to;
+// unwrap a single fence so a formatting habit cannot cost the whole handoff.
+function stripJsonCodeFence(text: string): string {
+	const fenced = text.match(/^```[^\n]*\n([\s\S]*?)\n?```$/);
+	return fenced?.[1]?.trim() ?? text;
+}
+
 /** Parse the strict provider-portable JSON history artifact response. */
 export function parseHistoryArtifacts(text: string): HistoryArtifactParseResult {
-	const trimmed = text.trim();
+	const trimmed = stripJsonCodeFence(text.trim());
 	if (trimmed.length === 0) return { ok: false, code: "artifact-empty" };
 	let parsed: unknown;
 	try {
@@ -221,11 +231,11 @@ export function parseHistoryArtifacts(text: string): HistoryArtifactParseResult 
 		if (error instanceof SyntaxError) return { ok: false, code: "artifact-invalid-json" };
 		throw error;
 	}
-	if (!isRecord(parsed) || !hasExactKeys(parsed, HISTORY_ARTIFACT_KEYS)) return { ok: false, code: "artifact-invalid-shape" };
+	if (!isRecord(parsed) || !hasRequiredKeys(parsed, HISTORY_ARTIFACT_KEYS)) return { ok: false, code: "artifact-invalid-shape" };
 	if (parsed.version !== HISTORY_ARTIFACT_VERSION) return { ok: false, code: "artifact-invalid-shape" };
 	const brief = parseBriefEnvelope(parsed.brief);
 	if (!brief) return { ok: false, code: "artifact-invalid-shape" };
-	if (!isRecord(parsed.agentGuideUpdate) || !hasExactKeys(parsed.agentGuideUpdate, AGENT_GUIDE_UPDATE_KEYS)) return { ok: false, code: "artifact-invalid-shape" };
+	if (!isRecord(parsed.agentGuideUpdate) || !hasRequiredKeys(parsed.agentGuideUpdate, AGENT_GUIDE_UPDATE_KEYS)) return { ok: false, code: "artifact-invalid-shape" };
 	const rawContent = parsed.agentGuideUpdate.content;
 	if (rawContent !== null && nonEmptyString(rawContent) === undefined) return { ok: false, code: "artifact-invalid-shape" };
 	const agentGuideMd = rawContent === null ? undefined : nullableString(rawContent);

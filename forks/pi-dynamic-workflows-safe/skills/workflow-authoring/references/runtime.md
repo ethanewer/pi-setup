@@ -22,6 +22,6 @@ When JavaScript reads fields, pass a small plain JSON Schema. Schema noncomplian
 
 ## Routing and support
 
-Selector priority is explicit `model` > `agentType` model > `tier` > phase model > metadata model > implicit `medium` > session default. An unavailable selected route falls directly to the session default. Use exact `model`, nonstandard `tier`, or `agentType` only when context supplies its name and purpose. Worktree isolation is best-effort. See [registry ownership](registry-ownership.md).
+Selector priority is explicit `model` > `agentType` model > `tier` > phase model > metadata model > implicit `medium` > session default. An unavailable selected route falls directly to the session default. Use exact `model`, nonstandard `tier`, or `agentType` only when context supplies its name and purpose. Worktree isolation must succeed when requested: an agent that cannot get a worktree fails rather than running in the shared tree. See [registry ownership](registry-ownership.md).
 
 Generated entries marked `supported` are authoring API. `console` and whole-script Markdown fences are compatibility-only. VM realm facilities are internal. Active model routes and agent types are dynamic. Use `log()` in new scripts.

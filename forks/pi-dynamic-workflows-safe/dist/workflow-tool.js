@@ -2,6 +2,7 @@ import { defineTool } from "@earendil-works/pi-coding-agent";
 import { Text } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 import { BUILTIN_WORKFLOW_NAMES, resolveWorkflowInvocation } from "./builtin-workflows.js";
+import { DEFAULT_AGENT_TIMEOUT_MS, DEFAULT_MAX_AGENTS_PER_RUN, MAX_AGENTS_PER_RUN } from "./config.js";
 import { createToolUpdateWorkflowDisplay, createWorkflowSnapshot, fmtCost, fmtFull, fmtTokenSegment, recomputeWorkflowSnapshot, renderWorkflowText, tokenFigures, } from "./display.js";
 import { WorkflowError, WorkflowErrorCode } from "./errors.js";
 import { parseWorkflowScript } from "./workflow.js";
@@ -52,7 +53,9 @@ const workflowToolSchema = Type.Object({
         description: "Run the workflow in the background. Default: true — the tool returns immediately with a run ID, the turn ends so the user isn't blocked, and the result is delivered back into the conversation when it finishes. Set to false only when you need the result inline in this same turn (the call will block until the workflow completes).",
     })),
     maxAgents: Type.Optional(Type.Number({
-        description: "Maximum number of agents allowed in this run. Default: 1000; this is a safety ceiling, not a target. Set a lower limit for dynamic or exploratory fan-out, and reserve large fan-outs for explicit user intent.",
+        description: `Maximum number of agents allowed in this run. Default: ${DEFAULT_MAX_AGENTS_PER_RUN}, clamped to a hard ceiling of ` +
+            `${MAX_AGENTS_PER_RUN}; this is a safety ceiling, not a target. Set a lower limit for dynamic or exploratory fan-out, ` +
+            "and reserve large fan-outs for explicit user intent.",
     })),
     concurrency: Type.Optional(Type.Number({
         description: "Maximum concurrent agents for this run. Clamped to the runtime maximum. Use when provider/transport stability matters.",
@@ -61,7 +64,7 @@ const workflowToolSchema = Type.Object({
         description: "Retry attempts for recoverable agent failures such as timeout, connection failure, or empty assistant output. Default 0 unless configured.",
     })),
     agentTimeoutMs: Type.Optional(Type.Number({
-        description: "Timeout per agent in milliseconds. Omit to use configured `defaultAgentTimeoutMs`; without one, there is no hard timeout. Set only when the user asks to bound time.",
+        description: "Timeout per agent in milliseconds. Omit to use configured `defaultAgentTimeoutMs`; without one, a default per-agent timeout applies. Set only when the user asks to bound time.",
     })),
     tokenBudget: Type.Optional(Type.Number({
         description: "Opt-in soft spend gate, not a planning target. Never invent or infer `tokenBudget`; set it only when the user supplies or requests a cap. Omit for configured `defaultTokenBudget`; without one, unlimited. Exhaustion blocks later calls; in-flight work can overshoot.",
@@ -273,7 +276,9 @@ function resolveWorkflowToolDefaults(options, cwd) {
     return {
         agentTimeoutMs: options.defaultAgentTimeoutMs !== undefined
             ? options.defaultAgentTimeoutMs
-            : (settings.defaultAgentTimeoutMs ?? null),
+            : settings.defaultAgentTimeoutMs !== undefined
+                ? settings.defaultAgentTimeoutMs
+                : DEFAULT_AGENT_TIMEOUT_MS,
         concurrency: options.defaultConcurrency ?? options.concurrency ?? settings.defaultConcurrency,
         agentRetries: options.defaultAgentRetries ?? settings.defaultAgentRetries ?? 0,
     };

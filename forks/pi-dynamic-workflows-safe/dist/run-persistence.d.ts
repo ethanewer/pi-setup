@@ -96,7 +96,7 @@ export interface PersistedRunState {
     toolset?: string;
     /**
      * The run's resolved cap on total agents, fixed at start (per-run value,
-     * else undefined so runWorkflow applies its own MAX_AGENTS_PER_RUN default).
+     * else undefined so runWorkflow applies its own DEFAULT_MAX_AGENTS_PER_RUN).
      * Resume re-applies THIS value — never the manager's current default — same
      * rationale as tokenBudget. Absent on legacy runs (resumed with no cap
      * carried forward, i.e. runWorkflow's own default applies).
@@ -128,10 +128,40 @@ export interface PersistedRunState {
      * auto-resume attempt has been recorded yet.
      */
     autoResumeAttempts?: number;
+    /**
+     * The install that wrote this record (workflowInstallId()). Absent on records
+     * written before provenance existed and on records this install never wrote —
+     * a run store that arrived with a cloned repository, say. Only a record whose
+     * provenance matches this install is ever resumed without a human saying so.
+     */
+    installId?: string;
+    /**
+     * Absolute path this record was read from, and which store that path belongs
+     * to. Both are assigned by the reader on every load()/list(); they are never
+     * read from the file (a file claiming "global" while sitting in a project
+     * directory must not be believed) and never written to it.
+     */
+    sourcePath?: string;
+    sourceStore?: "global" | "legacy";
+    /**
+     * Set when a record first read from a project-local run store is written into
+     * the global store (status reconciliation, stop, attempt counters): the
+     * script still came from the project directory, so it stays gated on explicit
+     * confirmation regardless of where the file now lives.
+     */
+    foreignSource?: string;
 }
 export interface RunPersistence {
-    /** Save current run state. */
-    save(state: PersistedRunState): void;
+    /**
+     * Save current run state. `updatedAt` is restamped to now, since every write
+     * normally reports progress — except with `preserveUpdatedAt`, for a write
+     * that changes bookkeeping only (stamping provenance on a pre-existing
+     * record) and must not move the run in the recency ordering the listing and
+     * the retention cap both use.
+     */
+    save(state: PersistedRunState, options?: {
+        preserveUpdatedAt?: boolean;
+    }): void;
     /** Load a persisted run by ID. */
     load(runId: string): PersistedRunState | null;
     /** List all persisted runs. */
@@ -169,10 +199,69 @@ export type FsLayer = PersistenceFsLayer;
  * per-call directory scan bounded.
  */
 export declare const DEFAULT_MAX_TERMINAL_RUNS_ON_DISK = 300;
+/**
+ * How long a run lock written by ANOTHER host may go unrefreshed before it is
+ * treated as dead and reclaimed. Nothing here can inspect a foreign process, so
+ * time is the only bound available — and a bound there must be: without one, a
+ * lock left behind by a machine that has since been renamed, or by a peer
+ * sharing a synced run store, would hold the run forever and no resume, auto-
+ * resume or startup reconciliation could ever touch it again. The holder
+ * refreshes its heartbeat on every persist (see LOCK_HEARTBEAT_INTERVAL_MS), so
+ * a window this wide is only reached by a run that stopped reporting progress
+ * entirely.
+ */
+export declare const DEFAULT_FOREIGN_LOCK_STALE_MS: number;
 export interface RunPersistenceOptions {
     /** Override DEFAULT_MAX_TERMINAL_RUNS_ON_DISK (tests; advanced tuning). */
     maxTerminalRunsOnDisk?: number;
+    /**
+     * Override DEFAULT_FOREIGN_LOCK_STALE_MS (tests; shared/synced run stores).
+     * Clamped to at least MIN_FOREIGN_LOCK_STALE_MS.
+     */
+    foreignLockStaleMs?: number;
 }
+/** Whether `runId` is safe to turn into a path inside a run store. */
+export declare function isSafeRunId(runId: unknown): runId is string;
+/**
+ * Project a parsed run file onto PersistedRunState, field by field.
+ *
+ * Run records are read from the global store AND from a project-local store
+ * (`<cwd>/.pi/workflows/runs`, see WorkflowProjectPaths.legacyRunsDir), and a
+ * project-local store is part of whatever repository happens to be checked
+ * out. Since a record's `script` is what resume() executes, a run file is
+ * untrusted input, not this module's own output: unknown fields are dropped,
+ * a known field of the wrong type rejects the whole record, and provenance
+ * (`sourcePath`/`sourceStore`) is assigned by the caller, never believed from
+ * the file. Returns the reason on rejection so the caller can say so loudly.
+ */
+export declare function validatePersistedRunState(value: unknown): {
+    state: PersistedRunState;
+} | {
+    reason: string;
+};
+/**
+ * Whether this install wrote this record and it lives in the global run store.
+ * Both halves matter: the store location is unforgeable (nothing outside this
+ * process writes there) and the install id is unguessable, so a run file that
+ * travelled in with a repository satisfies neither.
+ */
+export declare function isInstallOwnedRun(run: PersistedRunState, installId: string): boolean;
+/**
+ * Where a run's script came from when it is not this install's own work: the
+ * project-local file it was read from, or the marker a relocated record carries
+ * (see PersistedRunState.foreignSource). undefined means the script was written
+ * by this install into its own store. Callers that copy a run's script somewhere
+ * more durable — `/workflows save`, the navigator's save action — carry this
+ * with it so a repo-supplied script does not become trusted by being saved.
+ */
+export declare function runScriptOrigin(run: PersistedRunState): string | undefined;
+/**
+ * Whether a persisted run may be resumed with no human in the loop (see
+ * UsageLimitScheduler). Auto-resume executes `script`, so it is restricted to
+ * runs this install created; anything else stays listable, inspectable, and
+ * resumable by explicit user action.
+ */
+export declare function isAutoResumeEligibleRun(run: PersistedRunState, installId: string): boolean;
 export declare function createRunPersistence(cwd: string, fsOverride?: Partial<FsLayer>, options?: RunPersistenceOptions): RunPersistence;
 /**
  * Generate a unique run ID.

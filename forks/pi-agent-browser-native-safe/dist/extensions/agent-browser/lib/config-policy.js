@@ -31,6 +31,7 @@ export const EXA_API_KEY_ENV = "EXA_API_KEY";
 export const CONFIG_RELATIVE_PATH = /** @type {const} */ ([CONFIG_DIR_NAME, "config", "pi-agent-browser-native", "config.json"]);
 export const GLOBAL_CONFIG_RELATIVE_PATH = /** @type {const} */ ([CONFIG_DIR_NAME, "config", "pi-agent-browser-native", "config.json"]);
 export const SECRET_COMMAND_TIMEOUT_MS = 15_000;
+export const PROJECT_CREDENTIAL_COMMANDS_ENV = "PI_AGENT_BROWSER_ALLOW_PROJECT_CREDENTIAL_COMMANDS";
 /** @type {Readonly<Record<WebSearchProvider, WebSearchProviderDescriptor>>} */
 export const WEB_SEARCH_PROVIDER_DESCRIPTORS = Object.freeze({
     exa: Object.freeze({
@@ -219,12 +220,47 @@ export function isPlaintextCredentialValue(rawValue) {
     return Boolean(trimmed) && !trimmed.startsWith("!") && !trimmed.startsWith("$");
 }
 /**
+ * Project-scope credentials may only name an environment variable: a repo-authored `!command` value would be
+ * executed on the host, and a repo-authored plaintext value is not a secret the user chose to share.
  * @param {string} rawValue
  * @param {WebSearchProvider} provider
  */
 export function isProjectSafeCredentialValueForProvider(rawValue, provider) {
     void provider;
-    return rawValue.trim().length > 0;
+    const trimmed = rawValue.trim();
+    if (trimmed.length === 0)
+        return false;
+    return !trimmed.startsWith("!") && hasEnvInterpolationReference(trimmed);
+}
+/**
+ * True only when the value actually names an environment variable, so an escaped `$$` or a trailing `$` inside an
+ * otherwise plaintext key is not mistaken for interpolation.
+ * @param {string} rawValue
+ */
+function hasEnvInterpolationReference(rawValue) {
+    for (let index = 0; index < rawValue.length; index += 1) {
+        if (rawValue[index] !== "$")
+            continue;
+        const next = rawValue[index + 1];
+        if (next === "$" || next === "!") {
+            index += 1;
+            continue;
+        }
+        if (next === "{") {
+            const end = rawValue.indexOf("}", index + 2);
+            if (end !== -1 && /^[A-Za-z_][A-Za-z0-9_]*$/.test(rawValue.slice(index + 2, end)))
+                return true;
+            continue;
+        }
+        if (next !== undefined && /^[A-Za-z_]/.test(next))
+            return true;
+    }
+    return false;
+}
+/** @param {NodeJS.ProcessEnv} [env] */
+export function isProjectCredentialCommandAllowed(env = process.env) {
+    const value = env[PROJECT_CREDENTIAL_COMMANDS_ENV]?.trim().toLowerCase();
+    return value === "1" || value === "true" || value === "yes";
 }
 /**
  * @param {unknown} value
@@ -366,13 +402,22 @@ function getBrowserExecutablePathScope(layers) {
     return undefined;
 }
 /**
+ * The trusted projections drive always-on prompt guidance, so they only read user-owned layers; project-scope
+ * browser targets stay in the plain `browser*` projections and reach the agent only through the trusted
+ * project-config path in the extension entrypoint.
+ * @param {ConfigLayer} layer
+ */
+function isTrustedConfigLayer(layer) {
+    return layer.scope !== "project";
+}
+/**
  * @param {ConfigLayer[]} layers
  * @returns {{ profile: Required<BrowserDefaultProfileConfig>; scope: ConfigLayerScope } | undefined}
  */
 function getTrustedBrowserDefaultProfile(layers) {
     for (let index = layers.length - 1; index >= 0; index -= 1) {
         const layer = layers[index];
-        if (!layer)
+        if (!layer || !isTrustedConfigLayer(layer))
             continue;
         const profile = getBrowserDefaultProfile(layer.config);
         if (profile)
@@ -387,7 +432,7 @@ function getTrustedBrowserDefaultProfile(layers) {
 function getTrustedBrowserExecutablePath(layers) {
     for (let index = layers.length - 1; index >= 0; index -= 1) {
         const layer = layers[index];
-        if (!layer)
+        if (!layer || !isTrustedConfigLayer(layer))
             continue;
         const executablePath = getBrowserExecutablePath(layer.config);
         if (executablePath)
@@ -409,7 +454,7 @@ function getWebSearchCredentialScope(layers, key) {
     return "global";
 }
 /**
- * @param {{ env: NodeJS.ProcessEnv; layers: ConfigLayer[]; mergedConfig: AgentBrowserConfig }} options
+ * @param {{ env: NodeJS.ProcessEnv; layers: ConfigLayer[]; mergedConfig: AgentBrowserConfig; warnings?: string[] }} options
  * @returns {Partial<Record<WebSearchProvider, CredentialSource>>}
  */
 export function buildWebSearchCredentialSources(options) {
@@ -419,7 +464,15 @@ export function buildWebSearchCredentialSources(options) {
         const descriptor = getWebSearchProviderDescriptor(provider);
         const apiKey = options.mergedConfig.webSearch?.[descriptor.configKey];
         if (apiKey !== undefined) {
-            sources[provider] = classifyCredentialSource(apiKey, getWebSearchCredentialScope(options.layers, descriptor.configKey), provider);
+            const scope = getWebSearchCredentialScope(options.layers, descriptor.configKey);
+            if (scope !== "project"
+                || isProjectSafeCredentialValueForProvider(apiKey, provider)
+                || isProjectCredentialCommandAllowed(options.env)) {
+                sources[provider] = classifyCredentialSource(apiKey, scope, provider);
+            }
+            else {
+                options.warnings?.push(`webSearch.${descriptor.configKey} from project config was ignored: project-scope credentials must interpolate an environment variable such as $${descriptor.apiKeyEnv}. Move command or plaintext credentials to the global config, or set ${PROJECT_CREDENTIAL_COMMANDS_ENV}=1 to opt in to project-scope credential commands.`);
+            }
         }
         if (!sources[provider] && options.env[descriptor.apiKeyEnv]?.trim()) {
             sources[provider] = { kind: "literal", provider, rawValue: options.env[descriptor.apiKeyEnv] ?? "", scope: "env-fallback" };

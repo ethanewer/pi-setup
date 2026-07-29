@@ -10,6 +10,21 @@ export type VoiceCommandResult = {
 const TRAILING_PUNCTUATION = /[\s.!?,;:]+$/u;
 
 /**
+ * Offset in `text` that corresponds to an offset in `text.toLowerCase()`.
+ * Case folding can change length (e.g. "İ" lowercases to two code units), so
+ * the original offset is walked instead of derived from the phrase length.
+ */
+const originalOffsetFor = (text: string, loweredOffset: number): number => {
+  let lowered = 0;
+  let index = 0;
+  while (index < text.length && lowered < loweredOffset) {
+    lowered += (text[index] ?? "").toLowerCase().length;
+    index += 1;
+  }
+  return index;
+};
+
+/**
  * Detect a trailing voice command keyword in a transcript. Matching is
  * case-insensitive, ignores trailing punctuation (whisper often adds a period)
  * and requires a word boundary before the phrase. Returns the matched command
@@ -28,7 +43,7 @@ export const parseVoiceCommand = (text: string, config: VoiceCommandsConfig): Vo
       const lowerPhrase = phrase.toLowerCase();
       if (lower === lowerPhrase) return { command, text: "" };
       if (lower.endsWith(lowerPhrase)) {
-        const start = stripped.length - phrase.length;
+        const start = originalOffsetFor(stripped, lower.length - lowerPhrase.length);
         const before = stripped[start - 1];
         if (before === undefined || /\s/u.test(before)) {
           return { command, text: stripped.slice(0, start).replace(TRAILING_PUNCTUATION, "") };
