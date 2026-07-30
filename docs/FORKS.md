@@ -79,8 +79,17 @@ lock is reclaimable after a staleness window rather than immediately.
 
 ## pi-agent-browser-native-safe
 
-Based on `pi-agent-browser-native@0.2.71`. Only `dist/` is shipped, so the fixes are in the
-compiled tree.
+Based on `pi-agent-browser-native@0.2.72`, which rebaselines the wrapper to
+`agent-browser 0.33.0` (so `install.sh` pins that). Only `dist/` is shipped, so the fixes
+are in the compiled tree.
+
+Re-vendored onto 0.2.72 on 2026-07-30. One conflict, in `package.json` (the version bump
+against this fork's `private: true`), resolved by hand; every other hunk applied cleanly.
+Upstream's code delta was additive — `--content` and `--tags` became value-taking flags —
+and was re-reviewed against the hardening: the write-path guards, the project-scope
+credential rule, the privileged-flag gate and the upstream-config pin were all re-verified
+functionally after the merge, including that the two new flags are not mistaken for write
+paths.
 
 **Closed.** `isProjectSafeCredentialValueForProvider` — a stub that returned `true` for any
 non-empty string — is implemented, so a project-scope credential can no longer be a

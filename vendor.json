@@ -10,10 +10,10 @@
     },
     "pi-agent-browser-native-safe": {
       "upstream": "pi-agent-browser-native",
-      "version": "0.2.71",
+      "version": "0.2.72",
       "live": "dist/extensions/agent-browser/index.js",
       "liveTree": "dist",
-      "patch": "patches/pi-agent-browser-native@0.2.71.patch"
+      "patch": "patches/pi-agent-browser-native@0.2.72.patch"
     },
     "pi-dynamic-workflows-safe": {
       "upstream": "@quintinshaw/pi-dynamic-workflows",
@@ -25,11 +25,11 @@
     },
     "pi-process-monitor-safe": {
       "upstream": "pi-process-monitor",
-      "version": "1.2.0",
+      "version": "1.3.0",
       "live": "extensions/monitor/index.ts",
       "liveTree": "extensions/monitor",
       "patch": null,
-      "note": "Hand-written rewrite rather than a patch of upstream, imported into this repository with its original commit history. Not re-vendorable with bin/pi-setup-vendor."
+      "note": "Hand-written rewrite rather than a patch of upstream, imported with its original commit history. Reviewed against upstream 1.3.0 on 2026-07-30: every applicable fix was already present independently (poll-tick overlap guard, idempotent stop, coalescer cancel on teardown, spawn-error cleanup, watcher removal from state). The rest of 1.3.0 is persisted watcher IDs and stop tombstones, which this fork intentionally omits - it has no persistence or restore. Not re-vendorable with bin/pi-setup-vendor."
     },
     "pi-context-handoff": {
       "upstream": null,

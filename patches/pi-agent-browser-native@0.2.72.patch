@@ -1,6 +1,6 @@
 diff -ruN --exclude=node_modules a/README.md b/README.md
 --- a/README.md	1985-10-26 03:15:00
-+++ b/README.md	2026-07-28 23:21:58
++++ b/README.md	2026-07-30 11:20:51
 @@ -105,6 +105,8 @@
  
  Keep both binaries on `PATH`. `record start` can begin without a file on disk, but `record stop` needs `ffmpeg` to encode the WebM.
@@ -30,7 +30,7 @@ diff -ruN --exclude=node_modules a/README.md b/README.md
  
 diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/index.js b/dist/extensions/agent-browser/index.js
 --- a/dist/extensions/agent-browser/index.js	1985-10-26 03:15:00
-+++ b/dist/extensions/agent-browser/index.js	2026-07-28 22:52:57
++++ b/dist/extensions/agent-browser/index.js	2026-07-30 11:20:51
 @@ -21,11 +21,12 @@
  import { closeManagedSession, getSessionContextKey, runAgentBrowserTool } from "./lib/orchestration/browser-run/index.js";
  import { findElectronLaunchRecordForSession, getActiveElectronRecords } from "./lib/orchestration/browser-run/session-state.js";
@@ -158,7 +158,7 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/index.js b/dist
      });
 diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/bash-guard.js b/dist/extensions/agent-browser/lib/bash-guard.js
 --- a/dist/extensions/agent-browser/lib/bash-guard.js	1985-10-26 03:15:00
-+++ b/dist/extensions/agent-browser/lib/bash-guard.js	2026-07-28 19:13:30
++++ b/dist/extensions/agent-browser/lib/bash-guard.js	2026-07-30 11:20:51
 @@ -1,9 +1,12 @@
 -import { readFile } from "node:fs/promises";
 -import { join } from "node:path";
@@ -251,7 +251,7 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/bash-guard.
      catch {
 diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/child-process-policy.js b/dist/extensions/agent-browser/lib/child-process-policy.js
 --- a/dist/extensions/agent-browser/lib/child-process-policy.js	1969-12-31 18:00:00
-+++ b/dist/extensions/agent-browser/lib/child-process-policy.js	2026-07-28 19:09:36
++++ b/dist/extensions/agent-browser/lib/child-process-policy.js	2026-07-30 11:20:51
 @@ -0,0 +1,138 @@
 +/**
 + * Purpose: Own which upstream `agent-browser` executable the wrapper spawns and which parent environment variables reach it.
@@ -393,7 +393,7 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/child-proce
 +}
 diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/config-policy.js b/dist/extensions/agent-browser/lib/config-policy.js
 --- a/dist/extensions/agent-browser/lib/config-policy.js	1985-10-26 03:15:00
-+++ b/dist/extensions/agent-browser/lib/config-policy.js	2026-07-28 19:42:55
++++ b/dist/extensions/agent-browser/lib/config-policy.js	2026-07-30 11:20:51
 @@ -31,6 +31,7 @@
  export const CONFIG_RELATIVE_PATH = /** @type {const} */ ([CONFIG_DIR_NAME, "config", "pi-agent-browser-native", "config.json"]);
  export const GLOBAL_CONFIG_RELATIVE_PATH = /** @type {const} */ ([CONFIG_DIR_NAME, "config", "pi-agent-browser-native", "config.json"]);
@@ -514,7 +514,7 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/config-poli
              sources[provider] = { kind: "literal", provider, rawValue: options.env[descriptor.apiKeyEnv] ?? "", scope: "env-fallback" };
 diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/config.js b/dist/extensions/agent-browser/lib/config.js
 --- a/dist/extensions/agent-browser/lib/config.js	1985-10-26 03:15:00
-+++ b/dist/extensions/agent-browser/lib/config.js	2026-07-28 23:21:31
++++ b/dist/extensions/agent-browser/lib/config.js	2026-07-30 11:20:51
 @@ -4,12 +4,132 @@
   * Scope: Package-owned configuration only; canonical config policy lives in config-policy.js, browser command execution and web-search API calls live in focused modules.
   * Invariants/Assumptions: Credential sources from loaded config are passed through to the runtime; command credentials are resolved lazily at execution time and displayed values stay redacted.
@@ -674,7 +674,7 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/config.js b
      else if (source.kind === "env") {
 diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/electron/discovery.js b/dist/extensions/agent-browser/lib/electron/discovery.js
 --- a/dist/extensions/agent-browser/lib/electron/discovery.js	1985-10-26 03:15:00
-+++ b/dist/extensions/agent-browser/lib/electron/discovery.js	2026-07-28 18:51:58
++++ b/dist/extensions/agent-browser/lib/electron/discovery.js	2026-07-30 11:20:51
 @@ -6,15 +6,20 @@
   * Invariants/Assumptions: Discovery is best-effort, missing scan roots are ignored, malformed .desktop files are skipped, and results are capped before they reach model-visible output.
   */
@@ -819,7 +819,7 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/electron/di
      const resourcesDirectory = join(executableDirectory, "resources");
 diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/electron/launch.js b/dist/extensions/agent-browser/lib/electron/launch.js
 --- a/dist/extensions/agent-browser/lib/electron/launch.js	1985-10-26 03:15:00
-+++ b/dist/extensions/agent-browser/lib/electron/launch.js	2026-07-28 19:16:38
++++ b/dist/extensions/agent-browser/lib/electron/launch.js	2026-07-30 11:20:51
 @@ -3,12 +3,12 @@
   * Responsibilities: Resolve Electron targets, enforce caller-owned allow/deny policy, create isolated userDataDir profiles, launch with remote debugging on an OS-chosen port, poll DevToolsActivePort, and read bounded CDP version/target metadata.
   * Scope: Host-side Electron lifecycle setup only; upstream agent-browser attach/presentation stays in the extension entrypoint.
@@ -927,7 +927,7 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/electron/la
          targets: metadata.targets,
 diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/electron/orphans.js b/dist/extensions/agent-browser/lib/electron/orphans.js
 --- a/dist/extensions/agent-browser/lib/electron/orphans.js	1969-12-31 18:00:00
-+++ b/dist/extensions/agent-browser/lib/electron/orphans.js	2026-07-28 19:17:13
++++ b/dist/extensions/agent-browser/lib/electron/orphans.js	2026-07-30 11:20:51
 @@ -0,0 +1,88 @@
 +/**
 + * Purpose: Reap wrapper-owned Electron launches whose pi process died before its shutdown hook could clean them up.
@@ -1019,7 +1019,7 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/electron/or
 +}
 diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/input-modes/electron.js b/dist/extensions/agent-browser/lib/input-modes/electron.js
 --- a/dist/extensions/agent-browser/lib/input-modes/electron.js	1985-10-26 03:15:00
-+++ b/dist/extensions/agent-browser/lib/input-modes/electron.js	2026-07-28 19:36:06
++++ b/dist/extensions/agent-browser/lib/input-modes/electron.js	2026-07-30 11:20:51
 @@ -4,7 +4,9 @@
   * Scope: Electron input-mode validation only; launch/probe/cleanup execution stays in the extension entrypoint.
   */
@@ -1074,7 +1074,7 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/input-modes
      const value = input[fieldName];
 diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/input-modes/params.js b/dist/extensions/agent-browser/lib/input-modes/params.js
 --- a/dist/extensions/agent-browser/lib/input-modes/params.js	1985-10-26 03:15:00
-+++ b/dist/extensions/agent-browser/lib/input-modes/params.js	2026-07-28 19:00:37
++++ b/dist/extensions/agent-browser/lib/input-modes/params.js	2026-07-30 11:20:51
 @@ -14,7 +14,7 @@
      return Type.Object({
          action: StringEnum(["launch"], { description: "Launch an Electron app with an isolated wrapper-owned profile." }),
@@ -1086,7 +1086,7 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/input-modes
          timeoutMs: Type.Optional(Type.Integer({ description: "Bounded launch timeout in milliseconds.", minimum: 1 })),
 diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/input-modes/types.js b/dist/extensions/agent-browser/lib/input-modes/types.js
 --- a/dist/extensions/agent-browser/lib/input-modes/types.js	1985-10-26 03:15:00
-+++ b/dist/extensions/agent-browser/lib/input-modes/types.js	2026-07-28 18:50:16
++++ b/dist/extensions/agent-browser/lib/input-modes/types.js	2026-07-30 11:20:51
 @@ -15,6 +15,7 @@
  export const AGENT_BROWSER_ELECTRON_LIST_FIELDS = new Set(["action", "query", "maxResults"]);
  export const AGENT_BROWSER_ELECTRON_PROBE_FIELDS = new Set(["action", "launchId", "timeoutMs"]);
@@ -1097,7 +1097,7 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/input-modes
  export const SOURCE_LOOKUP_DEFAULT_MAX_WORKSPACE_FILES = 2_000;
 diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/launch-flag-policy.js b/dist/extensions/agent-browser/lib/launch-flag-policy.js
 --- a/dist/extensions/agent-browser/lib/launch-flag-policy.js	1969-12-31 18:00:00
-+++ b/dist/extensions/agent-browser/lib/launch-flag-policy.js	2026-07-28 21:21:36
++++ b/dist/extensions/agent-browser/lib/launch-flag-policy.js	2026-07-30 11:20:51
 @@ -0,0 +1,157 @@
 +/**
 + * Purpose: Own the wrapper policy for raw browser/Electron launch switches that can execute host code or read local files.
@@ -1258,7 +1258,7 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/launch-flag
 +}
 diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/navigation-policy.js b/dist/extensions/agent-browser/lib/navigation-policy.js
 --- a/dist/extensions/agent-browser/lib/navigation-policy.js	1985-10-26 03:15:00
-+++ b/dist/extensions/agent-browser/lib/navigation-policy.js	2026-07-28 23:25:53
++++ b/dist/extensions/agent-browser/lib/navigation-policy.js	2026-07-30 11:20:51
 @@ -1,12 +1,132 @@
  /**
   * Purpose: Keep wrapper-side navigation policy parsing and evaluation small and explicit.
@@ -1480,7 +1480,7 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/navigation-
          allowedDisplay: options.policy.display,
 diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/orchestration/browser-run/artifact-paths.js b/dist/extensions/agent-browser/lib/orchestration/browser-run/artifact-paths.js
 --- a/dist/extensions/agent-browser/lib/orchestration/browser-run/artifact-paths.js	1985-10-26 03:15:00
-+++ b/dist/extensions/agent-browser/lib/orchestration/browser-run/artifact-paths.js	2026-07-28 23:28:30
++++ b/dist/extensions/agent-browser/lib/orchestration/browser-run/artifact-paths.js	2026-07-30 11:20:51
 @@ -1,4 +1,5 @@
  import { extname, isAbsolute } from "node:path";
 +import { VALUE_FLAGS, getFlagName } from "../../argv-grammar.js";
@@ -1555,7 +1555,7 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/orchestrati
  }
 diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/orchestration/browser-run/prepare/direct-anchor-download.js b/dist/extensions/agent-browser/lib/orchestration/browser-run/prepare/direct-anchor-download.js
 --- a/dist/extensions/agent-browser/lib/orchestration/browser-run/prepare/direct-anchor-download.js	1985-10-26 03:15:00
-+++ b/dist/extensions/agent-browser/lib/orchestration/browser-run/prepare/direct-anchor-download.js	2026-07-28 18:54:57
++++ b/dist/extensions/agent-browser/lib/orchestration/browser-run/prepare/direct-anchor-download.js	2026-07-30 11:20:51
 @@ -4,6 +4,7 @@
  import { buildAgentBrowserResultCategoryDetails } from "../../../results.js";
  import { formatSessionArtifactRetentionSummary, mergeSessionArtifactManifest } from "../../../results/artifact-manifest.js";
@@ -1575,7 +1575,7 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/orchestrati
          const probeData = await runSessionCommandData({
 diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/orchestration/browser-run/prepare.js b/dist/extensions/agent-browser/lib/orchestration/browser-run/prepare.js
 --- a/dist/extensions/agent-browser/lib/orchestration/browser-run/prepare.js	1985-10-26 03:15:00
-+++ b/dist/extensions/agent-browser/lib/orchestration/browser-run/prepare.js	2026-07-28 23:39:48
++++ b/dist/extensions/agent-browser/lib/orchestration/browser-run/prepare.js	2026-07-30 11:20:51
 @@ -2,6 +2,8 @@
  import { dirname, resolve } from "node:path";
  import { launchElectronApp } from "../../electron/launch.js";
@@ -1746,7 +1746,7 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/orchestrati
      if (compiledElectron?.action === "launch") {
 diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/orchestration/browser-run/process-output.js b/dist/extensions/agent-browser/lib/orchestration/browser-run/process-output.js
 --- a/dist/extensions/agent-browser/lib/orchestration/browser-run/process-output.js	1985-10-26 03:15:00
-+++ b/dist/extensions/agent-browser/lib/orchestration/browser-run/process-output.js	2026-07-28 22:46:36
++++ b/dist/extensions/agent-browser/lib/orchestration/browser-run/process-output.js	2026-07-30 11:20:51
 @@ -2,7 +2,7 @@
  import { isCloseCommand, isNavigationObservableCommandName, isOpenNavigationCommand } from "../../command-taxonomy.js";
  import { OPEN_RESULT_TAB_CORRECTION_FLAGS } from "../../launch-scoped-flags.js";
@@ -1800,7 +1800,7 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/orchestrati
              electronPostCommandHealth = buildElectronPostCommandHealthDiagnostic({ command: prepared.executionPlan.commandInfo.command, record: electronRecordForCommand, status: electronStatusAfterCommand, target: observedSessionTabTarget ?? currentSessionTabTarget });
 diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/orchestration/electron-host/index.js b/dist/extensions/agent-browser/lib/orchestration/electron-host/index.js
 --- a/dist/extensions/agent-browser/lib/orchestration/electron-host/index.js	1985-10-26 03:15:00
-+++ b/dist/extensions/agent-browser/lib/orchestration/electron-host/index.js	2026-07-28 19:17:27
++++ b/dist/extensions/agent-browser/lib/orchestration/electron-host/index.js	2026-07-30 11:20:51
 @@ -1,9 +1,10 @@
  /**
   * Purpose: Own wrapper-side Electron host orchestration for agent_browser structured electron input.
@@ -1815,7 +1815,7 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/orchestrati
  import { isRecord } from "../../parsing.js";
 diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/orchestration/output-file.js b/dist/extensions/agent-browser/lib/orchestration/output-file.js
 --- a/dist/extensions/agent-browser/lib/orchestration/output-file.js	1985-10-26 03:15:00
-+++ b/dist/extensions/agent-browser/lib/orchestration/output-file.js	2026-07-28 18:54:20
++++ b/dist/extensions/agent-browser/lib/orchestration/output-file.js	2026-07-30 11:20:51
 @@ -1,6 +1,7 @@
  import { mkdir, writeFile } from "node:fs/promises";
  import { dirname, isAbsolute, resolve } from "node:path";
@@ -1836,7 +1836,7 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/orchestrati
          await writeFile(absolutePath, serialized, "utf8");
 diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/playbook.js b/dist/extensions/agent-browser/lib/playbook.js
 --- a/dist/extensions/agent-browser/lib/playbook.js	1985-10-26 03:15:00
-+++ b/dist/extensions/agent-browser/lib/playbook.js	2026-07-28 21:23:07
++++ b/dist/extensions/agent-browser/lib/playbook.js	2026-07-30 11:20:51
 @@ -88,10 +88,19 @@
      "When agent_browser details.nextActions exists, use exact payloads over guessed selectors/prose. Dense snapshots: check Omitted high-value controls/highValueControlRefIds. Dashboards: verify scroll with screenshot/snapshot.",
      "For agent_browser extraction: read <url> for docs/text; read for active-tab DOM; get title/url; get text/html/value/count <selector>; get attr <selector> <name>; eval --stdin for targeted state. Batch 3+ getters; heed visibility warnings.",
@@ -1870,7 +1870,7 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/playbook.js
          ...(options.docs ? [buildInstalledDocsGuideline(options.docs)] : []),
 diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/process.js b/dist/extensions/agent-browser/lib/process.js
 --- a/dist/extensions/agent-browser/lib/process.js	1985-10-26 03:15:00
-+++ b/dist/extensions/agent-browser/lib/process.js	2026-07-28 23:42:33
++++ b/dist/extensions/agent-browser/lib/process.js	2026-07-30 11:20:51
 @@ -1,20 +1,25 @@
  /**
   * Purpose: Execute the upstream agent-browser binary for the pi-agent-browser extension.
@@ -2266,7 +2266,7 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/process.js 
                  terminateChild("abort");
 diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/prompt-policy.js b/dist/extensions/agent-browser/lib/prompt-policy.js
 --- a/dist/extensions/agent-browser/lib/prompt-policy.js	1985-10-26 03:15:00
-+++ b/dist/extensions/agent-browser/lib/prompt-policy.js	2026-07-28 19:13:40
++++ b/dist/extensions/agent-browser/lib/prompt-policy.js	2026-07-30 11:20:51
 @@ -10,12 +10,16 @@
      /\bbrowser\b.*\b(?:automation|click|fill|navigate|open|page|screenshot|site|snapshot|tab|url|visit|web(?:site| page)?)\b/i,
      /\b(?:browse|click|fill|login|navigate|open|visit)\b.*\b(?:https?:\/\/\S+|page|site|tab|url|web(?:site| page)?)\b/i,
@@ -2289,7 +2289,7 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/prompt-poli
  function inferPromptArtifactKind(line, path) {
 diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/runtime.js b/dist/extensions/agent-browser/lib/runtime.js
 --- a/dist/extensions/agent-browser/lib/runtime.js	1985-10-26 03:15:00
-+++ b/dist/extensions/agent-browser/lib/runtime.js	2026-07-28 21:22:15
++++ b/dist/extensions/agent-browser/lib/runtime.js	2026-07-30 11:20:51
 @@ -10,7 +10,8 @@
  import { createHash, randomUUID } from "node:crypto";
  import { basename } from "node:path";
@@ -2363,7 +2363,7 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/runtime.js 
      for (let index = 0; index < args.length; index += 1) {
 diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/temp.js b/dist/extensions/agent-browser/lib/temp.js
 --- a/dist/extensions/agent-browser/lib/temp.js	1985-10-26 03:15:00
-+++ b/dist/extensions/agent-browser/lib/temp.js	2026-07-28 19:16:55
++++ b/dist/extensions/agent-browser/lib/temp.js	2026-07-30 11:20:51
 @@ -1,6 +1,6 @@
  /**
   * Purpose: Create private temporary and persisted spill files for the pi-agent-browser extension without leaking artifacts broadly on disk.
@@ -2412,7 +2412,7 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/temp.js b/d
      const parentDirectory = dirname(path);
 diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/upstream-config-policy.js b/dist/extensions/agent-browser/lib/upstream-config-policy.js
 --- a/dist/extensions/agent-browser/lib/upstream-config-policy.js	1969-12-31 18:00:00
-+++ b/dist/extensions/agent-browser/lib/upstream-config-policy.js	2026-07-28 23:43:04
++++ b/dist/extensions/agent-browser/lib/upstream-config-policy.js	2026-07-30 11:20:51
 @@ -0,0 +1,87 @@
 +/**
 + * Purpose: Keep the upstream agent-browser CLI from silently loading configuration the checked-out project controls.
@@ -2503,7 +2503,7 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/upstream-co
 +}
 diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/write-path-policy.js b/dist/extensions/agent-browser/lib/write-path-policy.js
 --- a/dist/extensions/agent-browser/lib/write-path-policy.js	1969-12-31 18:00:00
-+++ b/dist/extensions/agent-browser/lib/write-path-policy.js	2026-07-28 23:46:00
++++ b/dist/extensions/agent-browser/lib/write-path-policy.js	2026-07-30 11:20:51
 @@ -0,0 +1,154 @@
 +/**
 + * Purpose: Confine wrapper-created files and directories to operator-approved roots.
@@ -2661,7 +2661,7 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/write-path-
 +}
 diff -ruN --exclude=node_modules a/docs/ARCHITECTURE.md b/docs/ARCHITECTURE.md
 --- a/docs/ARCHITECTURE.md	1985-10-26 03:15:00
-+++ b/docs/ARCHITECTURE.md	2026-07-28 23:43:20
++++ b/docs/ARCHITECTURE.md	2026-07-30 11:20:51
 @@ -35,10 +35,10 @@
  ### Direct subprocess execution
  
@@ -2696,8 +2696,8 @@ diff -ruN --exclude=node_modules a/docs/ARCHITECTURE.md b/docs/ARCHITECTURE.md
  - bounded machine-readable outcome metadata on tool `details` (`resultCategory`, `successCategory`, `failureCategory`, optional `nextActions`, optional `pageChangeSummary` with per-step summaries on `batch`, optional `artifactVerification` with the same shape on each successful `batchSteps[]` row) so agents can branch without parsing prose; enums, classifier precedence, and generic follow-up payloads are implemented under `extensions/agent-browser/lib/results/` in focused modules (`contracts.ts` for shared types, `categories.ts` for `classifyAgentBrowserSuccessCategory` / `classifyAgentBrowserFailureCategory` / `buildAgentBrowserResultCategoryDetails`, `action-recommendations.ts` for `buildAgentBrowserNextActions`, `next-actions.ts` for the `AgentBrowserNextAction` shape and merge helpers, `recovery-actions.ts` for recovery id registries and `buildRecoveryNextActions`, `network.ts` for `classifyNetworkRequestFailure` / `summarizeNetworkFailures`, and related helpers). Per-session tab target, `refSnapshot` alignment, invalidation, and tab pinning observations flow through `extensions/agent-browser/lib/session-page-state.ts` from `extensions/agent-browser/index.ts`. Compact page-change summaries and artifact verification rollups are built in `extensions/agent-browser/lib/results/presentation.ts` (`buildPageChangeSummary`, `buildArtifactVerificationSummary`), and the human contract lives in [`TOOL_CONTRACT.md`](TOOL_CONTRACT.md#details). Real Pi custom tools otherwise only mark a row failed when `execute` throws, so the extension also registers `pi.on("tool_result", …)` and patches `agent_browser` results whose `details.resultCategory` is `failure` to set `isError: true`. Prose results also receive a short category notice, while caller-requested `--json` results with parseable JSON content keep that text unchanged so JSONL transcripts, UI affordances, and the machine-readable contract stay aligned for wrapper-side reclassifications such as `qa-failure` (`buildAgentBrowserToolResultPatch` in `extensions/agent-browser/lib/pi-tool-rendering.ts`; transcript semantics in the same contract doc)
 diff -ruN --exclude=node_modules a/docs/COMMAND_REFERENCE.md b/docs/COMMAND_REFERENCE.md
 --- a/docs/COMMAND_REFERENCE.md	1985-10-26 03:15:00
-+++ b/docs/COMMAND_REFERENCE.md	2026-07-28 23:43:20
-@@ -795,7 +795,7 @@
++++ b/docs/COMMAND_REFERENCE.md	2026-07-30 11:20:51
+@@ -806,7 +806,7 @@
  - project-local: `.pi/config/pi-agent-browser-native/config.json`
  - explicit override: `PI_AGENT_BROWSER_CONFIG=/path/to/config.json`
  
@@ -2706,7 +2706,7 @@ diff -ruN --exclude=node_modules a/docs/COMMAND_REFERENCE.md b/docs/COMMAND_REFE
  
  `pi install npm:pi-agent-browser-native` loads the extension, but it does **not** usually put the package helper on your shell `PATH`. The clearest setup is to write the config file directly and keep actual keys in the environment that launches `pi`:
  
-@@ -831,7 +831,7 @@
+@@ -842,7 +842,7 @@
  npm exec --yes --package pi-agent-browser-native@latest -- pi-agent-browser-config browser executable set "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser"
  ```
  
@@ -2715,7 +2715,7 @@ diff -ruN --exclude=node_modules a/docs/COMMAND_REFERENCE.md b/docs/COMMAND_REFE
  
  Example config:
  
-@@ -901,7 +901,7 @@
+@@ -912,7 +912,7 @@
  - `--screenshot-format <fmt>`: `png` or `jpeg`. Environment: `AGENT_BROWSER_SCREENSHOT_FORMAT`.
  - `--content-boundaries`: wrap page output in boundary markers. Environment: `AGENT_BROWSER_CONTENT_BOUNDARIES`.
  - `--max-output <chars>`: truncate page output to N characters. Environment: `AGENT_BROWSER_MAX_OUTPUT`.
@@ -2724,7 +2724,7 @@ diff -ruN --exclude=node_modules a/docs/COMMAND_REFERENCE.md b/docs/COMMAND_REFE
  - `--action-policy <path>`: action policy JSON file. Environment: `AGENT_BROWSER_ACTION_POLICY`.
  - `--confirm-actions <list>`: action categories requiring confirmation. Environment: `AGENT_BROWSER_CONFIRM_ACTIONS`.
  - `--confirm-interactive`: interactive confirmations; auto-denies when stdin is not a TTY. Environment: `AGENT_BROWSER_CONFIRM_INTERACTIVE`.
-@@ -924,9 +924,11 @@
+@@ -935,9 +935,11 @@
  3. Environment variables, including `AGENT_BROWSER_CONFIG`.
  4. CLI flags.
  
@@ -2740,7 +2740,7 @@ diff -ruN --exclude=node_modules a/docs/COMMAND_REFERENCE.md b/docs/COMMAND_REFE
  
 diff -ruN --exclude=node_modules a/docs/ELECTRON.md b/docs/ELECTRON.md
 --- a/docs/ELECTRON.md	1985-10-26 03:15:00
-+++ b/docs/ELECTRON.md	2026-07-28 19:20:57
++++ b/docs/ELECTRON.md	2026-07-30 11:20:51
 @@ -155,7 +155,7 @@
  
  Optional `timeoutMs` on `electron.launch` bounds host-side CDP readiness (waiting for `DevToolsActivePort` and attach). When omitted, the default is **15 seconds** with a hard maximum of **120 seconds**, matching `ELECTRON_LAUNCH_DEFAULT_TIMEOUT_MS` and `ELECTRON_LAUNCH_MAX_TIMEOUT_MS` in `extensions/agent-browser/lib/electron/launch.ts`.
@@ -2774,7 +2774,7 @@ diff -ruN --exclude=node_modules a/docs/ELECTRON.md b/docs/ELECTRON.md
  ### What the **caller** owns
 diff -ruN --exclude=node_modules a/docs/TOOL_CONTRACT.md b/docs/TOOL_CONTRACT.md
 --- a/docs/TOOL_CONTRACT.md	1985-10-26 03:15:00
-+++ b/docs/TOOL_CONTRACT.md	2026-07-28 23:40:37
++++ b/docs/TOOL_CONTRACT.md	2026-07-30 11:20:51
 @@ -203,6 +203,7 @@
  - required unless `semanticAction`, `job`, `qa`, `sourceLookup`, `networkSourceLookup`, or `electron` is provided
  - exact CLI args passed after `agent-browser`; this is the 1:1 upstream CLI coverage path for the targeted `agent-browser` version
@@ -2822,18 +2822,18 @@ diff -ruN --exclude=node_modules a/docs/TOOL_CONTRACT.md b/docs/TOOL_CONTRACT.md
  
 diff -ruN --exclude=node_modules a/package.json b/package.json
 --- a/package.json	1985-10-26 03:15:00
-+++ b/package.json	2026-07-28 23:50:52
++++ b/package.json	2026-07-30 11:21:04
 @@ -1,6 +1,7 @@
  {
    "name": "pi-agent-browser-native",
-   "version": "0.2.71",
+   "version": "0.2.72",
 +  "private": true,
    "description": "pi extension that exposes agent-browser as a native tool for browser automation",
    "type": "module",
    "author": "Mitch Fultz (https://github.com/fitchmultz)",
 diff -ruN --exclude=node_modules a/scripts/config.mjs b/scripts/config.mjs
 --- a/scripts/config.mjs	1985-10-26 03:15:00
-+++ b/scripts/config.mjs	2026-07-28 21:32:58
++++ b/scripts/config.mjs	2026-07-30 11:20:51
 @@ -68,6 +68,7 @@
    Project config: .pi/config/pi-agent-browser-native/config.json
    Override:       ${AGENT_BROWSER_CONFIG_ENV}=/path/to/config.json
@@ -2844,7 +2844,7 @@ diff -ruN --exclude=node_modules a/scripts/config.mjs b/scripts/config.mjs
  }
 diff -ruN --exclude=node_modules a/scripts/doctor.mjs b/scripts/doctor.mjs
 --- a/scripts/doctor.mjs	1985-10-26 03:15:00
-+++ b/scripts/doctor.mjs	2026-07-29 07:51:30
++++ b/scripts/doctor.mjs	2026-07-30 11:20:51
 @@ -164,8 +164,12 @@
  	if (text === PACKAGE_NAME) return true;
  	if (text.includes(REPO_URL_FRAGMENT)) return true;

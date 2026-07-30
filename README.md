@@ -54,16 +54,16 @@ smoke test against `https://example.com`.
 | Component | Version |
 |---|---:|
 | `@earendil-works/pi-coding-agent` | `0.82.0` |
-| `agent-browser` | `0.32.2` |
+| `agent-browser` | `0.33.0` |
 
 Extension forks and the upstream releases they are based on:
 
 | Fork (Pi local package) | Upstream | Upstream version |
 |---|---|---:|
 | `pi-voice-stt-safe` | `pi-voice-stt` | `0.4.0` |
-| `pi-agent-browser-native-safe` | `pi-agent-browser-native` | `0.2.71` |
+| `pi-agent-browser-native-safe` | `pi-agent-browser-native` | `0.2.72` |
 | `pi-dynamic-workflows-safe` | `@quintinshaw/pi-dynamic-workflows` | `3.4.1` |
-| `pi-process-monitor-safe` | `pi-process-monitor` | hand-written rewrite |
+| `pi-process-monitor-safe` | `pi-process-monitor` | rewrite, reviewed vs `1.3.0` |
 | `pi-context-handoff` | — | first-party |
 
 `vendor.json` is the machine-readable version of this table and is what the tooling
@@ -252,7 +252,7 @@ extensions being added to the full profile.
 ## Files created
 
 ```text
-~/.local/bin/pi                              Bun-backed full entrypoint
+~/.local/bin/pi                              Bun-backed full entrypoint (only one)
 ~/.local/bin/p                               Lean entrypoint
 ~/.local/bin/agent-browser                   Bun-backed agent-browser entrypoint
 ~/.local/bin/pi-agent-browser-config         Browser config CLI
@@ -272,6 +272,13 @@ extensions being added to the full profile.
 ```
 
 The installer adds `~/.local/bin` and `~/.bun/bin` to `.zshrc` and `.bashrc`.
+
+There is exactly one entrypoint per command. Pi is installed once, globally, by Bun;
+`bun add --global` also links its own `pi` and `agent-browser` shims into `~/.bun/bin`,
+and the installer removes them. Those shims point at the same installation but bypass the
+wrappers above — notably `pi`'s guard against inheriting the lean `p` profile from a tmux
+server. If you previously installed Pi another way (npm global, Homebrew), remove it:
+`npm uninstall -g @earendil-works/pi-coding-agent agent-browser`.
 
 ## Session archives
 

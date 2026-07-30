@@ -5,7 +5,7 @@
  * Scope: Static command capability taxonomy only; command-shape parsing, spawning, and formatting live elsewhere.
  */
 const ADDITIONAL_COMMAND_TOKENS = [
-    "auth", "chat", "clipboard", "confirm", "connect", "dashboard", "deny", "device", "dialog", "diff", "doctor", "errors", "eval", "find", "frame", "get", "highlight", "inspect", "install", "is", "mcp", "plugin", "plugins", "profiles", "profiler", "react", "record", "removeinitscript", "session", "set", "skills", "snapshot", "state", "stream", "trace", "upgrade", "vitals", "wait", "web-vitals", "window",
+    "a11y", "auth", "chat", "clipboard", "confirm", "connect", "dashboard", "deny", "device", "dialog", "diff", "doctor", "errors", "eval", "find", "frame", "get", "highlight", "inspect", "install", "is", "mcp", "plugin", "plugins", "profiles", "profiler", "react", "record", "removeinitscript", "session", "set", "skills", "snapshot", "state", "stream", "trace", "upgrade", "vitals", "wait", "web-vitals", "window",
 ];
 const COMMAND_CAPABILITIES = [
     {

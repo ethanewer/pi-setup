@@ -2,12 +2,12 @@
 set -euo pipefail
 
 PI_VERSION="0.82.0"
-AGENT_BROWSER_VERSION="0.32.2"
+AGENT_BROWSER_VERSION="0.33.0"
 
 # Upstream versions the hardened forks in forks/ are based on. bin/pi-setup-doctor
 # compares these against the npm registry to report when a fork is behind upstream.
 UPSTREAM_VOICE="0.4.0"
-UPSTREAM_BROWSER="0.2.71"
+UPSTREAM_BROWSER="0.2.72"
 UPSTREAM_WORKFLOWS="3.4.1"
 
 # Extensions are installed as Pi "local" packages from forks/ in this repository,
@@ -207,6 +207,14 @@ echo "p: could not locate @earendil-works/pi-coding-agent" >&2
 exit 1
 SH
 chmod 755 "$LOCAL_BIN/pi" "$LOCAL_BIN/p" "$LOCAL_BIN/agent-browser"
+
+# `bun add --global` links its own pi/agent-browser shims into $BUN_INSTALL/bin. They
+# point at the same single installation, but they bypass the wrappers above - notably
+# pi's guard against inheriting the lean `p` profile - so remove them and leave exactly
+# one entrypoint per command.
+for shim in pi agent-browser; do
+  [[ -e "$BUN_INSTALL/bin/$shim" || -L "$BUN_INSTALL/bin/$shim" ]] && rm -f "$BUN_INSTALL/bin/$shim"
+done
 
 log "Writing Pi configuration"
 CONFIG_SCRIPT="$(mktemp)"
