@@ -91,7 +91,8 @@ lock is reclaimable after a staleness window rather than immediately.
 ## pi-agent-browser-native-safe
 
 Based on `pi-agent-browser-native@0.2.72`, which rebaselines the wrapper to
-`agent-browser 0.33.0` (so `install.sh` pins that). Only `dist/` is shipped, so the fixes
+`agent-browser 0.33.0`, re-baselined here to `0.33.1` (which `install.sh` pins). Only
+`dist/` is shipped, so the fixes
 are in the compiled tree.
 
 Re-vendored onto 0.2.72 on 2026-07-30. One conflict, in `package.json` (the version bump
@@ -124,6 +125,15 @@ an allowlist that rejects `--*-launcher`, `--*-cmd-prefix`, `--no-sandbox`,
 URL as a violation rather than as no-violation. POSIX children run in their own process group
 so timeout and abort actually reap descendants. The CLI path is pinned rather than resolved
 through `PATH`.
+
+**CLI re-baseline, 2026-07-30.** The pinned `agent-browser` moved 0.33.0 -> 0.33.1. The
+release adds one flag, `--idle-timeout`, which this wrapper's argv grammar already listed,
+and changes no command. It also changes a default that matters for long runs: the
+`agent-browser` daemon now exits after **one hour** with no commands, where before it ran
+until told to stop. A run that opens a page, works elsewhere for over an hour and comes back
+finds a fresh daemon; tabs and transient state from the old one are gone unless the session
+had a restore key. Headed, Safari/iOS and user-attached browsers are exempt.
+`--idle-timeout 0` disables it, and `AGENT_BROWSER_IDLE_TIMEOUT_MS` still works.
 
 **Residual risk.** `--download-path` and `--screenshot-dir` are `.git`-guarded but
 deliberately *not* workspace-confined, so a model can still place artifacts in a writable

@@ -2831,6 +2831,25 @@ diff -ruN --exclude=node_modules a/docs/ELECTRON.md b/docs/ELECTRON.md
  - Treats `electron.cleanup` as wrapper-owned only; never touches manually launched apps.
  
  ### What the **caller** owns
+diff -ruN --exclude=node_modules a/docs/SUPPORT_MATRIX.md b/docs/SUPPORT_MATRIX.md
+--- a/docs/SUPPORT_MATRIX.md	1985-10-26 03:15:00
++++ b/docs/SUPPORT_MATRIX.md	2026-07-30 18:48:36
+@@ -26,7 +26,14 @@
+ 
+ ## Audit result
+ 
+-- Target upstream: `agent-browser 0.33.0` (must match `CAPABILITY_BASELINE.targetVersion` in [`scripts/agent-browser-capability-baseline.mjs`](../scripts/agent-browser-capability-baseline.mjs)).
++- Target upstream: `agent-browser 0.33.1` (must match `CAPABILITY_BASELINE.targetVersion` in [`scripts/agent-browser-capability-baseline.mjs`](../scripts/agent-browser-capability-baseline.mjs)).
++- Re-baselined 0.33.0 -> 0.33.1 in this fork on 2026-07-30. Upstream's release-gate evidence
++  in the table below is theirs and still refers to 0.33.0; those gates live in upstream's
++  repository and are not vendored here, so they were not re-run. What was checked instead:
++  the two binaries' `--help` surfaces were diffed (one flag added, `--idle-timeout`, already
++  present in this wrapper's `GLOBAL_VALUE_FLAGS`; no flag removed; identical command set, so
++  the artifact-path guards that key off command prefixes are unaffected), and the wrapper was
++  exercised live against the new CLI.
+ - Source of truth: `CAPABILITY_BASELINE.inventorySections` in the same file (stable `id` keys: `skills`, `core-commands`, `state-tabs-frames-dialogs`, `network-storage-artifacts-diagnostics`, `batch-auth-setup-ai`, `options-and-env`).
+ - Status: source and wrapper adaptation target the 2026-07-23 0.33.0 audit. The wrapper classifies 0.32.4+ locator-detail find misses as `selector-not-found`, treats HAR `--content` and a11y `--tags` as command-scoped value flags, documents `derive-client` / HAR body modes / `a11y`, and renders compact a11y summaries; prior helper idle-timeout, post-`tab close` target refresh, and document-direction scroll behavior remain. Upstream 0.33.0 also revives discarded tabs on tab switch.
+ - High-priority support gaps: 2026-05-26 audit found sessionless local commands and command-scoped value flags needed sharper wrapper handling; runtime/tests/docs now cover those paths. The 0.28.0 rebaseline added local `mcp` and `plugin` surfaces plus plugin-backed credential login; wrapper docs/tests mark `mcp` and known `plugin` commands sessionless, with no compatibility shim for older upstream releases. The 0.29.1 rebaseline added upstream `@agent-browser/sandbox` helper-package guidance and stricter `install --with-deps` failure semantics; no new wrapper runtime mode or bundled dependency was required. The 0.30.1 rebaseline fixed upstream `wait --url` glob matching, so constrained `job.assertUrl` delegates glob and exact patterns directly to `wait --url`. The 0.31.0 rebaseline adds restore workflow and namespace/session lifecycle surfaces (`--restore`, restore checks, `--namespace`, `session id`, and `session info`) without adding a wrapper compatibility layer. The 0.31.1 rebaseline fixes upstream React renderer selection for `react tree`, `react inspect`, and `react suspense`; no wrapper runtime change was required. The 0.31.2 rebaseline adds the local-launch-only `--webgpu` preset and `doctor --webgpu`, plus periodic restore-state autosaves controlled by `AGENT_BROWSER_AUTOSAVE_INTERVAL_MS`; the wrapper treats WebGPU as launch-scoped and leaves autosave ownership upstream. The 0.32.0 rebaseline hardens request/worker/popup/WebRTC containment behind `--allowed-domains`, fixes waits against already-complete documents, and adds a separate `@agent-browser/eve` package; the wrapper makes containment launch-scoped, retains its final-URL check as defense in depth, and adds no Eve-specific mode. The 0.32.1–0.32.2 rebaseline updates only eve compatibility/packaging, but the full current-surface audit also found the local reference had omitted upstream `read [url]` since 0.30.0; baseline/help sampling, content-first presentation, tab-target preservation, timeout budgeting, docs, and tests now cover it. The 0.32.3–0.32.4 rebaseline adds HAR response-body capture modes, the `derive-client` skill, fixed `find role` implicit-ARIA / accessible-name matching with locator-detail misses, and an advertised `find` action list of `click, fill, check, hover, text` only; the wrapper documents and classifies those surfaces without adding a new input mode. Remaining upstream-owned caveat: some help paths still mention `wait <selector> --state hidden` / `detached`, but runtime probes show those shapes still fail, so wrapper docs keep `wait --fn` disappearance predicates and top-level `uncheck` / `type` / `focus` passthrough instead of `find` for those actions. `wait --download <path>` still reports the requested path without guaranteed on-disk persistence ([#1300](https://github.com/vercel-labs/agent-browser/issues/1300)).
 diff -ruN --exclude=node_modules a/docs/TOOL_CONTRACT.md b/docs/TOOL_CONTRACT.md
 --- a/docs/TOOL_CONTRACT.md	1985-10-26 03:15:00
 +++ b/docs/TOOL_CONTRACT.md	2026-07-30 11:20:51
@@ -2890,6 +2909,27 @@ diff -ruN --exclude=node_modules a/package.json b/package.json
    "description": "pi extension that exposes agent-browser as a native tool for browser automation",
    "type": "module",
    "author": "Mitch Fultz (https://github.com/fitchmultz)",
+diff -ruN --exclude=node_modules a/scripts/agent-browser-capability-baseline.mjs b/scripts/agent-browser-capability-baseline.mjs
+--- a/scripts/agent-browser-capability-baseline.mjs	1985-10-26 03:15:00
++++ b/scripts/agent-browser-capability-baseline.mjs	2026-07-30 18:48:36
+@@ -15,7 +15,7 @@
+ const sourceEvidence = Object.freeze({
+   repository: "vercel-labs/agent-browser",
+   upstreamHead: "1ed371f3af472cc0d6cd8fdaea75d1a085ff7534",
+-  upstreamPackageVersion: "0.33.0",
++  upstreamPackageVersion: "0.33.1",
+   inspectedSources: Object.freeze([
+     "agent-browser --version",
+     "agent-browser --help",
+@@ -844,7 +844,7 @@
+ ]);
+ 
+ export const CAPABILITY_BASELINE = Object.freeze({
+-  targetVersion: "0.33.0",
++  targetVersion: "0.33.1",
+   sourceEvidence,
+   helpCommands,
+   inventorySections,
 diff -ruN --exclude=node_modules a/scripts/config.mjs b/scripts/config.mjs
 --- a/scripts/config.mjs	1985-10-26 03:15:00
 +++ b/scripts/config.mjs	2026-07-30 11:20:51

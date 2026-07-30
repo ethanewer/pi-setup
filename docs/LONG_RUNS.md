@@ -123,6 +123,12 @@ Being honest about the remaining edges:
   minutes, not hours.
 - **Context that cannot be compacted.** If the recent-turn window alone exceeds the
   threshold, there is nothing left to summarize. Lower `keepRecentTokens` if you hit it.
+- **A browser session idling out mid-run.** Since `agent-browser` 0.33.1 the daemon exits
+  after an hour with no commands, so a long run that leaves the browser alone for that long
+  comes back to a fresh one: open tabs and any state without a restore key are gone. It
+  fails visibly rather than silently — the next command starts a new daemon — but work
+  staged in a tab is lost. Set `--idle-timeout 0`, or give the session a restore key, if a
+  run needs the browser to survive long gaps.
 - **A missing helper binary on a cold install.** Pi fetches `fd` on first tool use; if
   that fetch cannot complete, the first tool call blocks. `~/.pi/agent/bin` is populated
   after any successful interactive run, so do one before relying on unattended runs on a

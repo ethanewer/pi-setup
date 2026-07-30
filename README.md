@@ -55,7 +55,7 @@ smoke test against `https://example.com`.
 | Component | Version |
 |---|---:|
 | `@earendil-works/pi-coding-agent` | `0.83.0` |
-| `agent-browser` | `0.33.0` |
+| `agent-browser` | `0.33.1` |
 
 Extension forks and the upstream releases they are based on:
 
