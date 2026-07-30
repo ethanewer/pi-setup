@@ -365,7 +365,7 @@ cat <<EOF
 Installed successfully.
 
 Open a new terminal, then use:
-  pi  Full setup: Voice STT + browser + workflows + continue + monitor
+  pi  Full setup: Voice STT + browser + workflows + handoff briefs + monitor
   p   Lean setup: Voice STT only, quiet startup
 
 Voice dictation: Option+P on macOS, Alt+P on Linux.

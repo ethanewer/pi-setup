@@ -192,9 +192,13 @@ if [[ "$OFFLINE" == "0" ]] && command -v npm >/dev/null 2>&1; then
   say ""
   say "Upstream releases"
   for fork in $FORK_NAMES; do
-    read -r UPSTREAM PINNED < <(node -e '
+    # A first-party entry has an empty upstream. The delimiter must be a
+    # non-whitespace character: IFS collapses leading empty fields for whitespace
+    # delimiters, which would shift the version into UPSTREAM and query the
+    # registry for it.
+    IFS='|' read -r UPSTREAM PINNED < <(node -e '
 const v = require(process.argv[1] + "/vendor.json").forks[process.argv[2]];
-console.log(v.upstream ?? "", v.version);
+process.stdout.write((v.upstream ?? "") + "|" + (v.version ?? "") + "\n");
 ' "$REPO_DIR" "$fork")
     # A first-party package (upstream: null) has no release to compare against.
     if [[ -z "$UPSTREAM" ]]; then

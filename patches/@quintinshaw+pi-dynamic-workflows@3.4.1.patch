@@ -4629,7 +4629,7 @@ diff -ruN --exclude=node_modules a/package.json b/package.json
        "skills/workflow-authoring",
 diff -ruN --exclude=node_modules a/skills/workflow-authoring/references/capabilities.md b/skills/workflow-authoring/references/capabilities.md
 --- a/skills/workflow-authoring/references/capabilities.md	1985-10-26 03:15:00
-+++ b/skills/workflow-authoring/references/capabilities.md	2026-07-28 19:12:01
++++ b/skills/workflow-authoring/references/capabilities.md	2026-07-30 11:12:45
 @@ -32,10 +32,10 @@
  | name | workflow-tool-input | `name?: string` | — |
  | args | workflow-tool-input | `args?: unknown` | — |
@@ -4637,15 +4637,16 @@ diff -ruN --exclude=node_modules a/skills/workflow-authoring/references/capabili
 -| maxAgents | workflow-tool-input | `maxAgents?: number = 1000` | — |
 +| maxAgents | workflow-tool-input | `maxAgents?: number = 100` | — |
  | concurrency | workflow-tool-input | `concurrency?: number` | — |
- | agentRetries | workflow-tool-input | `agentRetries?: number = configured value or 0` | — |
+-| agentRetries | workflow-tool-input | `agentRetries?: number = configured value or 0` | — |
 -| agentTimeoutMs | workflow-tool-input | `agentTimeoutMs?: number = configured default or unbounded` | — |
++| agentRetries | workflow-tool-input | `agentRetries?: number = configured value or 2` | — |
 +| agentTimeoutMs | workflow-tool-input | `agentTimeoutMs?: number = configured default, else 15m` | — |
  | tokenBudget | workflow-tool-input | `tokenBudget?: number = configured default or unlimited` | — |
  | resumeFromRunId | workflow-tool-input | `resumeFromRunId?: string` | — |
  <!-- END GENERATED SUPPORTED WORKFLOW CAPABILITIES -->
 diff -ruN --exclude=node_modules a/skills/workflow-authoring/references/capability-details.md b/skills/workflow-authoring/references/capability-details.md
 --- a/skills/workflow-authoring/references/capability-details.md	1985-10-26 03:15:00
-+++ b/skills/workflow-authoring/references/capability-details.md	2026-07-28 19:49:02
++++ b/skills/workflow-authoring/references/capability-details.md	2026-07-30 11:12:45
 @@ -28,7 +28,7 @@
  - Constraint: resume replays only the longest unchanged prefix; the first miss and every later call execute live
  - Constraint: selector priority is explicit model > agentType model > tier > phase model > metadata model > implicit medium > session default
@@ -4666,6 +4667,15 @@ diff -ruN --exclude=node_modules a/skills/workflow-authoring/references/capabili
  
  <a id="tool-input-concurrency"></a>
  ## concurrency
+@@ -268,7 +268,7 @@
+ 
+ - Classification: `workflow-tool-input`
+ - Support: `supported`
+-- Signature: `agentRetries?: number = configured value or 0`
++- Signature: `agentRetries?: number = configured value or 2`
+ - Constraint: floored and clamped to 0..3
+ 
+ <a id="tool-input-agenttimeoutms"></a>
 @@ -276,7 +276,7 @@
  
  - Classification: `workflow-tool-input`
@@ -4677,13 +4687,13 @@ diff -ruN --exclude=node_modules a/skills/workflow-authoring/references/capabili
  ## tokenBudget
 diff -ruN --exclude=node_modules a/skills/workflow-authoring/references/lifecycle.md b/skills/workflow-authoring/references/lifecycle.md
 --- a/skills/workflow-authoring/references/lifecycle.md	1985-10-26 03:15:00
-+++ b/skills/workflow-authoring/references/lifecycle.md	2026-07-28 19:12:01
++++ b/skills/workflow-authoring/references/lifecycle.md	2026-07-30 11:12:45
 @@ -2,7 +2,7 @@
  
  ## Bounds and budget
  
 -Set finite bounds that match the work for `maxAgents`, `concurrency`, and `agentRetries`; bound loops and semantic retries inside the script. Treat invocation-level `agentTimeoutMs` and `tokenBudget` as opt-in user constraints, not precautionary defaults. Omit `tokenBudget` unless the user supplies a cap or explicitly asks you to choose one. If asked to choose, allow for every planned agent call, retry, synthesis, and verification pass, with headroom. A tight gate can terminate coverage; it does not reduce work already in flight. An omitted `agentTimeoutMs` uses the configured `defaultAgentTimeoutMs` and is otherwise unbounded. An omitted `tokenBudget` uses the configured `defaultTokenBudget` and is otherwise unlimited.
-+Set finite bounds that match the work for `maxAgents`, `concurrency`, and `agentRetries`; bound loops and semantic retries inside the script. Treat invocation-level `agentTimeoutMs` and `tokenBudget` as opt-in user constraints, not precautionary defaults. Omit `tokenBudget` unless the user supplies a cap or explicitly asks you to choose one. If asked to choose, allow for every planned agent call, retry, synthesis, and verification pass, with headroom. A tight gate can terminate coverage; it does not reduce work already in flight. An omitted `agentTimeoutMs` uses the configured `defaultAgentTimeoutMs`, else a default 15-minute per-agent timeout. An omitted `tokenBudget` uses the configured `defaultTokenBudget` and is otherwise unlimited.
++Set finite bounds that match the work for `maxAgents`, `concurrency`, and `agentRetries`; bound loops and semantic retries inside the script. Treat invocation-level `agentTimeoutMs` and `tokenBudget` as opt-in user constraints, not precautionary defaults. Omit `tokenBudget` unless the user supplies a cap or explicitly asks you to choose one. If asked to choose, allow for every planned agent call, retry, synthesis, and verification pass, with headroom. A tight gate can terminate coverage; it does not reduce work already in flight. An omitted `agentTimeoutMs` uses the configured `defaultAgentTimeoutMs`, else a default 60-minute per-agent timeout. An omitted `tokenBudget` uses the configured `defaultTokenBudget` and is otherwise unlimited.
  
  Enter a phase budget with `phase("Name", { budget: N })`; phase metadata does not carry budgets. `N` is a token allowance, not a call or round count: size it for the intended agent work instead of copying a small iteration limit. Token and phase budgets are soft pre-call gates. Spend lands after agents finish, so concurrent work can overshoot. A phase budget gates later calls in that phase; it neither reserves tokens nor cancels active calls. `budget.spent()` and `budget.remaining()` include nested work.
  

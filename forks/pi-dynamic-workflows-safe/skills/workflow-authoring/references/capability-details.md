@@ -268,7 +268,7 @@ Every exact fact below is projected from the installed extension's capability co
 
 - Classification: `workflow-tool-input`
 - Support: `supported`
-- Signature: `agentRetries?: number = configured value or 0`
+- Signature: `agentRetries?: number = configured value or 2`
 - Constraint: floored and clamped to 0..3
 
 <a id="tool-input-agenttimeoutms"></a>
