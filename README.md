@@ -192,7 +192,9 @@ The Option bindings need Option to act as Meta — Terminal.app's *Use Option as
 iTerm2's *Esc+* for both Left and Right Option. Voice works either way, because the fork
 binds the literal `π` as well.
 
-Check any key with `bin/pi-setup-keyprobe`, inside tmux and outside it.
+`/hotkeys` lists all of these, including the voice key and what the other keys do while
+recording. Check any individual key with `bin/pi-setup-keyprobe`, inside tmux and outside
+it.
 
 ## Voice STT
 
@@ -211,8 +213,9 @@ Voice dictation is configured for OpenAI:
 ```
 
 Use **Option+P** on macOS or **Alt+P** on Linux to start recording. The text cursor
-becomes a slowly pulsing red dot — the input box itself does not change colour, and
-nothing is announced in a banner.
+becomes a slowly pulsing red dot with a grey `recording` beside it — the input box itself
+does not change colour, and nothing is announced in a banner. Both disappear when
+transcription starts, where the placeholder takes over.
 
 What you press next decides where the transcript goes:
 

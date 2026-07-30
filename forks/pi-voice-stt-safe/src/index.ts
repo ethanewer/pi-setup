@@ -12,6 +12,8 @@ import { assertProviderReady } from "./providers/readiness";
 import { createInputIndicator, createVoiceEditorFactory } from "./ui/input-indicator";
 import { resolveStrings } from "./i18n/strings";
 import { containsPasteMarker, formatError } from "./utils/text";
+import type { AppKeybinding, KeybindingsManager } from "@earendil-works/pi-coding-agent";
+import type { KeyId } from "@earendil-works/pi-tui";
 import type { Delivery } from "./core/dictation-controller";
 import { placeholderText, replacePlaceholder } from "./ui/transcribing";
 import { createPendingStore } from "./ui/pending-message";
@@ -49,6 +51,44 @@ export default function piVoiceSttExtension(pi: ExtensionAPI) {
   const getConfig = () => loadConfig({ configPath: startup.configPath, mode: activeMode });
 
   const pendingMessages = createPendingStore(() => inputIndicator.getTick());
+
+  /**
+   * Put the dictation key in `/hotkeys`, which lists Pi's own bindings plus whatever
+   * extensions registered. The editor wrapper sees the key before Pi's shortcut dispatch,
+   * so this registration is what makes it discoverable rather than what makes it work —
+   * and its handler covers the case where the editor does not have focus.
+   */
+  let shortcutRegistered = false;
+  const registerVoiceShortcut = (keybindings: KeybindingsManager, ctx: ExtensionContext) => {
+    if (shortcutRegistered) return;
+    const primary = startup.keybinds[0];
+    if (!primary) return;
+    shortcutRegistered = true;
+    // "alt" reads as Option on macOS, the way Pi renders its own hints.
+    const asOption = (key: string) =>
+      key
+        .split("+")
+        .map((part) => (process.platform === "darwin" && part === "alt" ? "Option" : part.charAt(0).toUpperCase() + part.slice(1)))
+        .join("+");
+    const queueKey = keybindings.getKeys("app.message.followUp" as AppKeybinding)[0];
+    const queue = queueKey ? asOption(queueKey) : "the follow-up key";
+    const alternates = startup.keybinds.slice(1).join(" / ");
+    try {
+      pi.registerShortcut(primary as KeyId, {
+        // Kept short: /hotkeys renders this in a fixed-width table and truncates.
+        description:
+          `Voice dictation${alternates ? ` (also ${alternates})` : ""} · recording: ` +
+          `Enter send · ${queue} queue · Esc cancel`,
+        handler: (shortcutCtx) => {
+          void controller.toggle(shortcutCtx).catch((error: unknown) => reportError(shortcutCtx, error));
+        },
+      });
+    } catch {
+      // Not a key id Pi can bind — a configuration of only literal characters, say. The
+      // key still works through the editor; it just cannot be listed.
+      void ctx;
+    }
+  };
 
   /** Placeholders outstanding anywhere, so the spinner keeps turning while any remain. */
   let openPlaceholders = 0;
@@ -283,6 +323,7 @@ export default function piVoiceSttExtension(pi: ExtensionAPI) {
       getTick: () => inputIndicator.getTick(),
       renderLabel: (theme) => inputIndicator.renderLabel(theme),
       attachTui: (tui) => inputIndicator.attach(tui),
+      attachKeybindings: (keybindings) => registerVoiceShortcut(keybindings, ctx),
       attachEditor: (editor) => {
         activeEditor = editor;
       },

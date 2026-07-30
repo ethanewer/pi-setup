@@ -2,7 +2,6 @@ import { CustomEditor, type AppKeybinding, type ExtensionContext, type Keybindin
 import {
   CURSOR_MARKER,
   matchesKey,
-  sliceByColumn,
   truncateToWidth,
   visibleWidth,
   type EditorComponent,
@@ -12,6 +11,7 @@ import {
 import type { DictationMode } from "../core/dictation-controller";
 import { matchesAnyKeybind } from "../core/keybind";
 import type { Strings } from "../i18n/strings";
+import { composeCursorLine } from "./cursor-cell";
 import { animateRenderedLines, frameAt } from "./transcribing";
 
 type VoiceEditorOptions = {
@@ -36,9 +36,8 @@ type VoiceEditorOptions = {
  */
 const BLINK_TICKS = 4;
 
-/** The marker plus the one reverse-video cell the editor renders as its cursor. */
-// biome-ignore lint/suspicious/noControlCharactersInRegex: terminal escapes are the subject
-const CURSOR_CELL = new RegExp(`${CURSOR_MARKER.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\x1b\\[7m[\\s\\S]*?\\x1b\\[0m`);
+/** Written beside the dot while recording, when the cells after it are blank. */
+const RECORDING_LABEL = " recording";
 
 const injectRightLabel = (line: string, width: number, label: string): string => {
   const labelWidth = visibleWidth(label);
@@ -122,38 +121,21 @@ class VoiceEditorWrapper implements EditorComponent {
 
   /**
    * The recording indicator takes the cursor's place rather than adding another element
-   * to the frame: while recording, the point where typing would land pulses red.
-   *
-   * The dot *overwrites* the cell the cursor sits on instead of being inserted before it.
-   * CURSOR_MARKER is zero width and the editor pads every row to exactly the viewport
-   * width, so inserting a visible character there pushes the row one column over and Pi
-   * kills the session for overflowing the terminal.
+   * to the frame: while recording, the point where typing would land pulses red, with a
+   * grey "recording" beside it when there is blank space to put it. Both disappear the
+   * moment transcription starts, where the placeholder takes over.
    */
   private replaceCursor(lines: string[], width: number): string[] {
     if (this.options.getMode() !== "recording") return lines;
     const theme = this.options.ctx.ui.theme;
     const lit = Math.floor(this.options.getTick() / BLINK_TICKS) % 2 === 0;
     const dot = theme.fg(lit ? "error" : "dim", "●");
+    const label = { text: theme.fg("dim", RECORDING_LABEL), width: RECORDING_LABEL.length };
     let done = false;
     return lines.map((line) => {
       if (done || !line.includes(CURSOR_MARKER)) return line;
       done = true;
-
-      // The editor draws its cursor as the marker followed by one reverse-video cell
-      // (`ESC[7m` + grapheme + `ESC[0m`). Swapping the whole run for the dot keeps the
-      // line exactly as wide and, more importantly, takes the `ESC[7m` with it: leaving
-      // that opener behind was what smeared a white highlight across the rest of the row.
-      const replaced = line.replace(CURSOR_CELL, dot);
-      if (replaced !== line) return replaced;
-
-      // Cursor rendering that does not match the expected shape: drop the marker's cell
-      // by column and cancel reverse video explicitly, so the fallback cannot smear either.
-      const marker = line.indexOf(CURSOR_MARKER);
-      const head = line.slice(0, marker);
-      const tail = line.slice(marker + CURSOR_MARKER.length);
-      const rest = sliceByColumn(tail, 1, Math.max(0, width - visibleWidth(head) - 1));
-      const composed = `${head}${dot}\x1b[27m${rest}`;
-      return visibleWidth(composed) > width ? truncateToWidth(composed, width, "") : composed;
+      return composeCursorLine(line, dot, label, width);
     });
   }
 
@@ -335,10 +317,16 @@ export const createVoiceEditorFactory = (
   previousFactory: ((tui: TUI, theme: EditorTheme, keybindings: KeybindingsManager) => EditorComponent) | undefined,
   // The keybindings manager is handed to the factory by Pi, not by the caller, so the
   // queue key follows whatever the user configured for app.message.followUp.
-  options: Omit<VoiceEditorOptions, "keybindings"> & { attachTui(tui: TUI): void; attachEditor?(editor: EditorComponent): void },
+  options: Omit<VoiceEditorOptions, "keybindings"> & {
+    attachTui(tui: TUI): void;
+    attachEditor?(editor: EditorComponent): void;
+    /** Pi hands the resolved keybindings to the factory; nothing else in the extension sees them. */
+    attachKeybindings?(keybindings: KeybindingsManager): void;
+  },
 ) => {
   return (tui: TUI, theme: EditorTheme, keybindings: KeybindingsManager): EditorComponent => {
     options.attachTui(tui);
+    options.attachKeybindings?.(keybindings);
     const base = previousFactory?.(tui, theme, keybindings) ?? new CustomEditor(tui, theme, keybindings);
     const editor = new VoiceEditorWrapper(base, { ...options, keybindings });
     options.attachEditor?.(editor);

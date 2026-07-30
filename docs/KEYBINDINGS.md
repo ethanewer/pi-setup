@@ -49,7 +49,10 @@ form a Kitty-protocol terminal uses to report a composed `π`.
 | `app.model.cycleBackward` | `shift+ctrl+p` | `ctrl+alt+p` | `ctrl+shift+<letter>` is indistinguishable from `ctrl+<letter>` without CSI-u. |
 | `app.tree.filter.cycleBackward` | `shift+ctrl+o` | `ctrl+alt+o` | Same reason. |
 
-Voice dictation is in `stt.json`, not here: `"keybind": ["alt+p", "π"]`.
+Voice dictation is in `stt.json`, not here: `"keybind": ["alt+p", "π"]`. The fork also
+registers it as an extension shortcut so `/hotkeys` lists it — the editor sees the key
+before Pi's shortcut dispatch, so that registration is for discoverability, and its
+description carries the keys that only apply while recording.
 
 ## Defaults that are already fine
 
