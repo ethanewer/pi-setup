@@ -114,8 +114,8 @@ The installed extension generates this compact index from its executable capabil
 | background | workflow-tool-input | `background?: boolean = true` | — |
 | maxAgents | workflow-tool-input | `maxAgents?: number = 100` | — |
 | concurrency | workflow-tool-input | `concurrency?: number` | — |
-| agentRetries | workflow-tool-input | `agentRetries?: number = configured value or 0` | — |
-| agentTimeoutMs | workflow-tool-input | `agentTimeoutMs?: number = configured default, else 15m` | — |
+| agentRetries | workflow-tool-input | `agentRetries?: number = configured value or 2` | — |
+| agentTimeoutMs | workflow-tool-input | `agentTimeoutMs?: number = configured default, else 60m` | — |
 | tokenBudget | workflow-tool-input | `tokenBudget?: number = configured default or unlimited` | — |
 | resumeFromRunId | workflow-tool-input | `resumeFromRunId?: string` | — |
 <!-- END GENERATED SUPPORTED WORKFLOW CAPABILITIES -->

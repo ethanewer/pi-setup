@@ -202,7 +202,7 @@ Voice dictation is configured for OpenAI:
 
 ```json
 {
-  "keybind": "alt+p",
+  "keybind": ["alt+p", "π"],
   "provider": {
     "type": "openai",
     "model": "gpt-4o-mini-transcribe",
@@ -282,12 +282,13 @@ reports when npm has published a newer release than this repository pins, for Pi
 ```bash
 bun test tests/     # pure logic, no network or model
 tests/smoke.sh      # installed setup: tools, bash, /btw, browser, workflow
-tests/tui-btw.sh    # TUI-only: inline rendering, sticky mode, cancel (needs tmux)
+tests/tui-btw.sh    # TUI-only: the full-screen /btw view, the main thread behind it, escape (needs tmux)
 ```
 
-`bun test tests/` covers the pure logic of the first-party extensions — the history
-sanitizer that keeps a mid-turn `/btw` snapshot valid, the prompt assembly, and config
-parsing. The two scripts drive the installed setup with real model calls; `tests/smoke.sh
+`bun test tests/` covers the pure logic of the first-party extensions: the history
+sanitizer that keeps a mid-turn `/btw` snapshot valid, prompt assembly and config parsing,
+the voice keybind matcher and its placeholder/cursor rendering, and the compaction file-list
+carry-forward. The two scripts drive the installed setup with real model calls; `tests/smoke.sh
 --quick` skips the browser and workflow runs.
 
 Scope the command to `tests/`. A bare `bun test` also collects
@@ -360,6 +361,7 @@ extensions being added to the full profile.
 ~/.local/bin/pi-agent-browser-doctor         Browser diagnostics CLI
 ~/.pi/agent/settings.json                    Main Pi settings
 ~/.pi/agent/stt.json                         Voice STT configuration (mode 600)
+~/.pi/agent/keybindings.json                 Keys remapped for tmux and Kitty terminals
 ~/.pi/agent/local/                           Hardened extension forks
 ~/.pi/agent/npm/                             Shared extension packages (no longer used
                                              by this setup; pruned on install)
@@ -367,6 +369,7 @@ extensions being added to the full profile.
                                              installer is piped from curl
 ~/.pi/agent/p/remove-pi-documentation.js     Lean prompt filter
 ~/.pi/agent-p/settings.json                  Quiet lean settings overlay
+~/.pi/agent-p/keybindings.json               The same remapped keys for the lean profile
 ~/.pi/agent-p/auth.json                      Symlink to main auth
 ~/.pi/agent-p/models-store.json              Symlink to main model catalog
 ~/.pi/agent-p/bin                            Symlink to main helper binaries

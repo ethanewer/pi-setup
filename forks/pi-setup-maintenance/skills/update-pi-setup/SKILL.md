@@ -28,8 +28,8 @@ wrappers in `~/.local/bin`, and prunes stale npm copies of the extensions.
 cd ~/pi-setup && bin/pi-setup-doctor
 ```
 
-Every section, in the order it prints. The first four can emit PROBLEMs and fail the exit
-code; the last two are advisory.
+Every section, in the order it prints. Only "Upstream releases" is advisory — every other
+section can emit a PROBLEM and fail the exit code.
 
 | Section | What a finding means |
 |---|---|
@@ -45,7 +45,32 @@ code; the last two are advisory.
 based on. `docs/FORKS.md` says what each fork changes and why, and is what to re-check
 after an upstream merge.
 
-## 2. Update Pi itself
+## 2. When the doctor reports a PROBLEM
+
+Try the mechanical repair first. It reinstalls from `forks/`, which is the fix for a drifted
+install, a settings file that lost a package, a missing keybindings file, a missing `p`
+profile, and a version that no longer matches the pin:
+
+```bash
+bin/pi-setup-doctor --fix
+```
+
+It re-runs the whole report afterwards, so a clean exit means the problem is gone. It will
+not touch anything that needs a decision, and says so rather than pretending. Those cases:
+
+| PROBLEM | What to do |
+|---|---|
+| `trust.json trusts <path>` | Remove that key and re-approve individual repositories. Trust inherits down the tree, so a home-wide entry trusts every repository you ever clone. |
+| `compaction.reserveTokens is …` / `compaction is disabled` | Edit `~/.pi/agent/settings.json`. About 16384 reserve is right; see [`LONG_RUNS.md`](../../../../docs/LONG_RUNS.md). |
+| `<name> is installed at … but is not in vendor.json` | A retired package. Confirm it is not wanted, then `rm -rf` that directory — `--fix` will not delete for you. |
+| `stt.json is not valid JSON` / `no usable keybind` | Fix the file by hand; `install.sh` only rewrites the keys it manages, so a syntax error survives a reinstall. |
+| A fork does not reproduce from its patch (`bin/pi-setup-vendor --verify --all`) | Someone edited `forks/` without regenerating. Run `bin/pi-setup-vendor --regenerate-patch <fork>` and review the diff. |
+
+If the problem is a defect in an extension rather than a broken install, that is a code
+change: fix it in `forks/<name>/`, regenerate the patch if that fork has one, add a test
+under `tests/` when the logic is pure, and follow [Verify](#verify).
+
+## 3. Update Pi itself
 
 ```bash
 cd ~/pi-setup
@@ -71,10 +96,15 @@ Then:
    check while iterating.
 4. [Verify](#verify), then commit.
 
-## 3. Move a fork onto a newer upstream release
+## 4. Move a fork onto a newer upstream release
 
-For the three forks that have an upstream (`pi-voice-stt-safe`,
-`pi-agent-browser-native-safe`, `pi-dynamic-workflows-safe`):
+Four forks track an upstream. Three can be re-vendored mechanically because they have a
+patch file — `pi-voice-stt-safe`, `pi-agent-browser-native-safe`,
+`pi-dynamic-workflows-safe` — and `pi-process-monitor-safe` tracks
+`pi-process-monitor` by hand, with no patch, so upstream changes are ported deliberately
+and the decision recorded in its `vendor.json` note.
+
+For the three with a patch:
 
 ```bash
 bin/pi-setup-vendor <fork> <new-version>
@@ -95,7 +125,8 @@ After any re-vendor, treat the hardening as unverified until you have re-checked
 3. Read the upstream changelog between the two versions for new entry points.
 4. `bin/pi-setup-vendor --verify <fork>` — the patch must reproduce `forks/<fork>` byte
    for byte.
-5. Update `UPSTREAM_*` in `install.sh` and the table in `README.md`.
+5. Update the table in `README.md`. `vendor.json` is the machine-readable record and
+   `bin/pi-setup-vendor` already updated it.
 6. `./install.sh`, then [Verify](#verify).
 
 If you hand-edit a fork instead, regenerate its patch so it stays the reviewable record:
@@ -108,7 +139,7 @@ bin/pi-setup-vendor --verify <fork>
 `pi-process-monitor-safe` is hand-maintained with no patch file; port upstream fixes
 manually and record what you decided in its `vendor.json` note.
 
-## 4. Change a first-party package
+## 5. Change a first-party package
 
 `pi-context-handoff`, `pi-btw-side`, and `pi-setup-maintenance` have no upstream. Edit
 them directly, bump `version` in both `package.json` and `vendor.json` if the change is
@@ -142,7 +173,7 @@ packages at runtime and they are not dependencies of this repository, so without
 cannot resolve `@earendil-works/*`, `node:fs` or `process`, and reports errors that are
 artefacts of the invocation rather than defects in the code.
 
-## 5. agent-browser is pinned to the fork's baseline, on purpose
+## 6. agent-browser is pinned to the fork's baseline, on purpose
 
 `AGENT_BROWSER_VERSION` in `install.sh` is not "whatever npm has latest". The
 `pi-agent-browser-native-safe` wrapper is validated against one specific CLI release —
@@ -161,10 +192,11 @@ Run all of this after any change. It is cheap except for the model calls in the 
 
 ```bash
 cd ~/pi-setup
-bin/pi-setup-doctor          # must exit 0
-bun test tests/              # pure logic of the first-party extensions
-tests/smoke.sh               # installed setup: tools, bash, /btw, browser, workflow
-tests/tui-btw.sh             # TUI-only behaviour: the /btw side view and escape
+bin/pi-setup-doctor              # must exit 0
+bin/pi-setup-vendor --verify --all   # every patch still reproduces its fork
+bun test tests/                  # pure logic of the first-party extensions
+tests/smoke.sh                   # installed setup: tools, bash, /btw, browser, workflow
+tests/tui-btw.sh                 # TUI-only: the /btw side view and escape
 ```
 
 `tests/smoke.sh --quick` skips the browser and workflow runs while iterating. The voice
@@ -190,6 +222,15 @@ Then start `pi` once interactively and confirm the startup listing is intact:
 
 A fork that failed to load is **silently absent** from that listing rather than raising
 an error, so check the names rather than assuming success.
+
+## Auditing the extensions for defects
+
+The doctor checks that the installation is intact; it says nothing about whether the code
+is correct. For that, [`docs/AUDIT-EXTENSIONS.md`](../../../../docs/AUDIT-EXTENSIONS.md)
+records how the 2026-07-30 audit was run — one agent per package hunting bugs and UX
+defects, each finding then handed to a second agent instructed to refute it — what it
+found, and which findings were deliberately not fixed. Repeat it the same way after a
+large change, and update that file with what the next pass finds.
 
 ## Commit
 

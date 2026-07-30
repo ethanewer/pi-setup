@@ -1,6 +1,6 @@
 diff -ruN --exclude=node_modules a/README.md b/README.md
 --- a/README.md	1985-10-26 03:15:00
-+++ b/README.md	2026-07-30 17:48:18
++++ b/README.md	2026-07-30 18:22:49
 @@ -75,10 +75,10 @@
  
  ## Why use it
@@ -21,9 +21,10 @@ diff -ruN --exclude=node_modules a/README.md b/README.md
 -| maxAgents | workflow-tool-input | `maxAgents?: number = 1000` | — |
 +| maxAgents | workflow-tool-input | `maxAgents?: number = 100` | — |
  | concurrency | workflow-tool-input | `concurrency?: number` | — |
- | agentRetries | workflow-tool-input | `agentRetries?: number = configured value or 0` | — |
+-| agentRetries | workflow-tool-input | `agentRetries?: number = configured value or 0` | — |
 -| agentTimeoutMs | workflow-tool-input | `agentTimeoutMs?: number = configured default or unbounded` | — |
-+| agentTimeoutMs | workflow-tool-input | `agentTimeoutMs?: number = configured default, else 15m` | — |
++| agentRetries | workflow-tool-input | `agentRetries?: number = configured value or 2` | — |
++| agentTimeoutMs | workflow-tool-input | `agentTimeoutMs?: number = configured default, else 60m` | — |
  | tokenBudget | workflow-tool-input | `tokenBudget?: number = configured default or unlimited` | — |
  | resumeFromRunId | workflow-tool-input | `resumeFromRunId?: string` | — |
  <!-- END GENERATED SUPPORTED WORKFLOW CAPABILITIES -->
@@ -2402,7 +2403,7 @@ diff -ruN --exclude=node_modules a/dist/web-tools.js b/dist/web-tools.js
  }
 diff -ruN --exclude=node_modules a/dist/workflow-capability-contract.js b/dist/workflow-capability-contract.js
 --- a/dist/workflow-capability-contract.js	1985-10-26 03:15:00
-+++ b/dist/workflow-capability-contract.js	2026-07-30 17:45:31
++++ b/dist/workflow-capability-contract.js	2026-07-30 18:22:49
 @@ -132,7 +132,7 @@
              "selector priority is explicit model > agentType model > tier > phase model > metadata model > implicit medium > session default",
              "an explicit model, agentType model, tier, or phase model that resolves to an unavailable model throws MODEL_NOT_FOUND naming the source (e.g. the tier and what it resolved to) instead of falling back",
@@ -2419,9 +2420,10 @@ diff -ruN --exclude=node_modules a/dist/workflow-capability-contract.js b/dist/w
 -    toolInput("maxAgents", "maxAgents?: number = 1000", ["default, not a hard product maximum"]),
 +    toolInput("maxAgents", "maxAgents?: number = 100", ["configurable default; runtime clamps to a 1000 ceiling"]),
      toolInput("concurrency", "concurrency?: number", ["runtime clamps to 1..16"]),
-     toolInput("agentRetries", "agentRetries?: number = configured value or 0", ["floored and clamped to 0..3"]),
+-    toolInput("agentRetries", "agentRetries?: number = configured value or 0", ["floored and clamped to 0..3"]),
 -    toolInput("agentTimeoutMs", "agentTimeoutMs?: number = configured default or unbounded"),
-+    toolInput("agentTimeoutMs", "agentTimeoutMs?: number = configured default, else 15m"),
++    toolInput("agentRetries", "agentRetries?: number = configured value or 2", ["floored and clamped to 0..3"]),
++    toolInput("agentTimeoutMs", "agentTimeoutMs?: number = configured default, else 60m"),
      toolInput("tokenBudget", "tokenBudget?: number = configured default or unlimited", [
          "soft pre-call gate; in-flight work can overshoot",
      ]),
@@ -3373,7 +3375,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-settings.js b/dist/workflow-set
      if (deliveredResultMaxChars !== undefined)
 diff -ruN --exclude=node_modules a/dist/workflow-tool.js b/dist/workflow-tool.js
 --- a/dist/workflow-tool.js	1985-10-26 03:15:00
-+++ b/dist/workflow-tool.js	2026-07-30 17:44:46
++++ b/dist/workflow-tool.js	2026-07-30 18:22:49
 @@ -2,6 +2,7 @@
  import { Text } from "@earendil-works/pi-tui";
  import { Type } from "typebox";
@@ -3382,7 +3384,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-tool.js b/dist/workflow-tool.js
  import { createToolUpdateWorkflowDisplay, createWorkflowSnapshot, fmtCost, fmtFull, fmtTokenSegment, recomputeWorkflowSnapshot, renderWorkflowText, tokenFigures, } from "./display.js";
  import { WorkflowError, WorkflowErrorCode } from "./errors.js";
  import { parseWorkflowScript } from "./workflow.js";
-@@ -52,7 +53,9 @@
+@@ -52,16 +53,18 @@
          description: "Run the workflow in the background. Default: true — the tool returns immediately with a run ID, the turn ends so the user isn't blocked, and the result is delivered back into the conversation when it finishes. Set to false only when you need the result inline in this same turn (the call will block until the workflow completes).",
      })),
      maxAgents: Type.Optional(Type.Number({
@@ -3393,8 +3395,10 @@ diff -ruN --exclude=node_modules a/dist/workflow-tool.js b/dist/workflow-tool.js
      })),
      concurrency: Type.Optional(Type.Number({
          description: "Maximum concurrent agents for this run. Clamped to the runtime maximum. Use when provider/transport stability matters.",
-@@ -61,7 +64,7 @@
-         description: "Retry attempts for recoverable agent failures such as timeout, connection failure, or empty assistant output. Default 0 unless configured.",
+     })),
+     agentRetries: Type.Optional(Type.Number({
+-        description: "Retry attempts for recoverable agent failures such as timeout, connection failure, or empty assistant output. Default 0 unless configured.",
++        description: "Retry attempts for recoverable agent failures such as timeout, connection failure, or empty assistant output. Default 2 unless configured.",
      })),
      agentTimeoutMs: Type.Optional(Type.Number({
 -        description: "Timeout per agent in milliseconds. Omit to use configured `defaultAgentTimeoutMs`; without one, there is no hard timeout. Set only when the user asks to bound time.",
@@ -4639,7 +4643,7 @@ diff -ruN --exclude=node_modules a/package.json b/package.json
        "skills/workflow-authoring",
 diff -ruN --exclude=node_modules a/skills/workflow-authoring/references/capabilities.md b/skills/workflow-authoring/references/capabilities.md
 --- a/skills/workflow-authoring/references/capabilities.md	1985-10-26 03:15:00
-+++ b/skills/workflow-authoring/references/capabilities.md	2026-07-30 17:44:46
++++ b/skills/workflow-authoring/references/capabilities.md	2026-07-30 18:22:49
 @@ -32,10 +32,10 @@
  | name | workflow-tool-input | `name?: string` | — |
  | args | workflow-tool-input | `args?: unknown` | — |
@@ -4650,13 +4654,13 @@ diff -ruN --exclude=node_modules a/skills/workflow-authoring/references/capabili
 -| agentRetries | workflow-tool-input | `agentRetries?: number = configured value or 0` | — |
 -| agentTimeoutMs | workflow-tool-input | `agentTimeoutMs?: number = configured default or unbounded` | — |
 +| agentRetries | workflow-tool-input | `agentRetries?: number = configured value or 2` | — |
-+| agentTimeoutMs | workflow-tool-input | `agentTimeoutMs?: number = configured default, else 15m` | — |
++| agentTimeoutMs | workflow-tool-input | `agentTimeoutMs?: number = configured default, else 60m` | — |
  | tokenBudget | workflow-tool-input | `tokenBudget?: number = configured default or unlimited` | — |
  | resumeFromRunId | workflow-tool-input | `resumeFromRunId?: string` | — |
  <!-- END GENERATED SUPPORTED WORKFLOW CAPABILITIES -->
 diff -ruN --exclude=node_modules a/skills/workflow-authoring/references/capability-details.md b/skills/workflow-authoring/references/capability-details.md
 --- a/skills/workflow-authoring/references/capability-details.md	1985-10-26 03:15:00
-+++ b/skills/workflow-authoring/references/capability-details.md	2026-07-30 17:45:31
++++ b/skills/workflow-authoring/references/capability-details.md	2026-07-30 18:22:49
 @@ -29,7 +29,7 @@
  - Constraint: selector priority is explicit model > agentType model > tier > phase model > metadata model > implicit medium > session default
  - Constraint: an explicit model, agentType model, tier, or phase model that resolves to an unavailable model throws MODEL_NOT_FOUND naming the source (e.g. the tier and what it resolved to) instead of falling back
@@ -4691,7 +4695,7 @@ diff -ruN --exclude=node_modules a/skills/workflow-authoring/references/capabili
  - Classification: `workflow-tool-input`
  - Support: `supported`
 -- Signature: `agentTimeoutMs?: number = configured default or unbounded`
-+- Signature: `agentTimeoutMs?: number = configured default, else 15m`
++- Signature: `agentTimeoutMs?: number = configured default, else 60m`
  
  <a id="tool-input-tokenbudget"></a>
  ## tokenBudget
@@ -6750,7 +6754,7 @@ diff -ruN --exclude=node_modules a/src/web-tools.ts b/src/web-tools.ts
  }
 diff -ruN --exclude=node_modules a/src/workflow-capability-contract.ts b/src/workflow-capability-contract.ts
 --- a/src/workflow-capability-contract.ts	1985-10-26 03:15:00
-+++ b/src/workflow-capability-contract.ts	2026-07-30 17:45:31
++++ b/src/workflow-capability-contract.ts	2026-07-30 18:22:49
 @@ -311,7 +311,7 @@
        "selector priority is explicit model > agentType model > tier > phase model > metadata model > implicit medium > session default",
        "an explicit model, agentType model, tier, or phase model that resolves to an unavailable model throws MODEL_NOT_FOUND naming the source (e.g. the tier and what it resolved to) instead of falling back",
@@ -6767,9 +6771,10 @@ diff -ruN --exclude=node_modules a/src/workflow-capability-contract.ts b/src/wor
 -  toolInput("maxAgents", "maxAgents?: number = 1000", ["default, not a hard product maximum"]),
 +  toolInput("maxAgents", "maxAgents?: number = 100", ["configurable default; runtime clamps to a 1000 ceiling"]),
    toolInput("concurrency", "concurrency?: number", ["runtime clamps to 1..16"]),
-   toolInput("agentRetries", "agentRetries?: number = configured value or 0", ["floored and clamped to 0..3"]),
+-  toolInput("agentRetries", "agentRetries?: number = configured value or 0", ["floored and clamped to 0..3"]),
 -  toolInput("agentTimeoutMs", "agentTimeoutMs?: number = configured default or unbounded"),
-+  toolInput("agentTimeoutMs", "agentTimeoutMs?: number = configured default, else 15m"),
++  toolInput("agentRetries", "agentRetries?: number = configured value or 2", ["floored and clamped to 0..3"]),
++  toolInput("agentTimeoutMs", "agentTimeoutMs?: number = configured default, else 60m"),
    toolInput("tokenBudget", "tokenBudget?: number = configured default or unlimited", [
      "soft pre-call gate; in-flight work can overshoot",
    ]),
@@ -7658,7 +7663,7 @@ diff -ruN --exclude=node_modules a/src/workflow-settings.ts b/src/workflow-setti
    if (deliveredResultMaxChars !== undefined) settings.deliveredResultMaxChars = deliveredResultMaxChars;
 diff -ruN --exclude=node_modules a/src/workflow-tool.ts b/src/workflow-tool.ts
 --- a/src/workflow-tool.ts	1985-10-26 03:15:00
-+++ b/src/workflow-tool.ts	2026-07-30 17:44:46
++++ b/src/workflow-tool.ts	2026-07-30 18:22:49
 @@ -3,6 +3,12 @@
  import { Type } from "typebox";
  import { BUILTIN_WORKFLOW_NAMES, resolveWorkflowInvocation } from "./builtin-workflows.js";
@@ -7683,7 +7688,14 @@ diff -ruN --exclude=node_modules a/src/workflow-tool.ts b/src/workflow-tool.ts
      }),
    ),
    concurrency: Type.Optional(
-@@ -94,7 +102,7 @@
+@@ -88,13 +96,13 @@
+   agentRetries: Type.Optional(
+     Type.Number({
+       description:
+-        "Retry attempts for recoverable agent failures such as timeout, connection failure, or empty assistant output. Default 0 unless configured.",
++        "Retry attempts for recoverable agent failures such as timeout, connection failure, or empty assistant output. Default 2 unless configured.",
+     }),
+   ),
    agentTimeoutMs: Type.Optional(
      Type.Number({
        description:

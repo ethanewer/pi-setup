@@ -144,9 +144,12 @@ now that the code is not installed, and git history retains the fork.
 
 ## pi-context-handoff
 
-First-party, not a fork. Steers Pi's own compaction toward a handoff brief and does nothing
-else: hook `session_before_compact`, call Pi's `compact()` with focus instructions plus a
-retry policy, return the result.
+First-party, not a fork. Steers Pi's own compaction toward a handoff brief: hook
+`session_before_compact`, call Pi's `compact()` with focus instructions, provider
+environment and a retry policy, then return the result — after merging the previous
+compaction's file lists back into it. That last step is not cosmetic: Pi refuses to carry
+file lists forward from a hook-produced compaction, so without it the accumulated
+read/modified lists restart empty at every boundary.
 
 It **cannot stop a run** — no `ctx.abort()`, no injected messages, no `{ cancel: true }`.
 Every failure path returns `undefined`, which is exactly the behaviour of not having it
@@ -267,6 +270,9 @@ the listing identifies every extension by name:
 ```text
 [Skills]
   monitor, update-pi-setup, workflow-authoring, workflow-patterns
+
+[Prompts]
+  /watch
 
 [Extensions]
   agent-browser, btw, context-handoff, monitor, voice-stt, workflow

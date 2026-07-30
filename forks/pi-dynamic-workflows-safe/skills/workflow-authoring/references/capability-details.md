@@ -277,7 +277,7 @@ Every exact fact below is projected from the installed extension's capability co
 
 - Classification: `workflow-tool-input`
 - Support: `supported`
-- Signature: `agentTimeoutMs?: number = configured default, else 15m`
+- Signature: `agentTimeoutMs?: number = configured default, else 60m`
 
 <a id="tool-input-tokenbudget"></a>
 ## tokenBudget

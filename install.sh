@@ -4,11 +4,9 @@ set -euo pipefail
 PI_VERSION="0.83.0"
 AGENT_BROWSER_VERSION="0.33.0"
 
-# Upstream versions the hardened forks in forks/ are based on. bin/pi-setup-doctor
-# compares these against the npm registry to report when a fork is behind upstream.
-UPSTREAM_VOICE="0.4.0"
-UPSTREAM_BROWSER="0.2.72"
-UPSTREAM_WORKFLOWS="3.5.0"
+# Upstream versions live in vendor.json, which is what bin/pi-setup-doctor and
+# bin/pi-setup-vendor read. They used to be duplicated here as UPSTREAM_* variables that
+# nothing consumed, so they could drift from the truth without any check noticing.
 
 # Extensions are installed as Pi "local" packages from forks/ in this repository,
 # never from npm. Pi never rewrites local packages, so the security fixes in these
@@ -27,6 +25,11 @@ case "$(uname -s)" in
   *) fail "This installer supports macOS and Linux." ;;
 esac
 command -v curl >/dev/null 2>&1 || fail "curl is required."
+# Bun's installer unpacks a zip, so a machine without unzip fails partway through with a
+# confusing error rather than at the door.
+if ! command -v bun >/dev/null 2>&1 && [[ ! -x "${BUN_INSTALL:-$HOME/.bun}/bin/bun" ]]; then
+  command -v unzip >/dev/null 2>&1 || fail "unzip is required to install Bun (apt install unzip / brew install unzip)."
+fi
 
 export BUN_INSTALL="${BUN_INSTALL:-$HOME/.bun}"
 if command -v bun >/dev/null 2>&1; then
@@ -57,7 +60,9 @@ if [[ -n "$SELF" && -f "$SELF" ]]; then
   [[ -d "$CANDIDATE/forks" ]] && SRC_DIR="$CANDIDATE"
 fi
 if [[ -z "$SRC_DIR" ]]; then
-  command -v git >/dev/null 2>&1 || fail "git is required to fetch the extension forks."
+  # `command -v git` is not enough on macOS: /usr/bin/git is a stub that prompts for the
+  # Xcode command line tools and exits non-zero, so the clone would fail after the check.
+  git --version >/dev/null 2>&1 || fail "git is required to fetch the extension forks (on macOS: xcode-select --install)."
   CLONE_DIR="$MAIN_DIR/setup-src"
   if [[ -d "$CLONE_DIR/.git" ]]; then
     log "Updating setup sources in $CLONE_DIR"
@@ -108,6 +113,7 @@ done
 for cli in config doctor; do
   TARGET="$LOCAL_PKG_DIR/pi-agent-browser-native-safe/scripts/$cli.mjs"
   if [[ -f "$TARGET" ]]; then
+    rm -f "$LOCAL_BIN/pi-agent-browser-$cli"
     cat > "$LOCAL_BIN/pi-agent-browser-$cli" <<SH
 #!/bin/sh
 set -eu
@@ -122,6 +128,9 @@ SH
   fi
 done
 
+# Remove before writing: `cat >` follows a symlink and would write through it, clobbering
+# whatever it points at rather than replacing the link.
+rm -f "$LOCAL_BIN/pi"
 cat > "$LOCAL_BIN/pi" <<'SH'
 #!/bin/sh
 set -eu
@@ -149,6 +158,7 @@ echo "pi: could not locate @earendil-works/pi-coding-agent" >&2
 exit 1
 SH
 
+rm -f "$LOCAL_BIN/agent-browser"
 cat > "$LOCAL_BIN/agent-browser" <<'SH'
 #!/bin/sh
 set -eu
@@ -176,10 +186,14 @@ export default function (pi) {
 }
 JS
 
-cat > "$LOCAL_BIN/p" <<'SH'
-#!/bin/sh
-set -eu
-MAIN_DIR="$HOME/.pi/agent"
+rm -f "$LOCAL_BIN/p"
+# The one install-time value is printed separately so the body can stay a quoted heredoc:
+# the installer honours PI_CODING_AGENT_DIR, so the lean profile must point at the directory
+# actually installed into rather than assume ~/.pi/agent, and everything else in the script
+# must reach the wrapper verbatim.
+{
+  printf '#!/bin/sh\nset -eu\nMAIN_DIR="%s"\n' "$MAIN_DIR"
+  cat <<'SH'
 export PI_SKIP_VERSION_CHECK=1
 export PI_CODING_AGENT_DIR="$HOME/.pi/agent-p"
 export PI_CODING_AGENT_SESSION_DIR="$MAIN_DIR/sessions"
@@ -206,6 +220,7 @@ done
 echo "p: could not locate @earendil-works/pi-coding-agent" >&2
 exit 1
 SH
+} > "$LOCAL_BIN/p"
 chmod 755 "$LOCAL_BIN/pi" "$LOCAL_BIN/p" "$LOCAL_BIN/agent-browser"
 
 # `bun add --global` links its own pi/agent-browser shims into $BUN_INSTALL/bin. They

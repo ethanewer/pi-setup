@@ -286,7 +286,7 @@ hand against the shipped code before being fixed: the trust-inheritance behaviou
 write, the provider host-pinning gap, and the absence of any `isProjectTrusted` call
 were each confirmed directly rather than taken from a report.
 
-Fixing then took three rounds, because each round was adversarially re-reviewed by an
+Fixing then took four rounds, because each round was adversarially re-reviewed by an
 independent agent instructed to *refute* the fixes and to hunt for feature regressions,
 rather than to confirm them. Round one closed most findings; verification found four
 security gaps that had survived and one blocking regression. Round two closed those and

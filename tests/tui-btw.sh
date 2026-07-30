@@ -9,6 +9,9 @@
 set -uo pipefail
 
 command -v tmux >/dev/null 2>&1 || { echo "tui-btw.sh: tmux is required" >&2; exit 2; }
+# python3 is a stub on a clean macOS that prompts for the Xcode tools, so check it runs
+# rather than that it exists — the session-file assertion at the end needs it.
+python3 -c '' >/dev/null 2>&1 || { echo "tui-btw.sh: a working python3 is required (macOS: xcode-select --install)" >&2; exit 2; }
 
 SESSION="pi-setup-tui-btw"
 WORK="$(mktemp -d)"

@@ -61,7 +61,7 @@ const workflowToolSchema = Type.Object({
         description: "Maximum concurrent agents for this run. Clamped to the runtime maximum. Use when provider/transport stability matters.",
     })),
     agentRetries: Type.Optional(Type.Number({
-        description: "Retry attempts for recoverable agent failures such as timeout, connection failure, or empty assistant output. Default 0 unless configured.",
+        description: "Retry attempts for recoverable agent failures such as timeout, connection failure, or empty assistant output. Default 2 unless configured.",
     })),
     agentTimeoutMs: Type.Optional(Type.Number({
         description: "Timeout per agent in milliseconds. Omit to use configured `defaultAgentTimeoutMs`; without one, a default per-agent timeout applies. Set only when the user asks to bound time.",

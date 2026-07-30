@@ -96,7 +96,7 @@ const workflowToolSchema = Type.Object({
   agentRetries: Type.Optional(
     Type.Number({
       description:
-        "Retry attempts for recoverable agent failures such as timeout, connection failure, or empty assistant output. Default 0 unless configured.",
+        "Retry attempts for recoverable agent failures such as timeout, connection failure, or empty assistant output. Default 2 unless configured.",
     }),
   ),
   agentTimeoutMs: Type.Optional(

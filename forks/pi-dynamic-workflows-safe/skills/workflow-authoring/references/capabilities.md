@@ -35,7 +35,7 @@ This compact generated index covers supported runtime globals and workflow-tool 
 | maxAgents | workflow-tool-input | `maxAgents?: number = 100` | — |
 | concurrency | workflow-tool-input | `concurrency?: number` | — |
 | agentRetries | workflow-tool-input | `agentRetries?: number = configured value or 2` | — |
-| agentTimeoutMs | workflow-tool-input | `agentTimeoutMs?: number = configured default, else 15m` | — |
+| agentTimeoutMs | workflow-tool-input | `agentTimeoutMs?: number = configured default, else 60m` | — |
 | tokenBudget | workflow-tool-input | `tokenBudget?: number = configured default or unlimited` | — |
 | resumeFromRunId | workflow-tool-input | `resumeFromRunId?: string` | — |
 <!-- END GENERATED SUPPORTED WORKFLOW CAPABILITIES -->

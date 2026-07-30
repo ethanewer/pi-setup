@@ -134,9 +134,10 @@ Being honest about the remaining edges:
   (`agent-session.js:776`, `:1533-1556`, `:1662`) and by a live multi-tool run captured
   as a JSON event stream, which showed successive `turn_start` → tool call →
   `tool_execution_end` → `turn_end` cycles continuing normally.
-- `pi-context-handoff`'s pure logic is unit-tested: instruction assembly (including that
-  a malformed config degrades to defaults with retries still enabled, and that inherited
-  `customInstructions` are preserved rather than overridden).
+- `pi-context-handoff`'s file-list carry-forward is unit-tested (`tests/carry-files.test.ts`):
+  format parity with Pi's own `formatFileOperations`, the merge, stripping the old block,
+  and carrying the previous compaction's lists into a new summary. Its instruction assembly
+  and config parsing are not yet covered by tests.
 - End-to-end, a **real threshold compaction** was driven in an isolated agent dir (40k
   window, `reserveTokens` 6000, seven ~6k-token files). Instrumented, it showed the
   extension loading, the hook firing with `reason=threshold`, and a compaction being

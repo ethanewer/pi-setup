@@ -4,20 +4,42 @@
 #   bin/pi-setup-doctor            full report
 #   bin/pi-setup-doctor --quiet    only problems
 #   bin/pi-setup-doctor --offline  skip the npm registry check for upstream releases
+#   bin/pi-setup-doctor --fix      repair what can be repaired mechanically, then re-check
 #
 # Exits non-zero when anything is wrong, so it can gate CI or a shell prompt.
+#
+# --fix handles exactly the problems whose repair is deterministic: an installed copy that
+# no longer matches forks/, settings that do not load a fork or still load the npm package
+# that would shadow it, a version that drifted from the pin, and an stt.json that is not
+# owner-only. The first three are all one thing — re-running install.sh — so that is what it
+# does. It never deletes anything, never edits a fork, and never touches trust.json or the
+# compaction settings, because those need a judgement it cannot make.
 set -uo pipefail
 
 QUIET=0
 OFFLINE=0
+FIX=0
+FIXED=0
 for arg in "$@"; do
   case "$arg" in
     --quiet) QUIET=1 ;;
     --offline) OFFLINE=1 ;;
-    -h|--help) sed -n '2,9p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    --fix) FIX=1 ;;
+    -h|--help) awk 'NR==1 { next } /^#/ { sub(/^# ?/, ""); print; next } { exit }' "$0"; exit 0 ;;
     *) printf 'pi-setup-doctor: unknown argument %s\n' "$arg" >&2; exit 2 ;;
   esac
 done
+
+# Repairs are recorded rather than performed inline: a fix that reinstalls would invalidate
+# every check after it, so they run once at the end and the whole report is re-run.
+NEEDS_INSTALL=0
+FIXABLE_STT=""
+fixable() { # fixable <what> <message>
+  case "$1" in
+    install) NEEDS_INSTALL=1 ;;
+    stt) FIXABLE_STT="$2" ;;
+  esac
+}
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MAIN_DIR="${PI_CODING_AGENT_DIR:-$HOME/.pi/agent}"
@@ -30,9 +52,21 @@ ok() { [[ "$QUIET" == "1" ]] || printf '  ok       %s\n' "$*"; }
 note() { NOTES=$((NOTES + 1)); printf '  note     %s\n' "$*"; }
 bad() { PROBLEMS=$((PROBLEMS + 1)); printf '  PROBLEM  %s\n' "$*"; }
 
-command -v node >/dev/null 2>&1 || { printf 'pi-setup-doctor: node is required\n' >&2; exit 2; }
+# The installer guarantees bun, not node: a clean machine that never had Node.js still has
+# to be able to run this. bun -e takes the same code-then-argv shape as node -e, so either
+# works for the small scripts below.
+if command -v node >/dev/null 2>&1; then
+  JS="node"
+elif command -v bun >/dev/null 2>&1; then
+  JS="bun"
+elif [[ -x "${BUN_INSTALL:-$HOME/.bun}/bin/bun" ]]; then
+  JS="${BUN_INSTALL:-$HOME/.bun}/bin/bun"
+else
+  printf '%s: needs node or bun on PATH\n' "$(basename "$0")" >&2
+  exit 2
+fi
 
-FORK_NAMES="$(node -e '
+FORK_NAMES="$("$JS" -e '
 const v = require(process.argv[1] + "/vendor.json");
 console.log(Object.keys(v.forks).join(" "));
 ' "$REPO_DIR")" || { printf 'pi-setup-doctor: could not read vendor.json\n' >&2; exit 2; }
@@ -47,7 +81,8 @@ for fork in $FORK_NAMES; do
     continue
   fi
   if [[ ! -d "$DST" ]]; then
-    bad "$fork is not installed at $DST (run install.sh)"
+    bad "$fork is not installed at $DST (bin/pi-setup-doctor --fix)"
+    fixable install
     continue
   fi
   # .git is present when a fork was installed from its own checkout; node_modules and
@@ -56,7 +91,8 @@ for fork in $FORK_NAMES; do
   if [[ -z "$DIFF" ]]; then
     ok "$fork matches the installed copy"
   else
-    bad "$fork differs from the installed copy:"
+    bad "$fork differs from the installed copy (bin/pi-setup-doctor --fix reinstalls from forks/):"
+    fixable install
     printf '%s\n' "$DIFF" | sed 's/^/             /' | head -20
   fi
 done
@@ -65,9 +101,10 @@ say ""
 say "Pi settings"
 SETTINGS="$MAIN_DIR/settings.json"
 if [[ ! -f "$SETTINGS" ]]; then
-  bad "missing $SETTINGS"
+  bad "missing $SETTINGS (install.sh writes it; run bin/pi-setup-doctor --fix)"
+  fixable install
 else
-  SETTINGS_REPORT="$(node -e '
+  SETTINGS_REPORT="$("$JS" -e '
 const { readFileSync } = require("node:fs");
 const [settingsPath, repoDir] = process.argv.slice(1);
 const vendor = require(repoDir + "/vendor.json");
@@ -85,18 +122,24 @@ const ids = entries.map(identity);
 const out = [];
 for (const fork of Object.keys(vendor.forks)) {
   if (ids.includes(fork)) out.push("ok\tsettings load local/" + fork);
-  else out.push("bad\tsettings do not load local/" + fork);
+  else out.push("bad\tsettings do not load local/" + fork + " (bin/pi-setup-doctor --fix)");
 }
 for (const [fork, meta] of Object.entries(vendor.forks)) {
   if (ids.includes(meta.upstream)) {
-    out.push("bad\tsettings still load the unpatched npm package " + meta.upstream + " (it can shadow the fork)");
+    out.push("bad\tsettings still load the unpatched npm package " + meta.upstream + " (it can shadow the fork; bin/pi-setup-doctor --fix)");
   }
 }
 console.log(out.join("\n"));
 ' "$SETTINGS" "$REPO_DIR")"
   while IFS=$'\t' read -r kind message; do
     [[ -z "${kind:-}" ]] && continue
-    [[ "$kind" == "ok" ]] && ok "$message" || bad "$message"
+    if [[ "$kind" == "ok" ]]; then
+      ok "$message"
+    else
+      bad "$message"
+      # install.sh owns settings.json's packages list, so reinstalling is the repair.
+      fixable install
+    fi
   done <<< "$SETTINGS_REPORT"
 fi
 
@@ -104,17 +147,22 @@ say ""
 say "Configuration hygiene"
 STT="$MAIN_DIR/stt.json"
 if [[ -f "$STT" ]]; then
-  MODE="$(stat -f '%Lp' "$STT" 2>/dev/null || stat -c '%a' "$STT" 2>/dev/null)"
+  # GNU stat -f means --file-system and *succeeds* with unrelated output, so trying BSD
+  # first silently produced a non-mode on Linux and reported a false problem on every
+  # install there. Try GNU, then fall back only if the result is not an octal mode.
+  MODE="$(stat -c '%a' "$STT" 2>/dev/null)"
+  case "$MODE" in ''|*[!0-7]*) MODE="$(stat -f '%Lp' "$STT" 2>/dev/null)" ;; esac
   if [[ "$MODE" == "600" ]]; then
     ok "stt.json is owner-only (600)"
   else
     bad "stt.json is mode $MODE; it selects the transcription host and capture binary, so it should be 600 (chmod 600 $STT)"
+    fixable stt "$STT"
   fi
 fi
 
 TRUST="$MAIN_DIR/trust.json"
 if [[ -f "$TRUST" ]]; then
-  TRUST_REPORT="$(node -e '
+  TRUST_REPORT="$("$JS" -e '
 const { readFileSync } = require("node:fs");
 const { homedir } = require("node:os");
 const trust = JSON.parse(readFileSync(process.argv[1], "utf8"));
@@ -129,9 +177,72 @@ console.log(broad.join("\n"));
   else
     while read -r entry; do
       [[ -z "$entry" ]] && continue
-      bad "trust.json trusts $entry, and Pi inherits trust down the directory tree, so every repository under it is trusted without a prompt. Prefer per-repository entries."
+      bad "trust.json trusts $entry, and Pi inherits trust down the directory tree, so every repository under it is trusted without a prompt. Remove that key from $TRUST and re-approve the repositories you actually work in (this is a judgement call, so --fix will not touch it)."
     done <<< "$TRUST_REPORT"
   fi
+fi
+
+say ""
+say "Keybindings and the p profile"
+# config/keybindings.json is merged into both agent directories by install.sh. Nothing
+# checked that it arrived, so a remap could silently apply to neither.
+KEYBINDS_SRC="$REPO_DIR/config/keybindings.json"
+P_DIR="$HOME/.pi/agent-p"
+if [[ ! -f "$KEYBINDS_SRC" ]]; then
+  bad "missing $KEYBINDS_SRC; install.sh has nothing to merge into the agent directories"
+else
+  for target in "$MAIN_DIR/keybindings.json" "$P_DIR/keybindings.json"; do
+    if [[ ! -f "$target" ]]; then
+      bad "$target is missing; the remapped keys are not in effect there (bin/pi-setup-doctor --fix)"
+      fixable install
+      continue
+    fi
+    MISSING="$("$JS" -e '
+const { readFileSync } = require("node:fs");
+const [srcPath, dstPath] = process.argv.slice(1);
+const want = JSON.parse(readFileSync(srcPath, "utf8"));
+const have = JSON.parse(readFileSync(dstPath, "utf8"));
+const out = [];
+for (const [id, keys] of Object.entries(want)) {
+  const mine = JSON.stringify(keys);
+  if (JSON.stringify(have[id]) !== mine) out.push(id);
+}
+process.stdout.write(out.join(", "));
+' "$KEYBINDS_SRC" "$target" 2>/dev/null)"
+    if [[ -z "$MISSING" ]]; then
+      ok "$(basename "$(dirname "$target")")/keybindings.json carries every managed binding"
+    else
+      bad "$target does not match config/keybindings.json for: $MISSING (bin/pi-setup-doctor --fix)"
+      fixable install
+    fi
+  done
+fi
+
+# The lean profile is a full second installation surface and was entirely unchecked.
+if [[ ! -x "$HOME/.local/bin/p" ]]; then
+  bad "$HOME/.local/bin/p is missing or not executable (bin/pi-setup-doctor --fix)"
+  fixable install
+elif [[ ! -f "$P_DIR/settings.json" ]]; then
+  bad "$P_DIR/settings.json is missing, so the lean profile has no configuration (bin/pi-setup-doctor --fix)"
+  fixable install
+else
+  ok "the p profile is installed"
+fi
+
+# A keybind Pi cannot parse falls back to the upstream default without saying so.
+if [[ -f "$STT" ]]; then
+  STT_REPORT="$("$JS" -e '
+const { readFileSync } = require("node:fs");
+let config;
+try { config = JSON.parse(readFileSync(process.argv[1], "utf8")); }
+catch (error) { process.stdout.write("bad\tstt.json is not valid JSON (" + error.message + "); voice dictation falls back to its defaults"); process.exit(0); }
+const keybind = config.keybind;
+const list = Array.isArray(keybind) ? keybind : typeof keybind === "string" ? [keybind] : [];
+if (list.length === 0) process.stdout.write("bad\tstt.json has no usable keybind; dictation falls back to ctrl+r");
+else process.stdout.write("ok\tvoice keybind " + list.join(" / "));
+' "$STT" 2>/dev/null)"
+  IFS=$'\t' read -r STT_KIND STT_MSG <<< "$STT_REPORT"
+  [[ "${STT_KIND:-bad}" == "ok" ]] && ok "$STT_MSG" || bad "${STT_MSG:-stt.json could not be read}"
 fi
 
 say ""
@@ -159,7 +270,7 @@ BUN_GLOBAL="${BUN_INSTALL:-$HOME/.bun}/install/global/node_modules"
 PINNED_PI="$(sed -n 's/^PI_VERSION="\(.*\)"$/\1/p' "$REPO_DIR/install.sh" | head -1)"
 PINNED_AB="$(sed -n 's/^AGENT_BROWSER_VERSION="\(.*\)"$/\1/p' "$REPO_DIR/install.sh" | head -1)"
 pkg_version() { # pkg_version <package-dir>
-  node -e '
+  "$JS" -e '
 const { existsSync, readFileSync } = require("node:fs");
 const path = process.argv[1] + "/package.json";
 if (!existsSync(path)) process.exit(0);
@@ -174,16 +285,18 @@ for entry in "Pi|$PINNED_PI|$INSTALLED_PI" "agent-browser|$PINNED_AB|$INSTALLED_
     bad "could not read the $NAME version pinned in install.sh"
   elif [[ -z "$INSTALLED" ]]; then
     bad "$NAME is pinned at $PINNED but is not installed under $BUN_GLOBAL (run ./install.sh)"
+    fixable install
   elif [[ "$INSTALLED" == "$PINNED" ]]; then
     ok "$NAME $INSTALLED matches the version install.sh pins"
   else
     bad "$NAME $INSTALLED is installed but install.sh pins $PINNED; the next ./install.sh run would change it. Update the pin or reinstall."
+    fixable install
   fi
 done
 
 say ""
 say "Compaction settings"
-COMPACTION_REPORT="$(node -e '
+COMPACTION_REPORT="$("$JS" -e '
 const { readFileSync, existsSync } = require("node:fs");
 const [settingsPath, storePath] = process.argv.slice(1);
 const read = (p) => (existsSync(p) ? JSON.parse(readFileSync(p, "utf8")) : {});
@@ -191,7 +304,7 @@ const settings = read(settingsPath);
 const compaction = settings.compaction ?? {};
 const reserve = typeof compaction.reserveTokens === "number" ? compaction.reserveTokens : 16384;
 if (compaction.enabled === false) {
-  console.log("bad\tcompaction is disabled; a long run will hit the context limit and stop instead of compacting");
+  console.log("bad\tcompaction is disabled in " + settingsPath + "; a long run will hit the context limit and stop instead of compacting. Set compaction.enabled true, or drop the key to take the default.");
   process.exit(0);
 }
 // Compaction fires at contextWindow - reserveTokens, so a reserve near the window
@@ -207,8 +320,8 @@ for (const provider of Object.values(store)) {
 }
 if (!win) { console.log("ok\treserveTokens " + reserve + " (context window for " + wanted + " unknown; not checked)"); process.exit(0); }
 const threshold = win - reserve;
-if (threshold <= 0) console.log("bad\treserveTokens " + reserve + " >= context window " + win + " for " + wanted + "; compaction can never leave usable context");
-else if (reserve > win / 2) console.log("bad\treserveTokens " + reserve + " is over half the " + win + "-token window for " + wanted + "; compaction would fire at " + threshold + " tokens and the summarization request can stall");
+if (threshold <= 0) console.log("bad\tcompaction.reserveTokens is " + reserve + " in " + settingsPath + ", at or above the " + win + "-token window for " + wanted + ", so compaction can never leave usable context. About 16384 is right.");
+else if (reserve > win / 2) console.log("bad\tcompaction.reserveTokens is " + reserve + " in " + settingsPath + ", over half the " + win + "-token window for " + wanted + ": compaction fires at " + threshold + " tokens and the summarization request can stall. About 16384 is right.");
 else console.log("ok\treserveTokens " + reserve + " of a " + win + "-token window (compaction at ~" + threshold + " tokens)");
 ' "$SETTINGS" "$MAIN_DIR/models-store.json" 2>/dev/null)"
 if [[ -z "$COMPACTION_REPORT" ]]; then
@@ -239,7 +352,7 @@ if [[ "$OFFLINE" == "0" ]] && command -v npm >/dev/null 2>&1; then
     # non-whitespace character: IFS collapses leading empty fields for whitespace
     # delimiters, which would shift the version into UPSTREAM and query the
     # registry for it.
-    IFS='|' read -r UPSTREAM PINNED < <(node -e '
+    IFS='|' read -r UPSTREAM PINNED < <("$JS" -e '
 const v = require(process.argv[1] + "/vendor.json").forks[process.argv[2]];
 process.stdout.write((v.upstream ?? "") + "|" + (v.version ?? "") + "\n");
 ' "$REPO_DIR" "$fork")
@@ -256,7 +369,7 @@ process.stdout.write((v.upstream ?? "") + "|" + (v.version ?? "") + "\n");
     else
       # A fork with no patch file is hand-maintained; pi-setup-vendor refuses to re-vendor
       # it, so suggesting the command would send the reader down a path that always fails.
-      PATCH_REL="$(node -e '
+      PATCH_REL="$("$JS" -e '
 const v = require(process.argv[1] + "/vendor.json").forks[process.argv[2]];
 process.stdout.write(v.patch ?? "");
 ' "$REPO_DIR" "$fork")"
@@ -270,7 +383,42 @@ process.stdout.write(v.patch ?? "");
 fi
 
 say ""
+if [[ "$PROBLEMS" -gt 0 && "$FIX" == "1" ]]; then
+  printf '\nRepairing what can be repaired mechanically.\n'
+  if [[ -n "$FIXABLE_STT" ]]; then
+    if chmod 600 "$FIXABLE_STT" 2>/dev/null; then
+      printf '  fixed    chmod 600 %s\n' "$FIXABLE_STT"
+      FIXED=$((FIXED + 1))
+    else
+      printf '  failed   could not chmod 600 %s\n' "$FIXABLE_STT"
+    fi
+  fi
+  if [[ "$NEEDS_INSTALL" == "1" ]]; then
+    if [[ ! -x "$REPO_DIR/install.sh" ]]; then
+      printf '  failed   %s/install.sh is missing or not executable\n' "$REPO_DIR"
+    else
+      printf '  running  %s/install.sh (Chrome check skipped)\n' "$REPO_DIR"
+      if PI_SETUP_SKIP_BROWSER_INSTALL=1 "$REPO_DIR/install.sh" >/tmp/pi-setup-fix.log 2>&1; then
+        printf '  fixed    reinstalled from forks/\n'
+        FIXED=$((FIXED + 1))
+      else
+        printf '  failed   install.sh exited non-zero; see /tmp/pi-setup-fix.log\n'
+      fi
+    fi
+  fi
+  if [[ "$FIXED" == "0" ]]; then
+    printf '\nNothing was mechanically fixable. The problems above need a decision.\n'
+    printf '%s problem(s), %s note(s).\n' "$PROBLEMS" "$NOTES"
+    exit 1
+  fi
+  # Re-check from scratch: a repair invalidates every result gathered before it.
+  printf '\nRe-checking.\n'
+  exec "$0" $([[ "$QUIET" == "1" ]] && printf -- --quiet) $([[ "$OFFLINE" == "1" ]] && printf -- --offline)
+fi
 if [[ "$PROBLEMS" -gt 0 ]]; then
+  if [[ "$FIX" == "0" ]]; then
+    printf 'Some of these may be mechanically fixable: bin/pi-setup-doctor --fix\n'
+  fi
   printf '%s problem(s), %s note(s).\n' "$PROBLEMS" "$NOTES"
   exit 1
 fi
