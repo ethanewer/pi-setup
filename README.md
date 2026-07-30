@@ -229,10 +229,15 @@ What you press next decides where the transcript goes:
 | anything else | keep it in the box, then apply that key |
 
 Transcription never blocks you. The moment recording stops, a `[⠏ transcribing]`
-placeholder takes the transcript's place — in the input box, or just above it when the
-message is already on its way — and you keep typing. When the provider answers, the
-placeholder becomes the text; if it fails, it becomes an error and **nothing is sent**.
-The model receives a spoken message only once the transcript exists.
+placeholder takes the transcript's place and you keep typing. When the provider answers,
+the placeholder becomes the text.
+
+Sending and queueing take **the whole message**, not just the speech: anything already
+typed leaves the composer with it, and the placeholder holds the spot where the cursor
+was, so `typed words [⠏ transcribing] more` is sent as one message once the transcript
+lands. If transcription fails, the message becomes an error, **nothing is sent**, and the
+text goes back into the composer. The model receives a spoken message only once the
+transcript exists.
 
 `stt.json` takes a list, so the same chord works whether or not the terminal treats Option
 as Meta: `"keybind": ["alt+p", "π"]`. Pi's own keybindings cannot express the literal

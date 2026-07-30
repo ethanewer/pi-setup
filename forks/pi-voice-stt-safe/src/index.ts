@@ -132,10 +132,15 @@ export default function piVoiceSttExtension(pi: ExtensionAPI) {
 
     return {
       resolve: (text) => {
-        // A placeholder the user deleted while waiting means the transcript has nowhere
-        // to go; appending it to whatever they typed instead would be worse than losing it.
+        // A placeholder the user deleted while waiting means the transcript has nowhere to
+        // go; appending it to whatever they typed instead would be worse than losing it.
+        // Say that plainly rather than reporting an insertion that did not happen.
         if (!finish(text)) {
-          notify(ctx, { title: "Pi Voice STT", message: strings.toast.inserted, variant: "info" });
+          notify(ctx, {
+            title: "Pi Voice STT",
+            message: "Transcript discarded: its placeholder was removed from the prompt.",
+            variant: "warning",
+          });
         }
       },
       fail: (message) => {
@@ -149,12 +154,25 @@ export default function piVoiceSttExtension(pi: ExtensionAPI) {
   };
 
   /**
-   * The user already committed to sending or queueing. A custom entry stands in for the
-   * message until the transcript exists — Pi never shows custom entries to the model, so
-   * nothing reaches it until the real message is sent below.
+   * The user already committed to sending or queueing, so the whole message leaves the
+   * composer now — anything already typed included, with the placeholder standing where
+   * the cursor was. It waits above the editor until the transcript exists, and only then
+   * is a message sent for the first time; the model sees nothing before that.
+   *
+   * On failure the composed text goes back into the editor. Taking someone's typing and
+   * then losing it because a provider timed out is not an acceptable way to fail.
    */
   const beginMessageDelivery = (ctx: ExtensionContext, outcome: "send" | "queue"): Delivery => {
-    const id = pendingMessages.begin(ctx, outcome);
+    // Insert at the cursor first, then take the line: the transcript lands where the
+    // cursor was, keeping whatever was typed on either side of it.
+    if (activeEditor?.insertTextAtCursor) activeEditor.insertTextAtCursor(placeholderText());
+    else ctx.ui.setEditorText(`${ctx.ui.getEditorText()}${placeholderText()}`);
+    // The expanded text, so pasted content travels with the message rather than as a
+    // marker that no longer has anything to expand to once the editor is cleared.
+    const composed = ctx.ui.getEditorText();
+    ctx.ui.setEditorText("");
+
+    const id = pendingMessages.begin(ctx, outcome, composed);
     trackPlaceholder(1);
     let settled = false;
     const settle = () => {
@@ -164,11 +182,19 @@ export default function piVoiceSttExtension(pi: ExtensionAPI) {
       return true;
     };
 
+    const restore = () => {
+      const { text } = replacePlaceholder(composed, "");
+      if (text.trim().length === 0) return;
+      const current = ctx.ui.getEditorText();
+      ctx.ui.setEditorText(current.length > 0 ? `${text}${current}` : text);
+    };
+
     return {
       resolve: (text) => {
         if (!settle()) return;
         pendingMessages.resolve(ctx, id);
-        const prompt = text.trim();
+        const { text: full, replaced } = replacePlaceholder(composed, text);
+        const prompt = (replaced ? full : `${composed} ${text}`).trim();
         if (!prompt) return;
         if (outcome === "queue" || !ctx.isIdle()) pi.sendUserMessage(prompt, { deliverAs: "followUp" });
         else pi.sendUserMessage(prompt);
@@ -176,10 +202,12 @@ export default function piVoiceSttExtension(pi: ExtensionAPI) {
       fail: (message) => {
         if (!settle()) return;
         pendingMessages.fail(ctx, id, message);
+        restore();
       },
       cancel: () => {
         if (!settle()) return;
         pendingMessages.resolve(ctx, id);
+        restore();
       },
     };
   };

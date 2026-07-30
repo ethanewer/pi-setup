@@ -15,22 +15,25 @@
  */
 
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { type Component, Text, truncateToWidth } from "@earendil-works/pi-tui";
+import { type Component, truncateToWidth } from "@earendil-works/pi-tui";
 
-import { frameAt, placeholderText } from "./transcribing";
+import { animateRenderedLines, frameAt } from "./transcribing";
 
 const WIDGET_KEY = "voice-pending";
+/** Widgets render above the editor, so a long message must not push the transcript away. */
+const MAX_LINES = 6;
 /** How long a failure stays on screen before the line clears itself. */
 const ERROR_LINGER_MS = 8000;
 
 export type PendingIntent = "send" | "queue";
 
 type PendingItem =
-	| { id: number; status: "pending"; intent: PendingIntent }
+	/** `text` is the whole message with the placeholder standing in for the transcript. */
+	| { id: number; status: "pending"; intent: PendingIntent; text: string }
 	| { id: number; status: "failed"; message: string };
 
 export type PendingStore = {
-	begin(ctx: ExtensionContext, intent: PendingIntent): number;
+	begin(ctx: ExtensionContext, intent: PendingIntent, text: string): number;
 	resolve(ctx: ExtensionContext, id: number): void;
 	fail(ctx: ExtensionContext, id: number, message: string): void;
 	count(): number;
@@ -71,9 +74,9 @@ export const createPendingStore = (getTick: () => number): PendingStore => {
 	};
 
 	return {
-		begin(ctx, intent) {
+		begin(ctx, intent, text) {
 			const id = nextId++;
-			items.push({ id, status: "pending", intent });
+			items.push({ id, status: "pending", intent, text });
 			sync(ctx);
 			return id;
 		},
@@ -110,19 +113,29 @@ class PendingWidget implements Component {
 	) {}
 
 	render(width: number): string[] {
-		return this.items.map((item) => {
-			const text =
-				item.status === "failed"
-					? this.theme.fg("error", `voice transcription failed: ${item.message}`)
-					: this.theme.fg(
-							"dim",
-							placeholderText(item.intent === "queue" ? "transcribing, will queue" : "transcribing").replace(
-								"⠿",
-								frameAt(this.getTick()),
-							),
-						);
-			return truncateToWidth(text, width, "");
-		});
+		const lines: string[] = [];
+		for (const item of this.items) {
+			if (item.status === "failed") {
+				lines.push(truncateToWidth(this.theme.fg("error", `voice transcription failed: ${item.message}`), width, ""));
+				continue;
+			}
+			// The message as it will be sent, with the placeholder where the transcript
+			// goes. It is shown in full so the wait is over something recognisable rather
+			// than over a bare spinner.
+			const queued = item.intent === "queue" ? this.theme.fg("dim", "  (queued)") : "";
+			const painted = animateRenderedLines(item.text.split("\n"), frameAt(this.getTick()), (part) =>
+				this.theme.fg("dim", part),
+			);
+			const shown = painted.slice(0, MAX_LINES);
+			for (const [index, line] of shown.entries()) {
+				const last = index === shown.length - 1;
+				lines.push(truncateToWidth(last ? `${line}${queued}` : line, width, ""));
+			}
+			if (painted.length > shown.length) {
+				lines.push(truncateToWidth(this.theme.fg("dim", `  … ${painted.length - shown.length} more lines`), width, ""));
+			}
+		}
+		return lines;
 	}
 
 	invalidate(): void {}

@@ -52,8 +52,12 @@ export class SideView implements Component, Focusable {
 	private mainStatus: MainStatus = "idle";
 	private busy = false;
 	private spinnerFrame = 0;
-	/** Rows scrolled up from the bottom. 0 sticks to the newest output. */
-	private scrollBack = 0;
+	/**
+	 * The content row shown at the bottom of the viewport, or null to follow the newest
+	 * output. Anchoring to content rather than to a distance from the end is what keeps a
+	 * scrolled-back reader in place while an answer streams in below them.
+	 */
+	private anchor: number | null = null;
 	private lastTranscriptRows = 0;
 	private lastTotalRows = 0;
 
@@ -81,18 +85,18 @@ export class SideView implements Component, Focusable {
 
 	addUser(text: string): void {
 		this.blocks.push({ kind: "user", component: new UserMessageComponent(text, getMarkdownTheme(), 0) });
-		this.stickToBottom();
+		this.onContent();
 	}
 
 	addNotice(text: string, tone: "dim" | "error" = "dim"): void {
 		this.blocks.push({ kind: "notice", text, tone });
-		this.stickToBottom();
+		this.onContent();
 	}
 
 	startAssistant(message: AssistantMessage): void {
 		const component = new AssistantMessageComponent(message, false, getMarkdownTheme());
 		this.blocks.push({ kind: "assistant", component, message });
-		this.stickToBottom();
+		this.onContent();
 	}
 
 	updateAssistant(message: AssistantMessage): void {
@@ -103,7 +107,7 @@ export class SideView implements Component, Focusable {
 			if (block.kind !== "assistant") continue;
 			block.message = message;
 			block.component.updateContent(message);
-			this.stickToBottom();
+			this.onContent();
 			return;
 		}
 		this.startAssistant(message);
@@ -111,7 +115,7 @@ export class SideView implements Component, Focusable {
 
 	startTool(id: string, label: string): void {
 		this.blocks.push({ kind: "tool", id, label, state: "running" });
-		this.stickToBottom();
+		this.onContent();
 	}
 
 	endTool(id: string, isError: boolean): void {
@@ -127,7 +131,7 @@ export class SideView implements Component, Focusable {
 
 	setBusy(busy: boolean): void {
 		this.busy = busy;
-		this.stickToBottom();
+		this.onContent();
 	}
 
 	setMainStatus(status: MainStatus): void {
@@ -142,8 +146,11 @@ export class SideView implements Component, Focusable {
 		this.tui.requestRender();
 	}
 
-	private stickToBottom(): void {
-		this.scrollBack = 0;
+	/**
+	 * New content arrived. Only jump to it when the reader is already at the bottom —
+	 * yanking them out of what they were reading is the whole thing to avoid.
+	 */
+	private onContent(): void {
 		this.tui.requestRender();
 	}
 
@@ -174,8 +181,10 @@ export class SideView implements Component, Focusable {
 	}
 
 	private scrollBy(rows: number): void {
-		const max = Math.max(0, this.lastTotalRows - this.lastTranscriptRows);
-		this.scrollBack = Math.min(max, Math.max(0, this.scrollBack + rows));
+		const bottom = this.anchor ?? this.lastTotalRows;
+		const next = bottom - rows;
+		// Scrolling back to the end resumes following, so later output appears again.
+		this.anchor = next >= this.lastTotalRows ? null : Math.max(this.lastTranscriptRows, next);
 		this.tui.requestRender();
 	}
 
@@ -202,6 +211,8 @@ export class SideView implements Component, Focusable {
 		this.lastTotalRows = body.length;
 		this.lastTranscriptRows = transcriptRows;
 
+		if (this.anchor !== null && this.anchor > body.length) this.anchor = null;
+
 		let visible: string[];
 		if (body.length <= transcriptRows) {
 			// A short conversation grows downward from the top, like the main chat: header,
@@ -210,7 +221,7 @@ export class SideView implements Component, Focusable {
 			// wall of blank rows.
 			visible = body;
 		} else {
-			const end = body.length - this.scrollBack;
+			const end = this.anchor ?? body.length;
 			visible = body.slice(Math.max(0, end - transcriptRows), end);
 		}
 
@@ -232,7 +243,8 @@ export class SideView implements Component, Focusable {
 		const left = this.busy
 			? `${this.theme.fg("accent", SPINNER[this.spinnerFrame])} ${this.theme.fg("dim", "answering · esc return to the main thread")}`
 			: this.theme.fg("dim", "esc return to the main thread");
-		const right = this.theme.fg("dim", this.scrollBack > 0 ? `scrolled ${this.scrollBack} · shift+↓ to follow` : "side conversation");
+		const behind = this.anchor === null ? 0 : Math.max(0, this.lastTotalRows - this.anchor);
+		const right = this.theme.fg("dim", behind > 0 ? `${behind} rows below · shift+↓ to follow` : "side conversation");
 		return row(left, right, width);
 	}
 

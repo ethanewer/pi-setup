@@ -204,9 +204,10 @@ becomes a slowly pulsing red dot while recording, and a `[⠏ transcribing]` pla
 holds the transcript's spot while the provider works. Transcription stopped being a modal
 wait: the key that ends a recording chooses insert (`alt+p`), send (`enter`) or queue
 (the `app.message.followUp` key), any other key inserts and is then applied, and typing
-continues around the placeholder. A sent message is a live widget until the transcript
-arrives, so the model gets nothing until it does, and a failure becomes an error line
-rather than a half-sent message. `PI_STT_FAKE_TRANSCRIPT` / `PI_STT_FAKE_FAIL` /
+continues around the placeholder. Sending or queueing takes the whole composer with it — the
+placeholder holds the cursor's spot inside the message — and the result waits in a live
+widget until the transcript arrives, so the model gets nothing until it does. A failure
+becomes an error line and returns the text to the composer rather than losing it. `PI_STT_FAKE_TRANSCRIPT` / `PI_STT_FAKE_FAIL` /
 `PI_STT_FAKE_DELAY_MS` replace the provider with a fixed answer so this lifecycle can be
 driven end to end without a microphone or an API call.
 

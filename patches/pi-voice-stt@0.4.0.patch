@@ -1498,7 +1498,7 @@ diff -ruN --exclude=node_modules a/src/core/voice-commands.ts b/src/core/voice-c
            return { command, text: stripped.slice(0, start).replace(TRAILING_PUNCTUATION, "") };
 diff -ruN --exclude=node_modules a/src/index.ts b/src/index.ts
 --- a/src/index.ts	1985-10-26 03:15:00
-+++ b/src/index.ts	2026-07-30 15:48:33
++++ b/src/index.ts	2026-07-30 16:23:34
 @@ -1,4 +1,5 @@
  import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 +import type { EditorComponent } from "@earendil-works/pi-tui";
@@ -1519,7 +1519,7 @@ diff -ruN --exclude=node_modules a/src/index.ts b/src/index.ts
  
  const toastType = (variant: DictationToast["variant"]): "info" | "warning" | "error" => {
    if (variant === "error") return "error";
-@@ -34,31 +40,179 @@
+@@ -34,31 +40,207 @@
    const strings = resolveStrings(startup.locale);
    const inputIndicator = createInputIndicator(keybind, strings);
    let activeMode = startup.mode || DEFAULT_MODE;
@@ -1615,10 +1615,15 @@ diff -ruN --exclude=node_modules a/src/index.ts b/src/index.ts
 +
 +    return {
 +      resolve: (text) => {
-+        // A placeholder the user deleted while waiting means the transcript has nowhere
-+        // to go; appending it to whatever they typed instead would be worse than losing it.
++        // A placeholder the user deleted while waiting means the transcript has nowhere to
++        // go; appending it to whatever they typed instead would be worse than losing it.
++        // Say that plainly rather than reporting an insertion that did not happen.
 +        if (!finish(text)) {
-+          notify(ctx, { title: "Pi Voice STT", message: strings.toast.inserted, variant: "info" });
++          notify(ctx, {
++            title: "Pi Voice STT",
++            message: "Transcript discarded: its placeholder was removed from the prompt.",
++            variant: "warning",
++          });
 +        }
 +      },
 +      fail: (message) => {
@@ -1632,12 +1637,25 @@ diff -ruN --exclude=node_modules a/src/index.ts b/src/index.ts
 +  };
 +
 +  /**
-+   * The user already committed to sending or queueing. A custom entry stands in for the
-+   * message until the transcript exists — Pi never shows custom entries to the model, so
-+   * nothing reaches it until the real message is sent below.
++   * The user already committed to sending or queueing, so the whole message leaves the
++   * composer now — anything already typed included, with the placeholder standing where
++   * the cursor was. It waits above the editor until the transcript exists, and only then
++   * is a message sent for the first time; the model sees nothing before that.
++   *
++   * On failure the composed text goes back into the editor. Taking someone's typing and
++   * then losing it because a provider timed out is not an acceptable way to fail.
 +   */
 +  const beginMessageDelivery = (ctx: ExtensionContext, outcome: "send" | "queue"): Delivery => {
-+    const id = pendingMessages.begin(ctx, outcome);
++    // Insert at the cursor first, then take the line: the transcript lands where the
++    // cursor was, keeping whatever was typed on either side of it.
++    if (activeEditor?.insertTextAtCursor) activeEditor.insertTextAtCursor(placeholderText());
++    else ctx.ui.setEditorText(`${ctx.ui.getEditorText()}${placeholderText()}`);
++    // The expanded text, so pasted content travels with the message rather than as a
++    // marker that no longer has anything to expand to once the editor is cleared.
++    const composed = ctx.ui.getEditorText();
++    ctx.ui.setEditorText("");
++
++    const id = pendingMessages.begin(ctx, outcome, composed);
 +    trackPlaceholder(1);
 +    let settled = false;
 +    const settle = () => {
@@ -1647,11 +1665,19 @@ diff -ruN --exclude=node_modules a/src/index.ts b/src/index.ts
 +      return true;
 +    };
 +
++    const restore = () => {
++      const { text } = replacePlaceholder(composed, "");
++      if (text.trim().length === 0) return;
++      const current = ctx.ui.getEditorText();
++      ctx.ui.setEditorText(current.length > 0 ? `${text}${current}` : text);
++    };
++
 +    return {
 +      resolve: (text) => {
 +        if (!settle()) return;
 +        pendingMessages.resolve(ctx, id);
-+        const prompt = text.trim();
++        const { text: full, replaced } = replacePlaceholder(composed, text);
++        const prompt = (replaced ? full : `${composed} ${text}`).trim();
 +        if (!prompt) return;
 +        if (outcome === "queue" || !ctx.isIdle()) pi.sendUserMessage(prompt, { deliverAs: "followUp" });
 +        else pi.sendUserMessage(prompt);
@@ -1659,10 +1685,12 @@ diff -ruN --exclude=node_modules a/src/index.ts b/src/index.ts
 +      fail: (message) => {
 +        if (!settle()) return;
 +        pendingMessages.fail(ctx, id, message);
++        restore();
 +      },
 +      cancel: () => {
 +        if (!settle()) return;
 +        pendingMessages.resolve(ctx, id);
++        restore();
 +      },
 +    };
 +  };
@@ -1715,7 +1743,7 @@ diff -ruN --exclude=node_modules a/src/index.ts b/src/index.ts
      notify,
      onModeChange: (mode) => inputIndicator.setMode(mode),
      onError: reportError,
-@@ -120,13 +274,18 @@
+@@ -120,13 +302,18 @@
          try {
            const config = await getConfig();
            assertProviderReady(config.provider);
@@ -1735,7 +1763,7 @@ diff -ruN --exclude=node_modules a/src/index.ts b/src/index.ts
          } catch (error) {
            reportError(ctx, error);
          }
-@@ -139,7 +298,17 @@
+@@ -139,7 +326,17 @@
        }
  
        const configPath = startup.configPath || "defaults only (set PI_STT_CONFIG or ~/.pi/agent/stt.json)";
@@ -1754,7 +1782,7 @@ diff -ruN --exclude=node_modules a/src/index.ts b/src/index.ts
      },
    });
  
-@@ -148,11 +317,16 @@
+@@ -148,11 +345,16 @@
  
      const previousEditor = ctx.ui.getEditorComponent();
      ctx.ui.setEditorComponent(createVoiceEditorFactory(previousEditor, {
@@ -1772,7 +1800,7 @@ diff -ruN --exclude=node_modules a/src/index.ts b/src/index.ts
        onToggle: (handlerCtx) => {
          void (async () => {
            // Idle -> start recording. While recording/processing -> stop. The
-@@ -176,11 +350,24 @@
+@@ -176,11 +378,24 @@
        onSend: (handlerCtx) => {
          void controller.stopAndSubmit(handlerCtx).catch((error: unknown) => reportError(handlerCtx, error));
        },
@@ -2351,8 +2379,8 @@ diff -ruN --exclude=node_modules a/src/ui/input-indicator.ts b/src/ui/input-indi
  };
 diff -ruN --exclude=node_modules a/src/ui/pending-message.ts b/src/ui/pending-message.ts
 --- a/src/ui/pending-message.ts	1969-12-31 18:00:00
-+++ b/src/ui/pending-message.ts	2026-07-30 15:20:31
-@@ -0,0 +1,129 @@
++++ b/src/ui/pending-message.ts	2026-07-30 16:26:53
+@@ -0,0 +1,142 @@
 +/**
 + * A message the user has committed to sending, whose text does not exist yet.
 + *
@@ -2370,22 +2398,25 @@ diff -ruN --exclude=node_modules a/src/ui/pending-message.ts b/src/ui/pending-me
 + */
 +
 +import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
-+import { type Component, Text, truncateToWidth } from "@earendil-works/pi-tui";
++import { type Component, truncateToWidth } from "@earendil-works/pi-tui";
 +
-+import { frameAt, placeholderText } from "./transcribing";
++import { animateRenderedLines, frameAt } from "./transcribing";
 +
 +const WIDGET_KEY = "voice-pending";
++/** Widgets render above the editor, so a long message must not push the transcript away. */
++const MAX_LINES = 6;
 +/** How long a failure stays on screen before the line clears itself. */
 +const ERROR_LINGER_MS = 8000;
 +
 +export type PendingIntent = "send" | "queue";
 +
 +type PendingItem =
-+	| { id: number; status: "pending"; intent: PendingIntent }
++	/** `text` is the whole message with the placeholder standing in for the transcript. */
++	| { id: number; status: "pending"; intent: PendingIntent; text: string }
 +	| { id: number; status: "failed"; message: string };
 +
 +export type PendingStore = {
-+	begin(ctx: ExtensionContext, intent: PendingIntent): number;
++	begin(ctx: ExtensionContext, intent: PendingIntent, text: string): number;
 +	resolve(ctx: ExtensionContext, id: number): void;
 +	fail(ctx: ExtensionContext, id: number, message: string): void;
 +	count(): number;
@@ -2426,9 +2457,9 @@ diff -ruN --exclude=node_modules a/src/ui/pending-message.ts b/src/ui/pending-me
 +	};
 +
 +	return {
-+		begin(ctx, intent) {
++		begin(ctx, intent, text) {
 +			const id = nextId++;
-+			items.push({ id, status: "pending", intent });
++			items.push({ id, status: "pending", intent, text });
 +			sync(ctx);
 +			return id;
 +		},
@@ -2465,19 +2496,29 @@ diff -ruN --exclude=node_modules a/src/ui/pending-message.ts b/src/ui/pending-me
 +	) {}
 +
 +	render(width: number): string[] {
-+		return this.items.map((item) => {
-+			const text =
-+				item.status === "failed"
-+					? this.theme.fg("error", `voice transcription failed: ${item.message}`)
-+					: this.theme.fg(
-+							"dim",
-+							placeholderText(item.intent === "queue" ? "transcribing, will queue" : "transcribing").replace(
-+								"⠿",
-+								frameAt(this.getTick()),
-+							),
-+						);
-+			return truncateToWidth(text, width, "");
-+		});
++		const lines: string[] = [];
++		for (const item of this.items) {
++			if (item.status === "failed") {
++				lines.push(truncateToWidth(this.theme.fg("error", `voice transcription failed: ${item.message}`), width, ""));
++				continue;
++			}
++			// The message as it will be sent, with the placeholder where the transcript
++			// goes. It is shown in full so the wait is over something recognisable rather
++			// than over a bare spinner.
++			const queued = item.intent === "queue" ? this.theme.fg("dim", "  (queued)") : "";
++			const painted = animateRenderedLines(item.text.split("\n"), frameAt(this.getTick()), (part) =>
++				this.theme.fg("dim", part),
++			);
++			const shown = painted.slice(0, MAX_LINES);
++			for (const [index, line] of shown.entries()) {
++				const last = index === shown.length - 1;
++				lines.push(truncateToWidth(last ? `${line}${queued}` : line, width, ""));
++			}
++			if (painted.length > shown.length) {
++				lines.push(truncateToWidth(this.theme.fg("dim", `  … ${painted.length - shown.length} more lines`), width, ""));
++			}
++		}
++		return lines;
 +	}
 +
 +	invalidate(): void {}
