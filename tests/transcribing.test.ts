@@ -54,14 +54,27 @@ describe("animation", () => {
 		expect(animated?.length).toBe(line.length);
 	});
 
+	test("paints the whole run, brackets and label included", () => {
+		const [animated] = animateRenderedLines([placeholderText()], "⠙", (t) => `<${t}>`);
+		expect(animated).toBe("<[⠙ transcribing]>");
+	});
+
+	test("restores the foreground that was in effect before it", () => {
+		const line = `\x1b[38;2;1;2;3mtyped ${placeholderText()} more`;
+		const [animated] = animateRenderedLines([line], "⠙", (t) => `\x1b[90m${t}\x1b[39m`);
+		expect(animated).toBe("\x1b[38;2;1;2;3mtyped \x1b[90m[⠙ transcribing]\x1b[39m\x1b[38;2;1;2;3m more");
+	});
+
+	test("colours the frame alone when the run is split across a wrap", () => {
+		// The sentinel wrapped onto this line but its opening bracket did not, so there is
+		// no run to paint — only the frame is substituted.
+		const [wrapped] = animateRenderedLines([`${SPINNER_SENTINEL} transcribing] tail`], "⠙", (t) => `<${t}>`);
+		expect(wrapped).toBe("<⠙> transcribing] tail");
+	});
+
 	test("leaves lines without a placeholder untouched", () => {
 		const lines = ["plain", "also plain"];
 		expect(animateRenderedLines(lines, "⠙", (t) => t)).toBe(lines);
-	});
-
-	test("paints only the frame, so surrounding styling is preserved", () => {
-		const [animated] = animateRenderedLines([placeholderText()], "⠙", (t) => `<${t}>`);
-		expect(animated).toBe("[<⠙> transcribing]");
 	});
 
 	test("cycles through every frame", () => {

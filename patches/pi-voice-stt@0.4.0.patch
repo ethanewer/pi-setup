@@ -1983,8 +1983,8 @@ diff -ruN --exclude=node_modules a/src/secrets/resolve-api-key.ts b/src/secrets/
  };
 diff -ruN --exclude=node_modules a/src/ui/cursor-cell.ts b/src/ui/cursor-cell.ts
 --- a/src/ui/cursor-cell.ts	1969-12-31 18:00:00
-+++ b/src/ui/cursor-cell.ts	2026-07-30 15:43:40
-@@ -0,0 +1,78 @@
++++ b/src/ui/cursor-cell.ts	2026-07-30 16:08:18
+@@ -0,0 +1,88 @@
 +/**
 + * Drawing the recording indicator into the editor's cursor cell.
 + *
@@ -2042,31 +2042,41 @@ diff -ruN --exclude=node_modules a/src/ui/cursor-cell.ts b/src/ui/cursor-cell.ts
 +	return region.length >= columns && region.trim().length === 0;
 +};
 +
++/** Styled text plus the number of columns it occupies, given separately because
++ * measuring styled text on every frame is wasted work. */
++export type Indicator = { text: string; width: number };
++
 +/**
-+ * Compose the cursor row: `dot` in the cursor's cell, then `label` over the blank cells
-+ * that follow it, with the rest of the line shifted back so the width never changes.
++ * Compose the cursor row: the indicator starts in the cursor's cell and runs over the
++ * cells after it, with the rest of the line shifted back so the width never changes.
 + *
-+ * `dot` and `label` are already styled; their visible widths are given separately because
-+ * measuring styled text at every frame is wasted work.
++ * `full` is used only when every cell it needs is blank — at the end of a line those are
++ * the editor's padding, so it costs nothing, while mid-text there is nothing to write
++ * over without hiding the user's own characters. In that case `minimal` is used instead,
++ * which is a single cell. It is all or nothing on purpose: a partially drawn `[● recor`
++ * would be worse than the bare dot.
 + */
-+export const composeCursorLine = (
-+	line: string,
-+	dot: string,
-+	label: { text: string; width: number } | undefined,
-+	width: number,
-+): string => {
++export const composeCursorLine = (line: string, full: Indicator, minimal: Indicator, width: number): string => {
 +	const parts = splitAtCursor(line);
 +	if (!parts) return line;
 +
-+	const used = visibleWidth(parts.head) + 1;
-+	const showLabel = label && label.width > 0 && used + label.width <= width && roomFor(parts.tail, label.width);
-+	const tail = showLabel ? sliceByColumn(parts.tail, label.width, Math.max(0, width - used - label.width)) : parts.tail;
-+	return `${parts.head}${dot}${showLabel ? label.text : ""}${tail}`;
++	const start = visibleWidth(parts.head);
++	const fits = (indicator: Indicator) =>
++		indicator.width > 0 &&
++		start + indicator.width <= width &&
++		(indicator.width === 1 || roomFor(parts.tail, indicator.width - 1));
++
++	const chosen = fits(full) ? full : minimal;
++	// The cursor's own cell is already gone with the run that was replaced; anything the
++	// indicator needs beyond it comes out of the cells that follow.
++	const consumed = Math.max(0, chosen.width - 1);
++	const tail = consumed > 0 ? sliceByColumn(parts.tail, consumed, Math.max(0, width - start - chosen.width)) : parts.tail;
++	return `${parts.head}${chosen.text}${tail}`;
 +};
 diff -ruN --exclude=node_modules a/src/ui/input-indicator.ts b/src/ui/input-indicator.ts
 --- a/src/ui/input-indicator.ts	1985-10-26 03:15:00
-+++ b/src/ui/input-indicator.ts	2026-07-30 15:47:19
-@@ -1,26 +1,44 @@
++++ b/src/ui/input-indicator.ts	2026-07-30 16:08:18
+@@ -1,26 +1,45 @@
  import { CustomEditor, type AppKeybinding, type ExtensionContext, type KeybindingsManager, type Theme } from "@earendil-works/pi-coding-agent";
  import {
 +  CURSOR_MARKER,
@@ -2107,13 +2117,14 @@ diff -ruN --exclude=node_modules a/src/ui/input-indicator.ts b/src/ui/input-indi
 + */
 +const BLINK_TICKS = 4;
 +
-+/** Written beside the dot while recording, when the cells after it are blank. */
-+const RECORDING_LABEL = " recording";
++/** Shown at the cursor while recording, when the cells after it are blank. The brackets
++ * keep it from running into whatever the user has typed. */
++const RECORDING_LABEL = " recording]";
 +
  const injectRightLabel = (line: string, width: number, label: string): string => {
    const labelWidth = visibleWidth(label);
    if (width <= 0) return "";
-@@ -101,49 +119,82 @@
+@@ -101,49 +120,88 @@
      (this.base as EditorComponent & { focused?: boolean }).focused = value;
    }
  
@@ -2138,12 +2149,18 @@ diff -ruN --exclude=node_modules a/src/ui/input-indicator.ts b/src/ui/input-indi
 -    else delete (this.base as EditorComponent & { borderColor?: (str: string) => string }).borderColor;
 +    const lit = Math.floor(this.options.getTick() / BLINK_TICKS) % 2 === 0;
 +    const dot = theme.fg(lit ? "error" : "dim", "●");
-+    const label = { text: theme.fg("dim", RECORDING_LABEL), width: RECORDING_LABEL.length };
++    // Brackets in the same grey as the label, so the block reads as one thing and the
++    // pulsing dot is the only colour in it.
++    const full = {
++      text: `${theme.fg("dim", "[")}${dot}${theme.fg("dim", RECORDING_LABEL)}`,
++      width: RECORDING_LABEL.length + 2,
++    };
++    const minimal = { text: dot, width: 1 };
 +    let done = false;
 +    return lines.map((line) => {
 +      if (done || !line.includes(CURSOR_MARKER)) return line;
 +      done = true;
-+      return composeCursorLine(line, dot, label, width);
++      return composeCursorLine(line, full, minimal, width);
 +    });
    }
  
@@ -2153,7 +2170,7 @@ diff -ruN --exclude=node_modules a/src/ui/input-indicator.ts b/src/ui/input-indi
 -    const lines = this.base.render(width);
 +    const lines = this.replaceCursor(
 +      animateRenderedLines(this.base.render(width), frameAt(this.options.getTick()), (text) =>
-+        this.options.ctx.ui.theme.fg("accent", text),
++        this.options.ctx.ui.theme.fg("dim", text),
 +      ),
 +      width,
 +    );
@@ -2217,7 +2234,7 @@ diff -ruN --exclude=node_modules a/src/ui/input-indicator.ts b/src/ui/input-indi
      this.base.handleInput(data);
    }
  
-@@ -164,8 +215,15 @@
+@@ -164,8 +222,15 @@
      this.base.addToHistory?.(text);
    }
  
@@ -2234,7 +2251,7 @@ diff -ruN --exclude=node_modules a/src/ui/input-indicator.ts b/src/ui/input-indi
    }
  
    getExpandedText(): string {
-@@ -189,12 +247,11 @@
+@@ -189,12 +254,11 @@
    }
  }
  
@@ -2248,7 +2265,7 @@ diff -ruN --exclude=node_modules a/src/ui/input-indicator.ts b/src/ui/input-indi
    let timer: ReturnType<typeof setInterval> | undefined;
  
    const requestRender = () => tui?.requestRender();
-@@ -205,8 +262,10 @@
+@@ -205,8 +269,10 @@
      timer = undefined;
    };
  
@@ -2260,7 +2277,7 @@ diff -ruN --exclude=node_modules a/src/ui/input-indicator.ts b/src/ui/input-indi
      timer = setInterval(() => {
        tick += 1;
        requestRender();
-@@ -214,8 +273,8 @@
+@@ -214,8 +280,8 @@
    };
  
    const syncAnimation = () => {
@@ -2271,7 +2288,7 @@ diff -ruN --exclude=node_modules a/src/ui/input-indicator.ts b/src/ui/input-indi
    };
  
    return {
-@@ -230,23 +289,20 @@
+@@ -230,23 +296,20 @@
        syncAnimation();
        requestRender();
      },
@@ -2308,7 +2325,7 @@ diff -ruN --exclude=node_modules a/src/ui/input-indicator.ts b/src/ui/input-indi
        return `${theme.fg("dim", strings.indicator.idle)} ${theme.fg("accent", keybind)}`;
      },
      dispose() {
-@@ -259,11 +315,21 @@
+@@ -259,11 +322,21 @@
  
  export const createVoiceEditorFactory = (
    previousFactory: ((tui: TUI, theme: EditorTheme, keybindings: KeybindingsManager) => EditorComponent) | undefined,
@@ -2467,8 +2484,8 @@ diff -ruN --exclude=node_modules a/src/ui/pending-message.ts b/src/ui/pending-me
 +}
 diff -ruN --exclude=node_modules a/src/ui/transcribing.ts b/src/ui/transcribing.ts
 --- a/src/ui/transcribing.ts	1969-12-31 18:00:00
-+++ b/src/ui/transcribing.ts	2026-07-30 15:10:53
-@@ -0,0 +1,68 @@
++++ b/src/ui/transcribing.ts	2026-07-30 16:07:54
+@@ -0,0 +1,93 @@
 +/**
 + * The `[⠏ transcribing]` placeholder.
 + *
@@ -2497,18 +2514,43 @@ diff -ruN --exclude=node_modules a/src/ui/transcribing.ts b/src/ui/transcribing.
 +export const placeholderText = (label = "transcribing"): string =>
 +	`${PLACEHOLDER_PREFIX}${label}${PLACEHOLDER_SUFFIX}`;
 +
++/** Foreground-colour escapes, so the editor's own text colour can be restored after ours. */
++const FOREGROUND = /\x1b\[(?:38;[0-9;:]+|39|3[0-7]|9[0-7])m/g;
++
++const foregroundBefore = (line: string, index: number): string => {
++	let last = "";
++	for (const match of line.slice(0, index).matchAll(FOREGROUND)) last = match[0];
++	return last;
++};
++
 +/**
-+ * Swap the sentinel for the current frame in already-rendered lines. Braille cells are
-+ * single width, so the substitution cannot change the layout the editor computed — which
-+ * is the whole reason the sentinel is a character rather than a wider marker.
++ * Swap the sentinel for the current frame in already-rendered lines, and paint the whole
++ * `[⠋ transcribing]` run so it reads as one dim block rather than as text the user typed.
++ *
++ * Only styling changes: braille cells are single width and the label is left alone, so
++ * the substitution cannot alter the layout the editor computed. Whatever foreground was
++ * in effect before the placeholder is re-emitted after it, so text typed alongside keeps
++ * the editor's colour instead of falling back to the terminal default.
 + */
 +export const animateRenderedLines = (lines: string[], frame: string, paint: (text: string) => string): string[] => {
-+	if (frame === SPINNER_SENTINEL) return lines;
 +	let touched = false;
 +	const out = lines.map((line) => {
-+		if (!line.includes(SPINNER_SENTINEL)) return line;
++		const at = line.indexOf(SPINNER_SENTINEL);
++		if (at === -1) return line;
 +		touched = true;
-+		return line.split(SPINNER_SENTINEL).join(paint(frame));
++
++		const open = line.lastIndexOf(PLACEHOLDER_PREFIX[0] ?? "[", at);
++		const close = line.indexOf(PLACEHOLDER_SUFFIX, at);
++		// A placeholder split across a wrap has no bracket on this line; colour the frame
++		// alone rather than guessing where the run begins.
++		if (open === -1 || close === -1) {
++			const restore = foregroundBefore(line, at);
++			return `${line.slice(0, at)}${paint(frame)}${restore}${line.slice(at + SPINNER_SENTINEL.length)}`;
++		}
++
++		const body = line.slice(open, close + PLACEHOLDER_SUFFIX.length).split(SPINNER_SENTINEL).join(frame);
++		const restore = foregroundBefore(line, open);
++		return `${line.slice(0, open)}${paint(body)}${restore}${line.slice(close + PLACEHOLDER_SUFFIX.length)}`;
 +	});
 +	return touched ? out : lines;
 +};

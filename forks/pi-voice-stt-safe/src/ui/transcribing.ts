@@ -26,18 +26,43 @@ export const PLACEHOLDER_SUFFIX = "]";
 export const placeholderText = (label = "transcribing"): string =>
 	`${PLACEHOLDER_PREFIX}${label}${PLACEHOLDER_SUFFIX}`;
 
+/** Foreground-colour escapes, so the editor's own text colour can be restored after ours. */
+const FOREGROUND = /\x1b\[(?:38;[0-9;:]+|39|3[0-7]|9[0-7])m/g;
+
+const foregroundBefore = (line: string, index: number): string => {
+	let last = "";
+	for (const match of line.slice(0, index).matchAll(FOREGROUND)) last = match[0];
+	return last;
+};
+
 /**
- * Swap the sentinel for the current frame in already-rendered lines. Braille cells are
- * single width, so the substitution cannot change the layout the editor computed — which
- * is the whole reason the sentinel is a character rather than a wider marker.
+ * Swap the sentinel for the current frame in already-rendered lines, and paint the whole
+ * `[⠋ transcribing]` run so it reads as one dim block rather than as text the user typed.
+ *
+ * Only styling changes: braille cells are single width and the label is left alone, so
+ * the substitution cannot alter the layout the editor computed. Whatever foreground was
+ * in effect before the placeholder is re-emitted after it, so text typed alongside keeps
+ * the editor's colour instead of falling back to the terminal default.
  */
 export const animateRenderedLines = (lines: string[], frame: string, paint: (text: string) => string): string[] => {
-	if (frame === SPINNER_SENTINEL) return lines;
 	let touched = false;
 	const out = lines.map((line) => {
-		if (!line.includes(SPINNER_SENTINEL)) return line;
+		const at = line.indexOf(SPINNER_SENTINEL);
+		if (at === -1) return line;
 		touched = true;
-		return line.split(SPINNER_SENTINEL).join(paint(frame));
+
+		const open = line.lastIndexOf(PLACEHOLDER_PREFIX[0] ?? "[", at);
+		const close = line.indexOf(PLACEHOLDER_SUFFIX, at);
+		// A placeholder split across a wrap has no bracket on this line; colour the frame
+		// alone rather than guessing where the run begins.
+		if (open === -1 || close === -1) {
+			const restore = foregroundBefore(line, at);
+			return `${line.slice(0, at)}${paint(frame)}${restore}${line.slice(at + SPINNER_SENTINEL.length)}`;
+		}
+
+		const body = line.slice(open, close + PLACEHOLDER_SUFFIX.length).split(SPINNER_SENTINEL).join(frame);
+		const restore = foregroundBefore(line, open);
+		return `${line.slice(0, open)}${paint(body)}${restore}${line.slice(close + PLACEHOLDER_SUFFIX.length)}`;
 	});
 	return touched ? out : lines;
 };

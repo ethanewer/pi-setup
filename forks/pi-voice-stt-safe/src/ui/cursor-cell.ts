@@ -55,24 +55,34 @@ export const roomFor = (tail: string, columns: number): boolean => {
 	return region.length >= columns && region.trim().length === 0;
 };
 
+/** Styled text plus the number of columns it occupies, given separately because
+ * measuring styled text on every frame is wasted work. */
+export type Indicator = { text: string; width: number };
+
 /**
- * Compose the cursor row: `dot` in the cursor's cell, then `label` over the blank cells
- * that follow it, with the rest of the line shifted back so the width never changes.
+ * Compose the cursor row: the indicator starts in the cursor's cell and runs over the
+ * cells after it, with the rest of the line shifted back so the width never changes.
  *
- * `dot` and `label` are already styled; their visible widths are given separately because
- * measuring styled text at every frame is wasted work.
+ * `full` is used only when every cell it needs is blank — at the end of a line those are
+ * the editor's padding, so it costs nothing, while mid-text there is nothing to write
+ * over without hiding the user's own characters. In that case `minimal` is used instead,
+ * which is a single cell. It is all or nothing on purpose: a partially drawn `[● recor`
+ * would be worse than the bare dot.
  */
-export const composeCursorLine = (
-	line: string,
-	dot: string,
-	label: { text: string; width: number } | undefined,
-	width: number,
-): string => {
+export const composeCursorLine = (line: string, full: Indicator, minimal: Indicator, width: number): string => {
 	const parts = splitAtCursor(line);
 	if (!parts) return line;
 
-	const used = visibleWidth(parts.head) + 1;
-	const showLabel = label && label.width > 0 && used + label.width <= width && roomFor(parts.tail, label.width);
-	const tail = showLabel ? sliceByColumn(parts.tail, label.width, Math.max(0, width - used - label.width)) : parts.tail;
-	return `${parts.head}${dot}${showLabel ? label.text : ""}${tail}`;
+	const start = visibleWidth(parts.head);
+	const fits = (indicator: Indicator) =>
+		indicator.width > 0 &&
+		start + indicator.width <= width &&
+		(indicator.width === 1 || roomFor(parts.tail, indicator.width - 1));
+
+	const chosen = fits(full) ? full : minimal;
+	// The cursor's own cell is already gone with the run that was replaced; anything the
+	// indicator needs beyond it comes out of the cells that follow.
+	const consumed = Math.max(0, chosen.width - 1);
+	const tail = consumed > 0 ? sliceByColumn(parts.tail, consumed, Math.max(0, width - start - chosen.width)) : parts.tail;
+	return `${parts.head}${chosen.text}${tail}`;
 };

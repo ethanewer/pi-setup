@@ -36,8 +36,9 @@ type VoiceEditorOptions = {
  */
 const BLINK_TICKS = 4;
 
-/** Written beside the dot while recording, when the cells after it are blank. */
-const RECORDING_LABEL = " recording";
+/** Shown at the cursor while recording, when the cells after it are blank. The brackets
+ * keep it from running into whatever the user has typed. */
+const RECORDING_LABEL = " recording]";
 
 const injectRightLabel = (line: string, width: number, label: string): string => {
   const labelWidth = visibleWidth(label);
@@ -130,12 +131,18 @@ class VoiceEditorWrapper implements EditorComponent {
     const theme = this.options.ctx.ui.theme;
     const lit = Math.floor(this.options.getTick() / BLINK_TICKS) % 2 === 0;
     const dot = theme.fg(lit ? "error" : "dim", "●");
-    const label = { text: theme.fg("dim", RECORDING_LABEL), width: RECORDING_LABEL.length };
+    // Brackets in the same grey as the label, so the block reads as one thing and the
+    // pulsing dot is the only colour in it.
+    const full = {
+      text: `${theme.fg("dim", "[")}${dot}${theme.fg("dim", RECORDING_LABEL)}`,
+      width: RECORDING_LABEL.length + 2,
+    };
+    const minimal = { text: dot, width: 1 };
     let done = false;
     return lines.map((line) => {
       if (done || !line.includes(CURSOR_MARKER)) return line;
       done = true;
-      return composeCursorLine(line, dot, label, width);
+      return composeCursorLine(line, full, minimal, width);
     });
   }
 
@@ -143,7 +150,7 @@ class VoiceEditorWrapper implements EditorComponent {
     this.syncBase();
     const lines = this.replaceCursor(
       animateRenderedLines(this.base.render(width), frameAt(this.options.getTick()), (text) =>
-        this.options.ctx.ui.theme.fg("accent", text),
+        this.options.ctx.ui.theme.fg("dim", text),
       ),
       width,
     );

@@ -213,9 +213,10 @@ Voice dictation is configured for OpenAI:
 ```
 
 Use **Option+P** on macOS or **Alt+P** on Linux to start recording. The text cursor
-becomes a slowly pulsing red dot with a grey `recording` beside it — the input box itself
-does not change colour, and nothing is announced in a banner. Both disappear when
-transcription starts, where the placeholder takes over.
+becomes `[● recording]`, a slowly pulsing red dot in a grey bracketed block — the input
+box itself does not change colour, and nothing is announced in a banner. Mid-text, where
+there is no blank space to write into, it is the dot alone. It gives way to
+`[⠏ transcribing]` in the same grey when the provider takes over.
 
 What you press next decides where the transcript goes:
 

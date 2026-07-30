@@ -18,7 +18,9 @@ const { CURSOR_MARKER, composeCursorLine, roomFor, splitAtCursor, stripAnsi } = 
 const { visibleWidth } = hasPiTui ? require(tuiEntry) : { visibleWidth: (t: string) => t.length };
 
 const DOT = "\x1b[31m●\x1b[39m";
-const LABEL = { text: "\x1b[90m recording\x1b[39m", width: " recording".length };
+const MINIMAL = { text: DOT, width: 1 };
+/** `[● recording]` — grey brackets around the pulsing dot. */
+const FULL = { text: `\x1b[90m[\x1b[39m${DOT}\x1b[90m recording]\x1b[39m`, width: "[● recording]".length };
 /** The editor's cursor: marker, then one reverse-video cell. */
 const cursorOn = (grapheme: string) => `${CURSOR_MARKER}\x1b[7m${grapheme}\x1b[0m`;
 const pad = (line: string, width: number) => line + " ".repeat(Math.max(0, width - visibleWidth(line)));
@@ -26,7 +28,7 @@ const pad = (line: string, width: number) => line + " ".repeat(Math.max(0, width
 describe.skipIf(!hasPiTui)("composeCursorLine", () => {
 	test("takes the reverse-video cell with it, so nothing smears", () => {
 		const line = pad(`hi ${cursorOn("a")}rest`, 40);
-		const out = composeCursorLine(line, DOT, LABEL, 40);
+		const out = composeCursorLine(line, FULL, MINIMAL, 40);
 		expect(out).not.toContain("\x1b[7m");
 		expect(stripAnsi(out)).toContain("hi ●");
 	});
@@ -34,36 +36,36 @@ describe.skipIf(!hasPiTui)("composeCursorLine", () => {
 	test("keeps the row exactly as wide, with and without the label", () => {
 		const atEnd = pad(`typed ${cursorOn(" ")}`, 40);
 		const inText = pad(`typed ${cursorOn("w")}ords here`, 40);
-		expect(visibleWidth(composeCursorLine(atEnd, DOT, LABEL, 40))).toBe(40);
-		expect(visibleWidth(composeCursorLine(inText, DOT, LABEL, 40))).toBe(40);
-		expect(visibleWidth(composeCursorLine(atEnd, DOT, undefined, 40))).toBe(40);
+		expect(visibleWidth(composeCursorLine(atEnd, FULL, MINIMAL, 40))).toBe(40);
+		expect(visibleWidth(composeCursorLine(inText, FULL, MINIMAL, 40))).toBe(40);
+		expect(visibleWidth(composeCursorLine(atEnd, MINIMAL, MINIMAL, 40))).toBe(40);
 	});
 
-	test("writes the label into the padding after the cursor", () => {
-		const out = composeCursorLine(pad(`typed ${cursorOn(" ")}`, 40), DOT, LABEL, 40);
-		expect(stripAnsi(out)).toBe(pad("typed ● recording", 40));
+	test("writes the bracketed indicator into the padding after the cursor", () => {
+		const out = composeCursorLine(pad(`typed ${cursorOn(" ")}`, 40), FULL, MINIMAL, 40);
+		expect(stripAnsi(out)).toBe(pad("typed [● recording]", 40));
 	});
 
-	test("omits the label rather than hide the user's own text", () => {
-		const out = composeCursorLine(pad(`typed ${cursorOn("w")}ords here`, 40), DOT, LABEL, 40);
+	test("falls back to the bare dot rather than hide the user's own text", () => {
+		const out = composeCursorLine(pad(`typed ${cursorOn("w")}ords here`, 40), FULL, MINIMAL, 40);
 		expect(stripAnsi(out)).toBe(pad("typed ●ords here", 40));
 		expect(stripAnsi(out)).not.toContain("recording");
 	});
 
 	test("omits the label when the row is too narrow for it", () => {
-		const out = composeCursorLine(pad(`typed ${cursorOn(" ")}`, 12), DOT, LABEL, 12);
+		const out = composeCursorLine(pad(`typed ${cursorOn(" ")}`, 12), FULL, MINIMAL, 12);
 		expect(stripAnsi(out)).not.toContain("recording");
 		expect(visibleWidth(out)).toBe(12);
 	});
 
 	test("leaves a line with no cursor alone", () => {
 		const line = pad("no cursor here", 40);
-		expect(composeCursorLine(line, DOT, LABEL, 40)).toBe(line);
+		expect(composeCursorLine(line, FULL, MINIMAL, 40)).toBe(line);
 	});
 
 	test("falls back to dropping one column when the cursor is only a marker", () => {
 		const line = pad(`typed ${CURSOR_MARKER}xyz`, 40);
-		const out = composeCursorLine(line, DOT, LABEL, 40);
+		const out = composeCursorLine(line, FULL, MINIMAL, 40);
 		expect(stripAnsi(out)).toContain("typed ●yz");
 		expect(visibleWidth(out)).toBe(40);
 	});
