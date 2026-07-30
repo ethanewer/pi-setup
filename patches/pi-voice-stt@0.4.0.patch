@@ -1942,8 +1942,8 @@ diff -ruN --exclude=node_modules a/src/secrets/resolve-api-key.ts b/src/secrets/
  };
 diff -ruN --exclude=node_modules a/src/ui/input-indicator.ts b/src/ui/input-indicator.ts
 --- a/src/ui/input-indicator.ts	1985-10-26 03:15:00
-+++ b/src/ui/input-indicator.ts	2026-07-30 15:18:08
-@@ -1,26 +1,41 @@
++++ b/src/ui/input-indicator.ts	2026-07-30 15:38:20
+@@ -1,26 +1,45 @@
  import { CustomEditor, type AppKeybinding, type ExtensionContext, type KeybindingsManager, type Theme } from "@earendil-works/pi-coding-agent";
  import {
 +  CURSOR_MARKER,
@@ -1984,10 +1984,14 @@ diff -ruN --exclude=node_modules a/src/ui/input-indicator.ts b/src/ui/input-indi
 + */
 +const BLINK_TICKS = 4;
 +
++/** The marker plus the one reverse-video cell the editor renders as its cursor. */
++// biome-ignore lint/suspicious/noControlCharactersInRegex: terminal escapes are the subject
++const CURSOR_CELL = new RegExp(`${CURSOR_MARKER.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\x1b\\[7m[\\s\\S]*?\\x1b\\[0m`);
++
  const injectRightLabel = (line: string, width: number, label: string): string => {
    const labelWidth = visibleWidth(label);
    if (width <= 0) return "";
-@@ -101,49 +116,92 @@
+@@ -101,49 +120,99 @@
      (this.base as EditorComponent & { focused?: boolean }).focused = value;
    }
  
@@ -2017,16 +2021,23 @@ diff -ruN --exclude=node_modules a/src/ui/input-indicator.ts b/src/ui/input-indi
 +    const dot = theme.fg(lit ? "error" : "dim", "●");
 +    let done = false;
 +    return lines.map((line) => {
-+      if (done) return line;
-+      const marker = line.indexOf(CURSOR_MARKER);
-+      if (marker === -1) return line;
++      if (done || !line.includes(CURSOR_MARKER)) return line;
 +      done = true;
-+      const before = line.slice(0, marker);
-+      const after = line.slice(marker + CURSOR_MARKER.length);
-+      const cursorColumn = visibleWidth(before);
-+      // Drop the one cell the dot now occupies, keeping the styling that follows it.
-+      const rest = sliceByColumn(after, 1, Math.max(0, width - cursorColumn - 1));
-+      const composed = `${before}${dot}${rest}`;
++
++      // The editor draws its cursor as the marker followed by one reverse-video cell
++      // (`ESC[7m` + grapheme + `ESC[0m`). Swapping the whole run for the dot keeps the
++      // line exactly as wide and, more importantly, takes the `ESC[7m` with it: leaving
++      // that opener behind was what smeared a white highlight across the rest of the row.
++      const replaced = line.replace(CURSOR_CELL, dot);
++      if (replaced !== line) return replaced;
++
++      // Cursor rendering that does not match the expected shape: drop the marker's cell
++      // by column and cancel reverse video explicitly, so the fallback cannot smear either.
++      const marker = line.indexOf(CURSOR_MARKER);
++      const head = line.slice(0, marker);
++      const tail = line.slice(marker + CURSOR_MARKER.length);
++      const rest = sliceByColumn(tail, 1, Math.max(0, width - visibleWidth(head) - 1));
++      const composed = `${head}${dot}\x1b[27m${rest}`;
 +      return visibleWidth(composed) > width ? truncateToWidth(composed, width, "") : composed;
 +    });
    }
@@ -2101,7 +2112,7 @@ diff -ruN --exclude=node_modules a/src/ui/input-indicator.ts b/src/ui/input-indi
      this.base.handleInput(data);
    }
  
-@@ -164,8 +222,15 @@
+@@ -164,8 +233,15 @@
      this.base.addToHistory?.(text);
    }
  
@@ -2118,7 +2129,7 @@ diff -ruN --exclude=node_modules a/src/ui/input-indicator.ts b/src/ui/input-indi
    }
  
    getExpandedText(): string {
-@@ -189,12 +254,11 @@
+@@ -189,12 +265,11 @@
    }
  }
  
@@ -2132,7 +2143,7 @@ diff -ruN --exclude=node_modules a/src/ui/input-indicator.ts b/src/ui/input-indi
    let timer: ReturnType<typeof setInterval> | undefined;
  
    const requestRender = () => tui?.requestRender();
-@@ -205,8 +269,10 @@
+@@ -205,8 +280,10 @@
      timer = undefined;
    };
  
@@ -2144,7 +2155,7 @@ diff -ruN --exclude=node_modules a/src/ui/input-indicator.ts b/src/ui/input-indi
      timer = setInterval(() => {
        tick += 1;
        requestRender();
-@@ -214,8 +280,8 @@
+@@ -214,8 +291,8 @@
    };
  
    const syncAnimation = () => {
@@ -2155,7 +2166,7 @@ diff -ruN --exclude=node_modules a/src/ui/input-indicator.ts b/src/ui/input-indi
    };
  
    return {
-@@ -230,23 +296,20 @@
+@@ -230,23 +307,20 @@
        syncAnimation();
        requestRender();
      },
@@ -2192,7 +2203,7 @@ diff -ruN --exclude=node_modules a/src/ui/input-indicator.ts b/src/ui/input-indi
        return `${theme.fg("dim", strings.indicator.idle)} ${theme.fg("accent", keybind)}`;
      },
      dispose() {
-@@ -259,11 +322,15 @@
+@@ -259,11 +333,15 @@
  
  export const createVoiceEditorFactory = (
    previousFactory: ((tui: TUI, theme: EditorTheme, keybindings: KeybindingsManager) => EditorComponent) | undefined,

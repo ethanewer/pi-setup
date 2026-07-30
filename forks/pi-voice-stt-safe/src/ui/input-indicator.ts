@@ -36,6 +36,10 @@ type VoiceEditorOptions = {
  */
 const BLINK_TICKS = 4;
 
+/** The marker plus the one reverse-video cell the editor renders as its cursor. */
+// biome-ignore lint/suspicious/noControlCharactersInRegex: terminal escapes are the subject
+const CURSOR_CELL = new RegExp(`${CURSOR_MARKER.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\x1b\\[7m[\\s\\S]*?\\x1b\\[0m`);
+
 const injectRightLabel = (line: string, width: number, label: string): string => {
   const labelWidth = visibleWidth(label);
   if (width <= 0) return "";
@@ -132,16 +136,23 @@ class VoiceEditorWrapper implements EditorComponent {
     const dot = theme.fg(lit ? "error" : "dim", "●");
     let done = false;
     return lines.map((line) => {
-      if (done) return line;
-      const marker = line.indexOf(CURSOR_MARKER);
-      if (marker === -1) return line;
+      if (done || !line.includes(CURSOR_MARKER)) return line;
       done = true;
-      const before = line.slice(0, marker);
-      const after = line.slice(marker + CURSOR_MARKER.length);
-      const cursorColumn = visibleWidth(before);
-      // Drop the one cell the dot now occupies, keeping the styling that follows it.
-      const rest = sliceByColumn(after, 1, Math.max(0, width - cursorColumn - 1));
-      const composed = `${before}${dot}${rest}`;
+
+      // The editor draws its cursor as the marker followed by one reverse-video cell
+      // (`ESC[7m` + grapheme + `ESC[0m`). Swapping the whole run for the dot keeps the
+      // line exactly as wide and, more importantly, takes the `ESC[7m` with it: leaving
+      // that opener behind was what smeared a white highlight across the rest of the row.
+      const replaced = line.replace(CURSOR_CELL, dot);
+      if (replaced !== line) return replaced;
+
+      // Cursor rendering that does not match the expected shape: drop the marker's cell
+      // by column and cancel reverse video explicitly, so the fallback cannot smear either.
+      const marker = line.indexOf(CURSOR_MARKER);
+      const head = line.slice(0, marker);
+      const tail = line.slice(marker + CURSOR_MARKER.length);
+      const rest = sliceByColumn(tail, 1, Math.max(0, width - visibleWidth(head) - 1));
+      const composed = `${head}${dot}\x1b[27m${rest}`;
       return visibleWidth(composed) > width ? truncateToWidth(composed, width, "") : composed;
     });
   }
