@@ -4,6 +4,7 @@ import {
 	animateRenderedLines,
 	frameAt,
 	hasPlaceholder,
+	nextFreeSlot,
 	placeholderText,
 	replacePlaceholder,
 	SPINNER_FRAMES,
@@ -32,17 +33,33 @@ describe("placeholder", () => {
 		});
 	});
 
-	test("replaces only the first of two outstanding placeholders", () => {
-		const text = `${placeholderText()} and ${placeholderText()}`;
-		const once = replacePlaceholder(text, "first");
-		expect(once.text).toBe(`first and ${placeholderText()}`);
-		expect(replacePlaceholder(once.text, "second").text).toBe("first and second");
+	test("two outstanding placeholders are addressed individually", () => {
+		const first = placeholderText(1);
+		const second = placeholderText(2);
+		expect(second).toBe("[⠿ transcribing 2]");
+		const text = `${first} and ${second}`;
+
+		// Out of order on purpose: the second provider answering first must not take the
+		// first block's spot, which is exactly what "replace the first placeholder" did.
+		const b = replacePlaceholder(text, "SECOND", second);
+		expect(b.text).toBe(`${first} and SECOND`);
+		const a = replacePlaceholder(b.text, "FIRST", first);
+		expect(a.text).toBe("FIRST and SECOND");
 	});
 
-	test("a custom label still round-trips", () => {
-		const text = placeholderText("transcribing, will queue");
-		expect(hasPlaceholder(text)).toBe(true);
-		expect(replacePlaceholder(text, "x").text).toBe("x");
+	test("slot 1's marker does not match slot 2's block", () => {
+		expect(hasPlaceholder(placeholderText(2), placeholderText(1))).toBe(false);
+		expect(replacePlaceholder(placeholderText(2), "x", placeholderText(1)).replaced).toBe(false);
+	});
+});
+
+describe("slots", () => {
+	test("reuses the lowest number that is free", () => {
+		expect(nextFreeSlot(new Set())).toBe(1);
+		expect(nextFreeSlot(new Set([1]))).toBe(2);
+		expect(nextFreeSlot(new Set([1, 2]))).toBe(3);
+		// A finished transcription frees its slot, so numbering stays small.
+		expect(nextFreeSlot(new Set([2]))).toBe(1);
 	});
 });
 
@@ -57,6 +74,18 @@ describe("animation", () => {
 	test("paints the whole run, brackets and label included", () => {
 		const [animated] = animateRenderedLines([placeholderText()], "⠙", (t) => `<${t}>`);
 		expect(animated).toBe("<[⠙ transcribing]>");
+	});
+
+	test("animates every placeholder on the line, not just the first", () => {
+		const line = `${placeholderText(1)} gap ${placeholderText(2)}`;
+		const [animated] = animateRenderedLines([line], "⠙", (t) => t);
+		expect(animated).toBe("[⠙ transcribing] gap [⠙ transcribing 2]");
+		expect(animated).not.toContain(SPINNER_SENTINEL);
+	});
+
+	test("animates a numbered placeholder too", () => {
+		const [animated] = animateRenderedLines([placeholderText(2)], "⠙", (t) => `<${t}>`);
+		expect(animated).toBe("<[⠙ transcribing 2]>");
 	});
 
 	test("restores the foreground that was in effect before it", () => {

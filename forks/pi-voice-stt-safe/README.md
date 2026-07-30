@@ -86,13 +86,11 @@ or a top-level `keybind` in the config file. Environment wins at startup.
 {
   "output": {
     "appendTrailingSpace": true,
-    "submitOnStop": false
   }
 }
 ```
 
 - `appendTrailingSpace` (default `true`): append a space after the inserted transcript.
-- `submitOnStop` (default `false`): when `true`, stopping a recording with the `Ctrl+R` toggle also sends the transcript to chat (same as pressing `Enter` while recording) instead of only inserting it into the prompt. Hands-free dictation: `Ctrl+R` to start, `Ctrl+R` to stop-and-send, `Esc` to cancel.
 - `replacements` (default `{}`): a literal dictionary applied to the raw transcript before cleanup. Case-insensitive and word-boundary aware (Unicode-aware, so accented or punctuated keys such as `"café"` or `"c++"` match); longer keys win. Keys and values are treated as literal text. Handy for terms the recognizer mishears:
 
 ```json
@@ -147,7 +145,7 @@ Optionally trigger an action by ending your dictation with a keyword. Disabled b
 }
 ```
 
-- `send`: strip the keyword and send the prompt to chat (even when `submitOnStop` is off).
+- `send`: strip the keyword and send the prompt to chat.
 - `clear`: discard the current dictation without inserting anything.
 - `newline`: insert the text followed by a line break.
 
@@ -425,7 +423,7 @@ The voice state is displayed inside the input area, right-aligned on the prompt 
 | Action | Behavior |
 | --- | --- |
 | `Ctrl+R` while idle | Start recording |
-| `Ctrl+R` while recording | Stop, transcribe, insert transcript into the prompt (or send it directly when `output.submitOnStop` is `true`) |
+| the voice key while recording | Stop, transcribe, insert the transcript into the prompt |
 | `Enter` while recording | Stop, transcribe, insert transcript, send prompt to chat |
 | `Esc` while recording/processing | Cancel recording or transcription |
 | `/stt status` | Show current mode and config source, plus a config file that cannot be parsed; reads nothing else, so no key or `ffmpeg` lookup happens |

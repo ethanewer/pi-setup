@@ -1,6 +1,6 @@
 diff -ruN --exclude=node_modules a/README.md b/README.md
 --- a/README.md	1985-10-26 03:15:00
-+++ b/README.md	2026-07-28 23:33:47
++++ b/README.md	2026-07-30 16:38:08
 @@ -14,19 +14,19 @@
  - `Enter`-to-send and `Esc`-to-cancel while recording.
  - Pi-native animated input indicator, right-aligned in the prompt border (`voice ctrl+r`, `● recording`, `• transcribing`).
@@ -24,16 +24,32 @@ diff -ruN --exclude=node_modules a/README.md b/README.md
  - Microphone permission for the terminal app running Pi, or for the Mac bridge daemon when using `capture.type: "bridge"`.
  - A transcription backend (Mistral, OpenAI/Groq, Deepgram, ElevenLabs, Gladia, AssemblyAI, or a local OpenAI-compatible server).
  
-@@ -93,7 +93,7 @@
+@@ -86,14 +86,12 @@
+ {
+   "output": {
+     "appendTrailingSpace": true,
+-    "submitOnStop": false
+   }
+ }
+ ```
  
  - `appendTrailingSpace` (default `true`): append a space after the inserted transcript.
- - `submitOnStop` (default `false`): when `true`, stopping a recording with the `Ctrl+R` toggle also sends the transcript to chat (same as pressing `Enter` while recording) instead of only inserting it into the prompt. Hands-free dictation: `Ctrl+R` to start, `Ctrl+R` to stop-and-send, `Esc` to cancel.
+-- `submitOnStop` (default `false`): when `true`, stopping a recording with the `Ctrl+R` toggle also sends the transcript to chat (same as pressing `Enter` while recording) instead of only inserting it into the prompt. Hands-free dictation: `Ctrl+R` to start, `Ctrl+R` to stop-and-send, `Esc` to cancel.
 -- `replacements` (default `{}`): a literal dictionary applied to the raw transcript before cleanup. Case-insensitive and word-boundary aware; longer keys win. Handy for terms the recognizer mishears:
 +- `replacements` (default `{}`): a literal dictionary applied to the raw transcript before cleanup. Case-insensitive and word-boundary aware (Unicode-aware, so accented or punctuated keys such as `"café"` or `"c++"` match); longer keys win. Keys and values are treated as literal text. Handy for terms the recognizer mishears:
  
  ```json
  {
-@@ -172,7 +172,7 @@
+@@ -147,7 +145,7 @@
+ }
+ ```
+ 
+-- `send`: strip the keyword and send the prompt to chat (even when `submitOnStop` is off).
++- `send`: strip the keyword and send the prompt to chat.
+ - `clear`: discard the current dictation without inserting anything.
+ - `newline`: insert the text followed by a line break.
+ 
+@@ -172,7 +170,7 @@
  ```
  
  - `enabled` (default `false`): turn the cleanup pass on.
@@ -42,7 +58,7 @@ diff -ruN --exclude=node_modules a/README.md b/README.md
  - `language` (default `"auto"`): `"auto"` keeps the spoken language; set e.g. `"fr"` to normalize the output.
  - `prompt`: override the base system prompt.
  - `projectTerms`: glossary of terms the model should spell correctly (e.g. `"super base"` → `Supabase`).
-@@ -248,11 +248,14 @@
+@@ -248,11 +246,14 @@
      "endpoint": "https://api.openai.com/v1/audio/transcriptions",
      "model": "whisper-1",
      "apiKeyEnv": "OPENAI_API_KEY",
@@ -57,7 +73,7 @@ diff -ruN --exclude=node_modules a/README.md b/README.md
  ### Deepgram
  
  ```json
-@@ -323,8 +326,12 @@
+@@ -323,8 +324,12 @@
  }
  ```
  
@@ -71,7 +87,7 @@ diff -ruN --exclude=node_modules a/README.md b/README.md
  ### Mac microphone bridge for VPS usage
  
  Use this when Pi runs on a VPS but your real microphone is on your Mac. The extension keeps the same `Ctrl+R` UX, but audio capture is delegated to a small local Mac daemon through a reverse SSH tunnel. The bridge is **opt-in**: it only activates when you set `capture.type: "bridge"` — the default `ffmpeg` recorder is unchanged.
-@@ -368,6 +375,8 @@
+@@ -368,6 +373,8 @@
  
  Run `/stt doctor` in Pi to verify the bridge health. The daemon only accesses the microphone when Pi calls `/start` after `Ctrl+R`; `/stop` returns the WAV to the VPS for transcription by your configured provider. On macOS the installer prefers a tiny native background app (`Pi Voice STT Bridge.app`) so microphone permission works without keeping a terminal open — the first `/start` may trigger a permission prompt.
  
@@ -80,7 +96,7 @@ diff -ruN --exclude=node_modules a/README.md b/README.md
  ## Audio capture notes
  
  With `capture.type: "ffmpeg"`, the extension records through `ffmpeg`. Platform defaults are:
-@@ -378,6 +387,8 @@
+@@ -378,6 +385,8 @@
  | Linux | `pulse` | `default` |
  | Windows | `dshow` | `audio=Microphone` |
  
@@ -89,8 +105,12 @@ diff -ruN --exclude=node_modules a/README.md b/README.md
  On macOS, list devices with:
  
  ```bash
-@@ -417,8 +428,8 @@
- | `Ctrl+R` while recording | Stop, transcribe, insert transcript into the prompt (or send it directly when `output.submitOnStop` is `true`) |
+@@ -414,11 +423,11 @@
+ | Action | Behavior |
+ | --- | --- |
+ | `Ctrl+R` while idle | Start recording |
+-| `Ctrl+R` while recording | Stop, transcribe, insert transcript into the prompt (or send it directly when `output.submitOnStop` is `true`) |
++| the voice key while recording | Stop, transcribe, insert the transcript into the prompt |
  | `Enter` while recording | Stop, transcribe, insert transcript, send prompt to chat |
  | `Esc` while recording/processing | Cancel recording or transcription |
 -| `/stt status` | Show current mode and config source |
@@ -100,7 +120,7 @@ diff -ruN --exclude=node_modules a/README.md b/README.md
  | `/stt start` | Start recording |
  | `/stt stop` | Stop and insert transcript |
  | `/stt send` | Stop and send to chat |
-@@ -438,6 +449,8 @@
+@@ -438,6 +447,8 @@
  export GLADIA_API_KEY=...
  export ASSEMBLYAI_API_KEY=...
  ```
@@ -419,7 +439,7 @@ diff -ruN --exclude=node_modules a/src/cleanup/openai-compatible.ts b/src/cleanu
          max_tokens: config.maxTokens,
 diff -ruN --exclude=node_modules a/src/config/defaults.ts b/src/config/defaults.ts
 --- a/src/config/defaults.ts	1985-10-26 03:15:00
-+++ b/src/config/defaults.ts	2026-07-28 21:17:11
++++ b/src/config/defaults.ts	2026-07-30 16:34:04
 @@ -22,6 +22,7 @@
  export const defaultFfmpegCaptureConfig = {
    type: "ffmpeg",
@@ -428,6 +448,14 @@ diff -ruN --exclude=node_modules a/src/config/defaults.ts b/src/config/defaults.
    ...platformCaptureDefaults(),
    sampleRate: 16000,
    channels: 1,
+@@ -128,7 +129,6 @@
+ 
+ export const defaultOutputConfig = {
+   appendTrailingSpace: true,
+-  submitOnStop: false,
+   replacements: {},
+ } satisfies OutputConfig;
+ 
 diff -ruN --exclude=node_modules a/src/config/endpoint.ts b/src/config/endpoint.ts
 --- a/src/config/endpoint.ts	1985-10-26 03:15:00
 +++ b/src/config/endpoint.ts	2026-07-28 23:16:05
@@ -677,7 +705,7 @@ diff -ruN --exclude=node_modules a/src/config/endpoint.ts b/src/config/endpoint.
  export const endpointRequiresAuth = (endpoint: string): boolean => {
 diff -ruN --exclude=node_modules a/src/config/load-config.ts b/src/config/load-config.ts
 --- a/src/config/load-config.ts	1985-10-26 03:15:00
-+++ b/src/config/load-config.ts	2026-07-28 23:31:27
++++ b/src/config/load-config.ts	2026-07-30 16:34:04
 @@ -13,7 +13,7 @@
    defaultOutputConfig,
    defaultVoiceCommandsConfig,
@@ -929,7 +957,14 @@ diff -ruN --exclude=node_modules a/src/config/load-config.ts b/src/config/load-c
    }
  
    if (providerType === "deepgram") return deepgramProviderFrom(merged, provider);
-@@ -248,9 +366,20 @@
+@@ -241,16 +359,26 @@
+   const output = objectFrom(merged.output);
+   return {
+     appendTrailingSpace: booleanFrom(output.appendTrailingSpace ?? merged.appendTrailingSpace, defaultOutputConfig.appendTrailingSpace),
+-    submitOnStop: booleanFrom(output.submitOnStop ?? merged.submitOnStop, defaultOutputConfig.submitOnStop),
+     replacements: stringMapFrom(output.replacements ?? merged.replacements, defaultOutputConfig.replacements),
+   };
+ };
  
  const cleanupFrom = async (merged: Record<string, unknown>): Promise<CleanupConfig> => {
    const cleanup = objectFrom(merged.cleanup);
@@ -952,7 +987,7 @@ diff -ruN --exclude=node_modules a/src/config/load-config.ts b/src/config/load-c
      model: textFrom(cleanup.model, defaultCleanupConfig.model),
      language: textFrom(cleanup.language, defaultCleanupConfig.language),
      prompt: textFrom(cleanup.prompt, defaultCleanupConfig.prompt),
-@@ -258,8 +387,8 @@
+@@ -258,8 +386,8 @@
      useRepoContext: booleanFrom(cleanup.useRepoContext, defaultCleanupConfig.useRepoContext),
      maxTokens: positiveIntegerFrom(cleanup.maxTokens, defaultCleanupConfig.maxTokens),
      timeoutSeconds: positiveIntegerFrom(cleanup.timeoutSeconds, defaultCleanupConfig.timeoutSeconds),
@@ -998,7 +1033,7 @@ diff -ruN --exclude=node_modules a/src/config/startup.ts b/src/config/startup.ts
  };
 diff -ruN --exclude=node_modules a/src/config/types.ts b/src/config/types.ts
 --- a/src/config/types.ts	1985-10-26 03:15:00
-+++ b/src/config/types.ts	2026-07-28 21:17:06
++++ b/src/config/types.ts	2026-07-30 16:34:04
 @@ -1,6 +1,13 @@
  export type FfmpegCaptureConfig = {
    type: "ffmpeg";
@@ -1022,9 +1057,17 @@ diff -ruN --exclude=node_modules a/src/config/types.ts b/src/config/types.ts
  };
  
  export type DeepgramProviderConfig = SecretConfig & {
+@@ -99,7 +106,6 @@
+    * sends the transcript straight to chat instead of only inserting it into
+    * the prompt. Mirrors the Enter-while-recording behavior.
+    */
+-  submitOnStop: boolean;
+   /**
+    * Literal dictionary applied to the raw transcript (before cleanup), e.g.
+    * { "super base": "Supabase" }. Case-insensitive, word-boundary aware.
 diff -ruN --exclude=node_modules a/src/core/dictation-controller.ts b/src/core/dictation-controller.ts
 --- a/src/core/dictation-controller.ts	1985-10-26 03:15:00
-+++ b/src/core/dictation-controller.ts	2026-07-30 15:29:55
++++ b/src/core/dictation-controller.ts	2026-07-30 16:33:56
 @@ -10,6 +10,19 @@
  
  export type DictationMode = "idle" | "recording" | "processing" | "polishing";
@@ -1235,9 +1278,14 @@ diff -ruN --exclude=node_modules a/src/core/dictation-controller.ts b/src/core/d
      if (recording && !processing) {
        cancelRequested = true;
        const active = recording;
-@@ -212,37 +262,53 @@
+@@ -211,38 +261,58 @@
+ 
    const startRecording = async (ctx: ExtensionContext) => {
      if (disposed) return;
++    // There is only ever one recording. `recording` is not set until the recorder has
++    // actually started, which can take seconds behind a permission prompt, so a second
++    // press in that window would otherwise open a second microphone and orphan the first.
++    if (starting || recording) return;
      processing = true;
 +    starting = true;
 +    startCancelled = false;
@@ -1304,7 +1352,7 @@ diff -ruN --exclude=node_modules a/src/core/dictation-controller.ts b/src/core/d
      await startRecording(ctx);
    };
  
-@@ -250,26 +316,24 @@
+@@ -250,26 +320,24 @@
      disposed = true;
      transcriptionController?.abort();
      const operation = activeOperation;
@@ -1498,7 +1546,7 @@ diff -ruN --exclude=node_modules a/src/core/voice-commands.ts b/src/core/voice-c
            return { command, text: stripped.slice(0, start).replace(TRAILING_PUNCTUATION, "") };
 diff -ruN --exclude=node_modules a/src/index.ts b/src/index.ts
 --- a/src/index.ts	1985-10-26 03:15:00
-+++ b/src/index.ts	2026-07-30 16:23:34
++++ b/src/index.ts	2026-07-30 16:34:46
 @@ -1,4 +1,5 @@
  import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 +import type { EditorComponent } from "@earendil-works/pi-tui";
@@ -1514,12 +1562,12 @@ diff -ruN --exclude=node_modules a/src/index.ts b/src/index.ts
 +import type { AppKeybinding, KeybindingsManager } from "@earendil-works/pi-coding-agent";
 +import type { KeyId } from "@earendil-works/pi-tui";
 +import type { Delivery } from "./core/dictation-controller";
-+import { placeholderText, replacePlaceholder } from "./ui/transcribing";
++import { nextFreeSlot, placeholderText, replacePlaceholder } from "./ui/transcribing";
 +import { createPendingStore } from "./ui/pending-message";
  
  const toastType = (variant: DictationToast["variant"]): "info" | "warning" | "error" => {
    if (variant === "error") return "error";
-@@ -34,31 +40,207 @@
+@@ -34,31 +40,217 @@
    const strings = resolveStrings(startup.locale);
    const inputIndicator = createInputIndicator(keybind, strings);
    let activeMode = startup.mode || DEFAULT_MODE;
@@ -1573,11 +1621,20 @@ diff -ruN --exclude=node_modules a/src/index.ts b/src/index.ts
 +    }
 +  };
 +
-+  /** Placeholders outstanding anywhere, so the spinner keeps turning while any remain. */
-+  let openPlaceholders = 0;
-+  const trackPlaceholder = (delta: number) => {
-+    openPlaceholders = Math.max(0, openPlaceholders + delta);
-+    inputIndicator.setPlaceholderCount(openPlaceholders);
++  /**
++   * Slots of the placeholders outstanding anywhere. Each transcription owns one, so its
++   * result can only land in its own block, and the spinner keeps turning while any remain.
++   */
++  const openSlots = new Set<number>();
++  const claimSlot = (): number => {
++    const slot = nextFreeSlot(openSlots);
++    openSlots.add(slot);
++    inputIndicator.setPlaceholderCount(openSlots.size);
++    return slot;
++  };
++  const releaseSlot = (slot: number) => {
++    openSlots.delete(slot);
++    inputIndicator.setPlaceholderCount(openSlots.size);
 +  };
 +
 +  /**
@@ -1600,17 +1657,17 @@ diff -ruN --exclude=node_modules a/src/index.ts b/src/index.ts
 +
 +  /** The transcript is destined for the prompt: hold its place with a placeholder. */
 +  const beginEditorDelivery = (ctx: ExtensionContext): Delivery => {
-+    const marker = placeholderText();
++    const slot = claimSlot();
++    const marker = placeholderText(slot);
 +    if (activeEditor?.insertTextAtCursor) activeEditor.insertTextAtCursor(marker);
 +    else ctx.ui.setEditorText(`${ctx.ui.getEditorText()}${marker}`);
-+    trackPlaceholder(1);
 +
 +    let settled = false;
 +    const finish = (replacement: string) => {
 +      if (settled) return false;
 +      settled = true;
-+      trackPlaceholder(-1);
-+      return rewriteEditor(ctx, (text) => replacePlaceholder(text, replacement));
++      releaseSlot(slot);
++      return rewriteEditor(ctx, (text) => replacePlaceholder(text, replacement, marker));
 +    };
 +
 +    return {
@@ -1648,25 +1705,26 @@ diff -ruN --exclude=node_modules a/src/index.ts b/src/index.ts
 +  const beginMessageDelivery = (ctx: ExtensionContext, outcome: "send" | "queue"): Delivery => {
 +    // Insert at the cursor first, then take the line: the transcript lands where the
 +    // cursor was, keeping whatever was typed on either side of it.
-+    if (activeEditor?.insertTextAtCursor) activeEditor.insertTextAtCursor(placeholderText());
-+    else ctx.ui.setEditorText(`${ctx.ui.getEditorText()}${placeholderText()}`);
++    const slot = claimSlot();
++    const marker = placeholderText(slot);
++    if (activeEditor?.insertTextAtCursor) activeEditor.insertTextAtCursor(marker);
++    else ctx.ui.setEditorText(`${ctx.ui.getEditorText()}${marker}`);
 +    // The expanded text, so pasted content travels with the message rather than as a
 +    // marker that no longer has anything to expand to once the editor is cleared.
 +    const composed = ctx.ui.getEditorText();
 +    ctx.ui.setEditorText("");
 +
 +    const id = pendingMessages.begin(ctx, outcome, composed);
-+    trackPlaceholder(1);
 +    let settled = false;
 +    const settle = () => {
 +      if (settled) return false;
 +      settled = true;
-+      trackPlaceholder(-1);
++      releaseSlot(slot);
 +      return true;
 +    };
 +
 +    const restore = () => {
-+      const { text } = replacePlaceholder(composed, "");
++      const { text } = replacePlaceholder(composed, "", marker);
 +      if (text.trim().length === 0) return;
 +      const current = ctx.ui.getEditorText();
 +      ctx.ui.setEditorText(current.length > 0 ? `${text}${current}` : text);
@@ -1676,7 +1734,7 @@ diff -ruN --exclude=node_modules a/src/index.ts b/src/index.ts
 +      resolve: (text) => {
 +        if (!settle()) return;
 +        pendingMessages.resolve(ctx, id);
-+        const { text: full, replaced } = replacePlaceholder(composed, text);
++        const { text: full, replaced } = replacePlaceholder(composed, text, marker);
 +        const prompt = (replaced ? full : `${composed} ${text}`).trim();
 +        if (!prompt) return;
 +        if (outcome === "queue" || !ctx.isIdle()) pi.sendUserMessage(prompt, { deliverAs: "followUp" });
@@ -1743,7 +1801,7 @@ diff -ruN --exclude=node_modules a/src/index.ts b/src/index.ts
      notify,
      onModeChange: (mode) => inputIndicator.setMode(mode),
      onError: reportError,
-@@ -120,13 +302,18 @@
+@@ -120,13 +312,18 @@
          try {
            const config = await getConfig();
            assertProviderReady(config.provider);
@@ -1763,7 +1821,7 @@ diff -ruN --exclude=node_modules a/src/index.ts b/src/index.ts
          } catch (error) {
            reportError(ctx, error);
          }
-@@ -139,7 +326,17 @@
+@@ -139,7 +336,17 @@
        }
  
        const configPath = startup.configPath || "defaults only (set PI_STT_CONFIG or ~/.pi/agent/stt.json)";
@@ -1782,7 +1840,7 @@ diff -ruN --exclude=node_modules a/src/index.ts b/src/index.ts
      },
    });
  
-@@ -148,11 +345,16 @@
+@@ -148,27 +355,20 @@
  
      const previousEditor = ctx.ui.getEditorComponent();
      ctx.ui.setEditorComponent(createVoiceEditorFactory(previousEditor, {
@@ -1798,9 +1856,28 @@ diff -ruN --exclude=node_modules a/src/index.ts b/src/index.ts
 +        activeEditor = editor;
 +      },
        onToggle: (handlerCtx) => {
-         void (async () => {
-           // Idle -> start recording. While recording/processing -> stop. The
-@@ -176,11 +378,24 @@
+-        void (async () => {
+-          // Idle -> start recording. While recording/processing -> stop. The
+-          // stop path honors output.submitOnStop: when enabled, Ctrl+R also
+-          // sends the transcript to chat (like Enter), instead of only
+-          // inserting it into the prompt.
+-          if (controller.getMode() === "idle") {
+-            await controller.toggle(handlerCtx);
+-            return;
+-          }
+-          const submitOnStop = await getConfig()
+-            .then((config) => config.output.submitOnStop)
+-            .catch(() => false);
+-          if (submitOnStop) await controller.stopAndSubmit(handlerCtx);
+-          else await controller.toggle(handlerCtx);
+-        })().catch((error: unknown) => reportError(handlerCtx, error));
++        // Idle starts recording; recording stops it and keeps the transcript in the
++        // prompt. Sending has its own key, so the voice key has exactly one meaning.
++        void controller.toggle(handlerCtx).catch((error: unknown) => reportError(handlerCtx, error));
+       },
+       onCancel: (handlerCtx) => {
+         void controller.cancel(handlerCtx).catch((error: unknown) => reportError(handlerCtx, error));
+@@ -176,11 +376,24 @@
        onSend: (handlerCtx) => {
          void controller.stopAndSubmit(handlerCtx).catch((error: unknown) => reportError(handlerCtx, error));
        },
@@ -2525,8 +2602,8 @@ diff -ruN --exclude=node_modules a/src/ui/pending-message.ts b/src/ui/pending-me
 +}
 diff -ruN --exclude=node_modules a/src/ui/transcribing.ts b/src/ui/transcribing.ts
 --- a/src/ui/transcribing.ts	1969-12-31 18:00:00
-+++ b/src/ui/transcribing.ts	2026-07-30 16:07:54
-@@ -0,0 +1,93 @@
++++ b/src/ui/transcribing.ts	2026-07-30 16:36:24
+@@ -0,0 +1,115 @@
 +/**
 + * The `[⠏ transcribing]` placeholder.
 + *
@@ -2551,9 +2628,16 @@ diff -ruN --exclude=node_modules a/src/ui/transcribing.ts b/src/ui/transcribing.
 +export const PLACEHOLDER_PREFIX = `[${SPINNER_SENTINEL} `;
 +export const PLACEHOLDER_SUFFIX = "]";
 +
-+/** The literal text inserted into the editor, or shown as a pending message. */
-+export const placeholderText = (label = "transcribing"): string =>
-+	`${PLACEHOLDER_PREFIX}${label}${PLACEHOLDER_SUFFIX}`;
++/**
++ * The literal text inserted into the editor, or shown as a pending message.
++ *
++ * `slot` distinguishes placeholders that are outstanding at the same time. Slot 1 reads
++ * plainly; a second concurrent transcription is `[⠿ transcribing 2]`, and each delivery
++ * replaces its own marker by exact text rather than "the first one in the string" — two
++ * providers answering out of order used to swap their transcripts.
++ */
++export const placeholderText = (slot = 1): string =>
++	`${PLACEHOLDER_PREFIX}transcribing${slot > 1 ? ` ${slot}` : ""}${PLACEHOLDER_SUFFIX}`;
 +
 +/** Foreground-colour escapes, so the editor's own text colour can be restored after ours. */
 +const FOREGROUND = /\x1b\[(?:38;[0-9;:]+|39|3[0-7]|9[0-7])m/g;
@@ -2576,22 +2660,33 @@ diff -ruN --exclude=node_modules a/src/ui/transcribing.ts b/src/ui/transcribing.
 +export const animateRenderedLines = (lines: string[], frame: string, paint: (text: string) => string): string[] => {
 +	let touched = false;
 +	const out = lines.map((line) => {
-+		const at = line.indexOf(SPINNER_SENTINEL);
-+		if (at === -1) return line;
++		if (!line.includes(SPINNER_SENTINEL)) return line;
 +		touched = true;
 +
-+		const open = line.lastIndexOf(PLACEHOLDER_PREFIX[0] ?? "[", at);
-+		const close = line.indexOf(PLACEHOLDER_SUFFIX, at);
-+		// A placeholder split across a wrap has no bracket on this line; colour the frame
-+		// alone rather than guessing where the run begins.
-+		if (open === -1 || close === -1) {
-+			const restore = foregroundBefore(line, at);
-+			return `${line.slice(0, at)}${paint(frame)}${restore}${line.slice(at + SPINNER_SENTINEL.length)}`;
++		// Every run on the line, not just the first: two transcriptions can be outstanding
++		// at once, and the second used to sit there showing its raw sentinel forever.
++		let result = "";
++		let cursor = 0;
++		while (cursor <= line.length) {
++			const at = line.indexOf(SPINNER_SENTINEL, cursor);
++			if (at === -1) {
++				result += line.slice(cursor);
++				break;
++			}
++			const open = line.lastIndexOf(PLACEHOLDER_PREFIX[0] ?? "[", at);
++			const close = line.indexOf(PLACEHOLDER_SUFFIX, at);
++			// A placeholder split across a wrap has no bracket on this line; colour the
++			// frame alone rather than guessing where the run begins.
++			if (open === -1 || open < cursor || close === -1) {
++				result += line.slice(cursor, at) + paint(frame) + foregroundBefore(line, at);
++				cursor = at + SPINNER_SENTINEL.length;
++				continue;
++			}
++			const body = line.slice(open, close + PLACEHOLDER_SUFFIX.length).split(SPINNER_SENTINEL).join(frame);
++			result += line.slice(cursor, open) + paint(body) + foregroundBefore(line, open);
++			cursor = close + PLACEHOLDER_SUFFIX.length;
 +		}
-+
-+		const body = line.slice(open, close + PLACEHOLDER_SUFFIX.length).split(SPINNER_SENTINEL).join(frame);
-+		const restore = foregroundBefore(line, open);
-+		return `${line.slice(0, open)}${paint(body)}${restore}${line.slice(close + PLACEHOLDER_SUFFIX.length)}`;
++		return result;
 +	});
 +	return touched ? out : lines;
 +};
@@ -2599,27 +2694,31 @@ diff -ruN --exclude=node_modules a/src/ui/transcribing.ts b/src/ui/transcribing.
 +export const frameAt = (tick: number): string => SPINNER_FRAMES[tick % SPINNER_FRAMES.length] ?? SPINNER_FRAMES[0];
 +
 +/**
-+ * Replace the first placeholder in `text` with `replacement`.
++ * Replace one specific placeholder with `replacement`.
 + *
-+ * Returns the original string when there is no placeholder left — the user may have
++ * Returns the original string when that marker is no longer there — the user may have
 + * deleted it while the provider was working, and in that case the transcript has nowhere
 + * to go and must not be appended blindly to whatever they typed instead.
 + */
 +export const replacePlaceholder = (
 +	text: string,
 +	replacement: string,
++	marker: string = placeholderText(),
 +): { text: string; replaced: boolean } => {
-+	const start = text.indexOf(PLACEHOLDER_PREFIX);
++	const start = text.indexOf(marker);
 +	if (start === -1) return { text, replaced: false };
-+	const end = text.indexOf(PLACEHOLDER_SUFFIX, start + PLACEHOLDER_PREFIX.length);
-+	if (end === -1) return { text, replaced: false };
-+	return {
-+		text: text.slice(0, start) + replacement + text.slice(end + PLACEHOLDER_SUFFIX.length),
-+		replaced: true,
-+	};
++	return { text: text.slice(0, start) + replacement + text.slice(start + marker.length), replaced: true };
 +};
 +
-+export const hasPlaceholder = (text: string): boolean => replacePlaceholder(text, "").replaced;
++export const hasPlaceholder = (text: string, marker: string = placeholderText()): boolean =>
++	text.includes(marker);
++
++/** The lowest slot not currently outstanding, so numbering stays as small as possible. */
++export const nextFreeSlot = (taken: ReadonlySet<number>): number => {
++	let slot = 1;
++	while (taken.has(slot)) slot += 1;
++	return slot;
++};
 diff -ruN --exclude=node_modules a/src/utils/executable.ts b/src/utils/executable.ts
 --- a/src/utils/executable.ts	1969-12-31 18:00:00
 +++ b/src/utils/executable.ts	2026-07-28 18:47:47

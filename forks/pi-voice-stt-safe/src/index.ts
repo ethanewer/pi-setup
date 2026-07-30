@@ -15,7 +15,7 @@ import { containsPasteMarker, formatError } from "./utils/text";
 import type { AppKeybinding, KeybindingsManager } from "@earendil-works/pi-coding-agent";
 import type { KeyId } from "@earendil-works/pi-tui";
 import type { Delivery } from "./core/dictation-controller";
-import { placeholderText, replacePlaceholder } from "./ui/transcribing";
+import { nextFreeSlot, placeholderText, replacePlaceholder } from "./ui/transcribing";
 import { createPendingStore } from "./ui/pending-message";
 
 const toastType = (variant: DictationToast["variant"]): "info" | "warning" | "error" => {
@@ -90,11 +90,20 @@ export default function piVoiceSttExtension(pi: ExtensionAPI) {
     }
   };
 
-  /** Placeholders outstanding anywhere, so the spinner keeps turning while any remain. */
-  let openPlaceholders = 0;
-  const trackPlaceholder = (delta: number) => {
-    openPlaceholders = Math.max(0, openPlaceholders + delta);
-    inputIndicator.setPlaceholderCount(openPlaceholders);
+  /**
+   * Slots of the placeholders outstanding anywhere. Each transcription owns one, so its
+   * result can only land in its own block, and the spinner keeps turning while any remain.
+   */
+  const openSlots = new Set<number>();
+  const claimSlot = (): number => {
+    const slot = nextFreeSlot(openSlots);
+    openSlots.add(slot);
+    inputIndicator.setPlaceholderCount(openSlots.size);
+    return slot;
+  };
+  const releaseSlot = (slot: number) => {
+    openSlots.delete(slot);
+    inputIndicator.setPlaceholderCount(openSlots.size);
   };
 
   /**
@@ -117,17 +126,17 @@ export default function piVoiceSttExtension(pi: ExtensionAPI) {
 
   /** The transcript is destined for the prompt: hold its place with a placeholder. */
   const beginEditorDelivery = (ctx: ExtensionContext): Delivery => {
-    const marker = placeholderText();
+    const slot = claimSlot();
+    const marker = placeholderText(slot);
     if (activeEditor?.insertTextAtCursor) activeEditor.insertTextAtCursor(marker);
     else ctx.ui.setEditorText(`${ctx.ui.getEditorText()}${marker}`);
-    trackPlaceholder(1);
 
     let settled = false;
     const finish = (replacement: string) => {
       if (settled) return false;
       settled = true;
-      trackPlaceholder(-1);
-      return rewriteEditor(ctx, (text) => replacePlaceholder(text, replacement));
+      releaseSlot(slot);
+      return rewriteEditor(ctx, (text) => replacePlaceholder(text, replacement, marker));
     };
 
     return {
@@ -165,25 +174,26 @@ export default function piVoiceSttExtension(pi: ExtensionAPI) {
   const beginMessageDelivery = (ctx: ExtensionContext, outcome: "send" | "queue"): Delivery => {
     // Insert at the cursor first, then take the line: the transcript lands where the
     // cursor was, keeping whatever was typed on either side of it.
-    if (activeEditor?.insertTextAtCursor) activeEditor.insertTextAtCursor(placeholderText());
-    else ctx.ui.setEditorText(`${ctx.ui.getEditorText()}${placeholderText()}`);
+    const slot = claimSlot();
+    const marker = placeholderText(slot);
+    if (activeEditor?.insertTextAtCursor) activeEditor.insertTextAtCursor(marker);
+    else ctx.ui.setEditorText(`${ctx.ui.getEditorText()}${marker}`);
     // The expanded text, so pasted content travels with the message rather than as a
     // marker that no longer has anything to expand to once the editor is cleared.
     const composed = ctx.ui.getEditorText();
     ctx.ui.setEditorText("");
 
     const id = pendingMessages.begin(ctx, outcome, composed);
-    trackPlaceholder(1);
     let settled = false;
     const settle = () => {
       if (settled) return false;
       settled = true;
-      trackPlaceholder(-1);
+      releaseSlot(slot);
       return true;
     };
 
     const restore = () => {
-      const { text } = replacePlaceholder(composed, "");
+      const { text } = replacePlaceholder(composed, "", marker);
       if (text.trim().length === 0) return;
       const current = ctx.ui.getEditorText();
       ctx.ui.setEditorText(current.length > 0 ? `${text}${current}` : text);
@@ -193,7 +203,7 @@ export default function piVoiceSttExtension(pi: ExtensionAPI) {
       resolve: (text) => {
         if (!settle()) return;
         pendingMessages.resolve(ctx, id);
-        const { text: full, replaced } = replacePlaceholder(composed, text);
+        const { text: full, replaced } = replacePlaceholder(composed, text, marker);
         const prompt = (replaced ? full : `${composed} ${text}`).trim();
         if (!prompt) return;
         if (outcome === "queue" || !ctx.isIdle()) pi.sendUserMessage(prompt, { deliverAs: "followUp" });
@@ -356,21 +366,9 @@ export default function piVoiceSttExtension(pi: ExtensionAPI) {
         activeEditor = editor;
       },
       onToggle: (handlerCtx) => {
-        void (async () => {
-          // Idle -> start recording. While recording/processing -> stop. The
-          // stop path honors output.submitOnStop: when enabled, Ctrl+R also
-          // sends the transcript to chat (like Enter), instead of only
-          // inserting it into the prompt.
-          if (controller.getMode() === "idle") {
-            await controller.toggle(handlerCtx);
-            return;
-          }
-          const submitOnStop = await getConfig()
-            .then((config) => config.output.submitOnStop)
-            .catch(() => false);
-          if (submitOnStop) await controller.stopAndSubmit(handlerCtx);
-          else await controller.toggle(handlerCtx);
-        })().catch((error: unknown) => reportError(handlerCtx, error));
+        // Idle starts recording; recording stops it and keeps the transcript in the
+        // prompt. Sending has its own key, so the voice key has exactly one meaning.
+        void controller.toggle(handlerCtx).catch((error: unknown) => reportError(handlerCtx, error));
       },
       onCancel: (handlerCtx) => {
         void controller.cancel(handlerCtx).catch((error: unknown) => reportError(handlerCtx, error));

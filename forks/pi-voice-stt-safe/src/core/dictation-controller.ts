@@ -261,6 +261,10 @@ export const createDictationController = (options: DictationControllerOptions) =
 
   const startRecording = async (ctx: ExtensionContext) => {
     if (disposed) return;
+    // There is only ever one recording. `recording` is not set until the recorder has
+    // actually started, which can take seconds behind a permission prompt, so a second
+    // press in that window would otherwise open a second microphone and orphan the first.
+    if (starting || recording) return;
     processing = true;
     starting = true;
     startCancelled = false;

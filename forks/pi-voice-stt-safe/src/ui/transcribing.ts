@@ -22,9 +22,16 @@ export const SPINNER_SENTINEL = "⠿";
 export const PLACEHOLDER_PREFIX = `[${SPINNER_SENTINEL} `;
 export const PLACEHOLDER_SUFFIX = "]";
 
-/** The literal text inserted into the editor, or shown as a pending message. */
-export const placeholderText = (label = "transcribing"): string =>
-	`${PLACEHOLDER_PREFIX}${label}${PLACEHOLDER_SUFFIX}`;
+/**
+ * The literal text inserted into the editor, or shown as a pending message.
+ *
+ * `slot` distinguishes placeholders that are outstanding at the same time. Slot 1 reads
+ * plainly; a second concurrent transcription is `[⠿ transcribing 2]`, and each delivery
+ * replaces its own marker by exact text rather than "the first one in the string" — two
+ * providers answering out of order used to swap their transcripts.
+ */
+export const placeholderText = (slot = 1): string =>
+	`${PLACEHOLDER_PREFIX}transcribing${slot > 1 ? ` ${slot}` : ""}${PLACEHOLDER_SUFFIX}`;
 
 /** Foreground-colour escapes, so the editor's own text colour can be restored after ours. */
 const FOREGROUND = /\x1b\[(?:38;[0-9;:]+|39|3[0-7]|9[0-7])m/g;
@@ -47,22 +54,33 @@ const foregroundBefore = (line: string, index: number): string => {
 export const animateRenderedLines = (lines: string[], frame: string, paint: (text: string) => string): string[] => {
 	let touched = false;
 	const out = lines.map((line) => {
-		const at = line.indexOf(SPINNER_SENTINEL);
-		if (at === -1) return line;
+		if (!line.includes(SPINNER_SENTINEL)) return line;
 		touched = true;
 
-		const open = line.lastIndexOf(PLACEHOLDER_PREFIX[0] ?? "[", at);
-		const close = line.indexOf(PLACEHOLDER_SUFFIX, at);
-		// A placeholder split across a wrap has no bracket on this line; colour the frame
-		// alone rather than guessing where the run begins.
-		if (open === -1 || close === -1) {
-			const restore = foregroundBefore(line, at);
-			return `${line.slice(0, at)}${paint(frame)}${restore}${line.slice(at + SPINNER_SENTINEL.length)}`;
+		// Every run on the line, not just the first: two transcriptions can be outstanding
+		// at once, and the second used to sit there showing its raw sentinel forever.
+		let result = "";
+		let cursor = 0;
+		while (cursor <= line.length) {
+			const at = line.indexOf(SPINNER_SENTINEL, cursor);
+			if (at === -1) {
+				result += line.slice(cursor);
+				break;
+			}
+			const open = line.lastIndexOf(PLACEHOLDER_PREFIX[0] ?? "[", at);
+			const close = line.indexOf(PLACEHOLDER_SUFFIX, at);
+			// A placeholder split across a wrap has no bracket on this line; colour the
+			// frame alone rather than guessing where the run begins.
+			if (open === -1 || open < cursor || close === -1) {
+				result += line.slice(cursor, at) + paint(frame) + foregroundBefore(line, at);
+				cursor = at + SPINNER_SENTINEL.length;
+				continue;
+			}
+			const body = line.slice(open, close + PLACEHOLDER_SUFFIX.length).split(SPINNER_SENTINEL).join(frame);
+			result += line.slice(cursor, open) + paint(body) + foregroundBefore(line, open);
+			cursor = close + PLACEHOLDER_SUFFIX.length;
 		}
-
-		const body = line.slice(open, close + PLACEHOLDER_SUFFIX.length).split(SPINNER_SENTINEL).join(frame);
-		const restore = foregroundBefore(line, open);
-		return `${line.slice(0, open)}${paint(body)}${restore}${line.slice(close + PLACEHOLDER_SUFFIX.length)}`;
+		return result;
 	});
 	return touched ? out : lines;
 };
@@ -70,24 +88,28 @@ export const animateRenderedLines = (lines: string[], frame: string, paint: (tex
 export const frameAt = (tick: number): string => SPINNER_FRAMES[tick % SPINNER_FRAMES.length] ?? SPINNER_FRAMES[0];
 
 /**
- * Replace the first placeholder in `text` with `replacement`.
+ * Replace one specific placeholder with `replacement`.
  *
- * Returns the original string when there is no placeholder left — the user may have
+ * Returns the original string when that marker is no longer there — the user may have
  * deleted it while the provider was working, and in that case the transcript has nowhere
  * to go and must not be appended blindly to whatever they typed instead.
  */
 export const replacePlaceholder = (
 	text: string,
 	replacement: string,
+	marker: string = placeholderText(),
 ): { text: string; replaced: boolean } => {
-	const start = text.indexOf(PLACEHOLDER_PREFIX);
+	const start = text.indexOf(marker);
 	if (start === -1) return { text, replaced: false };
-	const end = text.indexOf(PLACEHOLDER_SUFFIX, start + PLACEHOLDER_PREFIX.length);
-	if (end === -1) return { text, replaced: false };
-	return {
-		text: text.slice(0, start) + replacement + text.slice(end + PLACEHOLDER_SUFFIX.length),
-		replaced: true,
-	};
+	return { text: text.slice(0, start) + replacement + text.slice(start + marker.length), replaced: true };
 };
 
-export const hasPlaceholder = (text: string): boolean => replacePlaceholder(text, "").replaced;
+export const hasPlaceholder = (text: string, marker: string = placeholderText()): boolean =>
+	text.includes(marker);
+
+/** The lowest slot not currently outstanding, so numbering stays as small as possible. */
+export const nextFreeSlot = (taken: ReadonlySet<number>): number => {
+	let slot = 1;
+	while (taken.has(slot)) slot += 1;
+	return slot;
+};

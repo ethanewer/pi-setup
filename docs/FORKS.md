@@ -207,7 +207,14 @@ wait: the key that ends a recording chooses insert (`alt+p`), send (`enter`) or 
 continues around the placeholder. Sending or queueing takes the whole composer with it — the
 placeholder holds the cursor's spot inside the message — and the result waits in a live
 widget until the transcript arrives, so the model gets nothing until it does. A failure
-becomes an error line and returns the text to the composer rather than losing it. `PI_STT_FAKE_TRANSCRIPT` / `PI_STT_FAKE_FAIL` /
+becomes an error line and returns the text to the composer rather than losing it.
+
+There is only ever one recording: a second press during the seconds a recorder can take to
+start is ignored rather than opening a second microphone. Transcriptions, though, can
+overlap, so each placeholder carries its own slot — a concurrent one reads
+`[⠏ transcribing 2]` — and each transcript replaces its own marker by exact text. Upstream's
+`output.submitOnStop` is dropped: it made the voice key send instead of insert, which now
+has its own key. `PI_STT_FAKE_TRANSCRIPT` / `PI_STT_FAKE_FAIL` /
 `PI_STT_FAKE_DELAY_MS` replace the provider with a fixed answer so this lifecycle can be
 driven end to end without a microphone or an API call.
 
