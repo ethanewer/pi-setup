@@ -13,7 +13,7 @@ UPSTREAM_WORKFLOWS="3.4.1"
 # Extensions are installed as Pi "local" packages from forks/ in this repository,
 # never from npm. Pi never rewrites local packages, so the security fixes in these
 # forks cannot be silently reverted by a later `bun install` or package update.
-FORKS="pi-voice-stt-safe pi-agent-browser-native-safe pi-dynamic-workflows-safe pi-context-handoff pi-process-monitor-safe"
+FORKS="pi-voice-stt-safe pi-agent-browser-native-safe pi-dynamic-workflows-safe pi-context-handoff pi-btw-inline pi-process-monitor-safe"
 
 REPO_URL="${PI_SETUP_REPO_URL:-https://github.com/ethanewer/pi-setup.git}"
 REPO_REF="${PI_SETUP_REF:-main}"
@@ -239,6 +239,7 @@ const wanted = [
   "local/pi-agent-browser-native-safe",
   "local/pi-dynamic-workflows-safe",
   "local/pi-context-handoff",
+  "local/pi-btw-inline",
   "local/pi-process-monitor-safe",
 ];
 const managed = new Set([
@@ -251,7 +252,12 @@ const managed = new Set([
   "pi-agent-browser-native-safe",
   "pi-dynamic-workflows-safe",
   "pi-context-handoff",
+  "pi-btw-inline",
   "pi-process-monitor-safe",
+  // Unrelated npm packages that also register /btw through a TUI overlay. Listed so an
+  // existing install of one is dropped rather than left racing pi-btw-inline for the name.
+  "pi-btw",
+  "pi-render-btw",
   // Retired: pi-continue replaced by pi-context-handoff. Listed so an existing
   // local/pi-continue-safe entry is removed rather than left loading alongside.
   "pi-continue-safe",
@@ -373,10 +379,11 @@ cat <<EOF
 Installed successfully.
 
 Open a new terminal, then use:
-  pi  Full setup: Voice STT + browser + workflows + handoff briefs + monitor
+  pi  Full setup: Voice STT + browser + workflows + handoff briefs + monitor + /btw
   p   Lean setup: Voice STT only, quiet startup
 
 Voice dictation: Option+P on macOS, Alt+P on Linux.
+Side questions:  /btw <question>, /btw:end to return.
 
 Extensions are installed from forks/ as Pi local packages. Run
 'bin/pi-setup-doctor' to check that the installed copies still match this

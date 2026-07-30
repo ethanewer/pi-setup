@@ -1,0 +1,33 @@
+{
+  "name": "pi-btw-inline",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Codex's /side (alias /btw) for Pi: an ephemeral fork of the conversation for a question that must not pollute the main context. Rendered inline in the transcript, with no overlay.",
+  "type": "module",
+  "license": "MIT",
+  "keywords": [
+    "pi-package",
+    "pi",
+    "pi-coding-agent",
+    "btw",
+    "side-question",
+    "codex"
+  ],
+  "files": [
+    "extensions",
+    "README.md"
+  ],
+  "pi": {
+    "extensions": [
+      "./extensions/btw/index.ts"
+    ]
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-ai": ">=0.82.0",
+    "@earendil-works/pi-coding-agent": ">=0.82.0",
+    "@earendil-works/pi-tui": ">=0.82.0"
+  },
+  "engines": {
+    "node": ">=22.18"
+  }
+}

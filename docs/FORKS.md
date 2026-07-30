@@ -143,6 +143,30 @@ installed, so the worst case is a less useful summary. It uses only Pi's public 
 also removes the deep private-module imports that made the previous extension fragile
 across Pi releases.
 
+## pi-btw-inline
+
+First-party, not a fork. Implements Codex's `/side` — aliased `/btw` there too — as
+`/btw <question>`: an ephemeral fork of the current conversation that answers a side
+question without the question or the answer entering the main thread's context. The
+boundary prompt and developer instructions are Codex's, from
+`codex-rs/tui/src/app/side.rs`.
+
+Two deliberate departures. The exchange renders **inline** in the transcript as a custom
+entry rather than in an overlay, which is the reason the package exists rather than one of
+the npm `/btw` extensions. And the side thread gets **read-only tools** by default
+(`read`, `grep`, `find`, `ls`) instead of inheriting the parent's: Codex relies on prompt
+instructions to keep a side thread non-mutating, but a Pi sub-session runs without an
+approval prompt in front of it, so the restriction is structural here. `"toolset": "full"`
+restores Codex's behaviour.
+
+It **cannot stop a run**. The fork is a separate `AgentSession` with an in-memory session
+manager: it cannot abort the main turn, cannot write to the main context, and reports its
+own failures as a notification plus a transcript entry. The command never blocks Pi's
+input loop, which is also what lets `/btw:end` cancel an answer in flight. It is usable
+while the main thread is mid-turn — the case it exists for — and the mid-turn history
+snapshot is trimmed back to the last resolved tool call so a half-finished turn cannot
+produce an invalid request.
+
 ## pi-voice-stt-safe
 
 Based on `pi-voice-stt@0.4.0`.
@@ -190,7 +214,7 @@ the listing identifies every extension by name:
 
 ```text
 [Extensions]
-  agent-browser, continue, monitor, voice-stt, workflow
+  agent-browser, btw, context-handoff, monitor, voice-stt, workflow
 ```
 
 For voice-stt that entry is a one-line re-export; `src/` is still the implementation. For
@@ -226,6 +250,7 @@ reachable by repo-controlled or model-chosen input before.
 | `worktreeIsolationFallback` | Continuing when `git worktree add` fails |
 | `defaultMaxAgents` / `maxAgents` | Raising a run above the 100-agent default, up to the 1000 ceiling |
 | `defaultAgentTimeoutMs` / `agentTimeoutMs: null` | Removing the 60-minute per-agent timeout entirely |
+| `toolset: "full"` (`pi-btw-inline.json`) | Giving a `/btw` side thread `bash`, `edit`, and `write`, which is Codex's own side-thread toolset |
 
 One gate is a configuration shape rather than a flag: in `pi-voice-stt-safe` a named vendor
 alias is pinned to that vendor's host, so sending audio to a custom endpoint requires

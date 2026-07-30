@@ -72,6 +72,19 @@ Genuine quota and rate limits are handled differently and correctly: they throw
 `PROVIDER_USAGE_LIMIT`, which **checkpoints the run as paused** for the usage-limit
 scheduler to auto-resume, rather than burning retries against the same wall.
 
+## Side questions do not interrupt the run
+
+`/btw` ([`pi-btw-inline`](../forks/pi-btw-inline/README.md)) answers in a separate
+`AgentSession` with its own in-memory session manager. It cannot abort the main turn,
+cannot add anything to the main thread's context, and its failures surface as a
+notification plus a transcript entry rather than an exception in Pi's event loop. Asking
+mid-turn is supported and tested: the main turn keeps streaming while the answer is
+written, and the history snapshot the fork inherits is trimmed back to the last resolved
+tool call so a half-finished turn cannot produce an invalid request.
+
+It also cannot quietly consume the context it was meant to protect: the exchange is a
+custom entry, which Pi never sends to a model.
+
 ## Configuration for long runs
 
 Compaction is Pi's job, not an extension's. Tune it in `~/.pi/agent/settings.json`:

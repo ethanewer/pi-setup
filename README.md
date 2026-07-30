@@ -3,7 +3,8 @@
 A reproducible, fast [Pi coding agent](https://pi.dev) setup with two entrypoints:
 
 - **`pi`** — full environment with Voice STT, native browser automation, dynamic
-  workflows, compaction handoff briefs, and background process monitoring.
+  workflows, compaction handoff briefs, background process monitoring, and `/btw` side
+  questions.
 - **`p`** — lean environment with Voice STT only, quiet startup, no skills, and a
   smaller system prompt.
 
@@ -65,6 +66,7 @@ Extension forks and the upstream releases they are based on:
 | `pi-dynamic-workflows-safe` | `@quintinshaw/pi-dynamic-workflows` | `3.4.1` |
 | `pi-process-monitor-safe` | `pi-process-monitor` | rewrite, reviewed vs `1.3.0` |
 | `pi-context-handoff` | — | first-party |
+| `pi-btw-inline` | — | first-party |
 
 `vendor.json` is the machine-readable version of this table and is what the tooling
 reads.
@@ -129,6 +131,7 @@ standalone diffs.
 - workflow authoring and built-in workflow skills
 - compaction handoff briefs that keep a long run going
 - background process monitoring (`monitor`, `/watch`)
+- side questions in an ephemeral fork (`/btw`, `/btw:end`)
 - project `AGENTS.md` / `CLAUDE.md` context
 - visible startup resource listing
 
@@ -152,6 +155,23 @@ documentation block from the system prompt. It also:
 profile, not another Pi installation. The `pi` wrapper explicitly rejects an inherited
 lean-profile environment, so a tmux server started from `p` cannot accidentally turn later
 `pi` sessions into the lean configuration.
+
+## Side questions (`/btw`)
+
+`/btw <question>` answers in an ephemeral fork of the current conversation. The model sees
+the history so far as reference context; neither the question nor the answer enters the
+main thread's context, and the main thread does not have to be idle — asking mid-turn is
+the case it is for. The answer renders inline in the transcript, not in an overlay.
+
+```text
+/btw does this migration drop data if it runs twice?   ask
+                                                        (typed messages now go to the fork)
+/btw:end                                                discard it and return
+```
+
+The side thread gets read-only tools by default. See
+[`forks/pi-btw-inline/README.md`](forks/pi-btw-inline/README.md) for configuration and for
+what does and does not match Codex's `/side`.
 
 ## Voice STT
 
@@ -193,6 +213,21 @@ Verifies that every fork in `forks/` matches the copy installed under
 packages, that `stt.json` is owner-only, and that `trust.json` has no home-wide entry.
 Also reports when upstream has published a newer release than a fork is based on. Exits
 non-zero on problems, so it can gate CI.
+
+### Run the unit tests
+
+```bash
+bun test tests/
+```
+
+Covers the pure logic of the first-party extensions — the history sanitizer that keeps a
+mid-turn `/btw` snapshot valid, the prompt assembly, and config parsing. No network, no
+model, no installed Pi required.
+
+Scope the command to `tests/`. A bare `bun test` also collects
+`forks/pi-process-monitor-safe/test/`, which is that fork's own suite and needs its dev
+dependencies (`cd forks/pi-process-monitor-safe && bun install`) that `install.sh`
+deliberately does not install.
 
 ### Change a fork
 
