@@ -24,6 +24,12 @@ export var WorkflowErrorCode;
     WorkflowErrorCode["SCHEMA_NONCOMPLIANCE"] = "SCHEMA_NONCOMPLIANCE";
     /** A non-schema agent completed without any assistant text output. */
     WorkflowErrorCode["AGENT_EMPTY_OUTPUT"] = "AGENT_EMPTY_OUTPUT";
+    /**
+     * An agent()'s `model`/`tier` spec did not resolve to any known model. Never
+     * silently substituted for the session default — resolution is deterministic,
+     * so retrying the same spec would fail identically every time.
+     */
+    WorkflowErrorCode["MODEL_NOT_FOUND"] = "MODEL_NOT_FOUND";
     /** Agent execution failed. */
     WorkflowErrorCode["AGENT_EXECUTION_ERROR"] = "AGENT_EXECUTION_ERROR";
     /** Run state persistence failed. */

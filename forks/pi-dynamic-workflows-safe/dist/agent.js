@@ -339,6 +339,15 @@ export class WorkflowAgent {
      * getSharedResourceLoader — this is the #109 memory mitigation.
      */
     sharedResourceLoaderPromise;
+    /**
+     * Emitted at most once per instance (~= once per run, see the class-level
+     * lifetime note above): the untagged/default "medium" tier resolved to a
+     * model spec that isn't available. Deliberately per-instance rather than a
+     * MODEL_NOT_FOUND throw — an untagged agent never asked for that specific
+     * model, so a broken default tier shouldn't fail every untagged agent in the
+     * run. See onModelFallback below for the (still-loud) degrade path.
+     */
+    warnedDefaultTierUnavailable = false;
     constructor(options = {}) {
         this.cwd = options.cwd ?? process.cwd();
         this.baseTools = options.tools ?? createCodingTools(this.cwd);
@@ -511,22 +520,50 @@ export class WorkflowAgent {
         const modelSpec = resolveAgentModelSpec(options, this.mainModel, () => this.loadTierConfig(), () => warnTierUnconfiguredOnce(this.mainModel, modelRegistry));
         // Resolve a requested model spec to a Model object. Specs use Pi CLI-style
         // parsing, including an optional :thinking suffix such as gpt-5.5:xhigh.
-        // A given-but-unresolved spec falls back to the session default (with a
-        // warning) rather than failing.
+        //
+        // A given-but-unresolved spec's behavior is asymmetric by design (#131):
+        //   - options.model or options.tier was explicitly set by the script (or by
+        //     workflow.ts's phase-based routing, which only ever supplies
+        //     options.model when the user configured that phase) → throw
+        //     MODEL_NOT_FOUND naming the source. Resolution is deterministic, so
+        //     retrying the same spec is pointless (recoverable:false), and a silent
+        //     substitution would otherwise run real API calls against a different
+        //     (or unauthenticated) model while the caller believes its pin/tier was
+        //     honored.
+        //   - neither was set: the agent is UNTAGGED and only got routed through
+        //     the implicit default "medium" tier because *some other* agent's tier
+        //     is configured (see resolveAgentModelSpec). This agent never asked for
+        //     that model, so a broken default tier degrades to the session default
+        //     instead of failing every untagged agent in the run — but the degrade
+        //     still needs to be loud (onModelFallback), not a silent continuation.
+        const isExplicitRequest = Boolean(options.model || options.tier);
         let resolvedModel;
         let resolvedThinkingLevel;
         if (modelSpec) {
             const resolved = resolveModelSpecWithThinking(modelSpec, modelRegistry);
             if (resolved.warning)
                 console.warn(`[workflow] ${resolved.warning}`);
-            if (resolved.model) {
+            if (!resolved.model) {
+                if (isExplicitRequest) {
+                    // The resolver's error already names the spec and the remedy; the tier
+                    // branch swaps in its own message so the config source is named too.
+                    const message = options.model
+                        ? (resolved.error ?? `Model "${modelSpec}" not found. Use /workflows-models to choose an available model.`)
+                        : `tier "${options.tier}" from model-tiers.json resolves to "${modelSpec}", which is not available. Use /workflows-models to choose an available model.`;
+                    throw new WorkflowError(message, WorkflowErrorCode.MODEL_NOT_FOUND, {
+                        recoverable: false,
+                        agentLabel: options.label,
+                    });
+                }
+                if (!this.warnedDefaultTierUnavailable) {
+                    this.warnedDefaultTierUnavailable = true;
+                    options.onModelFallback?.({ tier: "medium", requestedSpec: modelSpec });
+                }
+            }
+            else {
                 resolvedModel = resolved.model;
                 resolvedThinkingLevel = resolved.thinkingLevel;
                 options.onModelResolved?.(resolved.resolvedSpec ?? canonicalModelSpec(resolved.model));
-            }
-            else {
-                console.warn(`[workflow] model "${modelSpec}" not found; using session default`);
-                options.onModelFallback?.(modelSpec);
             }
         }
         const agentDir = getAgentDir();

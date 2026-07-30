@@ -63,7 +63,7 @@ Extension forks and the upstream releases they are based on:
 |---|---|---:|
 | `pi-voice-stt-safe` | `pi-voice-stt` | `0.4.0` |
 | `pi-agent-browser-native-safe` | `pi-agent-browser-native` | `0.2.72` |
-| `pi-dynamic-workflows-safe` | `@quintinshaw/pi-dynamic-workflows` | `3.4.1` |
+| `pi-dynamic-workflows-safe` | `@quintinshaw/pi-dynamic-workflows` | `3.5.0` |
 | `pi-process-monitor-safe` | `pi-process-monitor` | rewrite, reviewed vs `1.3.0` |
 | `pi-context-handoff` | — | first-party |
 | `pi-btw-side` | — | first-party |

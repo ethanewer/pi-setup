@@ -33,7 +33,7 @@ bin/pi-setup-vendor --verify <fork>
 
 ## pi-dynamic-workflows-safe
 
-Based on `@quintinshaw/pi-dynamic-workflows@3.4.1`. `src/**/*.ts` is the tree Pi loads;
+Based on `@quintinshaw/pi-dynamic-workflows@3.5.0`. `src/**/*.ts` is the tree Pi loads;
 `dist/` is the compiled mirror shipped through the package `exports` field.
 
 **Closed.** The zero-click RCE chain is broken at every link: persisted run records are
@@ -57,6 +57,17 @@ were not the same code. The fork now ships a `tsconfig.json` that compiles *pris
 into byte-identical *pristine* `dist` (94/94 files) — proving it reconstructs the original
 build — and `dist` is a clean-room `tsc` build of the fork's `src`. Rebuild with
 `npm run build`.
+
+Re-vendored onto 3.5.0 on 2026-07-30. Upstream's delta was small (7 files, 142 lines) but
+landed on the files this fork patches hardest, and it is worth having: an unresolvable
+`model` or `tier` used to fall back to the session default silently, and now throws
+`MODEL_NOT_FOUND` — a wrong-model run that looked successful is exactly the failure this
+setup cares about. One hunk rejected, in the capability contract, because upstream rewrote
+the line above this fork's worktree-isolation constraint; resolved by hand in the contract,
+its `dist` mirror and both authoring-skill references. The hardening was re-verified
+against the merged tree: cold-start rearm provenance, the vm timeout, the web-fetch host
+gate, project-local workflow trust, the worktree fallback gate and the agent ceiling are
+all still in place.
 
 **Default changes.** A run defaults to 100 agents (was 1000).
 `DEFAULT_AGENT_TIMEOUT_MS` is 60 minutes (was unbounded), sized so a legitimately long

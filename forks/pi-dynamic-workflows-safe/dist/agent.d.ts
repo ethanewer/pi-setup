@@ -176,8 +176,11 @@ export interface AgentRunOptions<TSchemaDef extends TSchema | undefined = undefi
     onUsage?: (usage: AgentUsage) => void;
     /**
      * Model spec for this subagent: either `provider/modelId` (unambiguous) or a
-     * bare `modelId`. When it can't be resolved, the session default is used and
-     * a warning is logged. When omitted, the session default applies.
+     * bare `modelId`, parsed with the same grammar as Pi CLI's `--model`. When it
+     * can't be resolved to a known model, `run()` throws MODEL_NOT_FOUND rather
+     * than silently substituting the session default — a wrong-model run would
+     * otherwise look successful while quietly answering with different (or
+     * unauthenticated) weights. When omitted, the session default applies.
      */
     model?: string;
     /**
@@ -187,12 +190,34 @@ export interface AgentRunOptions<TSchemaDef extends TSchema | undefined = undefi
      * the tier has no configured entry. An explicit `model` always takes priority,
      * so workflow scripts can use `{ tier: "small" }` for coarse routing without
      * caring which concrete model backs that tier.
+     *
+     * A script-requested tier that resolves to an unavailable model spec is just
+     * as loud as an explicit `model` pin — `run()` throws MODEL_NOT_FOUND naming
+     * the tier and the spec it resolved to, e.g. `tier "big" from
+     * model-tiers.json resolves to "deadprov/x", which is not available`.
+     *
+     * That's deliberately asymmetric with the IMPLICIT default tier an untagged
+     * agent (neither `model` nor `tier` set) gets routed through: since the
+     * script never asked for that tier, a broken default degrades to the
+     * session default instead of failing every untagged agent in the run — see
+     * onModelFallback below for how that degrade stays visible.
      */
     tier?: string;
     /** Called with the resolved model id once known (for display/telemetry). */
     onModelResolved?: (modelId: string) => void;
-    /** Called when `model`/`tier`/phase resolved to a spec that wasn't found (fell back to session default). */
-    onModelFallback?: (requestedSpec: string) => void;
+    /**
+     * Called (at most once per WorkflowAgent instance) when an UNTAGGED agent's
+     * implicit default "medium" tier resolves to a model spec that isn't
+     * available. This is the one case that degrades to the session default
+     * instead of throwing MODEL_NOT_FOUND (see `tier` above) — but the degrade
+     * must still land in the run's own log/event stream, not just a
+     * console.warn, or a broken default tier silently drifts every untagged
+     * agent's model with zero trace in the run itself.
+     */
+    onModelFallback?: (info: {
+        tier: string;
+        requestedSpec: string;
+    }) => void;
     /** Called with a compact snapshot of this subagent's message/tool history. */
     onHistory?: (history: AgentHistoryEntry[]) => void;
     /** Run this agent in a different working directory (e.g. an isolated worktree). */
@@ -271,6 +296,15 @@ export declare class WorkflowAgent {
      * getSharedResourceLoader — this is the #109 memory mitigation.
      */
     private sharedResourceLoaderPromise?;
+    /**
+     * Emitted at most once per instance (~= once per run, see the class-level
+     * lifetime note above): the untagged/default "medium" tier resolved to a
+     * model spec that isn't available. Deliberately per-instance rather than a
+     * MODEL_NOT_FOUND throw — an untagged agent never asked for that specific
+     * model, so a broken default tier shouldn't fail every untagged agent in the
+     * run. See onModelFallback below for the (still-loud) degrade path.
+     */
+    private warnedDefaultTierUnavailable;
     constructor(options?: WorkflowAgentOptions);
     /**
      * A resource loader shared by every subagent of this run, built once (#109).

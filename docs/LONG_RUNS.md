@@ -61,7 +61,11 @@ subagent's result to `null`. This is not hypothetical — it happened during thi
 A generic provider error is already classified `recoverable: true`
 (`errors.ts:259-262`); it simply never retried. Now:
 
-- `DEFAULT_AGENT_RETRIES = 2` (3 attempts total).
+- `DEFAULT_AGENT_RETRIES = 2` (3 attempts total). This did not actually take effect until
+  2026-07-30: the manager resolved an unset retry count with `?? 0`, and the extension
+  passes an unset one unless a settings file exists, so every real run got a single
+  attempt while this document claimed otherwise. Found by the extension audit; the
+  constant is now reachable and an explicit `0` is still honoured.
 - Exponential backoff between attempts, 2s base, 30s ceiling — an immediate retry into a
   transient upstream fault usually just reproduces it.
 - Abort during a backoff is still honoured, so cancelling stays responsive.

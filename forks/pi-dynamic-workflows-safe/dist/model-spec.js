@@ -1,3 +1,4 @@
+import { modelsAreEqual } from "@earendil-works/pi-ai";
 export const THINKING_LEVELS = ["off", "minimal", "low", "medium", "high", "xhigh", "max"];
 const DEFAULT_MODEL_PER_PROVIDER = {
     "amazon-bedrock": "us.anthropic.claude-opus-4-6-v1",
@@ -150,7 +151,13 @@ function buildFallbackModel(provider, modelId, availableModels) {
 /**
  * Resolve a workflow model-tier/agent model string with the same user-facing
  * grammar as Pi CLI `--model`: `provider/modelId[:thinking]`, bare model ids,
- * fuzzy patterns, and exact colon-containing model ids.
+ * fuzzy patterns, and exact colon-containing model ids. This is a manual port of
+ * pi-coding-agent's `resolveCliModel` (core/model-resolver.ts) — kept in sync by
+ * the cross-check property test in tests/model-spec.test.ts, which runs both
+ * implementations against the same fuzzed inputs and fails loudly the moment they
+ * diverge (see that file for why we don't call pi's export directly: it requires
+ * a real `ModelRuntime`, which has a private constructor pi doesn't expose a
+ * lightweight adapter for).
  */
 export function resolveModelSpecWithThinking(spec, modelRegistry) {
     const requestedSpec = spec.trim();
@@ -191,6 +198,22 @@ export function resolveModelSpecWithThinking(spec, modelRegistry) {
         allowInvalidThinkingLevelFallback: false,
     });
     if (model) {
+        // The provider was inferred from a slash prefix (e.g. "moonshotai/kimi-k3"),
+        // but "moonshotai" can be BOTH a real provider name and the vendor segment of
+        // an aggregator's compound model id (OpenRouter et al. name models
+        // "vendor/model"). If the inferred provider has no configured auth and the
+        // exact same string is also a literal model id on a different, authenticated
+        // provider, prefer that one — otherwise a bare aggregator-style pin silently
+        // resolves against an unauthenticated native provider instead of the
+        // aggregator the caller actually has access to.
+        if (inferredProvider && modelRegistry.hasConfiguredAuth && !modelRegistry.hasConfiguredAuth(model)) {
+            const rawExactMatches = availableModels.filter((candidate) => candidate.id.toLowerCase() === requestedSpec.toLowerCase() && !modelsAreEqual(candidate, model));
+            const authenticatedRawMatches = rawExactMatches.filter((candidate) => modelRegistry.hasConfiguredAuth?.(candidate));
+            if (authenticatedRawMatches.length === 1) {
+                const preferred = authenticatedRawMatches[0];
+                return { requestedSpec, model: preferred, resolvedSpec: canonicalModelSpec(preferred) };
+            }
+        }
         return {
             requestedSpec,
             model,

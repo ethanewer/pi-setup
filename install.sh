@@ -8,7 +8,7 @@ AGENT_BROWSER_VERSION="0.33.0"
 # compares these against the npm registry to report when a fork is behind upstream.
 UPSTREAM_VOICE="0.4.0"
 UPSTREAM_BROWSER="0.2.72"
-UPSTREAM_WORKFLOWS="3.4.1"
+UPSTREAM_WORKFLOWS="3.5.0"
 
 # Extensions are installed as Pi "local" packages from forks/ in this repository,
 # never from npm. Pi never rewrites local packages, so the security fixes in these

@@ -24,6 +24,12 @@ export declare function splitModelSpecThinking(spec: string | undefined, knownMo
 /**
  * Resolve a workflow model-tier/agent model string with the same user-facing
  * grammar as Pi CLI `--model`: `provider/modelId[:thinking]`, bare model ids,
- * fuzzy patterns, and exact colon-containing model ids.
+ * fuzzy patterns, and exact colon-containing model ids. This is a manual port of
+ * pi-coding-agent's `resolveCliModel` (core/model-resolver.ts) — kept in sync by
+ * the cross-check property test in tests/model-spec.test.ts, which runs both
+ * implementations against the same fuzzed inputs and fails loudly the moment they
+ * diverge (see that file for why we don't call pi's export directly: it requires
+ * a real `ModelRuntime`, which has a private constructor pi doesn't expose a
+ * lightweight adapter for).
  */
-export declare function resolveModelSpecWithThinking(spec: string, modelRegistry: Pick<ModelRegistry, "getAll">): ResolvedModelSpec;
+export declare function resolveModelSpecWithThinking(spec: string, modelRegistry: Pick<ModelRegistry, "getAll"> & Partial<Pick<ModelRegistry, "hasConfiguredAuth">>): ResolvedModelSpec;
