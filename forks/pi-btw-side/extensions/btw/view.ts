@@ -204,17 +204,22 @@ export class SideView implements Component, Focusable {
 
 		let visible: string[];
 		if (body.length <= transcriptRows) {
-			// Pad upward so the composer stays pinned to the bottom of the screen instead
-			// of floating in the middle of an empty view.
-			visible = [...Array(transcriptRows - body.length).fill(""), ...body];
+			// A short conversation grows downward from the top, like the main chat: header,
+			// what has been said, then the composer directly under it. Padding above
+			// instead would strand the composer at the bottom of a tall terminal behind a
+			// wall of blank rows.
+			visible = body;
 		} else {
 			const end = body.length - this.scrollBack;
 			visible = body.slice(Math.max(0, end - transcriptRows), end);
 		}
 
-		// Every line is padded to the overlay's full width: an overlay composites onto the
-		// chat behind it, so a short line would let the main transcript show through.
-		return [...header, ...visible, ...editor, ...footer].map((line) => pad(line, width));
+		const lines = [...header, ...visible, ...editor, ...footer];
+		// The overlay composites onto the chat behind it, so it has to stay opaque for the
+		// full height even when there is nothing to put there yet.
+		while (lines.length < rows) lines.push("");
+		// Same reason, horizontally: a short line would let the main transcript show through.
+		return lines.map((line) => pad(line, width));
 	}
 
 	private renderHeader(width: number): string[] {

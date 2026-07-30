@@ -45,7 +45,7 @@ wait_line1() { # wait_line1 <text> [seconds]
   return 1
 }
 # Wait for the side view to stop answering, so a later keystroke is not raced.
-wait_idle() { local i=0; while (( i < 200 )); do screen | tail -1 | grep -q "answering" || return 0; sleep 1; i=$((i+1)); done; return 1; }
+wait_idle() { local i=0; while (( i < 200 )); do screen | grep -q "answering" || return 0; sleep 1; i=$((i+1)); done; return 1; }
 check() { if [[ "$2" == "0" ]]; then PASS=$((PASS+1)); printf '  PASS  %s\n' "$1"; else FAIL=$((FAIL+1)); printf '  FAIL  %s\n' "$1"; fi }
 send() { tmux send-keys -t "$SESSION" -l "$1"; sleep 0.4; tmux send-keys -t "$SESSION" Enter; }
 
