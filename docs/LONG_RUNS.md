@@ -119,10 +119,27 @@ Being honest about the remaining edges:
 - `pi-context-handoff`'s pure logic is unit-tested: instruction assembly (including that
   a malformed config degrades to defaults with retries still enabled, and that inherited
   `customInstructions` are preserved rather than overridden).
-- End-to-end, a session was built, compacted with `/compact`, and continued — with a
-  sentinel token planted in the focus instructions to prove the extension's instructions
-  actually reached the summarizer rather than inferring it from behaviour.
+- End-to-end, a **real threshold compaction** was driven in an isolated agent dir (40k
+  window, `reserveTokens` 6000, seven ~6k-token files). Instrumented, it showed the
+  extension loading, the hook firing with `reason=threshold`, and a compaction being
+  returned; `compaction_end` then recorded a summary **byte-identical in length (825) to
+  what the extension returned**, proving Pi used it verbatim rather than falling back. The
+  summary carried the objective, progress so far, and the concrete next action.
+- Two caveats worth recording. `/compact` in `-p` mode produces no compaction entry, so it
+  is not a usable trigger for testing; use a real threshold. And a "begin the summary with
+  <token>" instruction cannot be verified literally, because Pi's `compact()` prepends its
+  own wrapper (`Turn Context (split turn)`) ahead of the model's text — the instructions
+  shape the body, not position zero.
 
-One methodological note worth keeping: `pi -p` buffers all output until the run finishes,
-and an idle process at 0% CPU is normally just waiting on the provider. Several apparent
-"hangs" during this work were slow runs, not stalls. Use `--mode json` to see progress.
+Three methodological notes worth keeping:
+
+- `pi -p` buffers all output until the run finishes, and an idle process at 0% CPU is
+  normally just waiting on the provider. Several apparent "hangs" during this work were
+  slow runs, not stalls — the same task completed on a later attempt. Use `--mode json`
+  to see progress as it happens.
+- Pi fetches a helper binary (`fd`) on first tool use. In an agent dir with no `bin/`,
+  the first tool call blocks on that fetch, which does look exactly like a hang.
+- `pi -p` is single-shot: it answers the prompt and exits. In the compaction test the
+  model ended its turn after four of seven files and Pi compacted afterwards, which is
+  print-mode behaviour, not the extension's. Long autonomous runs belong in an
+  interactive session or a driving loop.
