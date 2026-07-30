@@ -254,7 +254,17 @@ process.stdout.write((v.upstream ?? "") + "|" + (v.version ?? "") + "\n");
     elif [[ "$LATEST" == "$PINNED" ]]; then
       ok "$UPSTREAM is current at $PINNED"
     else
-      note "$UPSTREAM upstream is $LATEST, fork is based on $PINNED (bin/pi-setup-vendor $fork $LATEST)"
+      # A fork with no patch file is hand-maintained; pi-setup-vendor refuses to re-vendor
+      # it, so suggesting the command would send the reader down a path that always fails.
+      PATCH_REL="$(node -e '
+const v = require(process.argv[1] + "/vendor.json").forks[process.argv[2]];
+process.stdout.write(v.patch ?? "");
+' "$REPO_DIR" "$fork")"
+      if [[ -n "$PATCH_REL" ]]; then
+        note "$UPSTREAM upstream is $LATEST, fork is based on $PINNED (bin/pi-setup-vendor $fork $LATEST)"
+      else
+        note "$UPSTREAM upstream is $LATEST, fork is based on $PINNED (hand-maintained: port changes by hand and record the review in vendor.json)"
+      fi
     fi
   done
 fi

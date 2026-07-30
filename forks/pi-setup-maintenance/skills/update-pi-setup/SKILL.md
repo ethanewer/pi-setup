@@ -28,14 +28,18 @@ wrappers in `~/.local/bin`, and prunes stale npm copies of the extensions.
 cd ~/pi-setup && bin/pi-setup-doctor
 ```
 
-Read the four sections that matter:
+Every section, in the order it prints. The first four can emit PROBLEMs and fail the exit
+code; the last two are advisory.
 
 | Section | What a finding means |
 |---|---|
 | Forks: repository vs installed | An installed copy no longer matches `forks/`. Re-run `./install.sh`. |
+| Pi settings | `settings.json` does not load a fork, or still loads the unpatched npm package that would shadow it. |
+| Configuration hygiene | `stt.json` is not mode 600, or `trust.json` trusts a directory that every repository sits under. |
+| Retired and unknown local packages | A package on disk that `vendor.json` does not know about — dead code that can still be loaded if it is re-added to settings. |
 | Pi and agent-browser | Installed version differs from the pin in `install.sh` — something bypassed the installer. |
-| Upstream releases | npm has a newer release than this repository pins, for Pi, `agent-browser`, or a fork's upstream. This is a note, not a problem: upgrading is a deliberate act. |
-| Retired and unknown local packages | A package on disk that `vendor.json` does not know about. |
+| Compaction settings | `reserveTokens` too large, or compaction disabled: both stop a long run. |
+| Upstream releases | npm has a newer release than this repository pins. A note, not a problem: upgrading is a deliberate act. |
 
 `vendor.json` is the machine-readable record of which upstream release each fork is
 based on. `docs/FORKS.md` says what each fork changes and why, and is what to re-check
@@ -110,23 +114,45 @@ manually and record what you decided in its `vendor.json` note.
 them directly, bump `version` in both `package.json` and `vendor.json` if the change is
 worth marking, then `./install.sh`.
 
+`config/keybindings.json` is the other tree the installer owns: it is merged into
+`~/.pi/agent/keybindings.json` and the `p` profile's copy, touching only the ids listed in
+it. Edit it there, never in the agent directory. `docs/KEYBINDINGS.md` records why each id
+is remapped and how to measure a key with `bin/pi-setup-keyprobe`.
+
 Typecheck before installing — Pi runs TypeScript without checking it, so a type error
 becomes a runtime failure inside a session:
 
 ```bash
-cd /tmp && bunx tsc --noEmit --strict --skipLibCheck --moduleResolution bundler \
-  --target ES2023 --module ESNext --allowImportingTsExtensions --noEmit \
-  ~/pi-setup/forks/<pkg>/extensions/*/*.ts
+dir="$(mktemp -d)" && ln -s "$HOME/.bun/install/global/node_modules" "$dir/node_modules"
+cat > "$dir/tsconfig.json" <<JSON
+{
+  "compilerOptions": {
+    "target": "ES2023", "module": "ESNext", "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true, "strict": true, "noEmit": true,
+    "skipLibCheck": true, "types": ["node"], "paths": { "*": ["./node_modules/*"] }
+  },
+  "include": ["$HOME/pi-setup/forks/<pkg>/**/*.ts"]
+}
+JSON
+(cd "$dir" && bunx tsc --noEmit)
 ```
+
+The `node_modules` symlink and `types: ["node"]` are both load-bearing: Pi supplies its
+packages at runtime and they are not dependencies of this repository, so without them tsc
+cannot resolve `@earendil-works/*`, `node:fs` or `process`, and reports errors that are
+artefacts of the invocation rather than defects in the code.
 
 ## 5. agent-browser is pinned to the fork's baseline, on purpose
 
 `AGENT_BROWSER_VERSION` in `install.sh` is not "whatever npm has latest". The
 `pi-agent-browser-native-safe` wrapper is validated against one specific CLI release —
 `docs/SUPPORT_MATRIX.md` in that fork names it as the capability baseline. Raising it is
-a re-baseline job: update the baseline, re-run that fork's own verification gates
-(`npm run verify`, `npm run verify -- real-upstream`), and re-check the command
-reference. `bin/pi-setup-doctor` will keep reporting the newer release as a note until
+a re-baseline job. Note that the fork vendors only `dist/`, `scripts/` and `docs/` — the
+`npm run verify` gates its own SUPPORT_MATRIX.md describes live in upstream's repository,
+not here, so re-running them means working from an upstream checkout at the target
+version. What can be done in this repository is re-reading
+`docs/COMMAND_REFERENCE.md` and `docs/SUPPORT_MATRIX.md` against the new CLI's `--help`,
+and re-checking the artifact-path guards that hard-code command prefixes. `bin/pi-setup-doctor` will keep reporting the newer release as a note until
 then; that note is expected, not a defect.
 
 ## Verify
@@ -141,15 +167,25 @@ tests/smoke.sh               # installed setup: tools, bash, /btw, browser, work
 tests/tui-btw.sh             # TUI-only behaviour: the /btw side view and escape
 ```
 
+`tests/smoke.sh --quick` skips the browser and workflow runs while iterating. The voice
+UI has a test seam for the paths a script cannot reach otherwise:
+`PI_STT_FAKE_TRANSCRIPT`, `PI_STT_FAKE_FAIL` and `PI_STT_FAKE_DELAY_MS` replace the
+provider with a fixed answer, so the placeholder lifecycle can be driven without a
+microphone or an API call.
+
 `tests/smoke.sh --quick` skips the browser and workflow runs when iterating.
 
 Then start `pi` once interactively and confirm the startup listing is intact:
 
 ```text
-[Extensions]
-  agent-browser, btw, context-handoff, monitor, voice-stt, workflow
 [Skills]
   monitor, update-pi-setup, workflow-authoring, workflow-patterns
+
+[Prompts]
+  /watch
+
+[Extensions]
+  agent-browser, btw, context-handoff, monitor, voice-stt, workflow
 ```
 
 A fork that failed to load is **silently absent** from that listing rather than raising
@@ -169,7 +205,7 @@ reinstall:
 
 ```bash
 cd ~/pi-setup
-git revert <commit>     # or: git checkout <good-commit> -- install.sh forks/ vendor.json
+git revert <commit>     # or: git checkout <good-commit> -- install.sh forks/ patches/ vendor.json config/
 ./install.sh
 bin/pi-setup-doctor
 ```
