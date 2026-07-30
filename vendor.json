@@ -1,5 +1,5 @@
 {
-  "comment": "Provenance for every fork in forks/. bin/pi-setup-doctor reads this to report upstream drift; bin/pi-setup-vendor reads it to re-vendor a fork onto a newer upstream release.",
+  "comment": "Provenance for every package in forks/. bin/pi-setup-doctor reads this to report upstream drift; bin/pi-setup-vendor reads it to re-vendor a fork onto a newer upstream release. An entry with upstream:null is first-party and has neither.",
   "forks": {
     "pi-voice-stt-safe": {
       "upstream": "pi-voice-stt",
@@ -23,13 +23,6 @@
       "patch": "patches/@quintinshaw+pi-dynamic-workflows@3.4.1.patch",
       "note": "extensions/workflow/index.ts imports ../../src/*.js, so src/ is the tree Pi loads. dist/ is a compiled mirror reachable only through the package exports field; rebuild it with npm run build."
     },
-    "pi-continue-safe": {
-      "upstream": "pi-continue",
-      "version": "0.9.3",
-      "live": "extensions/continue/index.ts",
-      "liveTree": "extensions/continue",
-      "patch": "patches/pi-continue@0.9.3.patch"
-    },
     "pi-process-monitor-safe": {
       "upstream": "pi-process-monitor",
       "version": "1.2.0",
@@ -37,6 +30,14 @@
       "liveTree": "extensions/monitor",
       "patch": null,
       "note": "Hand-written rewrite rather than a patch of upstream, imported into this repository with its original commit history. Not re-vendorable with bin/pi-setup-vendor."
+    },
+    "pi-context-handoff": {
+      "upstream": null,
+      "version": "1.0.0",
+      "live": "extensions/context-handoff/index.ts",
+      "liveTree": "extensions/context-handoff",
+      "patch": null,
+      "note": "First-party extension, not a fork: replaces pi-continue. Steers Pi's own compaction and cannot abort a turn. No upstream to track and nothing to re-vendor."
     }
   }
 }

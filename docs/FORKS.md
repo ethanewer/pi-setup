@@ -58,8 +58,11 @@ into byte-identical *pristine* `dist` (94/94 files) — proving it reconstructs 
 build — and `dist` is a clean-room `tsc` build of the fork's `src`. Rebuild with
 `npm run build`.
 
-**Default changes.** `DEFAULT_AGENT_TIMEOUT_MS` is 15 minutes (was unbounded) and a run
-defaults to 100 agents (was 1000). The 1000 ceiling is still reachable via
+**Default changes.** A run defaults to 100 agents (was 1000).
+`DEFAULT_AGENT_TIMEOUT_MS` is 60 minutes (was unbounded), sized so a legitimately long
+subagent is not silently degraded to `null`. `DEFAULT_AGENT_RETRIES` is 2 with exponential
+backoff (was 0), because a transient provider fault was the most common way a long run
+lost work — see [`LONG_RUNS.md`](LONG_RUNS.md). The 1000 ceiling is still reachable via
 `maxAgents`/`defaultMaxAgents`, and `agentTimeoutMs: null` restores unbounded agents. New
 settings: `trustProjectLocalWorkflows`, `webFetchAllowedHosts`,
 `webFetchAllowPrivateNetwork`, `worktreeIsolationFallback`, `defaultMaxAgents`.
@@ -110,47 +113,26 @@ supply-chain risk if committed unreviewed. `scripts/doctor.mjs` still runs
 `agent-browser --version` unpinned in the operator's directory; verified empirically against
 a hostile project config that `--version` reaches no privileged key and launches no browser.
 
-## pi-continue-safe
+## pi-continue-safe — retired
 
-Based on `pi-continue@0.9.3`.
+Removed. It replaced Pi's native compaction with an abort-summarize-prove-resume pipeline
+whose every link could stop a long run, and it was strictly less resilient than the Pi
+behaviour it displaced. Replaced by
+[`pi-context-handoff`](../forks/pi-context-handoff/README.md); the reasoning and the
+evidence are in [`LONG_RUNS.md`](LONG_RUNS.md). Its 21 verified security fixes are moot
+now that the code is not installed, and git history retains the fork.
 
-**Closed.** The package made zero `ctx.isProjectTrusted()` calls while honouring project
-config, project prompt overrides and project `.pi/settings.json` — and asset content was the
-one thing inserted *unescaped*, so a cloned repo could replace the system prompt of the
-summarizer that receives your entire transcript. Every project-scoped input is now
-trust-gated, failing closed when the host cannot report trust. The keys that could redirect
-or silence a write — `agentGuidePath`, `agentGuideSyncMode`, `agentGuideOverwritePolicy`,
-`agentGuideAllowOutsideProject`, `allowSymlinkedOutputDirectory` — are user-scope only, so a
-*trusted* but hostile repo cannot pick an escaping path and suppress the confirmation.
+## pi-context-handoff
 
-Guide and artifact reads and writes are `realpath`-confined, refuse to follow a symlink, and
-refuse `.git`. The guide read is `O_NOFOLLOW`, requires a regular file, and is size-capped,
-so a guide symlinked to a FIFO or `/dev/zero` can no longer hang compaction. The state
-machine can no longer wedge: the unguarded `await` in front of the resume dispatch is
-wrapped, a watchdog force-settles a stuck event, and config readers degrade to defaults with
-one warning instead of throwing on every request. A synthesis failure falls back to Pi's
-native compaction instead of destroying the in-flight turn, and validation tolerates fenced
-JSON and unknown extra keys. Compaction ownership is claimed by a request nonce rather than
-"an event is active", so your manual `/compact` is no longer hijacked. Settings writes are
-atomic (temp file + rename). Overwrite provenance is a content digest, so a file you edited
-by hand still prompts.
+First-party, not a fork. Steers Pi's own compaction toward a handoff brief and does nothing
+else: hook `session_before_compact`, call Pi's `compact()` with focus instructions plus a
+retry policy, return the result.
 
-**Behaviour you will notice.** Per-repo guide selection is gone by design — a project can no
-longer set `agentGuidePath` or turn sync off for itself (`enabled: false` remains the
-project-scoped escape hatch), and one warning per project names the ignored keys. A guide
-symlinked outside the repository needs `agentGuideAllowOutsideProject`, for reading as well
-as writing. New settings: `maxChainedContinuations` (10) and `maxChainedSynthesisCostUsd`
-(5) bound automatic chaining that was previously unlimited; set `0` to restore.
-`synthesisFailureFallback` selects the native-compaction fallback.
-
-**Residual risk.** Content-level injection through the transcript remains possible by
-design: hostile file or tool output inside the history can still steer `brief.forbid` or
-`brief.next[0]`. The mitigation is structural labelling of untrusted-derived entries plus the
-reworded resume prompt — not enforcement — so a model that ignores the label can still act
-on an attacker's proposal. A parent-directory TOCTOU window remains between the containment
-check and the write, because Node exposes no `openat`. One cosmetic item is unfixable from an
-extension: when synthesis fails, Pi's own native summarizer still receives the original
-`customInstructions` including the correlation marker, because the host keeps a private copy.
+It **cannot stop a run** — no `ctx.abort()`, no injected messages, no `{ cancel: true }`.
+Every failure path returns `undefined`, which is exactly the behaviour of not having it
+installed, so the worst case is a less useful summary. It uses only Pi's public API, which
+also removes the deep private-module imports that made the previous extension fragile
+across Pi releases.
 
 ## pi-voice-stt-safe
 
@@ -227,9 +209,6 @@ reachable by repo-controlled or model-chosen input before.
 | `PI_AGENT_BROWSER_ELECTRON_APP_URL_SCHEMES` | Extra schemes exempt from `--allowed-domains` |
 | `PI_AGENT_BROWSER_FORWARD_ALL_ENV` | Forwarding loader vars (`NODE_OPTIONS`, `LD_PRELOAD`, …) to the child |
 | `PI_AGENT_BROWSER_ALLOW_DIRECT_BASH` | Calling `agent-browser` directly from `bash` |
-| `PI_CONTINUE_TRUST_PROJECT_CONFIG` | Project config and prompt overrides on a host that cannot report trust |
-| `agentGuideAllowOutsideProject` | Reading and writing a guide whose realpath leaves the project |
-| `allowSymlinkedOutputDirectory` | A deliberately symlinked `.pi` or `.pi/continue` |
 | `PI_STT_ALLOWED_ENDPOINT_HOSTS` | Additional hosts accepted for a named vendor alias |
 | `PI_STT_BRIDGE_ALLOW_REMOTE` | Binding the bridge daemon beyond loopback |
 | `trustProjectLocalWorkflows` | Repo-local saved workflows and run records |

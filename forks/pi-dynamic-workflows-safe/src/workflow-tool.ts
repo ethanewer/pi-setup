@@ -2,7 +2,12 @@ import { defineTool, type ToolDefinition } from "@earendil-works/pi-coding-agent
 import { Text } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 import { BUILTIN_WORKFLOW_NAMES, resolveWorkflowInvocation } from "./builtin-workflows.js";
-import { DEFAULT_AGENT_TIMEOUT_MS, DEFAULT_MAX_AGENTS_PER_RUN, MAX_AGENTS_PER_RUN } from "./config.js";
+import {
+  DEFAULT_AGENT_RETRIES,
+  DEFAULT_AGENT_TIMEOUT_MS,
+  DEFAULT_MAX_AGENTS_PER_RUN,
+  MAX_AGENTS_PER_RUN,
+} from "./config.js";
 import {
   createToolUpdateWorkflowDisplay,
   createWorkflowSnapshot,
@@ -373,7 +378,7 @@ function resolveWorkflowToolDefaults(
           ? settings.defaultAgentTimeoutMs
           : DEFAULT_AGENT_TIMEOUT_MS,
     concurrency: options.defaultConcurrency ?? options.concurrency ?? settings.defaultConcurrency,
-    agentRetries: options.defaultAgentRetries ?? settings.defaultAgentRetries ?? 0,
+    agentRetries: options.defaultAgentRetries ?? settings.defaultAgentRetries ?? DEFAULT_AGENT_RETRIES,
   };
 }
 

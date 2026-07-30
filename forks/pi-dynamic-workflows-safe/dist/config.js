@@ -16,8 +16,13 @@ export const DEFAULT_MAX_AGENTS_PER_RUN = 100;
  * option or `defaultAgentTimeoutMs: null`) still means no hard timeout; the
  * default is finite so a subagent that never settles — and cannot be signalled
  * dead, see runWorkflow's drain — cannot hold a run open indefinitely.
+ *
+ * Sized for unattended long-running work: a subagent doing real analysis across
+ * a large tree can legitimately run far longer than a few minutes, and a
+ * timeout here degrades that agent's result to null, so too low a value loses
+ * work silently rather than protecting anything.
  */
-export const DEFAULT_AGENT_TIMEOUT_MS = 15 * 60 * 1000;
+export const DEFAULT_AGENT_TIMEOUT_MS = 60 * 60 * 1000;
 /**
  * Wall-clock ceiling on one synchronous stretch of workflow-script execution
  * inside the vm realm (vm timeouts only bound synchronous work; an awaiting
@@ -39,6 +44,27 @@ export const DRAIN_GRACE_MS = 30 * 1000;
 export const MAX_CONCURRENCY = 16;
 /** Maximum automatic retry attempts after a recoverable agent failure. */
 export const MAX_AGENT_RETRIES = 3;
+/**
+ * Automatic retry attempts after a recoverable agent failure when neither the
+ * call site nor `defaultAgentRetries` sets one.
+ *
+ * Non-zero by default because the dominant recoverable failure in practice is a
+ * transient provider fault — a 5xx, a dropped connection, an overloaded
+ * upstream — which wrapError classifies as recoverable AGENT_EXECUTION_ERROR. At
+ * zero, one such blip permanently drops that agent's result to null (or fails
+ * the run), which is the single most common way a long unattended run loses
+ * work. Genuine quota/rate limits are classified separately and checkpoint the
+ * run for auto-resume instead of burning retries against the same wall.
+ */
+export const DEFAULT_AGENT_RETRIES = 2;
+/**
+ * Base delay before re-attempting a recoverable agent failure. Retries back off
+ * as base * 2^(attempt-1); an immediate retry into a transient upstream fault
+ * usually just reproduces it.
+ */
+export const AGENT_RETRY_BASE_DELAY_MS = 2_000;
+/** Ceiling on a single backoff delay, so a long backoff cannot stall a run. */
+export const AGENT_RETRY_MAX_DELAY_MS = 30_000;
 /** Default token budget if none specified. */
 export const DEFAULT_TOKEN_BUDGET = null;
 /** Legacy project-relative directory for persisted workflow run state. New writes use workflowProjectPaths(). */

@@ -134,14 +134,73 @@ console.log(broad.join("\n"));
   fi
 fi
 
+say ""
+say "Retired and unknown local packages"
+UNKNOWN=0
+if [[ -d "$LOCAL_PKG_DIR" ]]; then
+  for dir in "$LOCAL_PKG_DIR"/*; do
+    [[ -d "$dir" ]] || continue
+    name="$(basename "$dir")"
+    if ! printf '%s\n' $FORK_NAMES | grep -Fqx "$name"; then
+      UNKNOWN=1
+      bad "$name is installed at $dir but is not in vendor.json; a retired package left on disk can still be loaded if it is re-added to settings (rm -rf '$dir')"
+    fi
+  done
+fi
+[[ "$UNKNOWN" == "0" ]] && ok "no retired or unrecognized local packages"
+
+say ""
+say "Compaction settings"
+COMPACTION_REPORT="$(node -e '
+const { readFileSync, existsSync } = require("node:fs");
+const [settingsPath, storePath] = process.argv.slice(1);
+const read = (p) => (existsSync(p) ? JSON.parse(readFileSync(p, "utf8")) : {});
+const settings = read(settingsPath);
+const compaction = settings.compaction ?? {};
+const reserve = typeof compaction.reserveTokens === "number" ? compaction.reserveTokens : 16384;
+if (compaction.enabled === false) {
+  console.log("bad\tcompaction is disabled; a long run will hit the context limit and stop instead of compacting");
+  process.exit(0);
+}
+// Compaction fires at contextWindow - reserveTokens, so a reserve near the window
+// leaves almost no usable context and produces a summarization request that stalls.
+const store = read(storePath);
+const wanted = settings.defaultModel;
+let win;
+for (const provider of Object.values(store)) {
+  for (const m of provider?.models ?? []) {
+    if (m?.id === wanted && typeof m.contextWindow === "number") { win = m.contextWindow; break; }
+  }
+  if (win) break;
+}
+if (!win) { console.log("ok\treserveTokens " + reserve + " (context window for " + wanted + " unknown; not checked)"); process.exit(0); }
+const threshold = win - reserve;
+if (threshold <= 0) console.log("bad\treserveTokens " + reserve + " >= context window " + win + " for " + wanted + "; compaction can never leave usable context");
+else if (reserve > win / 2) console.log("bad\treserveTokens " + reserve + " is over half the " + win + "-token window for " + wanted + "; compaction would fire at " + threshold + " tokens and the summarization request can stall");
+else console.log("ok\treserveTokens " + reserve + " of a " + win + "-token window (compaction at ~" + threshold + " tokens)");
+' "$SETTINGS" "$MAIN_DIR/models-store.json" 2>/dev/null)"
+if [[ -z "$COMPACTION_REPORT" ]]; then
+  note "could not evaluate compaction settings"
+else
+  while IFS=$'\t' read -r kind message; do
+    [[ -z "${kind:-}" ]] && continue
+    [[ "$kind" == "ok" ]] && ok "$message" || bad "$message"
+  done <<< "$COMPACTION_REPORT"
+fi
+
 if [[ "$OFFLINE" == "0" ]] && command -v npm >/dev/null 2>&1; then
   say ""
   say "Upstream releases"
   for fork in $FORK_NAMES; do
     read -r UPSTREAM PINNED < <(node -e '
 const v = require(process.argv[1] + "/vendor.json").forks[process.argv[2]];
-console.log(v.upstream, v.version);
+console.log(v.upstream ?? "", v.version);
 ' "$REPO_DIR" "$fork")
+    # A first-party package (upstream: null) has no release to compare against.
+    if [[ -z "$UPSTREAM" ]]; then
+      ok "$fork is first-party (no upstream to track)"
+      continue
+    fi
     LATEST="$(npm view "$UPSTREAM" version 2>/dev/null | tail -1)"
     if [[ -z "$LATEST" ]]; then
       note "could not query $UPSTREAM from the registry"

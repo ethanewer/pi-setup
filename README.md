@@ -3,7 +3,7 @@
 A reproducible, fast [Pi coding agent](https://pi.dev) setup with two entrypoints:
 
 - **`pi`** — full environment with Voice STT, native browser automation, dynamic
-  workflows, session continuation, and background process monitoring.
+  workflows, compaction handoff briefs, and background process monitoring.
 - **`p`** — lean environment with Voice STT only, quiet startup, no skills, and a
   smaller system prompt.
 
@@ -63,8 +63,8 @@ Extension forks and the upstream releases they are based on:
 | `pi-voice-stt-safe` | `pi-voice-stt` | `0.4.0` |
 | `pi-agent-browser-native-safe` | `pi-agent-browser-native` | `0.2.71` |
 | `pi-dynamic-workflows-safe` | `@quintinshaw/pi-dynamic-workflows` | `3.4.1` |
-| `pi-continue-safe` | `pi-continue` | `0.9.3` |
 | `pi-process-monitor-safe` | `pi-process-monitor` | hand-written rewrite |
+| `pi-context-handoff` | — | first-party |
 
 `vendor.json` is the machine-readable version of this table and is what the tooling
 reads.
@@ -79,7 +79,9 @@ recurring defect is that they treat project-local files as trusted input.
 
 [`docs/AUDIT.md`](docs/AUDIT.md) records every finding with file and line references.
 [`docs/FORKS.md`](docs/FORKS.md) records what each fork changes, and the residual risk
-that remains after the fixes.
+that remains after the fixes. [`docs/LONG_RUNS.md`](docs/LONG_RUNS.md) covers running
+autonomously for a long time without stopping — what used to break, what fixed it, and
+what can still stop a run.
 
 ### Why forks rather than patches applied at install time
 
@@ -125,7 +127,7 @@ standalone diffs.
 - `agent_browser`
 - `workflow` and `workflow_control`
 - workflow authoring and built-in workflow skills
-- session continuation and compaction (`/continue`)
+- compaction handoff briefs that keep a long run going
 - background process monitoring (`monitor`, `/watch`)
 - project `AGENTS.md` / `CLAUDE.md` context
 - visible startup resource listing
@@ -221,8 +223,9 @@ the doctor, and update the version table above.
 
 Update `PI_VERSION` in `install.sh`, test on macOS and Linux, and rerun the installer.
 The wrappers locate the installed Pi package dynamically, so they need no changes.
-`pi-continue-safe` reaches into Pi's internals, so check `docs/FORKS.md` for the private
-modules it depends on when moving to a new Pi release.
+`pi-context-handoff` uses only Pi's public API (`compact`, and the
+`session_before_compact` hook), so a Pi upgrade should not disturb it. If Pi ever changes
+that hook's contract the extension degrades to native compaction rather than failing.
 
 ## Performance
 

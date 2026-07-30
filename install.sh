@@ -9,12 +9,11 @@ AGENT_BROWSER_VERSION="0.32.2"
 UPSTREAM_VOICE="0.4.0"
 UPSTREAM_BROWSER="0.2.71"
 UPSTREAM_WORKFLOWS="3.4.1"
-UPSTREAM_CONTINUE="0.9.3"
 
 # Extensions are installed as Pi "local" packages from forks/ in this repository,
 # never from npm. Pi never rewrites local packages, so the security fixes in these
 # forks cannot be silently reverted by a later `bun install` or package update.
-FORKS="pi-voice-stt-safe pi-agent-browser-native-safe pi-dynamic-workflows-safe pi-continue-safe pi-process-monitor-safe"
+FORKS="pi-voice-stt-safe pi-agent-browser-native-safe pi-dynamic-workflows-safe pi-context-handoff pi-process-monitor-safe"
 
 REPO_URL="${PI_SETUP_REPO_URL:-https://github.com/ethanewer/pi-setup.git}"
 REPO_REF="${PI_SETUP_REF:-main}"
@@ -231,7 +230,7 @@ const wanted = [
   "local/pi-voice-stt-safe",
   "local/pi-agent-browser-native-safe",
   "local/pi-dynamic-workflows-safe",
-  "local/pi-continue-safe",
+  "local/pi-context-handoff",
   "local/pi-process-monitor-safe",
 ];
 const managed = new Set([
@@ -243,8 +242,11 @@ const managed = new Set([
   "pi-voice-stt-safe",
   "pi-agent-browser-native-safe",
   "pi-dynamic-workflows-safe",
-  "pi-continue-safe",
+  "pi-context-handoff",
   "pi-process-monitor-safe",
+  // Retired: pi-continue replaced by pi-context-handoff. Listed so an existing
+  // local/pi-continue-safe entry is removed rather than left loading alongside.
+  "pi-continue-safe",
 ]);
 const identity = (entry) => {
   const source = typeof entry === "string" ? entry : entry?.source;

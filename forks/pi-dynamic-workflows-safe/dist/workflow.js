@@ -4,7 +4,7 @@ import vm from "node:vm";
 import { parse } from "acorn";
 import { WorkflowAgent } from "./agent.js";
 import { agentDefinitionKey, loadAgentRegistry, resolveAgentType, } from "./agent-registry.js";
-import { DEFAULT_AGENT_TIMEOUT_MS, DEFAULT_DRAIN_TIMEOUT_MS, DEFAULT_MAX_AGENTS_PER_RUN, DEFAULT_SCRIPT_TIMEOUT_MS, DRAIN_GRACE_MS, MAX_AGENT_RETRIES, MAX_AGENTS_PER_RUN, MAX_CONCURRENCY, } from "./config.js";
+import { AGENT_RETRY_BASE_DELAY_MS, AGENT_RETRY_MAX_DELAY_MS, DEFAULT_AGENT_RETRIES, DEFAULT_AGENT_TIMEOUT_MS, DEFAULT_DRAIN_TIMEOUT_MS, DEFAULT_MAX_AGENTS_PER_RUN, DEFAULT_SCRIPT_TIMEOUT_MS, DRAIN_GRACE_MS, MAX_AGENT_RETRIES, MAX_AGENTS_PER_RUN, MAX_CONCURRENCY, } from "./config.js";
 import { adoptForeignWorkflowError, isWorkflowError, WORKFLOW_ERROR_BRAND, WorkflowError, WorkflowErrorCode, wrapError, } from "./errors.js";
 import { createWorkflowLogger } from "./logger.js";
 import { parseModelRoutingFromMeta, resolveModelForPhase } from "./model-routing.js";
@@ -541,7 +541,7 @@ export async function runWorkflow(script, options = {}) {
             state.firstMiss = Math.min(state.firstMiss, callIndex);
         return limiter(async () => {
             const timeout = agentOptions.timeoutMs !== undefined ? agentOptions.timeoutMs : agentTimeoutMs;
-            const retryAttempts = normalizeAgentRetries(agentOptions.retries ?? options.agentRetries ?? 0);
+            const retryAttempts = normalizeAgentRetries(agentOptions.retries ?? options.agentRetries ?? DEFAULT_AGENT_RETRIES);
             const maxAttempts = retryAttempts + 1;
             options.onAgentStart?.({ id: deltaKey, label, phase: assignedPhase, prompt, model: displayModel });
             // Optional per-agent worktree isolation (deterministic name -> stable resume keys).
@@ -726,12 +726,17 @@ export async function runWorkflow(script, options = {}) {
                         // result this attempt's writes should be attributed to.
                         store.discardDelta(deltaKey);
                         if (workflowError.recoverable && attempt < maxAttempts) {
-                            log(`agent "${label}" attempt ${attempt}/${maxAttempts} failed: ${workflowError.code} ${workflowError.message}; retrying`);
+                            const backoffMs = Math.min(AGENT_RETRY_MAX_DELAY_MS, AGENT_RETRY_BASE_DELAY_MS * 2 ** (attempt - 1));
+                            log(`agent "${label}" attempt ${attempt}/${maxAttempts} failed: ${workflowError.code} ${workflowError.message}; retrying in ${backoffMs}ms`);
                             // This attempt's spend already accrued into shared.spent/tokenUsage
                             // above (recordTokens) — but it will never reach onAgentEnd (only
                             // the final attempt does), so report it on the dedicated channel
                             // instead (see WorkflowRunOptions.onRetrySpend).
                             options.onRetrySpend?.(tokens);
+                            // Abort during the backoff must not be swallowed: throwIfAborted at
+                            // the top of the next attempt would only see it after the wait.
+                            await new Promise((resolve) => setTimeout(resolve, backoffMs));
+                            throwIfAborted();
                             continue;
                         }
                         options.onAgentEnd?.({

@@ -1,0 +1,31 @@
+{
+  "name": "pi-context-handoff",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Steers Pi's own compaction toward a handoff brief that keeps a long autonomous run going. Never aborts a turn, never injects a resume prompt, and falls back to native compaction on any failure.",
+  "type": "module",
+  "license": "MIT",
+  "keywords": [
+    "pi-package",
+    "pi",
+    "pi-coding-agent",
+    "compaction",
+    "continuation",
+    "long-running"
+  ],
+  "files": [
+    "extensions",
+    "README.md"
+  ],
+  "pi": {
+    "extensions": [
+      "./extensions/context-handoff/index.ts"
+    ]
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": ">=0.82.0"
+  },
+  "engines": {
+    "node": ">=22.18"
+  }
+}
