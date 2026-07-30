@@ -2737,12 +2737,12 @@ diff -ruN --exclude=node_modules a/dist/workflow-manager.d.ts b/dist/workflow-ma
       *
 diff -ruN --exclude=node_modules a/dist/workflow-manager.js b/dist/workflow-manager.js
 --- a/dist/workflow-manager.js	1985-10-26 03:15:00
-+++ b/dist/workflow-manager.js	2026-07-29 20:15:07
++++ b/dist/workflow-manager.js	2026-07-30 17:38:18
 @@ -2,10 +2,12 @@
   * Workflow manager for background execution, pause/resume, and run management.
   */
  import { EventEmitter } from "node:events";
-+import { DEFAULT_AGENT_TIMEOUT_MS } from "./config.js";
++import { DEFAULT_AGENT_RETRIES, DEFAULT_AGENT_TIMEOUT_MS } from "./config.js";
  import { preview } from "./display.js";
  import { isProviderUsageLimit, WorkflowError, WorkflowErrorCode } from "./errors.js";
 -import { createRunPersistence, generateRunId, } from "./run-persistence.js";
@@ -2769,11 +2769,12 @@ diff -ruN --exclude=node_modules a/dist/workflow-manager.js b/dist/workflow-mana
          this.modelRegistry = options.modelRegistry;
          this.sessionId = options.sessionId;
 -        this.defaultAgentTimeoutMs = options.defaultAgentTimeoutMs ?? null;
+-        this.defaultAgentRetries = options.defaultAgentRetries ?? 0;
 +        // Explicit null means "no hard timeout" and is honored; only an omitted
 +        // value falls back to the finite default (see DEFAULT_AGENT_TIMEOUT_MS).
 +        this.defaultAgentTimeoutMs =
 +            options.defaultAgentTimeoutMs !== undefined ? options.defaultAgentTimeoutMs : DEFAULT_AGENT_TIMEOUT_MS;
-         this.defaultAgentRetries = options.defaultAgentRetries ?? 0;
++        this.defaultAgentRetries = options.defaultAgentRetries !== undefined ? options.defaultAgentRetries : DEFAULT_AGENT_RETRIES;
          this.defaultTokenBudget = options.defaultTokenBudget ?? null;
          this.toolsets = options.toolsets;
          this.excludeSubagentTools = options.excludeSubagentTools;
@@ -2866,9 +2867,10 @@ diff -ruN --exclude=node_modules a/dist/workflow-manager.js b/dist/workflow-mana
          this.concurrency = options.concurrency ?? 8;
          this.loadSavedWorkflow = options.loadSavedWorkflow;
 -        this.defaultAgentTimeoutMs = options.defaultAgentTimeoutMs ?? null;
+-        this.defaultAgentRetries = options.defaultAgentRetries ?? 0;
 +        this.defaultAgentTimeoutMs =
 +            options.defaultAgentTimeoutMs !== undefined ? options.defaultAgentTimeoutMs : DEFAULT_AGENT_TIMEOUT_MS;
-         this.defaultAgentRetries = options.defaultAgentRetries ?? 0;
++        this.defaultAgentRetries = options.defaultAgentRetries !== undefined ? options.defaultAgentRetries : DEFAULT_AGENT_RETRIES;
          this.defaultTokenBudget = options.defaultTokenBudget ?? null;
          this.toolsets = options.toolsets;
          this.excludeSubagentTools = options.excludeSubagentTools;
@@ -4246,8 +4248,8 @@ diff -ruN --exclude=node_modules a/dist/worktree.js b/dist/worktree.js
          await exec("git", ["-C", repoRoot, "worktree", "add", "-b", branch, path, "HEAD"]);
 diff -ruN --exclude=node_modules a/extensions/workflow/index.ts b/extensions/workflow/index.ts
 --- a/extensions/workflow/index.ts	1969-12-31 18:00:00
-+++ b/extensions/workflow/index.ts	2026-07-29 12:06:00
-@@ -0,0 +1,204 @@
++++ b/extensions/workflow/index.ts	2026-07-30 17:38:59
+@@ -0,0 +1,210 @@
 +import { createCodingTools, type ExtensionAPI, type ExtensionContext } from "@earendil-works/pi-coding-agent";
 +import {
 +  claimWorkflowRuntime,
@@ -4382,6 +4384,12 @@ diff -ruN --exclude=node_modules a/extensions/workflow/index.ts b/extensions/wor
 +    if (event?.reason === "reload") {
 +      handoffWorkflowRuntime(runtime);
 +    } else {
++      // Every other shutdown — /new, /resume, a fork — replaces the extension without
++      // handing the runtime over, so anything still running would keep executing on an
++      // orphaned manager and deliver its results into an invalidated ExtensionAPI.
++      // Checkpointing it as paused puts it on the journal-recovery path instead, so the
++      // next generation's cold start can pick it up rather than losing the work.
++      pauseStrandedWorkflowRuntime(runtime);
 +      discardWorkflowRuntime(cwd, runtime);
 +    }
 +  });
@@ -6955,12 +6963,12 @@ diff -ruN --exclude=node_modules a/src/workflow-editor.ts b/src/workflow-editor.
  
 diff -ruN --exclude=node_modules a/src/workflow-manager.ts b/src/workflow-manager.ts
 --- a/src/workflow-manager.ts	1985-10-26 03:15:00
-+++ b/src/workflow-manager.ts	2026-07-28 21:51:56
++++ b/src/workflow-manager.ts	2026-07-30 17:38:18
 @@ -5,17 +5,20 @@
  import { EventEmitter } from "node:events";
  import type { ModelRegistry, ToolDefinition } from "@earendil-works/pi-coding-agent";
  import type { WorkflowAgent } from "./agent.js";
-+import { DEFAULT_AGENT_TIMEOUT_MS } from "./config.js";
++import { DEFAULT_AGENT_RETRIES, DEFAULT_AGENT_TIMEOUT_MS } from "./config.js";
  import { preview, type WorkflowAgentSnapshot, type WorkflowSnapshot } from "./display.js";
  import { isProviderUsageLimit, WorkflowError, WorkflowErrorCode } from "./errors.js";
  import {
@@ -7066,16 +7074,21 @@ diff -ruN --exclude=node_modules a/src/workflow-manager.ts b/src/workflow-manage
  
    constructor(options: WorkflowManagerOptions = {}) {
      super();
-@@ -340,12 +393,18 @@
+@@ -340,12 +393,22 @@
      this.mainModel = options.mainModel;
      this.modelRegistry = options.modelRegistry;
      this.sessionId = options.sessionId;
 -    this.defaultAgentTimeoutMs = options.defaultAgentTimeoutMs ?? null;
+-    this.defaultAgentRetries = options.defaultAgentRetries ?? 0;
 +    // Explicit null means "no hard timeout" and is honored; only an omitted
 +    // value falls back to the finite default (see DEFAULT_AGENT_TIMEOUT_MS).
 +    this.defaultAgentTimeoutMs =
 +      options.defaultAgentTimeoutMs !== undefined ? options.defaultAgentTimeoutMs : DEFAULT_AGENT_TIMEOUT_MS;
-     this.defaultAgentRetries = options.defaultAgentRetries ?? 0;
++    // `?? 0` made the fork's DEFAULT_AGENT_RETRIES unreachable: the extension passes
++    // `settings.defaultAgentRetries`, which is undefined unless the user wrote a settings
++    // file, so every real run got 0 retries while the docs promised 2. Zero stays
++    // honoured when it is set deliberately.
++    this.defaultAgentRetries = options.defaultAgentRetries !== undefined ? options.defaultAgentRetries : DEFAULT_AGENT_RETRIES;
      this.defaultTokenBudget = options.defaultTokenBudget ?? null;
      this.toolsets = options.toolsets;
      this.excludeSubagentTools = options.excludeSubagentTools;
@@ -7086,7 +7099,7 @@ diff -ruN --exclude=node_modules a/src/workflow-manager.ts b/src/workflow-manage
      this.maxTerminalRunsInMemory = options.maxTerminalRunsInMemory ?? DEFAULT_MAX_TERMINAL_RUNS_IN_MEMORY;
      this.persistence = createRunPersistence(this.cwd);
      this.recoverStaleRuns();
-@@ -362,18 +421,62 @@
+@@ -362,18 +425,62 @@
     * that died mid-run (this fresh manager has it nowhere in memory). Reconcile it
     * to "paused" — never "failed" — so its journal is preserved and resume() can
     * replay the completed prefix and finish the rest.
@@ -7158,14 +7171,15 @@ diff -ruN --exclude=node_modules a/src/workflow-manager.ts b/src/workflow-manage
          }
        }
      } catch {
-@@ -390,12 +493,16 @@
+@@ -390,12 +497,16 @@
    reconfigureAfterReload(options: WorkflowManagerReloadOptions): void {
      this.concurrency = options.concurrency ?? 8;
      this.loadSavedWorkflow = options.loadSavedWorkflow;
 -    this.defaultAgentTimeoutMs = options.defaultAgentTimeoutMs ?? null;
+-    this.defaultAgentRetries = options.defaultAgentRetries ?? 0;
 +    this.defaultAgentTimeoutMs =
 +      options.defaultAgentTimeoutMs !== undefined ? options.defaultAgentTimeoutMs : DEFAULT_AGENT_TIMEOUT_MS;
-     this.defaultAgentRetries = options.defaultAgentRetries ?? 0;
++    this.defaultAgentRetries = options.defaultAgentRetries !== undefined ? options.defaultAgentRetries : DEFAULT_AGENT_RETRIES;
      this.defaultTokenBudget = options.defaultTokenBudget ?? null;
      this.toolsets = options.toolsets;
      this.excludeSubagentTools = options.excludeSubagentTools;
@@ -7176,7 +7190,7 @@ diff -ruN --exclude=node_modules a/src/workflow-manager.ts b/src/workflow-manage
    }
  
    /** Set the session's main model (provider/id). Used to auto-tier explore agents. */
-@@ -467,7 +574,7 @@
+@@ -467,7 +578,7 @@
        // Same freeze-at-start pattern as tokenBudget, for the same reason: a
        // resumed run must keep these values, not re-resolve against the
        // manager's current defaults (see ManagedRun doc comments).
@@ -7185,7 +7199,7 @@ diff -ruN --exclude=node_modules a/src/workflow-manager.ts b/src/workflow-manage
        agentTimeoutMs: exec.agentTimeoutMs !== undefined ? exec.agentTimeoutMs : this.defaultAgentTimeoutMs,
        concurrency: exec.concurrency !== undefined ? exec.concurrency : this.concurrency,
        agentRetries: exec.agentRetries !== undefined ? exec.agentRetries : this.defaultAgentRetries,
-@@ -485,6 +592,7 @@
+@@ -485,6 +596,7 @@
          script,
          args,
          sessionId: this.sessionId,
@@ -7193,7 +7207,7 @@ diff -ruN --exclude=node_modules a/src/workflow-manager.ts b/src/workflow-manage
          status: "running",
          phases: managed.snapshot.phases,
          agents: [],
-@@ -531,7 +639,7 @@
+@@ -531,7 +643,7 @@
      managed.tokenBudget = exec.tokenBudget !== undefined ? exec.tokenBudget : this.defaultTokenBudget;
      managed.toolset = exec.toolset;
      // Same freeze-at-start pattern as tokenBudget (see startInBackground/ManagedRun).
@@ -7202,7 +7216,7 @@ diff -ruN --exclude=node_modules a/src/workflow-manager.ts b/src/workflow-manage
      managed.agentTimeoutMs = exec.agentTimeoutMs !== undefined ? exec.agentTimeoutMs : this.defaultAgentTimeoutMs;
      managed.concurrency = exec.concurrency !== undefined ? exec.concurrency : this.concurrency;
      managed.agentRetries = exec.agentRetries !== undefined ? exec.agentRetries : this.defaultAgentRetries;
-@@ -657,6 +765,7 @@
+@@ -657,6 +769,7 @@
          tokenBudget: resolvedTokenBudget,
          tools: resolvedTools,
          excludeTools: this.excludeSubagentTools,
@@ -7210,7 +7224,7 @@ diff -ruN --exclude=node_modules a/src/workflow-manager.ts b/src/workflow-manage
          confirm,
          loadSavedWorkflow: this.loadSavedWorkflow,
          resumeJournal,
-@@ -1046,10 +1155,17 @@
+@@ -1046,10 +1159,17 @@
          runId: managed.runId,
          workflowName: managed.snapshot.name,
          // Persist the real script + journal so the run can be resumed. Runs live
@@ -7229,7 +7243,7 @@ diff -ruN --exclude=node_modules a/src/workflow-manager.ts b/src/workflow-manage
          journal: keepsResumeJournal ? managed.journal : undefined,
          status: managed.status,
          // Persisted every write (not just at pause) so a stale read during the
-@@ -1148,6 +1264,12 @@
+@@ -1148,6 +1268,12 @@
  
      const persisted = this.persistence.load(runId);
      if (!persisted?.script || persisted.status === "completed" || persisted.status === "aborted") return false;
@@ -7242,7 +7256,7 @@ diff -ruN --exclude=node_modules a/src/workflow-manager.ts b/src/workflow-manage
      const lease = this.persistence.acquireRunLease(runId);
      if (!lease) return false;
  
-@@ -1200,6 +1322,12 @@
+@@ -1200,6 +1326,12 @@
        // Carry the original opt-out forward across resumes; it's fixed at
        // run-start and persistRun() re-persists it on every subsequent write.
        autoResume: persisted.autoResume,
@@ -7255,7 +7269,7 @@ diff -ruN --exclude=node_modules a/src/workflow-manager.ts b/src/workflow-manage
        // Restore start-time execution context: the budget the run started with
        // (legacy runs without one resume unbudgeted — never re-apply the current
        // default to a run that predates it) and the toolset tag executeRun
-@@ -1210,7 +1338,7 @@
+@@ -1210,7 +1342,7 @@
        // per-run knobs (see ManagedRun doc comments) — same rationale as
        // tokenBudget: never re-resolve against the manager's CURRENT defaults.
        // maxAgents: legacy/never-set runs resume with no cap carried forward
@@ -7264,7 +7278,7 @@ diff -ruN --exclude=node_modules a/src/workflow-manager.ts b/src/workflow-manage
        // maxAgents had never been passed at all.
        maxAgents: persisted.maxAgents,
        // agentTimeoutMs: unlike tokenBudget, a legacy run's real timeout at
-@@ -1265,6 +1393,48 @@
+@@ -1265,6 +1397,48 @@
      // cumulative cap across resume with no extra seeding required.
      void this.executeRun(managed, script, args, { resumeJournal, initialTokenUsage: priorTokenUsage }).catch(() => {});
      return true;

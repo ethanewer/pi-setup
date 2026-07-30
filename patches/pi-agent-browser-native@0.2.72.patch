@@ -1553,6 +1553,22 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/orchestrati
 +    }
 +    return requestedPaths.filter((requestedPath) => requestedPath.length > 0);
  }
+diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/orchestration/browser-run/diagnostics.js b/dist/extensions/agent-browser/lib/orchestration/browser-run/diagnostics.js
+--- a/dist/extensions/agent-browser/lib/orchestration/browser-run/diagnostics.js	1985-10-26 03:15:00
++++ b/dist/extensions/agent-browser/lib/orchestration/browser-run/diagnostics.js	2026-07-30 17:39:59
+@@ -857,7 +857,11 @@
+ export async function collectTimeoutPartialProgress(options) {
+     const rawSteps = getTimeoutProgressSteps(options.compiledJob, options.command, options.stdin);
+     const artifacts = await collectTimeoutArtifactEvidence(options.cwd, rawSteps);
+-    const [urlData, titleData] = await Promise.all([runSessionCommandData({ args: ["get", "url"], cwd: options.cwd, namespace: options.namespace, sessionName: options.sessionName }), runSessionCommandData({ args: ["get", "title"], cwd: options.cwd, namespace: options.namespace, sessionName: options.sessionName })]);
++    // These two run against a daemon that has just timed out, so without the caller's
++    // signal and a short budget of their own they sat on the full default watchdog and
++    // ignored Escape — the user's cancel appeared to do nothing for another ~35s.
++    const recoveryOptions = { signal: options.signal, timeoutMs: options.timeoutMs };
++    const [urlData, titleData] = await Promise.all([runSessionCommandData({ args: ["get", "url"], cwd: options.cwd, namespace: options.namespace, sessionName: options.sessionName, ...recoveryOptions }), runSessionCommandData({ args: ["get", "title"], cwd: options.cwd, namespace: options.namespace, sessionName: options.sessionName, ...recoveryOptions })]);
+     const recoveredUrl = extractStringResultField(urlData, "result") ?? extractStringResultField(urlData, "url");
+     const title = extractStringResultField(titleData, "result") ?? extractStringResultField(titleData, "title");
+     const plannedUrl = recoveredUrl ? undefined : getPlannedCurrentPageUrl(rawSteps);
 diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/orchestration/browser-run/prepare/direct-anchor-download.js b/dist/extensions/agent-browser/lib/orchestration/browser-run/prepare/direct-anchor-download.js
 --- a/dist/extensions/agent-browser/lib/orchestration/browser-run/prepare/direct-anchor-download.js	1985-10-26 03:15:00
 +++ b/dist/extensions/agent-browser/lib/orchestration/browser-run/prepare/direct-anchor-download.js	2026-07-30 11:20:51
@@ -1746,7 +1762,7 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/orchestrati
      if (compiledElectron?.action === "launch") {
 diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/orchestration/browser-run/process-output.js b/dist/extensions/agent-browser/lib/orchestration/browser-run/process-output.js
 --- a/dist/extensions/agent-browser/lib/orchestration/browser-run/process-output.js	1985-10-26 03:15:00
-+++ b/dist/extensions/agent-browser/lib/orchestration/browser-run/process-output.js	2026-07-30 11:20:51
++++ b/dist/extensions/agent-browser/lib/orchestration/browser-run/process-output.js	2026-07-30 17:39:59
 @@ -2,7 +2,7 @@
  import { isCloseCommand, isNavigationObservableCommandName, isOpenNavigationCommand } from "../../command-taxonomy.js";
  import { OPEN_RESULT_TAB_CORRECTION_FLAGS } from "../../launch-scoped-flags.js";
@@ -1756,7 +1772,18 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/orchestrati
  import { analyzeNetworkSourceLookupResults, analyzeQaPresetResults, analyzeQaPresetTimeout, analyzeSourceLookupResults, buildQaCompactPassText, extractQaPageContext, redactNetworkSourceLookupAnalysis, } from "../../input-modes.js";
  import { applyNetworkRouteRecords, buildNetworkRouteDiagnostics, buildToolPresentation, getAgentBrowserErrorText, parseAgentBrowserEnvelope, } from "../../results.js";
  import { buildEvictedSessionArtifactEntries, formatSessionArtifactRetentionSummary, mergeSessionArtifactManifest, } from "../../results/artifact-manifest.js";
-@@ -184,7 +184,9 @@
+@@ -15,6 +15,10 @@
+ import { applyOpenResultTabCorrection, buildAboutBlankRecoveryHint, buildAboutBlankWarning, buildElectronPostCommandHealthDiagnostic, buildElectronRefFreshnessDiagnostic, buildElectronSessionMismatch, buildManagedSessionOutcome, closeManagedSession, collectOpenResultTabCorrection, collectSessionTabSelection, extractNavigationSummaryFromData, extractStringResultField, findElectronLaunchRecordForSession, formatElectronPostCommandHealthText, formatElectronSessionMismatchText, getSessionContextKey, getStaleRefArgs, mergeNavigationSummaryIntoData, shouldCaptureNavigationSummary, shouldCorrectSessionTabAfterCommand, shouldInspectElectronPostCommandHealth, unwrapPinnedSessionBatchEnvelope, updateTraceOwnerState, } from "./session-state.js";
+ import { collectClickDispatchDiagnostic } from "./click-dispatch.js";
+ import { buildScrollNoopDiagnostic, collectComboboxFocusDiagnostic, collectElectronBroadGetTextScopeDiagnostics, collectElectronHandoff, collectFillVerificationDiagnostic, collectNavigationSummary, collectOverlayBlockerDiagnostic, collectQaAttachedTarget, collectSnapshotOverlayBlockerDiagnostic, collectRecordingDependencyWarning, collectScrollPositionSnapshot, collectSelectorTextVisibilityDiagnostics, collectTimeoutPartialProgress, sleepMs, formatQaAttachedTargetText, getArtifactCleanupGuidance, getEvalResultWarning, getEvalStdinHint, getSourceLookupElectronContext, } from "./diagnostics.js";
++
++/** Cancellable, short budget for post-timeout recovery probes: they are diagnostics, and
++ * the command they describe has already failed. */
++const TIMEOUT_RECOVERY_BUDGET_MS = 5000;
+ import { repairScreenshotData } from "./prepare.js";
+ import { getPersistentSessionArtifactStore } from "./session-artifacts.js";
+ import { buildFinalAgentBrowserToolResult, buildRedactedPresentationContent, buildWrapperRecoveryHint, prepareFinalResultRecoveryState, redactExactSensitiveText, redactExactSensitiveValue, } from "./final-result.js";
+@@ -184,7 +188,9 @@
              ? parsedAllowedDomainsPolicy ?? allowedDomainsBySession.get(sessionStateKey)
              : parsedAllowedDomainsPolicy;
          const shouldCaptureAllowedDomainNavigationSummary = sessionAllowedDomainsPolicy !== undefined && !cssClickWithoutHref && (prepared.executionPlan.commandInfo.command === "batch" || isNavigationObservableCommandName(prepared.executionPlan.commandInfo.command));
@@ -1767,7 +1794,7 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/orchestrati
              !navigationSummary &&
              (shouldCaptureNavigationSummary(prepared.executionPlan.commandInfo.command, presentationEnvelope?.data) ||
                  shouldCaptureSemanticActionNavigationSummary(prepared.compiledSemanticAction, presentationEnvelope?.data) ||
-@@ -241,15 +243,26 @@
+@@ -241,15 +247,26 @@
              allowedDomainsBySession = new Map(allowedDomainsBySession);
              allowedDomainsBySession.set(sessionStateKey, parsedAllowedDomainsPolicy);
          }
@@ -1798,6 +1825,15 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/orchestrati
          if (succeeded && electronRecordForCommand && shouldInspectElectronPostCommandHealth(prepared.executionPlan.commandInfo.command)) {
              electronStatusAfterCommand ??= await inspectElectronLaunchStatus(electronRecordForCommand);
              electronPostCommandHealth = buildElectronPostCommandHealthDiagnostic({ command: prepared.executionPlan.commandInfo.command, record: electronRecordForCommand, status: electronStatusAfterCommand, target: observedSessionTabTarget ?? currentSessionTabTarget });
+@@ -264,7 +281,7 @@
+         let fillVerificationDiagnostic;
+         let selectorTextVisibilityDiagnostics = [];
+         let electronBroadGetTextScopeDiagnostics = [];
+-        const timeoutPartialProgress = processResult.timedOut ? await collectTimeoutPartialProgress({ command: prepared.executionPlan.commandInfo.command, compiledJob: prepared.compiledJob, cwd, namespace: prepared.executionPlan.namespace, sessionName: prepared.executionPlan.sessionName, stdin: prepared.runtimeToolStdin }) : undefined;
++        const timeoutPartialProgress = processResult.timedOut ? await collectTimeoutPartialProgress({ command: prepared.executionPlan.commandInfo.command, compiledJob: prepared.compiledJob, cwd, namespace: prepared.executionPlan.namespace, sessionName: prepared.executionPlan.sessionName, signal, stdin: prepared.runtimeToolStdin, timeoutMs: TIMEOUT_RECOVERY_BUDGET_MS }) : undefined;
+         if (succeeded) {
+             const fillRefSnapshot = prepared.resolvedSemanticActionRefSnapshot ?? prepared.priorRefSnapshotState;
+             fillVerificationDiagnostic = await collectFillVerificationDiagnostic({ commandTokens: prepared.commandTokens, cwd, forceValueVerification: electronRecordForCommand !== undefined, namespace: prepared.executionPlan.namespace, refSnapshot: fillRefSnapshot, sessionName: prepared.executionPlan.sessionName, signal });
 diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/orchestration/electron-host/index.js b/dist/extensions/agent-browser/lib/orchestration/electron-host/index.js
 --- a/dist/extensions/agent-browser/lib/orchestration/electron-host/index.js	1985-10-26 03:15:00
 +++ b/dist/extensions/agent-browser/lib/orchestration/electron-host/index.js	2026-07-30 11:20:51
@@ -1870,7 +1906,7 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/playbook.js
          ...(options.docs ? [buildInstalledDocsGuideline(options.docs)] : []),
 diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/process.js b/dist/extensions/agent-browser/lib/process.js
 --- a/dist/extensions/agent-browser/lib/process.js	1985-10-26 03:15:00
-+++ b/dist/extensions/agent-browser/lib/process.js	2026-07-30 11:20:51
++++ b/dist/extensions/agent-browser/lib/process.js	2026-07-30 17:39:31
 @@ -1,20 +1,25 @@
  /**
   * Purpose: Execute the upstream agent-browser binary for the pi-agent-browser extension.
@@ -2209,7 +2245,17 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/process.js 
      return await new Promise((resolve) => {
          let aborted = false;
          let settled = false;
-@@ -211,6 +405,7 @@
+@@ -206,22 +400,29 @@
+         let stdoutTail = "";
+         let stdoutSpillHandle;
+         let stdoutSpillPath;
++        // Set synchronously the moment the first oversized chunk is deferred. Gating on
++        // stdoutSpillPath instead let chunks that arrived while the temp file was being
++        // created keep landing in the in-memory buffer, which is then flushed ahead of the
++        // chunk that triggered the spill — silently reordering the output.
++        let spillingStdout = false;
+         let pendingStdoutWrite = Promise.resolve();
+         let stdoutSpillError;
          let killTimer;
          let timeoutTimer;
          let abortListener;
@@ -2217,7 +2263,20 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/process.js 
          let timedOut = false;
          let completionWatcher;
          const queueStdoutChunk = (buffer) => {
-@@ -256,6 +451,10 @@
+             stdoutTail = appendTail(stdoutTail, buffer.toString("utf8"), MAX_BUFFERED_STDOUT_TAIL_CHARS);
+             if (stdoutSpillError)
+                 return;
+-            if (!stdoutSpillPath && stdoutBufferedBytes + buffer.length <= MAX_BUFFERED_STDOUT_BYTES) {
++            if (!spillingStdout && stdoutBufferedBytes + buffer.length <= MAX_BUFFERED_STDOUT_BYTES) {
+                 stdoutBuffers.push(buffer);
+                 stdoutBufferedBytes += buffer.length;
+                 return;
+             }
++            spillingStdout = true;
+             pendingStdoutWrite = pendingStdoutWrite
+                 .then(async () => {
+                 if (stdoutSpillError)
+@@ -256,6 +457,10 @@
              if (settled)
                  return;
              settled = true;
@@ -2228,7 +2287,7 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/process.js 
              void pendingStdoutWrite.finally(async () => {
                  removeAbortListener();
                  if (killTimer) {
-@@ -285,10 +484,11 @@
+@@ -285,10 +490,11 @@
                  });
              });
          };
@@ -2242,7 +2301,7 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/process.js 
              stdio: ["pipe", "pipe", "pipe"],
          });
          const terminateChild = (reason) => {
-@@ -303,7 +503,7 @@
+@@ -303,7 +509,7 @@
              terminateSpawnedChild(child, "SIGTERM");
              killTimer = setTimeout(() => {
                  terminateSpawnedChild(child, "SIGKILL");
@@ -2251,7 +2310,7 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/process.js 
          };
          const recordStdinError = (error) => {
              const stdinError = error instanceof Error ? error : new Error(String(error));
-@@ -355,6 +555,12 @@
+@@ -355,6 +561,12 @@
              timeoutTimer = setTimeout(() => terminateChild("timeout"), timeoutMs);
              timeoutTimer.unref?.();
          }

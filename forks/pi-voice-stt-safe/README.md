@@ -4,15 +4,20 @@
 
 Provider-agnostic speech-to-text dictation for the [Pi coding agent](https://github.com/earendil-works/pi-coding-agent) TUI.
 
-Press `Ctrl+R` to record your microphone, press it again to transcribe and insert the transcript into the active prompt, press `Enter` while recording to transcribe and send it directly to chat, or press `Esc` to cancel recording/transcription.
+Press the voice key to record your microphone. What you press next decides where the transcript
+goes: the voice key again keeps it in the prompt, `Enter` sends the whole message, the follow-up
+key queues it, `Esc` throws the recording away, and any other key inserts the transcript and then
+applies that key. Transcription never blocks you — a placeholder holds the spot and you keep
+typing around it.
 
 This project is intentionally small and hackable: a Pi extension, local/bridge audio recorders, and OpenAI-compatible/Mistral transcription providers.
 
 ## Features
 
 - Pi TUI extension with `/stt` command and `Ctrl+R` shortcut.
-- `Enter`-to-send and `Esc`-to-cancel while recording.
-- Pi-native animated input indicator, right-aligned in the prompt border (`voice ctrl+r`, `● recording`, `• transcribing`).
+- `Enter` sends, the follow-up key queues, `Esc` cancels — all decided while recording.
+- Indicators live at the cursor: `[● recording]` while capturing, `[⠏ transcribing]` while the
+  provider works. Nothing is sent to the model until the transcript exists.
 - `ffmpeg` microphone capture to temporary WAV files.
 - Optional Mac microphone bridge for Pi sessions running on a VPS over SSH, token-authenticated and loopback-bound by default.
 - Mistral Voxtral provider.
@@ -418,14 +423,20 @@ You can also lower the threshold with `capture.minBytes` (default `4096`), but a
 
 ## Usage
 
-The voice state is displayed inside the input area, right-aligned on the prompt border, so it stays close to where you are typing without taking over the footer/token line. Recording uses a subtle blinking dot; transcription uses a small horizontal moving dot.
+The voice state is displayed where the text is, not in a banner. Recording replaces the text
+cursor with `[● recording]` — a red dot pulsing inside a grey bracketed block, reduced to the
+bare dot when there is no blank space beside the cursor. The input box itself never changes
+colour. Transcription is a `[⠏ transcribing]` placeholder holding the transcript's spot, in the
+same grey, either in the prompt or just above it when the message is already on its way.
 
 | Action | Behavior |
 | --- | --- |
-| `Ctrl+R` while idle | Start recording |
-| the voice key while recording | Stop, transcribe, insert the transcript into the prompt |
-| `Enter` while recording | Stop, transcribe, insert transcript, send prompt to chat |
-| `Esc` while recording/processing | Cancel recording or transcription |
+| the voice key while idle | Start recording |
+| the voice key while recording | Stop; the transcript lands in the prompt where the cursor was |
+| `Enter` while recording | Stop and send; the whole prompt goes with it, transcript included |
+| the follow-up key while recording | Stop and queue the whole prompt as a follow-up |
+| any other key while recording | Stop, keep the transcript in the prompt, then apply that key |
+| `Esc` while recording | Cancel the recording. A transcription already under way is not interrupted; use `/stt cancel` |
 | `/stt status` | Show current mode and config source, plus a config file that cannot be parsed; reads nothing else, so no key or `ffmpeg` lookup happens |
 | `/stt doctor` | Check config, provider readiness, and local `ffmpeg` or bridge health; prints the resolved `ffmpeg` binary path, or the reason it could not be resolved |
 | `/stt start` | Start recording |
@@ -433,6 +444,11 @@ The voice state is displayed inside the input area, right-aligned on the prompt 
 | `/stt send` | Stop and send to chat |
 | `/stt cancel` | Cancel active recording/transcription |
 | `/stt mode [name]` | Show or switch the active preset (`default`, `raw`, or your own) |
+
+Known limitation: delivering a transcript rewrites the prompt through Pi's `setEditorText`, which
+moves the caret to the end of the text and closes an open autocomplete. Pi's editor exposes no
+public way to restore a caret position, and reaching into its private cursor state is how earlier
+extensions broke across releases, so this is left as-is.
 
 ## Secret handling
 

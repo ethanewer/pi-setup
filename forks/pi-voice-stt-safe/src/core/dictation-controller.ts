@@ -190,7 +190,11 @@ export const createDictationController = (options: DictationControllerOptions) =
       if (activeRecordingHandle === active) activeRecordingHandle = undefined;
       processing = false;
       cancelRequested = false;
-      setMode("idle", ctx);
+      // Overlapping transcriptions are an advertised flow, so this operation finishing
+      // says nothing about whether a microphone is open. Assigning "idle" here left a
+      // later recording live with no indicator, no key routing, and no way to stop it
+      // short of the max-duration timer. Mode follows the live state instead.
+      setMode(recording ? "recording" : "idle", ctx);
     }
   };
 

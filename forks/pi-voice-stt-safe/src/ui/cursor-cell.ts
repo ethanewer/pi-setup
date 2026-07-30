@@ -15,6 +15,8 @@
 
 import { sliceByColumn, visibleWidth } from "@earendil-works/pi-tui";
 
+import { stripAnsi } from "./transcribing";
+
 /** Pi's zero-width hardware-cursor marker. Kept as a literal so this module stays pure. */
 export const CURSOR_MARKER = "\x1b_pi:c\x07";
 
@@ -23,10 +25,7 @@ const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\
 /** The marker plus the one reverse-video cell the editor draws as its cursor. */
 export const CURSOR_CELL = new RegExp(`${escapeRegExp(CURSOR_MARKER)}\\x1b\\[7m[\\s\\S]*?\\x1b\\[0m`);
 
-const ANSI = /\x1b\[[0-9;:]*[A-Za-z]|\x1b\][^\x07]*\x07|\x1b[_P^][^\x07]*\x07/g;
-
-/** Visible characters only, for deciding whether a region is safe to write over. */
-export const stripAnsi = (text: string): string => text.replace(ANSI, "");
+export { stripAnsi };
 
 export type CursorLineParts = {
 	/** Everything before the cursor. */

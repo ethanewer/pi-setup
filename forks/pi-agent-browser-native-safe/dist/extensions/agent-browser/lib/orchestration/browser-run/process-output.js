@@ -15,6 +15,10 @@ import { createFreshSessionName, extractCommandTokens, resolveManagedSessionStat
 import { applyOpenResultTabCorrection, buildAboutBlankRecoveryHint, buildAboutBlankWarning, buildElectronPostCommandHealthDiagnostic, buildElectronRefFreshnessDiagnostic, buildElectronSessionMismatch, buildManagedSessionOutcome, closeManagedSession, collectOpenResultTabCorrection, collectSessionTabSelection, extractNavigationSummaryFromData, extractStringResultField, findElectronLaunchRecordForSession, formatElectronPostCommandHealthText, formatElectronSessionMismatchText, getSessionContextKey, getStaleRefArgs, mergeNavigationSummaryIntoData, shouldCaptureNavigationSummary, shouldCorrectSessionTabAfterCommand, shouldInspectElectronPostCommandHealth, unwrapPinnedSessionBatchEnvelope, updateTraceOwnerState, } from "./session-state.js";
 import { collectClickDispatchDiagnostic } from "./click-dispatch.js";
 import { buildScrollNoopDiagnostic, collectComboboxFocusDiagnostic, collectElectronBroadGetTextScopeDiagnostics, collectElectronHandoff, collectFillVerificationDiagnostic, collectNavigationSummary, collectOverlayBlockerDiagnostic, collectQaAttachedTarget, collectSnapshotOverlayBlockerDiagnostic, collectRecordingDependencyWarning, collectScrollPositionSnapshot, collectSelectorTextVisibilityDiagnostics, collectTimeoutPartialProgress, sleepMs, formatQaAttachedTargetText, getArtifactCleanupGuidance, getEvalResultWarning, getEvalStdinHint, getSourceLookupElectronContext, } from "./diagnostics.js";
+
+/** Cancellable, short budget for post-timeout recovery probes: they are diagnostics, and
+ * the command they describe has already failed. */
+const TIMEOUT_RECOVERY_BUDGET_MS = 5000;
 import { repairScreenshotData } from "./prepare.js";
 import { getPersistentSessionArtifactStore } from "./session-artifacts.js";
 import { buildFinalAgentBrowserToolResult, buildRedactedPresentationContent, buildWrapperRecoveryHint, prepareFinalResultRecoveryState, redactExactSensitiveText, redactExactSensitiveValue, } from "./final-result.js";
@@ -277,7 +281,7 @@ export async function processBrowserOutput(input) {
         let fillVerificationDiagnostic;
         let selectorTextVisibilityDiagnostics = [];
         let electronBroadGetTextScopeDiagnostics = [];
-        const timeoutPartialProgress = processResult.timedOut ? await collectTimeoutPartialProgress({ command: prepared.executionPlan.commandInfo.command, compiledJob: prepared.compiledJob, cwd, namespace: prepared.executionPlan.namespace, sessionName: prepared.executionPlan.sessionName, stdin: prepared.runtimeToolStdin }) : undefined;
+        const timeoutPartialProgress = processResult.timedOut ? await collectTimeoutPartialProgress({ command: prepared.executionPlan.commandInfo.command, compiledJob: prepared.compiledJob, cwd, namespace: prepared.executionPlan.namespace, sessionName: prepared.executionPlan.sessionName, signal, stdin: prepared.runtimeToolStdin, timeoutMs: TIMEOUT_RECOVERY_BUDGET_MS }) : undefined;
         if (succeeded) {
             const fillRefSnapshot = prepared.resolvedSemanticActionRefSnapshot ?? prepared.priorRefSnapshotState;
             fillVerificationDiagnostic = await collectFillVerificationDiagnostic({ commandTokens: prepared.commandTokens, cwd, forceValueVerification: electronRecordForCommand !== undefined, namespace: prepared.executionPlan.namespace, refSnapshot: fillRefSnapshot, sessionName: prepared.executionPlan.sessionName, signal });

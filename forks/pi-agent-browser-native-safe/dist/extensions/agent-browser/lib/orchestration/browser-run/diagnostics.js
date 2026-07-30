@@ -857,7 +857,11 @@ function buildTimeoutProgressSteps(options) {
 export async function collectTimeoutPartialProgress(options) {
     const rawSteps = getTimeoutProgressSteps(options.compiledJob, options.command, options.stdin);
     const artifacts = await collectTimeoutArtifactEvidence(options.cwd, rawSteps);
-    const [urlData, titleData] = await Promise.all([runSessionCommandData({ args: ["get", "url"], cwd: options.cwd, namespace: options.namespace, sessionName: options.sessionName }), runSessionCommandData({ args: ["get", "title"], cwd: options.cwd, namespace: options.namespace, sessionName: options.sessionName })]);
+    // These two run against a daemon that has just timed out, so without the caller's
+    // signal and a short budget of their own they sat on the full default watchdog and
+    // ignored Escape — the user's cancel appeared to do nothing for another ~35s.
+    const recoveryOptions = { signal: options.signal, timeoutMs: options.timeoutMs };
+    const [urlData, titleData] = await Promise.all([runSessionCommandData({ args: ["get", "url"], cwd: options.cwd, namespace: options.namespace, sessionName: options.sessionName, ...recoveryOptions }), runSessionCommandData({ args: ["get", "title"], cwd: options.cwd, namespace: options.namespace, sessionName: options.sessionName, ...recoveryOptions })]);
     const recoveredUrl = extractStringResultField(urlData, "result") ?? extractStringResultField(urlData, "url");
     const title = extractStringResultField(titleData, "result") ?? extractStringResultField(titleData, "title");
     const plannedUrl = recoveredUrl ? undefined : getPlannedCurrentPageUrl(rawSteps);

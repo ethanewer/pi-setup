@@ -120,8 +120,12 @@ export default function btwExtension(pi: ExtensionAPI) {
 		let closed = false;
 		const started = Date.now();
 		let exchanges = 0;
-		let lastQuestion = "";
-		let lastAnswer = "";
+		/**
+		 * The last exchange that actually completed, written as one record so the card can
+		 * never pair a new question with the previous answer. An errored, aborted or
+		 * still-running turn leaves this untouched and is simply not recorded.
+		 */
+		let lastExchange: { question: string; answer: string; toolCalls: number; status: "ok" | "aborted" } | undefined;
 
 		// Submissions are queued rather than dropped: the composer stays live while an
 		// answer streams, and a message typed then would otherwise vanish silently.
@@ -143,7 +147,6 @@ export default function btwExtension(pi: ExtensionAPI) {
 
 			busy = true;
 			exchanges += 1;
-			lastQuestion = text;
 			view?.setBusy(true);
 			try {
 				const result = await thread.ask(
@@ -156,7 +159,14 @@ export default function btwExtension(pi: ExtensionAPI) {
 					},
 					config.timeoutMs,
 				);
-				lastAnswer = result.text;
+				if (result.text.trim().length > 0) {
+					lastExchange = {
+						question: text,
+						answer: result.text,
+						toolCalls: result.toolCalls,
+						status: result.aborted ? "aborted" : "ok",
+					};
+				}
 				if (result.timedOut) {
 					view?.addNotice(`stopped at the ${Math.round(config.timeoutMs / 1000)}s limit`, "error");
 				} else if (result.aborted) {
@@ -218,15 +228,16 @@ export default function btwExtension(pi: ExtensionAPI) {
 
 		// Discarded on exit, like Codex. `record: true` keeps a collapsed card in the
 		// transcript instead; it is still a custom entry, so no model ever sees it.
-		if (config.record && exchanges > 0 && lastAnswer.trim().length > 0) {
+		if (config.record && lastExchange) {
+			const earlier = Math.max(0, exchanges - 1);
 			record(ctx, {
-				question: exchanges === 1 ? lastQuestion : `${lastQuestion}  (+${exchanges - 1} earlier)`,
-				answer: lastAnswer,
+				question: earlier === 0 ? lastExchange.question : `${lastExchange.question}  (+${earlier} earlier)`,
+				answer: lastExchange.answer,
 				model: `${thread.model.provider}/${thread.model.id}`,
 				durationMs: Date.now() - started,
-				toolCalls: 0,
+				toolCalls: lastExchange.toolCalls,
 				timestamp: Date.now(),
-				status: "ok",
+				status: lastExchange.status,
 			});
 		}
 	}

@@ -5,7 +5,7 @@
 import { EventEmitter } from "node:events";
 import type { ModelRegistry, ToolDefinition } from "@earendil-works/pi-coding-agent";
 import type { WorkflowAgent } from "./agent.js";
-import { DEFAULT_AGENT_TIMEOUT_MS } from "./config.js";
+import { DEFAULT_AGENT_RETRIES, DEFAULT_AGENT_TIMEOUT_MS } from "./config.js";
 import { preview, type WorkflowAgentSnapshot, type WorkflowSnapshot } from "./display.js";
 import { isProviderUsageLimit, WorkflowError, WorkflowErrorCode } from "./errors.js";
 import {
@@ -397,7 +397,11 @@ export class WorkflowManager extends EventEmitter {
     // value falls back to the finite default (see DEFAULT_AGENT_TIMEOUT_MS).
     this.defaultAgentTimeoutMs =
       options.defaultAgentTimeoutMs !== undefined ? options.defaultAgentTimeoutMs : DEFAULT_AGENT_TIMEOUT_MS;
-    this.defaultAgentRetries = options.defaultAgentRetries ?? 0;
+    // `?? 0` made the fork's DEFAULT_AGENT_RETRIES unreachable: the extension passes
+    // `settings.defaultAgentRetries`, which is undefined unless the user wrote a settings
+    // file, so every real run got 0 retries while the docs promised 2. Zero stays
+    // honoured when it is set deliberately.
+    this.defaultAgentRetries = options.defaultAgentRetries !== undefined ? options.defaultAgentRetries : DEFAULT_AGENT_RETRIES;
     this.defaultTokenBudget = options.defaultTokenBudget ?? null;
     this.toolsets = options.toolsets;
     this.excludeSubagentTools = options.excludeSubagentTools;
@@ -495,7 +499,7 @@ export class WorkflowManager extends EventEmitter {
     this.loadSavedWorkflow = options.loadSavedWorkflow;
     this.defaultAgentTimeoutMs =
       options.defaultAgentTimeoutMs !== undefined ? options.defaultAgentTimeoutMs : DEFAULT_AGENT_TIMEOUT_MS;
-    this.defaultAgentRetries = options.defaultAgentRetries ?? 0;
+    this.defaultAgentRetries = options.defaultAgentRetries !== undefined ? options.defaultAgentRetries : DEFAULT_AGENT_RETRIES;
     this.defaultTokenBudget = options.defaultTokenBudget ?? null;
     this.toolsets = options.toolsets;
     this.excludeSubagentTools = options.excludeSubagentTools;

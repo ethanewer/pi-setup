@@ -50,7 +50,15 @@ import {
   type TimerHandle,
   type WatcherMeta,
 } from "./types.ts";
+
 import { tailBytes, truncateTail } from "./text.ts";
+
+/**
+ * Hard ceiling on coalescing, as a multiple of coalesceMs. Output that keeps matching
+ * faster than the debounce window would otherwise postpone the ping indefinitely — a
+ * steadily-matching watcher never fired at all.
+ */
+const MAX_COALESCE_MULTIPLE = 4;
 
 // Lines surfaced by default (case-insensitive regex). Override per-call via notifyOn.
 export const DEFAULT_NOTIFY = [
@@ -242,6 +250,7 @@ export function createMonitorRuntime(deps: RuntimeDeps): MonitorRuntime {
         buf = [];
         return;
       }
+      if (buf.length === 0) return;
       const { content } = truncateTail(buf.join("\n"), {
         maxLines,
         maxBytes: MAX_EMIT_BYTES,
@@ -249,20 +258,37 @@ export function createMonitorRuntime(deps: RuntimeDeps): MonitorRuntime {
       buf = [];
       emit(w, content);
     };
+    // A pure debounce starves: a process that matches at a steady interval shorter than
+    // coalesceMs pushes the deadline forward on every line and the watcher never pings at
+    // all. The first buffered line therefore also starts a hard deadline that a later line
+    // cannot move.
+    let deadline: ReturnType<Clock["setTimeout"]> | null = null;
+    const clearTimers = () => {
+      if (timer !== null) {
+        clock.clearTimeout(timer);
+        timer = null;
+      }
+      if (deadline !== null) {
+        clock.clearTimeout(deadline);
+        deadline = null;
+      }
+    };
+    const flushAndClear = () => {
+      clearTimers();
+      flush();
+    };
     return {
       push(line: string): void {
         if (!isActive(w)) return;
         buf.push(line);
         if (timer !== null) clock.clearTimeout(timer);
-        timer = clock.setTimeout(flush, coalesceMs);
+        timer = clock.setTimeout(flushAndClear, coalesceMs);
+        if (deadline === null) deadline = clock.setTimeout(flushAndClear, coalesceMs * MAX_COALESCE_MULTIPLE);
       },
-      flushNow: flush,
+      flushNow: flushAndClear,
       clear(): void {
         buf = [];
-        if (timer !== null) {
-          clock.clearTimeout(timer);
-          timer = null;
-        }
+        clearTimers();
       },
     };
   }

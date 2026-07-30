@@ -19,7 +19,15 @@ import {
 	type Theme,
 	UserMessageComponent,
 } from "@earendil-works/pi-coding-agent";
-import { type Component, Editor, type Focusable, matchesKey, type TUI, visibleWidth } from "@earendil-works/pi-tui";
+import {
+	type Component,
+	Editor,
+	type Focusable,
+	matchesKey,
+	type TUI,
+	visibleWidth,
+	wrapTextWithAnsi,
+} from "@earendil-works/pi-tui";
 
 /** What the main thread is doing, shown top right the way Codex shows parent status. */
 export type MainStatus = "working" | "idle";
@@ -85,6 +93,9 @@ export class SideView implements Component, Focusable {
 
 	addUser(text: string): void {
 		this.blocks.push({ kind: "user", component: new UserMessageComponent(text, getMarkdownTheme(), 0) });
+		// Submitting is an explicit "show me the newest output" gesture, unlike output
+		// streaming in on its own — so this is the one place that overrides a scroll-back.
+		this.anchor = null;
 		this.onContent();
 	}
 
@@ -262,11 +273,15 @@ export class SideView implements Component, Focusable {
 				case "tool": {
 					const mark = block.state === "running" ? "⋯" : block.state === "error" ? "✗" : "✓";
 					const color = block.state === "error" ? "error" : "dim";
-					lines.push(this.theme.fg(color, `  ${mark} ${block.label}`));
+					lines.push(...wrapPlain(`  ${mark} ${block.label}`, width, (text) => this.theme.fg(color, text)));
 					break;
 				}
 				case "notice":
-					lines.push(this.theme.fg(block.tone === "error" ? "error" : "dim", `  ${block.text}`));
+					lines.push(
+						...wrapPlain(`  ${block.text}`, width, (text) =>
+							this.theme.fg(block.tone === "error" ? "error" : "dim", text),
+						),
+					);
 					break;
 			}
 		}
@@ -275,6 +290,24 @@ export class SideView implements Component, Focusable {
 }
 
 const SPINNER = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+
+/**
+ * One rendered row per array element is the renderer's contract, and it is not optional:
+ * a string containing a newline shifts every row below it and corrupts the overlay. Tool
+ * labels and notices are plain text from arbitrary sources — an error message, a tool
+ * argument — so they are split and wrapped before they reach the line array.
+ */
+function wrapPlain(text: string, width: number, paint: (text: string) => string): string[] {
+	const out: string[] = [];
+	for (const paragraph of text.split("\n")) {
+		if (paragraph.length === 0) {
+			out.push("");
+			continue;
+		}
+		for (const line of wrapTextWithAnsi(paragraph, Math.max(1, width))) out.push(paint(line));
+	}
+	return out;
+}
 
 function terminalRows(): number {
 	const rows = process.stdout.rows;

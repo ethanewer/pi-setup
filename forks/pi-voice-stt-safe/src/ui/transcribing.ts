@@ -13,6 +13,11 @@
  * ordinary run of characters that can be spliced out by index.
  */
 
+const ANSI = /\x1b\[[0-9;:]*[A-Za-z]|\x1b\][^\x07]*\x07|\x1b[_P^][^\x07]*\x07/g;
+
+/** Visible characters only. Lives here because this module must not depend on pi-tui. */
+export const stripAnsi = (text: string): string => text.replace(ANSI, "");
+
 /** Braille spinner, the same set Pi uses for its own working indicator. */
 export const SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"] as const;
 
@@ -32,6 +37,32 @@ export const PLACEHOLDER_SUFFIX = "]";
  */
 export const placeholderText = (slot = 1): string =>
 	`${PLACEHOLDER_PREFIX}transcribing${slot > 1 ? ` ${slot}` : ""}${PLACEHOLDER_SUFFIX}`;
+
+/**
+ * The bracket that opens or closes a placeholder run, ignoring the ones inside terminal
+ * escapes. `ESC[7m` and `ESC[0m` both contain a `[`, and the editor renders its cursor as
+ * exactly that — so a naive backwards search for `[` matched inside an escape whenever the
+ * caret sat on the placeholder's first cells, sliced the escape in half, and pushed the
+ * line past the terminal width. Pi treats an overlong line as fatal, so that crashed the
+ * session mid-dictation.
+ */
+const bracketBefore = (line: string, from: number, bracket: string): number => {
+	for (let i = from; i >= 0; i--) {
+		if (line[i] !== bracket) continue;
+		if (i > 0 && line[i - 1] === "\x1b") continue;
+		return i;
+	}
+	return -1;
+};
+
+const bracketAfter = (line: string, from: number, bracket: string): number => {
+	for (let i = from; i < line.length; i++) {
+		if (line[i] !== bracket) continue;
+		if (i > 0 && line[i - 1] === "\x1b") continue;
+		return i;
+	}
+	return -1;
+};
 
 /** Foreground-colour escapes, so the editor's own text colour can be restored after ours. */
 const FOREGROUND = /\x1b\[(?:38;[0-9;:]+|39|3[0-7]|9[0-7])m/g;
@@ -67,11 +98,16 @@ export const animateRenderedLines = (lines: string[], frame: string, paint: (tex
 				result += line.slice(cursor);
 				break;
 			}
-			const open = line.lastIndexOf(PLACEHOLDER_PREFIX[0] ?? "[", at);
-			const close = line.indexOf(PLACEHOLDER_SUFFIX, at);
+			const open = bracketBefore(line, at, PLACEHOLDER_PREFIX[0] ?? "[");
+			const close = bracketAfter(line, at, PLACEHOLDER_SUFFIX);
 			// A placeholder split across a wrap has no bracket on this line; colour the
 			// frame alone rather than guessing where the run begins.
-			if (open === -1 || open < cursor || close === -1) {
+			// Anything that does not strip down to a real `[… ]` run is left to the
+			// frame-only branch, which substitutes one single-width cell and so can never
+			// change the line's width.
+			const plausible =
+				open !== -1 && close !== -1 && open >= cursor && stripAnsi(line.slice(open, close + 1)).startsWith("[");
+			if (!plausible) {
 				result += line.slice(cursor, at) + paint(frame) + foregroundBefore(line, at);
 				cursor = at + SPINNER_SENTINEL.length;
 				continue;

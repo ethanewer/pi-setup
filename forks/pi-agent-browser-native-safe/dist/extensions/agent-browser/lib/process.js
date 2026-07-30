@@ -400,6 +400,11 @@ export async function runAgentBrowserProcess(options) {
         let stdoutTail = "";
         let stdoutSpillHandle;
         let stdoutSpillPath;
+        // Set synchronously the moment the first oversized chunk is deferred. Gating on
+        // stdoutSpillPath instead let chunks that arrived while the temp file was being
+        // created keep landing in the in-memory buffer, which is then flushed ahead of the
+        // chunk that triggered the spill — silently reordering the output.
+        let spillingStdout = false;
         let pendingStdoutWrite = Promise.resolve();
         let stdoutSpillError;
         let killTimer;
@@ -412,11 +417,12 @@ export async function runAgentBrowserProcess(options) {
             stdoutTail = appendTail(stdoutTail, buffer.toString("utf8"), MAX_BUFFERED_STDOUT_TAIL_CHARS);
             if (stdoutSpillError)
                 return;
-            if (!stdoutSpillPath && stdoutBufferedBytes + buffer.length <= MAX_BUFFERED_STDOUT_BYTES) {
+            if (!spillingStdout && stdoutBufferedBytes + buffer.length <= MAX_BUFFERED_STDOUT_BYTES) {
                 stdoutBuffers.push(buffer);
                 stdoutBufferedBytes += buffer.length;
                 return;
             }
+            spillingStdout = true;
             pendingStdoutWrite = pendingStdoutWrite
                 .then(async () => {
                 if (stdoutSpillError)

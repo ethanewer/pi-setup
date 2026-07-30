@@ -132,6 +132,12 @@ export default function extension(pi: ExtensionAPI) {
     if (event?.reason === "reload") {
       handoffWorkflowRuntime(runtime);
     } else {
+      // Every other shutdown — /new, /resume, a fork — replaces the extension without
+      // handing the runtime over, so anything still running would keep executing on an
+      // orphaned manager and deliver its results into an invalidated ExtensionAPI.
+      // Checkpointing it as paused puts it on the journal-recovery path instead, so the
+      // next generation's cold start can pick it up rather than losing the work.
+      pauseStrandedWorkflowRuntime(runtime);
       discardWorkflowRuntime(cwd, runtime);
     }
   });

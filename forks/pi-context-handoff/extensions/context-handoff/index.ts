@@ -17,6 +17,7 @@
 
 import { compact, type ExtensionAPI, type ExtensionContext } from "@earendil-works/pi-coding-agent";
 
+import { carryFileLists } from "./carry-files.js";
 import { type HandoffConfig, loadHandoffConfig } from "./config.js";
 import { buildHandoffFocus } from "./instructions.js";
 
@@ -32,6 +33,28 @@ function createOnceNotifier() {
 		} catch {
 			// A UI that refuses a notification must not affect compaction.
 		}
+	};
+}
+
+/**
+ * Pi passes its own callbacks to compact() so the TUI can show a retry indicator. Calling
+ * compact() ourselves means supplying them, or a compaction that is quietly retrying a
+ * failed provider call is indistinguishable from one that has hung.
+ */
+function retryCallbacks(ctx: ExtensionContext) {
+	const say = (message: string | undefined) => {
+		if (!ctx.hasUI) return;
+		try {
+			ctx.ui.setStatus("context-handoff", message);
+		} catch {
+			// Status is decoration; never let it affect the compaction.
+		}
+	};
+	return {
+		onRetryScheduled: (attempt: number, maxAttempts: number, delayMs: number) =>
+			say(`handoff brief: retry ${attempt}/${maxAttempts} in ${Math.round(delayMs / 1000)}s`),
+		onRetryAttemptStart: () => say("handoff brief: retrying"),
+		onRetryFinished: () => say(undefined),
 	};
 }
 
@@ -69,6 +92,10 @@ export default function contextHandoffExtension(pi: ExtensionAPI) {
 
 		try {
 			const auth = await ctx.modelRegistry.getApiKeyAndHeaders(model);
+			// An unresolvable key would only surface as a provider error mid-compaction;
+			// deferring to Pi is both quieter and more likely to work, since Pi resolves
+			// auth for the same call through its own path.
+			if (!auth.ok) return undefined;
 			const focus = buildHandoffFocus({
 				reason: event.reason,
 				willRetry: event.willRetry,
@@ -85,8 +112,14 @@ export default function contextHandoffExtension(pi: ExtensionAPI) {
 				event.signal,
 				ctx.thinkingLevel,
 				undefined,
-				undefined,
+				// Provider-scoped environment: gateway ids, regions, endpoints, proxies.
+				// Dropping it pointed the summarization request at a differently configured
+				// provider than the one the session itself is using.
+				auth.env,
 				config.retry,
+				// Pi drives its retry indicator through these. Without them a compaction that
+				// was retrying looked identical to one that had hung.
+				retryCallbacks(ctx),
 			);
 
 			// A summary Pi cannot use is worse than none: returning a malformed
@@ -97,7 +130,10 @@ export default function contextHandoffExtension(pi: ExtensionAPI) {
 				return undefined;
 			}
 
-			return { compaction };
+			// Pi refuses to read details from a hook-produced compaction, so it will never
+			// carry this entry's file lists into the next one. Merge them here or the
+			// accumulated read/modified lists restart empty at every boundary.
+			return { compaction: carryFileLists(compaction, event.branchEntries) };
 		} catch (error) {
 			// Includes the abort case. Pi's own compaction path handles an aborted
 			// signal, so handing back undefined stays correct there too.
