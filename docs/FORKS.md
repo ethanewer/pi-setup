@@ -143,7 +143,7 @@ installed, so the worst case is a less useful summary. It uses only Pi's public 
 also removes the deep private-module imports that made the previous extension fragile
 across Pi releases.
 
-## pi-btw-inline
+## pi-btw-side
 
 First-party, not a fork. Implements Codex's `/side` — aliased `/btw` there too — as
 `/btw <question>`: an ephemeral fork of the current conversation that answers a side
@@ -151,21 +151,24 @@ question without the question or the answer entering the main thread's context. 
 boundary prompt and developer instructions are Codex's, from
 `codex-rs/tui/src/app/side.rs`.
 
-Two deliberate departures. The exchange renders **inline** in the transcript as a custom
-entry rather than in an overlay, which is the reason the package exists rather than one of
-the npm `/btw` extensions. And the side thread gets **read-only tools** by default
-(`read`, `grep`, `find`, `ls`) instead of inheriting the parent's: Codex relies on prompt
+`/btw` switches the screen to a clean side conversation and escape returns, the way Codex
+switches to a forked thread and returns on Ctrl+C. The inherited history is context for
+the model but is not displayed — Codex's `install_side_thread_snapshot` does the same, and
+for the same reason: a side conversation should visually start at the boundary. The view
+is rendered with Pi's own message components, so it looks like the real chat.
+
+One deliberate departure: the side thread gets **read-only tools** by default (`read`,
+`grep`, `find`, `ls`) instead of inheriting the parent's. Codex relies on prompt
 instructions to keep a side thread non-mutating, but a Pi sub-session runs without an
 approval prompt in front of it, so the restriction is structural here. `"toolset": "full"`
 restores Codex's behaviour.
 
 It **cannot stop a run**. The fork is a separate `AgentSession` with an in-memory session
-manager: it cannot abort the main turn, cannot write to the main context, and reports its
-own failures as a notification plus a transcript entry. The command never blocks Pi's
-input loop, which is also what lets `/btw:end` cancel an answer in flight. It is usable
-while the main thread is mid-turn — the case it exists for — and the mid-turn history
-snapshot is trimmed back to the last resolved tool call so a half-finished turn cannot
-produce an invalid request.
+manager and the view is an overlay, so the host session is neither aborted, paused, nor
+added to. The main thread keeps streaming behind the view — verified — and the header
+reports whether it is still working, since its transcript is hidden while the view is up.
+The mid-turn history snapshot is trimmed back to the last resolved tool call so a
+half-finished turn cannot produce an invalid request.
 
 ## pi-voice-stt-safe
 
@@ -266,7 +269,7 @@ reachable by repo-controlled or model-chosen input before.
 | `worktreeIsolationFallback` | Continuing when `git worktree add` fails |
 | `defaultMaxAgents` / `maxAgents` | Raising a run above the 100-agent default, up to the 1000 ceiling |
 | `defaultAgentTimeoutMs` / `agentTimeoutMs: null` | Removing the 60-minute per-agent timeout entirely |
-| `toolset: "full"` (`pi-btw-inline.json`) | Giving a `/btw` side thread `bash`, `edit`, and `write`, which is Codex's own side-thread toolset |
+| `toolset: "full"` (`pi-btw-side.json`) | Giving a `/btw` side thread `bash`, `edit`, and `write`, which is Codex's own side-thread toolset |
 
 One gate is a configuration shape rather than a flag: in `pi-voice-stt-safe` a named vendor
 alias is pinned to that vendor's host, so sending audio to a custom endpoint requires

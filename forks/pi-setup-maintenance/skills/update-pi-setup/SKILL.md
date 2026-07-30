@@ -106,7 +106,7 @@ manually and record what you decided in its `vendor.json` note.
 
 ## 4. Change a first-party package
 
-`pi-context-handoff`, `pi-btw-inline`, and `pi-setup-maintenance` have no upstream. Edit
+`pi-context-handoff`, `pi-btw-side`, and `pi-setup-maintenance` have no upstream. Edit
 them directly, bump `version` in both `package.json` and `vendor.json` if the change is
 worth marking, then `./install.sh`.
 
@@ -138,7 +138,7 @@ cd ~/pi-setup
 bin/pi-setup-doctor          # must exit 0
 bun test tests/              # pure logic of the first-party extensions
 tests/smoke.sh               # installed setup: tools, bash, /btw, browser, workflow
-tests/tui-btw.sh             # TUI-only behaviour: inline render, sticky mode, cancel
+tests/tui-btw.sh             # TUI-only behaviour: the /btw side view and escape
 ```
 
 `tests/smoke.sh --quick` skips the browser and workflow runs when iterating.

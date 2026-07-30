@@ -14,8 +14,6 @@ export interface BtwModelRef {
 
 export interface BtwConfig {
 	enabled: boolean;
-	/** Stay in the side conversation after the first answer, as Codex does. */
-	sticky: boolean;
 	toolset: BtwToolset;
 	/** null inherits the main thread's model, which is what Codex does. */
 	model: BtwModelRef | null;
@@ -23,22 +21,23 @@ export interface BtwConfig {
 	thinkingLevel: string | null;
 	/** Abort a side turn that has run this long. 0 disables the timeout. */
 	timeoutMs: number;
-	/** Show streaming output in a footer widget while the answer is being written. */
-	livePreview: boolean;
-	previewLines: number;
+	/**
+	 * Leave a collapsed card in the main transcript when the side conversation closes.
+	 * Off by default, because Codex discards a side conversation on exit. The card is a
+	 * custom entry either way, so no model ever sees it.
+	 */
+	record: boolean;
 }
 
 export const THINKING_LEVELS = ["off", "minimal", "low", "medium", "high", "xhigh", "max"] as const;
 
 export const DEFAULT_BTW_CONFIG: BtwConfig = {
 	enabled: true,
-	sticky: true,
 	toolset: "readonly",
 	model: null,
 	thinkingLevel: null,
 	timeoutMs: 10 * 60 * 1000,
-	livePreview: true,
-	previewLines: 6,
+	record: false,
 };
 
 /**
@@ -55,7 +54,7 @@ function resolveAgentDir(): string {
 }
 
 export function btwConfigPath(): string {
-	return join(resolveAgentDir(), "extensions", "pi-btw-inline.json");
+	return join(resolveAgentDir(), "extensions", "pi-btw-side.json");
 }
 
 function asBoolean(value: unknown, fallback: boolean): boolean {
@@ -110,13 +109,11 @@ export function loadBtwConfig(): { config: BtwConfig; warning?: string } {
 	return {
 		config: {
 			enabled: asBoolean(raw.enabled, DEFAULT_BTW_CONFIG.enabled),
-			sticky: asBoolean(raw.sticky, DEFAULT_BTW_CONFIG.sticky),
 			toolset: asToolset(raw.toolset, DEFAULT_BTW_CONFIG.toolset),
 			model: parseModelRef(raw.model),
 			thinkingLevel: asThinkingLevel(raw.thinkingLevel, DEFAULT_BTW_CONFIG.thinkingLevel),
 			timeoutMs: asCount(raw.timeoutMs, DEFAULT_BTW_CONFIG.timeoutMs, 6 * 60 * 60 * 1000),
-			livePreview: asBoolean(raw.livePreview, DEFAULT_BTW_CONFIG.livePreview),
-			previewLines: Math.max(1, asCount(raw.previewLines, DEFAULT_BTW_CONFIG.previewLines, 40)),
+			record: asBoolean(raw.record, DEFAULT_BTW_CONFIG.record),
 		},
 	};
 }

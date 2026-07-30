@@ -1,9 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import type { AssistantMessage, Message, ToolResultMessage, UserMessage } from "@earendil-works/pi-ai";
 
-import { lastAssistantText, sanitizeInheritedMessages, stripDynamicSystemPromptFooter } from "../forks/pi-btw-inline/extensions/btw/context.js";
-import { DEFAULT_BTW_CONFIG, parseModelRef } from "../forks/pi-btw-inline/extensions/btw/config.js";
-import { buildFirstSideMessage, buildSideDeveloperInstructions, SIDE_BOUNDARY_PROMPT } from "../forks/pi-btw-inline/extensions/btw/instructions.js";
+import { lastAssistantText, sanitizeInheritedMessages, stripDynamicSystemPromptFooter } from "../forks/pi-btw-side/extensions/btw/context.js";
+import { DEFAULT_BTW_CONFIG, parseModelRef } from "../forks/pi-btw-side/extensions/btw/config.js";
+import { buildFirstSideMessage, buildSideDeveloperInstructions, SIDE_BOUNDARY_PROMPT } from "../forks/pi-btw-side/extensions/btw/instructions.js";
 
 const user = (text: string): UserMessage => ({ role: "user", content: [{ type: "text", text }], timestamp: 0 });
 
@@ -141,6 +141,8 @@ describe("config", () => {
 	test("defaults are the safe ones", () => {
 		expect(DEFAULT_BTW_CONFIG.toolset).toBe("readonly");
 		expect(DEFAULT_BTW_CONFIG.enabled).toBe(true);
-		expect(DEFAULT_BTW_CONFIG.sticky).toBe(true);
+		// Codex discards a side conversation on exit; leaving a card behind is opt-in.
+		expect(DEFAULT_BTW_CONFIG.record).toBe(false);
+		expect(DEFAULT_BTW_CONFIG.model).toBeNull();
 	});
 });

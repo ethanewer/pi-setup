@@ -66,7 +66,7 @@ Extension forks and the upstream releases they are based on:
 | `pi-dynamic-workflows-safe` | `@quintinshaw/pi-dynamic-workflows` | `3.4.1` |
 | `pi-process-monitor-safe` | `pi-process-monitor` | rewrite, reviewed vs `1.3.0` |
 | `pi-context-handoff` | — | first-party |
-| `pi-btw-inline` | — | first-party |
+| `pi-btw-side` | — | first-party |
 | `pi-setup-maintenance` | — | first-party, skills only |
 
 `vendor.json` is the machine-readable version of this table and is what the tooling
@@ -133,7 +133,7 @@ standalone diffs.
 - the `update-pi-setup` maintenance skill
 - compaction handoff briefs that keep a long run going
 - background process monitoring (`monitor`, `/watch`)
-- side questions in an ephemeral fork (`/btw`, `/btw:end`)
+- side questions in an ephemeral fork (`/btw`, escape to return)
 - project `AGENTS.md` / `CLAUDE.md` context
 - visible startup resource listing
 
@@ -160,19 +160,19 @@ lean-profile environment, so a tmux server started from `p` cannot accidentally 
 
 ## Side questions (`/btw`)
 
-`/btw <question>` answers in an ephemeral fork of the current conversation. The model sees
-the history so far as reference context; neither the question nor the answer enters the
-main thread's context, and the main thread does not have to be idle — asking mid-turn is
-the case it is for. The answer renders inline in the transcript, not in an overlay.
+`/btw <question>` switches the screen to a clean side conversation in an ephemeral fork.
+The model sees the history so far as reference context; neither the question nor the
+answer enters the main thread's context. The main thread does not have to be idle — it
+keeps running behind the view, which is the case `/btw` is for.
 
 ```text
-/btw does this migration drop data if it runs twice?   ask
-                                                        (typed messages now go to the fork)
-/btw:end                                                discard it and return
+/btw does this migration drop data if it runs twice?   ask (screen switches to the fork)
+                                                        typing goes to the fork, no prefix
+esc                                                     discard it and return
 ```
 
 The side thread gets read-only tools by default. See
-[`forks/pi-btw-inline/README.md`](forks/pi-btw-inline/README.md) for configuration and for
+[`forks/pi-btw-side/README.md`](forks/pi-btw-side/README.md) for configuration and for
 what does and does not match Codex's `/side`.
 
 ## Voice STT

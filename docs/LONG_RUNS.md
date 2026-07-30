@@ -74,15 +74,16 @@ scheduler to auto-resume, rather than burning retries against the same wall.
 
 ## Side questions do not interrupt the run
 
-`/btw` ([`pi-btw-inline`](../forks/pi-btw-inline/README.md)) answers in a separate
-`AgentSession` with its own in-memory session manager. It cannot abort the main turn,
-cannot add anything to the main thread's context, and its failures surface as a
-notification plus a transcript entry rather than an exception in Pi's event loop. Asking
-mid-turn is supported and tested: the main turn keeps streaming while the answer is
-written, and the history snapshot the fork inherits is trimmed back to the last resolved
-tool call so a half-finished turn cannot produce an invalid request.
+`/btw` ([`pi-btw-side`](../forks/pi-btw-side/README.md)) answers in a separate
+`AgentSession` with its own in-memory session manager, displayed in an overlay. It cannot
+abort the main turn, cannot add anything to the main thread's context, and its failures
+surface inside its own view rather than as an exception in Pi's event loop. Asking
+mid-turn is supported and tested: the main turn keeps streaming behind the view and
+finishes normally, and the history snapshot the fork inherits is trimmed back to the last
+resolved tool call so a half-finished turn cannot produce an invalid request.
 
-It also cannot quietly consume the context it was meant to protect: the exchange is a
+It also cannot quietly consume the context it was meant to protect. The side conversation
+is discarded when the view closes, and even with `record: true` what it leaves behind is a
 custom entry, which Pi never sends to a model.
 
 ## Configuration for long runs

@@ -1,4 +1,4 @@
-import type { ImageContent, Message, Model } from "@earendil-works/pi-ai";
+import type { AssistantMessage, ImageContent, Message, Model } from "@earendil-works/pi-ai";
 import {
 	type AgentSession,
 	buildSessionContext,
@@ -16,14 +16,17 @@ import {
 } from "@earendil-works/pi-coding-agent";
 
 import type { BtwConfig } from "./config.js";
-import { assistantText, lastAssistantText, sanitizeInheritedMessages, stripDynamicSystemPromptFooter } from "./context.js";
+import { lastAssistantText, sanitizeInheritedMessages, stripDynamicSystemPromptFooter } from "./context.js";
 import { buildFirstSideMessage, buildSideDeveloperInstructions } from "./instructions.js";
 
 export interface SideTurnHooks {
-	/** Full assistant text so far, called on every streaming update. */
-	onText?: (text: string) => void;
-	/** A tool the side thread is running, already formatted for display. */
-	onTool?: (label: string) => void;
+	/** A new assistant message began. The same object is then passed to onAssistant. */
+	onAssistantStart?: (message: AssistantMessage) => void;
+	/** Streaming update or completion of the current assistant message. */
+	onAssistant?: (message: AssistantMessage) => void;
+	/** A tool call started, with a label already formatted for display. */
+	onToolStart?: (toolCallId: string, label: string) => void;
+	onToolEnd?: (toolCallId: string, isError: boolean) => void;
 }
 
 export interface SideTurnResult {
@@ -136,11 +139,18 @@ export class SideThread {
 
 		const unsubscribe = this.session.subscribe((event) => {
 			try {
-				if (event.type === "message_update" && event.message.role === "assistant") {
-					hooks.onText?.(assistantText(event.message));
+				if (event.type === "message_start" && event.message.role === "assistant") {
+					hooks.onAssistantStart?.(event.message as AssistantMessage);
+				} else if (
+					(event.type === "message_update" || event.type === "message_end") &&
+					event.message.role === "assistant"
+				) {
+					hooks.onAssistant?.(event.message as AssistantMessage);
 				} else if (event.type === "tool_execution_start") {
 					toolCalls += 1;
-					hooks.onTool?.(formatToolCall(event.toolName, event.args));
+					hooks.onToolStart?.(event.toolCallId, formatToolCall(event.toolName, event.args));
+				} else if (event.type === "tool_execution_end") {
+					hooks.onToolEnd?.(event.toolCallId, Boolean(event.isError));
 				}
 			} catch {
 				// Display is never allowed to break the turn.
@@ -260,7 +270,11 @@ function sideResourceLoader(ctx: ExtensionContext, toolNames: readonly string[])
 		getThemes: () => ({ themes: [], diagnostics: [] }),
 		getAgentsFiles: () => ({ agentsFiles: [] }),
 		getSystemPrompt: () => (systemPrompt.length > 0 ? systemPrompt : undefined),
+		// Added in Pi 0.83.0 for the startup context listing. The side thread's prompt is
+		// assembled here rather than read from a file, so it has no source paths to report.
+		getSystemPromptSource: () => undefined,
 		getAppendSystemPrompt: () => appended,
+		getAppendSystemPromptSources: () => [],
 		extendResources: () => {},
 		reload: async () => {},
 	};
