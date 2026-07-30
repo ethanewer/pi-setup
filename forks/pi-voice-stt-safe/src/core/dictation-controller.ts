@@ -10,6 +10,19 @@ import { formatTranscriptForPrompt } from "./output";
 
 export type DictationMode = "idle" | "recording" | "processing" | "polishing";
 
+/** Where a transcript is headed, decided by the key that stopped the recording. */
+export type DictationOutcome = "insert" | "send" | "queue";
+
+/**
+ * A place the transcript will land, claimed the instant recording stops so the user does
+ * not wait on the provider. Exactly one of resolve/fail/cancel is called.
+ */
+export type Delivery = {
+  resolve(text: string): Promise<void> | void;
+  fail(message: string): void;
+  cancel(): void;
+};
+
 export type DictationToast = {
   variant?: "info" | "success" | "warning" | "error";
   title?: string;
@@ -24,15 +37,15 @@ export type DictationControllerOptions = {
   createRecorder(config: PluginConfig): AudioRecorder;
   createProvider(config: PluginConfig): { transcribe(input: { audioPath: string; language?: string; signal: AbortSignal }): Promise<{ text: string }> };
   createCleanup(config: PluginConfig): CleanupClient | null;
-  appendPrompt(ctx: ExtensionContext, text: string): Promise<unknown>;
-  submitPrompt(ctx: ExtensionContext): Promise<unknown>;
+  /** Claim a destination for the transcript. Runs before the provider is called. */
+  beginDelivery(ctx: ExtensionContext, outcome: DictationOutcome): Delivery;
   notify(ctx: ExtensionContext | undefined, toast: DictationToast): void;
   onModeChange?(mode: DictationMode, ctx: ExtensionContext | undefined): void;
   onError(ctx: ExtensionContext | undefined, error: unknown): void;
 };
 
 type StopRecordingOptions = {
-  submitAfterAppend?: boolean;
+  outcome?: DictationOutcome;
 };
 
 const MAX_DURATION_RETRY_MS = 1000;
@@ -70,33 +83,31 @@ export const createDictationController = (options: DictationControllerOptions) =
     if (!disposed) options.notify(ctx ?? lastContext, toast);
   };
 
-  const appendPrompt = async (ctx: ExtensionContext, text: string) => {
-    if (disposed || !text) return;
-    await options.appendPrompt(ctx, text);
-  };
-
-  const submitPrompt = async (ctx: ExtensionContext) => {
-    if (disposed) return;
-    await options.submitPrompt(ctx);
-  };
-
-  const stopActiveRecording = async (ctx: ExtensionContext, active: RecordingHandle, config: PluginConfig, stopOptions: StopRecordingOptions) => {
+  const stopActiveRecording = async (
+    ctx: ExtensionContext,
+    active: RecordingHandle,
+    config: PluginConfig,
+    stopOptions: StopRecordingOptions,
+    delivery: Delivery,
+  ) => {
     const provider = options.createProvider(config);
     const controller = new AbortController();
     transcriptionController = controller;
     const timeout = setTimeout(() => controller.abort(), config.provider.timeoutSeconds * 1000);
 
     try {
-      notify(ctx, { title: "Pi Voice STT", message: options.strings.toast.stopping, variant: "info" });
+      // No "stopping" toast: the placeholder already says so, in the place the text will
+      // appear.
       const audioPath = await active.stop();
-      if (disposed) return;
+      if (disposed) return delivery.cancel();
       const result = await provider.transcribe({ audioPath, language: config.provider.language, signal: controller.signal });
-      if (cancelRequested || disposed) return;
+      if (cancelRequested || disposed) return delivery.cancel();
 
       let text = applyReplacements(result.text, config.output.replacements);
       const voice = parseVoiceCommand(text, config.commands);
       if (voice.command === "clear") {
         notify(ctx, { title: "Pi Voice STT", message: options.strings.toast.cleared, variant: "info" });
+        delivery.cancel();
         return;
       }
       text = voice.text;
@@ -117,29 +128,22 @@ export const createDictationController = (options: DictationControllerOptions) =
           clearTimeout(cleanupTimeout);
           if (transcriptionController === cleanupController) transcriptionController = undefined;
         }
-        if (cancelRequested || disposed) return;
+        if (cancelRequested || disposed) return delivery.cancel();
       }
 
-      const shouldSubmit = stopOptions.submitAfterAppend || voice.command === "send";
       const formatted = formatTranscriptForPrompt(text, config.output);
-      if (!formatted && !shouldSubmit) {
-        notify(ctx, { title: "Pi Voice STT", message: options.strings.toast.emptyTranscript, variant: "warning" });
+      if (!formatted.trim()) {
+        // Nothing was said. The placeholder has to go either way, or it sits in the
+        // editor forever waiting for a transcript that already arrived empty.
+        delivery.fail(options.strings.toast.emptyTranscript);
         return;
       }
 
-      await appendPrompt(ctx, formatted);
-      if (voice.command === "newline") await appendPrompt(ctx, "\n");
-      if (shouldSubmit) {
-        await waitForPromptAppendFlush();
-        await submitPrompt(ctx);
-      }
-      if (!cancelRequested) {
-        notify(ctx, {
-          title: "Pi Voice STT",
-          message: shouldSubmit ? options.strings.toast.sent : options.strings.toast.inserted,
-          variant: "success",
-        });
-      }
+      await delivery.resolve(voice.command === "newline" ? `${formatted}\n` : formatted);
+    } catch (error) {
+      // The delivery is the single report: it puts the message where the transcript was
+      // going to appear. Rethrowing would add a toast saying the same thing again.
+      delivery.fail(error instanceof Error ? error.message : String(error));
     } finally {
       clearTimeout(timeout);
       if (transcriptionController === controller) transcriptionController = undefined;
@@ -159,6 +163,9 @@ export const createDictationController = (options: DictationControllerOptions) =
 
     processing = true;
     setMode("processing", ctx);
+    // Claimed before any await, so the placeholder is on screen in the same frame the
+    // recording indicator disappears.
+    const delivery = options.beginDelivery(ctx, stopOptions.outcome ?? "insert");
     const active = recording;
     const activeConfig = recordingConfig;
     recording = undefined;
@@ -167,8 +174,12 @@ export const createDictationController = (options: DictationControllerOptions) =
     if (active.timeout) clearTimeout(active.timeout);
 
     const operation = activeConfig
-      ? stopActiveRecording(ctx, active, activeConfig, stopOptions)
-      : Promise.reject(new Error("Recording config was not available."));
+      ? stopActiveRecording(ctx, active, activeConfig, stopOptions, delivery)
+      : (() => {
+          const error = new Error("Recording config was not available.");
+          delivery.fail(error.message);
+          return Promise.reject(error);
+        })();
     activeOperation = operation;
     try {
       await operation;
@@ -271,13 +282,9 @@ export const createDictationController = (options: DictationControllerOptions) =
       recording = started;
       recordingConfig = config;
       armMaxDuration(started, config.capture.maxSeconds * 1000);
+      // No toast on start. The pulsing red cursor is the indicator, and a banner
+      // repeating the keys every time is the noise this replaced.
       setMode("recording", ctx);
-      notify(ctx, {
-        title: "Pi Voice STT",
-        message: options.strings.toast.startRecording(options.keybind),
-        variant: "info",
-        duration: 5000,
-      });
     } catch (error) {
       if (started) {
         if (recording === started) {
@@ -296,10 +303,12 @@ export const createDictationController = (options: DictationControllerOptions) =
 
   const toggle = async (ctx: ExtensionContext) => {
     rememberContext(ctx);
-    if (recording || processing) {
-      await stopRecording(ctx);
+    if (recording) {
+      await stopRecording(ctx, { outcome: "insert" });
       return;
     }
+    // A transcription still in flight owns its own placeholder, so it does not block a
+    // new recording the way it did when the editor was the only destination.
     await startRecording(ctx);
   };
 
@@ -323,8 +332,8 @@ export const createDictationController = (options: DictationControllerOptions) =
 
   return {
     toggle,
-    stop: (ctx: ExtensionContext) => stopRecording(ctx),
-    stopAndSubmit: (ctx: ExtensionContext) => stopRecording(ctx, { submitAfterAppend: true }),
+    stop: (ctx: ExtensionContext, outcome: DictationOutcome = "insert") => stopRecording(ctx, { outcome }),
+    stopAndSubmit: (ctx: ExtensionContext) => stopRecording(ctx, { outcome: "send" }),
     cancel,
     dispose,
     getMode: () => mode,

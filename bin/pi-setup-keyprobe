@@ -8,10 +8,11 @@
  * Run it inside tmux and outside it. A binding only works where the two agree, and only
  * if the "pi sees" column is the key id you meant to bind.
  *
- * Caveat: this reads the terminal in its default state. Pi additionally asks for the
- * Kitty keyboard protocol at startup; on a terminal that supports it (Ghostty, Kitty,
- * WezTerm, iTerm2 3.5+) Pi may see richer sequences than this shows. Terminal.app has no
- * such support, and default tmux does not forward it.
+ * Like Pi, it asks for the Kitty keyboard protocol first and reports whether the terminal
+ * agreed, because the answer changes every encoding below: Ghostty sends Option+Tab as
+ * `ESC [ 9;3u` (`alt+tab`) with the protocol on, and as `ESC TAB` (`ctrl+alt+i`) without
+ * it. tmux does not forward the protocol unless `extended-keys` is set, so the same
+ * terminal reports differently inside and outside tmux.
  */
 
 import { homedir } from "node:os";
@@ -23,8 +24,9 @@ const tuiEntry = join(
 );
 
 let parseKey: (data: string) => string | null;
+let setKittyProtocolActive: (active: boolean) => void;
 try {
-	({ parseKey } = await import(tuiEntry));
+	({ parseKey, setKittyProtocolActive } = await import(tuiEntry));
 } catch (error) {
 	console.error(`pi-setup-keyprobe: could not load pi-tui from ${tuiEntry}`);
 	console.error(String(error));
@@ -58,22 +60,53 @@ if (!process.stdin.isTTY) {
 	process.exit(2);
 }
 
-console.log(`
-Press the keys you want to bind. Each line shows the bytes your terminal sent and the
-key id Pi would match against. Ctrl+Q quits.
-
-Worth testing: enter, option+enter, option+tab, shift+enter, option+p, tab, shift+tab.
-${process.env.TMUX ? "You are inside tmux." : "You are NOT inside tmux — run it again inside tmux and compare."}
-`);
-
 process.stdin.setRawMode(true);
 process.stdin.resume();
 process.stdin.setEncoding("utf8");
+
+// Ask for the Kitty keyboard protocol exactly as Pi does, then wait briefly for the
+// terminal's reply. Without this the probe reports legacy encodings for a terminal that
+// will send Pi something else entirely.
+const KITTY_PUSH = "\x1b[>1u";
+const KITTY_QUERY = "\x1b[?u";
+const KITTY_POP = "\x1b[<u";
+const kittyReply = /\x1b\[\?\d+u/;
+
+let negotiating = true;
+let kittyActive = false;
+process.stdout.write(KITTY_PUSH + KITTY_QUERY);
+
+const restore = () => {
+	if (kittyActive) process.stdout.write(KITTY_POP);
+	process.stdin.setRawMode(false);
+};
+
 process.stdin.on("data", (chunk: string) => {
+	if (negotiating) {
+		if (kittyReply.test(chunk)) {
+			kittyActive = true;
+			setKittyProtocolActive(true);
+			return;
+		}
+		// Anything else during the negotiation window is a real keypress; fall through.
+	}
 	if (chunk === "\x11") {
 		console.log("\nbye");
-		process.stdin.setRawMode(false);
+		restore();
 		process.exit(0);
 	}
 	report(chunk);
 });
+
+setTimeout(() => {
+	negotiating = false;
+	console.log(`
+Kitty keyboard protocol: ${kittyActive ? "ACTIVE — Pi sees CSI-u sequences" : "not active — legacy encodings"}
+${process.env.TMUX ? "Inside tmux." : "NOT inside tmux — run it again inside tmux and compare."}
+
+Press the keys you want to bind. Each line shows the bytes your terminal sent and the key
+id Pi would match against. Ctrl+Q quits.
+
+Worth testing: enter, option+enter, option+tab, shift+enter, option+p, tab, shift+tab.
+`);
+}, 250);

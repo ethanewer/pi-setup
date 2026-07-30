@@ -75,7 +75,13 @@ describe("matchesAnyKeybind", () => {
 });
 
 describe("describeKeybinds", () => {
-	test("reads as a list in the editor label", () => {
-		expect(describeKeybinds(["alt+p", "π"])).toBe("alt+p / π");
+	// The alternates exist so one chord works across terminal settings; showing them all
+	// in the editor label is the noise this setup is trying to remove.
+	test("shows only the primary binding", () => {
+		expect(describeKeybinds(["alt+p", "π"])).toBe("alt+p");
+	});
+
+	test("survives an empty list", () => {
+		expect(describeKeybinds([])).toBe("");
 	});
 });

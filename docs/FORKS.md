@@ -195,7 +195,20 @@ locale depended on.
 
 **Added here.** `keybind` accepts a list and matches literal characters as well as Pi key
 ids, so dictation can be bound to both `alt+p` and the `π` that macOS composes for the
-same chord. See [`KEYBINDINGS.md`](KEYBINDINGS.md).
+same chord, including the CSI-u form a Kitty-protocol terminal uses for it. See
+[`KEYBINDINGS.md`](KEYBINDINGS.md).
+
+**Rewritten here: the dictation UI.** The input box no longer changes colour, the
+start/stop/sent toasts are gone, and the state lives where the text does — the cursor
+becomes a slowly pulsing red dot while recording, and a `[⠏ transcribing]` placeholder
+holds the transcript's spot while the provider works. Transcription stopped being a modal
+wait: the key that ends a recording chooses insert (`alt+p`), send (`enter`) or queue
+(the `app.message.followUp` key), any other key inserts and is then applied, and typing
+continues around the placeholder. A sent message is a live widget until the transcript
+arrives, so the model gets nothing until it does, and a failure becomes an error line
+rather than a half-sent message. `PI_STT_FAKE_TRANSCRIPT` / `PI_STT_FAKE_FAIL` /
+`PI_STT_FAKE_DELAY_MS` replace the provider with a fixed answer so this lifecycle can be
+driven end to end without a microphone or an API call.
 
 **Residual risk.** Anyone who can write `~/.pi/agent/stt.json` can still send your
 microphone audio to an arbitrary HTTPS host by naming a credential explicitly, or run any

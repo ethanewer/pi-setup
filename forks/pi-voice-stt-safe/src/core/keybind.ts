@@ -40,10 +40,26 @@ export const parseKeybinds = (value: unknown, fallback: readonly string[] = DEFA
  * `matchesKey` return false rather than throw, so a typo in the config costs that one
  * binding and nothing else.
  */
+/**
+ * A terminal negotiating the Kitty keyboard protocol (Ghostty, Kitty, WezTerm, iTerm2
+ * 3.5+) reports a composed character as its codepoint in a CSI-u sequence rather than as
+ * the character itself, so `π` arrives as `ESC [ 960 u`. Pi cannot parse that — it has no
+ * key id for a bare codepoint — so the literal comparison has to understand the form too.
+ */
+const CSI_U_CODEPOINT = /^\x1b\[(\d+)(?:;[\d:]+)?u$/;
+
+const literalMatches = (data: string, keybind: string): boolean => {
+	if (data === keybind) return true;
+	const csi = CSI_U_CODEPOINT.exec(data);
+	if (!csi) return false;
+	const codepoint = Number.parseInt(csi[1] ?? "", 10);
+	return Number.isFinite(codepoint) && String.fromCodePoint(codepoint) === keybind;
+};
+
 export const matchesAnyKeybind = (data: string, keybinds: readonly string[]): boolean => {
 	for (const keybind of keybinds) {
 		if (keybind.length === 0) continue;
-		if (data === keybind) return true;
+		if (literalMatches(data, keybind)) return true;
 		try {
 			if (matchesKey(data, keybind as KeyId)) return true;
 		} catch {
@@ -53,5 +69,9 @@ export const matchesAnyKeybind = (data: string, keybinds: readonly string[]): bo
 	return false;
 };
 
-/** How the binding is shown in the editor's right-hand label and in `/stt status`. */
-export const describeKeybinds = (keybinds: readonly string[]): string => keybinds.join(" / ");
+/**
+ * How the binding is shown in the editor label and in `/stt status`. Only the first
+ * binding is shown: the others exist so the same physical chord works across terminal
+ * settings, and listing them all is noise.
+ */
+export const describeKeybinds = (keybinds: readonly string[]): string => keybinds[0] ?? "";

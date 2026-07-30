@@ -1,6 +1,8 @@
 import { CustomEditor, type AppKeybinding, type ExtensionContext, type KeybindingsManager, type Theme } from "@earendil-works/pi-coding-agent";
 import {
+  CURSOR_MARKER,
   matchesKey,
+  sliceByColumn,
   truncateToWidth,
   visibleWidth,
   type EditorComponent,
@@ -10,16 +12,29 @@ import {
 import type { DictationMode } from "../core/dictation-controller";
 import { matchesAnyKeybind } from "../core/keybind";
 import type { Strings } from "../i18n/strings";
+import { animateRenderedLines, frameAt } from "./transcribing";
 
 type VoiceEditorOptions = {
   keybinds: string[];
   ctx: ExtensionContext;
+  keybindings: KeybindingsManager;
   getMode(): DictationMode;
+  getTick(): number;
   renderLabel(theme: Theme): string;
   onToggle(ctx: ExtensionContext): void;
   onCancel(ctx: ExtensionContext): void;
   onSend(ctx: ExtensionContext): void;
+  onQueue(ctx: ExtensionContext): void;
+  /** Stop recording, leave the transcript in the editor, then apply this keystroke. */
+  onInsertThen(ctx: ExtensionContext, data: string): void;
 };
+
+/**
+ * Ticks per blink phase. The dot spends this many animation frames lit and the same
+ * number dim, so at the 120ms tick it pulses about once a second — calmer than the
+ * two-frame flicker it replaces.
+ */
+const BLINK_TICKS = 4;
 
 const injectRightLabel = (line: string, width: number, label: string): string => {
   const labelWidth = visibleWidth(label);
@@ -101,30 +116,64 @@ class VoiceEditorWrapper implements EditorComponent {
     (this.base as EditorComponent & { focused?: boolean }).focused = value;
   }
 
-  // While recording/processing, tint the whole prompt border so the state is
-  // impossible to miss (red = recording, orange = transcribing). Idle restores
-  // whatever border color pi set on the wrapper.
-  private applyModeBorder(): void {
-    const mode = this.options.getMode();
+  /**
+   * The recording indicator takes the cursor's place rather than adding another element
+   * to the frame: while recording, the point where typing would land pulses red.
+   *
+   * The dot *overwrites* the cell the cursor sits on instead of being inserted before it.
+   * CURSOR_MARKER is zero width and the editor pads every row to exactly the viewport
+   * width, so inserting a visible character there pushes the row one column over and Pi
+   * kills the session for overflowing the terminal.
+   */
+  private replaceCursor(lines: string[], width: number): string[] {
+    if (this.options.getMode() !== "recording") return lines;
     const theme = this.options.ctx.ui.theme;
-    if (mode === "recording") this.base.borderColor = (str: string) => theme.fg("error", str);
-    else if (mode === "processing") this.base.borderColor = (str: string) => theme.fg("warning", str);
-    else if (mode === "polishing") this.base.borderColor = (str: string) => theme.fg("accent", str);
-    else if (this.borderColor) this.base.borderColor = this.borderColor;
-    else delete (this.base as EditorComponent & { borderColor?: (str: string) => string }).borderColor;
+    const lit = Math.floor(this.options.getTick() / BLINK_TICKS) % 2 === 0;
+    const dot = theme.fg(lit ? "error" : "dim", "●");
+    let done = false;
+    return lines.map((line) => {
+      if (done) return line;
+      const marker = line.indexOf(CURSOR_MARKER);
+      if (marker === -1) return line;
+      done = true;
+      const before = line.slice(0, marker);
+      const after = line.slice(marker + CURSOR_MARKER.length);
+      const cursorColumn = visibleWidth(before);
+      // Drop the one cell the dot now occupies, keeping the styling that follows it.
+      const rest = sliceByColumn(after, 1, Math.max(0, width - cursorColumn - 1));
+      const composed = `${before}${dot}${rest}`;
+      return visibleWidth(composed) > width ? truncateToWidth(composed, width, "") : composed;
+    });
   }
 
   render(width: number): string[] {
     this.syncBase();
-    this.applyModeBorder();
-    const lines = this.base.render(width);
+    const lines = this.replaceCursor(
+      animateRenderedLines(this.base.render(width), frameAt(this.options.getTick()), (text) =>
+        this.options.ctx.ui.theme.fg("accent", text),
+      ),
+      width,
+    );
     if (lines.length === 0) return lines;
 
     const label = this.options.renderLabel(this.options.ctx.ui.theme);
-    lines[0] = injectRightLabel(lines[0] ?? "", width, label);
+    if (label.length > 0) lines[0] = injectRightLabel(lines[0] ?? "", width, label);
     return lines;
   }
 
+  /**
+   * While recording, the next keystroke decides where the transcript goes:
+   *
+   *   the voice key  keep it in the editor
+   *   enter          send it
+   *   the queue key  queue it as a follow-up
+   *   escape         throw the recording away
+   *   anything else  keep it in the editor, then apply the key
+   *
+   * The last rule is what makes recording feel like typing: pressing Option+Enter
+   * mid-recording leaves the placeholder behind and puts the cursor on a fresh line,
+   * rather than being swallowed or ending the recording with no destination.
+   */
   handleInput(data: string): void {
     this.syncBase();
     const mode = this.options.getMode();
@@ -134,16 +183,25 @@ class VoiceEditorWrapper implements EditorComponent {
       return;
     }
 
-    if (mode !== "idle" && matchesKey(data, "escape")) {
-      this.options.onCancel(this.options.ctx);
+    if (mode === "recording") {
+      if (matchesKey(data, "escape")) {
+        this.options.onCancel(this.options.ctx);
+        return;
+      }
+      if (matchesKey(data, "enter")) {
+        this.options.onSend(this.options.ctx);
+        return;
+      }
+      if (this.options.keybindings.matches(data, "app.message.followUp" as AppKeybinding)) {
+        this.options.onQueue(this.options.ctx);
+        return;
+      }
+      this.options.onInsertThen(this.options.ctx, data);
       return;
     }
 
-    if (mode === "recording" && matchesKey(data, "enter")) {
-      this.options.onSend(this.options.ctx);
-      return;
-    }
-
+    // Transcribing is not a modal state: the placeholder holds the spot and everything
+    // typed around it behaves normally.
     this.base.handleInput(data);
   }
 
@@ -196,12 +254,11 @@ class VoiceEditorWrapper implements EditorComponent {
   }
 }
 
-const PROCESSING_FRAMES = ["•  ", " • ", "  •", " • "];
-
 export const createInputIndicator = (keybind: string, strings: Strings) => {
   let mode: DictationMode = "idle";
   let tui: TUI | undefined;
   let tick = 0;
+  let placeholders = 0;
   let timer: ReturnType<typeof setInterval> | undefined;
 
   const requestRender = () => tui?.requestRender();
@@ -212,8 +269,10 @@ export const createInputIndicator = (keybind: string, strings: Strings) => {
     timer = undefined;
   };
 
+  const animating = () => mode !== "idle" || placeholders > 0;
+
   const startAnimation = () => {
-    if (timer || mode === "idle") return;
+    if (timer || !animating()) return;
     timer = setInterval(() => {
       tick += 1;
       requestRender();
@@ -221,8 +280,8 @@ export const createInputIndicator = (keybind: string, strings: Strings) => {
   };
 
   const syncAnimation = () => {
-    if (mode === "idle") stopAnimation();
-    else startAnimation();
+    if (animating()) startAnimation();
+    else stopAnimation();
   };
 
   return {
@@ -237,23 +296,20 @@ export const createInputIndicator = (keybind: string, strings: Strings) => {
       syncAnimation();
       requestRender();
     },
+    /** Spinners keep turning while transcripts are outstanding, in the editor or above it. */
+    setPlaceholderCount(count: number) {
+      placeholders = Math.max(0, count);
+      syncAnimation();
+      requestRender();
+    },
+    getTick: () => tick,
+    /**
+     * Only the idle affordance is a label. Recording is the pulsing cursor and
+     * transcribing is the placeholder, both of which sit where the text is — so adding a
+     * banner for either would just be a second thing to read.
+     */
     renderLabel(theme: Theme): string {
-      if (mode === "recording") {
-        // Clear on/off blink in red so the recording state is obvious.
-        const dot = tick % 2 === 0 ? "●" : "○";
-        return `${theme.fg("error", dot)} ${theme.fg("error", strings.indicator.recording)} ${theme.fg("dim", strings.indicator.recordingHint)}`;
-      }
-
-      if (mode === "processing") {
-        const frame = PROCESSING_FRAMES[tick % PROCESSING_FRAMES.length] ?? "…";
-        return `${theme.fg("warning", frame)} ${theme.fg("warning", strings.indicator.transcribing)} ${theme.fg("dim", strings.indicator.transcribingHint)}`;
-      }
-
-      if (mode === "polishing") {
-        const frame = PROCESSING_FRAMES[tick % PROCESSING_FRAMES.length] ?? "…";
-        return `${theme.fg("accent", frame)} ${theme.fg("accent", strings.indicator.polishing)} ${theme.fg("dim", strings.indicator.polishingHint)}`;
-      }
-
+      if (mode !== "idle") return "";
       return `${theme.fg("dim", strings.indicator.idle)} ${theme.fg("accent", keybind)}`;
     },
     dispose() {
@@ -266,12 +322,14 @@ export const createInputIndicator = (keybind: string, strings: Strings) => {
 
 export const createVoiceEditorFactory = (
   previousFactory: ((tui: TUI, theme: EditorTheme, keybindings: KeybindingsManager) => EditorComponent) | undefined,
-  options: VoiceEditorOptions & { attachTui(tui: TUI): void; attachEditor?(editor: EditorComponent): void },
+  // The keybindings manager is handed to the factory by Pi, not by the caller, so the
+  // queue key follows whatever the user configured for app.message.followUp.
+  options: Omit<VoiceEditorOptions, "keybindings"> & { attachTui(tui: TUI): void; attachEditor?(editor: EditorComponent): void },
 ) => {
   return (tui: TUI, theme: EditorTheme, keybindings: KeybindingsManager): EditorComponent => {
     options.attachTui(tui);
     const base = previousFactory?.(tui, theme, keybindings) ?? new CustomEditor(tui, theme, keybindings);
-    const editor = new VoiceEditorWrapper(base, options);
+    const editor = new VoiceEditorWrapper(base, { ...options, keybindings });
     options.attachEditor?.(editor);
     return editor;
   };

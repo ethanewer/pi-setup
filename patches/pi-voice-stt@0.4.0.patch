@@ -1024,9 +1024,43 @@ diff -ruN --exclude=node_modules a/src/config/types.ts b/src/config/types.ts
  export type DeepgramProviderConfig = SecretConfig & {
 diff -ruN --exclude=node_modules a/src/core/dictation-controller.ts b/src/core/dictation-controller.ts
 --- a/src/core/dictation-controller.ts	1985-10-26 03:15:00
-+++ b/src/core/dictation-controller.ts	2026-07-28 19:04:58
-@@ -35,9 +35,11 @@
-   submitAfterAppend?: boolean;
++++ b/src/core/dictation-controller.ts	2026-07-30 15:29:55
+@@ -10,6 +10,19 @@
+ 
+ export type DictationMode = "idle" | "recording" | "processing" | "polishing";
+ 
++/** Where a transcript is headed, decided by the key that stopped the recording. */
++export type DictationOutcome = "insert" | "send" | "queue";
++
++/**
++ * A place the transcript will land, claimed the instant recording stops so the user does
++ * not wait on the provider. Exactly one of resolve/fail/cancel is called.
++ */
++export type Delivery = {
++  resolve(text: string): Promise<void> | void;
++  fail(message: string): void;
++  cancel(): void;
++};
++
+ export type DictationToast = {
+   variant?: "info" | "success" | "warning" | "error";
+   title?: string;
+@@ -24,20 +37,22 @@
+   createRecorder(config: PluginConfig): AudioRecorder;
+   createProvider(config: PluginConfig): { transcribe(input: { audioPath: string; language?: string; signal: AbortSignal }): Promise<{ text: string }> };
+   createCleanup(config: PluginConfig): CleanupClient | null;
+-  appendPrompt(ctx: ExtensionContext, text: string): Promise<unknown>;
+-  submitPrompt(ctx: ExtensionContext): Promise<unknown>;
++  /** Claim a destination for the transcript. Runs before the provider is called. */
++  beginDelivery(ctx: ExtensionContext, outcome: DictationOutcome): Delivery;
+   notify(ctx: ExtensionContext | undefined, toast: DictationToast): void;
+   onModeChange?(mode: DictationMode, ctx: ExtensionContext | undefined): void;
+   onError(ctx: ExtensionContext | undefined, error: unknown): void;
+ };
+ 
+ type StopRecordingOptions = {
+-  submitAfterAppend?: boolean;
++  outcome?: DictationOutcome;
  };
  
 -const PROMPT_APPEND_FLUSH_DELAY_MS = 30;
@@ -1039,7 +1073,7 @@ diff -ruN --exclude=node_modules a/src/core/dictation-controller.ts b/src/core/d
  
  export const createDictationController = (options: DictationControllerOptions) => {
    let recording: RecordingHandle | undefined;
-@@ -46,6 +48,8 @@
+@@ -46,6 +61,8 @@
    let activeOperation: Promise<void> | undefined;
    let transcriptionController: AbortController | undefined;
    let processing = false;
@@ -1048,25 +1082,115 @@ diff -ruN --exclude=node_modules a/src/core/dictation-controller.ts b/src/core/d
    let cancelRequested = false;
    let mode: DictationMode = "idle";
    let disposed = false;
-@@ -116,9 +120,15 @@
-         if (cancelRequested || disposed) return;
+@@ -66,33 +83,31 @@
+     if (!disposed) options.notify(ctx ?? lastContext, toast);
+   };
+ 
+-  const appendPrompt = async (ctx: ExtensionContext, text: string) => {
+-    if (disposed || !text) return;
+-    await options.appendPrompt(ctx, text);
+-  };
+-
+-  const submitPrompt = async (ctx: ExtensionContext) => {
+-    if (disposed) return;
+-    await options.submitPrompt(ctx);
+-  };
+-
+-  const stopActiveRecording = async (ctx: ExtensionContext, active: RecordingHandle, config: PluginConfig, stopOptions: StopRecordingOptions) => {
++  const stopActiveRecording = async (
++    ctx: ExtensionContext,
++    active: RecordingHandle,
++    config: PluginConfig,
++    stopOptions: StopRecordingOptions,
++    delivery: Delivery,
++  ) => {
+     const provider = options.createProvider(config);
+     const controller = new AbortController();
+     transcriptionController = controller;
+     const timeout = setTimeout(() => controller.abort(), config.provider.timeoutSeconds * 1000);
+ 
+     try {
+-      notify(ctx, { title: "Pi Voice STT", message: options.strings.toast.stopping, variant: "info" });
++      // No "stopping" toast: the placeholder already says so, in the place the text will
++      // appear.
+       const audioPath = await active.stop();
+-      if (disposed) return;
++      if (disposed) return delivery.cancel();
+       const result = await provider.transcribe({ audioPath, language: config.provider.language, signal: controller.signal });
+-      if (cancelRequested || disposed) return;
++      if (cancelRequested || disposed) return delivery.cancel();
+ 
+       let text = applyReplacements(result.text, config.output.replacements);
+       const voice = parseVoiceCommand(text, config.commands);
+       if (voice.command === "clear") {
+         notify(ctx, { title: "Pi Voice STT", message: options.strings.toast.cleared, variant: "info" });
++        delivery.cancel();
+         return;
+       }
+       text = voice.text;
+@@ -113,23 +128,22 @@
+           clearTimeout(cleanupTimeout);
+           if (transcriptionController === cleanupController) transcriptionController = undefined;
+         }
+-        if (cancelRequested || disposed) return;
++        if (cancelRequested || disposed) return delivery.cancel();
        }
  
 -      await appendPrompt(ctx, formatTranscriptForPrompt(text, config.output));
 -      if (voice.command === "newline") await appendPrompt(ctx, "\n");
-       const shouldSubmit = stopOptions.submitAfterAppend || voice.command === "send";
+-      const shouldSubmit = stopOptions.submitAfterAppend || voice.command === "send";
+-      if (shouldSubmit) {
+-        await waitForPromptAppendFlush();
+-        await submitPrompt(ctx);
 +      const formatted = formatTranscriptForPrompt(text, config.output);
-+      if (!formatted && !shouldSubmit) {
-+        notify(ctx, { title: "Pi Voice STT", message: options.strings.toast.emptyTranscript, variant: "warning" });
++      if (!formatted.trim()) {
++        // Nothing was said. The placeholder has to go either way, or it sits in the
++        // editor forever waiting for a transcript that already arrived empty.
++        delivery.fail(options.strings.toast.emptyTranscript);
 +        return;
-+      }
+       }
+-      if (!cancelRequested) {
+-        notify(ctx, {
+-          title: "Pi Voice STT",
+-          message: shouldSubmit ? options.strings.toast.sent : options.strings.toast.inserted,
+-          variant: "success",
+-        });
+-      }
 +
-+      await appendPrompt(ctx, formatted);
-+      if (voice.command === "newline") await appendPrompt(ctx, "\n");
-       if (shouldSubmit) {
-         await waitForPromptAppendFlush();
-         await submitPrompt(ctx);
-@@ -173,15 +183,44 @@
++      await delivery.resolve(voice.command === "newline" ? `${formatted}\n` : formatted);
++    } catch (error) {
++      // The delivery is the single report: it puts the message where the transcript was
++      // going to appear. Rethrowing would add a toast saying the same thing again.
++      delivery.fail(error instanceof Error ? error.message : String(error));
+     } finally {
+       clearTimeout(timeout);
+       if (transcriptionController === controller) transcriptionController = undefined;
+@@ -149,6 +163,9 @@
+ 
+     processing = true;
+     setMode("processing", ctx);
++    // Claimed before any await, so the placeholder is on screen in the same frame the
++    // recording indicator disappears.
++    const delivery = options.beginDelivery(ctx, stopOptions.outcome ?? "insert");
+     const active = recording;
+     const activeConfig = recordingConfig;
+     recording = undefined;
+@@ -157,8 +174,12 @@
+     if (active.timeout) clearTimeout(active.timeout);
+ 
+     const operation = activeConfig
+-      ? stopActiveRecording(ctx, active, activeConfig, stopOptions)
+-      : Promise.reject(new Error("Recording config was not available."));
++      ? stopActiveRecording(ctx, active, activeConfig, stopOptions, delivery)
++      : (() => {
++          const error = new Error("Recording config was not available.");
++          delivery.fail(error.message);
++          return Promise.reject(error);
++        })();
+     activeOperation = operation;
+     try {
+       await operation;
+@@ -173,15 +194,44 @@
      }
    };
  
@@ -1111,7 +1235,7 @@ diff -ruN --exclude=node_modules a/src/core/dictation-controller.ts b/src/core/d
      if (recording && !processing) {
        cancelRequested = true;
        const active = recording;
-@@ -212,19 +251,26 @@
+@@ -212,37 +262,53 @@
    const startRecording = async (ctx: ExtensionContext) => {
      if (disposed) return;
      processing = true;
@@ -1142,13 +1266,15 @@ diff -ruN --exclude=node_modules a/src/core/dictation-controller.ts b/src/core/d
 -        void stopRecording(timeoutContext).catch((error) => options.onError(timeoutContext, error));
 -      }, config.capture.maxSeconds * 1000);
 +      armMaxDuration(started, config.capture.maxSeconds * 1000);
++      // No toast on start. The pulsing red cursor is the indicator, and a banner
++      // repeating the keys every time is the noise this replaced.
        setMode("recording", ctx);
-       notify(ctx, {
-         title: "Pi Voice STT",
-@@ -232,8 +278,19 @@
-         variant: "info",
-         duration: 5000,
-       });
+-      notify(ctx, {
+-        title: "Pi Voice STT",
+-        message: options.strings.toast.startRecording(options.keybind),
+-        variant: "info",
+-        duration: 5000,
+-      });
 +    } catch (error) {
 +      if (started) {
 +        if (recording === started) {
@@ -1165,7 +1291,20 @@ diff -ruN --exclude=node_modules a/src/core/dictation-controller.ts b/src/core/d
      }
    };
  
-@@ -250,18 +307,16 @@
+   const toggle = async (ctx: ExtensionContext) => {
+     rememberContext(ctx);
+-    if (recording || processing) {
+-      await stopRecording(ctx);
++    if (recording) {
++      await stopRecording(ctx, { outcome: "insert" });
+       return;
+     }
++    // A transcription still in flight owns its own placeholder, so it does not block a
++    // new recording the way it did when the editor was the only destination.
+     await startRecording(ctx);
+   };
+ 
+@@ -250,26 +316,24 @@
      disposed = true;
      transcriptionController?.abort();
      const operation = activeOperation;
@@ -1193,10 +1332,20 @@ diff -ruN --exclude=node_modules a/src/core/dictation-controller.ts b/src/core/d
      await operation?.catch(() => {});
      setMode("idle", lastContext);
    };
+ 
+   return {
+     toggle,
+-    stop: (ctx: ExtensionContext) => stopRecording(ctx),
+-    stopAndSubmit: (ctx: ExtensionContext) => stopRecording(ctx, { submitAfterAppend: true }),
++    stop: (ctx: ExtensionContext, outcome: DictationOutcome = "insert") => stopRecording(ctx, { outcome }),
++    stopAndSubmit: (ctx: ExtensionContext) => stopRecording(ctx, { outcome: "send" }),
+     cancel,
+     dispose,
+     getMode: () => mode,
 diff -ruN --exclude=node_modules a/src/core/keybind.ts b/src/core/keybind.ts
 --- a/src/core/keybind.ts	1969-12-31 18:00:00
-+++ b/src/core/keybind.ts	2026-07-30 14:32:56
-@@ -0,0 +1,57 @@
++++ b/src/core/keybind.ts	2026-07-30 15:10:26
+@@ -0,0 +1,77 @@
 +import { matchesKey, type KeyId } from "@earendil-works/pi-tui";
 +
 +/**
@@ -1239,10 +1388,26 @@ diff -ruN --exclude=node_modules a/src/core/keybind.ts b/src/core/keybind.ts
 + * `matchesKey` return false rather than throw, so a typo in the config costs that one
 + * binding and nothing else.
 + */
++/**
++ * A terminal negotiating the Kitty keyboard protocol (Ghostty, Kitty, WezTerm, iTerm2
++ * 3.5+) reports a composed character as its codepoint in a CSI-u sequence rather than as
++ * the character itself, so `π` arrives as `ESC [ 960 u`. Pi cannot parse that — it has no
++ * key id for a bare codepoint — so the literal comparison has to understand the form too.
++ */
++const CSI_U_CODEPOINT = /^\x1b\[(\d+)(?:;[\d:]+)?u$/;
++
++const literalMatches = (data: string, keybind: string): boolean => {
++	if (data === keybind) return true;
++	const csi = CSI_U_CODEPOINT.exec(data);
++	if (!csi) return false;
++	const codepoint = Number.parseInt(csi[1] ?? "", 10);
++	return Number.isFinite(codepoint) && String.fromCodePoint(codepoint) === keybind;
++};
++
 +export const matchesAnyKeybind = (data: string, keybinds: readonly string[]): boolean => {
 +	for (const keybind of keybinds) {
 +		if (keybind.length === 0) continue;
-+		if (data === keybind) return true;
++		if (literalMatches(data, keybind)) return true;
 +		try {
 +			if (matchesKey(data, keybind as KeyId)) return true;
 +		} catch {
@@ -1252,8 +1417,12 @@ diff -ruN --exclude=node_modules a/src/core/keybind.ts b/src/core/keybind.ts
 +	return false;
 +};
 +
-+/** How the binding is shown in the editor's right-hand label and in `/stt status`. */
-+export const describeKeybinds = (keybinds: readonly string[]): string => keybinds.join(" / ");
++/**
++ * How the binding is shown in the editor label and in `/stt status`. Only the first
++ * binding is shown: the others exist so the same physical chord works across terminal
++ * settings, and listing them all is noise.
++ */
++export const describeKeybinds = (keybinds: readonly string[]): string => keybinds[0] ?? "";
 diff -ruN --exclude=node_modules a/src/core/replacements.ts b/src/core/replacements.ts
 --- a/src/core/replacements.ts	1985-10-26 03:15:00
 +++ b/src/core/replacements.ts	2026-07-28 19:17:00
@@ -1329,23 +1498,26 @@ diff -ruN --exclude=node_modules a/src/core/voice-commands.ts b/src/core/voice-c
            return { command, text: stripped.slice(0, start).replace(TRAILING_PUNCTUATION, "") };
 diff -ruN --exclude=node_modules a/src/index.ts b/src/index.ts
 --- a/src/index.ts	1985-10-26 03:15:00
-+++ b/src/index.ts	2026-07-30 14:33:12
++++ b/src/index.ts	2026-07-30 15:23:40
 @@ -1,4 +1,5 @@
  import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 +import type { EditorComponent } from "@earendil-works/pi-tui";
  import { checkBridgeRecorderHealth } from "./audio/bridge-recorder";
  import { createRecorder } from "./audio/factory";
  import { loadConfig, readConfigFile } from "./config/load-config";
-@@ -10,7 +11,7 @@
+@@ -10,7 +11,10 @@
  import { assertProviderReady } from "./providers/readiness";
  import { createInputIndicator, createVoiceEditorFactory } from "./ui/input-indicator";
  import { resolveStrings } from "./i18n/strings";
 -import { formatError } from "./utils/text";
 +import { containsPasteMarker, formatError } from "./utils/text";
++import type { Delivery } from "./core/dictation-controller";
++import { placeholderText, replacePlaceholder } from "./ui/transcribing";
++import { createPendingStore } from "./ui/pending-message";
  
  const toastType = (variant: DictationToast["variant"]): "info" | "warning" | "error" => {
    if (variant === "error") return "error";
-@@ -34,6 +35,13 @@
+@@ -34,31 +38,141 @@
    const strings = resolveStrings(startup.locale);
    const inputIndicator = createInputIndicator(keybind, strings);
    let activeMode = startup.mode || DEFAULT_MODE;
@@ -1359,65 +1531,151 @@ diff -ruN --exclude=node_modules a/src/index.ts b/src/index.ts
  
    const getConfig = () => loadConfig({ configPath: startup.configPath, mode: activeMode });
  
-@@ -41,21 +49,52 @@
++  const pendingMessages = createPendingStore(() => inputIndicator.getTick());
++
++  /** Placeholders outstanding anywhere, so the spinner keeps turning while any remain. */
++  let openPlaceholders = 0;
++  const trackPlaceholder = (delta: number) => {
++    openPlaceholders = Math.max(0, openPlaceholders + delta);
++    inputIndicator.setPlaceholderCount(openPlaceholders);
++  };
++
++  /**
++   * Rewrite the editor's text. Prefers the editor's own raw text so paste markers
++   * survive, and falls back to the expanded text when a marker would be orphaned:
++   * setEditorText drops the paste map, and a marker with nothing to expand to loses the
++   * pasted content entirely.
++   */
++  const rewriteEditor = (ctx: ExtensionContext, rewrite: (text: string) => { text: string; replaced: boolean }): boolean => {
++    const raw = activeEditor?.getText();
++    if (raw !== undefined && !containsPasteMarker(raw)) {
++      const next = rewrite(raw);
++      if (next.replaced) ctx.ui.setEditorText(next.text);
++      return next.replaced;
++    }
++    const next = rewrite(ctx.ui.getEditorText());
++    if (next.replaced) ctx.ui.setEditorText(next.text);
++    return next.replaced;
++  };
++
++  /** The transcript is destined for the prompt: hold its place with a placeholder. */
++  const beginEditorDelivery = (ctx: ExtensionContext): Delivery => {
++    const marker = placeholderText();
++    if (activeEditor?.insertTextAtCursor) activeEditor.insertTextAtCursor(marker);
++    else ctx.ui.setEditorText(`${ctx.ui.getEditorText()}${marker}`);
++    trackPlaceholder(1);
++
++    let settled = false;
++    const finish = (replacement: string) => {
++      if (settled) return false;
++      settled = true;
++      trackPlaceholder(-1);
++      return rewriteEditor(ctx, (text) => replacePlaceholder(text, replacement));
++    };
++
++    return {
++      resolve: (text) => {
++        // A placeholder the user deleted while waiting means the transcript has nowhere
++        // to go; appending it to whatever they typed instead would be worse than losing it.
++        if (!finish(text)) {
++          notify(ctx, { title: "Pi Voice STT", message: strings.toast.inserted, variant: "info" });
++        }
++      },
++      fail: (message) => {
++        finish("");
++        notify(ctx, { title: "Pi Voice STT", message, variant: "error" });
++      },
++      cancel: () => {
++        finish("");
++      },
++    };
++  };
++
++  /**
++   * The user already committed to sending or queueing. A custom entry stands in for the
++   * message until the transcript exists — Pi never shows custom entries to the model, so
++   * nothing reaches it until the real message is sent below.
++   */
++  const beginMessageDelivery = (ctx: ExtensionContext, outcome: "send" | "queue"): Delivery => {
++    const id = pendingMessages.begin(ctx, outcome);
++    trackPlaceholder(1);
++    let settled = false;
++    const settle = () => {
++      if (settled) return false;
++      settled = true;
++      trackPlaceholder(-1);
++      return true;
++    };
++
++    return {
++      resolve: (text) => {
++        if (!settle()) return;
++        pendingMessages.resolve(ctx, id);
++        const prompt = text.trim();
++        if (!prompt) return;
++        if (outcome === "queue" || !ctx.isIdle()) pi.sendUserMessage(prompt, { deliverAs: "followUp" });
++        else pi.sendUserMessage(prompt);
++      },
++      fail: (message) => {
++        if (!settle()) return;
++        pendingMessages.fail(ctx, id, message);
++      },
++      cancel: () => {
++        if (!settle()) return;
++        pendingMessages.resolve(ctx, id);
++      },
++    };
++  };
++
+   const controller = createDictationController({
      keybind,
      strings,
      loadConfig: getConfig,
 -    createRecorder: (config) => createRecorder(config.capture),
+-    createProvider: (config) => createProvider(config.provider),
+-    createCleanup: (config) => createCleanup(config.cleanup),
+-    appendPrompt: async (ctx, text) => {
+-      const current = ctx.ui.getEditorText();
+-      ctx.ui.setEditorText(`${current}${text}`);
 +    createRecorder: (config) => {
 +      // A new dictation invalidates the previous insertion snapshot.
 +      insertedPrompt = undefined;
 +      insertedEditorText = undefined;
 +      return createRecorder(config.capture);
-+    },
-     createProvider: (config) => createProvider(config.provider),
-     createCleanup: (config) => createCleanup(config.cleanup),
-     appendPrompt: async (ctx, text) => {
--      const current = ctx.ui.getEditorText();
--      ctx.ui.setEditorText(`${current}${text}`);
-+      if (activeEditor?.insertTextAtCursor) activeEditor.insertTextAtCursor(text);
-+      else ctx.ui.setEditorText(`${ctx.ui.getEditorText()}${text}`);
-+      insertedPrompt = ctx.ui.getEditorText();
-+      insertedEditorText = activeEditor?.getText();
      },
-     submitPrompt: async (ctx) => {
+-    submitPrompt: async (ctx) => {
 -      const prompt = ctx.ui.getEditorText().trimEnd();
-+      const current = ctx.ui.getEditorText();
-+      const editorText = activeEditor?.getText();
-+      const snapshot = insertedPrompt;
-+      const editorSnapshot = insertedEditorText;
-+      insertedPrompt = undefined;
-+      insertedEditorText = undefined;
-+      const submitted = snapshot !== undefined && current.startsWith(snapshot) ? snapshot : current;
-+      const prompt = submitted.trimEnd();
-       if (!prompt) {
-         notify(ctx, { title: "Pi Voice STT", message: strings.toast.emptyTranscript, variant: "warning" });
-         return;
-       }
- 
+-      if (!prompt) {
+-        notify(ctx, { title: "Pi Voice STT", message: strings.toast.emptyTranscript, variant: "warning" });
+-        return;
+-      }
+-
 -      ctx.ui.setEditorText("");
-+      // setEditorText writes raw editor text, so the leftover is preferably cut
-+      // from the editor's own text rather than from the expanded text. It may
-+      // only be used when the two agree character for character: setEditorText
-+      // lands on the editor's setText, which drops its paste map, so a raw
-+      // leftover that still holds a paste marker would be left with nothing to
-+      // expand to and its content would be gone. Writing the expanded leftover
-+      // instead is verbose but loses nothing, and an exact comparison decides
-+      // that without depending on how the editor words its markers.
-+      const expandedRemainder = current.slice(submitted.length);
-+      const rawRemainder = editorText !== undefined && editorSnapshot !== undefined && editorText.startsWith(editorSnapshot)
-+        ? editorText.slice(editorSnapshot.length)
-+        : undefined;
-+      const remainder = submitted === current
-+        ? ""
-+        : rawRemainder === expandedRemainder && !containsPasteMarker(expandedRemainder)
-+          ? rawRemainder
-+          : expandedRemainder;
-+      ctx.ui.setEditorText(remainder);
-       if (ctx.isIdle()) pi.sendUserMessage(prompt);
-       else pi.sendUserMessage(prompt, { deliverAs: "followUp" });
+-      if (ctx.isIdle()) pi.sendUserMessage(prompt);
+-      else pi.sendUserMessage(prompt, { deliverAs: "followUp" });
++    createProvider: (config) => {
++      // Test seam. PI_STT_FAKE_TRANSCRIPT replaces the provider with a fixed answer so
++      // the placeholder lifecycle can be driven end to end without a microphone or an API
++      // call; PI_STT_FAKE_FAIL makes it fail instead. Both are ignored unless set, and
++      // neither can widen what the real provider is allowed to do.
++      const fake = process.env.PI_STT_FAKE_TRANSCRIPT;
++      const fail = process.env.PI_STT_FAKE_FAIL;
++      if (fake === undefined && fail === undefined) return createProvider(config.provider);
++      const delayMs = Number.parseInt(process.env.PI_STT_FAKE_DELAY_MS ?? "", 10);
++      return {
++        transcribe: async () => {
++          await new Promise((resolve) => setTimeout(resolve, Number.isFinite(delayMs) ? delayMs : 2000));
++          if (fail !== undefined) throw new Error(fail || "fake transcription failure");
++          return { text: fake ?? "" };
++        },
++      };
      },
-@@ -120,13 +159,18 @@
++    createCleanup: (config) => createCleanup(config.cleanup),
++    beginDelivery: (ctx, outcome) => (outcome === "insert" ? beginEditorDelivery(ctx) : beginMessageDelivery(ctx, outcome)),
+     notify,
+     onModeChange: (mode) => inputIndicator.setMode(mode),
+     onError: reportError,
+@@ -120,13 +234,18 @@
          try {
            const config = await getConfig();
            assertProviderReady(config.provider);
@@ -1437,7 +1695,7 @@ diff -ruN --exclude=node_modules a/src/index.ts b/src/index.ts
          } catch (error) {
            reportError(ctx, error);
          }
-@@ -139,7 +183,17 @@
+@@ -139,7 +258,17 @@
        }
  
        const configPath = startup.configPath || "defaults only (set PI_STT_CONFIG or ~/.pi/agent/stt.json)";
@@ -1456,7 +1714,7 @@ diff -ruN --exclude=node_modules a/src/index.ts b/src/index.ts
      },
    });
  
-@@ -148,11 +202,14 @@
+@@ -148,11 +277,15 @@
  
      const previousEditor = ctx.ui.getEditorComponent();
      ctx.ui.setEditorComponent(createVoiceEditorFactory(previousEditor, {
@@ -1464,6 +1722,7 @@ diff -ruN --exclude=node_modules a/src/index.ts b/src/index.ts
 +      keybinds: startup.keybinds,
        ctx,
        getMode: () => controller.getMode(),
++      getTick: () => inputIndicator.getTick(),
        renderLabel: (theme) => inputIndicator.renderLabel(theme),
        attachTui: (tui) => inputIndicator.attach(tui),
 +      attachEditor: (editor) => {
@@ -1472,8 +1731,26 @@ diff -ruN --exclude=node_modules a/src/index.ts b/src/index.ts
        onToggle: (handlerCtx) => {
          void (async () => {
            // Idle -> start recording. While recording/processing -> stop. The
-@@ -182,5 +239,6 @@
+@@ -176,11 +309,24 @@
+       onSend: (handlerCtx) => {
+         void controller.stopAndSubmit(handlerCtx).catch((error: unknown) => reportError(handlerCtx, error));
+       },
++      onQueue: (handlerCtx) => {
++        void controller.stop(handlerCtx, "queue").catch((error: unknown) => reportError(handlerCtx, error));
++      },
++      onInsertThen: (handlerCtx, data) => {
++        // stop() claims the placeholder synchronously, before its first await, so the
++        // keystroke can be replayed in the same tick — awaiting the returned promise
++        // would hold it until the provider answered, and Option+Enter would land its
++        // newline seconds later.
++        void controller.stop(handlerCtx, "insert").catch((error: unknown) => reportError(handlerCtx, error));
++        activeEditor?.handleInput(data);
++      },
+     }));
+   });
+ 
    pi.on("session_shutdown", async () => {
++    pendingMessages.dispose();
      await controller.dispose();
      inputIndicator.dispose();
 +    activeEditor = undefined;
@@ -1665,8 +1942,14 @@ diff -ruN --exclude=node_modules a/src/secrets/resolve-api-key.ts b/src/secrets/
  };
 diff -ruN --exclude=node_modules a/src/ui/input-indicator.ts b/src/ui/input-indicator.ts
 --- a/src/ui/input-indicator.ts	1985-10-26 03:15:00
-+++ b/src/ui/input-indicator.ts	2026-07-30 14:33:27
-@@ -5,14 +5,14 @@
++++ b/src/ui/input-indicator.ts	2026-07-30 15:18:08
+@@ -1,26 +1,41 @@
+ import { CustomEditor, type AppKeybinding, type ExtensionContext, type KeybindingsManager, type Theme } from "@earendil-works/pi-coding-agent";
+ import {
++  CURSOR_MARKER,
+   matchesKey,
++  sliceByColumn,
+   truncateToWidth,
    visibleWidth,
    type EditorComponent,
    type EditorTheme,
@@ -1676,14 +1959,110 @@ diff -ruN --exclude=node_modules a/src/ui/input-indicator.ts b/src/ui/input-indi
  import type { DictationMode } from "../core/dictation-controller";
 +import { matchesAnyKeybind } from "../core/keybind";
  import type { Strings } from "../i18n/strings";
++import { animateRenderedLines, frameAt } from "./transcribing";
  
  type VoiceEditorOptions = {
 -  keybind: string;
 +  keybinds: string[];
    ctx: ExtensionContext;
++  keybindings: KeybindingsManager;
    getMode(): DictationMode;
++  getTick(): number;
    renderLabel(theme: Theme): string;
-@@ -129,7 +129,7 @@
+   onToggle(ctx: ExtensionContext): void;
+   onCancel(ctx: ExtensionContext): void;
+   onSend(ctx: ExtensionContext): void;
++  onQueue(ctx: ExtensionContext): void;
++  /** Stop recording, leave the transcript in the editor, then apply this keystroke. */
++  onInsertThen(ctx: ExtensionContext, data: string): void;
+ };
+ 
++/**
++ * Ticks per blink phase. The dot spends this many animation frames lit and the same
++ * number dim, so at the 120ms tick it pulses about once a second — calmer than the
++ * two-frame flicker it replaces.
++ */
++const BLINK_TICKS = 4;
++
+ const injectRightLabel = (line: string, width: number, label: string): string => {
+   const labelWidth = visibleWidth(label);
+   if (width <= 0) return "";
+@@ -101,49 +116,92 @@
+     (this.base as EditorComponent & { focused?: boolean }).focused = value;
+   }
+ 
+-  // While recording/processing, tint the whole prompt border so the state is
+-  // impossible to miss (red = recording, orange = transcribing). Idle restores
+-  // whatever border color pi set on the wrapper.
+-  private applyModeBorder(): void {
+-    const mode = this.options.getMode();
++  /**
++   * The recording indicator takes the cursor's place rather than adding another element
++   * to the frame: while recording, the point where typing would land pulses red.
++   *
++   * The dot *overwrites* the cell the cursor sits on instead of being inserted before it.
++   * CURSOR_MARKER is zero width and the editor pads every row to exactly the viewport
++   * width, so inserting a visible character there pushes the row one column over and Pi
++   * kills the session for overflowing the terminal.
++   */
++  private replaceCursor(lines: string[], width: number): string[] {
++    if (this.options.getMode() !== "recording") return lines;
+     const theme = this.options.ctx.ui.theme;
+-    if (mode === "recording") this.base.borderColor = (str: string) => theme.fg("error", str);
+-    else if (mode === "processing") this.base.borderColor = (str: string) => theme.fg("warning", str);
+-    else if (mode === "polishing") this.base.borderColor = (str: string) => theme.fg("accent", str);
+-    else if (this.borderColor) this.base.borderColor = this.borderColor;
+-    else delete (this.base as EditorComponent & { borderColor?: (str: string) => string }).borderColor;
++    const lit = Math.floor(this.options.getTick() / BLINK_TICKS) % 2 === 0;
++    const dot = theme.fg(lit ? "error" : "dim", "●");
++    let done = false;
++    return lines.map((line) => {
++      if (done) return line;
++      const marker = line.indexOf(CURSOR_MARKER);
++      if (marker === -1) return line;
++      done = true;
++      const before = line.slice(0, marker);
++      const after = line.slice(marker + CURSOR_MARKER.length);
++      const cursorColumn = visibleWidth(before);
++      // Drop the one cell the dot now occupies, keeping the styling that follows it.
++      const rest = sliceByColumn(after, 1, Math.max(0, width - cursorColumn - 1));
++      const composed = `${before}${dot}${rest}`;
++      return visibleWidth(composed) > width ? truncateToWidth(composed, width, "") : composed;
++    });
+   }
+ 
+   render(width: number): string[] {
+     this.syncBase();
+-    this.applyModeBorder();
+-    const lines = this.base.render(width);
++    const lines = this.replaceCursor(
++      animateRenderedLines(this.base.render(width), frameAt(this.options.getTick()), (text) =>
++        this.options.ctx.ui.theme.fg("accent", text),
++      ),
++      width,
++    );
+     if (lines.length === 0) return lines;
+ 
+     const label = this.options.renderLabel(this.options.ctx.ui.theme);
+-    lines[0] = injectRightLabel(lines[0] ?? "", width, label);
++    if (label.length > 0) lines[0] = injectRightLabel(lines[0] ?? "", width, label);
+     return lines;
+   }
+ 
++  /**
++   * While recording, the next keystroke decides where the transcript goes:
++   *
++   *   the voice key  keep it in the editor
++   *   enter          send it
++   *   the queue key  queue it as a follow-up
++   *   escape         throw the recording away
++   *   anything else  keep it in the editor, then apply the key
++   *
++   * The last rule is what makes recording feel like typing: pressing Option+Enter
++   * mid-recording leaves the placeholder behind and puts the cursor on a fresh line,
++   * rather than being swallowed or ending the recording with no destination.
++   */
+   handleInput(data: string): void {
      this.syncBase();
      const mode = this.options.getMode();
  
@@ -1692,7 +2071,37 @@ diff -ruN --exclude=node_modules a/src/ui/input-indicator.ts b/src/ui/input-indi
        this.options.onToggle(this.options.ctx);
        return;
      }
-@@ -164,8 +164,15 @@
+ 
+-    if (mode !== "idle" && matchesKey(data, "escape")) {
+-      this.options.onCancel(this.options.ctx);
++    if (mode === "recording") {
++      if (matchesKey(data, "escape")) {
++        this.options.onCancel(this.options.ctx);
++        return;
++      }
++      if (matchesKey(data, "enter")) {
++        this.options.onSend(this.options.ctx);
++        return;
++      }
++      if (this.options.keybindings.matches(data, "app.message.followUp" as AppKeybinding)) {
++        this.options.onQueue(this.options.ctx);
++        return;
++      }
++      this.options.onInsertThen(this.options.ctx, data);
+       return;
+     }
+ 
+-    if (mode === "recording" && matchesKey(data, "enter")) {
+-      this.options.onSend(this.options.ctx);
+-      return;
+-    }
+-
++    // Transcribing is not a modal state: the placeholder holds the spot and everything
++    // typed around it behaves normally.
+     this.base.handleInput(data);
+   }
+ 
+@@ -164,8 +222,15 @@
      this.base.addToHistory?.(text);
    }
  
@@ -1709,22 +2118,303 @@ diff -ruN --exclude=node_modules a/src/ui/input-indicator.ts b/src/ui/input-indi
    }
  
    getExpandedText(): string {
-@@ -259,11 +266,13 @@
+@@ -189,12 +254,11 @@
+   }
+ }
+ 
+-const PROCESSING_FRAMES = ["•  ", " • ", "  •", " • "];
+-
+ export const createInputIndicator = (keybind: string, strings: Strings) => {
+   let mode: DictationMode = "idle";
+   let tui: TUI | undefined;
+   let tick = 0;
++  let placeholders = 0;
+   let timer: ReturnType<typeof setInterval> | undefined;
+ 
+   const requestRender = () => tui?.requestRender();
+@@ -205,8 +269,10 @@
+     timer = undefined;
+   };
+ 
++  const animating = () => mode !== "idle" || placeholders > 0;
++
+   const startAnimation = () => {
+-    if (timer || mode === "idle") return;
++    if (timer || !animating()) return;
+     timer = setInterval(() => {
+       tick += 1;
+       requestRender();
+@@ -214,8 +280,8 @@
+   };
+ 
+   const syncAnimation = () => {
+-    if (mode === "idle") stopAnimation();
+-    else startAnimation();
++    if (animating()) startAnimation();
++    else stopAnimation();
+   };
+ 
+   return {
+@@ -230,23 +296,20 @@
+       syncAnimation();
+       requestRender();
+     },
++    /** Spinners keep turning while transcripts are outstanding, in the editor or above it. */
++    setPlaceholderCount(count: number) {
++      placeholders = Math.max(0, count);
++      syncAnimation();
++      requestRender();
++    },
++    getTick: () => tick,
++    /**
++     * Only the idle affordance is a label. Recording is the pulsing cursor and
++     * transcribing is the placeholder, both of which sit where the text is — so adding a
++     * banner for either would just be a second thing to read.
++     */
+     renderLabel(theme: Theme): string {
+-      if (mode === "recording") {
+-        // Clear on/off blink in red so the recording state is obvious.
+-        const dot = tick % 2 === 0 ? "●" : "○";
+-        return `${theme.fg("error", dot)} ${theme.fg("error", strings.indicator.recording)} ${theme.fg("dim", strings.indicator.recordingHint)}`;
+-      }
+-
+-      if (mode === "processing") {
+-        const frame = PROCESSING_FRAMES[tick % PROCESSING_FRAMES.length] ?? "…";
+-        return `${theme.fg("warning", frame)} ${theme.fg("warning", strings.indicator.transcribing)} ${theme.fg("dim", strings.indicator.transcribingHint)}`;
+-      }
+-
+-      if (mode === "polishing") {
+-        const frame = PROCESSING_FRAMES[tick % PROCESSING_FRAMES.length] ?? "…";
+-        return `${theme.fg("accent", frame)} ${theme.fg("accent", strings.indicator.polishing)} ${theme.fg("dim", strings.indicator.polishingHint)}`;
+-      }
+-
++      if (mode !== "idle") return "";
+       return `${theme.fg("dim", strings.indicator.idle)} ${theme.fg("accent", keybind)}`;
+     },
+     dispose() {
+@@ -259,11 +322,15 @@
  
  export const createVoiceEditorFactory = (
    previousFactory: ((tui: TUI, theme: EditorTheme, keybindings: KeybindingsManager) => EditorComponent) | undefined,
 -  options: VoiceEditorOptions & { attachTui(tui: TUI): void },
-+  options: VoiceEditorOptions & { attachTui(tui: TUI): void; attachEditor?(editor: EditorComponent): void },
++  // The keybindings manager is handed to the factory by Pi, not by the caller, so the
++  // queue key follows whatever the user configured for app.message.followUp.
++  options: Omit<VoiceEditorOptions, "keybindings"> & { attachTui(tui: TUI): void; attachEditor?(editor: EditorComponent): void },
  ) => {
    return (tui: TUI, theme: EditorTheme, keybindings: KeybindingsManager): EditorComponent => {
      options.attachTui(tui);
      const base = previousFactory?.(tui, theme, keybindings) ?? new CustomEditor(tui, theme, keybindings);
 -    return new VoiceEditorWrapper(base, options);
-+    const editor = new VoiceEditorWrapper(base, options);
++    const editor = new VoiceEditorWrapper(base, { ...options, keybindings });
 +    options.attachEditor?.(editor);
 +    return editor;
    };
  };
+diff -ruN --exclude=node_modules a/src/ui/pending-message.ts b/src/ui/pending-message.ts
+--- a/src/ui/pending-message.ts	1969-12-31 18:00:00
++++ b/src/ui/pending-message.ts	2026-07-30 15:20:31
+@@ -0,0 +1,129 @@
++/**
++ * A message the user has committed to sending, whose text does not exist yet.
++ *
++ * Pressing Enter while recording has to look like sending a message immediately, but the
++ * model must not receive anything until the transcript arrives. So the spot just above
++ * the composer — where Pi shows its own queued-message hints — holds a `[⠏ transcribing]`
++ * line until the provider answers. Then the line disappears and the real message is sent
++ * for the first time. If transcription fails, the line becomes an error and nothing is
++ * ever sent.
++ *
++ * This is a widget rather than a transcript entry on purpose: an entry is rendered once
++ * and committed to the scrollback, so it can neither animate nor be replaced afterwards.
++ * A widget is re-rendered every frame, which is what makes the spinner turn and the line
++ * vanish at the right moment.
++ */
++
++import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
++import { type Component, Text, truncateToWidth } from "@earendil-works/pi-tui";
++
++import { frameAt, placeholderText } from "./transcribing";
++
++const WIDGET_KEY = "voice-pending";
++/** How long a failure stays on screen before the line clears itself. */
++const ERROR_LINGER_MS = 8000;
++
++export type PendingIntent = "send" | "queue";
++
++type PendingItem =
++	| { id: number; status: "pending"; intent: PendingIntent }
++	| { id: number; status: "failed"; message: string };
++
++export type PendingStore = {
++	begin(ctx: ExtensionContext, intent: PendingIntent): number;
++	resolve(ctx: ExtensionContext, id: number): void;
++	fail(ctx: ExtensionContext, id: number, message: string): void;
++	count(): number;
++	dispose(): void;
++};
++
++export const createPendingStore = (getTick: () => number): PendingStore => {
++	const items: PendingItem[] = [];
++	const timers = new Map<number, ReturnType<typeof setTimeout>>();
++	let nextId = 1;
++	let mounted = false;
++
++	const remove = (ctx: ExtensionContext, id: number) => {
++		const index = items.findIndex((item) => item.id === id);
++		if (index !== -1) items.splice(index, 1);
++		const timer = timers.get(id);
++		if (timer) {
++			clearTimeout(timer);
++			timers.delete(id);
++		}
++		sync(ctx);
++	};
++
++	const sync = (ctx: ExtensionContext) => {
++		if (!ctx.hasUI) return;
++		try {
++			if (items.length === 0) {
++				if (mounted) ctx.ui.setWidget(WIDGET_KEY, undefined);
++				mounted = false;
++				return;
++			}
++			if (mounted) return;
++			mounted = true;
++			ctx.ui.setWidget(WIDGET_KEY, (_tui, theme) => new PendingWidget(items, getTick, theme));
++		} catch {
++			// The widget is an indicator; failing to mount one must not lose a transcript.
++		}
++	};
++
++	return {
++		begin(ctx, intent) {
++			const id = nextId++;
++			items.push({ id, status: "pending", intent });
++			sync(ctx);
++			return id;
++		},
++		resolve(ctx, id) {
++			remove(ctx, id);
++		},
++		fail(ctx, id, message) {
++			const index = items.findIndex((item) => item.id === id);
++			if (index === -1) return;
++			items[index] = { id, status: "failed", message };
++			timers.set(
++				id,
++				setTimeout(() => remove(ctx, id), ERROR_LINGER_MS),
++			);
++			sync(ctx);
++		},
++		count() {
++			return items.filter((item) => item.status === "pending").length;
++		},
++		dispose() {
++			for (const timer of timers.values()) clearTimeout(timer);
++			timers.clear();
++			items.length = 0;
++			mounted = false;
++		},
++	};
++};
++
++class PendingWidget implements Component {
++	constructor(
++		private readonly items: readonly PendingItem[],
++		private readonly getTick: () => number,
++		private readonly theme: { fg(color: string, text: string): string },
++	) {}
++
++	render(width: number): string[] {
++		return this.items.map((item) => {
++			const text =
++				item.status === "failed"
++					? this.theme.fg("error", `voice transcription failed: ${item.message}`)
++					: this.theme.fg(
++							"dim",
++							placeholderText(item.intent === "queue" ? "transcribing, will queue" : "transcribing").replace(
++								"⠿",
++								frameAt(this.getTick()),
++							),
++						);
++			return truncateToWidth(text, width, "");
++		});
++	}
++
++	invalidate(): void {}
++}
+diff -ruN --exclude=node_modules a/src/ui/transcribing.ts b/src/ui/transcribing.ts
+--- a/src/ui/transcribing.ts	1969-12-31 18:00:00
++++ b/src/ui/transcribing.ts	2026-07-30 15:10:53
+@@ -0,0 +1,68 @@
++/**
++ * The `[⠏ transcribing]` placeholder.
++ *
++ * Transcription is no longer something the user waits on. The moment recording stops, a
++ * placeholder takes the transcript's place — in the editor when the transcript is meant
++ * to land there, or as a pending message in the transcript when it is being sent or
++ * queued — and the user carries on typing. When the provider answers, the placeholder is
++ * replaced by the real text; when it fails, by an error.
++ *
++ * The spinner animates without touching the editor's text. The placeholder holds a fixed
++ * sentinel character and the frame is substituted in the *rendered* lines, so the editor's
++ * own text and cursor never move under the user's hands, and a placeholder is still an
++ * ordinary run of characters that can be spliced out by index.
++ */
++
++/** Braille spinner, the same set Pi uses for its own working indicator. */
++export const SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"] as const;
++
++/** Stands in for the animated frame inside the placeholder's stored text. */
++export const SPINNER_SENTINEL = "⠿";
++
++export const PLACEHOLDER_PREFIX = `[${SPINNER_SENTINEL} `;
++export const PLACEHOLDER_SUFFIX = "]";
++
++/** The literal text inserted into the editor, or shown as a pending message. */
++export const placeholderText = (label = "transcribing"): string =>
++	`${PLACEHOLDER_PREFIX}${label}${PLACEHOLDER_SUFFIX}`;
++
++/**
++ * Swap the sentinel for the current frame in already-rendered lines. Braille cells are
++ * single width, so the substitution cannot change the layout the editor computed — which
++ * is the whole reason the sentinel is a character rather than a wider marker.
++ */
++export const animateRenderedLines = (lines: string[], frame: string, paint: (text: string) => string): string[] => {
++	if (frame === SPINNER_SENTINEL) return lines;
++	let touched = false;
++	const out = lines.map((line) => {
++		if (!line.includes(SPINNER_SENTINEL)) return line;
++		touched = true;
++		return line.split(SPINNER_SENTINEL).join(paint(frame));
++	});
++	return touched ? out : lines;
++};
++
++export const frameAt = (tick: number): string => SPINNER_FRAMES[tick % SPINNER_FRAMES.length] ?? SPINNER_FRAMES[0];
++
++/**
++ * Replace the first placeholder in `text` with `replacement`.
++ *
++ * Returns the original string when there is no placeholder left — the user may have
++ * deleted it while the provider was working, and in that case the transcript has nowhere
++ * to go and must not be appended blindly to whatever they typed instead.
++ */
++export const replacePlaceholder = (
++	text: string,
++	replacement: string,
++): { text: string; replaced: boolean } => {
++	const start = text.indexOf(PLACEHOLDER_PREFIX);
++	if (start === -1) return { text, replaced: false };
++	const end = text.indexOf(PLACEHOLDER_SUFFIX, start + PLACEHOLDER_PREFIX.length);
++	if (end === -1) return { text, replaced: false };
++	return {
++		text: text.slice(0, start) + replacement + text.slice(end + PLACEHOLDER_SUFFIX.length),
++		replaced: true,
++	};
++};
++
++export const hasPlaceholder = (text: string): boolean => replacePlaceholder(text, "").replaced;
 diff -ruN --exclude=node_modules a/src/utils/executable.ts b/src/utils/executable.ts
 --- a/src/utils/executable.ts	1969-12-31 18:00:00
 +++ b/src/utils/executable.ts	2026-07-28 18:47:47

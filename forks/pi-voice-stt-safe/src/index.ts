@@ -12,6 +12,9 @@ import { assertProviderReady } from "./providers/readiness";
 import { createInputIndicator, createVoiceEditorFactory } from "./ui/input-indicator";
 import { resolveStrings } from "./i18n/strings";
 import { containsPasteMarker, formatError } from "./utils/text";
+import type { Delivery } from "./core/dictation-controller";
+import { placeholderText, replacePlaceholder } from "./ui/transcribing";
+import { createPendingStore } from "./ui/pending-message";
 
 const toastType = (variant: DictationToast["variant"]): "info" | "warning" | "error" => {
   if (variant === "error") return "error";
@@ -45,6 +48,102 @@ export default function piVoiceSttExtension(pi: ExtensionAPI) {
 
   const getConfig = () => loadConfig({ configPath: startup.configPath, mode: activeMode });
 
+  const pendingMessages = createPendingStore(() => inputIndicator.getTick());
+
+  /** Placeholders outstanding anywhere, so the spinner keeps turning while any remain. */
+  let openPlaceholders = 0;
+  const trackPlaceholder = (delta: number) => {
+    openPlaceholders = Math.max(0, openPlaceholders + delta);
+    inputIndicator.setPlaceholderCount(openPlaceholders);
+  };
+
+  /**
+   * Rewrite the editor's text. Prefers the editor's own raw text so paste markers
+   * survive, and falls back to the expanded text when a marker would be orphaned:
+   * setEditorText drops the paste map, and a marker with nothing to expand to loses the
+   * pasted content entirely.
+   */
+  const rewriteEditor = (ctx: ExtensionContext, rewrite: (text: string) => { text: string; replaced: boolean }): boolean => {
+    const raw = activeEditor?.getText();
+    if (raw !== undefined && !containsPasteMarker(raw)) {
+      const next = rewrite(raw);
+      if (next.replaced) ctx.ui.setEditorText(next.text);
+      return next.replaced;
+    }
+    const next = rewrite(ctx.ui.getEditorText());
+    if (next.replaced) ctx.ui.setEditorText(next.text);
+    return next.replaced;
+  };
+
+  /** The transcript is destined for the prompt: hold its place with a placeholder. */
+  const beginEditorDelivery = (ctx: ExtensionContext): Delivery => {
+    const marker = placeholderText();
+    if (activeEditor?.insertTextAtCursor) activeEditor.insertTextAtCursor(marker);
+    else ctx.ui.setEditorText(`${ctx.ui.getEditorText()}${marker}`);
+    trackPlaceholder(1);
+
+    let settled = false;
+    const finish = (replacement: string) => {
+      if (settled) return false;
+      settled = true;
+      trackPlaceholder(-1);
+      return rewriteEditor(ctx, (text) => replacePlaceholder(text, replacement));
+    };
+
+    return {
+      resolve: (text) => {
+        // A placeholder the user deleted while waiting means the transcript has nowhere
+        // to go; appending it to whatever they typed instead would be worse than losing it.
+        if (!finish(text)) {
+          notify(ctx, { title: "Pi Voice STT", message: strings.toast.inserted, variant: "info" });
+        }
+      },
+      fail: (message) => {
+        finish("");
+        notify(ctx, { title: "Pi Voice STT", message, variant: "error" });
+      },
+      cancel: () => {
+        finish("");
+      },
+    };
+  };
+
+  /**
+   * The user already committed to sending or queueing. A custom entry stands in for the
+   * message until the transcript exists — Pi never shows custom entries to the model, so
+   * nothing reaches it until the real message is sent below.
+   */
+  const beginMessageDelivery = (ctx: ExtensionContext, outcome: "send" | "queue"): Delivery => {
+    const id = pendingMessages.begin(ctx, outcome);
+    trackPlaceholder(1);
+    let settled = false;
+    const settle = () => {
+      if (settled) return false;
+      settled = true;
+      trackPlaceholder(-1);
+      return true;
+    };
+
+    return {
+      resolve: (text) => {
+        if (!settle()) return;
+        pendingMessages.resolve(ctx, id);
+        const prompt = text.trim();
+        if (!prompt) return;
+        if (outcome === "queue" || !ctx.isIdle()) pi.sendUserMessage(prompt, { deliverAs: "followUp" });
+        else pi.sendUserMessage(prompt);
+      },
+      fail: (message) => {
+        if (!settle()) return;
+        pendingMessages.fail(ctx, id, message);
+      },
+      cancel: () => {
+        if (!settle()) return;
+        pendingMessages.resolve(ctx, id);
+      },
+    };
+  };
+
   const controller = createDictationController({
     keybind,
     strings,
@@ -55,49 +154,25 @@ export default function piVoiceSttExtension(pi: ExtensionAPI) {
       insertedEditorText = undefined;
       return createRecorder(config.capture);
     },
-    createProvider: (config) => createProvider(config.provider),
+    createProvider: (config) => {
+      // Test seam. PI_STT_FAKE_TRANSCRIPT replaces the provider with a fixed answer so
+      // the placeholder lifecycle can be driven end to end without a microphone or an API
+      // call; PI_STT_FAKE_FAIL makes it fail instead. Both are ignored unless set, and
+      // neither can widen what the real provider is allowed to do.
+      const fake = process.env.PI_STT_FAKE_TRANSCRIPT;
+      const fail = process.env.PI_STT_FAKE_FAIL;
+      if (fake === undefined && fail === undefined) return createProvider(config.provider);
+      const delayMs = Number.parseInt(process.env.PI_STT_FAKE_DELAY_MS ?? "", 10);
+      return {
+        transcribe: async () => {
+          await new Promise((resolve) => setTimeout(resolve, Number.isFinite(delayMs) ? delayMs : 2000));
+          if (fail !== undefined) throw new Error(fail || "fake transcription failure");
+          return { text: fake ?? "" };
+        },
+      };
+    },
     createCleanup: (config) => createCleanup(config.cleanup),
-    appendPrompt: async (ctx, text) => {
-      if (activeEditor?.insertTextAtCursor) activeEditor.insertTextAtCursor(text);
-      else ctx.ui.setEditorText(`${ctx.ui.getEditorText()}${text}`);
-      insertedPrompt = ctx.ui.getEditorText();
-      insertedEditorText = activeEditor?.getText();
-    },
-    submitPrompt: async (ctx) => {
-      const current = ctx.ui.getEditorText();
-      const editorText = activeEditor?.getText();
-      const snapshot = insertedPrompt;
-      const editorSnapshot = insertedEditorText;
-      insertedPrompt = undefined;
-      insertedEditorText = undefined;
-      const submitted = snapshot !== undefined && current.startsWith(snapshot) ? snapshot : current;
-      const prompt = submitted.trimEnd();
-      if (!prompt) {
-        notify(ctx, { title: "Pi Voice STT", message: strings.toast.emptyTranscript, variant: "warning" });
-        return;
-      }
-
-      // setEditorText writes raw editor text, so the leftover is preferably cut
-      // from the editor's own text rather than from the expanded text. It may
-      // only be used when the two agree character for character: setEditorText
-      // lands on the editor's setText, which drops its paste map, so a raw
-      // leftover that still holds a paste marker would be left with nothing to
-      // expand to and its content would be gone. Writing the expanded leftover
-      // instead is verbose but loses nothing, and an exact comparison decides
-      // that without depending on how the editor words its markers.
-      const expandedRemainder = current.slice(submitted.length);
-      const rawRemainder = editorText !== undefined && editorSnapshot !== undefined && editorText.startsWith(editorSnapshot)
-        ? editorText.slice(editorSnapshot.length)
-        : undefined;
-      const remainder = submitted === current
-        ? ""
-        : rawRemainder === expandedRemainder && !containsPasteMarker(expandedRemainder)
-          ? rawRemainder
-          : expandedRemainder;
-      ctx.ui.setEditorText(remainder);
-      if (ctx.isIdle()) pi.sendUserMessage(prompt);
-      else pi.sendUserMessage(prompt, { deliverAs: "followUp" });
-    },
+    beginDelivery: (ctx, outcome) => (outcome === "insert" ? beginEditorDelivery(ctx) : beginMessageDelivery(ctx, outcome)),
     notify,
     onModeChange: (mode) => inputIndicator.setMode(mode),
     onError: reportError,
@@ -205,6 +280,7 @@ export default function piVoiceSttExtension(pi: ExtensionAPI) {
       keybinds: startup.keybinds,
       ctx,
       getMode: () => controller.getMode(),
+      getTick: () => inputIndicator.getTick(),
       renderLabel: (theme) => inputIndicator.renderLabel(theme),
       attachTui: (tui) => inputIndicator.attach(tui),
       attachEditor: (editor) => {
@@ -233,10 +309,22 @@ export default function piVoiceSttExtension(pi: ExtensionAPI) {
       onSend: (handlerCtx) => {
         void controller.stopAndSubmit(handlerCtx).catch((error: unknown) => reportError(handlerCtx, error));
       },
+      onQueue: (handlerCtx) => {
+        void controller.stop(handlerCtx, "queue").catch((error: unknown) => reportError(handlerCtx, error));
+      },
+      onInsertThen: (handlerCtx, data) => {
+        // stop() claims the placeholder synchronously, before its first await, so the
+        // keystroke can be replayed in the same tick — awaiting the returned promise
+        // would hold it until the provider answered, and Option+Enter would land its
+        // newline seconds later.
+        void controller.stop(handlerCtx, "insert").catch((error: unknown) => reportError(handlerCtx, error));
+        activeEditor?.handleInput(data);
+      },
     }));
   });
 
   pi.on("session_shutdown", async () => {
+    pendingMessages.dispose();
     await controller.dispose();
     inputIndicator.dispose();
     activeEditor = undefined;

@@ -210,8 +210,25 @@ Voice dictation is configured for OpenAI:
 }
 ```
 
-Use **Option+P** on macOS or **Alt+P** on Linux to start and stop recording. Press Enter
-while recording to transcribe and submit, or Escape to cancel.
+Use **Option+P** on macOS or **Alt+P** on Linux to start recording. The text cursor
+becomes a slowly pulsing red dot — the input box itself does not change colour, and
+nothing is announced in a banner.
+
+What you press next decides where the transcript goes:
+
+| While recording | |
+|---|---|
+| `Option+P` again | keep it in the input box |
+| `Enter` | send it |
+| `Option+Tab` | queue it as a follow-up |
+| `Escape` | throw the recording away |
+| anything else | keep it in the box, then apply that key |
+
+Transcription never blocks you. The moment recording stops, a `[⠏ transcribing]`
+placeholder takes the transcript's place — in the input box, or just above it when the
+message is already on its way — and you keep typing. When the provider answers, the
+placeholder becomes the text; if it fails, it becomes an error and **nothing is sent**.
+The model receives a spoken message only once the transcript exists.
 
 `stt.json` takes a list, so the same chord works whether or not the terminal treats Option
 as Meta: `"keybind": ["alt+p", "π"]`. Pi's own keybindings cannot express the literal

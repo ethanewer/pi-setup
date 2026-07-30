@@ -1,12 +1,20 @@
 # Keybindings that survive tmux
 
-Default tmux forwards only *legacy* terminal encodings. A key that needs the Kitty
-keyboard protocol, `modifyOtherKeys`, or CSI-u never arrives — the terminal either sends
-nothing extra or sends the unmodified key. This file records which of Pi's defaults are
-unreachable there, what this setup binds instead, and how it was determined.
+There are **two** encodings in play, and a binding has to cover both.
 
-Everything below was measured, not assumed, with `bin/pi-setup-keyprobe`, which decodes a
-keypress through Pi's own `parseKey`/`matchesKey`.
+Modern terminals (Ghostty, Kitty, WezTerm, iTerm2 3.5+) negotiate the **Kitty keyboard
+protocol** with Pi and then report modifiers explicitly: Option+Tab arrives as
+`ESC [ 9;3u`, which Pi reads as `alt+tab`. Terminal.app has no such support, and default
+tmux does not forward the protocol even when the outer terminal has it — so the same
+chord arrives as the **legacy** `ESC TAB`, which Pi reads as `ctrl+alt+i`. Keys that only
+exist in the protocol, `shift+enter` among them, simply do not arrive in legacy mode.
+
+So each action below is bound to *both* forms. The one that cannot be produced is inert,
+which costs nothing.
+
+Everything here was measured, not assumed, with `bin/pi-setup-keyprobe`, which negotiates
+the protocol the way Pi does and decodes each keypress through Pi's own
+`parseKey`/`matchesKey`.
 
 ## The terminal setting this depends on
 
@@ -26,7 +34,8 @@ So the Option bindings below need Meta **on**, for both the left and right Optio
 - **WezTerm** — `send_composed_key_when_left_alt_is_pressed = false` (and the right-alt twin)
 
 Voice dictation works either way: the fork accepts a list of bindings and compares literal
-characters as well as key ids, so `alt+p` and `π` are both bound.
+characters as well as key ids, so `alt+p` and `π` are both bound — including the `ESC [ 960 u`
+form a Kitty-protocol terminal uses to report a composed `π`.
 
 ## What this setup binds
 
@@ -34,8 +43,8 @@ characters as well as key ids, so `alt+p` and `π` are both bound.
 
 | Action | Pi default | Bound here | Why |
 |---|---|---|---|
-| `tui.input.newLine` | `shift+enter`, `ctrl+j` | `alt+enter`, `ctrl+j` | `shift+enter` is unreachable: a legacy terminal sends `CR` for it, exactly as for Enter. `ctrl+j` (`0x0a`) is kept as the binding that needs no Meta at all. |
-| `app.message.followUp` | `alt+enter` | `ctrl+alt+i` | Freed `alt+enter` for the newline. `ctrl+alt+i` **is** Option+Tab: the terminal sends `ESC TAB`, and Pi decodes `ESC` + `0x09` as `ctrl+alt+i`. Pi has no `alt+tab` key id at all. |
+| `tui.input.newLine` | `shift+enter`, `ctrl+j` | `alt+enter`, `shift+enter`, `ctrl+j` | Option+Enter is `alt+enter` in both modes. `shift+enter` is kept because it *does* work under the protocol, and because a Kitty-mode terminal reports `ESC CR` as `shift+enter`. `ctrl+j` (`0x0a`) needs no Meta and no protocol at all. |
+| `app.message.followUp` | `alt+enter` | `alt+tab`, `ctrl+alt+i` | Freed `alt+enter` for the newline. Option+Tab is `alt+tab` under the protocol and `ctrl+alt+i` without it — Pi decodes legacy `ESC` + `0x09` as ctrl+alt+i, since `0x09` is in the control range. Binding only one of the two is why this silently did nothing in Ghostty at first. |
 | `app.message.dequeue` | `alt+up` | `ctrl+alt+u` | Real conflict, not hygiene: Pi maps the legacy sequence `ESC p` to `alt+up`, so with Meta on, Option+P fired dictation *and* restored queued messages. |
 | `app.model.cycleBackward` | `shift+ctrl+p` | `ctrl+alt+p` | `ctrl+shift+<letter>` is indistinguishable from `ctrl+<letter>` without CSI-u. |
 | `app.tree.filter.cycleBackward` | `shift+ctrl+o` | `ctrl+alt+o` | Same reason. |
@@ -68,8 +77,6 @@ bin/pi-setup-keyprobe                 # press keys, see bytes and the id Pi matc
 bin/pi-setup-keyprobe --decode 1b0d   # decode bytes without a terminal
 ```
 
-Run it inside tmux and outside it. A binding is only safe where both agree, and only when
-the reported id is the one you meant to bind. One caveat: Pi also negotiates the Kitty
-keyboard protocol at startup, so on a terminal that supports it (Ghostty, Kitty, WezTerm,
-iTerm2 3.5+) Pi can see richer sequences than the probe shows — but not through default
-tmux, which does not forward them.
+Run it inside tmux and outside it: the header line tells you which mode you are in, and
+the same terminal will usually report differently in each. A binding is safe when it
+covers whatever the reported id is in both.
