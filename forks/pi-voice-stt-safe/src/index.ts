@@ -202,7 +202,7 @@ export default function piVoiceSttExtension(pi: ExtensionAPI) {
 
     const previousEditor = ctx.ui.getEditorComponent();
     ctx.ui.setEditorComponent(createVoiceEditorFactory(previousEditor, {
-      keybind,
+      keybinds: startup.keybinds,
       ctx,
       getMode: () => controller.getMode(),
       renderLabel: (theme) => inputIndicator.renderLabel(theme),

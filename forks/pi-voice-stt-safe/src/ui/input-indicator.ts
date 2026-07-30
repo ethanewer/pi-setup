@@ -5,14 +5,14 @@ import {
   visibleWidth,
   type EditorComponent,
   type EditorTheme,
-  type KeyId,
   type TUI,
 } from "@earendil-works/pi-tui";
 import type { DictationMode } from "../core/dictation-controller";
+import { matchesAnyKeybind } from "../core/keybind";
 import type { Strings } from "../i18n/strings";
 
 type VoiceEditorOptions = {
-  keybind: string;
+  keybinds: string[];
   ctx: ExtensionContext;
   getMode(): DictationMode;
   renderLabel(theme: Theme): string;
@@ -129,7 +129,7 @@ class VoiceEditorWrapper implements EditorComponent {
     this.syncBase();
     const mode = this.options.getMode();
 
-    if (matchesKey(data, this.options.keybind as KeyId)) {
+    if (matchesAnyKeybind(data, this.options.keybinds)) {
       this.options.onToggle(this.options.ctx);
       return;
     }

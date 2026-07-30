@@ -193,6 +193,10 @@ discards the *next* transcript. Replacements no longer treat `$&` in a value as 
 substitution pattern, and accented keys such as `café` now match — which the shipped French
 locale depended on.
 
+**Added here.** `keybind` accepts a list and matches literal characters as well as Pi key
+ids, so dictation can be bound to both `alt+p` and the `π` that macOS composes for the
+same chord. See [`KEYBINDINGS.md`](KEYBINDINGS.md).
+
 **Residual risk.** Anyone who can write `~/.pi/agent/stt.json` can still send your
 microphone audio to an arbitrary HTTPS host by naming a credential explicitly, or run any
 already-executable binary via `capture.ffmpegPath`. Both are the documented feature set; the

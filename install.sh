@@ -220,7 +220,7 @@ log "Writing Pi configuration"
 CONFIG_SCRIPT="$(mktemp)"
 cat > "$CONFIG_SCRIPT" <<'JS'
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-const [mainPath, pPath, sttPath, npmPkgPath, pNpmPkgPath, piVersion] = process.argv.slice(2);
+const [mainPath, pPath, sttPath, npmPkgPath, pNpmPkgPath, piVersion, keybindingsSrcPath, mainKeybindsPath, pKeybindsPath] = process.argv.slice(2);
 const read = (path) => existsSync(path) ? JSON.parse(readFileSync(path, "utf8")) : {};
 const writeJson = (path, value) => writeFileSync(path, JSON.stringify(value, null, 2) + "\n");
 
@@ -290,8 +290,17 @@ const lean = {
 };
 writeJson(pPath, lean);
 
+// Keybindings that a default tmux cannot deliver are remapped here. Only the ids this
+// repository manages are touched, so any other binding the user added survives.
+// docs/KEYBINDINGS.md records what each one is and why.
+const managedKeys = read(keybindingsSrcPath);
+for (const path of [mainKeybindsPath, pKeybindsPath]) {
+  if (!path) continue;
+  writeJson(path, { ...read(path), ...managedKeys });
+}
+
 const stt = read(sttPath);
-stt.keybind = "alt+p";
+stt.keybind = ["alt+p", "\u03c0"];
 stt.provider = {
   type: "openai",
   model: "gpt-4o-mini-transcribe",
@@ -327,7 +336,10 @@ JS
   "$MAIN_DIR/stt.json" \
   "$NPM_DIR/package.json" \
   "$P_DIR/npm/package.json" \
-  "$PI_VERSION"
+  "$PI_VERSION" \
+  "$SRC_DIR/config/keybindings.json" \
+  "$MAIN_DIR/keybindings.json" \
+  "$P_DIR/keybindings.json"
 rm -f "$CONFIG_SCRIPT"
 
 # stt.json holds provider and capture configuration that the voice fork re-reads on
@@ -386,8 +398,9 @@ Open a new terminal, then use:
   pi  Full setup: Voice STT + browser + workflows + handoff briefs + monitor + /btw
   p   Lean setup: Voice STT only, quiet startup
 
-Voice dictation: Option+P on macOS, Alt+P on Linux.
-Side questions:  /btw <question>, /btw:end to return.
+Voice dictation: Option+P (or the π it composes) on macOS, Alt+P on Linux.
+Side questions:  /btw <question>, escape to return.
+Keybindings:     newline Option+Enter or Ctrl+J, queue Option+Tab. See docs/KEYBINDINGS.md.
 
 Extensions are installed from forks/ as Pi local packages. Run
 'bin/pi-setup-doctor' to check that the installed copies still match this

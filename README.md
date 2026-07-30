@@ -175,6 +175,25 @@ The side thread gets read-only tools by default. See
 [`forks/pi-btw-side/README.md`](forks/pi-btw-side/README.md) for configuration and for
 what does and does not match Codex's `/side`.
 
+## Keybindings
+
+Default tmux only forwards legacy terminal encodings, so several of Pi's defaults never
+arrive — `shift+enter` among them. `config/keybindings.json` remaps those, and
+[`docs/KEYBINDINGS.md`](docs/KEYBINDINGS.md) records what was measured and why.
+
+| | |
+|---|---|
+| Newline | `Option+Enter`, or `Ctrl+J` with no terminal setup |
+| Queue a follow-up | `Option+Tab` |
+| Restore queued messages | `Ctrl+Option+U` |
+| Voice dictation | `Option+P`, or the `π` it composes |
+
+The Option bindings need Option to act as Meta — Terminal.app's *Use Option as Meta key*,
+iTerm2's *Esc+* for both Left and Right Option. Voice works either way, because the fork
+binds the literal `π` as well.
+
+Check any key with `bin/pi-setup-keyprobe`, inside tmux and outside it.
+
 ## Voice STT
 
 Voice dictation is configured for OpenAI:
@@ -193,6 +212,10 @@ Voice dictation is configured for OpenAI:
 
 Use **Option+P** on macOS or **Alt+P** on Linux to start and stop recording. Press Enter
 while recording to transcribe and submit, or Escape to cancel.
+
+`stt.json` takes a list, so the same chord works whether or not the terminal treats Option
+as Meta: `"keybind": ["alt+p", "π"]`. Pi's own keybindings cannot express the literal
+character — `matchesKey("π", "π")` is false — which is why this lives in the fork.
 
 The API key is read from the environment and is never written into the repository or Pi
 configuration. `~/.pi/agent/stt.json` is kept mode `600`: the fork re-reads it on every

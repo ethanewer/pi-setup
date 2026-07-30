@@ -963,6 +963,39 @@ diff -ruN --exclude=node_modules a/src/config/load-config.ts b/src/config/load-c
      apiKeyFile: textFrom(cleanup.apiKeyFile),
      keychainService: textFrom(cleanup.keychainService),
      keychainAccount: textFrom(cleanup.keychainAccount),
+diff -ruN --exclude=node_modules a/src/config/startup.ts b/src/config/startup.ts
+--- a/src/config/startup.ts	1985-10-26 03:15:00
++++ b/src/config/startup.ts	2026-07-30 14:33:12
+@@ -2,11 +2,15 @@
+ import { join } from "node:path";
+ import { homedir } from "node:os";
+ import { objectFrom, textFrom } from "../utils/coerce";
++import { DEFAULT_KEYBINDS, describeKeybinds, parseKeybinds } from "../core/keybind";
+ import { resolvePath } from "../utils/path";
+ 
+ export type StartupOptions = {
+   configPath: string;
++  /** Human-readable form of `keybinds`, for labels and /stt status. */
+   keybind: string;
++  /** Every key that toggles dictation. See core/keybind.ts for why there is more than one. */
++  keybinds: string[];
+   locale: string;
+   mode: string;
+ };
+@@ -22,9 +26,11 @@
+   const envConfigPath = textFrom(process.env.PI_STT_CONFIG);
+   const configPath = envConfigPath ? resolvePath(envConfigPath) : existsSync(DEFAULT_CONFIG_PATH) ? DEFAULT_CONFIG_PATH : "";
+   const config = readJsonIfPresent(configPath);
+-  const keybind = textFrom(process.env.PI_STT_KEYBIND, textFrom(config.keybind, "ctrl+r"));
++  const envKeybind = textFrom(process.env.PI_STT_KEYBIND);
++  const keybinds = parseKeybinds(envKeybind.length > 0 ? envKeybind : config.keybind, DEFAULT_KEYBINDS);
++  const keybind = describeKeybinds(keybinds);
+   const locale = textFrom(process.env.PI_STT_LOCALE, textFrom(config.locale, "en"));
+   const mode = textFrom(process.env.PI_STT_MODE, textFrom(config.mode, "default"));
+ 
+-  return { configPath, keybind, locale, mode };
++  return { configPath, keybind, keybinds, locale, mode };
+ };
 diff -ruN --exclude=node_modules a/src/config/types.ts b/src/config/types.ts
 --- a/src/config/types.ts	1985-10-26 03:15:00
 +++ b/src/config/types.ts	2026-07-28 21:17:06
@@ -1160,6 +1193,67 @@ diff -ruN --exclude=node_modules a/src/core/dictation-controller.ts b/src/core/d
      await operation?.catch(() => {});
      setMode("idle", lastContext);
    };
+diff -ruN --exclude=node_modules a/src/core/keybind.ts b/src/core/keybind.ts
+--- a/src/core/keybind.ts	1969-12-31 18:00:00
++++ b/src/core/keybind.ts	2026-07-30 14:32:56
+@@ -0,0 +1,57 @@
++import { matchesKey, type KeyId } from "@earendil-works/pi-tui";
++
++/**
++ * Voice dictation can be bound to more than one key, because on macOS the same physical
++ * chord produces different bytes depending on a terminal setting: with "Use Option as
++ * Meta key" off, Option+P sends the composed character `π`; with it on, the same chord
++ * sends `ESC p`, which Pi reads as `alt+p`. Binding both makes the key work either way,
++ * and across terminals that disagree about it.
++ *
++ * Pi's own keybindings cannot express this: `matchesKey` has no notion of a literal
++ * character, and returns false even for `matchesKey("π", "π")`.
++ */
++
++export const DEFAULT_KEYBINDS = ["ctrl+r"] as const;
++
++/** Accepts a string, a comma-separated string, or an array. Never throws. */
++export const parseKeybinds = (value: unknown, fallback: readonly string[] = DEFAULT_KEYBINDS): string[] => {
++	const out: string[] = [];
++	const push = (candidate: unknown): void => {
++		if (typeof candidate !== "string") return;
++		const trimmed = candidate.trim();
++		if (trimmed.length > 0 && !out.includes(trimmed)) out.push(trimmed);
++	};
++
++	if (Array.isArray(value)) {
++		for (const entry of value) push(entry);
++	} else if (typeof value === "string") {
++		// A comma-separated string keeps PI_STT_KEYBIND="alt+p,π" working. A literal
++		// comma cannot be bound this way; use the array form in stt.json for that.
++		for (const entry of value.split(",")) push(entry);
++	}
++
++	return out.length > 0 ? out : [...fallback];
++};
++
++/**
++ * True when the raw terminal bytes are one of the bound keys.
++ *
++ * Each binding is tried as a literal first, then as a Pi key id. An unknown id makes
++ * `matchesKey` return false rather than throw, so a typo in the config costs that one
++ * binding and nothing else.
++ */
++export const matchesAnyKeybind = (data: string, keybinds: readonly string[]): boolean => {
++	for (const keybind of keybinds) {
++		if (keybind.length === 0) continue;
++		if (data === keybind) return true;
++		try {
++			if (matchesKey(data, keybind as KeyId)) return true;
++		} catch {
++			// Not a key id Pi knows. The literal comparison above was its only chance.
++		}
++	}
++	return false;
++};
++
++/** How the binding is shown in the editor's right-hand label and in `/stt status`. */
++export const describeKeybinds = (keybinds: readonly string[]): string => keybinds.join(" / ");
 diff -ruN --exclude=node_modules a/src/core/replacements.ts b/src/core/replacements.ts
 --- a/src/core/replacements.ts	1985-10-26 03:15:00
 +++ b/src/core/replacements.ts	2026-07-28 19:17:00
@@ -1235,7 +1329,7 @@ diff -ruN --exclude=node_modules a/src/core/voice-commands.ts b/src/core/voice-c
            return { command, text: stripped.slice(0, start).replace(TRAILING_PUNCTUATION, "") };
 diff -ruN --exclude=node_modules a/src/index.ts b/src/index.ts
 --- a/src/index.ts	1985-10-26 03:15:00
-+++ b/src/index.ts	2026-07-28 22:56:26
++++ b/src/index.ts	2026-07-30 14:33:12
 @@ -1,4 +1,5 @@
  import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 +import type { EditorComponent } from "@earendil-works/pi-tui";
@@ -1362,7 +1456,13 @@ diff -ruN --exclude=node_modules a/src/index.ts b/src/index.ts
      },
    });
  
-@@ -153,6 +207,9 @@
+@@ -148,11 +202,14 @@
+ 
+     const previousEditor = ctx.ui.getEditorComponent();
+     ctx.ui.setEditorComponent(createVoiceEditorFactory(previousEditor, {
+-      keybind,
++      keybinds: startup.keybinds,
+       ctx,
        getMode: () => controller.getMode(),
        renderLabel: (theme) => inputIndicator.renderLabel(theme),
        attachTui: (tui) => inputIndicator.attach(tui),
@@ -1565,7 +1665,33 @@ diff -ruN --exclude=node_modules a/src/secrets/resolve-api-key.ts b/src/secrets/
  };
 diff -ruN --exclude=node_modules a/src/ui/input-indicator.ts b/src/ui/input-indicator.ts
 --- a/src/ui/input-indicator.ts	1985-10-26 03:15:00
-+++ b/src/ui/input-indicator.ts	2026-07-28 19:05:25
++++ b/src/ui/input-indicator.ts	2026-07-30 14:33:27
+@@ -5,14 +5,14 @@
+   visibleWidth,
+   type EditorComponent,
+   type EditorTheme,
+-  type KeyId,
+   type TUI,
+ } from "@earendil-works/pi-tui";
+ import type { DictationMode } from "../core/dictation-controller";
++import { matchesAnyKeybind } from "../core/keybind";
+ import type { Strings } from "../i18n/strings";
+ 
+ type VoiceEditorOptions = {
+-  keybind: string;
++  keybinds: string[];
+   ctx: ExtensionContext;
+   getMode(): DictationMode;
+   renderLabel(theme: Theme): string;
+@@ -129,7 +129,7 @@
+     this.syncBase();
+     const mode = this.options.getMode();
+ 
+-    if (matchesKey(data, this.options.keybind as KeyId)) {
++    if (matchesAnyKeybind(data, this.options.keybinds)) {
+       this.options.onToggle(this.options.ctx);
+       return;
+     }
 @@ -164,8 +164,15 @@
      this.base.addToHistory?.(text);
    }

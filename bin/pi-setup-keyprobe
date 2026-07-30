@@ -1,0 +1,79 @@
+#!/usr/bin/env bun
+/**
+ * Report what this terminal actually sends for a keypress, and what Pi makes of it.
+ *
+ *   bin/pi-setup-keyprobe              press keys, see the bytes; ctrl+q to quit
+ *   bin/pi-setup-keyprobe --decode 1b0d    decode hex bytes without a terminal
+ *
+ * Run it inside tmux and outside it. A binding only works where the two agree, and only
+ * if the "pi sees" column is the key id you meant to bind.
+ *
+ * Caveat: this reads the terminal in its default state. Pi additionally asks for the
+ * Kitty keyboard protocol at startup; on a terminal that supports it (Ghostty, Kitty,
+ * WezTerm, iTerm2 3.5+) Pi may see richer sequences than this shows. Terminal.app has no
+ * such support, and default tmux does not forward it.
+ */
+
+import { homedir } from "node:os";
+import { join } from "node:path";
+
+const tuiEntry = join(
+	process.env.BUN_INSTALL ?? join(homedir(), ".bun"),
+	"install/global/node_modules/@earendil-works/pi-tui/dist/index.js",
+);
+
+let parseKey: (data: string) => string | null;
+try {
+	({ parseKey } = await import(tuiEntry));
+} catch (error) {
+	console.error(`pi-setup-keyprobe: could not load pi-tui from ${tuiEntry}`);
+	console.error(String(error));
+	process.exit(2);
+}
+
+const hex = (text: string): string =>
+	[...Buffer.from(text, "utf8")].map((byte) => byte.toString(16).padStart(2, "0")).join(" ");
+
+const printable = (text: string): string =>
+	JSON.stringify(text).slice(1, -1).replace(/\\u001b/g, "\\e");
+
+function report(data: string): void {
+	const key = parseKey(data) ?? "(unrecognized)";
+	console.log(`  bytes ${hex(data).padEnd(24)} raw "${printable(data)}"`.padEnd(56) + `pi sees: ${key}`);
+}
+
+const decodeIndex = process.argv.indexOf("--decode");
+if (decodeIndex !== -1) {
+	const raw = (process.argv[decodeIndex + 1] ?? "").replace(/[^0-9a-fA-F]/g, "");
+	if (raw.length === 0 || raw.length % 2 !== 0) {
+		console.error("usage: pi-setup-keyprobe --decode <hex bytes, e.g. 1b0d>");
+		process.exit(2);
+	}
+	report(Buffer.from(raw, "hex").toString("utf8"));
+	process.exit(0);
+}
+
+if (!process.stdin.isTTY) {
+	console.error("pi-setup-keyprobe: needs a terminal. Use --decode <hex> otherwise.");
+	process.exit(2);
+}
+
+console.log(`
+Press the keys you want to bind. Each line shows the bytes your terminal sent and the
+key id Pi would match against. Ctrl+Q quits.
+
+Worth testing: enter, option+enter, option+tab, shift+enter, option+p, tab, shift+tab.
+${process.env.TMUX ? "You are inside tmux." : "You are NOT inside tmux — run it again inside tmux and compare."}
+`);
+
+process.stdin.setRawMode(true);
+process.stdin.resume();
+process.stdin.setEncoding("utf8");
+process.stdin.on("data", (chunk: string) => {
+	if (chunk === "\x11") {
+		console.log("\nbye");
+		process.stdin.setRawMode(false);
+		process.exit(0);
+	}
+	report(chunk);
+});
