@@ -150,6 +150,38 @@ fi
 [[ "$UNKNOWN" == "0" ]] && ok "no retired or unrecognized local packages"
 
 say ""
+say "Pi and agent-browser"
+# install.sh is the single source of truth for both versions: it pins them, installs
+# them, and rewrites the wrappers. An installation that has drifted from the pin means
+# something bypassed it (`pi update`, a manual `bun add --global`), and the next
+# ./install.sh run would silently move it back.
+BUN_GLOBAL="${BUN_INSTALL:-$HOME/.bun}/install/global/node_modules"
+PINNED_PI="$(sed -n 's/^PI_VERSION="\(.*\)"$/\1/p' "$REPO_DIR/install.sh" | head -1)"
+PINNED_AB="$(sed -n 's/^AGENT_BROWSER_VERSION="\(.*\)"$/\1/p' "$REPO_DIR/install.sh" | head -1)"
+pkg_version() { # pkg_version <package-dir>
+  node -e '
+const { existsSync, readFileSync } = require("node:fs");
+const path = process.argv[1] + "/package.json";
+if (!existsSync(path)) process.exit(0);
+try { process.stdout.write(String(JSON.parse(readFileSync(path, "utf8")).version ?? "")); } catch {}
+' "$1" 2>/dev/null
+}
+INSTALLED_PI="$(pkg_version "$BUN_GLOBAL/@earendil-works/pi-coding-agent")"
+INSTALLED_AB="$(pkg_version "$BUN_GLOBAL/agent-browser")"
+for entry in "Pi|$PINNED_PI|$INSTALLED_PI" "agent-browser|$PINNED_AB|$INSTALLED_AB"; do
+  IFS='|' read -r NAME PINNED INSTALLED <<< "$entry"
+  if [[ -z "$PINNED" ]]; then
+    bad "could not read the $NAME version pinned in install.sh"
+  elif [[ -z "$INSTALLED" ]]; then
+    bad "$NAME is pinned at $PINNED but is not installed under $BUN_GLOBAL (run ./install.sh)"
+  elif [[ "$INSTALLED" == "$PINNED" ]]; then
+    ok "$NAME $INSTALLED matches the version install.sh pins"
+  else
+    bad "$NAME $INSTALLED is installed but install.sh pins $PINNED; the next ./install.sh run would change it. Update the pin or reinstall."
+  fi
+done
+
+say ""
 say "Compaction settings"
 COMPACTION_REPORT="$(node -e '
 const { readFileSync, existsSync } = require("node:fs");
@@ -191,6 +223,17 @@ fi
 if [[ "$OFFLINE" == "0" ]] && command -v npm >/dev/null 2>&1; then
   say ""
   say "Upstream releases"
+  for entry in "@earendil-works/pi-coding-agent|$PINNED_PI" "agent-browser|$PINNED_AB"; do
+    IFS='|' read -r PKG PINNED <<< "$entry"
+    LATEST="$(npm view "$PKG" version 2>/dev/null | tail -1)"
+    if [[ -z "$LATEST" ]]; then
+      note "could not query $PKG from the registry"
+    elif [[ "$LATEST" == "$PINNED" ]]; then
+      ok "$PKG is current at $PINNED"
+    else
+      note "$PKG upstream is $LATEST, this repository pins $PINNED (see the update-pi-setup skill)"
+    fi
+  done
   for fork in $FORK_NAMES; do
     # A first-party entry has an empty upstream. The delimiter must be a
     # non-whitespace character: IFS collapses leading empty fields for whitespace

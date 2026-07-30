@@ -54,7 +54,7 @@ smoke test against `https://example.com`.
 
 | Component | Version |
 |---|---:|
-| `@earendil-works/pi-coding-agent` | `0.82.0` |
+| `@earendil-works/pi-coding-agent` | `0.83.0` |
 | `agent-browser` | `0.33.0` |
 
 Extension forks and the upstream releases they are based on:
@@ -67,6 +67,7 @@ Extension forks and the upstream releases they are based on:
 | `pi-process-monitor-safe` | `pi-process-monitor` | rewrite, reviewed vs `1.3.0` |
 | `pi-context-handoff` | — | first-party |
 | `pi-btw-inline` | — | first-party |
+| `pi-setup-maintenance` | — | first-party, skills only |
 
 `vendor.json` is the machine-readable version of this table and is what the tooling
 reads.
@@ -129,6 +130,7 @@ standalone diffs.
 - `agent_browser`
 - `workflow` and `workflow_control`
 - workflow authoring and built-in workflow skills
+- the `update-pi-setup` maintenance skill
 - compaction handoff briefs that keep a long run going
 - background process monitoring (`monitor`, `/watch`)
 - side questions in an ephemeral fork (`/btw`, `/btw:end`)
@@ -202,6 +204,17 @@ documented way to point at your own server.
 
 ## Maintenance
 
+The whole procedure — updating Pi, updating a fork onto a newer upstream, what to
+re-review afterwards, and how to roll back — is also a Pi skill, `update-pi-setup`, so an
+agent asked to "update pi" follows the pinned path instead of reaching for `pi update`.
+Read it at
+[`forks/pi-setup-maintenance/skills/update-pi-setup/SKILL.md`](forks/pi-setup-maintenance/skills/update-pi-setup/SKILL.md)
+or invoke it with `/skill:update-pi-setup`.
+
+> Do not run `pi update` or `bun add --global` for Pi or the extensions. `install.sh`
+> pins both versions and rewrites the wrappers; anything installed around it is reverted
+> by the next run and reported as drift by `bin/pi-setup-doctor`.
+
 ### Check the installed setup
 
 ```bash
@@ -210,19 +223,23 @@ bin/pi-setup-doctor
 
 Verifies that every fork in `forks/` matches the copy installed under
 `~/.pi/agent/local/`, that Pi's settings load the forks and not the unpatched npm
-packages, that `stt.json` is owner-only, and that `trust.json` has no home-wide entry.
-Also reports when upstream has published a newer release than a fork is based on. Exits
-non-zero on problems, so it can gate CI.
+packages, that `stt.json` is owner-only, that `trust.json` has no home-wide entry, and
+that the installed Pi and `agent-browser` match the versions `install.sh` pins. Also
+reports when npm has published a newer release than this repository pins, for Pi,
+`agent-browser`, or a fork's upstream. Exits non-zero on problems, so it can gate CI.
 
-### Run the unit tests
+### Run the tests
 
 ```bash
-bun test tests/
+bun test tests/     # pure logic, no network or model
+tests/smoke.sh      # installed setup: tools, bash, /btw, browser, workflow
+tests/tui-btw.sh    # TUI-only: inline rendering, sticky mode, cancel (needs tmux)
 ```
 
-Covers the pure logic of the first-party extensions — the history sanitizer that keeps a
-mid-turn `/btw` snapshot valid, the prompt assembly, and config parsing. No network, no
-model, no installed Pi required.
+`bun test tests/` covers the pure logic of the first-party extensions — the history
+sanitizer that keeps a mid-turn `/btw` snapshot valid, the prompt assembly, and config
+parsing. The two scripts drive the installed setup with real model calls; `tests/smoke.sh
+--quick` skips the browser and workflow runs.
 
 Scope the command to `tests/`. A bare `bun test` also collects
 `forks/pi-process-monitor-safe/test/`, which is that fork's own suite and needs its dev

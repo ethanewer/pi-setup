@@ -1,0 +1,175 @@
+---
+name: update-pi-setup
+description: Update this machine's Pi installation, the pinned agent-browser, or any hardened extension fork, and verify the result. Use when Pi has a new release, when bin/pi-setup-doctor reports drift or a newer upstream, when asked to update pi or an extension, or before changing anything under ~/pi-setup.
+---
+
+# Updating this Pi setup
+
+Everything is driven from the git repository at `~/pi-setup`. `install.sh` there is the
+single source of truth: it pins the Pi and `agent-browser` versions, copies each fork
+from `forks/` into `~/.pi/agent/local/`, rewrites the `pi`, `p`, and `agent-browser`
+wrappers in `~/.local/bin`, and prunes stale npm copies of the extensions.
+
+## Rules
+
+1. **Never** run `pi update`, `bun add --global @earendil-works/pi-coding-agent`, or
+   `pi package add` for these extensions. They bypass the pin, the next `./install.sh`
+   silently reverts them, and `bin/pi-setup-doctor` reports the drift as a PROBLEM.
+2. **Never** edit anything under `~/.pi/agent/local/`. That directory is install output.
+   Edit `forks/<name>/` in the repository and reinstall.
+3. Read the upstream changelog for breaking changes **before** bumping a version, not
+   after. Extensions here use Pi's SDK deeply; a removed API is a real risk.
+4. Finish every change with [Verify](#verify) and a commit. `bin/pi-setup-doctor` must
+   exit 0.
+
+## 1. Find out what is out of date
+
+```bash
+cd ~/pi-setup && bin/pi-setup-doctor
+```
+
+Read the four sections that matter:
+
+| Section | What a finding means |
+|---|---|
+| Forks: repository vs installed | An installed copy no longer matches `forks/`. Re-run `./install.sh`. |
+| Pi and agent-browser | Installed version differs from the pin in `install.sh` — something bypassed the installer. |
+| Upstream releases | npm has a newer release than this repository pins, for Pi, `agent-browser`, or a fork's upstream. This is a note, not a problem: upgrading is a deliberate act. |
+| Retired and unknown local packages | A package on disk that `vendor.json` does not know about. |
+
+`vendor.json` is the machine-readable record of which upstream release each fork is
+based on. `docs/FORKS.md` says what each fork changes and why, and is what to re-check
+after an upstream merge.
+
+## 2. Update Pi itself
+
+```bash
+cd ~/pi-setup
+npm view @earendil-works/pi-coding-agent version          # what is available
+```
+
+Before bumping, read the changelog for that release — https://pi.dev/changelog, or after
+installing, `~/.bun/install/global/node_modules/@earendil-works/pi-coding-agent/CHANGELOG.md`.
+Look specifically at **Breaking Changes** and anything touching the extension API, the
+SDK (`createAgentSession`, `ResourceLoader`, `SessionManager`, `ExtensionAPI`),
+compaction hooks, or skills, then grep the forks for whatever it names. For example,
+0.83.0 removed several TypeBox APIs:
+
+```bash
+grep -rn "Type\.Base\|Type\.Awaited\|Type\.Promise\|Value\.Mutate" --include="*.ts" --include="*.js" forks/ | grep -v node_modules
+```
+
+Then:
+
+1. Set `PI_VERSION` in `install.sh`.
+2. Update the version table in `README.md`.
+3. `./install.sh` — use `PI_SETUP_SKIP_BROWSER_INSTALL=1 ./install.sh` to skip the Chrome
+   check while iterating.
+4. [Verify](#verify), then commit.
+
+## 3. Move a fork onto a newer upstream release
+
+For the three forks that have an upstream (`pi-voice-stt-safe`,
+`pi-agent-browser-native-safe`, `pi-dynamic-workflows-safe`):
+
+```bash
+bin/pi-setup-vendor <fork> <new-version>
+```
+
+It downloads pristine upstream, applies `patches/<pkg>@<old>.patch`, replaces
+`forks/<fork>` on success, updates `vendor.json`, renames the patch file, and
+regenerates it. **If the patch does not apply cleanly** it stops and leaves a partially
+patched tree with `.rej` files in `.vendor-tmp/`, printing the exact commands to finish
+by hand.
+
+After any re-vendor, treat the hardening as unverified until you have re-checked it:
+
+1. `git diff -- forks/<fork>` — read all of it.
+2. Re-read the fork's section in `docs/FORKS.md` and confirm each fix still exists in the
+   merged tree. Upstream refactors move code; a fix can survive `patch` and still be
+   bypassed by a new code path that reaches the same sink.
+3. Read the upstream changelog between the two versions for new entry points.
+4. `bin/pi-setup-vendor --verify <fork>` — the patch must reproduce `forks/<fork>` byte
+   for byte.
+5. Update `UPSTREAM_*` in `install.sh` and the table in `README.md`.
+6. `./install.sh`, then [Verify](#verify).
+
+If you hand-edit a fork instead, regenerate its patch so it stays the reviewable record:
+
+```bash
+bin/pi-setup-vendor --regenerate-patch <fork>
+bin/pi-setup-vendor --verify <fork>
+```
+
+`pi-process-monitor-safe` is hand-maintained with no patch file; port upstream fixes
+manually and record what you decided in its `vendor.json` note.
+
+## 4. Change a first-party package
+
+`pi-context-handoff`, `pi-btw-inline`, and `pi-setup-maintenance` have no upstream. Edit
+them directly, bump `version` in both `package.json` and `vendor.json` if the change is
+worth marking, then `./install.sh`.
+
+Typecheck before installing — Pi runs TypeScript without checking it, so a type error
+becomes a runtime failure inside a session:
+
+```bash
+cd /tmp && bunx tsc --noEmit --strict --skipLibCheck --moduleResolution bundler \
+  --target ES2023 --module ESNext --allowImportingTsExtensions --noEmit \
+  ~/pi-setup/forks/<pkg>/extensions/*/*.ts
+```
+
+## 5. agent-browser is pinned to the fork's baseline, on purpose
+
+`AGENT_BROWSER_VERSION` in `install.sh` is not "whatever npm has latest". The
+`pi-agent-browser-native-safe` wrapper is validated against one specific CLI release —
+`docs/SUPPORT_MATRIX.md` in that fork names it as the capability baseline. Raising it is
+a re-baseline job: update the baseline, re-run that fork's own verification gates
+(`npm run verify`, `npm run verify -- real-upstream`), and re-check the command
+reference. `bin/pi-setup-doctor` will keep reporting the newer release as a note until
+then; that note is expected, not a defect.
+
+## Verify
+
+Run all of this after any change. It is cheap except for the model calls in the last two.
+
+```bash
+cd ~/pi-setup
+bin/pi-setup-doctor          # must exit 0
+bun test tests/              # pure logic of the first-party extensions
+tests/smoke.sh               # installed setup: tools, bash, /btw, browser, workflow
+tests/tui-btw.sh             # TUI-only behaviour: inline render, sticky mode, cancel
+```
+
+`tests/smoke.sh --quick` skips the browser and workflow runs when iterating.
+
+Then start `pi` once interactively and confirm the startup listing is intact:
+
+```text
+[Extensions]
+  agent-browser, btw, context-handoff, monitor, voice-stt, workflow
+[Skills]
+  monitor, update-pi-setup, workflow-authoring, workflow-patterns
+```
+
+A fork that failed to load is **silently absent** from that listing rather than raising
+an error, so check the names rather than assuming success.
+
+## Commit
+
+Commit to `~/pi-setup` and push to `origin main`. Say in the message what upstream
+version moved, what the changelog's breaking changes were, and what verification ran.
+The repository's history is the audit trail for the hardening, so a version bump with no
+review notes is worse than no bump.
+
+## Rollback
+
+Every version is pinned in `install.sh`, so rolling back is a git operation plus a
+reinstall:
+
+```bash
+cd ~/pi-setup
+git revert <commit>     # or: git checkout <good-commit> -- install.sh forks/ vendor.json
+./install.sh
+bin/pi-setup-doctor
+```

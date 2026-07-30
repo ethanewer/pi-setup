@@ -203,6 +203,19 @@ original commit history. It adds a watcher cap, kill-all, aggregated heartbeats,
 session shutdown with no persistence or restore. Not re-vendorable with
 `bin/pi-setup-vendor`; maintained directly.
 
+## pi-setup-maintenance
+
+First-party, skills only: no extensions, no tools, nothing loaded into a running session
+beyond one skill description. It carries `update-pi-setup`, the procedure for updating Pi,
+`agent-browser`, and each fork, plus what to re-review after an upstream merge and how to
+roll back.
+
+It exists because the failure mode is predictable: an agent told to "update pi" reaches
+for `pi update`, which bypasses the version pin in `install.sh`, is silently reverted by
+the next install, and shows up later as drift. The skill puts the pinned path where an
+agent will find it. `bin/pi-setup-doctor` now reports that drift directly, comparing the
+installed Pi and `agent-browser` against the versions `install.sh` pins.
+
 ## Startup labels
 
 Pi labels an extension by the directory holding its index file, falling back to the bare
@@ -213,6 +226,9 @@ now use the `extensions/<name>/index.ts` convention the other three already foll
 the listing identifies every extension by name:
 
 ```text
+[Skills]
+  monitor, update-pi-setup, workflow-authoring, workflow-patterns
+
 [Extensions]
   agent-browser, btw, context-handoff, monitor, voice-stt, workflow
 ```
