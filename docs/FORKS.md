@@ -217,12 +217,21 @@ reachable by repo-controlled or model-chosen input before.
 | `PI_AGENT_BROWSER_ELECTRON_EXTRA_APP_ARGS` | Electron switches outside the allowlist |
 | `PI_AGENT_BROWSER_ELECTRON_APP_URL_SCHEMES` | Extra schemes exempt from `--allowed-domains` |
 | `PI_AGENT_BROWSER_FORWARD_ALL_ENV` | Forwarding loader vars (`NODE_OPTIONS`, `LD_PRELOAD`, …) to the child |
-| `PI_AGENT_BROWSER_ALLOW_DIRECT_BASH` | Calling `agent-browser` directly from `bash` |
+| `PI_AGENT_BROWSER_ALLOW_DIRECT_BASH` | Calling `agent-browser` directly from `bash` (upstream gate, not added here) |
+| `PI_AGENT_BROWSER_SKIP_ORPHAN_ELECTRON_ADOPTION` | Skipping adoption/cleanup of Electron processes orphaned by a previous run |
 | `PI_STT_ALLOWED_ENDPOINT_HOSTS` | Additional hosts accepted for a named vendor alias |
 | `PI_STT_BRIDGE_ALLOW_REMOTE` | Binding the bridge daemon beyond loopback |
 | `trustProjectLocalWorkflows` | Repo-local saved workflows and run records |
 | `webFetchAllowedHosts` / `webFetchAllowPrivateNetwork` | `web_fetch` to loopback or private ranges |
 | `worktreeIsolationFallback` | Continuing when `git worktree add` fails |
+| `defaultMaxAgents` / `maxAgents` | Raising a run above the 100-agent default, up to the 1000 ceiling |
+| `defaultAgentTimeoutMs` / `agentTimeoutMs: null` | Removing the 60-minute per-agent timeout entirely |
+
+One gate is a configuration shape rather than a flag: in `pi-voice-stt-safe` a named vendor
+alias is pinned to that vendor's host, so sending audio to a custom endpoint requires
+`"type": "openai-compatible"` (or `"local"`) **and** an explicitly named secret
+(`apiKeyEnv`, `apiKeyFile`, `keychainService`, or an explicit `""` for deliberately
+keyless). A defaulted `OPENAI_API_KEY` can never follow a host you did not name.
 
 ## Verification
 
