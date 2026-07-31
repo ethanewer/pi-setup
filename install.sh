@@ -186,6 +186,9 @@ export default function (pi) {
 }
 JS
 
+# Retire the pre-repository wrapper location. Pi prepends its helper bin directory inside
+# sessions, so a stale copy here would shadow the managed ~/.local/bin/p wrapper.
+rm -f "$MAIN_DIR/bin/p"
 rm -f "$LOCAL_BIN/p"
 # The one install-time value is printed separately so the body can stay a quoted heredoc:
 # the installer honours PI_CODING_AGENT_DIR, so the lean profile must point at the directory
@@ -213,6 +216,8 @@ do
       --no-extensions \
       --no-skills \
       --extension "$MAIN_DIR/local/pi-voice-stt-safe/extensions/voice-stt/index.ts" \
+      --extension "$MAIN_DIR/local/pi-context-handoff/extensions/context-handoff/index.ts" \
+      --extension "$MAIN_DIR/local/pi-btw-side/extensions/btw/index.ts" \
       --extension "$MAIN_DIR/p/remove-pi-documentation.js" \
       "$@"
   fi
@@ -411,7 +416,7 @@ Installed successfully.
 
 Open a new terminal, then use:
   pi  Full setup: Voice STT + browser + workflows + handoff briefs + monitor + /btw
-  p   Lean setup: Voice STT only, quiet startup
+  p   Lean setup: Voice STT + /btw + handoff briefs, quiet startup
 
 Voice dictation: Option+P (or the π it composes) on macOS, Alt+P on Linux.
 Side questions:  /btw <question>, escape to return.

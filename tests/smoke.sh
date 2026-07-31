@@ -16,16 +16,17 @@ trap 'rm -rf "$WORK"' EXIT
 printf 'export const GREETING = "hello-from-alpha";\n' > "$WORK/alpha.ts"
 
 PASS=0; FAIL=0
-run() { # run <label> <expected-substring> <prompt>
-  local label="$1" expect="$2" prompt="$3" out
+run_with() { # run_with <entrypoint> <label> <expected-substring> <prompt>
+  local entrypoint="$1" label="$2" expect="$3" prompt="$4" out
   printf '  ... %s\n' "$label"
-  out="$(cd "$WORK" && pi -p "$prompt" 2>&1)"
+  out="$(cd "$WORK" && "$entrypoint" -p "$prompt" 2>&1)"
   if grep -qF -- "$expect" <<< "$out"; then
     PASS=$((PASS + 1)); printf '  PASS  %s\n' "$label"
   else
     FAIL=$((FAIL + 1)); printf '  FAIL  %s\n         expected %q in:\n%s\n' "$label" "$expect" "$(sed 's/^/           /' <<< "$out" | tail -8)"
   fi
 }
+run() { run_with pi "$@"; }
 
 printf '\nVersions\n'
 printf '  pi             %s\n' "$(pi --version 2>&1 | tail -1)"
@@ -40,6 +41,8 @@ run "tools registered" "monitor_kill_all" \
 run "built-in bash" "SMOKE-BASH-OK" \
   "Run the bash command 'echo SMOKE-BASH-OK' and reply with nothing else."
 run "btw side conversation" "hello-from-alpha" \
+  "/btw What constant does alpha.ts export? Reply with only its value."
+run_with p "lean p btw side conversation" "hello-from-alpha" \
   "/btw What constant does alpha.ts export? Reply with only its value."
 
 if [[ "$QUICK" == "0" ]]; then

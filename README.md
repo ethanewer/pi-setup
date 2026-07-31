@@ -5,8 +5,8 @@ A reproducible, fast [Pi coding agent](https://pi.dev) setup with two entrypoint
 - **`pi`** — full environment with Voice STT, native browser automation, dynamic
   workflows, compaction handoff briefs, background process monitoring, and `/btw` side
   questions.
-- **`p`** — lean environment with Voice STT only, quiet startup, no skills, and a
-  smaller system prompt.
+- **`p`** — lean environment with Voice STT, `/btw` side questions, and compaction
+  handoff briefs, but no browser, monitor, workflows, or skills.
 
 Both commands run the same Pi installation through Pi's Bun entrypoint. They share
 authentication, model catalogs, sessions, helper binaries, and installed package files.
@@ -145,8 +145,9 @@ standalone diffs.
 --no-extensions --no-skills
 ```
 
-It explicitly reloads only Voice STT and a tiny local extension that removes Pi's
-documentation block from the system prompt. It also:
+It explicitly reloads only Voice STT, `/btw`, compaction handoff briefs, and a tiny
+local extension that removes Pi's documentation block from the system prompt. The exact
+allowlist keeps the heavier browser, monitor, and workflow extensions out. It also:
 
 - uses quiet startup
 - skips the Pi version check
@@ -361,8 +362,8 @@ Qwen3.6 prompt-token comparison for a browser/workflow request:
 
 Actual timing and tokenization vary by machine, working directory, model template,
 extensions, and request. Workflow arming text injected into the user message is not
-included in the token table. These numbers predate the continuation and monitor
-extensions being added to the full profile.
+included in the token table. The `p` measurements predate `/btw` and context handoff being
+added to that profile; the full-profile measurements predate context handoff and monitor.
 
 ## Files created
 

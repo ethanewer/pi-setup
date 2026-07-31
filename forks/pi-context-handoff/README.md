@@ -33,7 +33,13 @@ dispatch, so the machinery that made the previous extension fragile has nothing 
 
 ## Configuration
 
-Optional, at `~/.pi/agent/extensions/pi-context-handoff.json`:
+All keys are optional. Configuration is read relative to `PI_CODING_AGENT_DIR`:
+
+- `pi`: `~/.pi/agent/extensions/pi-context-handoff.json`
+- `p`: `~/.pi/agent-p/extensions/pi-context-handoff.json`
+
+The profiles use separate files; main-profile customization does not automatically apply
+to `p`.
 
 ```json
 {

@@ -66,7 +66,13 @@ Deliberately different:
 
 ## Configuration
 
-`~/.pi/agent/extensions/pi-btw-side.json`, all keys optional:
+All keys are optional. Configuration is read relative to `PI_CODING_AGENT_DIR`:
+
+- `pi`: `~/.pi/agent/extensions/pi-btw-side.json`
+- `p`: `~/.pi/agent-p/extensions/pi-btw-side.json`
+
+The profiles use separate files; main-profile customization does not automatically apply
+to `p`.
 
 ```json
 {

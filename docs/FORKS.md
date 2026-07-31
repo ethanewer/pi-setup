@@ -296,6 +296,11 @@ A stray upstream package is still distinguishable at a glance: Pi prefixes `npm:
 `git:` sources with the package spec (`pi-voice-stt@0.4.0:src`) and leaves `local/`
 sources bare, so anything showing a version prefix is not one of these forks.
 
+The lean `p` wrapper disables extension and skill discovery, then explicitly loads only
+`voice-stt`, `btw`, and `context-handoff` (plus its prompt-removal helper). Browser,
+monitor, and workflow are full-profile-only. `bin/pi-setup-doctor` checks this exact
+allowlist so an accidental addition or omission is install-fixable drift.
+
 ## Now needs an opt-in
 
 Every capability below still works — it just requires a deliberate setting, because it was

@@ -260,15 +260,49 @@ process.stdout.write(out.join(", "));
   done
 fi
 
-# The lean profile is a full second installation surface and was entirely unchecked.
-if [[ ! -x "$HOME/.local/bin/p" ]]; then
-  bad "$HOME/.local/bin/p is missing or not executable (bin/pi-setup-doctor --fix)"
+# The lean profile is a full second installation surface. Its CLI allowlist is what keeps
+# browser, monitor, workflows, and every skill out, so checking only that the wrapper exists
+# would miss both accidental additions and missing lightweight extensions.
+P_WRAPPER="$HOME/.local/bin/p"
+if [[ ! -x "$P_WRAPPER" ]]; then
+  bad "$P_WRAPPER is missing or not executable (bin/pi-setup-doctor --fix)"
   fixable install
 elif [[ ! -f "$P_DIR/settings.json" ]]; then
   bad "$P_DIR/settings.json is missing, so the lean profile has no configuration (bin/pi-setup-doctor --fix)"
   fixable install
 else
-  ok "the p profile is installed"
+  if ! P_PROFILE_REPORT="$("$JS" -e '
+const { readFileSync } = require("node:fs");
+const [wrapper] = process.argv.slice(1);
+const text = readFileSync(wrapper, "utf8");
+const lines = text.split(/\r?\n/).map((line) => line.trim());
+const count = (flag) => lines.filter((line) => line === flag + " \\").length;
+const extensions = lines.flatMap((line) => {
+  const match = line.match(/^--extension\s+"([^"]+)"(?:\s+\\)?$/);
+  return match ? [match[1]] : [];
+});
+const expected = [
+  "$MAIN_DIR/local/pi-voice-stt-safe/extensions/voice-stt/index.ts",
+  "$MAIN_DIR/local/pi-context-handoff/extensions/context-handoff/index.ts",
+  "$MAIN_DIR/local/pi-btw-side/extensions/btw/index.ts",
+  "$MAIN_DIR/p/remove-pi-documentation.js",
+];
+const problems = [];
+if (count("--no-extensions") !== 1) problems.push("--no-extensions must appear exactly once");
+if (count("--no-skills") !== 1) problems.push("--no-skills must appear exactly once");
+if (JSON.stringify(extensions) !== JSON.stringify(expected)) {
+  problems.push("extension allowlist is [" + extensions.join(", ") + "]; expected [" + expected.join(", ") + "]");
+}
+process.stdout.write(problems.join("; "));
+' "$P_WRAPPER" 2>/dev/null)"; then
+    bad "could not inspect $P_WRAPPER's lean profile contract (bin/pi-setup-doctor --fix)"
+    fixable install
+  elif [[ -z "$P_PROFILE_REPORT" ]]; then
+    ok "the p profile has the exact voice-stt, context-handoff, and btw extension allowlist with no skills"
+  else
+    bad "$P_WRAPPER does not match the lean profile contract: $P_PROFILE_REPORT (bin/pi-setup-doctor --fix)"
+    fixable install
+  fi
 fi
 
 # A keybind Pi cannot parse falls back to the upstream default without saying so.
