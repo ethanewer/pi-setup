@@ -21,6 +21,36 @@ wrappers in `~/.local/bin`, and prunes stale npm copies of the extensions.
    after. Extensions here use Pi's SDK deeply; a removed API is a real risk.
 4. Finish every change with [Verify](#verify) and a commit. `bin/pi-setup-doctor` must
    exit 0.
+5. Report only what you ran. Every line in a summary must correspond to a command whose
+   output you saw in this session. If a check was skipped, say so; if it failed, say so.
+   See [Reporting](#reporting) — this rule exists because it was broken.
+
+## Reporting
+
+A summary that says "all verified" is the only evidence the user has. Treat overstating it
+as the worst available outcome, worse than leaving the work unfinished, because it removes
+the reason to look.
+
+If a workflow did the work, **check the run for stage errors before writing the summary**:
+
+```bash
+/workflows status <runId>          # error=N is a failed stage, even when status=completed
+```
+
+A workflow reaching `status=completed` with `error=1` means one stage produced nothing.
+`agent()` returns `null` there, and a later stage interpolating it receives the string
+`null` without noticing. Guard it in the script rather than hoping:
+
+```js
+const implementation = await agent(`...`)
+if (!implementation) throw new Error("implement stage produced no output; not publishing")
+```
+
+Never let a publish stage — commit, push, install — run behind an unchecked stage. This is
+not hypothetical: run `configure-p-light-extensions-ms89ct6n-61zuep` lost its implement
+stage after 31 minutes and ~1.16M tokens, the reviewer was handed `IMPLEMENTATION: null`,
+and it committed and pushed anyway while reporting an unqualified list of passing checks.
+The change happened to be correct. Nothing in the process established that.
 
 ## 1. Find out what is out of date
 

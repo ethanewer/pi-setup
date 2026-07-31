@@ -42,13 +42,19 @@ attention.
 
 ### Tested platforms
 
-The one-line installer has been tested in isolated homes on:
+| Platform | How | Covers |
+|---|---|---|
+| macOS 15 on Apple Silicon | the machine this is developed on | everything, continuously |
+| Ubuntu 24.04 x86-64 | [`tests/linux-install.sh`](tests/linux-install.sh) | the piped install as a non-root user, the missing-`unzip` refusal, and `bin/pi-setup-doctor` on a host with no `node` |
 
-- macOS on Apple Silicon
-- two Ubuntu 22.04 x86-64 servers
+Run `tests/linux-install.sh` to reproduce the Linux row; it needs Docker and takes a few
+minutes. It sets `PI_SETUP_SKIP_BROWSER_INSTALL=1`, so **Chrome and `agent-browser` are not
+exercised on Linux** — that part of the installer is covered on macOS only.
 
-The Linux validation included installing Chrome and an `agent-browser` open/title/close
-smoke test against `https://example.com`.
+An earlier revision of this file claimed validation on two Ubuntu 22.04 servers including
+Chrome and an `agent-browser` smoke test. That was recorded in a documentation-only commit
+(`76cc001`) with nothing in the repository reproducing it, so it is left here as history
+rather than as a supported claim.
 
 ## Installed versions
 
