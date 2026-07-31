@@ -62,12 +62,16 @@ known rather than unnoticed.
 | `pi-voice-stt-safe` | `index.ts:209` | Voice-sent messages skip pi's submit pipeline: no editor history, and a leading slash is not executed |
 | `pi-voice-stt-safe` | `index.ts:48` | Dead state and unused parameters left behind by the UI rewrite |
 
-Two were fixed by hand because they sat in files being edited anyway. Two more are
-documented limitations rather than defects: the caret jumps to the end of the prompt after a
+Two were fixed by hand because they sat in files being edited anyway. One more is a
+documented limitation rather than a defect: the caret jumps to the end of the prompt after a
 transcript is delivered, because Pi exposes no public way to restore a cursor position and
-reaching into its private state is what made earlier extensions fragile; and
-`pi-process-monitor-safe`'s own test suite needs `bun install` in that fork, since
-`install.sh` deliberately omits dev dependencies.
+reaching into its private state is what made earlier extensions fragile.
+
+A second entry on that list — `pi-process-monitor-safe`'s test suite needing `bun install`
+in that fork — has since been resolved by [`tests/fork-suites.sh`](../tests/fork-suites.sh),
+which borrows the dependencies from Bun's global tree. Those 84 tests had never run when
+this pass was made, which is worth remembering when reading the monitor findings below: they
+came from reading the code, with no suite to check them against.
 
 ## Repeating it
 

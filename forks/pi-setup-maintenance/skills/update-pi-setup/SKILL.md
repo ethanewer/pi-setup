@@ -36,6 +36,8 @@ section can emit a PROBLEM and fail the exit code.
 | Forks: repository vs installed | An installed copy no longer matches `forks/`. Re-run `./install.sh`. |
 | Pi settings | `settings.json` does not load a fork, or still loads the unpatched npm package that would shadow it. |
 | Configuration hygiene | `stt.json` is not mode 600, or `trust.json` trusts a directory that every repository sits under. |
+| Compiled mirrors | `pi-dynamic-workflows-safe`'s `dist/` no longer matches its `src/`. Both are reachable through the package exports, so a stale `dist` exports code nobody audited. Run `npm run build` in that fork. |
+| Keybindings and the p profile | An agent directory is missing a binding from `config/keybindings.json`, or the `p` profile is gone. Re-run `./install.sh`. See `docs/KEYBINDINGS.md`. |
 | Retired and unknown local packages | A package on disk that `vendor.json` does not know about — dead code that can still be loaded if it is re-added to settings. |
 | Pi and agent-browser | Installed version differs from the pin in `install.sh` — something bypassed the installer. |
 | Compaction settings | `reserveTokens` too large, or compaction disabled: both stop a long run. |
