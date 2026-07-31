@@ -286,6 +286,7 @@ bun test tests/       # pure logic, no network or model
 tests/fork-suites.sh  # the suites that ship inside the forks
 tests/smoke.sh        # installed setup: tools, bash, /btw, browser, workflow
 tests/tui-btw.sh      # TUI-only: the full-screen /btw view, the main thread behind it, escape (needs tmux)
+tests/linux-install.sh # the published install.sh on a clean Ubuntu container (needs Docker)
 ```
 
 `bun test tests/` covers the pure logic of the first-party extensions: the history
@@ -300,6 +301,13 @@ Scope the command to `tests/`. A bare `bun test` also collects
 from Bun's global tree — Pi already depends on all of them — so it needs no download and
 leaves nothing behind. Without it the suite does not run at all: 84 tests across 12 files
 that look like coverage and provide none.
+
+`tests/linux-install.sh` is the only thing here that does not run on macOS. It pipes the
+*published* `install.sh` into a clean `ubuntu:24.04` container as a non-root user, so
+commit and push before running it. It checks that a missing `unzip` is refused at the
+door rather than halfway through, that the install completes, and that
+`bin/pi-setup-doctor` exits 0 on a machine with no `node` at all. Pass an image and a git
+ref to test something else: `tests/linux-install.sh debian:12 my-branch`.
 
 ### Change a fork
 

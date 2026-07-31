@@ -205,6 +205,16 @@ the repository root collects those files too but they error, because that fork h
 `node_modules`; the script links Bun's global tree in for the run and removes the link
 after. Use the script, not a bare `bun test`.
 
+After changing `install.sh` or `bin/pi-setup-doctor`, also run:
+
+```bash
+tests/linux-install.sh           # needs Docker; push first, it tests the published install.sh
+```
+
+Everything else here runs on macOS, so Linux-only breakage — GNU vs BSD `stat`, a
+missing `unzip`, assuming `node` exists — is invisible without it. That class of bug has
+shipped before.
+
 `tests/smoke.sh --quick` skips the browser and workflow runs while iterating. The voice
 UI has a test seam for the paths a script cannot reach otherwise:
 `PI_STT_FAKE_TRANSCRIPT`, `PI_STT_FAKE_FAIL` and `PI_STT_FAKE_DELAY_MS` replace the
