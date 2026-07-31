@@ -183,6 +183,48 @@ console.log(broad.join("\n"));
 fi
 
 say ""
+say "Compiled mirrors"
+# dynamic-workflows ships src/ (what Pi loads) and dist/ (reachable through the package
+# exports field). They must agree: a previous divergence left seven dist files byte-identical
+# to vulnerable upstream while the audited src was fine, so the exported code was not the
+# code anyone had reviewed. Comparing every file needs a compiler; comparing the shape and
+# spot-checking the fork's own constants catches the failure that actually happened.
+MIRROR_DIR="$REPO_DIR/forks/pi-dynamic-workflows-safe"
+if [[ -d "$MIRROR_DIR/src" && -d "$MIRROR_DIR/dist" ]]; then
+  MIRROR_REPORT="$("$JS" -e '
+const { readdirSync, readFileSync, existsSync } = require("node:fs");
+const root = process.argv[1];
+const srcNames = readdirSync(root + "/src").filter((f) => f.endsWith(".ts")).map((f) => f.slice(0, -3));
+const missing = srcNames.filter((n) => !existsSync(root + "/dist/" + n + ".js"));
+if (missing.length > 0) {
+  console.log("bad\t" + missing.length + " src module(s) have no dist counterpart: " + missing.slice(0, 5).join(", "));
+  process.exit(0);
+}
+// Spot-check the constants this fork changed away from upstream. A dist that lost them is
+// a dist rebuilt from upstream rather than from this src.
+const probes = [
+  ["config", /DEFAULT_AGENT_RETRIES\s*=\s*2/],
+  ["config", /DEFAULT_AGENT_TIMEOUT_MS\s*=\s*60\s*\*\s*60\s*\*\s*1000/],
+  ["workflow-manager", /defaultAgentRetries !== undefined/],
+];
+const drifted = [];
+for (const [name, pattern] of probes) {
+  const inSrc = pattern.test(readFileSync(root + "/src/" + name + ".ts", "utf8"));
+  const inDist = pattern.test(readFileSync(root + "/dist/" + name + ".js", "utf8"));
+  if (inSrc !== inDist) drifted.push(name + " (" + pattern.source.slice(0, 30) + ")");
+}
+if (drifted.length > 0) console.log("bad\tdist has drifted from src: " + drifted.join("; ") + ". Rebuild with npm run build in that fork.");
+else console.log("ok\t" + srcNames.length + " src modules mirrored in dist, fork constants present in both");
+' "$MIRROR_DIR" 2>/dev/null)"
+  if [[ -z "$MIRROR_REPORT" ]]; then
+    note "could not compare src and dist for pi-dynamic-workflows-safe"
+  else
+    IFS=$'\t' read -r MIRROR_KIND MIRROR_MSG <<< "$MIRROR_REPORT"
+    [[ "${MIRROR_KIND:-bad}" == "ok" ]] && ok "$MIRROR_MSG" || bad "$MIRROR_MSG"
+  fi
+fi
+
+say ""
 say "Keybindings and the p profile"
 # config/keybindings.json is merged into both agent directories by install.sh. Nothing
 # checked that it arrived, so a remap could silently apply to neither.

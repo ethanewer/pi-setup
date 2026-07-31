@@ -195,17 +195,21 @@ cd ~/pi-setup
 bin/pi-setup-doctor              # must exit 0
 bin/pi-setup-vendor --verify --all   # every patch still reproduces its fork
 bun test tests/                  # pure logic of the first-party extensions
+tests/fork-suites.sh             # the suites that ship inside the forks (84 tests)
 tests/smoke.sh                   # installed setup: tools, bash, /btw, browser, workflow
 tests/tui-btw.sh                 # TUI-only: the /btw side view and escape
 ```
+
+`tests/fork-suites.sh` runs `forks/pi-process-monitor-safe/test/`. A bare `bun test` from
+the repository root collects those files too but they error, because that fork has no
+`node_modules`; the script links Bun's global tree in for the run and removes the link
+after. Use the script, not a bare `bun test`.
 
 `tests/smoke.sh --quick` skips the browser and workflow runs while iterating. The voice
 UI has a test seam for the paths a script cannot reach otherwise:
 `PI_STT_FAKE_TRANSCRIPT`, `PI_STT_FAKE_FAIL` and `PI_STT_FAKE_DELAY_MS` replace the
 provider with a fixed answer, so the placeholder lifecycle can be driven without a
 microphone or an API call.
-
-`tests/smoke.sh --quick` skips the browser and workflow runs when iterating.
 
 Then start `pi` once interactively and confirm the startup listing is intact:
 

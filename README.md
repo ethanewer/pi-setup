@@ -273,16 +273,19 @@ bin/pi-setup-doctor
 Verifies that every fork in `forks/` matches the copy installed under
 `~/.pi/agent/local/`, that Pi's settings load the forks and not the unpatched npm
 packages, that `stt.json` is owner-only, that `trust.json` has no home-wide entry, and
-that the installed Pi and `agent-browser` match the versions `install.sh` pins. Also
-reports when npm has published a newer release than this repository pins, for Pi,
-`agent-browser`, or a fork's upstream. Exits non-zero on problems, so it can gate CI.
+that the installed Pi and `agent-browser` match the versions `install.sh` pins, and that
+`pi-dynamic-workflows-safe`'s `dist/` still mirrors its `src/` — the package exports reach
+both, so a stale `dist` would export code nobody audited. Also reports when npm has
+published a newer release than this repository pins, for Pi, `agent-browser`, or a fork's
+upstream. Exits non-zero on problems, so it can gate CI.
 
 ### Run the tests
 
 ```bash
-bun test tests/     # pure logic, no network or model
-tests/smoke.sh      # installed setup: tools, bash, /btw, browser, workflow
-tests/tui-btw.sh    # TUI-only: the full-screen /btw view, the main thread behind it, escape (needs tmux)
+bun test tests/       # pure logic, no network or model
+tests/fork-suites.sh  # the suites that ship inside the forks
+tests/smoke.sh        # installed setup: tools, bash, /btw, browser, workflow
+tests/tui-btw.sh      # TUI-only: the full-screen /btw view, the main thread behind it, escape (needs tmux)
 ```
 
 `bun test tests/` covers the pure logic of the first-party extensions: the history
@@ -292,9 +295,11 @@ carry-forward. The two scripts drive the installed setup with real model calls; 
 --quick` skips the browser and workflow runs.
 
 Scope the command to `tests/`. A bare `bun test` also collects
-`forks/pi-process-monitor-safe/test/`, which is that fork's own suite and needs its dev
-dependencies (`cd forks/pi-process-monitor-safe && bun install`) that `install.sh`
-deliberately does not install.
+`forks/pi-process-monitor-safe/test/`, which is that fork's own suite; run it with
+`tests/fork-suites.sh` instead. That script borrows the dev dependencies the suite needs
+from Bun's global tree — Pi already depends on all of them — so it needs no download and
+leaves nothing behind. Without it the suite does not run at all: 84 tests across 12 files
+that look like coverage and provide none.
 
 ### Change a fork
 
