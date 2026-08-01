@@ -282,9 +282,13 @@ Verifies that every fork in `forks/` matches the copy installed under
 packages, that `stt.json` is owner-only, that `trust.json` has no home-wide entry, and
 that the installed Pi and `agent-browser` match the versions `install.sh` pins, and that
 `pi-dynamic-workflows-safe`'s `dist/` still mirrors its `src/` — the package exports reach
-both, so a stale `dist` would export code nobody audited. Also reports when npm has
-published a newer release than this repository pins, for Pi, `agent-browser`, or a fork's
-upstream. Exits non-zero on problems, so it can gate CI.
+both, so a stale `dist` would export code nobody audited. It also checks
+`compaction.reserveTokens` against [`config/compaction.json`](config/compaction.json),
+which is the same file `install.sh` applies: too small and a long agentic turn overshoots
+the context window, too large and the summarization call stalls. See
+[`docs/LONG_RUNS.md`](docs/LONG_RUNS.md). Also reports when npm has published a newer
+release than this repository pins, for Pi, `agent-browser`, or a fork's upstream. Exits
+non-zero on problems, so it can gate CI.
 
 ### Run the tests
 

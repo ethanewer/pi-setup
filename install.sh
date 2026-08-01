@@ -240,17 +240,51 @@ log "Writing Pi configuration"
 CONFIG_SCRIPT="$(mktemp)"
 cat > "$CONFIG_SCRIPT" <<'JS'
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-const [mainPath, pPath, sttPath, npmPkgPath, pNpmPkgPath, piVersion, keybindingsSrcPath, mainKeybindsPath, pKeybindsPath] = process.argv.slice(2);
+const [mainPath, pPath, sttPath, npmPkgPath, pNpmPkgPath, piVersion, keybindingsSrcPath, mainKeybindsPath, pKeybindsPath, compactionSrcPath, modelsStorePath] = process.argv.slice(2);
 const read = (path) => existsSync(path) ? JSON.parse(readFileSync(path, "utf8")) : {};
 const writeJson = (path, value) => writeFileSync(path, JSON.stringify(value, null, 2) + "\n");
 
 const main = read(mainPath);
 main.lastChangelogVersion ??= piVersion;
 main.defaultThinkingLevel = "medium";
-main.defaultProvider = "openai";
-main.defaultModel = "gpt-5.6-sol";
+// Provider and model decide which credentials Pi uses, so they are seeded and then left
+// alone. Forcing them reverted a deliberate choice on every install: one machine here runs
+// openai-codex, and a reinstall would have silently pointed it at plain openai auth.
+main.defaultProvider ??= "openai";
+main.defaultModel ??= "gpt-5.6-sol";
 main.theme ??= "dark";
 delete main.quietStartup;
+
+// Auto-compaction. config/compaction.json explains the policy and why Pi's default is too
+// small for long autonomous turns; the same file drives bin/pi-setup-doctor's check.
+const compactionPolicy = read(compactionSrcPath);
+const contextWindowFor = (modelId) => {
+  if (!modelId) return undefined;
+  for (const provider of Object.values(read(modelsStorePath))) {
+    for (const model of provider?.models ?? []) {
+      if (model?.id === modelId && typeof model.contextWindow === "number") return model.contextWindow;
+    }
+  }
+  return undefined;
+};
+const targetReserve = (settings) => {
+  const floor = compactionPolicy.minReserveTokens ?? 16384;
+  const window = contextWindowFor(settings.defaultModel);
+  let target = compactionPolicy.reserveTokens ?? floor;
+  if (typeof window === "number" && typeof compactionPolicy.maxFractionOfWindow === "number") {
+    target = Math.min(target, Math.floor(window * compactionPolicy.maxFractionOfWindow));
+  }
+  return Math.max(floor, target);
+};
+// Only ever raised. A larger reserve is a deliberate choice for an even longer run, and
+// clobbering it would be the same mistake as forcing the provider.
+const applyCompaction = (settings) => {
+  const compaction = { ...(settings.compaction ?? {}) };
+  const current = typeof compaction.reserveTokens === "number" ? compaction.reserveTokens : 0;
+  compaction.reserveTokens = Math.max(current, targetReserve(settings));
+  settings.compaction = compaction;
+};
+applyCompaction(main);
 
 // Every extension is a hardened local fork. The upstream npm identities are dropped
 // so a previously npm-installed copy cannot shadow the fork.
@@ -300,6 +334,7 @@ main.packages = [
 ];
 writeJson(mainPath, main);
 
+// p runs context-handoff too, so it needs the same compaction headroom.
 const lean = {
   lastChangelogVersion: main.lastChangelogVersion,
   defaultThinkingLevel: main.defaultThinkingLevel,
@@ -307,7 +342,9 @@ const lean = {
   defaultModel: main.defaultModel,
   theme: main.theme,
   quietStartup: true,
+  compaction: { ...(read(pPath).compaction ?? {}) },
 };
+applyCompaction(lean);
 writeJson(pPath, lean);
 
 // Keybindings that a default tmux cannot deliver are remapped here. Only the ids this
@@ -359,7 +396,9 @@ JS
   "$PI_VERSION" \
   "$SRC_DIR/config/keybindings.json" \
   "$MAIN_DIR/keybindings.json" \
-  "$P_DIR/keybindings.json"
+  "$P_DIR/keybindings.json" \
+  "$SRC_DIR/config/compaction.json" \
+  "$MAIN_DIR/models-store.json"
 rm -f "$CONFIG_SCRIPT"
 
 # stt.json holds provider and capture configuration that the voice fork re-reads on

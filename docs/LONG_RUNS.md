@@ -92,20 +92,42 @@ custom entry, which Pi never sends to a model.
 
 ## Configuration for long runs
 
-Compaction is Pi's job, not an extension's. Tune it in `~/.pi/agent/settings.json`:
+Compaction is Pi's job, not an extension's. `install.sh` writes it into
+`~/.pi/agent/settings.json` and `~/.pi/agent-p/settings.json`:
 
 ```json
-{ "compaction": { "enabled": true, "reserveTokens": 16384, "keepRecentTokens": 20000 } }
+{ "compaction": { "reserveTokens": 45000 } }
 ```
 
-Compaction fires when context exceeds `contextWindow - reserveTokens`. Pi's defaults are
-sensible; the only real hazard is setting `reserveTokens` too high.
+Compaction fires when context exceeds `contextWindow - reserveTokens`. There are hazards
+at both ends, and the low end is the one that actually bit.
 
-> **Do not set `reserveTokens` near the context window.** It leaves almost no usable
+> **`reserveTokens` must cover a whole turn, not a whole reply.** Pi evaluates the
+> threshold *between turns*. An agentic turn can be hundreds of entries long, so a run can
+> cross the threshold early in a turn and keep going for the rest of it. Pi's default of
+> 16384 quietly assumes the check happens often.
+>
+> Measured on session `019fb8da` (2026-07-31, `gpt-5.6-sol`, 272000-token window,
+> `reserveTokens` 16384): the 255616 threshold was crossed at 265232 tokens, and the turn
+> then ran **64 more model calls over 17 minutes**, peaking at **290536 — 18536 tokens past
+> the window**. It survived only because the provider tolerated the overflow. A slightly
+> longer turn would have hit a hard context error mid-run, which is the exact failure this
+> document exists to prevent.
+>
+> 45000 puts compaction at 227000 on that window, leaving room for the ~25000 tokens that
+> turn added after crossing.
+
+> **Do not set `reserveTokens` near the context window either.** It leaves almost no usable
 > context and produces a summarization request that stalls with no output and no error —
-> the process simply sits idle. Found the hard way while testing this. `bin/pi-setup-doctor`
-> now checks for it, and flags `compaction.enabled: false` as well, since a long run with
-> compaction off will hit the context limit and stop.
+> the process simply sits idle. Found the hard way while testing this.
+
+[`config/compaction.json`](../config/compaction.json) holds the policy and the measurement
+behind it. `install.sh` and `bin/pi-setup-doctor` both read that one file, so the number
+cannot drift between what gets installed and what gets checked. The reserve is scaled down
+on small-context models (at most a quarter of the window, never below Pi's 16384) so it
+never collides with the upper bound. An existing larger value is left alone — install only
+ever raises it. The doctor also flags `compaction.enabled: false`, since a long run with
+compaction off will hit the context limit and stop.
 
 Retries are on by default and unset in this setup (`retry.enabled` defaults true,
 `maxRetries` 3, `baseDelayMs` 2000). Leave them on.

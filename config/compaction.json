@@ -1,0 +1,24 @@
+{
+  "_comment": [
+    "Auto-compaction policy, applied by install.sh and checked by bin/pi-setup-doctor.",
+    "Both read this file so the rule lives in one place.",
+    "",
+    "Pi compacts when contextTokens > contextWindow - reserveTokens, but it only evaluates",
+    "that between turns. One agentic turn can be hundreds of entries long, so the reserve has",
+    "to cover an entire turn's growth, not just the next reply. Pi's default of 16384 assumes",
+    "the check runs often and is far too small for autonomous runs.",
+    "",
+    "Measured on session 019fb8da (2026-07-31, gpt-5.6-sol, 272000-token window): the",
+    "threshold was crossed at 265232 tokens and the turn kept running for 64 more model calls,",
+    "peaking at 290536 - 18536 tokens past the window. It only survived because the provider",
+    "tolerated the overflow. reserveTokens 45000 would have compacted at 227000, leaving room",
+    "for the ~25000 tokens that turn added after crossing.",
+    "",
+    "maxFractionOfWindow keeps the reserve away from bin/pi-setup-doctor's upper guard (half",
+    "the window) on small-context models, where a flat 45000 would leave too little usable",
+    "context. minReserveTokens is Pi's own default, the floor this never goes below."
+  ],
+  "reserveTokens": 45000,
+  "maxFractionOfWindow": 0.25,
+  "minReserveTokens": 16384
+}

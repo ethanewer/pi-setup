@@ -411,7 +411,7 @@ say ""
 say "Compaction settings"
 COMPACTION_REPORT="$("$JS" -e '
 const { readFileSync, existsSync } = require("node:fs");
-const [settingsPath, storePath] = process.argv.slice(1);
+const [settingsPath, storePath, policyPath] = process.argv.slice(1);
 const read = (p) => (existsSync(p) ? JSON.parse(readFileSync(p, "utf8")) : {});
 const settings = read(settingsPath);
 const compaction = settings.compaction ?? {};
@@ -420,8 +420,6 @@ if (compaction.enabled === false) {
   console.log("bad\tcompaction is disabled in " + settingsPath + "; a long run will hit the context limit and stop instead of compacting. Set compaction.enabled true, or drop the key to take the default.");
   process.exit(0);
 }
-// Compaction fires at contextWindow - reserveTokens, so a reserve near the window
-// leaves almost no usable context and produces a summarization request that stalls.
 const store = read(storePath);
 const wanted = settings.defaultModel;
 let win;
@@ -433,16 +431,43 @@ for (const provider of Object.values(store)) {
 }
 if (!win) { console.log("ok\treserveTokens " + reserve + " (context window for " + wanted + " unknown; not checked)"); process.exit(0); }
 const threshold = win - reserve;
-if (threshold <= 0) console.log("bad\tcompaction.reserveTokens is " + reserve + " in " + settingsPath + ", at or above the " + win + "-token window for " + wanted + ", so compaction can never leave usable context. About 16384 is right.");
-else if (reserve > win / 2) console.log("bad\tcompaction.reserveTokens is " + reserve + " in " + settingsPath + ", over half the " + win + "-token window for " + wanted + ": compaction fires at " + threshold + " tokens and the summarization request can stall. About 16384 is right.");
-else console.log("ok\treserveTokens " + reserve + " of a " + win + "-token window (compaction at ~" + threshold + " tokens)");
-' "$SETTINGS" "$MAIN_DIR/models-store.json" 2>/dev/null)"
+// Compaction fires at contextWindow - reserveTokens, so a reserve near the window leaves
+// almost no usable context and produces a summarization request that stalls.
+if (threshold <= 0) {
+  console.log("bad\tcompaction.reserveTokens is " + reserve + " in " + settingsPath + ", at or above the " + win + "-token window for " + wanted + ", so compaction can never leave usable context. Delete the key and re-run ./install.sh.");
+  process.exit(0);
+}
+if (reserve > win / 2) {
+  console.log("bad\tcompaction.reserveTokens is " + reserve + " in " + settingsPath + ", over half the " + win + "-token window for " + wanted + ": compaction fires at " + threshold + " tokens and the summarization request can stall. Delete the key and re-run ./install.sh.");
+  process.exit(0);
+}
+// The lower bound is the one that actually bit. Pi only tests the threshold between turns,
+// so the reserve has to absorb a whole agentic turn; config/compaction.json carries the
+// policy and the measurement behind it, and install.sh applies the same formula.
+const policy = read(policyPath);
+const floor = typeof policy.minReserveTokens === "number" ? policy.minReserveTokens : 16384;
+let target = typeof policy.reserveTokens === "number" ? policy.reserveTokens : floor;
+if (typeof policy.maxFractionOfWindow === "number") target = Math.min(target, Math.floor(win * policy.maxFractionOfWindow));
+target = Math.max(floor, target);
+if (reserve < target) {
+  console.log("bad\tcompaction.reserveTokens is " + reserve + " in " + settingsPath + ", so compaction waits until " + threshold + " tokens. Pi only checks between turns, and one long agentic turn has been measured adding ~25000 tokens after the threshold, running " + win + "-token context to 290536. config/compaction.json wants at least " + target + " (bin/pi-setup-doctor --fix).");
+  process.exit(0);
+}
+console.log("ok\treserveTokens " + reserve + " of a " + win + "-token window (compaction at ~" + threshold + " tokens, one long turn of headroom)");
+' "$SETTINGS" "$MAIN_DIR/models-store.json" "$REPO_DIR/config/compaction.json" 2>/dev/null)"
 if [[ -z "$COMPACTION_REPORT" ]]; then
   note "could not evaluate compaction settings"
 else
   while IFS=$'\t' read -r kind message; do
     [[ -z "${kind:-}" ]] && continue
-    [[ "$kind" == "ok" ]] && ok "$message" || bad "$message"
+    if [[ "$kind" == "ok" ]]; then
+      ok "$message"
+    else
+      bad "$message"
+      # A reserve below the policy floor is what a reinstall writes; the other compaction
+      # problems are hand-edited values that --fix would only raise, never lower.
+      [[ "$message" == *"config/compaction.json wants at least"* ]] && fixable install
+    fi
   done <<< "$COMPACTION_REPORT"
 fi
 
