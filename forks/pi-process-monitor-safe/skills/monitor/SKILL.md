@@ -121,3 +121,23 @@ watcher's heartbeat, and heartbeats never count as real events in status.
   `ALIVE=0`), otherwise a silently-dead remote job won't ping you.
 - Default `notifyOn` is broad. For chatty logs, pass a tight `notifyOn`.
 - After `/reload` or a session switch, monitors are gone — restart them.
+- **Progress bars are invisible.** Matching is line-oriented, so a job that redraws one
+  line with carriage returns (`tqdm`, `wget`, `docker pull`, most training loops) produces
+  no complete line and can never match any pattern. The watcher looks like it is waiting
+  patiently while it is actually blind. If that happens you get one event:
+
+  ```text
+  [watcher <id>] NO LINE BREAK in 65536 bytes of output. ...
+  ```
+
+  It fires once per watcher, never repeats, and means the watcher cannot see this output.
+  Fix it at the source — have the job print its own newline-terminated markers, which is
+  what you want anyway:
+
+  ```bash
+  python train.py 2>&1 | tee /tmp/train.log
+  echo "TRAIN_COMPLETE rc=$?"        # a real line the watcher can match
+  ```
+
+  Or watch it with poll mode, which re-runs a cheap check on an interval instead of tailing
+  the stream. Do not try to match text inside the bar.

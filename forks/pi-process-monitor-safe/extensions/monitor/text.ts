@@ -36,6 +36,21 @@ export function truncateTail(
   return { content, truncated };
 }
 
+/**
+ * Bound an unterminated partial line.
+ *
+ * Under the cap the text is returned byte-for-byte, so ordinary output reaches the matcher
+ * exactly as before — a partial line only gets rewritten once it is already too long to be
+ * a real line. Past the cap, the text after the final carriage return is preferred: a
+ * progress bar rewrites one line indefinitely, and that suffix is both what a terminal
+ * would be showing and naturally small. The byte tail is the fallback for long output that
+ * contains no carriage return at all.
+ */
+export function boundPartialLine(text: string, maxBytes: number): string {
+  if (Buffer.byteLength(text, "utf8") <= maxBytes) return text;
+  return tailBytes(text.slice(text.lastIndexOf("\r") + 1), maxBytes);
+}
+
 /** Keep at most the trailing `maxBytes` bytes of `text` (UTF-8 safe). */
 export function tailBytes(text: string, maxBytes: number): string {
   const buf = Buffer.from(text, "utf8");

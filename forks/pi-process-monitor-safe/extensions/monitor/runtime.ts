@@ -37,6 +37,7 @@ import {
   MAX_FILE_PENDING_BYTES,
   MAX_FILE_READ_BYTES,
   MAX_POLL_RETAINED_BYTES,
+  MAX_SPAWN_PENDING_BYTES,
   MAX_SUMMARY_LINES,
   MESSAGE_TYPE_EVENT,
   MESSAGE_TYPE_HEARTBEAT,
@@ -51,7 +52,7 @@ import {
   type WatcherMeta,
 } from "./types.ts";
 
-import { tailBytes, truncateTail } from "./text.ts";
+import { boundPartialLine, tailBytes, truncateTail } from "./text.ts";
 
 /**
  * Hard ceiling on coalescing, as a multiple of coalesceMs. Output that keeps matching
@@ -100,6 +101,8 @@ interface WatcherState {
   /** In-flight children (the spawn child, or currently running poll ticks). */
   children: Set<ChildRef>;
   coalescer: Coalescer | null;
+  /** Set once the no-line-break warning has fired, so it never fires twice. */
+  partialLineWarned: boolean;
 }
 
 export function compileMatchers(notifyOn?: string[]): (line: string) => boolean {
@@ -152,6 +155,33 @@ export function createMonitorRuntime(deps: RuntimeDeps): MonitorRuntime {
       },
       { triggerTurn: true, deliverAs: "steer" },
     );
+  }
+
+  /**
+   * Bound an unterminated partial line, and say so the first time it happens.
+   *
+   * Matching is line-oriented, so a process that only rewrites one line with carriage
+   * returns can never match anything: the watcher looks like it is waiting patiently when
+   * it is actually blind. That ambiguity is the real damage — it is indistinguishable from
+   * a job that simply has not reached its marker yet, and an agent will wait on it forever.
+   *
+   * Splitting on \r instead would make such output match, but a progress bar redrawing ten
+   * times a second would then reach the coalescer's hard flush every 8s, waking the agent
+   * ~450 times an hour for the life of the run. One warning is the cheaper signal, and it
+   * leaves matching semantics untouched for every watcher that already works.
+   */
+  function boundPending(w: WatcherState, pending: string, maxBytes: number): string {
+    if (Buffer.byteLength(pending, "utf8") <= maxBytes) return pending;
+    if (!w.partialLineWarned) {
+      w.partialLineWarned = true;
+      emit(
+        w,
+        `NO LINE BREAK in ${maxBytes} bytes of output. This watcher matches whole lines, so ` +
+          `output that redraws one line with carriage returns (a progress bar) can never match ` +
+          `any pattern. Have the job print newline-terminated markers, or watch it with poll mode.`,
+      );
+    }
+    return boundPartialLine(pending, maxBytes);
   }
 
   function runCleanups(w: WatcherState): void {
@@ -311,7 +341,7 @@ export function createMonitorRuntime(deps: RuntimeDeps): MonitorRuntime {
       if (!isActive(w)) return;
       pending += chunk;
       const lines = pending.split("\n");
-      pending = lines.pop() ?? "";
+      pending = boundPending(w, lines.pop() ?? "", MAX_SPAWN_PENDING_BYTES);
       for (const line of lines) {
         if (line.trim() && matcher(line)) push(line);
       }
@@ -441,7 +471,9 @@ export function createMonitorRuntime(deps: RuntimeDeps): MonitorRuntime {
       }
       size = current;
       const parts = (pending + text).split("\n");
-      pending = tailBytes(parts.pop() ?? "", MAX_FILE_PENDING_BYTES);
+      // File mode was already bounded, but it is just as blind to a carriage-return-only
+      // log, so it gets the same one-time warning.
+      pending = boundPending(w, parts.pop() ?? "", MAX_FILE_PENDING_BYTES);
       for (const line of parts) {
         if (line.trim() && matcher(line)) push(line);
       }
@@ -563,6 +595,7 @@ export function createMonitorRuntime(deps: RuntimeDeps): MonitorRuntime {
       cleanups: [],
       children: new Set(),
       coalescer: null,
+      partialLineWarned: false,
     };
     watchers.set(w.id, w);
 

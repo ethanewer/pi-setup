@@ -40,6 +40,13 @@ export const MAX_FILE_READ_BYTES = 256 * 1024;
 /** File mode retains at most this many bytes of an unterminated partial line. */
 export const MAX_FILE_PENDING_BYTES = 64 * 1024;
 
+/**
+ * Spawn mode retains at most this many bytes of an unterminated partial line.
+ * Spawn had no bound at all: a process that only ever rewrites one line with carriage
+ * returns produced no newline, so the buffer grew for the lifetime of the run.
+ */
+export const MAX_SPAWN_PENDING_BYTES = 64 * 1024;
+
 export const DEFAULT_COALESCE_SECONDS = 2;
 export const DEFAULT_MAX_LINES = 20;
 

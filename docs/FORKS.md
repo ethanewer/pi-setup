@@ -255,6 +255,30 @@ original commit history. It adds a watcher cap, kill-all, aggregated heartbeats,
 session shutdown with no persistence or restore. Not re-vendorable with
 `bin/pi-setup-vendor`; maintained directly.
 
+### Why a progress bar warns instead of matching
+
+Matching is line-oriented. A process that redraws one line with carriage returns and never
+emits a newline produces no complete line, so no pattern can match — the watcher is blind
+while looking exactly like a watcher that is waiting. Spawn mode also grew that partial line
+without bound.
+
+Both modes now cap the partial line and emit **one** `NO LINE BREAK` event per watcher. The
+alternative — treating `\r` as a line terminator — was rejected after costing it out:
+
+- Spawn mode has no dedup, and the coalescer has a hard flush at `coalesceMs × 4` = 8s
+  precisely so a steadily-matching process cannot postpone its ping. A bar redrawing ten
+  times a second whose text happens to match would therefore emit **every 8 seconds** —
+  about 450 turn-triggering wake-ups an hour, for the life of the run, on a setup whose
+  whole purpose is multi-day autonomy.
+- `maxLines` is 20, so each of those events would carry twenty near-identical copies of the
+  same bar.
+- It changes what counts as a line for every watcher that already works.
+
+Over the cap, the text after the final carriage return is kept in preference to a raw byte
+tail: that is what a terminal would be displaying, it is naturally small, and it means a
+marker printed *after* a long bar still matches when its newline arrives. Under the cap
+nothing is rewritten at all, so ordinary output reaches the matcher byte-for-byte.
+
 ## pi-setup-maintenance
 
 First-party, skills only: no extensions, no tools, nothing loaded into a running session

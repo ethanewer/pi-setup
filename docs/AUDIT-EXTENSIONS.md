@@ -49,7 +49,7 @@ known rather than unnoticed.
 | `pi-context-handoff` | `index.ts:71` | getApiKeyAndHeaders result is used without narrowing its ok discriminant |
 | `pi-dynamic-workflows-safe` | `workflow-capability-contract.ts:465` | Model-facing capability contract and README still state a 15-minute agent timeout |
 | `pi-dynamic-workflows-safe` | `workflow-ui.ts:1516` | Undocumented destructive single keys (x stop, r restart, s save) are live in the detail pager |
-| `pi-process-monitor-safe` | `runtime.ts:286` | Spawn mode's partial-line buffer is unbounded — a tqdm/carriage-return process leaks tens of MB and pings never fire |
+| ~~`pi-process-monitor-safe`~~ | ~~`runtime.ts:286`~~ | **Fixed 2026-08-02.** Spawn's partial-line buffer was unbounded, and a carriage-return-only process could never match. Ranking it low was wrong: the workload on `mk` is EvalScope/Slurm, whose output is full of carriage returns. Both modes now bound the partial line and emit one `NO LINE BREAK` warning, so a blind watcher is visible instead of silent. Splitting on `\r` was rejected — see [`FORKS.md`](FORKS.md#pi-process-monitor-safe). |
 | `pi-process-monitor-safe` | `runtime.ts:558` | timeoutSeconds discards already-matched buffered output instead of flushing it |
 | `pi-process-monitor-safe` | `extension.ts:186` | Message renderers hardcode paddingX=0, ignoring the outputPad option pi passes in |
 | `pi-process-monitor-safe` | `extension.ts:368` | /monitor --file accepts an unreadable path and still reports the watcher as running |

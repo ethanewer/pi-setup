@@ -102,19 +102,24 @@ test("a huge append is read bounded: content past the read cap is skipped to the
   assert.match(events[0]!.message.content, /error tail/);
 });
 
-test("an oversized unterminated line retains only a bounded tail", () => {
+test("an oversized unterminated line retains only a bounded tail, and says so once", () => {
   const h = makeHarness();
   h.files.set("/log/app", "");
   h.runtime.launch({ logFile: "/log/app", coalesceSeconds: 0, notifyOn: ["error"] });
   h.files.append("/log/app", "HEADMARK " + "x".repeat(100_000)); // > 64 KiB pending cap, no newline
   h.clock.advance(150);
-  assert.equal(h.pi.sentOfType(MESSAGE_TYPE_EVENT).length, 0);
+  // This used to emit nothing at all, which is exactly the problem: a watcher reading a
+  // log that never breaks a line is blind, and silence is indistinguishable from waiting.
+  const afterOverflow = h.pi.sentOfType(MESSAGE_TYPE_EVENT);
+  assert.equal(afterOverflow.length, 1);
+  assert.match(afterOverflow[0]!.message.content, /NO LINE BREAK/);
+
   h.files.append("/log/app", " error at the end\n");
   h.clock.advance(150);
   const events = h.pi.sentOfType(MESSAGE_TYPE_EVENT);
-  assert.equal(events.length, 1);
-  assert.match(events[0]!.message.content, /error at the end/);
-  assert.equal(events[0]!.message.content.includes("HEADMARK"), false);
+  assert.equal(events.length, 2, "the warning, then the real match");
+  assert.match(events[1]!.message.content, /error at the end/);
+  assert.equal(events[1]!.message.content.includes("HEADMARK"), false);
 });
 
 test("stopping a file watcher closes the fs watcher and the backstop", () => {
