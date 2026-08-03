@@ -14,8 +14,11 @@ export const COMMAND_REFERENCE_BASELINE_BLOCK_IDS = Object.freeze(["upstream-bas
 
 const sourceEvidence = Object.freeze({
   repository: "vercel-labs/agent-browser",
-  upstreamHead: "1ed371f3af472cc0d6cd8fdaea75d1a085ff7534",
-  upstreamPackageVersion: "0.33.1",
+  // npm tarballs for 0.33.2 carry no gitHead, so the commit behind this release could not
+  // be recovered. Recording null rather than carrying 0.33.1's hash forward, which would
+  // claim provenance this baseline does not have.
+  upstreamHead: null,
+  upstreamPackageVersion: "0.33.2",
   inspectedSources: Object.freeze([
     "agent-browser --version",
     "agent-browser --help",
@@ -844,7 +847,7 @@ const inventorySections = Object.freeze([
 ]);
 
 export const CAPABILITY_BASELINE = Object.freeze({
-  targetVersion: "0.33.1",
+  targetVersion: "0.33.2",
   sourceEvidence,
   helpCommands,
   inventorySections,

@@ -2833,13 +2833,30 @@ diff -ruN --exclude=node_modules a/docs/ELECTRON.md b/docs/ELECTRON.md
  ### What the **caller** owns
 diff -ruN --exclude=node_modules a/docs/SUPPORT_MATRIX.md b/docs/SUPPORT_MATRIX.md
 --- a/docs/SUPPORT_MATRIX.md	1985-10-26 03:15:00
-+++ b/docs/SUPPORT_MATRIX.md	2026-07-30 18:48:36
-@@ -26,7 +26,14 @@
++++ b/docs/SUPPORT_MATRIX.md	2026-08-02 22:36:30
+@@ -26,7 +26,31 @@
  
  ## Audit result
  
 -- Target upstream: `agent-browser 0.33.0` (must match `CAPABILITY_BASELINE.targetVersion` in [`scripts/agent-browser-capability-baseline.mjs`](../scripts/agent-browser-capability-baseline.mjs)).
-+- Target upstream: `agent-browser 0.33.1` (must match `CAPABILITY_BASELINE.targetVersion` in [`scripts/agent-browser-capability-baseline.mjs`](../scripts/agent-browser-capability-baseline.mjs)).
++- Target upstream: `agent-browser 0.33.2` (must match `CAPABILITY_BASELINE.targetVersion` in [`scripts/agent-browser-capability-baseline.mjs`](../scripts/agent-browser-capability-baseline.mjs)).
++- Re-baselined 0.33.1 -> 0.33.2 in this fork on 2026-08-02. Checked the same way: all 56 help
++  surfaces the baseline samples were diffed between the two published binaries. 53 are
++  byte-identical and the other 3 are purely additive — **nothing was removed anywhere**. Root
++  help gains three env vars (`AGENT_BROWSER_STREAM_QUALITY`, `AGENT_BROWSER_STREAM_MAX_WIDTH`,
++  `AGENT_BROWSER_STREAM_MAX_HEIGHT`), `stream --help` gains per-client `maxFps` and `ack`
++  pacing notes, and the core skill gains a `references/streaming.md`. The command set is
++  unchanged — `stream enable|disable|status` already existed in 0.33.1 and is already in
++  `inventorySections` — so the artifact-path guards that key off command prefixes are
++  unaffected, and no new flag reaches the argv tokenizer. `package.json` differs only in its
++  version field; no dependency changed.
++- The streaming server is not new in 0.33.2 and is not enabled by this bump: "streaming is
++  always available, binding an OS-assigned localhost port" is present in 0.33.1's `stream
++  --help` too. 0.33.2 only changes how frames are paced and encoded. This wrapper never runs
++  `stream`, so the WebSocket input surface stays out of reach of the tool contract either way.
++- `upstreamHead` is now `null`: npm tarballs for 0.33.2 carry no `gitHead`, so the commit
++  could not be recovered. Carrying 0.33.1's hash forward would have claimed provenance this
++  baseline does not have.
 +- Re-baselined 0.33.0 -> 0.33.1 in this fork on 2026-07-30. Upstream's release-gate evidence
 +  in the table below is theirs and still refers to 0.33.0; those gates live in upstream's
 +  repository and are not vendored here, so they were not re-run. What was checked instead:
@@ -2911,22 +2928,27 @@ diff -ruN --exclude=node_modules a/package.json b/package.json
    "author": "Mitch Fultz (https://github.com/fitchmultz)",
 diff -ruN --exclude=node_modules a/scripts/agent-browser-capability-baseline.mjs b/scripts/agent-browser-capability-baseline.mjs
 --- a/scripts/agent-browser-capability-baseline.mjs	1985-10-26 03:15:00
-+++ b/scripts/agent-browser-capability-baseline.mjs	2026-07-30 18:48:36
-@@ -15,7 +15,7 @@
++++ b/scripts/agent-browser-capability-baseline.mjs	2026-08-02 22:36:10
+@@ -14,8 +14,11 @@
+ 
  const sourceEvidence = Object.freeze({
    repository: "vercel-labs/agent-browser",
-   upstreamHead: "1ed371f3af472cc0d6cd8fdaea75d1a085ff7534",
+-  upstreamHead: "1ed371f3af472cc0d6cd8fdaea75d1a085ff7534",
 -  upstreamPackageVersion: "0.33.0",
-+  upstreamPackageVersion: "0.33.1",
++  // npm tarballs for 0.33.2 carry no gitHead, so the commit behind this release could not
++  // be recovered. Recording null rather than carrying 0.33.1's hash forward, which would
++  // claim provenance this baseline does not have.
++  upstreamHead: null,
++  upstreamPackageVersion: "0.33.2",
    inspectedSources: Object.freeze([
      "agent-browser --version",
      "agent-browser --help",
-@@ -844,7 +844,7 @@
+@@ -844,7 +847,7 @@
  ]);
  
  export const CAPABILITY_BASELINE = Object.freeze({
 -  targetVersion: "0.33.0",
-+  targetVersion: "0.33.1",
++  targetVersion: "0.33.2",
    sourceEvidence,
    helpCommands,
    inventorySections,

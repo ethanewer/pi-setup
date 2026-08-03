@@ -255,6 +255,37 @@ original commit history. It adds a watcher cap, kill-all, aggregated heartbeats,
 session shutdown with no persistence or restore. Not re-vendorable with
 `bin/pi-setup-vendor`; maintained directly.
 
+### Upstream 2.0.0 was reviewed and declined
+
+2.0.0 rebuilds the extension around crash-safe persistence: logical watcher UUIDs, source
+fingerprints, lifecycle revisions, cross-process leases validated against boot id and
+process start, abnormal-restart quarantine, versioned checkpoints, and
+`monitor_inspect` / `monitor_recover` / `monitor_gc` to operate it. This fork persists
+nothing — watcher definitions never reach the session file, so nothing can be restored or
+leaked across restarts. Adopting 2.0.0 would reverse that decision rather than upgrade it,
+so the fork stays on its 1.3.0 review baseline. `vendor.json` records this as
+`reviewedAgainst: "2.0.0"`, which is a different claim from `version` and suppresses the
+drift note for that release only.
+
+**One fix was ported: the per-tick poll timeout.** The fork's no-overlap guard had no
+bound, so a poll child that never exited — a hung SSH, which is the case poll mode exists
+for — held the guard forever and the watcher went permanently silent, with no error to
+latch onto. A tick now gets `intervalMs - 1000` and is killed through the existing
+process-group escalation, reported once through the existing failure latch.
+
+Declined from 2.0.0, with reasons:
+
+- **Suspension after N consecutive failures.** A suspended watcher strands an agent waiting
+  on it, and this fork has no recovery path to un-suspend one. The existing latch already
+  prevents notification storms.
+- **Exponential backoff with jitter.** Retrying every interval means the watcher self-heals
+  the moment a remote comes back. Up to five minutes of extra detection latency is a worse
+  trade than some wasted cheap spawns on a multi-day run.
+- **Poll confirmation and mutating-command quarantine.** The model already holds an
+  unrestricted `bash` tool, so gating monitor commands moves no security boundary.
+- **Structured process/file/SSH/HTTP probes and process receipts.** New surface area whose
+  purpose is to serve the persistence model this fork does not have.
+
 ### Why a progress bar warns instead of matching
 
 Matching is line-oriented. A process that redraws one line with carriage returns and never

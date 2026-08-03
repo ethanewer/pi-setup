@@ -490,9 +490,9 @@ if [[ "$OFFLINE" == "0" ]] && command -v npm >/dev/null 2>&1; then
     # non-whitespace character: IFS collapses leading empty fields for whitespace
     # delimiters, which would shift the version into UPSTREAM and query the
     # registry for it.
-    IFS='|' read -r UPSTREAM PINNED < <("$JS" -e '
+    IFS='|' read -r UPSTREAM PINNED REVIEWED < <("$JS" -e '
 const v = require(process.argv[1] + "/vendor.json").forks[process.argv[2]];
-process.stdout.write((v.upstream ?? "") + "|" + (v.version ?? "") + "\n");
+process.stdout.write((v.upstream ?? "") + "|" + (v.version ?? "") + "|" + (v.reviewedAgainst ?? "") + "\n");
 ' "$REPO_DIR" "$fork")
     # A first-party package (upstream: null) has no release to compare against.
     if [[ -z "$UPSTREAM" ]]; then
@@ -504,6 +504,13 @@ process.stdout.write((v.upstream ?? "") + "|" + (v.version ?? "") + "\n");
       note "could not query $UPSTREAM from the registry"
     elif [[ "$LATEST" == "$PINNED" ]]; then
       ok "$UPSTREAM is current at $PINNED"
+    elif [[ -n "$REVIEWED" && "$LATEST" == "$REVIEWED" ]]; then
+      # "Based on" and "reviewed against" are different claims. A hand-maintained fork can
+      # deliberately decline a release — 2.0.0 is built on persistence this fork does not
+      # have — and saying so once beats a note that repeats forever and teaches the reader
+      # to skip notes. The next release still reports, because reviewedAgainst will no
+      # longer equal latest.
+      ok "$UPSTREAM $LATEST reviewed and declined; fork stays on $PINNED (see vendor.json)"
     else
       # A fork with no patch file is hand-maintained; pi-setup-vendor refuses to re-vendor
       # it, so suggesting the command would send the reader down a path that always fails.

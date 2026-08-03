@@ -116,7 +116,10 @@ watcher's heartbeat, and heartbeats never count as real events in status.
 - **Don't** wrap a `monitor` call in a blocking `bash` wait — that defeats the
   point. `monitor` returns immediately; trust the ping.
 - For poll mode, your `command` must be **idempotent and fast** (a tail + a
-  process check). Don't put the actual long job in the poll command.
+  process check). Don't put the actual long job in the poll command. A tick that has not
+  finished one second before the next interval is killed and reported as
+  `POLL TIMEOUT after <n>s`, so a hung SSH costs one tick instead of silencing the
+  watcher; polling continues on the next interval.
 - Always include a death signal in `notifyOn` for poll/file mode (e.g.
   `ALIVE=0`), otherwise a silently-dead remote job won't ping you.
 - Default `notifyOn` is broad. For chatty logs, pass a tight `notifyOn`.

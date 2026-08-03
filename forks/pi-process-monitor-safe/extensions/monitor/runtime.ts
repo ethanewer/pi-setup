@@ -387,6 +387,28 @@ export function createMonitorRuntime(deps: RuntimeDeps): MonitorRuntime {
       errorLatched = true;
       emit(w, `${body} — suppressing repeats until a poll succeeds; retrying every tick`);
     };
+    const intervalMs = Math.max(MIN_POLL_INTERVAL_SECONDS, intervalSec) * 1000;
+    // A tick that never exits used to end the watcher permanently: `inFlight` stayed
+    // latched, every later tick returned early, and nothing was emitted again. A hung SSH
+    // is the ordinary way that happens, and poll mode exists to watch remote hosts, so the
+    // failure was both reachable and silent. Ported from upstream 2.0.0's poll timeout.
+    // Kept strictly under the interval so a killed tick cannot collide with its successor.
+    const tickTimeoutMs = Math.max(250, intervalMs - 1000);
+    // One handle for the whole watcher: a tick either clears its timer or the timer has
+    // already fired, so at most one is ever live. Registering the cleanup per tick instead
+    // would grow w.cleanups once per tick for the life of a multi-day watcher.
+    let tickTimer: TimerHandle | null = null;
+    const clearTickTimer = (): void => {
+      if (tickTimer === null) return;
+      clock.clearTimeout(tickTimer);
+      tickTimer = null;
+    };
+    // A timed-out child is abandoned, not awaited: it may still deliver an exit or an error
+    // minutes later, after the next tick already owns `inFlight` and `tickTimer`. Without
+    // this token that late callback cleared the *replacement* tick's timeout and released
+    // its slot — reinstating the very hang it was added to prevent, and letting two children
+    // run at once. Only the current tick may touch shared state.
+    let generation = 0;
     const tick = (): void => {
       if (!isActive(w) || inFlight) return;
       let handle: ChildHandle;
@@ -396,13 +418,27 @@ export function createMonitorRuntime(deps: RuntimeDeps): MonitorRuntime {
         reportFailure(`POLL SPAWN ERROR: ${(error as Error).message}`);
         return; // next tick retries
       }
-      trackChild(w, handle);
+      const child = trackChild(w, handle);
+      const myGeneration = ++generation;
+      const isCurrentTick = (): boolean => myGeneration === generation;
       inFlight = true;
       let out = "";
       // Bounded retention truncates from the head, which can leave the first
       // retained line partial; flag it so it is dropped before matching/dedup.
       let headTruncated = false;
       let failed = false;
+
+      tickTimer = clock.setTimeout(() => {
+        if (!isCurrentTick()) return;
+        tickTimer = null;
+        if (child.exited) return;
+        // Release the slot before killing. The child may never deliver an exit at all, and
+        // the next tick must not inherit this one's latch — that is the whole bug.
+        inFlight = false;
+        failed = true;
+        terminateChild(child, false);
+        reportFailure(`POLL TIMEOUT after ${Math.round(tickTimeoutMs / 1000)}s; stopped that tick`);
+      }, tickTimeoutMs);
       const capture = (chunk: string): void => {
         const combined = out + chunk;
         out = tailBytes(combined, MAX_POLL_RETAINED_BYTES);
@@ -411,10 +447,15 @@ export function createMonitorRuntime(deps: RuntimeDeps): MonitorRuntime {
       handle.onStdout(capture);
       handle.onStderr(capture);
       handle.onError((error) => {
+        if (!isCurrentTick()) return; // abandoned tick: its slot and timer belong to another
+        clearTickTimer();
+        if (failed) return; // already reported as a timeout
         failed = true;
         reportFailure(`POLL ERROR: ${error.message}`);
       });
       handle.onExit(() => {
+        if (!isCurrentTick()) return; // ditto: a late exit must not release someone else's slot
+        clearTickTimer();
         inFlight = false;
         if (failed || !isActive(w)) return; // an errored poll neither diffs nor re-arms
         errorLatched = false;
@@ -430,11 +471,12 @@ export function createMonitorRuntime(deps: RuntimeDeps): MonitorRuntime {
       });
     };
     tick();
-    const interval = clock.setInterval(
-      tick,
-      Math.max(MIN_POLL_INTERVAL_SECONDS, intervalSec) * 1000,
-    );
-    w.cleanups.push(() => clock.clearInterval(interval));
+    const interval = clock.setInterval(tick, intervalMs);
+    // Teardown cancels both, or a stopped watcher could still emit from a pending timer.
+    w.cleanups.push(() => {
+      clock.clearInterval(interval);
+      clearTickTimer();
+    });
   }
 
   // ---- file: tail appended lines ---------------------------------------

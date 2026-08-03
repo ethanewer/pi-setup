@@ -105,9 +105,12 @@ test("poll ticks do not overlap: ticks are skipped while the prior child is in f
   });
   assert.equal(h.proc.spawned.length, 1);
 
-  // Three intervals elapse while the first poll child is still running:
-  // every tick is skipped, no concurrent children pile up.
-  h.clock.advance(90_000);
+  // A tick still in flight suppresses the next one, so concurrent children never pile up.
+  // This used to assert that three whole intervals could elapse that way, which quietly
+  // encoded the hang-forever bug: a child that never exits held the guard permanently and
+  // the watcher went silent. The guard is now bounded by the per-tick timeout, so this
+  // stays inside that window; test/poll-timeout.test.ts covers what happens past it.
+  h.clock.advance(28_000);
   assert.equal(h.proc.spawned.length, 1);
 
   // Once the child completes, the next tick polls again and diffing works.

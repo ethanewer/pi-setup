@@ -26,7 +26,24 @@ When upstream ships a new `agent-browser` or the inventory changes:
 
 ## Audit result
 
-- Target upstream: `agent-browser 0.33.1` (must match `CAPABILITY_BASELINE.targetVersion` in [`scripts/agent-browser-capability-baseline.mjs`](../scripts/agent-browser-capability-baseline.mjs)).
+- Target upstream: `agent-browser 0.33.2` (must match `CAPABILITY_BASELINE.targetVersion` in [`scripts/agent-browser-capability-baseline.mjs`](../scripts/agent-browser-capability-baseline.mjs)).
+- Re-baselined 0.33.1 -> 0.33.2 in this fork on 2026-08-02. Checked the same way: all 56 help
+  surfaces the baseline samples were diffed between the two published binaries. 53 are
+  byte-identical and the other 3 are purely additive — **nothing was removed anywhere**. Root
+  help gains three env vars (`AGENT_BROWSER_STREAM_QUALITY`, `AGENT_BROWSER_STREAM_MAX_WIDTH`,
+  `AGENT_BROWSER_STREAM_MAX_HEIGHT`), `stream --help` gains per-client `maxFps` and `ack`
+  pacing notes, and the core skill gains a `references/streaming.md`. The command set is
+  unchanged — `stream enable|disable|status` already existed in 0.33.1 and is already in
+  `inventorySections` — so the artifact-path guards that key off command prefixes are
+  unaffected, and no new flag reaches the argv tokenizer. `package.json` differs only in its
+  version field; no dependency changed.
+- The streaming server is not new in 0.33.2 and is not enabled by this bump: "streaming is
+  always available, binding an OS-assigned localhost port" is present in 0.33.1's `stream
+  --help` too. 0.33.2 only changes how frames are paced and encoded. This wrapper never runs
+  `stream`, so the WebSocket input surface stays out of reach of the tool contract either way.
+- `upstreamHead` is now `null`: npm tarballs for 0.33.2 carry no `gitHead`, so the commit
+  could not be recovered. Carrying 0.33.1's hash forward would have claimed provenance this
+  baseline does not have.
 - Re-baselined 0.33.0 -> 0.33.1 in this fork on 2026-07-30. Upstream's release-gate evidence
   in the table below is theirs and still refers to 0.33.0; those gates live in upstream's
   repository and are not vendored here, so they were not re-run. What was checked instead:

@@ -93,7 +93,7 @@ not touch anything that needs a decision, and says so rather than pretending. Th
 | PROBLEM | What to do |
 |---|---|
 | `trust.json trusts <path>` | Remove that key and re-approve individual repositories. Trust inherits down the tree, so a home-wide entry trusts every repository you ever clone. |
-| `compaction.reserveTokens is …` / `compaction is disabled` | Edit `~/.pi/agent/settings.json`. About 16384 reserve is right; see [`LONG_RUNS.md`](../../../../docs/LONG_RUNS.md). |
+| `compaction.reserveTokens is …` / `compaction is disabled` | For a reserve below the floor, `--fix` reinstalls and applies `config/compaction.json`. For a hand-set value that is too large, or `enabled: false`, edit `~/.pi/agent/settings.json` — deleting the key lets the installer reapply the policy. See [`LONG_RUNS.md`](../../../../docs/LONG_RUNS.md). |
 | `<name> is installed at … but is not in vendor.json` | A retired package. Confirm it is not wanted, then `rm -rf` that directory — `--fix` will not delete for you. |
 | `stt.json is not valid JSON` / `no usable keybind` | Fix the file by hand; `install.sh` only rewrites the keys it manages, so a syntax error survives a reinstall. |
 | A fork does not reproduce from its patch (`bin/pi-setup-vendor --verify --all`) | Someone edited `forks/` without regenerating. Run `bin/pi-setup-vendor --regenerate-patch <fork>` and review the diff. |
@@ -170,6 +170,27 @@ bin/pi-setup-vendor --verify <fork>
 
 `pi-process-monitor-safe` is hand-maintained with no patch file; port upstream fixes
 manually and record what you decided in its `vendor.json` note.
+
+### Declining a release
+
+A hand-maintained fork may legitimately refuse an upstream release. `pi-process-monitor`
+2.0.0 is built on crash-safe persistence — logical UUIDs, cross-process leases, restart
+quarantine, recovery tools — and this fork persists nothing by design, so adopting it would
+reverse the fork's central decision rather than upgrade it.
+
+When that happens, do not leave the drift note firing forever; a note that never clears
+teaches the reader to skip notes. Instead:
+
+1. Read the release properly and port anything that fits. From 2.0.0 that was one fix: the
+   per-tick poll timeout, because the fork's no-overlap guard was unbounded and a hung SSH
+   child silenced a watcher permanently.
+2. Set `reviewedAgainst` to that version in `vendor.json`, keeping `version` as what the
+   fork is actually built on. The two fields are different claims and must not be conflated.
+3. Write the reasoning into the `note` — what was ported, what was declined, and why for
+   each. The next reader should not have to redo the analysis.
+
+The doctor then reports `reviewed and declined` instead of drift, and starts reporting
+again at the next release, because `reviewedAgainst` will no longer equal latest.
 
 ## 5. Change a first-party package
 
