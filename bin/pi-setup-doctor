@@ -450,10 +450,10 @@ let target = typeof policy.reserveTokens === "number" ? policy.reserveTokens : f
 if (typeof policy.maxFractionOfWindow === "number") target = Math.min(target, Math.floor(win * policy.maxFractionOfWindow));
 target = Math.max(floor, target);
 if (reserve < target) {
-  console.log("bad\tcompaction.reserveTokens is " + reserve + " in " + settingsPath + ", so compaction waits until " + threshold + " tokens. Pi only checks between turns, and one long agentic turn has been measured adding ~25000 tokens after the threshold, running " + win + "-token context to 290536. config/compaction.json wants at least " + target + " (bin/pi-setup-doctor --fix).");
+  console.log("bad\tcompaction.reserveTokens is " + reserve + " in " + settingsPath + ", so compaction waits until " + threshold + " tokens. Pi only checks after an agent run finishes, and one run has been measured adding ~25000 tokens past the threshold, taking a " + win + "-token context to 290536. config/compaction.json wants at least " + target + " (bin/pi-setup-doctor --fix).");
   process.exit(0);
 }
-console.log("ok\treserveTokens " + reserve + " of a " + win + "-token window (compaction at ~" + threshold + " tokens, one long turn of headroom)");
+console.log("ok\treserveTokens " + reserve + " of a " + win + "-token window (compaction at ~" + threshold + " tokens; slack for one long run, not a bound - see docs/LONG_RUNS.md)");
 ' "$SETTINGS" "$MAIN_DIR/models-store.json" "$REPO_DIR/config/compaction.json" 2>/dev/null)"
 if [[ -z "$COMPACTION_REPORT" ]]; then
   note "could not evaluate compaction settings"

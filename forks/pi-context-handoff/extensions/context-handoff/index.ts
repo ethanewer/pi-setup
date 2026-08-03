@@ -5,10 +5,20 @@
  * and does nothing else.
  *
  * Design constraint, which is the whole reason this package exists: it must not be
- * able to stop a run. Pi already compacts mid-turn and continues (agent-session's
- * _checkCompaction returns true and the agent loop carries on), and its native
- * summarization is retried. So this hooks session_before_compact, calls Pi's own
+ * able to stop a run. Pi compacts between agent runs and continues (agent-session's
+ * _checkCompaction returns true and the loop in _runAgentPrompt carries on), and its
+ * native summarization is retried. So this hooks session_before_compact, calls Pi's own
  * compact() with focus instructions plus a retry policy, and returns the result.
+ *
+ * An earlier version of this comment said Pi "compacts mid-turn". It does not, and the
+ * distinction matters: _checkCompaction is only reached from _handlePostAgentRun, after
+ * `await this.agent.prompt(...)` has returned (agent-session.js:744-750). Everything
+ * inside one agentic run — every LLM call and tool result in it — accumulates with no
+ * threshold check, so context can pass the model's window mid-run and stay there until
+ * the run ends. Nothing here can change that, and nothing here should try: the only
+ * extension-facing trigger, ctx.compact(), begins with _disconnectFromAgent() and
+ * abort(), so calling it from a turn_end hook would kill the run it was meant to protect.
+ * See docs/LONG_RUNS.md.
  *
  * It never calls ctx.abort(), never sends a message, and never returns
  * { cancel: true }. Every failure path returns undefined, which means "Pi, do your

@@ -102,10 +102,12 @@ Compaction is Pi's job, not an extension's. `install.sh` writes it into
 Compaction fires when context exceeds `contextWindow - reserveTokens`. There are hazards
 at both ends, and the low end is the one that actually bit.
 
-> **`reserveTokens` must cover a whole turn, not a whole reply.** Pi evaluates the
-> threshold *between turns*. An agentic turn can be hundreds of entries long, so a run can
-> cross the threshold early in a turn and keep going for the rest of it. Pi's default of
-> 16384 quietly assumes the check happens often.
+> **`reserveTokens` must cover a whole agent run, not a whole reply.** Pi evaluates the
+> threshold only *after* a run finishes. `_checkCompaction` is reached from
+> `_handlePostAgentRun`, which runs after `await this.agent.prompt(...)` returns
+> (`agent-session.js:744-750`). An agentic run can be hundreds of entries long, so a run
+> can cross the threshold early and keep going for the rest of it. Pi's default of 16384
+> quietly assumes the check happens often.
 >
 > Measured on session `019fb8da` (2026-07-31, `gpt-5.6-sol`, 272000-token window,
 > `reserveTokens` 16384): the 255616 threshold was crossed at 265232 tokens, and the turn
@@ -114,8 +116,33 @@ at both ends, and the low end is the one that actually bit.
 > longer turn would have hit a hard context error mid-run, which is the exact failure this
 > document exists to prevent.
 >
-> 45000 puts compaction at 227000 on that window, leaving room for the ~25000 tokens that
-> turn added after crossing.
+> 45000 puts compaction at 227000 on that window, which left room for the ~25000 tokens
+> that particular run added after crossing.
+
+> **A larger reserve is slack, not a bound. It cannot stop an overrun.** Because the check
+> only happens between runs, a long enough run passes any threshold you set. Observed on
+> `mk` on 2026-08-03 *with* `reserveTokens: 45000` already applied: a single run reached
+> **120.5% of the 272000-token window, about 328000 tokens**, worse than the 290536 that
+> motivated the setting. The reserve makes compaction trip sooner at every run boundary,
+> so a session spends less time near the ceiling — that is worth having, and it is all it
+> buys.
+>
+> **There is no code fix available to an extension.** The one extension-facing trigger,
+> `ctx.compact()`, delegates to `AgentSession.compact()`, which opens with
+> `this._disconnectFromAgent(); await this.abort();`. Calling it from `turn_end` would
+> abort the very run it was trying to protect. Pi exposes no `maxTurns`, `maxSteps`, or
+> equivalent, and `compaction` settings are only `enabled`, `reserveTokens`, and
+> `keepRecentTokens`. Nothing in this repository can bound within-run growth.
+>
+> What actually bounds it is **ending the run**. A turn that finishes lets the check run,
+> and compaction happens immediately. That is exactly the yield-and-be-woken pattern the
+> monitor exists for: report progress, end the turn, and let a watcher steer you back when
+> the job moves. A run that never yields will keep growing no matter how it is configured.
+>
+> Pi is not defenceless if the provider does reject the request: `_checkCompaction` case 1
+> detects a context-overflow response, compacts, and retries once
+> (`_overflowRecoveryAttempted`). So an overrun is expensive and outside the documented
+> envelope rather than immediately fatal.
 
 > **Do not set `reserveTokens` near the context window either.** It leaves almost no usable
 > context and produces a summarization request that stalls with no output and no error —

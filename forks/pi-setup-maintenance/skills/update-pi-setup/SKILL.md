@@ -70,7 +70,7 @@ section can emit a PROBLEM and fail the exit code.
 | Keybindings and the p profile | An agent directory is missing a binding from `config/keybindings.json`, or the `p` profile is gone. Re-run `./install.sh`. See `docs/KEYBINDINGS.md`. |
 | Retired and unknown local packages | A package on disk that `vendor.json` does not know about — dead code that can still be loaded if it is re-added to settings. |
 | Pi and agent-browser | Installed version differs from the pin in `install.sh` — something bypassed the installer. |
-| Compaction settings | `reserveTokens` outside the band in `config/compaction.json`, or compaction disabled. Too small is the common one: Pi only checks the threshold between turns, so a reserve that covers one reply but not one agentic turn lets a run overshoot its context window. Too large stalls the summarization call. Both stop a long run. |
+| Compaction settings | `reserveTokens` outside the band in `config/compaction.json`, or compaction disabled. Too small is the common one: Pi only checks the threshold *after an agent run finishes*, so a reserve that covers one reply but not one whole run lets context overshoot the window. Too large stalls the summarization call. Note the reserve is slack, not a bound — a long enough run passes any threshold, and no setting or extension prevents that. See [`LONG_RUNS.md`](../../../../docs/LONG_RUNS.md). |
 | Upstream releases | npm has a newer release than this repository pins. A note, not a problem: upgrading is a deliberate act. |
 
 `vendor.json` is the machine-readable record of which upstream release each fork is
