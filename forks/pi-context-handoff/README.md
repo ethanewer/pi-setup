@@ -27,9 +27,14 @@ what happens with this package uninstalled. A missing model, unreadable config, 
 outage, empty summary, or aborted signal all degrade to native compaction with Pi's own
 retries. The worst outcome is a less useful summary.
 
-This matters because Pi already compacts mid-turn and continues: `_checkCompaction`
-returns true and the agent loop carries on. There is no turn to abort and no resume to
-dispatch, so the machinery that made the previous extension fragile has nothing to do.
+This matters because Pi already compacts and resumes on its own: when `_checkCompaction`
+returns true, `_runAgentPrompt`'s loop calls `agent.continue()`. There is no turn to abort
+and no resume to dispatch, so the machinery that made the previous extension fragile has
+nothing to do.
+
+Note the check runs *after* an agent run returns, not inside one — so it cannot stop
+context from overshooting the window during a single long run. Nothing in this extension
+can change that; see [`docs/LONG_RUNS.md`](../../docs/LONG_RUNS.md).
 
 ## Configuration
 

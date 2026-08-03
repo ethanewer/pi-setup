@@ -23,12 +23,19 @@ defect in `pi-continue`, not two:
    waiting for a human. A `guardFailureKey` latch then aborted the next attempt at the
    same checkpoint too.
 
-The decisive detail: **Pi already compacts mid-turn and keeps going.**
-`_checkCompaction` returns true and the agent loop continues (`agent-session.js:776`), on
-overflow it compacts and retries the interrupted step (`:1533-1556`), and its native
+The decisive detail: **Pi already compacts and then keeps going by itself.** When
+`_checkCompaction` returns true, `_handlePostAgentRun` returns true too and
+`_runAgentPrompt`'s loop calls `agent.continue()` (`agent-session.js:744-750, 776`); on
+overflow it compacts and retries the interrupted step (`:1533-1556`); and its native
 summarization is handed a retry policy (`:1662`, 3 retries / 2s backoff). The extension
 replaced a zero-failure-link mechanism with a five-link one — and was strictly *less*
 resilient than the Pi behaviour it displaced.
+
+(Earlier revisions of this paragraph said Pi compacts "mid-turn". It does not — the check
+runs only after an agent run returns, which is why context can overshoot the window inside
+one long run. See [Configuration for long runs](#configuration-for-long-runs). What matters
+here is unchanged: Pi resumes on its own after compacting, so no extension needs to
+orchestrate a resume.)
 
 Two caps made it worse, and they were mine: `maxChainedContinuations: 10` and
 `maxChainedSynthesisCostUsd: 5`, added during the security audit. The counter only reset
