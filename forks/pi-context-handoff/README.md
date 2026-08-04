@@ -19,8 +19,14 @@ task is unfinished rather than reading as a conclusion.
 
 ## What it deliberately does not do
 
-It **cannot stop a run**. It never calls `ctx.abort()`, never sends a message, never
-returns `{ cancel: true }`, and never injects a resume prompt.
+It **cannot stop a run**. It never calls `ctx.abort()` and never returns
+`{ cancel: true }`.
+
+It does send exactly one kind of message — a resume nudge, and only where Pi has already
+decided to end the run. See [Resuming a run Pi abandoned](#resuming-a-run-pi-abandoned).
+Earlier versions of this file said it never sends a message; that was true until the
+resume was added, and the constraint it was protecting (this extension must not be able to
+*stop* a run) still holds.
 
 Every failure path returns `undefined`, which means "Pi, do your own compaction" — exactly
 what happens with this package uninstalled. A missing model, unreadable config, provider
@@ -96,9 +102,13 @@ extension's contribution) are preserved and appended, not overridden.
 This package does not decide that; Pi does. Tune it with Pi's own settings:
 
 ```json
-{ "compaction": { "enabled": true, "reserveTokens": 16384, "keepRecentTokens": 20000 } }
+{ "compaction": { "enabled": true, "reserveTokens": 68000, "keepRecentTokens": 20000 } }
 ```
 
 Compaction triggers when context exceeds `contextWindow - reserveTokens`. Keep
 `reserveTokens` well below the model's context window — setting it near the window
-produces a summarization request that can stall.
+produces a summarization request that can stall. `install.sh` applies
+[`config/compaction.json`](../../config/compaction.json), which sizes the reserve to cover
+one whole agent run rather than one reply; see
+[`docs/LONG_RUNS.md`](../../docs/LONG_RUNS.md) for why that matters and what it cannot
+guarantee.
