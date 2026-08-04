@@ -103,7 +103,7 @@ Compaction is Pi's job, not an extension's. `install.sh` writes it into
 `~/.pi/agent/settings.json` and `~/.pi/agent-p/settings.json`:
 
 ```json
-{ "compaction": { "reserveTokens": 45000 } }
+{ "compaction": { "reserveTokens": 68000 } }
 ```
 
 Compaction fires when context exceeds `contextWindow - reserveTokens`. There are hazards
@@ -123,8 +123,13 @@ at both ends, and the low end is the one that actually bit.
 > longer turn would have hit a hard context error mid-run, which is the exact failure this
 > document exists to prevent.
 >
-> 45000 puts compaction at 227000 on that window, which left room for the ~25000 tokens
-> that particular run added after crossing.
+> Session `019fcaa8` (2026-08-04) then showed 45000 was still too small, and showed it in
+> the most useful way: the run **started at 214665**, just under that setting's 227000
+> threshold, so Pi correctly declined to compact first. The run then grew **53324 tokens
+> across 49 calls** — more than the 45000 of window it had been left — and hit the ceiling
+> at 267989 with about 4000 tokens spare. **68000 would have compacted before that run ever
+> started.** The reserve must exceed the growth of one whole run, and 53324 is the largest
+> single-run growth measured so far.
 
 > **A larger reserve is slack, not a bound. It cannot stop an overrun.** Because the check
 > only happens between runs, a long enough run passes any threshold you set. Observed on
@@ -146,6 +151,46 @@ at both ends, and the low end is the one that actually bit.
 > monitor exists for: report progress, end the turn, and let a watcher steer you back when
 > the job moves. A run that never yields will keep growing no matter how it is configured.
 >
+## When the model is truncated, Pi compacts and then abandons the run
+
+This is a separate failure, seen three times on 2026-08-04, and it is the one that looks
+most like "the agent just stopped".
+
+When context leaves no room to generate, the provider truncates the reply. Every occurrence
+had the same shape: `stopReason: "length"`, `rawStopReason: "incomplete"`, **one empty
+thinking block, `output: 16`**, and `input + cacheRead` around 267,700 of a 272,000 window.
+The work was unfinished — there was no tool call and no answer.
+
+Pi has a case for exactly this. `isContextOverflow` case 3 covers "server truncates
+oversized input, leaving no room for output" — but it requires **both**
+`usage.output === 0` and `input + cacheRead >= contextWindow * 0.99`. These messages carried
+16 reasoning tokens rather than 0, and sat at 98.4%, just under the 269,280 floor. Both
+conditions missed, so a truncation was classified as a routine threshold compaction, which
+ends with:
+
+```js
+if (willRetry) { ...; return true; }        // resume
+return this.agent.hasQueuedMessages();       // false -> the run is over
+```
+
+The compaction succeeds and the run silently ends, with no error and nothing in the
+transcript after it.
+
+**That last line is also the fix, and production proved it.** `session_compact` is emitted
+and awaited *before* that return, so anything queued during the hook makes
+`hasQueuedMessages()` true and Pi calls `agent.continue()`. In session `019fcd7f` the same
+truncation happened twice: at 16:56:38 a monitor watcher event landed **28 ms** after the
+compaction and the run carried on for another 600 entries; at 18:36:39 nothing was queued
+and the run sat dead until a human typed **64 minutes** later. The monitor had accidentally
+rescued the first one.
+
+`pi-context-handoff` now does deliberately what the monitor did by accident: on
+`session_compact`, if the compaction followed a truncated assistant message and Pi is not
+already retrying, it injects a resume message using the same call shape. It is narrow on
+purpose — a normally finished turn is never nudged, or the agent would chatter after every
+compaction — and it gives up after three consecutive truncated resumes rather than looping,
+saying why. See [`forks/pi-context-handoff/extensions/context-handoff/resume.ts`](../forks/pi-context-handoff/extensions/context-handoff/resume.ts).
+
 > Pi is not defenceless if the provider does reject the request: `_checkCompaction` case 1
 > detects a context-overflow response, compacts, and retries once
 > (`_overflowRecoveryAttempted`). So an overrun is expensive and outside the documented

@@ -20,14 +20,24 @@
  * abort(), so calling it from a turn_end hook would kill the run it was meant to protect.
  * See docs/LONG_RUNS.md.
  *
- * It never calls ctx.abort(), never sends a message, and never returns
- * { cancel: true }. Every failure path returns undefined, which means "Pi, do your
- * own compaction" — the exact behaviour of not having this package installed.
+ * It never calls ctx.abort() and never returns { cancel: true }. Every failure path
+ * returns undefined, which means "Pi, do your own compaction" — the exact behaviour of
+ * not having this package installed.
+ *
+ * The one thing it does send is a resume nudge, and only in a situation where the run is
+ * otherwise already over. See resume.ts.
  */
 
 import { compact, type ExtensionAPI, type ExtensionContext } from "@earendil-works/pi-coding-agent";
 
 import { carryFileLists } from "./carry-files.js";
+import {
+	GAVE_UP_TEXT,
+	lastAssistantWasTruncated,
+	RESUME_MESSAGE_TYPE,
+	RESUME_TEXT,
+	ResumeGuard,
+} from "./resume.js";
 import { type HandoffConfig, loadHandoffConfig } from "./config.js";
 import { buildHandoffFocus } from "./instructions.js";
 
@@ -80,8 +90,13 @@ function describe(error: unknown): string {
 export default function contextHandoffExtension(pi: ExtensionAPI) {
 	const notifyOnce = createOnceNotifier();
 	let configWarned = false;
+	const resumeGuard = new ResumeGuard();
+	// Set by session_before_compact, read by session_compact: only the former is handed the
+	// branch entries needed to see how the last assistant message ended.
+	let lastCompactionFollowedTruncation = false;
 
 	pi.on("session_before_compact", async (event, ctx) => {
+		lastCompactionFollowedTruncation = lastAssistantWasTruncated(event.branchEntries);
 		let config: HandoffConfig;
 		try {
 			const loaded = loadHandoffConfig();
@@ -157,4 +172,34 @@ export default function contextHandoffExtension(pi: ExtensionAPI) {
 			return undefined;
 		}
 	});
+
+	// Resume a run Pi compacted and then abandoned. See resume.ts for why this exists and
+	// why it is safe: at this point Pi is about to end the run, and anything queued here is
+	// what makes it continue instead.
+	pi.on("session_compact", (event, ctx) => {
+		const decision = resumeGuard.decide(lastCompactionFollowedTruncation, event.willRetry === true);
+		lastCompactionFollowedTruncation = false;
+		if (decision === "ignore") return;
+		try {
+			pi.sendMessage(
+				{
+					customType: RESUME_MESSAGE_TYPE,
+					content: decision === "resume" ? RESUME_TEXT : GAVE_UP_TEXT,
+					display: true,
+					details: { consecutiveResumes: resumeGuard.consecutiveResumes },
+				},
+				// Exactly the shape the monitor uses, which is the shape observed to resume a
+				// run in production. "give-up" still sends: the run is ending either way, and
+				// a visible reason beats silence.
+				{ triggerTurn: decision === "resume", deliverAs: "steer" },
+			);
+		} catch (error) {
+			// A refused injection must never turn a survivable compaction into a crash.
+			notifyOnce(ctx, `pi-context-handoff: could not resume after compaction (${describe(error)}).`, "warning");
+		}
+	});
+
+	// A turn that finishes normally clears the streak, so unrelated truncations much later
+	// do not inherit an old count.
+	pi.on("agent_settled", () => resumeGuard.noteHealthyTurn());
 }

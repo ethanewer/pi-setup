@@ -36,6 +36,27 @@ Note the check runs *after* an agent run returns, not inside one — so it canno
 context from overshooting the window during a single long run. Nothing in this extension
 can change that; see [`docs/LONG_RUNS.md`](../../docs/LONG_RUNS.md).
 
+## Resuming a run Pi abandoned
+
+There is one case where Pi compacts and then does *not* resume, and this extension fixes
+it. When context leaves no room to generate, the reply is truncated: `stopReason "length"`,
+an empty thinking block, no tool call, work unfinished. Pi's overflow test misses that
+shape — it requires `usage.output === 0` and ≥99% of the window, and the real messages
+carry a few reasoning tokens at ~98.4% — so it compacts as a routine threshold and ends
+with `return this.agent.hasQueuedMessages()`, which is false. The run stops silently.
+
+`session_compact` is emitted before that return, so a message queued there makes Pi call
+`agent.continue()` instead. Observed in production: in one session a monitor event landing
+28 ms after such a compaction resumed the run for another 600 entries, while an identical
+compaction with nothing queued sat dead for 64 minutes.
+
+So on `session_compact`, when the compaction followed a truncated assistant message and Pi
+is not already retrying, this extension injects a resume message. It is narrow by design —
+a normally finished turn is never nudged — and it stops after three consecutive truncated
+resumes, saying why rather than looping. The logic is in
+[`extensions/context-handoff/resume.ts`](extensions/context-handoff/resume.ts) and is unit
+tested in [`tests/resume.test.ts`](../../tests/resume.test.ts).
+
 ## Configuration
 
 All keys are optional. Configuration is read relative to `PI_CODING_AGENT_DIR`:
