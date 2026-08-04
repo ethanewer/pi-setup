@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import {
+	isUnfinishedStop,
 	lastAssistantWasTruncated,
 	MAX_CONSECUTIVE_RESUMES,
 	ResumeGuard,
@@ -93,6 +94,75 @@ describe("ResumeGuard", () => {
 		const g = new ResumeGuard();
 		g.decide(true, false);
 		expect(g.decide(false, false)).toBe("ignore");
+		expect(g.consecutiveResumes).toBe(0);
+	});
+});
+
+describe("isUnfinishedStop", () => {
+	test("a deliberate finish and a user cancel are never resumed", () => {
+		// Resuming either would talk over the user; these are the two that must stay false.
+		expect(isUnfinishedStop("stop")).toBe(false);
+		expect(isUnfinishedStop("aborted")).toBe(false);
+		expect(isUnfinishedStop(undefined)).toBe(false);
+	});
+
+	test("a truncation or a provider error left work unfinished", () => {
+		expect(isUnfinishedStop("length")).toBe(true);
+		expect(isUnfinishedStop("error")).toBe(true);
+	});
+});
+
+describe("ResumeGuard backstop on agent_settled", () => {
+	test("covers the stops session_compact never sees", () => {
+		// A compaction that threw, or nothing-to-compact, emits no session_compact at all.
+		const g = new ResumeGuard();
+		expect(g.decideOnSettled("error")).toBe("resume");
+	});
+
+	test("a normally finished run is left alone", () => {
+		const g = new ResumeGuard();
+		expect(g.decideOnSettled("stop")).toBe("ignore");
+		expect(g.consecutiveResumes).toBe(0);
+	});
+
+	test("a cancelled run is left alone", () => {
+		const g = new ResumeGuard();
+		expect(g.decideOnSettled("aborted")).toBe("ignore");
+	});
+
+	test("does not resume twice when session_compact already did", () => {
+		const g = new ResumeGuard();
+		expect(g.decide(true, false)).toBe("resume");
+		expect(g.decideOnSettled("length")).toBe("ignore");
+		expect(g.consecutiveResumes).toBe(1);
+	});
+
+	test("endRun lets the next run be rescued again", () => {
+		const g = new ResumeGuard();
+		g.decide(true, false);
+		g.endRun();
+		expect(g.decideOnSettled("length")).toBe("resume");
+		expect(g.consecutiveResumes).toBe(2);
+	});
+
+	test("the cap applies across both hooks together", () => {
+		const g = new ResumeGuard();
+		g.decide(true, false);
+		g.endRun();
+		g.decideOnSettled("error");
+		g.endRun();
+		g.decide(true, false);
+		g.endRun();
+		expect(g.consecutiveResumes).toBe(MAX_CONSECUTIVE_RESUMES);
+		expect(g.decideOnSettled("length")).toBe("give-up");
+	});
+
+	test("a healthy run between failures resets the cap", () => {
+		const g = new ResumeGuard();
+		g.decideOnSettled("length");
+		g.endRun();
+		expect(g.decideOnSettled("stop")).toBe("ignore");
+		g.endRun();
 		expect(g.consecutiveResumes).toBe(0);
 	});
 });

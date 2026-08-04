@@ -184,12 +184,40 @@ compaction and the run carried on for another 600 entries; at 18:36:39 nothing w
 and the run sat dead until a human typed **64 minutes** later. The monitor had accidentally
 rescued the first one.
 
-`pi-context-handoff` now does deliberately what the monitor did by accident: on
-`session_compact`, if the compaction followed a truncated assistant message and Pi is not
-already retrying, it injects a resume message using the same call shape. It is narrow on
-purpose — a normally finished turn is never nudged, or the agent would chatter after every
-compaction — and it gives up after three consecutive truncated resumes rather than looping,
-saying why. See [`forks/pi-context-handoff/extensions/context-handoff/resume.ts`](../forks/pi-context-handoff/extensions/context-handoff/resume.ts).
+### The fix, and what it does and does not guarantee
+
+Truncation is only one of the ways `_runAutoCompaction` returns false and ends a run. The
+others are a compaction that threw, nothing to compact, an aborted compaction, and overflow
+recovery that has already spent its single `_overflowRecoveryAttempted` retry. **Three of
+those never emit `session_compact` at all**, so a hook there cannot see them.
+
+`pi-context-handoff` therefore resumes at two points:
+
+1. **`session_compact`** — the cheap path, used when a truncation was compacted. Queuing
+   there makes `hasQueuedMessages()` true and Pi calls `agent.continue()`, carrying on
+   inside the same run.
+2. **`agent_settled`** — the backstop. Pi documents it as "will not continue running
+   automatically", and it is emitted from `_runAgentPrompt`'s `finally`, so it fires on
+   every stopping path. If the run ended unfinished and nothing already rescued it, a
+   resume is injected with `triggerTurn`, which starts a new turn.
+
+"Unfinished" is `stopReason` of `length` or `error`. **`stop` and `aborted` are never
+resumed** — the first is the model deliberately finishing, the second is you cancelling, and
+resuming either would talk over you. That gating is what stops `agent_settled`, which fires
+after *every* run, from making the agent chatter.
+
+Verified end to end in tmux rather than only in unit tests: with the
+`PI_CONTEXT_HANDOFF_FORCE_RESUME=1` seam the transcript shows the first turn, the injected
+`[context-handoff-resume]` message, and then a genuinely new model turn. Normal runs were
+checked too and inject nothing.
+
+**The bounds, stated plainly.** It gives up after three consecutive unfinished resumes and
+says why, because an unrecoverable context is better ended than looped on. It cannot help if
+the `pi` process itself dies, and it does not stop context from growing inside a run — that
+is the architectural limit above. What it does guarantee is that Pi deciding to stop a run
+at a compaction boundary no longer ends it silently.
+
+See [`forks/pi-context-handoff/extensions/context-handoff/resume.ts`](../forks/pi-context-handoff/extensions/context-handoff/resume.ts).
 
 > Pi is not defenceless if the provider does reject the request: `_checkCompaction` case 1
 > detects a context-overflow response, compacts, and retries once

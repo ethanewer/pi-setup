@@ -32,7 +32,9 @@ import { compact, type ExtensionAPI, type ExtensionContext } from "@earendil-wor
 
 import { carryFileLists } from "./carry-files.js";
 import {
+	FORCE_RESUME_ENV,
 	GAVE_UP_TEXT,
+	isUnfinishedStop,
 	lastAssistantWasTruncated,
 	RESUME_MESSAGE_TYPE,
 	RESUME_TEXT,
@@ -94,6 +96,9 @@ export default function contextHandoffExtension(pi: ExtensionAPI) {
 	// Set by session_before_compact, read by session_compact: only the former is handed the
 	// branch entries needed to see how the last assistant message ended.
 	let lastCompactionFollowedTruncation = false;
+	// How the most recent low-level run ended, captured from agent_end because agent_settled
+	// carries no payload.
+	let lastRunStopReason: string | undefined;
 
 	pi.on("session_before_compact", async (event, ctx) => {
 		lastCompactionFollowedTruncation = lastAssistantWasTruncated(event.branchEntries);
@@ -173,13 +178,7 @@ export default function contextHandoffExtension(pi: ExtensionAPI) {
 		}
 	});
 
-	// Resume a run Pi compacted and then abandoned. See resume.ts for why this exists and
-	// why it is safe: at this point Pi is about to end the run, and anything queued here is
-	// what makes it continue instead.
-	pi.on("session_compact", (event, ctx) => {
-		const decision = resumeGuard.decide(lastCompactionFollowedTruncation, event.willRetry === true);
-		lastCompactionFollowedTruncation = false;
-		if (decision === "ignore") return;
+	const sendResume = (decision: "resume" | "give-up", ctx: ExtensionContext) => {
 		try {
 			pi.sendMessage(
 				{
@@ -194,12 +193,47 @@ export default function contextHandoffExtension(pi: ExtensionAPI) {
 				{ triggerTurn: decision === "resume", deliverAs: "steer" },
 			);
 		} catch (error) {
-			// A refused injection must never turn a survivable compaction into a crash.
-			notifyOnce(ctx, `pi-context-handoff: could not resume after compaction (${describe(error)}).`, "warning");
+			// A refused injection must never turn a survivable stop into a crash.
+			notifyOnce(ctx, `pi-context-handoff: could not resume the run (${describe(error)}).`, "warning");
+		}
+	};
+
+	// Cheapest resume point: session_compact is awaited before Pi's
+	// `return this.agent.hasQueuedMessages()`, so a message queued here continues the same run.
+	pi.on("session_compact", (event, ctx) => {
+		const decision = resumeGuard.decide(lastCompactionFollowedTruncation, event.willRetry === true);
+		lastCompactionFollowedTruncation = false;
+		if (decision !== "ignore") sendResume(decision, ctx);
+	});
+
+	// Backstop. Several ways Pi ends a run never emit session_compact at all — a compaction
+	// that threw, nothing to compact, an aborted compaction, or overflow recovery that has
+	// already spent its single retry. agent_settled fires on all of them.
+	pi.on("agent_end", (event) => {
+		const messages = (event as { messages?: Array<{ role?: string; stopReason?: string }> }).messages ?? [];
+		for (let i = messages.length - 1; i >= 0; i--) {
+			if (messages[i]?.role === "assistant") {
+				lastRunStopReason = messages[i]?.stopReason;
+				return;
+			}
 		}
 	});
 
-	// A turn that finishes normally clears the streak, so unrelated truncations much later
-	// do not inherit an old count.
-	pi.on("agent_settled", () => resumeGuard.noteHealthyTurn());
+	pi.on("agent_settled", (_event, ctx) => {
+		// The seam fires once: it is cleared here so a forced resume cannot loop.
+		const forced = process.env[FORCE_RESUME_ENV] === "1";
+		if (forced) delete process.env[FORCE_RESUME_ENV];
+		const decision = resumeGuard.decideOnSettled(lastRunStopReason, forced);
+		if (decision === "ignore") {
+			// A run that ended cleanly clears the streak so an unrelated stop much later does
+			// not inherit an old count.
+			if (!isUnfinishedStop(lastRunStopReason)) resumeGuard.noteHealthyTurn();
+			resumeGuard.endRun();
+			lastRunStopReason = undefined;
+			return;
+		}
+		sendResume(decision, ctx);
+		resumeGuard.endRun();
+		lastRunStopReason = undefined;
+	});
 }

@@ -50,10 +50,18 @@ with `return this.agent.hasQueuedMessages()`, which is false. The run stops sile
 28 ms after such a compaction resumed the run for another 600 entries, while an identical
 compaction with nothing queued sat dead for 64 minutes.
 
-So on `session_compact`, when the compaction followed a truncated assistant message and Pi
-is not already retrying, this extension injects a resume message. It is narrow by design —
-a normally finished turn is never nudged — and it stops after three consecutive truncated
-resumes, saying why rather than looping. The logic is in
+Truncation is only one of the ways Pi ends a run there. A compaction that threw, nothing to
+compact, an aborted compaction, and spent overflow recovery all return false the same way —
+and three of those never emit `session_compact` at all. So this extension resumes at two
+points: `session_compact` when it can (cheapest, continues the same run), and `agent_settled`
+as a backstop, which Pi emits from `_runAgentPrompt`'s `finally` on every stopping path.
+
+Only `stopReason` `length` or `error` count as unfinished. `stop` and `aborted` are never
+resumed — that gating is what keeps `agent_settled`, which fires after every run, from making
+the agent chatter. It gives up after three consecutive unfinished resumes and says why.
+
+`PI_CONTEXT_HANDOFF_FORCE_RESUME=1` forces the backstop once, which is how the injection is
+verified end to end; a real context truncation cannot be produced on demand. The logic is in
 [`extensions/context-handoff/resume.ts`](extensions/context-handoff/resume.ts) and is unit
 tested in [`tests/resume.test.ts`](../../tests/resume.test.ts).
 
