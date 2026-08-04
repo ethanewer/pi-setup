@@ -5,7 +5,8 @@
  * Usage: `index.ts` creates one store per Pi session lifecycle and records observations through update tokens.
  * Invariants/Assumptions: One tool-call update token must govern all page-state observations from that invocation; stale overlapping updates must not overwrite newer state.
  */
-import { isCloseCommand, isReadOnlyDiagnosticSessionTargetCommand } from "./command-taxonomy.js";
+import { getAgentBrowserSessionIdentityKey } from "./argv-grammar.js";
+import { isCloseCommand, isReadOnlyDiagnosticSessionTargetCommand, isUnverifiedPageTransitionCommand } from "./command-taxonomy.js";
 import { isRecord } from "./parsing.js";
 import { getEditableRefEvidence } from "./results/editable-ref-evidence.js";
 import { enrichSnapshotRefEntries, getSnapshotRefEntries } from "./results/snapshot-refs.js";
@@ -82,6 +83,9 @@ function extractBatchResultCommand(item) {
 }
 export function extractSessionTabTargetFromCommandData(commandTokens, data) {
     const [command, subcommand] = commandTokens;
+    if (command === "get" && subcommand === "url") {
+        return normalizeSessionTabTarget({ url: extractStringResultField(data, "url") ?? extractStringResultField(data, "result") });
+    }
     return isReadOnlyDiagnosticSessionTargetCommand(command, subcommand) ? undefined : extractSessionTabTargetFromData(data);
 }
 export function extractSessionTabTargetFromBatchResults(data) {
@@ -124,10 +128,12 @@ export function deriveSessionTabTarget(options) {
     const commandDataTarget = isReadOnlyDiagnosticSessionTargetCommand(options.command, options.subcommand)
         ? undefined
         : extractSessionTabTargetFromData(options.data);
-    return (normalizeSessionTabTarget(options.navigationSummary) ??
-        extractSessionTabTargetFromBatchResults(options.data) ??
-        commandDataTarget ??
-        options.previousTarget);
+    const observedTarget = normalizeSessionTabTarget(options.navigationSummary)
+        ?? extractSessionTabTargetFromBatchResults(options.data)
+        ?? commandDataTarget;
+    if (observedTarget || !isUnverifiedPageTransitionCommand(options.command, options.subcommand))
+        return observedTarget ?? options.previousTarget;
+    return undefined;
 }
 function batchContainsOnlyReadOnlyDiagnosticTargets(data) {
     if (!Array.isArray(data) || data.length === 0) {
@@ -263,11 +269,12 @@ function getRestoredRefSnapshot(details) {
             : undefined,
     };
 }
-function getLatestTabTargetOrder(targets) {
+function getLatestTabTargetOrder(targets, unknownTargets) {
     let latestOrder = 0;
-    for (const target of targets.values()) {
+    for (const target of targets.values())
         latestOrder = Math.max(latestOrder, target.order);
-    }
+    for (const order of unknownTargets.values())
+        latestOrder = Math.max(latestOrder, order);
     return latestOrder;
 }
 function getLatestRefStateOrder(snapshots, invalidations) {
@@ -278,8 +285,8 @@ function getLatestRefStateOrder(snapshots, invalidations) {
         latestOrder = Math.max(latestOrder, invalidation.order);
     return latestOrder;
 }
-function shouldApplyTabTargetUpdate(current, updateOrder) {
-    return !current || updateOrder >= current.order;
+function shouldApplyTabTargetUpdate(current, unknownOrder, updateOrder) {
+    return updateOrder >= Math.max(current?.order ?? 0, unknownOrder ?? 0);
 }
 function shouldApplyRefStateUpdate(options) {
     const currentOrder = Math.max(options.currentSnapshot?.order ?? 0, options.currentInvalidation?.order ?? 0);
@@ -292,14 +299,13 @@ function stripRefSnapshotInvalidationOrder(invalidation) {
     return invalidation ? { reason: invalidation.reason, summary: invalidation.summary } : undefined;
 }
 export function getSessionPageStateKey(sessionName, namespace) {
-    if (!sessionName)
-        return undefined;
-    return namespace ? `${namespace}\u0000${sessionName}` : sessionName;
+    return sessionName ? getAgentBrowserSessionIdentityKey(sessionName, namespace) : undefined;
 }
 export class SessionPageState {
     refSnapshotInvalidations = new Map();
     refSnapshots = new Map();
     tabPinningReasons = new Map();
+    tabTargetUnknownOrders = new Map();
     tabTargets = new Map();
     updateOrder = 0;
     static fromBranch(branch) {
@@ -327,13 +333,23 @@ export class SessionPageState {
                 continue;
             }
             const tabTarget = getRestoredSessionTabTarget(details, command, subcommand);
+            const tabTargetUnknown = details.sessionTabTargetUnknown === true;
             const refSnapshotInvalidation = getRestoredRefSnapshotInvalidation(details, command);
             const refSnapshot = refSnapshotInvalidation ? undefined : getRestoredRefSnapshot(details);
-            if (!tabTarget && !refSnapshotInvalidation && !refSnapshot)
+            if (!tabTarget && !tabTargetUnknown && !refSnapshotInvalidation && !refSnapshot)
                 continue;
             restoredOrder += 1;
-            if (tabTarget)
+            if (tabTargetUnknown) {
+                state.refSnapshotInvalidations.delete(sessionKey);
+                state.refSnapshots.delete(sessionKey);
+                state.tabTargets.delete(sessionKey);
+                state.tabTargetUnknownOrders.set(sessionKey, restoredOrder);
+                continue;
+            }
+            if (tabTarget) {
+                state.tabTargetUnknownOrders.delete(sessionKey);
                 state.tabTargets.set(sessionKey, { order: restoredOrder, target: tabTarget });
+            }
             if (refSnapshotInvalidation) {
                 state.refSnapshots.delete(sessionKey);
                 state.refSnapshotInvalidations.set(sessionKey, { ...refSnapshotInvalidation, order: restoredOrder });
@@ -343,7 +359,7 @@ export class SessionPageState {
                 state.refSnapshots.set(sessionKey, { ...refSnapshot, order: restoredOrder });
             }
         }
-        state.updateOrder = Math.max(restoredOrder, getLatestTabTargetOrder(state.tabTargets), getLatestRefStateOrder(state.refSnapshots, state.refSnapshotInvalidations));
+        state.updateOrder = Math.max(restoredOrder, getLatestTabTargetOrder(state.tabTargets, state.tabTargetUnknownOrders), getLatestRefStateOrder(state.refSnapshots, state.refSnapshotInvalidations));
         state.tabPinningReasons = new Map([...state.tabTargets.keys()].map((sessionName) => [sessionName, "restore"]));
         return state;
     }
@@ -355,6 +371,7 @@ export class SessionPageState {
         this.refSnapshotInvalidations = new Map();
         this.refSnapshots = new Map();
         this.tabPinningReasons = new Map();
+        this.tabTargetUnknownOrders = new Map();
         this.tabTargets = new Map();
         this.updateOrder = 0;
     }
@@ -365,14 +382,16 @@ export class SessionPageState {
             pinningReason: this.tabPinningReasons.get(sessionName),
             refSnapshot: stripRefSnapshotOrder(this.refSnapshots.get(sessionName)),
             refSnapshotInvalidation: stripRefSnapshotInvalidationOrder(this.refSnapshotInvalidations.get(sessionName)),
+            ...(this.tabTargetUnknownOrders.has(sessionName) ? { tabTargetUnknown: true } : {}),
             tabTarget: this.tabTargets.get(sessionName)?.target,
         };
     }
     applyTabTarget(options) {
         const current = this.tabTargets.get(options.sessionName);
-        if (!shouldApplyTabTargetUpdate(current, options.update)) {
+        if (!shouldApplyTabTargetUpdate(current, this.tabTargetUnknownOrders.get(options.sessionName), options.update)) {
             return { ...this.get(options.sessionName), applied: false, stale: true };
         }
+        this.tabTargetUnknownOrders.delete(options.sessionName);
         this.tabTargets.set(options.sessionName, { order: options.update, target: options.target });
         return { ...this.get(options.sessionName), applied: true };
     }
@@ -401,10 +420,22 @@ export class SessionPageState {
         this.refSnapshotInvalidations.set(options.sessionName, { ...options.invalidation, order: options.update });
         return { ...this.get(options.sessionName), applied: true };
     }
+    markTabTargetUnknown(options) {
+        const current = this.tabTargets.get(options.sessionName);
+        if (!shouldApplyTabTargetUpdate(current, this.tabTargetUnknownOrders.get(options.sessionName), options.update))
+            return { ...this.get(options.sessionName), applied: false, stale: true };
+        this.refSnapshotInvalidations.delete(options.sessionName);
+        this.refSnapshots.delete(options.sessionName);
+        this.tabPinningReasons.delete(options.sessionName);
+        this.tabTargets.delete(options.sessionName);
+        this.tabTargetUnknownOrders.set(options.sessionName, options.update);
+        return { ...this.get(options.sessionName), applied: true };
+    }
     clearSession(sessionName) {
         this.refSnapshotInvalidations.delete(sessionName);
         this.refSnapshots.delete(sessionName);
         this.tabPinningReasons.delete(sessionName);
+        this.tabTargetUnknownOrders.delete(sessionName);
         this.tabTargets.delete(sessionName);
     }
     markPinning(sessionName, reason) {

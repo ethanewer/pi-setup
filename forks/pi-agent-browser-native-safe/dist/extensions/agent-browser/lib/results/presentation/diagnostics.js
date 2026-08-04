@@ -9,6 +9,7 @@ import { classifyNetworkRequestFailure, isApiLikeNetworkRequest, isNetworkArtifa
 import { withOptionalSessionArgs } from "../next-actions.js";
 import { stringifyUnknown, truncateText } from "../text.js";
 import { firstLine, formatCount, getArrayField, getStringField, parseJsonPreviewString, redactModelFacingText, redactModelFacingTextIfSensitive, stringifyModelFacing, } from "./common.js";
+import { filterCallerOwnedSessionListItems, filterCallerOwnedStateListItems, filterManagedSessionListRows, filterManagedStateListRows, } from "./managed-list-filter.js";
 const DIAGNOSTIC_REQUEST_PREVIEW_LIMIT = 40;
 const DIAGNOSTIC_LOG_PREVIEW_LIMIT = 80;
 const NETWORK_BODY_PREVIEW_MAX_CHARS = 280;
@@ -114,7 +115,7 @@ export function formatDiagnosticSummary(commandInfo, data) {
     if (commandInfo.command === "session") {
         const sessions = getArrayField(data, "sessions");
         if (sessions)
-            return `Sessions: ${sessions.length}`;
+            return `Sessions: ${filterCallerOwnedSessionListItems(sessions).length}`;
         const session = getStringField(data, "session");
         if (session)
             return `Session: ${session}`;
@@ -172,11 +173,13 @@ export function formatDiagnosticSummary(commandInfo, data) {
     }
     if (commandInfo.command === "state") {
         const states = getArrayField(data, "states") ?? getArrayField(data, "files");
-        if (states)
-            return `States: ${states.length}`;
+        if (states) {
+            const visibleStates = commandInfo.subcommand === "list" ? filterCallerOwnedStateListItems(states) : states;
+            return `States: ${visibleStates.length}`;
+        }
         if (commandInfo.subcommand === "load")
             return undefined;
-        const stateName = getStringField(data, "name") ?? getStringField(data, "file") ?? getStringField(data, "path") ?? commandInfo.subcommand;
+        const stateName = getStringField(data, "name") ?? getStringField(data, "file") ?? getStringField(data, "filename") ?? getStringField(data, "path") ?? commandInfo.subcommand;
         if (stateName)
             return `State ${commandInfo.subcommand ?? "result"}: ${stateName}`;
     }
@@ -261,9 +264,10 @@ export function formatDiagnosticSummary(commandInfo, data) {
 function formatSessionText(data) {
     const sessions = getArrayField(data, "sessions");
     if (sessions) {
-        if (sessions.length === 0)
-            return "No active sessions.";
-        return sessions
+        const visibleSessions = filterCallerOwnedSessionListItems(sessions);
+        if (visibleSessions.length === 0)
+            return sessions.length === 0 ? "No active sessions." : "No caller-owned active sessions.";
+        return visibleSessions
             .map((item, index) => {
             if (!isRecord(item))
                 return `${index + 1}. ${stringifyModelFacing(item)}`;
@@ -912,12 +916,25 @@ function formatFrameText(data) {
     const lines = [frame ? `Frame: ${redactModelFacingText(frame)}` : undefined, title ? `Title: ${redactModelFacingText(title)}` : undefined, url ? `URL: ${redactModelFacingTextIfSensitive(url)}` : undefined].filter(Boolean);
     return lines.length > 0 ? lines.join("\n") : undefined;
 }
-function formatStateText(data) {
+function formatStateText(data, subcommand) {
+    if (subcommand === "show") {
+        const filename = getStringField(data, "filename") ?? getStringField(data, "name") ?? "saved state";
+        const summary = getStringField(data, "summary");
+        const lines = [`Saved state: ${redactModelFacingText(filename)}`];
+        if (summary)
+            lines.push(`Summary: ${redactModelFacingText(summary)}`);
+        if (typeof data.encrypted === "boolean")
+            lines.push(`Encrypted: ${data.encrypted ? "yes" : "no"}`);
+        if (typeof data.size === "number")
+            lines.push(`Size: ${data.size} bytes`);
+        return lines.join("\n");
+    }
     const states = getArrayField(data, "states") ?? getArrayField(data, "files");
     if (states) {
-        if (states.length === 0)
-            return "No saved states.";
-        return states
+        const visibleStates = filterCallerOwnedStateListItems(states);
+        if (visibleStates.length === 0)
+            return "No caller-owned saved states.";
+        return visibleStates
             .map((item, index) => {
             if (!isRecord(item))
                 return `${index + 1}. ${redactModelFacingTextIfSensitive(stringifyModelFacing(item))}`;
@@ -960,6 +977,12 @@ export function redactPresentationData(commandInfo, data) {
         return redactStatefulValues(data, new Set(["value"]));
     if (commandInfo.command === "storage")
         return redactStorageData(data);
+    if (commandInfo.command === "session" && commandInfo.subcommand === "list")
+        return redactStructuredPresentationValue(filterManagedSessionListRows(data));
+    if (commandInfo.command === "state" && commandInfo.subcommand === "list")
+        return redactStructuredPresentationValue(filterManagedStateListRows(data));
+    if (commandInfo.command === "state" && commandInfo.subcommand === "show")
+        return redactStatefulValues(data, new Set(["value"]));
     return redactStructuredPresentationValue(data);
 }
 export function formatDiagnosticText(commandInfo, data) {
@@ -986,7 +1009,7 @@ export function formatDiagnosticText(commandInfo, data) {
     if (commandInfo.command === "frame")
         return formatFrameText(data);
     if (commandInfo.command === "state")
-        return formatStateText(data);
+        return formatStateText(data, commandInfo.subcommand);
     if (commandInfo.command === "network" && commandInfo.subcommand === "requests")
         return formatNetworkRequestsText(data, commandInfo);
     if (commandInfo.command === "network" && commandInfo.subcommand === "request")

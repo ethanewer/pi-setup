@@ -58,7 +58,7 @@ function buildScrollResult(options) {
             [options.scrollField]: options.scrollValue,
             sessionMode: options.sessionMode,
             ...buildAgentBrowserResultCategoryDetails({ args: options.effectiveArgs, command: options.command, errorText: options.succeeded ? undefined : options.message, succeeded: options.succeeded, validationError: options.succeeded ? undefined : options.message }),
-            ...buildSessionDetailFields(options.sessionName, options.usedImplicitSession, options.namespace),
+            ...buildSessionDetailFields(options.sessionName, options.usedImplicitSession, options.namespace, options.managedSessionRestoreDisabled()),
             summary: options.message,
             validationError: options.succeeded ? undefined : options.message,
         },

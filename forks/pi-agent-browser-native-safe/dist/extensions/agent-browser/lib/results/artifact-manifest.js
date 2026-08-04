@@ -73,16 +73,18 @@ export function formatSessionArtifactRetentionSummary(manifest) {
         parts.push(`${missingCount} missing`);
     return `Session artifacts: ${parts.join(", ")} (${manifest.entries.length}/${manifest.maxEntries} recent).`;
 }
+export function getSessionArtifactManifestEntryKey(entry) {
+    return entry.storageScope === "explicit-path" && entry.absolutePath ? `${entry.storageScope}:${entry.absolutePath}` : `${entry.storageScope}:${entry.path}`;
+}
 export function mergeSessionArtifactManifest(options) {
     const nowMs = options.nowMs ?? Date.now();
     const maxEntries = getSessionArtifactManifestMaxEntries();
-    const getEntryKey = (entry) => entry.storageScope === "explicit-path" && entry.absolutePath ? `${entry.storageScope}:${entry.absolutePath}` : `${entry.storageScope}:${entry.path}`;
     const byPath = new Map();
     for (const entry of options.base?.entries ?? []) {
-        byPath.set(getEntryKey(entry), entry);
+        byPath.set(getSessionArtifactManifestEntryKey(entry), entry);
     }
     for (const entry of options.entries ?? []) {
-        const key = getEntryKey(entry);
+        const key = getSessionArtifactManifestEntryKey(entry);
         const existing = byPath.get(key);
         byPath.set(key, {
             ...existing,

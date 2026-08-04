@@ -90,18 +90,46 @@ lock is reclaimable after a staleness window rather than immediately.
 
 ## pi-agent-browser-native-safe
 
-Based on `pi-agent-browser-native@0.2.72`, which rebaselines the wrapper to
-`agent-browser 0.33.0`, re-baselined here to `0.33.1` (which `install.sh` pins). Only
-`dist/` is shipped, so the fixes
-are in the compiled tree.
+Based on `pi-agent-browser-native@0.2.77`, which targets `agent-browser 0.33.2` (which
+`install.sh` pins). Only `dist/` is shipped, so the fixes are in the compiled tree.
 
-Re-vendored onto 0.2.72 on 2026-07-30. One conflict, in `package.json` (the version bump
-against this fork's `private: true`), resolved by hand; every other hunk applied cleanly.
-Upstream's code delta was additive — `--content` and `--tags` became value-taking flags —
-and was re-reviewed against the hardening: the write-path guards, the project-scope
-credential rule, the privileged-flag gate and the upstream-config pin were all re-verified
-functionally after the merge, including that the two new flags are not mistaken for write
-paths.
+**Re-vendored 0.2.72 -> 0.2.77 on 2026-08-04, and this one was a real merge.** Five upstream
+releases landed a new managed-session subsystem (nine new modules, crash-safe restore keys,
+process identity, socket-directory ancestry validation) and touched 22 of the 37 files this
+fork patches. `patch` rejected 14 files, so the merge was redone as a git three-way merge —
+upstream 0.2.72 as base, the fork and 0.2.77 as branches — which reduced it to 21 conflict
+hunks across 15 files. `dist/extensions/agent-browser/lib/process.js` was rebuilt by taking
+upstream's rewritten file and re-porting the eight hardening concerns onto it, because both
+sides had restructured the same functions.
+
+Two resolutions are judgement calls worth knowing:
+
+- **Config pinning is now layered.** Upstream 0.2.74 added its own pin: browser-backed calls
+  reject discovered config unread and get a process-private empty config, and its
+  `trustedPinnedEmptyConfig` policy flag is derived from that variable. This fork's pin —
+  which copies the *user's* config so user defaults keep applying — now runs only where
+  upstream pinned nothing, notably plain-text inspection commands. Two pins can never
+  overwrite each other, and upstream's policy flag stays truthful.
+- **Windows CLI resolution.** Upstream replaced the launcher with a `Get-Command` probe plus
+  a missing-command marker, which is PATH resolution and undoes the pin. The fork keeps the
+  pinned path when one resolves and falls back to upstream's probe only when nothing was
+  pinned, so `isWindowsAgentBrowserCommandMissing` still works.
+
+Every hardening item was re-verified against the merged tree rather than assumed. Statically:
+the credential validator is still implemented (not the upstream stub), there is no `shell:
+true` anywhere and `!command` still goes through `execFile` with an argv array, the Electron
+code-execution denylist and `-launcher`/`-cmd-prefix` patterns are intact, and write-path
+confinement still reaches `prepare`, `direct-anchor-download` and `output-file`.
+Functionally, against the merged build: a page opens and returns its title; a screenshot
+inside the workspace is written; a write to `$HOME` and a write into `.git` are both refused
+with the fork's own messages and neither file exists on disk; a workspace-local
+`agent-browser` shim is never executed; and a hostile repo-local `agent-browser.json`
+naming an `executablePath` is refused in 7s without the named binary ever running.
+
+One upstream behaviour change to expect: 0.2.77 verifies artifacts, so a `close` that follows
+a refused screenshot is itself policy-blocked until the artifact is resolved. That is
+upstream working as designed, not a merge defect — it surfaced as a confusing
+"artifact guard blocked close" during verification.
 
 **Closed.** `isProjectSafeCredentialValueForProvider` — a stub that returned `true` for any
 non-empty string — is implemented, so a project-scope credential can no longer be a

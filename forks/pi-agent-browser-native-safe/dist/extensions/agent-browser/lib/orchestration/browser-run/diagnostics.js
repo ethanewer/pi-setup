@@ -10,6 +10,7 @@ import { buildVisibleRefFallbackDiagnosticFromSnapshot, getVisibleRefFallbackTar
 import { extractRefSnapshotFromData, normalizeComparableUrl } from "../../session-page-state.js";
 import { redactInvocationArgs, redactSensitiveText } from "../../runtime.js";
 import { isRecord } from "../../parsing.js";
+import { getManagedSessionStateAccessValidationError, isFileUrl } from "../../managed-session-state-policy.js";
 import { extractBatchResultCommand, extractNavigationSummaryFromData, extractStringResultField, findElectronLaunchRecordForSession, runSessionCommandData, } from "./session-state.js";
 import { parseValidBatchStepEntries } from "../batch-stdin.js";
 import { getScreenshotPathTokenIndex } from "./artifact-paths.js";
@@ -19,17 +20,12 @@ export function sleepMs(ms) {
 }
 export async function collectNavigationSummary(options) {
     const url = extractStringResultField(await runSessionCommandData({ args: ["get", "url"], cwd: options.cwd, namespace: options.namespace, sessionName: options.sessionName, signal: options.signal }), "url");
+    if (!url || !/^[a-z][a-z0-9+.-]*:/i.test(url))
+        return undefined;
+    if (isFileUrl(url))
+        return { url };
     const title = extractStringResultField(await runSessionCommandData({ args: ["get", "title"], cwd: options.cwd, namespace: options.namespace, sessionName: options.sessionName, signal: options.signal }), "title");
-    if (url && /^[a-z][a-z0-9+.-]*:/i.test(url))
-        return { title, url };
-    return extractNavigationSummaryFromData(await runSessionCommandData({
-        args: ["eval", "--stdin"],
-        cwd: options.cwd,
-        namespace: options.namespace,
-        sessionName: options.sessionName,
-        signal: options.signal,
-        stdin: `({ title: document.title, url: location.href })`,
-    }));
+    return { title, url };
 }
 function extractScrollPositionSnapshot(data) {
     const result = isRecord(data) && isRecord(data.result) ? data.result : data;
@@ -507,7 +503,7 @@ export function formatArtifactCleanupGuidanceText(guidance) {
 }
 async function collectManagedSessionCommandData(options) {
     try {
-        return { data: await runSessionCommandData(options) };
+        return { data: await runSessionCommandData({ ...options, pinNamespace: true }) };
     }
     catch (error) {
         return { error: error instanceof Error ? error.message : String(error) };
@@ -528,14 +524,16 @@ async function collectElectronManagedSessionUrl(options) {
 export async function collectElectronManagedSessionTarget(options) {
     if (!options.sessionName)
         return undefined;
-    const [titleResult, urlResult] = await Promise.all([
-        collectManagedSessionCommandData({ args: ["get", "title"], cwd: options.cwd, namespace: options.namespace, sessionName: options.sessionName, signal: options.signal, timeoutMs: options.timeoutMs }),
-        collectManagedSessionCommandData({ args: ["get", "url"], cwd: options.cwd, namespace: options.namespace, sessionName: options.sessionName, signal: options.signal, timeoutMs: options.timeoutMs }),
-    ]);
-    const title = boundElectronProbeString(extractStringResultField(titleResult.data, "result") ?? extractStringResultField(titleResult.data, "title"), 160);
+    const urlResult = await collectManagedSessionCommandData({ allowManagedSessionTarget: options.allowManagedSessionTarget, args: ["get", "url"], cwd: options.cwd, namespace: options.namespace, sessionName: options.sessionName, signal: options.signal, timeoutMs: options.timeoutMs });
     const url = boundElectronProbeString(extractStringResultField(urlResult.data, "result") ?? extractStringResultField(urlResult.data, "url"), 300);
-    const errors = [titleResult.error, urlResult.error].filter((value) => value !== undefined);
-    return { sessionName: options.sessionName, title, url, ...(errors.length > 0 ? { error: errors.join("; ") } : {}) };
+    if (urlResult.error || !url)
+        return { error: urlResult.error ?? "get url returned no active page URL.", sessionName: options.sessionName };
+    const fileAccessError = getManagedSessionStateAccessValidationError({ args: ["get", "title"], currentPageUrl: url, cwd: options.cwd });
+    if (fileAccessError)
+        return { error: fileAccessError, sessionName: options.sessionName, url };
+    const titleResult = await collectManagedSessionCommandData({ allowManagedSessionTarget: options.allowManagedSessionTarget, args: ["get", "title"], cwd: options.cwd, namespace: options.namespace, sessionName: options.sessionName, signal: options.signal, timeoutMs: options.timeoutMs });
+    const title = boundElectronProbeString(extractStringResultField(titleResult.data, "result") ?? extractStringResultField(titleResult.data, "title"), 160);
+    return { sessionName: options.sessionName, title, url, ...(titleResult.error ? { error: titleResult.error } : {}) };
 }
 export async function collectQaAttachedTarget(options) {
     if (!options.sessionName)
@@ -673,16 +671,33 @@ export async function collectVisibleRefFallbackDiagnostic(options) {
 export async function collectElectronHandoff(options) {
     if (options.handoff === "connect")
         return { handoff: "connect" };
-    const tabs = await runSessionCommandData({ args: ["tab", "list"], cwd: options.cwd, namespace: options.namespace, sessionName: options.sessionName, signal: options.signal });
+    if (options.signal?.aborted)
+        throw new Error("Electron handoff was aborted.");
+    const urlData = await runSessionCommandData({ args: ["get", "url"], cwd: options.cwd, namespace: options.namespace, sessionName: options.sessionName, signal: options.signal, throwOnFailure: true });
+    if (options.signal?.aborted)
+        throw new Error("Electron handoff was aborted.");
+    const url = extractStringResultField(urlData, "result") ?? extractStringResultField(urlData, "url");
+    if (!url)
+        throw new Error("Electron handoff get url returned no active page URL.");
+    const fileAccessError = getManagedSessionStateAccessValidationError({ args: ["snapshot", "-i"], currentPageUrl: url, cwd: options.cwd });
+    if (fileAccessError)
+        return { error: fileAccessError, failureCategory: "validation-error", handoff: options.handoff };
+    const tabs = await runSessionCommandData({ args: ["tab", "list"], cwd: options.cwd, namespace: options.namespace, sessionName: options.sessionName, signal: options.signal, throwOnFailure: true });
+    if (options.signal?.aborted)
+        throw new Error("Electron handoff was aborted.");
     if (options.handoff === "tabs")
         return { handoff: "tabs", tabs };
-    let snapshot = await runSessionCommandData({ args: ["snapshot", "-i"], cwd: options.cwd, namespace: options.namespace, sessionName: options.sessionName, signal: options.signal });
+    let snapshot = await runSessionCommandData({ args: ["snapshot", "-i"], cwd: options.cwd, namespace: options.namespace, sessionName: options.sessionName, signal: options.signal, throwOnFailure: true });
     let refSnapshot = extractRefSnapshotFromData(snapshot);
     let snapshotRetryCount = 0;
     while ((!refSnapshot || refSnapshot.refIds.length === 0) && snapshotRetryCount < 2) {
+        if (options.signal?.aborted)
+            throw new Error("Electron handoff was aborted.");
         snapshotRetryCount += 1;
         await sleepMs(250);
-        snapshot = await runSessionCommandData({ args: ["snapshot", "-i"], cwd: options.cwd, namespace: options.namespace, sessionName: options.sessionName, signal: options.signal });
+        if (options.signal?.aborted)
+            throw new Error("Electron handoff was aborted.");
+        snapshot = await runSessionCommandData({ args: ["snapshot", "-i"], cwd: options.cwd, namespace: options.namespace, sessionName: options.sessionName, signal: options.signal, throwOnFailure: true });
         refSnapshot = extractRefSnapshotFromData(snapshot);
     }
     return { handoff: "snapshot", refSnapshot, snapshot, ...(snapshotRetryCount > 0 ? { snapshotRetryCount } : {}), tabs };
@@ -857,12 +872,17 @@ function buildTimeoutProgressSteps(options) {
 export async function collectTimeoutPartialProgress(options) {
     const rawSteps = getTimeoutProgressSteps(options.compiledJob, options.command, options.stdin);
     const artifacts = await collectTimeoutArtifactEvidence(options.cwd, rawSteps);
-    // These two run against a daemon that has just timed out, so without the caller's
-    // signal and a short budget of their own they sat on the full default watchdog and
-    // ignored Escape — the user's cancel appeared to do nothing for another ~35s.
+    // These run against a daemon that has just timed out, so without the caller's signal
+    // and a short budget of their own they sat on the full default watchdog and ignored
+    // Escape — the user's cancel appeared to do nothing for another ~35s. Upstream now
+    // fetches the title conditionally, so the budget is applied to both calls instead of
+    // parallelising them.
     const recoveryOptions = { signal: options.signal, timeoutMs: options.timeoutMs };
-    const [urlData, titleData] = await Promise.all([runSessionCommandData({ args: ["get", "url"], cwd: options.cwd, namespace: options.namespace, sessionName: options.sessionName, ...recoveryOptions }), runSessionCommandData({ args: ["get", "title"], cwd: options.cwd, namespace: options.namespace, sessionName: options.sessionName, ...recoveryOptions })]);
+    const urlData = await runSessionCommandData({ args: ["get", "url"], cwd: options.cwd, namespace: options.namespace, sessionName: options.sessionName, ...recoveryOptions });
     const recoveredUrl = extractStringResultField(urlData, "result") ?? extractStringResultField(urlData, "url");
+    const titleData = recoveredUrl && !isFileUrl(recoveredUrl)
+        ? await runSessionCommandData({ args: ["get", "title"], cwd: options.cwd, namespace: options.namespace, sessionName: options.sessionName, ...recoveryOptions })
+        : undefined;
     const title = extractStringResultField(titleData, "result") ?? extractStringResultField(titleData, "title");
     const plannedUrl = recoveredUrl ? undefined : getPlannedCurrentPageUrl(rawSteps);
     const url = recoveredUrl ?? plannedUrl;

@@ -1,8 +1,9 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, resolve } from "node:path";
+import { getAgentBrowserStoragePathValidationError } from "../managed-session-state-policy.js";
 import { isRecord } from "../parsing.js";
 import { getWritePathConfinementError } from "../write-path-policy.js";
-function normalizeRequestedOutputPath(path) {
+export function normalizeRequestedOutputPath(path) {
     return path.startsWith("@") ? path.slice(1) : path;
 }
 function getTextContent(result) {
@@ -28,9 +29,20 @@ function appendOutputFileNotice(result, message) {
     }
     return [{ type: "text", text: message }, ...content];
 }
+export function getAgentBrowserOutputPathValidationError(outputPath, cwd) {
+    return outputPath ? getAgentBrowserStoragePathValidationError(normalizeRequestedOutputPath(outputPath), cwd) : undefined;
+}
 export async function applyAgentBrowserOutputPath(options) {
     if (!options.outputPath)
         return options.result;
+    const validationError = getAgentBrowserOutputPathValidationError(options.outputPath, options.cwd);
+    if (validationError) {
+        return {
+            content: [{ type: "text", text: validationError }],
+            details: { failureCategory: "validation-error", resultCategory: "failure", validationError },
+            isError: true,
+        };
+    }
     if (options.result.isError || (isRecord(options.result.details) && options.result.details.resultCategory === "failure"))
         return options.result;
     const requestedPath = normalizeRequestedOutputPath(options.outputPath);

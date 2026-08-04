@@ -11,10 +11,13 @@ import { fileURLToPath } from "node:url";
 import { Text } from "@earendil-works/pi-tui";
 import { PROJECT_RULE_PROMPT, buildBrowserDefaultProfileGuideline, buildBrowserExecutablePathGuideline, buildToolPromptGuidelines, } from "./lib/playbook.js";
 import { SessionPageState } from "./lib/session-page-state.js";
-import { createEphemeralSessionSeed, createFreshSessionName, createImplicitSessionName, extractCommandTokens, extractExplicitNamespace, getImplicitSessionCloseTimeoutMs, getImplicitSessionIdleTimeoutMs, extractExplicitSessionName, restoreManagedSessionStateFromBranch, validateToolArgs, } from "./lib/runtime.js";
+import { canUseHeadlessCompatibilityUserAgent, createEphemeralSessionSeed, createFreshSessionName, createImplicitSessionName, extractCommandTokens, getImplicitSessionCloseTimeoutMs, getImplicitSessionIdleTimeoutMs, restoreManagedSessionStateFromBranch, validateToolArgs, } from "./lib/runtime.js";
+import { extractExplicitNamespace, extractExplicitSessionName, resolveAgentBrowserNamespace } from "./lib/argv-grammar.js";
+import { cleanupManagedSessionRestoreConfig, ManagedSessionRestoreState } from "./lib/managed-session-restore.js";
 import { isRecord } from "./lib/parsing.js";
 import { buildPromptPolicy, getLatestUserPrompt, shouldAppendBrowserSystemPrompt } from "./lib/prompt-policy.js";
 import { isCloseCommand } from "./lib/command-taxonomy.js";
+import { hasLaunchScopedFlagToken } from "./lib/launch-scoped-flags.js";
 import { cleanupSecureTempArtifacts } from "./lib/temp.js";
 import { AGENT_BROWSER_PARAMS, } from "./lib/input-modes.js";
 import { parseAllowedDomainsPolicyFromArgs } from "./lib/navigation-policy.js";
@@ -23,8 +26,8 @@ import { findElectronLaunchRecordForSession, getActiveElectronRecords } from "./
 import { parseBatchStdinJsonArray } from "./lib/orchestration/batch-stdin.js";
 import { ELECTRON_POST_COMMAND_STATUS_SETTLE_MS, ELECTRON_PROFILE_ISOLATION_DETAILS, adoptOrphanedElectronLaunches, cleanupActiveElectronHostLaunches, handleElectronHostInput, restoreElectronLaunchRecordsFromBranch, } from "./lib/orchestration/electron-host/index.js";
 import { buildValidationFailureResult, resolveAgentBrowserInput } from "./lib/orchestration/input-plan.js";
-import { applyAgentBrowserOutputPath } from "./lib/orchestration/output-file.js";
-import { isSessionArtifactManifest } from "./lib/results/artifact-manifest.js";
+import { applyAgentBrowserOutputPath, getAgentBrowserOutputPathValidationError } from "./lib/orchestration/output-file.js";
+import { formatSessionArtifactRetentionSummary, getSessionArtifactManifestEntryKey, isSessionArtifactManifest, mergeSessionArtifactManifest } from "./lib/results/artifact-manifest.js";
 import { canRegisterWebSearchTool, loadAgentBrowserConfigSync } from "./lib/config.js";
 import { getUpstreamProjectConfigIgnoredNotice, planUpstreamConfigPin } from "./lib/upstream-config-policy.js";
 import { createAgentBrowserWebSearchTool } from "./lib/web-search.js";
@@ -68,11 +71,47 @@ function restoreArtifactManifestFromBranch(branch) {
         if (!message || message.toolName !== "agent_browser")
             continue;
         const details = isRecord(message.details) ? message.details : undefined;
-        if (isSessionArtifactManifest(details?.artifactManifest)) {
+        if (isSessionArtifactManifest(details?.artifactManifest) && (!restoredManifest || details.artifactManifest.updatedAtMs >= restoredManifest.updatedAtMs)) {
             restoredManifest = details.artifactManifest;
         }
     }
     return restoredManifest;
+}
+function restoreManagedSessionCompatibilityWorkaroundFromBranch(branch, sessionName, namespace) {
+    let restored;
+    const targetKey = getSessionContextKey(sessionName, namespace);
+    for (const entry of branch) {
+        if (!isRecord(entry) || entry.type !== "message")
+            continue;
+        const message = isRecord(entry.message) ? entry.message : undefined;
+        if (!message || message.toolName !== "agent_browser")
+            continue;
+        const details = isRecord(message.details) ? message.details : undefined;
+        if (!details)
+            continue;
+        const workaround = isRecord(details.compatibilityWorkaround) ? details.compatibilityWorkaround : undefined;
+        if (getSessionContextKey(typeof details.sessionName === "string" ? details.sessionName : undefined, typeof details.namespace === "string" ? details.namespace : undefined) !== targetKey)
+            continue;
+        const recognizedWorkaround = (workaround?.id === "chatgpt-headless-user-agent" || workaround?.id === "cloudflare-headless-user-agent") && typeof workaround.reason === "string"
+            ? { id: workaround.id, reason: workaround.reason }
+            : undefined;
+        const succeeded = getSuccessfulToolResult(details, message);
+        const outcome = getManagedSessionOutcome(details);
+        const activeAfterFailure = recognizedWorkaround
+            && outcome?.activeAfter === true
+            && typeof outcome.currentSessionName === "string"
+            && getSessionContextKey(outcome.currentSessionName, typeof outcome.currentSessionNamespace === "string" ? outcome.currentSessionNamespace : undefined) === targetKey
+            && (outcome.status === "created" || outcome.status === "replaced" || outcome.status === "unchanged");
+        if (!succeeded && !activeAfterFailure)
+            continue;
+        if (recognizedWorkaround) {
+            restored = recognizedWorkaround;
+        }
+        else if (!canUseHeadlessCompatibilityUserAgent(getToolResultArgs(details))) {
+            restored = undefined;
+        }
+    }
+    return restored;
 }
 function getToolResultArgs(details) {
     if (Array.isArray(details.args) && details.args.every((arg) => typeof arg === "string"))
@@ -80,6 +119,42 @@ function getToolResultArgs(details) {
     if (Array.isArray(details.effectiveArgs) && details.effectiveArgs.every((arg) => typeof arg === "string"))
         return details.effectiveArgs;
     return [];
+}
+function isAttachedBrowserInvocation(args, env = process.env) {
+    const autoConnectEnv = env.AGENT_BROWSER_AUTO_CONNECT;
+    return extractCommandTokens(args)[0] === "connect"
+        || hasLaunchScopedFlagToken(args, "--cdp")
+        || hasLaunchScopedFlagToken(args, "--auto-connect")
+        || env.AGENT_BROWSER_CDP !== undefined
+        || (autoConnectEnv !== undefined && !["", "0", "false", "no"].includes(autoConnectEnv.toLowerCase()));
+}
+function restoreAttachedSessionKeysFromBranch(branch) {
+    const attachedSessionKeys = new Set();
+    for (const entry of branch) {
+        if (!isRecord(entry) || entry.type !== "message")
+            continue;
+        const message = isRecord(entry.message) ? entry.message : undefined;
+        if (!message || message.toolName !== "agent_browser")
+            continue;
+        const details = isRecord(message.details) ? message.details : undefined;
+        if (!details)
+            continue;
+        const managedSessionOutcome = isRecord(details.managedSessionOutcome) ? details.managedSessionOutcome : undefined;
+        const retainedFailedAttachment = details.attachedBrowserSession === true && managedSessionOutcome?.activeAfter === true;
+        if (!getSuccessfulToolResult(details, message) && !retainedFailedAttachment)
+            continue;
+        const args = getToolResultArgs(details);
+        const sessionName = typeof details.sessionName === "string" ? details.sessionName : extractExplicitSessionName(args);
+        if (!sessionName)
+            continue;
+        const namespace = typeof details.namespace === "string" ? details.namespace : extractExplicitNamespace(args);
+        const sessionKey = getSessionContextKey(sessionName, namespace) ?? sessionName;
+        if (isCloseCommand(extractCommandTokens(args)[0]))
+            attachedSessionKeys.delete(sessionKey);
+        else if (details.attachedBrowserSession === true || isAttachedBrowserInvocation(args, {}))
+            attachedSessionKeys.add(sessionKey);
+    }
+    return attachedSessionKeys;
 }
 function restoreAllowedDomainsBySessionFromBranch(branch) {
     const restoredPolicies = new Map();
@@ -396,18 +471,18 @@ function syncElectronCleanupManagedSessions(sessions, cleanupResults) {
         untrackOwnedManagedSession(sessions, sessionName);
     }
 }
-async function closeOwnedManagedSessionsExcept(sessions, keepSessionName, timeoutMs, keepNamespace) {
+async function closeOwnedManagedSessionsExcept(sessions, restoreState, keepSessionName, timeoutMs, attachedSessionKeys, keepNamespace) {
     const keepKey = getSessionContextKey(keepSessionName, keepNamespace);
     for (const [key, owner] of [...sessions]) {
         if (key === keepKey)
             continue;
-        const error = await closeManagedSession({ cwd: owner.cwd, namespace: owner.namespace, sessionName: owner.sessionName, timeoutMs });
+        const error = await closeManagedSession({ cwd: owner.cwd, namespace: owner.namespace, preserveAttachedBrowserSession: attachedSessionKeys.has(key), restoreState, sessionName: owner.sessionName, timeoutMs });
         if (!error)
             sessions.delete(key);
     }
 }
-async function closeOwnedManagedSessions(sessions, timeoutMs) {
-    await closeOwnedManagedSessionsExcept(sessions, undefined, timeoutMs);
+async function closeOwnedManagedSessions(sessions, restoreState, timeoutMs, attachedSessionKeys) {
+    await closeOwnedManagedSessionsExcept(sessions, restoreState, undefined, timeoutMs, attachedSessionKeys);
 }
 function getOffBranchOwnedElectronLaunchRecords(ownedRecords, branchRecords) {
     const activeBranchLaunchIds = new Set(getActiveElectronRecords(branchRecords).map((record) => record.launchId));
@@ -455,6 +530,49 @@ function readPackageJson(packageJsonPath) {
     catch {
         return undefined;
     }
+}
+class KeyedAsyncExecutionQueue {
+    entries = new Map();
+    async run(key, work) {
+        const entry = this.entries.get(key) ?? { queue: new AsyncExecutionQueue(), users: 0 };
+        entry.users += 1;
+        this.entries.set(key, entry);
+        try {
+            return await entry.queue.run(work);
+        }
+        finally {
+            entry.users -= 1;
+            if (entry.users === 0 && this.entries.get(key) === entry)
+                this.entries.delete(key);
+        }
+    }
+}
+function mergeBrowserRunMap(current, initial, updated) {
+    if (updated === initial)
+        return current;
+    const merged = new Map(current);
+    for (const [key, value] of updated) {
+        if (!initial.has(key) || initial.get(key) !== value)
+            merged.set(key, value);
+    }
+    for (const key of initial.keys()) {
+        if (!updated.has(key))
+            merged.delete(key);
+    }
+    return merged;
+}
+function mergeBrowserRunArtifactManifest(current, initial, updated) {
+    if (!updated || updated === initial)
+        return current;
+    const initialEntries = new Map((initial?.entries ?? []).map((entry) => [getSessionArtifactManifestEntryKey(entry), entry]));
+    const changedEntries = updated.entries.filter((entry) => initialEntries.get(getSessionArtifactManifestEntryKey(entry)) !== entry);
+    return changedEntries.length === 0
+        ? current
+        : mergeSessionArtifactManifest({
+            base: current,
+            entries: changedEntries,
+            nowMs: Math.max(Date.now(), (current?.updatedAtMs ?? 0) + 1, updated.updatedAtMs),
+        });
 }
 function findPackageRoot(startDir) {
     let currentDir = startDir;
@@ -515,6 +633,7 @@ export default function agentBrowserExtension(pi) {
     let webSearchToolRegistered = false;
     let managedSessionActive = false;
     let managedSessionBaseName = createImplicitSessionName(undefined, process.cwd(), ephemeralSessionSeed);
+    let managedSessionCompatibilityWorkaround;
     let managedSessionName = managedSessionBaseName;
     let managedSessionCwd = process.cwd();
     let managedSessionNamespace;
@@ -523,29 +642,41 @@ export default function agentBrowserExtension(pi) {
     let traceOwners = new Map();
     let artifactManifest;
     let allowedDomainsBySession = new Map();
+    let attachedSessionKeys = new Set();
     let networkRoutesBySession = new Map();
     let electronLaunchRecords = new Map();
     let ownedElectronLaunchRecords = new Map();
     let branchOwnedElectronLaunchIds = new Set();
     let electronChildProcesses = new Map();
+    const managedSessionRestoreState = new ManagedSessionRestoreState();
     const ownedManagedSessions = new Map();
     const managedSessionExecutionQueue = new AsyncExecutionQueue();
+    const callerOwnedSessionExecutionQueues = new KeyedAsyncExecutionQueue();
+    let branchRestoreGeneration = 0;
     let branchStateGeneration = 0;
     const clearSessionScopedBrowserState = (sessionName, namespace) => {
         const key = getSessionContextKey(sessionName, namespace) ?? sessionName;
+        allowedDomainsBySession = new Map(allowedDomainsBySession);
         allowedDomainsBySession.delete(key);
+        attachedSessionKeys.delete(key);
+        networkRoutesBySession = new Map(networkRoutesBySession);
         networkRoutesBySession.delete(key);
         sessionPageState.clearSession(key);
     };
     const restoreBranchBackedState = (ctx, options) => {
+        branchRestoreGeneration += 1;
         branchStateGeneration += 1;
         const previousManagedSessionActive = managedSessionActive;
         const previousManagedSessionName = managedSessionName;
         const previousFreshSessionOrdinal = freshSessionOrdinal;
+        const previousAttachedSessionKeys = attachedSessionKeys;
         managedSessionBaseName = createImplicitSessionName(ctx.sessionManager.getSessionId(), ctx.cwd, ephemeralSessionSeed);
         const branch = ctx.sessionManager.getBranch();
         const branchResourceEvents = collectBranchManagedResourceEvents(branch);
         const restoredState = restoreManagedSessionStateFromBranch(branch, managedSessionBaseName);
+        managedSessionRestoreState.replace(restoredState.managedSessionRestoreDisabledIdentities, {
+            preserveDaemonRestoreKeys: !options.resetRuntimeOwnership,
+        });
         managedSessionActive = restoredState.active;
         const restoredFreshSessionOrdinal = options.resetRuntimeOwnership
             ? restoredState.freshSessionOrdinal
@@ -566,14 +697,22 @@ export default function agentBrowserExtension(pi) {
                 : createFreshSessionName(managedSessionBaseName, ephemeralSessionSeed, nextFreshSessionOrdinal)
             : restoredState.sessionName;
         managedSessionNamespace = shouldReservePostCloseSession ? undefined : restoredState.namespace;
+        managedSessionCompatibilityWorkaround = managedSessionActive
+            ? restoreManagedSessionCompatibilityWorkaroundFromBranch(branch, managedSessionName, managedSessionNamespace)
+            : undefined;
         managedSessionCwd = ctx.cwd;
         freshSessionOrdinal = nextFreshSessionOrdinal;
         sessionPageState = SessionPageState.fromBranch(branch);
         traceOwners = new Map();
         artifactManifest = restoreArtifactManifestFromBranch(branch);
         allowedDomainsBySession = restoreAllowedDomainsBySessionFromBranch(branch);
+        attachedSessionKeys = restoreAttachedSessionKeysFromBranch(branch);
         networkRoutesBySession = new Map();
         electronLaunchRecords = restoreElectronLaunchRecordsFromBranch(branch);
+        for (const record of getActiveElectronRecords(electronLaunchRecords)) {
+            if (record.sessionName)
+                attachedSessionKeys.add(getSessionContextKey(record.sessionName) ?? record.sessionName);
+        }
         if (options.resetRuntimeOwnership) {
             ownedManagedSessions.clear();
             ownedElectronLaunchRecords = new Map();
@@ -592,6 +731,17 @@ export default function agentBrowserExtension(pi) {
             branchOwnedLaunchIds: branchOwnedElectronLaunchIds,
             markBranchOwned: true,
         });
+        if (!options.resetRuntimeOwnership) {
+            for (const sessionKey of previousAttachedSessionKeys) {
+                if (ownedManagedSessions.has(sessionKey))
+                    attachedSessionKeys.add(sessionKey);
+            }
+            for (const record of ownedElectronLaunchRecords.values()) {
+                const sessionKey = getSessionContextKey(record.sessionName);
+                if (sessionKey && previousAttachedSessionKeys.has(sessionKey))
+                    attachedSessionKeys.add(sessionKey);
+            }
+        }
     };
     const registerWebSearchToolIfAvailable = (configState) => {
         if (webSearchToolRegistered || !canRegisterWebSearchTool(configState))
@@ -625,6 +775,8 @@ export default function agentBrowserExtension(pi) {
         });
     });
     pi.on("session_shutdown", async (event, ctx) => {
+        branchRestoreGeneration += 1;
+        branchStateGeneration += 1;
         let preservedElectronProfileDirs = [];
         await managedSessionExecutionQueue.run(async () => {
             const shutdownCwd = ctx?.cwd ?? managedSessionCwd;
@@ -636,9 +788,11 @@ export default function agentBrowserExtension(pi) {
                 ? ownedElectronLaunchRecords
                 : getOffBranchOwnedElectronLaunchRecords(ownedElectronLaunchRecords, electronLaunchRecords);
             const electronCleanupResults = await cleanupActiveElectronHostLaunches({
+                attachedSessionKeys,
                 cwd: shutdownCwd,
                 electronChildProcesses,
                 electronLaunchRecords: electronRecordsToCleanup,
+                managedSessionRestoreState,
                 timeoutMs: implicitSessionCloseTimeoutMs,
             });
             preservedElectronProfileDirs = [...new Set([
@@ -647,24 +801,27 @@ export default function agentBrowserExtension(pi) {
                 ])];
             syncElectronCleanupManagedSessions(ownedManagedSessions, electronCleanupResults);
             if (quitting) {
-                await closeOwnedManagedSessions(ownedManagedSessions, implicitSessionCloseTimeoutMs);
+                await closeOwnedManagedSessions(ownedManagedSessions, managedSessionRestoreState, implicitSessionCloseTimeoutMs, attachedSessionKeys);
             }
             else {
-                await closeOwnedManagedSessionsExcept(ownedManagedSessions, managedSessionActive ? managedSessionName : undefined, implicitSessionCloseTimeoutMs, managedSessionActive ? managedSessionNamespace : undefined);
+                await closeOwnedManagedSessionsExcept(ownedManagedSessions, managedSessionRestoreState, managedSessionActive ? managedSessionName : undefined, implicitSessionCloseTimeoutMs, attachedSessionKeys, managedSessionActive ? managedSessionNamespace : undefined);
             }
         });
         managedSessionActive = false;
+        managedSessionCompatibilityWorkaround = undefined;
         managedSessionNamespace = undefined;
         sessionPageState.reset();
         traceOwners = new Map();
         artifactManifest = undefined;
         allowedDomainsBySession = new Map();
+        attachedSessionKeys = new Set();
         networkRoutesBySession = new Map();
         electronLaunchRecords = new Map();
         ownedElectronLaunchRecords = new Map();
         branchOwnedElectronLaunchIds = new Set();
         electronChildProcesses = new Map();
         ownedManagedSessions.clear();
+        cleanupManagedSessionRestoreConfig();
         await cleanupSecureTempArtifacts({ preservePaths: preservedElectronProfileDirs });
     });
     pi.on("before_agent_start", async (event, ctx) => {
@@ -740,6 +897,10 @@ export default function agentBrowserExtension(pi) {
             if (resolvedInput.status === "invalid") {
                 return buildValidationFailureResult(resolvedInput);
             }
+            const outputPathValidationError = getAgentBrowserOutputPathValidationError(outputPath, ctx.cwd);
+            if (outputPathValidationError) {
+                return buildValidationFailureResult({ attemptedKind: resolvedInput.kind, kind: "invalid", redactedArgs: resolvedInput.redactedArgs, status: "invalid", toolArgs: resolvedInput.toolArgs, toolStdin: resolvedInput.toolStdin, validationError: outputPathValidationError });
+            }
             const { toolArgs } = resolvedInput;
             const compiledElectron = resolvedInput.kind === "electron" ? resolvedInput.compiledElectron : undefined;
             const redactedCompiledElectron = resolvedInput.kind === "electron" ? resolvedInput.redactedCompiledElectron : undefined;
@@ -750,6 +911,7 @@ export default function agentBrowserExtension(pi) {
                     ownedRecords: ownedElectronLaunchRecords,
                 });
                 const electronHostResult = await handleElectronHostInput({
+                    attachedSessionKeys,
                     compiledElectron,
                     cwd: ctx.cwd,
                     electronChildProcesses,
@@ -757,6 +919,8 @@ export default function agentBrowserExtension(pi) {
                     implicitSessionCloseTimeoutMs,
                     managedSessionActive,
                     managedSessionName,
+                    managedSessionNamespace,
+                    managedSessionRestoreState,
                     redactedCompiledElectron,
                     sessionPageState,
                     signal,
@@ -783,6 +947,7 @@ export default function agentBrowserExtension(pi) {
                         clearSessionScopedBrowserState(closedSessionName);
                         if (closedSessionName === managedSessionName) {
                             managedSessionActive = false;
+                            managedSessionCompatibilityWorkaround = undefined;
                             managedSessionNamespace = undefined;
                             freshSessionOrdinal += 1;
                             managedSessionName = createFreshSessionName(managedSessionBaseName, ephemeralSessionSeed, freshSessionOrdinal);
@@ -806,12 +971,17 @@ export default function agentBrowserExtension(pi) {
                 ownedElectronLaunchRecords,
                 ownedManagedSessions,
             });
+            const callerOwnedSessionQueueKey = !serializeBrowserCommand && explicitSessionName
+                ? getSessionContextKey(explicitSessionName, resolveAgentBrowserNamespace(toolArgs, process.env.AGENT_BROWSER_NAMESPACE)) ?? explicitSessionName
+                : undefined;
             const runBrowserCommand = async () => {
+                const branchRestoreGenerationAtStart = branchRestoreGeneration;
                 const generationAtStart = branchStateGeneration;
                 const sessionPageStateUpdate = sessionPageState.beginUpdate();
                 const browserRunState = {
                     allowedDomainsBySession,
                     artifactManifest,
+                    attachedSessionKeys,
                     closedManagedSessionNames: new Set(),
                     electronChildProcesses,
                     electronLaunchRecords,
@@ -819,14 +989,28 @@ export default function agentBrowserExtension(pi) {
                     freshSessionOrdinal,
                     managedSessionActive,
                     managedSessionBaseName,
+                    managedSessionCompatibilityWorkaround,
                     managedSessionCwd,
                     managedSessionName,
                     managedSessionNamespace,
+                    managedSessionRestoreState,
                     networkRoutesBySession,
+                    ownedManagedSessions,
                     sessionPageState,
                     traceOwners,
                 };
-                const result = await runAgentBrowserTool({
+                const initialAllowedDomainsBySession = browserRunState.allowedDomainsBySession;
+                const initialArtifactManifest = browserRunState.artifactManifest;
+                const initialNetworkRoutesBySession = browserRunState.networkRoutesBySession;
+                const attachedSessionRequested = isAttachedBrowserInvocation(toolArgs)
+                    || (resolvedInput.kind === "electron" && resolvedInput.compiledElectron.action === "launch");
+                const allocatesFreshManagedSession = explicitSessionName === undefined
+                    && (params.sessionMode === "fresh" || (resolvedInput.kind === "electron" && resolvedInput.compiledElectron.action === "launch"));
+                const reusableSessionKey = allocatesFreshManagedSession
+                    ? undefined
+                    : callerOwnedSessionQueueKey ?? getSessionContextKey(browserRunState.managedSessionName, browserRunState.managedSessionNamespace);
+                const attachedSessionKnown = reusableSessionKey !== undefined && attachedSessionKeys.has(reusableSessionKey);
+                let result = await runAgentBrowserTool({
                     ctx,
                     cwd: ctx.cwd,
                     electronPostCommandStatusSettleMs: ELECTRON_POST_COMMAND_STATUS_SETTLE_MS,
@@ -836,18 +1020,54 @@ export default function agentBrowserExtension(pi) {
                     input: resolvedInput,
                     onUpdate,
                     params,
+                    establishAttachedBrowserSession: attachedSessionRequested && !attachedSessionKnown,
+                    preserveAttachedBrowserSession: attachedSessionRequested || attachedSessionKnown,
                     promptPolicy,
                     sessionPageStateUpdate,
                     signal,
                     state: browserRunState,
                 });
+                const branchRestoreStillCurrent = branchRestoreGenerationAtStart === branchRestoreGeneration;
+                if (branchRestoreStillCurrent) {
+                    const resultDetails = isRecord(result.details) ? result.details : undefined;
+                    const resultSessionName = typeof resultDetails?.sessionName === "string"
+                        ? resultDetails.sessionName
+                        : extractExplicitSessionName(toolArgs);
+                    const resultNamespace = typeof resultDetails?.namespace === "string"
+                        ? resultDetails.namespace
+                        : resolveAgentBrowserNamespace(toolArgs, process.env.AGENT_BROWSER_NAMESPACE);
+                    const resultSessionKey = getSessionContextKey(resultSessionName, resultNamespace) ?? resultSessionName;
+                    const managedSessionOutcome = isRecord(resultDetails?.managedSessionOutcome) ? resultDetails.managedSessionOutcome : undefined;
+                    const attachedSessionRemainsActive = result.isError !== true
+                        || (attachedSessionRequested && managedSessionOutcome?.activeAfter === true);
+                    const closesAttachedSession = result.isError !== true && isCloseCommand(extractCommandTokens(toolArgs)[0]);
+                    if (resultSessionKey && closesAttachedSession)
+                        attachedSessionKeys.delete(resultSessionKey);
+                    else if (resultSessionKey && attachedSessionRemainsActive && (attachedSessionRequested || attachedSessionKnown)) {
+                        attachedSessionKeys.add(resultSessionKey);
+                        result = { ...result, details: { ...(resultDetails ?? {}), attachedBrowserSession: true } };
+                    }
+                }
+                if (branchRestoreStillCurrent) {
+                    allowedDomainsBySession = mergeBrowserRunMap(allowedDomainsBySession, initialAllowedDomainsBySession, browserRunState.allowedDomainsBySession);
+                    networkRoutesBySession = mergeBrowserRunMap(networkRoutesBySession, initialNetworkRoutesBySession, browserRunState.networkRoutesBySession);
+                    artifactManifest = mergeBrowserRunArtifactManifest(artifactManifest, initialArtifactManifest, browserRunState.artifactManifest);
+                    if (artifactManifest) {
+                        result = {
+                            ...result,
+                            details: {
+                                ...(isRecord(result.details) ? result.details : {}),
+                                artifactManifest,
+                                artifactRetentionSummary: formatSessionArtifactRetentionSummary(artifactManifest),
+                            },
+                        };
+                    }
+                }
                 const branchStateStillCurrent = generationAtStart === branchStateGeneration;
                 if (serializeBrowserCommand || branchStateStillCurrent) {
-                    allowedDomainsBySession = browserRunState.allowedDomainsBySession;
-                    networkRoutesBySession = browserRunState.networkRoutesBySession;
-                    artifactManifest = browserRunState.artifactManifest;
                     freshSessionOrdinal = Math.max(freshSessionOrdinal, browserRunState.freshSessionOrdinal);
                     managedSessionActive = browserRunState.managedSessionActive;
+                    managedSessionCompatibilityWorkaround = browserRunState.managedSessionCompatibilityWorkaround;
                     managedSessionCwd = browserRunState.managedSessionCwd;
                     managedSessionName = browserRunState.managedSessionName;
                     managedSessionNamespace = browserRunState.managedSessionNamespace;
@@ -866,8 +1086,10 @@ export default function agentBrowserExtension(pi) {
                 }
                 return applyAgentBrowserOutputPath({ cwd: ctx.cwd, outputPath, preserveTextContent: Array.isArray(params.args) && params.args.includes("--json"), result });
             };
-            return serializeBrowserCommand
-                ? managedSessionExecutionQueue.run(runBrowserCommand)
+            if (serializeBrowserCommand)
+                return managedSessionExecutionQueue.run(runBrowserCommand);
+            return callerOwnedSessionQueueKey
+                ? callerOwnedSessionExecutionQueues.run(callerOwnedSessionQueueKey, runBrowserCommand)
                 : runBrowserCommand();
         },
     });

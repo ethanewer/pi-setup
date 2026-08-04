@@ -1,6 +1,6 @@
 diff -ruN --exclude=node_modules a/README.md b/README.md
 --- a/README.md	1985-10-26 03:15:00
-+++ b/README.md	2026-07-30 11:20:51
++++ b/README.md	2026-08-04 15:05:11
 @@ -105,6 +105,8 @@
  
  Keep both binaries on `PATH`. `record start` can begin without a file on disk, but `record stop` needs `ffmpeg` to encode the WebM.
@@ -30,22 +30,22 @@ diff -ruN --exclude=node_modules a/README.md b/README.md
  
 diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/index.js b/dist/extensions/agent-browser/index.js
 --- a/dist/extensions/agent-browser/index.js	1985-10-26 03:15:00
-+++ b/dist/extensions/agent-browser/index.js	2026-07-30 11:20:51
-@@ -21,11 +21,12 @@
++++ b/dist/extensions/agent-browser/index.js	2026-08-04 15:07:41
+@@ -24,11 +24,12 @@
  import { closeManagedSession, getSessionContextKey, runAgentBrowserTool } from "./lib/orchestration/browser-run/index.js";
  import { findElectronLaunchRecordForSession, getActiveElectronRecords } from "./lib/orchestration/browser-run/session-state.js";
  import { parseBatchStdinJsonArray } from "./lib/orchestration/batch-stdin.js";
 -import { ELECTRON_POST_COMMAND_STATUS_SETTLE_MS, ELECTRON_PROFILE_ISOLATION_DETAILS, cleanupActiveElectronHostLaunches, handleElectronHostInput, restoreElectronLaunchRecordsFromBranch, } from "./lib/orchestration/electron-host/index.js";
 +import { ELECTRON_POST_COMMAND_STATUS_SETTLE_MS, ELECTRON_PROFILE_ISOLATION_DETAILS, adoptOrphanedElectronLaunches, cleanupActiveElectronHostLaunches, handleElectronHostInput, restoreElectronLaunchRecordsFromBranch, } from "./lib/orchestration/electron-host/index.js";
  import { buildValidationFailureResult, resolveAgentBrowserInput } from "./lib/orchestration/input-plan.js";
- import { applyAgentBrowserOutputPath } from "./lib/orchestration/output-file.js";
- import { isSessionArtifactManifest } from "./lib/results/artifact-manifest.js";
+ import { applyAgentBrowserOutputPath, getAgentBrowserOutputPathValidationError } from "./lib/orchestration/output-file.js";
+ import { formatSessionArtifactRetentionSummary, getSessionArtifactManifestEntryKey, isSessionArtifactManifest, mergeSessionArtifactManifest } from "./lib/results/artifact-manifest.js";
  import { canRegisterWebSearchTool, loadAgentBrowserConfigSync } from "./lib/config.js";
 +import { getUpstreamProjectConfigIgnoredNotice, planUpstreamConfigPin } from "./lib/upstream-config-policy.js";
  import { createAgentBrowserWebSearchTool } from "./lib/web-search.js";
  import { isDirectAgentBrowserBashAllowed, isHarmlessAgentBrowserInspectionCommand, looksLikeDirectAgentBrowserBash, } from "./lib/bash-guard.js";
  import { AgentBrowserResultComponent, buildAgentBrowserToolResultPatch, formatAgentBrowserRenderCall, formatAgentBrowserRenderResult, } from "./lib/pi-tool-rendering.js";
-@@ -170,12 +171,12 @@
+@@ -245,12 +246,12 @@
      const status = typeof outcome.status === "string" ? outcome.status : undefined;
      const currentSessionName = typeof outcome.currentSessionName === "string" ? outcome.currentSessionName : undefined;
      const attemptedSessionName = typeof outcome.attemptedSessionName === "string" ? outcome.attemptedSessionName : undefined;
@@ -60,7 +60,7 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/index.js b/dist
      }
  }
  function getTouchedElectronLaunchIds(sessionName, records) {
-@@ -446,13 +447,23 @@
+@@ -521,6 +522,15 @@
          })();
      }
  }
@@ -73,8 +73,10 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/index.js b/dist
 +        return undefined;
 +    }
 +}
- function findPackageRoot(startDir) {
-     let currentDir = startDir;
+ class KeyedAsyncExecutionQueue {
+     entries = new Map();
+     async run(key, work) {
+@@ -569,8 +579,9 @@
      while (true) {
          const packageJsonPath = join(currentDir, "package.json");
          if (existsSync(packageJsonPath)) {
@@ -86,7 +88,7 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/index.js b/dist
                  return currentDir;
          }
          const parentDir = dirname(currentDir);
-@@ -469,13 +480,21 @@
+@@ -587,13 +598,21 @@
          toolContractPath: join(packageRoot, "docs", "TOOL_CONTRACT.md"),
      };
  }
@@ -110,7 +112,7 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/index.js b/dist
  }
  export default function agentBrowserExtension(pi) {
      const ephemeralSessionSeed = createEphemeralSessionSeed();
-@@ -487,6 +506,7 @@
+@@ -605,6 +624,7 @@
      const toolPromptGuidelines = buildToolPromptGuidelines({
          browserDefaultProfile: agentBrowserConfig.trustedBrowserDefaultProfile,
          browserExecutablePath: agentBrowserConfig.trustedBrowserExecutablePath,
@@ -118,7 +120,7 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/index.js b/dist
          includeWebSearch: webSearchToolAvailable,
          docs: getInstalledDocsPaths(),
      });
-@@ -589,6 +609,11 @@
+@@ -739,6 +759,11 @@
      pi.on("session_start", async (_event, ctx) => {
          restoreBranchBackedState(ctx, { resetRuntimeOwnership: true });
          electronChildProcesses = new Map();
@@ -130,7 +132,7 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/index.js b/dist
          registerWebSearchToolIfAvailable(loadAgentBrowserConfigSync({
              cwd: ctx.cwd,
              includeProjectConfig: shouldIncludeProjectConfig(ctx),
-@@ -650,9 +675,15 @@
+@@ -807,9 +832,15 @@
              cwd: ctx.cwd,
              includeProjectConfig: shouldIncludeProjectConfig(ctx),
          });
@@ -147,7 +149,7 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/index.js b/dist
                  : undefined,
              runtimeConfig.browserDefaultProfileScope === "project"
                  ? buildBrowserDefaultProfileGuideline(runtimeConfig.browserDefaultProfile)
-@@ -674,7 +705,7 @@
+@@ -831,7 +862,7 @@
              !(await isDirectAgentBrowserBashAllowed(ctx.cwd))) {
              return {
                  block: true,
@@ -158,7 +160,7 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/index.js b/dist
      });
 diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/bash-guard.js b/dist/extensions/agent-browser/lib/bash-guard.js
 --- a/dist/extensions/agent-browser/lib/bash-guard.js	1985-10-26 03:15:00
-+++ b/dist/extensions/agent-browser/lib/bash-guard.js	2026-07-30 11:20:51
++++ b/dist/extensions/agent-browser/lib/bash-guard.js	2026-08-04 15:05:11
 @@ -1,9 +1,12 @@
 -import { readFile } from "node:fs/promises";
 -import { join } from "node:path";
@@ -251,7 +253,7 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/bash-guard.
      catch {
 diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/child-process-policy.js b/dist/extensions/agent-browser/lib/child-process-policy.js
 --- a/dist/extensions/agent-browser/lib/child-process-policy.js	1969-12-31 18:00:00
-+++ b/dist/extensions/agent-browser/lib/child-process-policy.js	2026-07-30 11:20:51
++++ b/dist/extensions/agent-browser/lib/child-process-policy.js	2026-08-04 15:05:11
 @@ -0,0 +1,138 @@
 +/**
 + * Purpose: Own which upstream `agent-browser` executable the wrapper spawns and which parent environment variables reach it.
@@ -393,7 +395,7 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/child-proce
 +}
 diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/config-policy.js b/dist/extensions/agent-browser/lib/config-policy.js
 --- a/dist/extensions/agent-browser/lib/config-policy.js	1985-10-26 03:15:00
-+++ b/dist/extensions/agent-browser/lib/config-policy.js	2026-07-30 11:20:51
++++ b/dist/extensions/agent-browser/lib/config-policy.js	2026-08-04 15:05:11
 @@ -31,6 +31,7 @@
  export const CONFIG_RELATIVE_PATH = /** @type {const} */ ([CONFIG_DIR_NAME, "config", "pi-agent-browser-native", "config.json"]);
  export const GLOBAL_CONFIG_RELATIVE_PATH = /** @type {const} */ ([CONFIG_DIR_NAME, "config", "pi-agent-browser-native", "config.json"]);
@@ -514,7 +516,7 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/config-poli
              sources[provider] = { kind: "literal", provider, rawValue: options.env[descriptor.apiKeyEnv] ?? "", scope: "env-fallback" };
 diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/config.js b/dist/extensions/agent-browser/lib/config.js
 --- a/dist/extensions/agent-browser/lib/config.js	1985-10-26 03:15:00
-+++ b/dist/extensions/agent-browser/lib/config.js	2026-07-30 11:20:51
++++ b/dist/extensions/agent-browser/lib/config.js	2026-08-04 15:05:11
 @@ -4,12 +4,132 @@
   * Scope: Package-owned configuration only; canonical config policy lives in config-policy.js, browser command execution and web-search API calls live in focused modules.
   * Invariants/Assumptions: Credential sources from loaded config are passed through to the runtime; command credentials are resolved lazily at execution time and displayed values stay redacted.
@@ -674,7 +676,7 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/config.js b
      else if (source.kind === "env") {
 diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/electron/discovery.js b/dist/extensions/agent-browser/lib/electron/discovery.js
 --- a/dist/extensions/agent-browser/lib/electron/discovery.js	1985-10-26 03:15:00
-+++ b/dist/extensions/agent-browser/lib/electron/discovery.js	2026-07-30 11:20:51
++++ b/dist/extensions/agent-browser/lib/electron/discovery.js	2026-08-04 15:05:11
 @@ -6,15 +6,20 @@
   * Invariants/Assumptions: Discovery is best-effort, missing scan roots are ignored, malformed .desktop files are skipped, and results are capped before they reach model-visible output.
   */
@@ -819,13 +821,13 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/electron/di
      const resourcesDirectory = join(executableDirectory, "resources");
 diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/electron/launch.js b/dist/extensions/agent-browser/lib/electron/launch.js
 --- a/dist/extensions/agent-browser/lib/electron/launch.js	1985-10-26 03:15:00
-+++ b/dist/extensions/agent-browser/lib/electron/launch.js	2026-07-30 11:20:51
++++ b/dist/extensions/agent-browser/lib/electron/launch.js	2026-08-04 15:06:39
 @@ -3,12 +3,12 @@
   * Responsibilities: Resolve Electron targets, enforce caller-owned allow/deny policy, create isolated userDataDir profiles, launch with remote debugging on an OS-chosen port, poll DevToolsActivePort, and read bounded CDP version/target metadata.
   * Scope: Host-side Electron lifecycle setup only; upstream agent-browser attach/presentation stays in the extension entrypoint.
   * Usage: Called by the agent_browser electron.launch shorthand before routing through upstream `connect`.
-- * Invariants/Assumptions: The wrapper only launches targets with Electron framework evidence, always uses an isolated temp profile, and never accepts a caller-supplied remote debugging port.
-+ * Invariants/Assumptions: The wrapper only launches targets with Electron framework evidence, always uses an isolated temp profile, never accepts a caller-supplied remote debugging port, and leaves an adoption record inside the profile so a later run can reap the launch if this process dies without cleaning up.
+- * Invariants/Assumptions: The wrapper only launches targets with Electron framework evidence, always uses an isolated temp profile, never accepts a caller-supplied remote debugging port, and cleans any spawned process/profile when cancellation interrupts readiness.
++ * Invariants/Assumptions: The wrapper only launches targets with Electron framework evidence, always uses an isolated temp profile, never accepts a caller-supplied remote debugging port, cleans any spawned process/profile when cancellation interrupts readiness, and leaves an adoption record inside the profile so a later run can reap the launch if this process dies without cleaning up.
   */
  import { spawn } from "node:child_process";
  import { randomUUID } from "node:crypto";
@@ -844,7 +846,7 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/electron/la
  const ELECTRON_DEFAULT_APP_ARGS = ["--disable-extensions", "--no-first-run", "--no-default-browser-check"];
  const ELECTRON_DEVTOOLS_POLL_INTERVAL_MS = 100;
  function normalizeTimeoutMs(timeoutMs) {
-@@ -185,6 +186,21 @@
+@@ -201,6 +202,21 @@
          return undefined;
      return `PID ${child.pid} remained alive after failed Electron launch cleanup.`;
  }
@@ -866,7 +868,7 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/electron/la
  function buildLaunchRecord(options) {
      return {
          appName: options.target.name,
-@@ -194,7 +210,7 @@
+@@ -210,7 +226,7 @@
          createdAtMs: options.createdAtMs,
          desktopId: options.target.desktopId,
          executablePath: options.target.executablePath,
@@ -875,15 +877,15 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/electron/la
          launchedByWrapper: true,
          packageSource: options.target.packageSource,
          pid: options.pid,
-@@ -253,6 +269,7 @@
+@@ -275,6 +291,7 @@
      const timeoutMs = normalizeTimeoutMs(options.timeoutMs);
      const startedAtMs = Date.now();
      const deadlineMs = startedAtMs + timeoutMs;
 +    const launchId = `electron-${randomUUID()}`;
      const userDataDir = await createSecureTempDirectory(ELECTRON_PROFILE_DIR_PREFIX);
-     let cleanupError;
-     let spawnError;
-@@ -272,6 +289,25 @@
+     if (options.signal?.aborted) {
+         let cleanupError;
+@@ -304,6 +321,25 @@
          exitSignal = signal;
      });
      child.unref();
@@ -909,15 +911,15 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/electron/la
      const buildFailureDiagnostics = (options = {}) => ({
          cdpVersionReached: options.cdpVersionReached,
          devToolsActivePort: options.devToolsActivePort,
-@@ -323,6 +359,7 @@
-     }
+@@ -359,6 +395,7 @@
+     const metadata = metadataResult.metadata;
      const record = buildLaunchRecord({
          createdAtMs: Date.now(),
 +        launchId,
          pid: child.pid,
          port: portResult.port,
          target,
-@@ -330,6 +367,7 @@
+@@ -366,6 +403,7 @@
          userDataDir,
          version: metadata.version,
      });
@@ -927,7 +929,7 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/electron/la
          targets: metadata.targets,
 diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/electron/orphans.js b/dist/extensions/agent-browser/lib/electron/orphans.js
 --- a/dist/extensions/agent-browser/lib/electron/orphans.js	1969-12-31 18:00:00
-+++ b/dist/extensions/agent-browser/lib/electron/orphans.js	2026-07-30 11:20:51
++++ b/dist/extensions/agent-browser/lib/electron/orphans.js	2026-08-04 15:05:11
 @@ -0,0 +1,88 @@
 +/**
 + * Purpose: Reap wrapper-owned Electron launches whose pi process died before its shutdown hook could clean them up.
@@ -1019,7 +1021,7 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/electron/or
 +}
 diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/input-modes/electron.js b/dist/extensions/agent-browser/lib/input-modes/electron.js
 --- a/dist/extensions/agent-browser/lib/input-modes/electron.js	1985-10-26 03:15:00
-+++ b/dist/extensions/agent-browser/lib/input-modes/electron.js	2026-07-30 11:20:51
++++ b/dist/extensions/agent-browser/lib/input-modes/electron.js	2026-08-04 15:05:11
 @@ -4,7 +4,9 @@
   * Scope: Electron input-mode validation only; launch/probe/cleanup execution stays in the extension entrypoint.
   */
@@ -1074,19 +1076,29 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/input-modes
      const value = input[fieldName];
 diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/input-modes/params.js b/dist/extensions/agent-browser/lib/input-modes/params.js
 --- a/dist/extensions/agent-browser/lib/input-modes/params.js	1985-10-26 03:15:00
-+++ b/dist/extensions/agent-browser/lib/input-modes/params.js	2026-07-30 11:20:51
-@@ -14,7 +14,7 @@
++++ b/dist/extensions/agent-browser/lib/input-modes/params.js	2026-08-04 15:07:11
+@@ -15,12 +15,12 @@
      return Type.Object({
-         action: StringEnum(["launch"], { description: "Launch an Electron app with an isolated wrapper-owned profile." }),
+         action: StringEnum(["launch"]),
          ...targetField,
--        appArgs: Type.Optional(Type.Array(Type.String({ description: "Argument passed to the Electron application.", minLength: 1 }), { description: "Optional Electron app argv. Wrapper-owned lifecycle/debug flags are rejected." })),
+-        appArgs: Type.Optional(Type.Array(Type.String({ minLength: 1 }))),
+-        handoff: Type.Optional(StringEnum(AGENT_BROWSER_ELECTRON_HANDOFFS)),
+-        targetType: Type.Optional(StringEnum(AGENT_BROWSER_ELECTRON_TARGET_TYPES)),
+-        timeoutMs: Type.Optional(Type.Integer({ minimum: 1 })),
+-        allow: Type.Optional(Type.Array(Type.String({ minLength: 1 }))),
+-        deny: Type.Optional(Type.Array(Type.String({ minLength: 1 }))),
 +        appArgs: Type.Optional(Type.Array(Type.String({ description: "Argument passed to the Electron application.", minLength: 1 }), { description: "Optional Electron app argv. Wrapper-owned lifecycle/debug flags, launcher/command-prefix switches, and sandbox/web-security switches are rejected; other dashed switches must be known-safe Chromium/Electron switches." })),
-         handoff: Type.Optional(StringEnum(AGENT_BROWSER_ELECTRON_HANDOFFS, { description: "Post-launch handoff depth. Defaults to snapshot." })),
-         targetType: Type.Optional(StringEnum(AGENT_BROWSER_ELECTRON_TARGET_TYPES, { description: "Preferred CDP target type. Defaults to page." })),
-         timeoutMs: Type.Optional(Type.Integer({ description: "Bounded launch timeout in milliseconds.", minimum: 1 })),
++        handoff: Type.Optional(StringEnum(AGENT_BROWSER_ELECTRON_HANDOFFS, { description: "Post-launch handoff depth. Defaults to snapshot." })),
++        targetType: Type.Optional(StringEnum(AGENT_BROWSER_ELECTRON_TARGET_TYPES, { description: "Preferred CDP target type. Defaults to page." })),
++        timeoutMs: Type.Optional(Type.Integer({ description: "Bounded launch timeout in milliseconds.", minimum: 1 })),
++        allow: Type.Optional(Type.Array(Type.String({ description: "App identifier allowed by the caller for electron.launch.", minLength: 1 }), { description: "Optional caller-owned allow list for electron.launch policy checks." })),
++        deny: Type.Optional(Type.Array(Type.String({ description: "App identifier denied by the caller for electron.launch.", minLength: 1 }), { description: "Optional caller-owned deny list for electron.launch policy checks; deny wins over allow." })),
+     }, { additionalProperties: false });
+ }
+ export function createAgentBrowserParamsSchema(Type = JsonSchema, StringEnum = localStringEnum) {
 diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/input-modes/types.js b/dist/extensions/agent-browser/lib/input-modes/types.js
 --- a/dist/extensions/agent-browser/lib/input-modes/types.js	1985-10-26 03:15:00
-+++ b/dist/extensions/agent-browser/lib/input-modes/types.js	2026-07-30 11:20:51
++++ b/dist/extensions/agent-browser/lib/input-modes/types.js	2026-08-04 15:05:11
 @@ -15,6 +15,7 @@
  export const AGENT_BROWSER_ELECTRON_LIST_FIELDS = new Set(["action", "query", "maxResults"]);
  export const AGENT_BROWSER_ELECTRON_PROBE_FIELDS = new Set(["action", "launchId", "timeoutMs"]);
@@ -1097,7 +1109,7 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/input-modes
  export const SOURCE_LOOKUP_DEFAULT_MAX_WORKSPACE_FILES = 2_000;
 diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/launch-flag-policy.js b/dist/extensions/agent-browser/lib/launch-flag-policy.js
 --- a/dist/extensions/agent-browser/lib/launch-flag-policy.js	1969-12-31 18:00:00
-+++ b/dist/extensions/agent-browser/lib/launch-flag-policy.js	2026-07-30 11:20:51
++++ b/dist/extensions/agent-browser/lib/launch-flag-policy.js	2026-08-04 15:05:11
 @@ -0,0 +1,157 @@
 +/**
 + * Purpose: Own the wrapper policy for raw browser/Electron launch switches that can execute host code or read local files.
@@ -1258,7 +1270,7 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/launch-flag
 +}
 diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/navigation-policy.js b/dist/extensions/agent-browser/lib/navigation-policy.js
 --- a/dist/extensions/agent-browser/lib/navigation-policy.js	1985-10-26 03:15:00
-+++ b/dist/extensions/agent-browser/lib/navigation-policy.js	2026-07-30 11:20:51
++++ b/dist/extensions/agent-browser/lib/navigation-policy.js	2026-08-04 15:05:11
 @@ -1,12 +1,132 @@
  /**
   * Purpose: Keep wrapper-side navigation policy parsing and evaluation small and explicit.
@@ -1480,14 +1492,15 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/navigation-
          allowedDisplay: options.policy.display,
 diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/orchestration/browser-run/artifact-paths.js b/dist/extensions/agent-browser/lib/orchestration/browser-run/artifact-paths.js
 --- a/dist/extensions/agent-browser/lib/orchestration/browser-run/artifact-paths.js	1985-10-26 03:15:00
-+++ b/dist/extensions/agent-browser/lib/orchestration/browser-run/artifact-paths.js	2026-07-30 11:20:51
-@@ -1,4 +1,5 @@
++++ b/dist/extensions/agent-browser/lib/orchestration/browser-run/artifact-paths.js	2026-08-04 15:06:39
+@@ -1,5 +1,5 @@
  import { extname, isAbsolute } from "node:path";
-+import { VALUE_FLAGS, getFlagName } from "../../argv-grammar.js";
+-import { GLOBAL_BOOLEAN_FLAGS_WITH_OPTIONAL_VALUES, VALUE_FLAGS } from "../../argv-grammar.js";
++import { GLOBAL_BOOLEAN_FLAGS_WITH_OPTIONAL_VALUES, VALUE_FLAGS, getFlagName } from "../../argv-grammar.js";
+ const SCREENSHOT_BOOLEAN_FLAGS = new Set(["--annotate", "--full", "-f"]);
  const SCREENSHOT_VALUE_FLAGS = new Set(["--screenshot-dir", "--screenshot-format", "--screenshot-quality"]);
  const SCREENSHOT_IMAGE_EXTENSIONS = new Set([".jpeg", ".jpg", ".png", ".webp"]);
- function isImagePathToken(token) {
-@@ -36,4 +37,65 @@
+@@ -43,4 +43,65 @@
          return candidateIndex;
      }
      return undefined;
@@ -1555,23 +1568,29 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/orchestrati
  }
 diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/orchestration/browser-run/diagnostics.js b/dist/extensions/agent-browser/lib/orchestration/browser-run/diagnostics.js
 --- a/dist/extensions/agent-browser/lib/orchestration/browser-run/diagnostics.js	1985-10-26 03:15:00
-+++ b/dist/extensions/agent-browser/lib/orchestration/browser-run/diagnostics.js	2026-07-30 17:39:59
-@@ -857,7 +857,11 @@
++++ b/dist/extensions/agent-browser/lib/orchestration/browser-run/diagnostics.js	2026-08-04 15:06:39
+@@ -872,10 +872,16 @@
  export async function collectTimeoutPartialProgress(options) {
      const rawSteps = getTimeoutProgressSteps(options.compiledJob, options.command, options.stdin);
      const artifacts = await collectTimeoutArtifactEvidence(options.cwd, rawSteps);
--    const [urlData, titleData] = await Promise.all([runSessionCommandData({ args: ["get", "url"], cwd: options.cwd, namespace: options.namespace, sessionName: options.sessionName }), runSessionCommandData({ args: ["get", "title"], cwd: options.cwd, namespace: options.namespace, sessionName: options.sessionName })]);
-+    // These two run against a daemon that has just timed out, so without the caller's
-+    // signal and a short budget of their own they sat on the full default watchdog and
-+    // ignored Escape — the user's cancel appeared to do nothing for another ~35s.
+-    const urlData = await runSessionCommandData({ args: ["get", "url"], cwd: options.cwd, namespace: options.namespace, sessionName: options.sessionName });
++    // These run against a daemon that has just timed out, so without the caller's signal
++    // and a short budget of their own they sat on the full default watchdog and ignored
++    // Escape — the user's cancel appeared to do nothing for another ~35s. Upstream now
++    // fetches the title conditionally, so the budget is applied to both calls instead of
++    // parallelising them.
 +    const recoveryOptions = { signal: options.signal, timeoutMs: options.timeoutMs };
-+    const [urlData, titleData] = await Promise.all([runSessionCommandData({ args: ["get", "url"], cwd: options.cwd, namespace: options.namespace, sessionName: options.sessionName, ...recoveryOptions }), runSessionCommandData({ args: ["get", "title"], cwd: options.cwd, namespace: options.namespace, sessionName: options.sessionName, ...recoveryOptions })]);
++    const urlData = await runSessionCommandData({ args: ["get", "url"], cwd: options.cwd, namespace: options.namespace, sessionName: options.sessionName, ...recoveryOptions });
      const recoveredUrl = extractStringResultField(urlData, "result") ?? extractStringResultField(urlData, "url");
+     const titleData = recoveredUrl && !isFileUrl(recoveredUrl)
+-        ? await runSessionCommandData({ args: ["get", "title"], cwd: options.cwd, namespace: options.namespace, sessionName: options.sessionName })
++        ? await runSessionCommandData({ args: ["get", "title"], cwd: options.cwd, namespace: options.namespace, sessionName: options.sessionName, ...recoveryOptions })
+         : undefined;
      const title = extractStringResultField(titleData, "result") ?? extractStringResultField(titleData, "title");
      const plannedUrl = recoveredUrl ? undefined : getPlannedCurrentPageUrl(rawSteps);
 diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/orchestration/browser-run/prepare/direct-anchor-download.js b/dist/extensions/agent-browser/lib/orchestration/browser-run/prepare/direct-anchor-download.js
 --- a/dist/extensions/agent-browser/lib/orchestration/browser-run/prepare/direct-anchor-download.js	1985-10-26 03:15:00
-+++ b/dist/extensions/agent-browser/lib/orchestration/browser-run/prepare/direct-anchor-download.js	2026-07-30 11:20:51
++++ b/dist/extensions/agent-browser/lib/orchestration/browser-run/prepare/direct-anchor-download.js	2026-08-04 15:05:11
 @@ -4,6 +4,7 @@
  import { buildAgentBrowserResultCategoryDetails } from "../../../results.js";
  import { formatSessionArtifactRetentionSummary, mergeSessionArtifactManifest } from "../../../results/artifact-manifest.js";
@@ -1591,9 +1610,9 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/orchestrati
          const probeData = await runSessionCommandData({
 diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/orchestration/browser-run/prepare.js b/dist/extensions/agent-browser/lib/orchestration/browser-run/prepare.js
 --- a/dist/extensions/agent-browser/lib/orchestration/browser-run/prepare.js	1985-10-26 03:15:00
-+++ b/dist/extensions/agent-browser/lib/orchestration/browser-run/prepare.js	2026-07-30 11:20:51
-@@ -2,6 +2,8 @@
- import { dirname, resolve } from "node:path";
++++ b/dist/extensions/agent-browser/lib/orchestration/browser-run/prepare.js	2026-08-04 15:05:11
+@@ -4,6 +4,8 @@
+ import { cleanupElectronLaunchResources } from "../../electron/cleanup.js";
  import { launchElectronApp } from "../../electron/launch.js";
  import { pathExists } from "../../fs-utils.js";
 +import { getFlagName } from "../../argv-grammar.js";
@@ -1601,7 +1620,7 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/orchestrati
  import { getCompiledSemanticActionSessionPrefix } from "../../input-modes.js";
  import { tryDirectAnchorDownload } from "./prepare/direct-anchor-download.js";
  import { tryNetworkRequestsPageFilter } from "./prepare/network-page-filter.js";
-@@ -20,7 +22,7 @@
+@@ -25,7 +27,7 @@
  import { buildElectronHostFailureResult, getElectronLaunchFailureCategory, redactRecoveryHint } from "./final-result.js";
  import { prepareClickDispatchProbe } from "./click-dispatch.js";
  import { collectScrollPositionSnapshot, validateQaAttachedPrecondition } from "./diagnostics.js";
@@ -1610,7 +1629,7 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/orchestrati
  import { findRequestedArtifactCloseViolation } from "./prompt-guards.js";
  export function normalizeRunInput(input) {
      const base = { redactedArgs: input.redactedArgs, toolArgs: input.toolArgs, toolStdin: input.toolStdin };
-@@ -69,6 +71,124 @@
+@@ -74,6 +76,124 @@
          return;
      await mkdir(dirname(resolve(cwd, requestedPath)), { recursive: true });
  }
@@ -1735,7 +1754,7 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/orchestrati
  async function normalizeScreenshotPathInTokens(commandTokens, cwd) {
      const screenshotPathTokenIndex = getScreenshotPathTokenIndex(commandTokens);
      if (screenshotPathTokenIndex === undefined) {
-@@ -315,6 +435,24 @@
+@@ -320,6 +440,24 @@
      let runtimeToolArgs = toolArgs;
      let runtimeToolStdin = toolStdin;
      let electronLaunch;
@@ -1759,21 +1778,21 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/orchestrati
 +    }
      const sessionMode = compiledElectron?.action === "launch" ? "fresh" : params.sessionMode ?? "auto";
      const freshSessionName = createFreshSessionName(managedSessionBaseName, ephemeralSessionSeed, freshSessionOrdinal + 1);
-     if (compiledElectron?.action === "launch") {
+     const rawManagedStateAccessError = getManagedSessionStateAccessValidationError({
 diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/orchestration/browser-run/process-output.js b/dist/extensions/agent-browser/lib/orchestration/browser-run/process-output.js
 --- a/dist/extensions/agent-browser/lib/orchestration/browser-run/process-output.js	1985-10-26 03:15:00
-+++ b/dist/extensions/agent-browser/lib/orchestration/browser-run/process-output.js	2026-07-30 17:39:59
-@@ -2,7 +2,7 @@
++++ b/dist/extensions/agent-browser/lib/orchestration/browser-run/process-output.js	2026-08-04 15:07:11
+@@ -3,7 +3,7 @@
  import { isCloseCommand, isNavigationObservableCommandName, isOpenNavigationCommand } from "../../command-taxonomy.js";
  import { OPEN_RESULT_TAB_CORRECTION_FLAGS } from "../../launch-scoped-flags.js";
  import { cleanupElectronLaunchResources, inspectElectronLaunchStatus } from "../../electron/cleanup.js";
 -import { getAllowedDomainsViolation, parseAllowedDomainsPolicyFromArgs } from "../../navigation-policy.js";
 +import { getAllowedDomainsViolation, getLocalAppFileRootsForLaunch, parseAllowedDomainsPolicyFromArgs } from "../../navigation-policy.js";
+ import { getManagedSessionResultingPageState, getObservedBrowserPageValidationError, managedSessionCommandRequiresLivePageVerification } from "../../managed-session-state-policy.js";
  import { analyzeNetworkSourceLookupResults, analyzeQaPresetResults, analyzeQaPresetTimeout, analyzeSourceLookupResults, buildQaCompactPassText, extractQaPageContext, redactNetworkSourceLookupAnalysis, } from "../../input-modes.js";
  import { applyNetworkRouteRecords, buildNetworkRouteDiagnostics, buildToolPresentation, getAgentBrowserErrorText, parseAgentBrowserEnvelope, } from "../../results.js";
- import { buildEvictedSessionArtifactEntries, formatSessionArtifactRetentionSummary, mergeSessionArtifactManifest, } from "../../results/artifact-manifest.js";
-@@ -15,6 +15,10 @@
- import { applyOpenResultTabCorrection, buildAboutBlankRecoveryHint, buildAboutBlankWarning, buildElectronPostCommandHealthDiagnostic, buildElectronRefFreshnessDiagnostic, buildElectronSessionMismatch, buildManagedSessionOutcome, closeManagedSession, collectOpenResultTabCorrection, collectSessionTabSelection, extractNavigationSummaryFromData, extractStringResultField, findElectronLaunchRecordForSession, formatElectronPostCommandHealthText, formatElectronSessionMismatchText, getSessionContextKey, getStaleRefArgs, mergeNavigationSummaryIntoData, shouldCaptureNavigationSummary, shouldCorrectSessionTabAfterCommand, shouldInspectElectronPostCommandHealth, unwrapPinnedSessionBatchEnvelope, updateTraceOwnerState, } from "./session-state.js";
+@@ -18,6 +18,10 @@
+ import { applyOpenResultTabCorrection, buildAboutBlankRecoveryHint, buildAboutBlankWarning, buildElectronPostCommandHealthDiagnostic, buildElectronRefFreshnessDiagnostic, buildElectronSessionMismatch, buildManagedSessionOutcome, collectOpenResultTabCorrection, collectSessionTabSelection, extractNavigationSummaryFromData, extractStringResultField, findElectronLaunchRecordForSession, formatElectronPostCommandHealthText, formatElectronSessionMismatchText, getSessionContextKey, getStaleRefArgs, mergeNavigationSummaryIntoData, shouldCaptureNavigationSummary, shouldCorrectSessionTabAfterCommand, shouldInspectElectronPostCommandHealth, unwrapPinnedSessionBatchEnvelope, updateTraceOwnerState, } from "./session-state.js";
  import { collectClickDispatchDiagnostic } from "./click-dispatch.js";
  import { buildScrollNoopDiagnostic, collectComboboxFocusDiagnostic, collectElectronBroadGetTextScopeDiagnostics, collectElectronHandoff, collectFillVerificationDiagnostic, collectNavigationSummary, collectOverlayBlockerDiagnostic, collectQaAttachedTarget, collectSnapshotOverlayBlockerDiagnostic, collectRecordingDependencyWarning, collectScrollPositionSnapshot, collectSelectorTextVisibilityDiagnostics, collectTimeoutPartialProgress, sleepMs, formatQaAttachedTargetText, getArtifactCleanupGuidance, getEvalResultWarning, getEvalStdinHint, getSourceLookupElectronContext, } from "./diagnostics.js";
 +
@@ -1782,8 +1801,8 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/orchestrati
 +const TIMEOUT_RECOVERY_BUDGET_MS = 5000;
  import { repairScreenshotData } from "./prepare.js";
  import { getPersistentSessionArtifactStore } from "./session-artifacts.js";
- import { buildFinalAgentBrowserToolResult, buildRedactedPresentationContent, buildWrapperRecoveryHint, prepareFinalResultRecoveryState, redactExactSensitiveText, redactExactSensitiveValue, } from "./final-result.js";
-@@ -184,7 +188,9 @@
+ import { buildFinalAgentBrowserToolResult, buildRedactedPresentationContent, buildWrapperRecoveryHint, prepareFinalResultRecoveryState, redactExactSensitiveValue, } from "./final-result.js";
+@@ -171,7 +175,9 @@
              ? parsedAllowedDomainsPolicy ?? allowedDomainsBySession.get(sessionStateKey)
              : parsedAllowedDomainsPolicy;
          const shouldCaptureAllowedDomainNavigationSummary = sessionAllowedDomainsPolicy !== undefined && !cssClickWithoutHref && (prepared.executionPlan.commandInfo.command === "batch" || isNavigationObservableCommandName(prepared.executionPlan.commandInfo.command));
@@ -1825,18 +1844,20 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/orchestrati
          if (succeeded && electronRecordForCommand && shouldInspectElectronPostCommandHealth(prepared.executionPlan.commandInfo.command)) {
              electronStatusAfterCommand ??= await inspectElectronLaunchStatus(electronRecordForCommand);
              electronPostCommandHealth = buildElectronPostCommandHealthDiagnostic({ command: prepared.executionPlan.commandInfo.command, record: electronRecordForCommand, status: electronStatusAfterCommand, target: observedSessionTabTarget ?? currentSessionTabTarget });
-@@ -264,7 +281,7 @@
+@@ -264,7 +281,9 @@
          let fillVerificationDiagnostic;
          let selectorTextVisibilityDiagnostics = [];
          let electronBroadGetTextScopeDiagnostics = [];
 -        const timeoutPartialProgress = processResult.timedOut ? await collectTimeoutPartialProgress({ command: prepared.executionPlan.commandInfo.command, compiledJob: prepared.compiledJob, cwd, namespace: prepared.executionPlan.namespace, sessionName: prepared.executionPlan.sessionName, stdin: prepared.runtimeToolStdin }) : undefined;
++        // signal + TIMEOUT_RECOVERY_BUDGET_MS keep post-timeout recovery cancellable; upstream
++        // added the live-tab follow-up. Both are wanted.
 +        const timeoutPartialProgress = processResult.timedOut ? await collectTimeoutPartialProgress({ command: prepared.executionPlan.commandInfo.command, compiledJob: prepared.compiledJob, cwd, namespace: prepared.executionPlan.namespace, sessionName: prepared.executionPlan.sessionName, signal, stdin: prepared.runtimeToolStdin, timeoutMs: TIMEOUT_RECOVERY_BUDGET_MS }) : undefined;
-         if (succeeded) {
-             const fillRefSnapshot = prepared.resolvedSemanticActionRefSnapshot ?? prepared.priorRefSnapshotState;
-             fillVerificationDiagnostic = await collectFillVerificationDiagnostic({ commandTokens: prepared.commandTokens, cwd, forceValueVerification: electronRecordForCommand !== undefined, namespace: prepared.executionPlan.namespace, refSnapshot: fillRefSnapshot, sessionName: prepared.executionPlan.sessionName, signal });
+         if (!currentSessionTabTarget && timeoutPartialProgress?.currentPage?.source === "live") {
+             currentSessionTabTarget = normalizeSessionTabTarget(timeoutPartialProgress.currentPage);
+         }
 diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/orchestration/electron-host/index.js b/dist/extensions/agent-browser/lib/orchestration/electron-host/index.js
 --- a/dist/extensions/agent-browser/lib/orchestration/electron-host/index.js	1985-10-26 03:15:00
-+++ b/dist/extensions/agent-browser/lib/orchestration/electron-host/index.js	2026-07-30 11:20:51
++++ b/dist/extensions/agent-browser/lib/orchestration/electron-host/index.js	2026-08-04 15:05:11
 @@ -1,9 +1,10 @@
  /**
   * Purpose: Own wrapper-side Electron host orchestration for agent_browser structured electron input.
@@ -1848,19 +1869,19 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/orchestrati
 +export { adoptOrphanedElectronLaunches } from "../../electron/orphans.js";
  import { discoverElectronApps } from "../../electron/discovery.js";
  import { boundElectronProbeString } from "../../electron/text.js";
- import { isRecord } from "../../parsing.js";
+ import { buildOwnedManagedSessionRestoreContext, withOwnedManagedSessionContext, } from "../../managed-session-restore.js";
 diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/orchestration/output-file.js b/dist/extensions/agent-browser/lib/orchestration/output-file.js
 --- a/dist/extensions/agent-browser/lib/orchestration/output-file.js	1985-10-26 03:15:00
-+++ b/dist/extensions/agent-browser/lib/orchestration/output-file.js	2026-07-30 11:20:51
-@@ -1,6 +1,7 @@
- import { mkdir, writeFile } from "node:fs/promises";
++++ b/dist/extensions/agent-browser/lib/orchestration/output-file.js	2026-08-04 15:06:39
+@@ -2,6 +2,7 @@
  import { dirname, isAbsolute, resolve } from "node:path";
+ import { getAgentBrowserStoragePathValidationError } from "../managed-session-state-policy.js";
  import { isRecord } from "../parsing.js";
 +import { getWritePathConfinementError } from "../write-path-policy.js";
- function normalizeRequestedOutputPath(path) {
+ export function normalizeRequestedOutputPath(path) {
      return path.startsWith("@") ? path.slice(1) : path;
  }
-@@ -36,6 +37,9 @@
+@@ -48,6 +49,9 @@
      const absolutePath = isAbsolute(requestedPath) ? requestedPath : resolve(options.cwd, requestedPath);
      const payload = getOutputPayload(options.result);
      try {
@@ -1872,9 +1893,9 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/orchestrati
          await writeFile(absolutePath, serialized, "utf8");
 diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/playbook.js b/dist/extensions/agent-browser/lib/playbook.js
 --- a/dist/extensions/agent-browser/lib/playbook.js	1985-10-26 03:15:00
-+++ b/dist/extensions/agent-browser/lib/playbook.js	2026-07-30 11:20:51
-@@ -88,10 +88,19 @@
-     "When agent_browser details.nextActions exists, use exact payloads over guessed selectors/prose. Dense snapshots: check Omitted high-value controls/highValueControlRefIds. Dashboards: verify scroll with screenshot/snapshot.",
++++ b/dist/extensions/agent-browser/lib/playbook.js	2026-08-04 15:05:11
+@@ -90,10 +90,19 @@
+     "When agent_browser details.nextActions exists, use exact payloads over guessed selectors/prose. Dense snapshots: check Omitted high-value controls. Dashboards: verify scroll with screenshot/snapshot.",
      "For agent_browser extraction: read <url> for docs/text; read for active-tab DOM; get title/url; get text/html/value/count <selector>; get attr <selector> <name>; eval --stdin for targeted state. Batch 3+ getters; heed visibility warnings.",
  ];
 -export function buildBrowserExecutablePathGuideline(executablePath) {
@@ -1895,7 +1916,7 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/playbook.js
  }
  export function buildBrowserDefaultProfileGuideline(profile) {
      if (!profile || profile.policy === "explicit-only")
-@@ -103,7 +112,7 @@
+@@ -105,7 +114,7 @@
  }
  export function buildToolPromptGuidelines(options) {
      const browserDefaultProfileGuideline = buildBrowserDefaultProfileGuideline(options.browserDefaultProfile);
@@ -1906,67 +1927,74 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/playbook.js
          ...(options.docs ? [buildInstalledDocsGuideline(options.docs)] : []),
 diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/process.js b/dist/extensions/agent-browser/lib/process.js
 --- a/dist/extensions/agent-browser/lib/process.js	1985-10-26 03:15:00
-+++ b/dist/extensions/agent-browser/lib/process.js	2026-07-30 17:39:31
-@@ -1,20 +1,25 @@
- /**
-  * Purpose: Execute the upstream agent-browser binary for the pi-agent-browser extension.
-- * Responsibilities: Spawn the agent-browser subprocess, forward parent environment variables plus wrapper overrides, stream optional stdin, bound in-memory output buffering, spill oversized stdout safely to a private temp file under a disk budget, and honor abort signals.
-+ * Responsibilities: Spawn the pinned agent-browser subprocess in its own POSIX process group, forward vetted parent environment variables plus wrapper overrides, stream optional stdin, bound in-memory output buffering, spill oversized stdout safely to a private temp file under a disk budget, and honor abort signals plus the parent's interrupt.
-  * Scope: Process execution only; argument planning, output formatting, and pi tool registration live elsewhere.
-  * Usage: Called by the extension tool after argument validation and session planning are complete.
-- * Invariants/Assumptions: The binary name is always `agent-browser`; Windows routes through PowerShell to invoke npm launchers with escaped argv; callers handle semantic success/error interpretation.
-+ * Invariants/Assumptions: The binary is the `agent-browser` file resolved by child-process-policy; Windows routes through PowerShell to invoke npm launchers with escaped argv; callers handle semantic success/error interpretation.
++++ b/dist/extensions/agent-browser/lib/process.js	2026-08-04 15:11:23
+@@ -7,17 +7,20 @@
   */
+ import { AsyncLocalStorage } from "node:async_hooks";
  import { spawn } from "node:child_process";
--import { chmod, mkdir } from "node:fs/promises";
+-import { lstat, mkdir, readdir } from "node:fs/promises";
 +import { existsSync } from "node:fs";
-+import { chmod, mkdir, readFile, stat } from "node:fs/promises";
-+import { constants as osConstants } from "node:os";
++import { lstat, mkdir, readdir, readFile, stat } from "node:fs/promises";
+ import { dirname, isAbsolute, join } from "node:path";
  import { env as processEnv, platform as processPlatform } from "node:process";
- import { GLOBAL_BOOLEAN_FLAGS_WITH_OPTIONAL_VALUES, GLOBAL_VALUE_FLAGS, getFlagName } from "./argv-grammar.js";
+ import { parseArgvDescriptor } from "./argv-descriptor.js";
 +import { DENIED_CHILD_ENV_VARS, isFullChildEnvForwardingAllowed, resolveAgentBrowserCliPath, sanitizeChildPathValue, } from "./child-process-policy.js";
- import { getImplicitSessionIdleTimeoutMs } from "./runtime.js";
+ import { needsManagedSession } from "./command-policy.js";
+ import { isKnownCommandToken } from "./command-taxonomy.js";
+ import { getFlagName, GLOBAL_BOOLEAN_FLAGS_WITH_OPTIONAL_VALUES, GLOBAL_VALUE_FLAGS, optionalGlobalValueFlagConsumesNext, } from "./argv-grammar.js";
+ import { canonicalizeOwnedManagedSessionCloseArgs, commitManagedSessionRestoreSuppression, getManagedSessionRestoreConfigEnv, getManagedSessionRestoreEnv, getManagedSessionRestoreProtectedEnv, getOwnedManagedSessionCompatibilityEnv, getOwnedManagedSessionNamespaceEnv, isOwnedManagedSessionTarget, shouldOmitOwnedManagedSessionRestoreEnv, validateManagedSessionRestoreContextForSpawn, } from "./managed-session-restore.js";
+ import { getManagedSessionStateAccessValidationError, getManagedSessionTargetAccessValidationError, } from "./managed-session-state-policy.js";
+ import { getImplicitSessionIdleTimeoutMs, isPlainTextInspectionArgs } from "./runtime.js";
 -import { openSecureTempFile, writeSecureTempChunk } from "./temp.js";
 +import { openSecureTempFile, writeSecureTempChunk, writeSecureTempFile } from "./temp.js";
 +import { NEUTRAL_UPSTREAM_CONFIG_TEXT, UPSTREAM_CONFIG_ENV, getUpstreamConfigPinFailureError, planUpstreamConfigPin, } from "./upstream-config-policy.js";
  const MAX_BUFFERED_STDOUT_BYTES = 512 * 1_024;
  const MAX_BUFFERED_STDERR_CHARS = 32_000;
  const MAX_BUFFERED_STDOUT_TAIL_CHARS = 32_000;
- const PROCESS_STDOUT_SPILL_FILE_PREFIX = "process-stdout";
-+const UPSTREAM_CONFIG_PIN_FILE_PREFIX = "upstream-config";
- const AGENT_BROWSER_SOCKET_DIR_ENV = "AGENT_BROWSER_SOCKET_DIR";
- const AGENT_BROWSER_DEFAULT_TIMEOUT_ENV = "AGENT_BROWSER_DEFAULT_TIMEOUT";
- const AGENT_BROWSER_IDLE_TIMEOUT_ENV = "AGENT_BROWSER_IDLE_TIMEOUT_MS";
-@@ -24,6 +29,10 @@
+@@ -32,6 +35,9 @@
  const DEFAULT_AGENT_BROWSER_PROCESS_TIMEOUT_MS = 35_000;
  /** Grace period after `exit` before resolving when `close` is delayed by inherited stdio handles. */
  const EXIT_STDIO_GRACE_MS = 100;
++const UPSTREAM_CONFIG_PIN_FILE_PREFIX = "upstream-config";
 +/** Grace period after SIGTERM before the process group is escalated to SIGKILL. */
 +const CHILD_TERMINATION_ESCALATION_MS = 2_000;
-+/** Poll step used to hand a parent interrupt back as soon as the terminated children are actually gone. */
-+const PARENT_INTERRUPT_SETTLE_POLL_MS = 50;
- function appendTail(text, addition, maxChars) {
-     const combined = text + addition;
-     return combined.length <= maxChars ? combined : combined.slice(combined.length - maxChars);
-@@ -55,25 +64,127 @@
-         return args;
-     return [args[index], ...leadingGlobals, ...args.slice(index + 1)];
+ const WINDOWS_AGENT_BROWSER_MISSING_MARKER = "PI_AGENT_BROWSER_COMMAND_NOT_FOUND:agent-browser.cmd";
+ const attachedBrowserSessionContext = new AsyncLocalStorage();
+ export function withAttachedBrowserSessionContext(preserve, run) {
+@@ -114,17 +120,24 @@
+         : "";
+     return ["--args", browserArgs, "--allow-file-access", "false", ...filtered];
  }
 -export function buildAgentBrowserSpawnCommand(args, platform = processPlatform) {
 +export function buildAgentBrowserSpawnCommand(args, platform = processPlatform, options = {}) {
++    // The CLI is pinned to a resolved file rather than left to PATH lookup, so a
++    // workspace-local `agent-browser` shim cannot take over the child.
 +    const resolvedCli = resolveAgentBrowserCliPath({ cwd: options.cwd, env: options.env, platform });
      if (platform !== "win32") {
 -        return { command: "agent-browser", args };
 +        return { command: resolvedCli.path ?? "agent-browser", args, error: resolvedCli.error };
      }
--    const commandLine = ["&", "agent-browser.cmd", ...reorderWindowsLeadingGlobalArgs(args).map(quoteWindowsPowerShellArg)].join(" ");
+     const invocationArgs = reorderWindowsLeadingGlobalArgs(args).map(quoteWindowsPowerShellArg).join(" ");
+-    const commandLine = [
+-        "$agentBrowser = Get-Command agent-browser.cmd -ErrorAction SilentlyContinue;",
+-        `if (-not $agentBrowser) { [Console]::Error.WriteLine('${WINDOWS_AGENT_BROWSER_MISSING_MARKER}'); exit 127 };`,
+-        `& $agentBrowser.Source ${invocationArgs}`.trimEnd(),
+-    ].join(" ");
 -    return { command: "powershell.exe", args: ["-NoLogo", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", commandLine] };
-+    const launcher = resolvedCli.path ? quoteWindowsPowerShellArg(resolvedCli.path) : "agent-browser.cmd";
-+    const commandLine = ["&", launcher, ...reorderWindowsLeadingGlobalArgs(args).map(quoteWindowsPowerShellArg)].join(" ");
++    // Upstream's Get-Command probe stays as the fallback when nothing was pinned, so its
++    // missing-command marker and isWindowsAgentBrowserCommandMissing still work.
++    const commandLine = resolvedCli.path
++        ? ["&", quoteWindowsPowerShellArg(resolvedCli.path), invocationArgs].join(" ").trimEnd()
++        : [
++            "$agentBrowser = Get-Command agent-browser.cmd -ErrorAction SilentlyContinue;",
++            `if (-not $agentBrowser) { [Console]::Error.WriteLine('${WINDOWS_AGENT_BROWSER_MISSING_MARKER}'); exit 127 };`,
++            `& $agentBrowser.Source ${invocationArgs}`.trimEnd(),
++        ].join(" ");
 +    return { command: "powershell.exe", args: ["-NoLogo", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", commandLine], error: resolvedCli.error };
  }
- function terminateSpawnedChild(child, signal) {
-     if (processPlatform === "win32" && child.pid) {
+ export function isWindowsAgentBrowserCommandMissing(stderr) {
+     const normalized = stderr.toLowerCase();
+@@ -140,7 +153,19 @@
          const killer = spawn("taskkill.exe", ["/PID", String(child.pid), "/T", "/F"], { stdio: "ignore" });
          killer.on("error", () => undefined);
          killer.unref();
@@ -1985,193 +2013,8 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/process.js 
 +    }
      child.kill(signal);
  }
-+/**
-+ * The POSIX child leads its own process group, so a terminal Ctrl-C no longer reaches it; the parent's interrupt is
-+ * forwarded to the same termination path the abort signal uses. Node suppresses its default SIGINT exit while a
-+ * listener is attached, so the interrupt is re-raised once the host has no handler of its own.
-+ */
-+const activeChildTerminators = new Set();
-+const interruptEscalationChildren = new Set();
-+let parentInterruptListener;
-+/**
-+ * Evaluated at signal time instead of cached when the wrapper's listener is attached, because the host may attach
-+ * its own SIGINT handler later; the wrapper's own listener never counts as the host's.
-+ */
-+function hostHandlesParentInterrupt() {
-+    return process.listeners("SIGINT").some((listener) => listener !== parentInterruptListener);
-+}
-+/**
-+ * Re-raising SIGINT ends this process through the default disposition, and a signal death runs neither pending
-+ * timers nor `exit` handlers, so anything still alive is escalated to SIGKILL here rather than by a timer that the
-+ * parent's own death would cancel.
-+ */
-+function raiseParentInterrupt() {
-+    // Includes any run started after the interrupt: this process is about to die, so its children cannot be left behind.
-+    for (const child of new Set([...interruptEscalationChildren, ...activeChildTerminators])) {
-+        if (child.isRunning())
-+            child.escalate();
-+    }
-+    interruptEscalationChildren.clear();
-+    activeChildTerminators.clear();
-+    detachParentInterruptListener();
-+    process.kill(process.pid, "SIGINT");
-+}
-+/** Hands the interrupt back as soon as the interrupted children are gone, and at the escalation deadline otherwise. */
-+function escalateInterruptedChildren(interruptedChildren) {
-+    for (const child of interruptedChildren) {
-+        if (child.isRunning())
-+            interruptEscalationChildren.add(child);
-+    }
-+    if (interruptEscalationChildren.size === 0) {
-+        raiseParentInterrupt();
-+        return;
-+    }
-+    let settleTimer;
-+    const escalationTimer = setTimeout(() => {
-+        clearInterval(settleTimer);
-+        raiseParentInterrupt();
-+    }, CHILD_TERMINATION_ESCALATION_MS);
-+    settleTimer = setInterval(() => {
-+        if ([...interruptEscalationChildren].some((child) => child.isRunning()))
-+            return;
-+        clearInterval(settleTimer);
-+        clearTimeout(escalationTimer);
-+        raiseParentInterrupt();
-+    }, PARENT_INTERRUPT_SETTLE_POLL_MS);
-+}
-+function handleParentInterrupt() {
-+    const interruptedChildren = [...activeChildTerminators];
-+    for (const child of interruptedChildren) {
-+        child.terminate();
-+    }
-+    if (hostHandlesParentInterrupt())
-+        return;
-+    activeChildTerminators.clear();
-+    escalateInterruptedChildren(interruptedChildren);
-+}
-+function detachParentInterruptListener() {
-+    if (!parentInterruptListener)
-+        return;
-+    process.removeListener("SIGINT", parentInterruptListener);
-+    parentInterruptListener = undefined;
-+}
-+function addParentInterruptTerminator(childTerminator) {
-+    activeChildTerminators.add(childTerminator);
-+    if (parentInterruptListener)
-+        return;
-+    parentInterruptListener = handleParentInterrupt;
-+    process.on("SIGINT", parentInterruptListener);
-+}
-+function removeParentInterruptTerminator(childTerminator) {
-+    activeChildTerminators.delete(childTerminator);
-+    interruptEscalationChildren.delete(childTerminator);
-+    if (activeChildTerminators.size === 0 && interruptEscalationChildren.size === 0)
-+        detachParentInterruptListener();
-+}
-+function getSignalTerminationExitCode(signal) {
-+    const signalNumber = osConstants.signals[signal];
-+    return typeof signalNumber === "number" ? 128 + signalNumber : 128;
-+}
  /** Exported for unit tests that lock subprocess exit-code precedence. */
- export function resolveSpawnedChildExitCode(input) {
-     // Precedence: observed `close` code when present, then wrapper timeout (124), then
--    // post-`exit` fallback when inherited stdio delays `close`, then spawn failure (127).
-+    // post-`exit` fallback when inherited stdio delays `close`, then signal death (128+n),
-+    // then spawn failure (127).
-     if (input.closeCode !== null && input.closeCode !== undefined) {
-         return input.closeCode;
-     }
-@@ -83,15 +194,20 @@
-     if (input.useExitFallback && input.exitCode !== null && input.exitCode !== undefined) {
-         return input.exitCode;
-     }
-+    const terminationSignal = input.closeSignal ?? input.exitSignal;
-+    if (terminationSignal) {
-+        return getSignalTerminationExitCode(terminationSignal);
-+    }
-     return input.spawnError ? 127 : 0;
- }
- function watchSpawnedChildCompletion(child, options) {
-     let exited = false;
-     let exitCode = null;
-+    let exitSignal = null;
-     let postExitTimer;
-     // `completed` suppresses duplicate exit/close callbacks; `settled` in `finish` guards async spill cleanup.
-     let completed = false;
--    const complete = (closeCode) => {
-+    const complete = (closeCode, closeSignal) => {
-         if (completed)
-             return;
-         completed = true;
-@@ -102,23 +218,26 @@
-         const context = options.getContext();
-         options.onComplete(resolveSpawnedChildExitCode({
-             closeCode,
-+            closeSignal,
-             exitCode,
-+            exitSignal,
-             useExitFallback: exited,
-             timedOut: context.timedOut,
-             spawnError: context.spawnError,
-         }));
-     };
--    child.once("exit", (code) => {
-+    child.once("exit", (code, signal) => {
-         exited = true;
-         exitCode = code;
-+        exitSignal = signal;
-         postExitTimer = setTimeout(() => {
-             destroySpawnedChildStreams(child);
--            complete(undefined);
-+            complete(undefined, undefined);
-         }, options.graceMs);
-         postExitTimer.unref?.();
-     });
--    child.once("close", (code) => {
--        complete(code);
-+    child.once("close", (code, signal) => {
-+        complete(code, signal);
-     });
-     return {
-         clear: () => {
-@@ -156,6 +275,36 @@
-     }
-     return `${DEFAULT_AGENT_BROWSER_SOCKET_DIR_PREFIX}${typeof uid === "number" ? `-${uid}` : ""}`;
- }
-+/**
-+ * The pinned file is a wrapper-owned copy of the user-level upstream config, so the user's own defaults keep
-+ * applying while project discovery loses, and the pin cannot edit the real user config; a command that would write
-+ * configuration is refused rather than writing the copy. It is cached per source file identity and re-created when
-+ * session cleanup removed it.
-+ */
-+let pinnedUpstreamConfigFile;
-+async function readUpstreamConfigPinSource(userConfigPath) {
-+    if (userConfigPath === undefined) {
-+        return { key: "neutral", text: NEUTRAL_UPSTREAM_CONFIG_TEXT };
-+    }
-+    const stats = await stat(userConfigPath).catch(() => undefined);
-+    if (!stats?.isFile()) {
-+        return { key: "neutral", text: NEUTRAL_UPSTREAM_CONFIG_TEXT };
-+    }
-+    return { key: `${userConfigPath}:${stats.mtimeMs}:${stats.size}`, text: await readFile(userConfigPath, "utf8") };
-+}
-+async function ensureUpstreamConfigPinPath(userConfigPath) {
-+    const source = await readUpstreamConfigPinSource(userConfigPath);
-+    if (pinnedUpstreamConfigFile?.key === source.key && existsSync(pinnedUpstreamConfigFile.path)) {
-+        return pinnedUpstreamConfigFile.path;
-+    }
-+    const path = await writeSecureTempFile({
-+        content: source.text,
-+        prefix: UPSTREAM_CONFIG_PIN_FILE_PREFIX,
-+        suffix: ".json",
-+    });
-+    pinnedUpstreamConfigFile = { key: source.key, path };
-+    return path;
-+}
- async function ensureAgentBrowserSocketDir(socketDir) {
-     try {
-         await mkdir(socketDir, { recursive: true, mode: 0o700 });
-@@ -166,11 +315,15 @@
+@@ -302,11 +327,15 @@
          return false;
      }
  }
@@ -2190,7 +2033,7 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/process.js 
      }
      for (const [name, value] of Object.entries(overrides ?? {})) {
          if (value === undefined) {
-@@ -180,6 +333,13 @@
+@@ -316,6 +345,13 @@
              childEnv[name] = value;
          }
      }
@@ -2204,128 +2047,67 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/process.js 
      clampUpstreamDefaultTimeout(childEnv);
      return childEnv;
  }
-@@ -196,6 +356,40 @@
-     if (requestedSocketDir && (await ensureAgentBrowserSocketDir(requestedSocketDir))) {
+@@ -425,6 +461,32 @@
+         }
          effectiveEnv = { ...effectiveEnv, [AGENT_BROWSER_SOCKET_DIR_ENV]: requestedSocketDir };
      }
 +    // Upstream discovers `./agent-browser.json` in the child cwd, so an untrusted project file is replaced by a
 +    // wrapper-owned pin before the child can read it; an unavailable pin fails the run instead of letting it apply.
-+    // `spawn` runs the child in this process's cwd when none is given, so that is the directory upstream discovers in.
-+    const upstreamConfigPin = planUpstreamConfigPin({ cwd: cwd ?? process.cwd(), env: processEnv });
-+    if (upstreamConfigPin.kind === "pin") {
-+        let pinnedConfigPath;
-+        try {
-+            pinnedConfigPath = await ensureUpstreamConfigPinPath(upstreamConfigPin.userConfigPath);
-+        }
-+        catch (error) {
-+            return {
-+                aborted: false,
-+                exitCode: 127,
-+                spawnError: new Error(getUpstreamConfigPinFailureError(upstreamConfigPin, error)),
-+                stderr: "",
-+                stdout: "",
-+                timedOut: false,
-+            };
-+        }
-+        effectiveEnv = { ...effectiveEnv, [UPSTREAM_CONFIG_ENV]: pinnedConfigPath };
-+    }
-+    const childEnv = buildAgentBrowserProcessEnv(processEnv, effectiveEnv, { cwd });
-+    // Resolution reads the unscrubbed parent PATH so a workspace-local shim is reported instead of silently missing.
-+    const spawnCommand = buildAgentBrowserSpawnCommand(args, processPlatform, { cwd, env: processEnv });
-+    if (spawnCommand.error) {
-+        return {
-+            aborted: false,
-+            exitCode: 127,
-+            spawnError: new Error(spawnCommand.error),
-+            stderr: "",
-+            stdout: "",
-+            timedOut: false,
-+        };
-+    }
-     return await new Promise((resolve) => {
-         let aborted = false;
-         let settled = false;
-@@ -206,22 +400,29 @@
-         let stdoutTail = "";
-         let stdoutSpillHandle;
-         let stdoutSpillPath;
-+        // Set synchronously the moment the first oversized chunk is deferred. Gating on
-+        // stdoutSpillPath instead let chunks that arrived while the temp file was being
-+        // created keep landing in the in-memory buffer, which is then flushed ahead of the
-+        // chunk that triggered the spill — silently reordering the output.
-+        let spillingStdout = false;
-         let pendingStdoutWrite = Promise.resolve();
-         let stdoutSpillError;
-         let killTimer;
-         let timeoutTimer;
-         let abortListener;
-+        let parentInterruptTerminator;
-         let timedOut = false;
-         let completionWatcher;
-         const queueStdoutChunk = (buffer) => {
-             stdoutTail = appendTail(stdoutTail, buffer.toString("utf8"), MAX_BUFFERED_STDOUT_TAIL_CHARS);
-             if (stdoutSpillError)
-                 return;
--            if (!stdoutSpillPath && stdoutBufferedBytes + buffer.length <= MAX_BUFFERED_STDOUT_BYTES) {
-+            if (!spillingStdout && stdoutBufferedBytes + buffer.length <= MAX_BUFFERED_STDOUT_BYTES) {
-                 stdoutBuffers.push(buffer);
-                 stdoutBufferedBytes += buffer.length;
-                 return;
-             }
-+            spillingStdout = true;
-             pendingStdoutWrite = pendingStdoutWrite
-                 .then(async () => {
-                 if (stdoutSpillError)
-@@ -256,6 +457,10 @@
-             if (settled)
-                 return;
-             settled = true;
-+            if (parentInterruptTerminator) {
-+                removeParentInterruptTerminator(parentInterruptTerminator);
-+                parentInterruptTerminator = undefined;
++    // Since 0.2.74 upstream pins its own process-private empty config for browser-backed commands, and its
++    // trustedPinnedEmptyConfig policy flag is derived from that variable — so ours only applies where upstream
++    // pinned nothing (notably plain-text inspection commands), and the two can never overwrite each other.
++    if (managedSessionRestoreConfigEnv[UPSTREAM_CONFIG_ENV] === undefined) {
++        const upstreamConfigPin = planUpstreamConfigPin({ cwd: cwd ?? process.cwd(), env: processEnv });
++        if (upstreamConfigPin.kind === "pin") {
++            let pinnedConfigPath;
++            try {
++                pinnedConfigPath = await ensureUpstreamConfigPinPath(upstreamConfigPin.userConfigPath);
 +            }
-             void pendingStdoutWrite.finally(async () => {
-                 removeAbortListener();
-                 if (killTimer) {
-@@ -285,10 +490,11 @@
++            catch (error) {
++                return {
++                    aborted: false,
++                    agentBrowserStarted: false,
++                    exitCode: 127,
++                    spawnError: new Error(getUpstreamConfigPinFailureError(upstreamConfigPin, error)),
++                    stderr: "",
++                    stdout: "",
++                    timedOut: false,
++                };
++            }
++            effectiveEnv = { ...effectiveEnv, [UPSTREAM_CONFIG_ENV]: pinnedConfigPath };
++        }
++    }
+     if (signal?.aborted) {
+         return { aborted: true, agentBrowserStarted: false, exitCode: 1, stderr: "", stdout: "", timedOut: false };
+     }
+@@ -528,15 +590,22 @@
                  });
              });
          };
--        const spawnCommand = buildAgentBrowserSpawnCommand(args);
+-        const childEnv = buildAgentBrowserProcessEnv(processEnv, effectiveEnv);
++        const childEnv = buildAgentBrowserProcessEnv(processEnv, effectiveEnv, { cwd });
+         const spawnPolicyError = getManagedPreSpawnPolicyError(managedSessionRestoreOptions, childEnv, allowManagedSessionTarget, managedStateCurrentPageUrl, managedStatePageUrlUnknown, trustedFirstBatchTabSelection, managedSessionRestoreConfigEnv.AGENT_BROWSER_CONFIG !== undefined);
+         if (spawnPolicyError) {
+             resolve({ aborted: false, agentBrowserStarted: false, exitCode: 1, spawnError: new Error(spawnPolicyError), stderr: "", stdout: "", timedOut: false });
+             return;
+         }
+-        const spawnCommand = buildAgentBrowserSpawnCommand(pinAgentBrowserFileAccessDisabled(args, ownedManagedSessionCompatibilityEnv.AGENT_BROWSER_USER_AGENT, preserveAttachedBrowserSession));
++        // Resolution reads the unscrubbed parent PATH so a workspace-local shim is reported instead of silently missing.
++        const spawnCommand = buildAgentBrowserSpawnCommand(pinAgentBrowserFileAccessDisabled(args, ownedManagedSessionCompatibilityEnv.AGENT_BROWSER_USER_AGENT, preserveAttachedBrowserSession), processPlatform, { cwd, env: processEnv });
++        if (spawnCommand.error) {
++            resolve({ aborted: false, agentBrowserStarted: false, exitCode: 127, spawnError: new Error(spawnCommand.error), stderr: "", stdout: "", timedOut: false });
++            return;
++        }
          const child = spawn(spawnCommand.command, spawnCommand.args, {
              cwd,
--            env: buildAgentBrowserProcessEnv(processEnv, effectiveEnv),
 +            // Own process group on POSIX so timeout/abort termination reaches upstream descendants.
 +            detached: processPlatform !== "win32",
-+            env: childEnv,
+             env: childEnv,
              stdio: ["pipe", "pipe", "pipe"],
          });
-         const terminateChild = (reason) => {
-@@ -303,7 +509,7 @@
-             terminateSpawnedChild(child, "SIGTERM");
-             killTimer = setTimeout(() => {
-                 terminateSpawnedChild(child, "SIGKILL");
--            }, 2_000);
-+            }, CHILD_TERMINATION_ESCALATION_MS);
-         };
-         const recordStdinError = (error) => {
-             const stdinError = error instanceof Error ? error : new Error(String(error));
-@@ -355,6 +561,12 @@
-             timeoutTimer = setTimeout(() => terminateChild("timeout"), timeoutMs);
-             timeoutTimer.unref?.();
-         }
-+        parentInterruptTerminator = {
-+            escalate: () => terminateSpawnedChild(child, "SIGKILL"),
-+            isRunning: () => child.exitCode === null && child.signalCode === null,
-+            terminate: () => terminateChild("abort"),
-+        };
-+        addParentInterruptTerminator(parentInterruptTerminator);
-         if (signal) {
-             if (signal.aborted) {
-                 terminateChild("abort");
 diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/prompt-policy.js b/dist/extensions/agent-browser/lib/prompt-policy.js
 --- a/dist/extensions/agent-browser/lib/prompt-policy.js	1985-10-26 03:15:00
-+++ b/dist/extensions/agent-browser/lib/prompt-policy.js	2026-07-30 11:20:51
++++ b/dist/extensions/agent-browser/lib/prompt-policy.js	2026-08-04 15:05:11
 @@ -10,12 +10,16 @@
      /\bbrowser\b.*\b(?:automation|click|fill|navigate|open|page|screenshot|site|snapshot|tab|url|visit|web(?:site| page)?)\b/i,
      /\b(?:browse|click|fill|login|navigate|open|visit)\b.*\b(?:https?:\/\/\S+|page|site|tab|url|web(?:site| page)?)\b/i,
@@ -2348,18 +2130,18 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/prompt-poli
  function inferPromptArtifactKind(line, path) {
 diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/runtime.js b/dist/extensions/agent-browser/lib/runtime.js
 --- a/dist/extensions/agent-browser/lib/runtime.js	1985-10-26 03:15:00
-+++ b/dist/extensions/agent-browser/lib/runtime.js	2026-07-30 11:20:51
++++ b/dist/extensions/agent-browser/lib/runtime.js	2026-08-04 15:06:39
 @@ -10,7 +10,8 @@
  import { createHash, randomUUID } from "node:crypto";
  import { basename } from "node:path";
  import { findCommandStartIndex, parseArgvDescriptor, parseCommandInfo, } from "./argv-descriptor.js";
--import { GLOBAL_VALUE_FLAGS_ALLOWING_DASH_VALUE, PREVALIDATED_VALUE_FLAGS, optionalGlobalValueFlagConsumesNext, } from "./argv-grammar.js";
-+import { GLOBAL_VALUE_FLAGS_ALLOWING_DASH_VALUE, PREVALIDATED_VALUE_FLAGS, getFlagName, optionalGlobalValueFlagConsumesNext, } from "./argv-grammar.js";
+-import { canonicalizeAgentBrowserNamespace, extractExplicitNamespace, extractExplicitSessionName, getAgentBrowserSessionIdentityKey, getBooleanFlagValue, GLOBAL_VALUE_FLAGS_ALLOWING_DASH_VALUE, PREVALIDATED_VALUE_FLAGS, resolveAgentBrowserNamespace, scanUpstreamGlobalFlagOccurrences, } from "./argv-grammar.js";
++import { canonicalizeAgentBrowserNamespace, extractExplicitNamespace, extractExplicitSessionName, getAgentBrowserSessionIdentityKey, getBooleanFlagValue, GLOBAL_VALUE_FLAGS_ALLOWING_DASH_VALUE, PREVALIDATED_VALUE_FLAGS, getFlagName, optionalGlobalValueFlagConsumesNext, resolveAgentBrowserNamespace, scanUpstreamGlobalFlagOccurrences, } from "./argv-grammar.js";
 +import { PRIVILEGED_ARGV_FLAGS, PRIVILEGED_ARGV_FLAGS_ENV, findCodeExecutionLaunchFlag, isPrivilegedArgvFlagValueAllowed, } from "./launch-flag-policy.js";
  import { needsManagedSession } from "./command-policy.js";
+ import { isWrapperManagedSessionName, redactManagedSessionRestoreKeys } from "./managed-session-capabilities.js";
  import { isCloseCommand, isOpenNavigationCommand } from "./command-taxonomy.js";
- import { LAUNCH_SCOPED_FLAG_DEFINITIONS, LAUNCH_SCOPED_FLAG_LABEL } from "./launch-scoped-flags.js";
-@@ -548,6 +549,51 @@
+@@ -580,6 +581,51 @@
          return undefined;
      return "agent-browser mcp starts a stdio MCP server for external MCP clients, not a one-shot native agent_browser tool workflow. Use the native agent_browser tool modes directly, or configure an MCP client to launch `agent-browser mcp`. Use `mcp --help` for help.";
  }
@@ -2411,7 +2193,7 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/runtime.js 
  export function validateToolArgs(args) {
      if (args.length === 0) {
          return "`args` must contain at least one agent-browser command token.";
-@@ -560,7 +606,7 @@
+@@ -592,7 +638,7 @@
      if (sessionModeArg) {
          return "Do not pass `--session-mode` in args. Use the top-level agent_browser `sessionMode` field instead, for example { args: [\"--profile\", \"Default\", \"open\", \"https://example.com\"], sessionMode: \"fresh\" }.";
      }
@@ -2422,7 +2204,7 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/runtime.js 
      for (let index = 0; index < args.length; index += 1) {
 diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/temp.js b/dist/extensions/agent-browser/lib/temp.js
 --- a/dist/extensions/agent-browser/lib/temp.js	1985-10-26 03:15:00
-+++ b/dist/extensions/agent-browser/lib/temp.js	2026-07-30 11:20:51
++++ b/dist/extensions/agent-browser/lib/temp.js	2026-08-04 15:05:11
 @@ -1,6 +1,6 @@
  /**
   * Purpose: Create private temporary and persisted spill files for the pi-agent-browser extension without leaking artifacts broadly on disk.
@@ -2431,7 +2213,7 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/temp.js b/d
   * Scope: Artifact lifecycle helpers only; callers decide what data to write and when to delete or retain long-lived references.
   * Usage: Imported by result/process helpers when they need secure spill files instead of world-readable shared tmp paths.
   * Invariants/Assumptions: Temp artifacts live under the OS temp directory, each active run uses a dedicated 0700 directory, files are created with exclusive 0600 permissions, session-scoped persisted artifacts stay under the pi session directory, and stale pruning only touches roots with an explicit pi-agent-browser ownership marker.
-@@ -453,6 +453,37 @@
+@@ -441,6 +441,37 @@
      await chmod(directory, 0o700).catch(() => undefined);
      await refreshSecureTempRootLease(tempRoot).catch(() => undefined);
      return directory;
@@ -2471,7 +2253,7 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/temp.js b/d
      const parentDirectory = dirname(path);
 diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/upstream-config-policy.js b/dist/extensions/agent-browser/lib/upstream-config-policy.js
 --- a/dist/extensions/agent-browser/lib/upstream-config-policy.js	1969-12-31 18:00:00
-+++ b/dist/extensions/agent-browser/lib/upstream-config-policy.js	2026-07-30 11:20:51
++++ b/dist/extensions/agent-browser/lib/upstream-config-policy.js	2026-08-04 15:05:11
 @@ -0,0 +1,87 @@
 +/**
 + * Purpose: Keep the upstream agent-browser CLI from silently loading configuration the checked-out project controls.
@@ -2562,7 +2344,7 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/upstream-co
 +}
 diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/write-path-policy.js b/dist/extensions/agent-browser/lib/write-path-policy.js
 --- a/dist/extensions/agent-browser/lib/write-path-policy.js	1969-12-31 18:00:00
-+++ b/dist/extensions/agent-browser/lib/write-path-policy.js	2026-07-30 11:20:51
++++ b/dist/extensions/agent-browser/lib/write-path-policy.js	2026-08-04 15:05:11
 @@ -0,0 +1,154 @@
 +/**
 + * Purpose: Confine wrapper-created files and directories to operator-approved roots.
@@ -2720,7 +2502,7 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/write-path-
 +}
 diff -ruN --exclude=node_modules a/docs/ARCHITECTURE.md b/docs/ARCHITECTURE.md
 --- a/docs/ARCHITECTURE.md	1985-10-26 03:15:00
-+++ b/docs/ARCHITECTURE.md	2026-07-30 11:20:51
++++ b/docs/ARCHITECTURE.md	2026-08-04 15:05:11
 @@ -35,10 +35,10 @@
  ### Direct subprocess execution
  
@@ -2744,7 +2526,7 @@ diff -ruN --exclude=node_modules a/docs/ARCHITECTURE.md b/docs/ARCHITECTURE.md
  
  `agent_browser_web_search` availability is conditional. Startup registration uses global, override, and environment fallback config without reading project-local config before Pi trust context exists; trusted project config can register the companion tool on `session_start`, and every execution reloads the final session config so `webSearch.enabled: false` still prevents a request even if a startup credential made the tool visible. A global disable is the normal user default and can still be overridden by project config or `PI_AGENT_BROWSER_CONFIG`; a project disable applies to one repo; an explicit `PI_AGENT_BROWSER_CONFIG` file with `webSearch.enabled: false` is the highest-priority hard disable for that run. Literal and env-backed sources must resolve before they make the tool available; command-backed sources are considered configured without running the command until tool execution, so secret managers do not slow startup or prompt unexpectedly. The tool resolves the selected key lazily, chooses Exa or Brave from available credentials (preferring Exa by default unless `webSearch.preferredProvider` says otherwise), then follows one provider-agnostic execution path through provider adapters for request building, HTTP JSON fetch, response normalization, and provider-specific detail fields. It calls Exa `/search` with highlights or Brave Search and returns compact result details without exposing keys.
  
-@@ -204,7 +204,7 @@
+@@ -206,7 +206,7 @@
  ### `pi-agent-browser-native` owns
  
  - tool registration and schema (including the optional `semanticAction` compilation path to upstream `find` or `select`)
@@ -2755,8 +2537,8 @@ diff -ruN --exclude=node_modules a/docs/ARCHITECTURE.md b/docs/ARCHITECTURE.md
  - bounded machine-readable outcome metadata on tool `details` (`resultCategory`, `successCategory`, `failureCategory`, optional `nextActions`, optional `pageChangeSummary` with per-step summaries on `batch`, optional `artifactVerification` with the same shape on each successful `batchSteps[]` row) so agents can branch without parsing prose; enums, classifier precedence, and generic follow-up payloads are implemented under `extensions/agent-browser/lib/results/` in focused modules (`contracts.ts` for shared types, `categories.ts` for `classifyAgentBrowserSuccessCategory` / `classifyAgentBrowserFailureCategory` / `buildAgentBrowserResultCategoryDetails`, `action-recommendations.ts` for `buildAgentBrowserNextActions`, `next-actions.ts` for the `AgentBrowserNextAction` shape and merge helpers, `recovery-actions.ts` for recovery id registries and `buildRecoveryNextActions`, `network.ts` for `classifyNetworkRequestFailure` / `summarizeNetworkFailures`, and related helpers). Per-session tab target, `refSnapshot` alignment, invalidation, and tab pinning observations flow through `extensions/agent-browser/lib/session-page-state.ts` from `extensions/agent-browser/index.ts`. Compact page-change summaries and artifact verification rollups are built in `extensions/agent-browser/lib/results/presentation.ts` (`buildPageChangeSummary`, `buildArtifactVerificationSummary`), and the human contract lives in [`TOOL_CONTRACT.md`](TOOL_CONTRACT.md#details). Real Pi custom tools otherwise only mark a row failed when `execute` throws, so the extension also registers `pi.on("tool_result", …)` and patches `agent_browser` results whose `details.resultCategory` is `failure` to set `isError: true`. Prose results also receive a short category notice, while caller-requested `--json` results with parseable JSON content keep that text unchanged so JSONL transcripts, UI affordances, and the machine-readable contract stay aligned for wrapper-side reclassifications such as `qa-failure` (`buildAgentBrowserToolResultPatch` in `extensions/agent-browser/lib/pi-tool-rendering.ts`; transcript semantics in the same contract doc)
 diff -ruN --exclude=node_modules a/docs/COMMAND_REFERENCE.md b/docs/COMMAND_REFERENCE.md
 --- a/docs/COMMAND_REFERENCE.md	1985-10-26 03:15:00
-+++ b/docs/COMMAND_REFERENCE.md	2026-07-30 11:20:51
-@@ -806,7 +806,7 @@
++++ b/docs/COMMAND_REFERENCE.md	2026-08-04 15:12:17
+@@ -816,7 +816,7 @@
  - project-local: `.pi/config/pi-agent-browser-native/config.json`
  - explicit override: `PI_AGENT_BROWSER_CONFIG=/path/to/config.json`
  
@@ -2765,7 +2547,7 @@ diff -ruN --exclude=node_modules a/docs/COMMAND_REFERENCE.md b/docs/COMMAND_REFE
  
  `pi install npm:pi-agent-browser-native` loads the extension, but it does **not** usually put the package helper on your shell `PATH`. The clearest setup is to write the config file directly and keep actual keys in the environment that launches `pi`:
  
-@@ -842,7 +842,7 @@
+@@ -852,7 +852,7 @@
  npm exec --yes --package pi-agent-browser-native@latest -- pi-agent-browser-config browser executable set "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser"
  ```
  
@@ -2774,7 +2556,7 @@ diff -ruN --exclude=node_modules a/docs/COMMAND_REFERENCE.md b/docs/COMMAND_REFE
  
  Example config:
  
-@@ -912,7 +912,7 @@
+@@ -923,7 +923,7 @@
  - `--screenshot-format <fmt>`: `png` or `jpeg`. Environment: `AGENT_BROWSER_SCREENSHOT_FORMAT`.
  - `--content-boundaries`: wrap page output in boundary markers. Environment: `AGENT_BROWSER_CONTENT_BOUNDARIES`.
  - `--max-output <chars>`: truncate page output to N characters. Environment: `AGENT_BROWSER_MAX_OUTPUT`.
@@ -2783,29 +2565,29 @@ diff -ruN --exclude=node_modules a/docs/COMMAND_REFERENCE.md b/docs/COMMAND_REFE
  - `--action-policy <path>`: action policy JSON file. Environment: `AGENT_BROWSER_ACTION_POLICY`.
  - `--confirm-actions <list>`: action categories requiring confirmation. Environment: `AGENT_BROWSER_CONFIRM_ACTIONS`.
  - `--confirm-interactive`: interactive confirmations; auto-denies when stdin is not a TTY. Environment: `AGENT_BROWSER_CONFIRM_INTERACTIVE`.
-@@ -935,9 +935,11 @@
+@@ -946,9 +946,11 @@
  3. Environment variables, including `AGENT_BROWSER_CONFIG`.
  4. CLI flags.
  
--Use `--config <path>` to load a specific config file. Boolean flags accept optional `true` or `false` values, such as `--headed false` or `--webgpu false`, to override config. Browser extensions from user and project configs are merged rather than replaced.
-+Step 2 is discovered from the upstream child's working directory, which is the Pi session workspace, so a checked-out project that merely ships `./agent-browser.json` would reach `executablePath`, `initScripts`, `proxy`, `allowFileAccess`, and `plugins` with no flag at all. Through the native `agent_browser` tool that layer is therefore not applied by default: when a repo-local `agent-browser.json` is present the wrapper pins upstream's own `AGENT_BROWSER_CONFIG` to a wrapper-owned copy of `~/.agent-browser/config.json` (or an empty config when there is no user-level file), so user defaults keep applying and the project layer is dropped. Start Pi with `PI_AGENT_BROWSER_TRUST_PROJECT_CONFIG=1` to apply the project file, or set `AGENT_BROWSER_CONFIG` yourself to pin an exact path; either way the wrapper leaves the resolution alone. The pin only changes what upstream reads: a pinned config is loaded, never written, and `plugin add` writes the file its own scope names (`./agent-browser.json`, or `~/.agent-browser/config.json` with `--global`), so no configuration write is lost or redirected while the pin is active. A plugin added to the project file does stay inactive until that file is trusted, so follow `plugin add` with `PI_AGENT_BROWSER_TRUST_PROJECT_CONFIG=1` (or add it with `--global`) when it needs to take effect.
+-Use separated `--config <path>` to load a specific config file in standalone upstream; upstream 0.33.2 does not recognize `--config=<path>` as the global config selector. The native wrapper rejects discovered, environment-selected, or explicit upstream config for browser-backed calls without reading it, then pins a process-private empty config for every accepted browser-backed spawn so a file created after planning cannot change the browser. Sessionless local/setup commands keep upstream config behavior. This policy is separate from the Pi-scoped package config under `.pi/config/pi-agent-browser-native/`; pass safe browser settings through native `args`/environment or that package's advisory browser guidance. Boolean flags accept optional `true` or `false` values, such as `--headed false` or `--webgpu false`, to override config. Browser extensions from user and project configs are merged rather than replaced.
++Step 2 is discovered from the upstream child's working directory, which is the Pi session workspace, so a checked-out project that merely ships `./agent-browser.json` would reach `executablePath`, `initScripts`, `proxy`, `allowFileAccess`, and `plugins` with no flag at all. Two layers stop that. For browser-backed calls upstream itself now rejects discovered, environment-selected, or explicit upstream config without reading it and pins a process-private empty config for every accepted spawn, so a file created after planning cannot change the browser. For the calls upstream leaves alone — sessionless local and setup commands — this wrapper pins upstream's `AGENT_BROWSER_CONFIG` to a wrapper-owned copy of `~/.agent-browser/config.json` (or an empty config when there is no user-level file) whenever a repo-local `agent-browser.json` is present, so user defaults keep applying and the project layer is dropped. The wrapper's pin only applies where upstream pinned nothing, so the two never overwrite each other. Start Pi with `PI_AGENT_BROWSER_TRUST_PROJECT_CONFIG=1` to apply the project file, or set `AGENT_BROWSER_CONFIG` yourself to pin an exact path; either way the wrapper leaves the resolution alone. A pinned config is loaded, never written, and `plugin add` writes the file its own scope names (`./agent-browser.json`, or `~/.agent-browser/config.json` with `--global`), so no configuration write is lost or redirected. A plugin added to the project file does stay inactive until that file is trusted, so follow `plugin add` with `PI_AGENT_BROWSER_TRUST_PROJECT_CONFIG=1` (or add it with `--global`) when it needs to take effect. This policy is separate from the Pi-scoped package config under `.pi/config/pi-agent-browser-native/`.
  
--Other useful environment variables include `AGENT_BROWSER_DEFAULT_TIMEOUT`, `AGENT_BROWSER_AUTOSAVE_INTERVAL_MS`, `AGENT_BROWSER_STREAM_PORT`, `AGENT_BROWSER_IDLE_TIMEOUT_MS`, `AGENT_BROWSER_ENCRYPTION_KEY`, `AGENT_BROWSER_STATE_EXPIRE_DAYS`, `AGENT_BROWSER_IOS_DEVICE`, `AGENT_BROWSER_IOS_UDID`, `AI_GATEWAY_URL`, `AI_GATEWAY_API_KEY`, provider credential names, and AWS credential names when using AgentCore. The upstream child receives the parent environment plus wrapper overrides such as the managed socket directory and clamped default operation timeout (`buildAgentBrowserProcessEnv` in `extensions/agent-browser/lib/process.ts`). Model-facing output still redacts recognized secret values.
-+Use `--config <path>` to load a specific config file. Through the native `agent_browser` tool that flag is gated like the other privileged launch flags, because a config file can set the browser executable, init scripts, a proxy, and file access: pass it only when Pi runs with `PI_AGENT_BROWSER_ALLOW_PRIVILEGED_FLAGS=--config` (or `=1`), and prefer `PI_AGENT_BROWSER_CONFIG` for a user-owned override path. Boolean flags accept optional `true` or `false` values, such as `--headed false` or `--webgpu false`, to override config. Browser extensions from user and project configs are merged rather than replaced.
+-Other useful environment variables include `AGENT_BROWSER_DEFAULT_TIMEOUT`, `AGENT_BROWSER_AUTOSAVE_INTERVAL_MS`, `AGENT_BROWSER_STREAM_PORT`, `AGENT_BROWSER_STREAM_QUALITY`, `AGENT_BROWSER_STREAM_MAX_WIDTH`, `AGENT_BROWSER_STREAM_MAX_HEIGHT`, `AGENT_BROWSER_IDLE_TIMEOUT_MS`, `AGENT_BROWSER_ENCRYPTION_KEY`, `AGENT_BROWSER_STATE_EXPIRE_DAYS`, `AGENT_BROWSER_IOS_DEVICE`, `AGENT_BROWSER_IOS_UDID`, `AI_GATEWAY_URL`, `AI_GATEWAY_API_KEY`, provider credential names, and AWS credential names when using AgentCore. The upstream child receives the parent environment plus wrapper overrides such as the managed socket directory, clamped default operation timeout, canonical owned-session namespace (including empty default), and Git-checkout-generation-stable `AGENT_BROWSER_RESTORE` for wrapper-owned managed sessions (`buildAgentBrowserProcessEnv` in `extensions/agent-browser/lib/process.ts`, ownership carried by the wrapper's typed process options and call-scoped managed-session context). Model-facing output still redacts recognized secret values.
++Use separated `--config <path>` to load a specific config file in standalone upstream; upstream 0.33.2 does not recognize `--config=<path>` as the global config selector. Through the native `agent_browser` tool that flag is gated like the other privileged launch flags, because a config file can set the browser executable, init scripts, a proxy, and file access: pass it only when Pi runs with `PI_AGENT_BROWSER_ALLOW_PRIVILEGED_FLAGS=--config` (or `=1`), and prefer `PI_AGENT_BROWSER_CONFIG` for a user-owned override path. Boolean flags accept optional `true` or `false` values, such as `--headed false` or `--webgpu false`, to override config. Browser extensions from user and project configs are merged rather than replaced.
 +
-+Other useful environment variables include `AGENT_BROWSER_DEFAULT_TIMEOUT`, `AGENT_BROWSER_AUTOSAVE_INTERVAL_MS`, `AGENT_BROWSER_STREAM_PORT`, `AGENT_BROWSER_IDLE_TIMEOUT_MS`, `AGENT_BROWSER_ENCRYPTION_KEY`, `AGENT_BROWSER_STATE_EXPIRE_DAYS`, `AGENT_BROWSER_IOS_DEVICE`, `AGENT_BROWSER_IOS_UDID`, `AI_GATEWAY_URL`, `AI_GATEWAY_API_KEY`, provider credential names, and AWS credential names when using AgentCore. The upstream child receives the parent environment plus wrapper overrides such as the managed socket directory and clamped default operation timeout, minus loader/interpreter injection variables such as `NODE_OPTIONS`, `LD_PRELOAD`, `DYLD_INSERT_LIBRARIES`, and `ELECTRON_RUN_AS_NODE`, and minus workspace-local `PATH` entries (`buildAgentBrowserProcessEnv` in `extensions/agent-browser/lib/process.ts`; `PI_AGENT_BROWSER_FORWARD_ALL_ENV=1` forwards everything verbatim). Model-facing output still redacts recognized secret values.
++Other useful environment variables include `AGENT_BROWSER_DEFAULT_TIMEOUT`, `AGENT_BROWSER_AUTOSAVE_INTERVAL_MS`, `AGENT_BROWSER_STREAM_PORT`, `AGENT_BROWSER_STREAM_QUALITY`, `AGENT_BROWSER_STREAM_MAX_WIDTH`, `AGENT_BROWSER_STREAM_MAX_HEIGHT`, `AGENT_BROWSER_IDLE_TIMEOUT_MS`, `AGENT_BROWSER_ENCRYPTION_KEY`, `AGENT_BROWSER_STATE_EXPIRE_DAYS`, `AGENT_BROWSER_IOS_DEVICE`, `AGENT_BROWSER_IOS_UDID`, `AI_GATEWAY_URL`, `AI_GATEWAY_API_KEY`, provider credential names, and AWS credential names when using AgentCore. The upstream child receives the parent environment plus wrapper overrides such as the managed socket directory, clamped default operation timeout, canonical owned-session namespace (including empty default), and Git-checkout-generation-stable `AGENT_BROWSER_RESTORE` for wrapper-owned managed sessions, minus loader/interpreter injection variables such as `NODE_OPTIONS`, `LD_PRELOAD`, `DYLD_INSERT_LIBRARIES`, and `ELECTRON_RUN_AS_NODE`, and minus workspace-local `PATH` entries (`buildAgentBrowserProcessEnv` in `extensions/agent-browser/lib/process.ts`; `PI_AGENT_BROWSER_FORWARD_ALL_ENV=1` forwards everything verbatim). Model-facing output still redacts recognized secret values.
  
  ## Wrapper-specific behavior worth knowing
  
 diff -ruN --exclude=node_modules a/docs/ELECTRON.md b/docs/ELECTRON.md
 --- a/docs/ELECTRON.md	1985-10-26 03:15:00
-+++ b/docs/ELECTRON.md	2026-07-30 11:20:51
++++ b/docs/ELECTRON.md	2026-08-04 15:11:51
 @@ -155,7 +155,7 @@
  
- Optional `timeoutMs` on `electron.launch` bounds host-side CDP readiness (waiting for `DevToolsActivePort` and attach). When omitted, the default is **15 seconds** with a hard maximum of **120 seconds**, matching `ELECTRON_LAUNCH_DEFAULT_TIMEOUT_MS` and `ELECTRON_LAUNCH_MAX_TIMEOUT_MS` in `extensions/agent-browser/lib/electron/launch.ts`.
+ Optional `timeoutMs` on `electron.launch` bounds host-side CDP readiness (waiting for `DevToolsActivePort` and attach). When omitted, the default is **15 seconds** with a hard maximum of **120 seconds**, matching `ELECTRON_LAUNCH_DEFAULT_TIMEOUT_MS` and `ELECTRON_LAUNCH_MAX_TIMEOUT_MS` in `extensions/agent-browser/lib/electron/launch.ts`. Pi cancellation is separate: an already-cancelled call never launches the app, while cancellation during readiness polling or URL/tab/snapshot handoff closes the managed session, stops the tracked process, removes its isolated profile, and returns `failureCategory: "aborted"` without waiting for the launch timeout.
  
--Wrapper-owned launches **always** use an isolated temp profile and an OS-chosen port. `--user-data-dir`, `--remote-debugging-port`, `--remote-debugging-address`, `--remote-debugging-pipe`, and bare `--` in `appArgs` are rejected. There is no caller-supplied port and no way to make `electron.launch` reuse the app's normal signed-in profile or attach to an already-running app — by design. Use the manual path described above when those are the actual requirements.
-+Wrapper-owned launches **always** use an isolated temp profile and an OS-chosen port. `--user-data-dir`, `--remote-debugging-port`, `--remote-debugging-address`, `--remote-debugging-pipe`, and bare `--` in `appArgs` are rejected, as are code-execution and sandbox-disabling switches; other dashed switches must be in the known-safe list unless `PI_AGENT_BROWSER_ELECTRON_EXTRA_APP_ARGS=1` is set (see [`TOOL_CONTRACT.md`](TOOL_CONTRACT.md#electron)). There is no caller-supplied port and no way to make `electron.launch` reuse the app's normal signed-in profile or attach to an already-running app — by design. Use the manual path described above when those are the actual requirements.
+-Wrapper-owned launches **always** use an isolated temp profile and an OS-chosen port. If wrapper validation, managed-session policy, or the post-attach live-URL handoff guard fails after the host app starts, the wrapper immediately stops that process and removes the isolated profile; it retains a partial tracked record only when cleanup itself cannot finish. `--user-data-dir`, `--remote-debugging-port`, `--remote-debugging-address`, `--remote-debugging-pipe`, and bare `--` in `appArgs` are rejected. There is no caller-supplied port and no way to make `electron.launch` reuse the app's normal signed-in profile or attach to an already-running app — by design. Use the manual path described above when those are the actual requirements.
++Wrapper-owned launches **always** use an isolated temp profile and an OS-chosen port. If wrapper validation, managed-session policy, or the post-attach live-URL handoff guard fails after the host app starts, the wrapper immediately stops that process and removes the isolated profile; it retains a partial tracked record only when cleanup itself cannot finish. `--user-data-dir`, `--remote-debugging-port`, `--remote-debugging-address`, `--remote-debugging-pipe`, and bare `--` in `appArgs` are rejected, as are code-execution and sandbox-disabling switches; other dashed switches must be in the known-safe list unless `PI_AGENT_BROWSER_ELECTRON_EXTRA_APP_ARGS=1` is set (see [`TOOL_CONTRACT.md`](TOOL_CONTRACT.md#electron)). There is no caller-supplied port and no way to make `electron.launch` reuse the app's normal signed-in profile or attach to an already-running app — by design. Use the manual path described above when those are the actual requirements.
  
  ### `electron.status` — liveness and targets
  
@@ -2833,13 +2615,11 @@ diff -ruN --exclude=node_modules a/docs/ELECTRON.md b/docs/ELECTRON.md
  ### What the **caller** owns
 diff -ruN --exclude=node_modules a/docs/SUPPORT_MATRIX.md b/docs/SUPPORT_MATRIX.md
 --- a/docs/SUPPORT_MATRIX.md	1985-10-26 03:15:00
-+++ b/docs/SUPPORT_MATRIX.md	2026-08-02 22:36:30
-@@ -26,7 +26,31 @@
- 
++++ b/docs/SUPPORT_MATRIX.md	2026-08-04 15:12:44
+@@ -27,6 +27,31 @@
  ## Audit result
  
--- Target upstream: `agent-browser 0.33.0` (must match `CAPABILITY_BASELINE.targetVersion` in [`scripts/agent-browser-capability-baseline.mjs`](../scripts/agent-browser-capability-baseline.mjs)).
-+- Target upstream: `agent-browser 0.33.2` (must match `CAPABILITY_BASELINE.targetVersion` in [`scripts/agent-browser-capability-baseline.mjs`](../scripts/agent-browser-capability-baseline.mjs)).
+ - Target upstream: `agent-browser 0.33.2` (must match `CAPABILITY_BASELINE.targetVersion` in [`scripts/agent-browser-capability-baseline.mjs`](../scripts/agent-browser-capability-baseline.mjs)).
 +- Re-baselined 0.33.1 -> 0.33.2 in this fork on 2026-08-02. Checked the same way: all 56 help
 +  surfaces the baseline samples were diffed between the two published binaries. 53 are
 +  byte-identical and the other 3 are purely additive — **nothing was removed anywhere**. Root
@@ -2854,9 +2634,10 @@ diff -ruN --exclude=node_modules a/docs/SUPPORT_MATRIX.md b/docs/SUPPORT_MATRIX.
 +  always available, binding an OS-assigned localhost port" is present in 0.33.1's `stream
 +  --help` too. 0.33.2 only changes how frames are paced and encoded. This wrapper never runs
 +  `stream`, so the WebSocket input surface stays out of reach of the tool contract either way.
-+- `upstreamHead` is now `null`: npm tarballs for 0.33.2 carry no `gitHead`, so the commit
-+  could not be recovered. Carrying 0.33.1's hash forward would have claimed provenance this
-+  baseline does not have.
++- `upstreamHead` was recorded as `null` here on 2026-08-02 because the 0.33.2 npm tarball
++  carried no `gitHead`. Upstream's own 0.2.74 rebaseline targeted the same 0.33.2 CLI and
++  published the commit, so the baseline now records
++  `93cdda5709e8861c0c26b0b955d8d746e9fda0d7` instead of a placeholder.
 +- Re-baselined 0.33.0 -> 0.33.1 in this fork on 2026-07-30. Upstream's release-gate evidence
 +  in the table below is theirs and still refers to 0.33.0; those gates live in upstream's
 +  repository and are not vendored here, so they were not re-run. What was checked instead:
@@ -2865,12 +2646,12 @@ diff -ruN --exclude=node_modules a/docs/SUPPORT_MATRIX.md b/docs/SUPPORT_MATRIX.
 +  the artifact-path guards that key off command prefixes are unaffected), and the wrapper was
 +  exercised live against the new CLI.
  - Source of truth: `CAPABILITY_BASELINE.inventorySections` in the same file (stable `id` keys: `skills`, `core-commands`, `state-tabs-frames-dialogs`, `network-storage-artifacts-diagnostics`, `batch-auth-setup-ai`, `options-and-env`).
- - Status: source and wrapper adaptation target the 2026-07-23 0.33.0 audit. The wrapper classifies 0.32.4+ locator-detail find misses as `selector-not-found`, treats HAR `--content` and a11y `--tags` as command-scoped value flags, documents `derive-client` / HAR body modes / `a11y`, and renders compact a11y summaries; prior helper idle-timeout, post-`tab close` target refresh, and document-direction scroll behavior remain. Upstream 0.33.0 also revives discarded tabs on tab switch.
+ - Status: source and wrapper adaptation target the 2026-08-02 0.33.2 audit. Keeps 0.33.0 a11y/HAR/`find` coverage, documents 0.33.1 idle-timeout/tab-recovery and 0.33.2 stream quality/size env vars, and enables Git-checkout-generation-stable `AGENT_BROWSER_RESTORE` for extension-managed `piab-*` sessions so SSO cookies survive browser relaunches. Prior helper idle-timeout, post-`tab close` target refresh, and document-direction scroll behavior remain.
  - High-priority support gaps: 2026-05-26 audit found sessionless local commands and command-scoped value flags needed sharper wrapper handling; runtime/tests/docs now cover those paths. The 0.28.0 rebaseline added local `mcp` and `plugin` surfaces plus plugin-backed credential login; wrapper docs/tests mark `mcp` and known `plugin` commands sessionless, with no compatibility shim for older upstream releases. The 0.29.1 rebaseline added upstream `@agent-browser/sandbox` helper-package guidance and stricter `install --with-deps` failure semantics; no new wrapper runtime mode or bundled dependency was required. The 0.30.1 rebaseline fixed upstream `wait --url` glob matching, so constrained `job.assertUrl` delegates glob and exact patterns directly to `wait --url`. The 0.31.0 rebaseline adds restore workflow and namespace/session lifecycle surfaces (`--restore`, restore checks, `--namespace`, `session id`, and `session info`) without adding a wrapper compatibility layer. The 0.31.1 rebaseline fixes upstream React renderer selection for `react tree`, `react inspect`, and `react suspense`; no wrapper runtime change was required. The 0.31.2 rebaseline adds the local-launch-only `--webgpu` preset and `doctor --webgpu`, plus periodic restore-state autosaves controlled by `AGENT_BROWSER_AUTOSAVE_INTERVAL_MS`; the wrapper treats WebGPU as launch-scoped and leaves autosave ownership upstream. The 0.32.0 rebaseline hardens request/worker/popup/WebRTC containment behind `--allowed-domains`, fixes waits against already-complete documents, and adds a separate `@agent-browser/eve` package; the wrapper makes containment launch-scoped, retains its final-URL check as defense in depth, and adds no Eve-specific mode. The 0.32.1–0.32.2 rebaseline updates only eve compatibility/packaging, but the full current-surface audit also found the local reference had omitted upstream `read [url]` since 0.30.0; baseline/help sampling, content-first presentation, tab-target preservation, timeout budgeting, docs, and tests now cover it. The 0.32.3–0.32.4 rebaseline adds HAR response-body capture modes, the `derive-client` skill, fixed `find role` implicit-ARIA / accessible-name matching with locator-detail misses, and an advertised `find` action list of `click, fill, check, hover, text` only; the wrapper documents and classifies those surfaces without adding a new input mode. Remaining upstream-owned caveat: some help paths still mention `wait <selector> --state hidden` / `detached`, but runtime probes show those shapes still fail, so wrapper docs keep `wait --fn` disappearance predicates and top-level `uncheck` / `type` / `focus` passthrough instead of `find` for those actions. `wait --download <path>` still reports the requested path without guaranteed on-disk persistence ([#1300](https://github.com/vercel-labs/agent-browser/issues/1300)).
 diff -ruN --exclude=node_modules a/docs/TOOL_CONTRACT.md b/docs/TOOL_CONTRACT.md
 --- a/docs/TOOL_CONTRACT.md	1985-10-26 03:15:00
-+++ b/docs/TOOL_CONTRACT.md	2026-07-30 11:20:51
-@@ -203,6 +203,7 @@
++++ b/docs/TOOL_CONTRACT.md	2026-08-04 15:11:51
+@@ -205,6 +205,7 @@
  - required unless `semanticAction`, `job`, `qa`, `sourceLookup`, `networkSourceLookup`, or `electron` is provided
  - exact CLI args passed after `agent-browser`; this is the 1:1 upstream CLI coverage path for the targeted `agent-browser` version
  - no shell operators
@@ -2878,17 +2659,17 @@ diff -ruN --exclude=node_modules a/docs/TOOL_CONTRACT.md b/docs/TOOL_CONTRACT.md
  - do not include the binary name
  - do not include `--json`; the wrapper injects it (see [Wrapper `--json`](#wrapper-json))
  - first-call recipe: `open` → `snapshot -i` → `click` / `fill` with current `@eN` refs from that snapshot → `snapshot -i` again after navigation or DOM changes
-@@ -390,16 +391,16 @@
+@@ -392,16 +393,16 @@
  - Host install discovery (`electron.list` and resolving `appName` / `bundleId` through `discoverElectronApps` in `extensions/agent-browser/lib/electron/discovery.ts`) runs on **macOS** and **Linux** only. On **Windows** (and any other platform), `list` returns `platform: "unsupported"` with an empty `apps` array, and `launch` cannot resolve purely name-based targets without a prior scan—use `executablePath` or a host `appPath` that resolves to a verifiable Electron binary (`inspectElectronExecutablePath` still gates Windows executables).
- - `launch.handoff` defaults to `"snapshot"`; supported values are `"connect"`, `"tabs"`, and `"snapshot"`. `"connect"` stops after attach, `"tabs"` adds a session-scoped `tab list` and is the safer diagnostic starting point when you do not want to capture refs/content yet, and `"snapshot"` adds `tab list` plus `snapshot -i` so current refs are immediately available. If the first Electron snapshot returns no refs while the app is still settling, the wrapper retries briefly before reporting no refs and tells agents to run `snapshot -i` once more before treating the UI as unusable.
+ - `launch.handoff` defaults to `"snapshot"`; supported values are `"connect"`, `"tabs"`, and `"snapshot"`. `"connect"` stops after attach, `"tabs"` verifies the live URL before a session-scoped `tab list` and is the safer diagnostic starting point when you do not want to capture refs/content yet, and `"snapshot"` verifies the live URL before `tab list` plus `snapshot -i` so current refs are immediately available. If the first Electron snapshot returns no refs while the app is still settling, the wrapper retries briefly before reporting no refs and tells agents to run `snapshot -i` once more before treating the UI as unusable.
  - `launch.targetType` defaults to `"page"`; supported values are `"page"`, `"webview"`, and `"any"`. When a matching CDP target exposes a WebSocket URL, launch connects to that target; otherwise it falls back to the browser port.
 -- `appArgs` are passed to the Electron app, but wrapper-owned lifecycle/debug flags are rejected (`--user-data-dir`, `--remote-debugging-port`, `--remote-debugging-address`, `--remote-debugging-pipe`, and `--`).
 +- `appArgs` are passed to the Electron app, but dashed switches are checked against an allowlist rather than a short denylist. Always rejected: wrapper-owned lifecycle/debug flags (`--user-data-dir`, `--remote-debugging-port`, `--remote-debugging-address`, `--remote-debugging-pipe`, and `--`) and any code-execution or sandbox-disabling form (`*-launcher` / `*-cmd-prefix` such as `--gpu-launcher`, `--renderer-cmd-prefix`, `--utility-cmd-prefix`; `--no-sandbox`, `--disable-gpu-sandbox`, `--disable-setuid-sandbox`, `--load-extension`, `--disable-web-security`, `--remote-allow-origins`, `--inspect*`), in both `--flag=value` and separated-value spellings. Other dashed switches must be in the known-safe Chromium/Electron list (`ELECTRON_ALLOWED_APP_ARG_FLAGS` in `extensions/agent-browser/lib/launch-flag-policy.ts`); non-dashed app arguments always pass. To forward an unlisted switch, the user starts Pi with `PI_AGENT_BROWSER_ELECTRON_EXTRA_APP_ARGS=1`; the always-rejected forms stay rejected even then.
  - `allow` and `deny` are optional caller-owned policy lists. Entries match app name, bundle id, desktop id, app path, or executable path by substring. If `allow` is set, the target must match it; `deny` wins on conflict. With neither list, launch is permitted.
  - `electron.status` / `electron.cleanup` accept optional `all` only as the boolean literal `true` to include every wrapper-tracked launch; `all` and `launchId` cannot both be set. Status and cleanup use the same runtime wrapper-tracked scope: current branch-visible records plus still-owned off-branch records. Default no-argument status/cleanup is intentionally ambiguous when more than one active launch is in that merged scope; pass `launchId` or `all: true`.
- - `electron.launch` `timeoutMs` is an optional positive integer for the host CDP readiness window. The launcher normalizes missing or non-positive values to **15000 ms** and **caps** at **120000 ms** (`normalizeTimeoutMs` in `extensions/agent-browser/lib/electron/launch.ts`). Other actions use `timeoutMs` differently: **`status`** forwards it only to managed-session `get title` / `get url` reads for mismatch diagnostics (when omitted, those subprocess reads use the normal `runAgentBrowserProcess` default from `getAgentBrowserProcessTimeoutMs`), while localhost CDP liveness in `inspectElectronLaunchStatus` uses a fixed **1000 ms** fetch budget per HTTP probe (`ELECTRON_STATUS_FETCH_TIMEOUT_MS` in `extensions/agent-browser/lib/electron/cleanup.ts`). **`cleanup`** applies one budget to upstream managed-session `close` plus host process exit, debug-port verification, and temp profile removal (`cleanupTrackedElectronHostLaunches` in `extensions/agent-browser/lib/orchestration/electron-host/index.ts`); when omitted it defaults to **`PI_AGENT_BROWSER_IMPLICIT_SESSION_CLOSE_TIMEOUT_MS`** else **5000 ms** (`getImplicitSessionCloseTimeoutMs` in `extensions/agent-browser/lib/runtime.ts`). **`probe`** forwards it to each bounded upstream read (`get title`, `get url`, `eval --stdin`, `tab list`, `snapshot -i`); when omitted, those reads use the same `runAgentBrowserProcess` default as other tool calls.
+ - `electron.launch` `timeoutMs` is an optional positive integer for the host CDP readiness window. The launcher normalizes missing or non-positive values to **15000 ms** and **caps** at **120000 ms** (`normalizeTimeoutMs` in `extensions/agent-browser/lib/electron/launch.ts`). Other actions use `timeoutMs` differently: **`status`** forwards it only to managed-session `get url`, then `get title` reads for mismatch diagnostics (when omitted, those subprocess reads use the normal `runAgentBrowserProcess` default from `getAgentBrowserProcessTimeoutMs`), while localhost CDP liveness in `inspectElectronLaunchStatus` uses a fixed **1000 ms** fetch budget per HTTP probe (`ELECTRON_STATUS_FETCH_TIMEOUT_MS` in `extensions/agent-browser/lib/electron/cleanup.ts`). **`cleanup`** applies one budget to upstream managed-session `close` plus host process exit, debug-port verification, and temp profile removal (`cleanupTrackedElectronHostLaunches` in `extensions/agent-browser/lib/orchestration/electron-host/index.ts`); when omitted it defaults to **`PI_AGENT_BROWSER_IMPLICIT_SESSION_CLOSE_TIMEOUT_MS`** else **5000 ms** (`getImplicitSessionCloseTimeoutMs` in `extensions/agent-browser/lib/runtime.ts`). **`probe`** forwards it to each bounded upstream read (`get url`, `get title`, `eval --stdin`, `tab list`, `snapshot -i`); when omitted, those reads use the same `runAgentBrowserProcess` default as other tool calls.
 -- Non-Electron targets are rejected as a correctness failure; the wrapper does not blindly launch arbitrary executables as Electron.
-+- Non-Electron targets are rejected; the wrapper does not blindly launch arbitrary executables as Electron. Evidence is binary-level, not directory-level: macOS requires a real Mach-O `Electron Framework` binary inside `Contents/Frameworks/Electron Framework.framework` plus an app payload, and the launch target must be a regular executable Mach-O file resolved from a `CFBundleExecutable` that contains no path separators and stays inside `Contents/MacOS`; Linux requires an executable ELF binary with a sibling `chrome_*.pak` and a `resources/app`(`.asar`) payload; Windows requires an executable PE image with the same pak/payload evidence.
++- Non-Electron targets are rejected as a correctness failure; the wrapper does not blindly launch arbitrary executables as Electron. Evidence is binary-level, not directory-level: macOS requires a real Mach-O `Electron Framework` binary inside `Contents/Frameworks/Electron Framework.framework` plus an app payload, and the launch target must be a regular executable Mach-O file resolved from a `CFBundleExecutable` that contains no path separators and stays inside `Contents/MacOS`; Linux requires an executable ELF binary with a sibling `chrome_*.pak` and a `resources/app`(`.asar`) payload; Windows requires an executable PE image with the same pak/payload evidence.
  
  Safety defaults and ownership:
  
@@ -2898,7 +2679,7 @@ diff -ruN --exclude=node_modules a/docs/TOOL_CONTRACT.md b/docs/TOOL_CONTRACT.md
  - Remote debugging exposes app contents to the attached browser tool. The wrapper gives isolation defaults and optional `allow` / `deny`; the user still owns the decision to launch or attach to a sensitive desktop app.
  - `electron.list` may annotate apps as likely sensitive (`sensitivity.level: "likely-sensitive"`, categories such as `notes`, `chat`, `mail`, `developer-workspace`, or `passwords-auth`) and print `[likely sensitive: …]`. These annotations are non-blocking hints, not enforcement; caller-owned `allow` / `deny` policy still controls launch decisions.
  - Cleanup is wrapper-owned **only** for records created by `electron.launch`. `electron.cleanup` never targets manually launched apps, externally supplied debug ports, or arbitrary Electron processes. Explicit screenshots/downloads/HARs/traces remain host-file cleanup, not Electron cleanup. If `electron.cleanup` closes the upstream managed session but process/profile cleanup remains partial, later shutdown cleanup does not close that managed session a second time; retry cleanup focuses on the remaining host resources.
-@@ -577,6 +578,7 @@
+@@ -579,6 +580,7 @@
  - type: `string`
  - optional; can be used with any successful browser result path, most often `eval --stdin`, `get text`, `get html`, `snapshot`, or diagnostic captures whose result should become a durable local file
  - workspace-relative paths resolve against the Pi session cwd; absolute paths are used as-is; a leading `@` is stripped for consistency with Pi file arguments
@@ -2906,7 +2687,7 @@ diff -ruN --exclude=node_modules a/docs/TOOL_CONTRACT.md b/docs/TOOL_CONTRACT.md
  - after the upstream command completes, the wrapper writes `details.data` when present, otherwise the model-facing text content; objects/arrays are written as pretty JSON with a trailing newline and strings are written as-is
  - successful writes append `details.outputFile = { status: "saved", path, absolutePath, source, bytes }`; they also append a visible `Output file: …` line except when the caller explicitly passed upstream `--json`, where parseable JSON content is preserved and the saved-file notice lives only in `details.outputFile`. Write failures append `details.outputFile.status: "failed"`, remove success-only category fields, and mark the tool result failed without rolling back browser session state.
  
-@@ -696,7 +698,7 @@
+@@ -698,7 +700,7 @@
  
  These categories are intentionally bounded and stable so agents can branch on them instead of parsing prose. They do not replace raw diagnostics: `details.error`, `details.stderr`, `details.parseError`, `details.validationError`, and visible content still preserve the specific upstream or wrapper message after normal redaction.
  
@@ -2917,44 +2698,18 @@ diff -ruN --exclude=node_modules a/docs/TOOL_CONTRACT.md b/docs/TOOL_CONTRACT.md
  
 diff -ruN --exclude=node_modules a/package.json b/package.json
 --- a/package.json	1985-10-26 03:15:00
-+++ b/package.json	2026-07-30 11:21:04
++++ b/package.json	2026-08-04 15:06:39
 @@ -1,6 +1,7 @@
  {
    "name": "pi-agent-browser-native",
-   "version": "0.2.72",
+   "version": "0.2.77",
 +  "private": true,
    "description": "pi extension that exposes agent-browser as a native tool for browser automation",
    "type": "module",
    "author": "Mitch Fultz (https://github.com/fitchmultz)",
-diff -ruN --exclude=node_modules a/scripts/agent-browser-capability-baseline.mjs b/scripts/agent-browser-capability-baseline.mjs
---- a/scripts/agent-browser-capability-baseline.mjs	1985-10-26 03:15:00
-+++ b/scripts/agent-browser-capability-baseline.mjs	2026-08-02 22:36:10
-@@ -14,8 +14,11 @@
- 
- const sourceEvidence = Object.freeze({
-   repository: "vercel-labs/agent-browser",
--  upstreamHead: "1ed371f3af472cc0d6cd8fdaea75d1a085ff7534",
--  upstreamPackageVersion: "0.33.0",
-+  // npm tarballs for 0.33.2 carry no gitHead, so the commit behind this release could not
-+  // be recovered. Recording null rather than carrying 0.33.1's hash forward, which would
-+  // claim provenance this baseline does not have.
-+  upstreamHead: null,
-+  upstreamPackageVersion: "0.33.2",
-   inspectedSources: Object.freeze([
-     "agent-browser --version",
-     "agent-browser --help",
-@@ -844,7 +847,7 @@
- ]);
- 
- export const CAPABILITY_BASELINE = Object.freeze({
--  targetVersion: "0.33.0",
-+  targetVersion: "0.33.2",
-   sourceEvidence,
-   helpCommands,
-   inventorySections,
 diff -ruN --exclude=node_modules a/scripts/config.mjs b/scripts/config.mjs
 --- a/scripts/config.mjs	1985-10-26 03:15:00
-+++ b/scripts/config.mjs	2026-07-30 11:20:51
++++ b/scripts/config.mjs	2026-08-04 15:05:11
 @@ -68,6 +68,7 @@
    Project config: .pi/config/pi-agent-browser-native/config.json
    Override:       ${AGENT_BROWSER_CONFIG_ENV}=/path/to/config.json
@@ -2965,7 +2720,7 @@ diff -ruN --exclude=node_modules a/scripts/config.mjs b/scripts/config.mjs
  }
 diff -ruN --exclude=node_modules a/scripts/doctor.mjs b/scripts/doctor.mjs
 --- a/scripts/doctor.mjs	1985-10-26 03:15:00
-+++ b/scripts/doctor.mjs	2026-07-30 11:20:51
++++ b/scripts/doctor.mjs	2026-08-04 15:05:11
 @@ -164,8 +164,12 @@
  	if (text === PACKAGE_NAME) return true;
  	if (text.includes(REPO_URL_FRAGMENT)) return true;

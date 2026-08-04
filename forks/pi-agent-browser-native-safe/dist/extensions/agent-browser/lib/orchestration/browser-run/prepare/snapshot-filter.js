@@ -149,7 +149,7 @@ export async function trySnapshotFilter(options) {
                 snapshotFilter: request.role || request.search ? { cleanArgs: request.cleanArgs, matchedRefs: filtered.matchedRefs, role: request.role, search: request.search, totalLines: filtered.totalLines, totalRefs: filtered.totalRefs, visibleLines: filtered.visibleLines } : undefined,
                 snapshotViewport: viewport,
                 ...buildAgentBrowserResultCategoryDetails({ args: options.effectiveArgs, command: "snapshot", succeeded: true }),
-                ...buildSessionDetailFields(options.sessionName, options.usedImplicitSession, options.namespace),
+                ...buildSessionDetailFields(options.sessionName, options.usedImplicitSession, options.namespace, options.managedSessionRestoreDisabled()),
                 summary,
             },
             isError: false,

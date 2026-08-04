@@ -3,7 +3,7 @@
  * Responsibilities: Resolve Electron targets, enforce caller-owned allow/deny policy, create isolated userDataDir profiles, launch with remote debugging on an OS-chosen port, poll DevToolsActivePort, and read bounded CDP version/target metadata.
  * Scope: Host-side Electron lifecycle setup only; upstream agent-browser attach/presentation stays in the extension entrypoint.
  * Usage: Called by the agent_browser electron.launch shorthand before routing through upstream `connect`.
- * Invariants/Assumptions: The wrapper only launches targets with Electron framework evidence, always uses an isolated temp profile, never accepts a caller-supplied remote debugging port, and leaves an adoption record inside the profile so a later run can reap the launch if this process dies without cleaning up.
+ * Invariants/Assumptions: The wrapper only launches targets with Electron framework evidence, always uses an isolated temp profile, never accepts a caller-supplied remote debugging port, cleans any spawned process/profile when cancellation interrupts readiness, and leaves an adoption record inside the profile so a later run can reap the launch if this process dies without cleaning up.
  */
 import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
@@ -25,8 +25,18 @@ function normalizeTimeoutMs(timeoutMs) {
         return ELECTRON_LAUNCH_DEFAULT_TIMEOUT_MS;
     return Math.min(timeoutMs, ELECTRON_LAUNCH_MAX_TIMEOUT_MS);
 }
-function sleep(ms) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
+function sleep(ms, signal) {
+    if (signal?.aborted)
+        return Promise.resolve();
+    return new Promise((resolve) => {
+        const timer = setTimeout(done, ms);
+        function done() {
+            clearTimeout(timer);
+            signal?.removeEventListener("abort", done);
+            resolve();
+        }
+        signal?.addEventListener("abort", done, { once: true });
+    });
 }
 function normalizeIdentifier(value) {
     const trimmed = value?.trim().toLowerCase();
@@ -111,6 +121,8 @@ async function readDevToolsActivePort(userDataDir) {
 async function pollDevToolsActivePort(options) {
     let devToolsActivePort;
     while (Date.now() <= options.deadlineMs) {
+        if (options.signal?.aborted)
+            return { devToolsActivePort, failure: "aborted" };
         const spawnError = options.getSpawnError();
         if (spawnError)
             return { devToolsActivePort, failure: "spawn-error", spawnError };
@@ -121,20 +133,24 @@ async function pollDevToolsActivePort(options) {
         if (exit.code !== null || exit.signal !== null) {
             return { devToolsActivePort, failure: exit.code === 0 ? "single-instance-conflict" : "spawn-error" };
         }
-        await sleep(ELECTRON_DEVTOOLS_POLL_INTERVAL_MS);
+        await sleep(ELECTRON_DEVTOOLS_POLL_INTERVAL_MS, options.signal);
     }
     return { devToolsActivePort, failure: "timeout" };
 }
-async function pollCdpMetadata(port, deadlineMs) {
+async function pollCdpMetadata(port, deadlineMs, signal) {
     while (Date.now() <= deadlineMs) {
-        const version = parseCdpVersion(await fetchCdpJson(`http://127.0.0.1:${port}/json/version`));
+        if (signal?.aborted)
+            return { aborted: true };
+        const version = parseCdpVersion(await fetchCdpJson(`http://127.0.0.1:${port}/json/version`, signal));
+        if (signal?.aborted)
+            return { aborted: true };
         if (version) {
-            const targets = parseCdpTargets(await fetchCdpJson(`http://127.0.0.1:${port}/json/list`));
-            return { targets, version };
+            const targets = parseCdpTargets(await fetchCdpJson(`http://127.0.0.1:${port}/json/list`, signal));
+            return signal?.aborted ? { aborted: true } : { aborted: false, metadata: { targets, version } };
         }
-        await sleep(ELECTRON_DEVTOOLS_POLL_INTERVAL_MS);
+        await sleep(ELECTRON_DEVTOOLS_POLL_INTERVAL_MS, signal);
     }
-    return undefined;
+    return { aborted: false };
 }
 function buildLaunchArgs(userDataDir, appArgs) {
     return [
@@ -226,6 +242,8 @@ function buildLaunchRecord(options) {
 function launchFailureMessage(reason, target, detail) {
     const label = target ? `${target.name} (${target.appPath ?? target.executablePath})` : "target";
     switch (reason) {
+        case "aborted":
+            return `Electron launch was aborted${target ? ` before ${label} finished starting` : " before the app started"}.`;
         case "non-electron-target":
             return `Electron launch rejected: ${label} does not have Electron framework evidence.`;
         case "policy-blocked":
@@ -242,7 +260,11 @@ function launchFailureMessage(reason, target, detail) {
 }
 export async function launchElectronApp(options) {
     const appArgs = options.appArgs ?? [];
+    if (options.signal?.aborted)
+        return { ok: false, failure: { appArgs, error: launchFailureMessage("aborted", undefined), reason: "aborted" } };
     const target = await resolveElectronLaunchTarget(options);
+    if (options.signal?.aborted)
+        return { ok: false, failure: { appArgs, error: launchFailureMessage("aborted", target), reason: "aborted", target } };
     if (!target) {
         return {
             ok: false,
@@ -271,6 +293,16 @@ export async function launchElectronApp(options) {
     const deadlineMs = startedAtMs + timeoutMs;
     const launchId = `electron-${randomUUID()}`;
     const userDataDir = await createSecureTempDirectory(ELECTRON_PROFILE_DIR_PREFIX);
+    if (options.signal?.aborted) {
+        let cleanupError;
+        try {
+            await rm(userDataDir, { force: true, recursive: true });
+        }
+        catch (error) {
+            cleanupError = error instanceof Error ? error.message : String(error);
+        }
+        return { ok: false, failure: { appArgs, cleanupError, error: launchFailureMessage("aborted", target), reason: "aborted", target, userDataDir } };
+    }
     let cleanupError;
     let spawnError;
     let exitCode = null;
@@ -348,15 +380,19 @@ export async function launchElectronApp(options) {
         deadlineMs,
         getChildExit: () => ({ code: exitCode, signal: exitSignal }),
         getSpawnError: () => spawnError,
+        signal: options.signal,
         userDataDir,
     });
     if (!portResult.port) {
         return fail(portResult.failure ?? "timeout", portResult.spawnError?.message, { devToolsActivePort: portResult.devToolsActivePort });
     }
-    const metadata = await pollCdpMetadata(portResult.port, deadlineMs);
-    if (!metadata) {
+    const metadataResult = await pollCdpMetadata(portResult.port, deadlineMs, options.signal);
+    if (metadataResult.aborted)
+        return fail("aborted", undefined, { devToolsActivePort: portResult.devToolsActivePort, port: portResult.port });
+    if (!metadataResult.metadata) {
         return fail("port-not-found", undefined, { cdpVersionReached: false, devToolsActivePort: portResult.devToolsActivePort, port: portResult.port });
     }
+    const metadata = metadataResult.metadata;
     const record = buildLaunchRecord({
         createdAtMs: Date.now(),
         launchId,

@@ -82,6 +82,12 @@ const COMMAND_CAPABILITIES = [
         readOnlyDiagnosticSessionTarget: true,
     },
     {
+        command: "eval",
+        invalidatesBatchRefs: true,
+        navigationObservable: true,
+        triggersPostMutationSnapshot: true,
+    },
+    {
         command: "fill",
         eligibleForElectronHealthProbe: true,
         eligibleForPageChangeSummary: true,
@@ -304,6 +310,11 @@ export function isElectronPostCommandHealthCommand(command) {
 }
 export function isNavigationObservableCommandName(command) {
     return hasCommandCapability(command, "navigationObservable");
+}
+export function isUnverifiedPageTransitionCommand(command, subcommand) {
+    return ["back", "connect", "eval", "forward", "reload"].includes(command ?? "")
+        || (command === "state" && subcommand === "load")
+        || (command === "tab" && subcommand !== undefined && !["list", "new"].includes(subcommand));
 }
 export function isPageMutationCommand(command) {
     return hasCommandCapability(command, "triggersPostMutationSnapshot");

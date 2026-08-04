@@ -1,10 +1,10 @@
 import { rm } from "node:fs/promises";
 import { runAgentBrowserProcess } from "../../process.js";
-import { buildAgentBrowserNextActions, getAgentBrowserErrorText, parseAgentBrowserEnvelope } from "../../results.js";
+import { buildAgentBrowserNextActions, parseAgentBrowserEnvelope } from "../../results.js";
 import { buildNextToolAction, withOptionalNamespaceArgs, withOptionalSessionArgs } from "../../results/next-actions.js";
 import { getSessionPageStateKey, isAboutBlankUrl, normalizeComparableUrl, normalizeSessionTabTarget, targetsMatch, } from "../../session-page-state.js";
 import { isCloseCommand, isElectronPostCommandHealthCommand, isNavigationObservableCommandName, isRefGuardedCommand, isRefInvalidatingBatchCommand, isSessionTabPinningExcludedCommand, isSessionTabPostCommandCorrectionExcludedCommand, } from "../../command-taxonomy.js";
-import { chooseOpenResultTabCorrection, redactInvocationArgs } from "../../runtime.js";
+import { chooseOpenResultTabCorrection } from "../../runtime.js";
 import { isRecord } from "../../parsing.js";
 import { parseUserBatchStdin } from "../batch-stdin.js";
 export const NAVIGATION_SUMMARY_EVAL = `({ title: document.title, url: location.href })`;
@@ -19,6 +19,8 @@ export function applyBrowserRunStatePatch(state, patch) {
         state.freshSessionOrdinal = patch.freshSessionOrdinal;
     if (patch.managedSessionActive !== undefined)
         state.managedSessionActive = patch.managedSessionActive;
+    if ("managedSessionCompatibilityWorkaround" in patch)
+        state.managedSessionCompatibilityWorkaround = patch.managedSessionCompatibilityWorkaround;
     if (patch.managedSessionCwd !== undefined)
         state.managedSessionCwd = patch.managedSessionCwd;
     if (patch.managedSessionName !== undefined)
@@ -29,8 +31,17 @@ export function applyBrowserRunStatePatch(state, patch) {
         state.networkRoutesBySession = patch.networkRoutesBySession;
 }
 export const getSessionContextKey = getSessionPageStateKey;
-export function buildSessionDetailFields(sessionName, usedImplicitSession, namespace) {
-    return { ...(namespace ? { namespace } : {}), ...(sessionName ? { sessionName, usedImplicitSession } : {}) };
+export function buildSessionDetailFields(sessionName, usedImplicitSession, namespace, managedSessionRestoreDisabled = false) {
+    return {
+        ...(namespace ? { namespace } : {}),
+        ...(sessionName
+            ? {
+                sessionName,
+                usedImplicitSession,
+                ...(managedSessionRestoreDisabled ? { managedSessionRestoreDisabled: true } : {}),
+            }
+            : {}),
+    };
 }
 export function buildManagedSessionOutcome(options) {
     const { activeAfter, activeBefore, attemptedSessionName, command, currentSessionName, currentSessionNamespace, previousSessionName, replacedSessionName, replacedSessionNamespace, sessionMode, succeeded } = options;
@@ -224,6 +235,8 @@ export function extractNavigationSummaryFromData(data) {
     return title || url ? { title, url } : undefined;
 }
 export function shouldCaptureNavigationSummary(command, data) {
+    if (command === "eval")
+        return true;
     if (isRecord(data) && typeof data.clicked === "string" && !data.clicked.startsWith("@") && !data.clicked.startsWith("ref=") && typeof data.href !== "string")
         return false;
     return (isNavigationObservableCommandName(command) &&
@@ -481,11 +494,12 @@ export function unwrapPinnedSessionBatchEnvelope(options) {
     };
 }
 export async function runSessionCommandData(options) {
-    const { args, cwd, namespace, sessionName, signal, stdin, timeoutMs } = options;
+    const { allowManagedSessionTarget, args, cwd, namespace, pinNamespace, sessionName, signal, stdin, throwOnFailure, timeoutMs } = options;
     if (!sessionName)
         return undefined;
     const processResult = await runAgentBrowserProcess({
-        args: ["--json", ...(namespace ? ["--namespace", namespace] : []), "--session", sessionName, ...args],
+        allowManagedSessionTarget,
+        args: ["--json", ...(namespace !== undefined || pinNamespace ? ["--namespace", namespace ?? ""] : []), "--session", sessionName, ...args],
         cwd,
         signal,
         stdin,
@@ -493,6 +507,14 @@ export async function runSessionCommandData(options) {
     });
     try {
         if (processResult.aborted || processResult.spawnError || processResult.exitCode !== 0) {
+            if (throwOnFailure) {
+                const reason = processResult.aborted
+                    ? "command was aborted"
+                    : processResult.spawnError
+                        ? "process could not start"
+                        : `process exited with code ${processResult.exitCode}`;
+                throw new Error(`agent-browser ${reason}`);
+            }
             return undefined;
         }
         const parsed = await parseAgentBrowserEnvelope({
@@ -500,6 +522,8 @@ export async function runSessionCommandData(options) {
             stdoutPath: processResult.stdoutSpillPath,
         });
         if (parsed.parseError || parsed.envelope?.success === false) {
+            if (throwOnFailure)
+                throw new Error(parsed.parseError ? "agent-browser returned invalid structured output" : "agent-browser reported failure");
             return undefined;
         }
         return parsed.envelope?.data;
@@ -727,39 +751,5 @@ export function buildElectronRefFreshnessDiagnostic(options) {
 }
 export function formatElectronRefFreshnessText(diagnostic) {
     return diagnostic?.summary;
-}
-export async function closeManagedSession(options) {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), options.timeoutMs);
-    let stdoutSpillPath;
-    const closeArgs = [...(options.namespace ? ["--namespace", options.namespace] : []), "--session", options.sessionName, "close"];
-    try {
-        const processResult = await runAgentBrowserProcess({
-            args: closeArgs,
-            cwd: options.cwd,
-            signal: controller.signal,
-        });
-        stdoutSpillPath = processResult.stdoutSpillPath;
-        return getAgentBrowserErrorText({
-            aborted: processResult.aborted,
-            command: "close",
-            effectiveArgs: redactInvocationArgs(closeArgs),
-            exitCode: processResult.exitCode,
-            plainTextInspection: false,
-            spawnError: processResult.spawnError,
-            stderr: processResult.stderr,
-            timedOut: processResult.timedOut,
-            timeoutMs: processResult.timeoutMs,
-        });
-    }
-    catch (error) {
-        return error instanceof Error ? error.message : String(error);
-    }
-    finally {
-        clearTimeout(timer);
-        if (stdoutSpillPath) {
-            await rm(stdoutSpillPath, { force: true }).catch(() => undefined);
-        }
-    }
 }
 export { extractBatchResultCommand };

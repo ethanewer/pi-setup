@@ -68,7 +68,7 @@ Extension forks and the upstream releases they are based on:
 | Fork (Pi local package) | Upstream | Upstream version |
 |---|---|---:|
 | `pi-voice-stt-safe` | `pi-voice-stt` | `0.4.0` |
-| `pi-agent-browser-native-safe` | `pi-agent-browser-native` | `0.2.72` |
+| `pi-agent-browser-native-safe` | `pi-agent-browser-native` | `0.2.77` |
 | `pi-dynamic-workflows-safe` | `@quintinshaw/pi-dynamic-workflows` | `3.5.0` |
 | `pi-process-monitor-safe` | `pi-process-monitor` | rewrite, built on `1.3.0`, `2.0.0` reviewed and declined |
 | `pi-context-handoff` | — | first-party |
