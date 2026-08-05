@@ -3,10 +3,10 @@
 A reproducible, fast [Pi coding agent](https://pi.dev) setup with two entrypoints:
 
 - **`pi`** — full environment with Voice STT, native browser automation, dynamic
-  workflows, compaction handoff briefs, background process monitoring, and `/btw` side
-  questions.
-- **`p`** — lean environment with Voice STT, `/btw` side questions, and compaction
-  handoff briefs, but no browser, monitor, workflows, or skills.
+  workflows, mid-run and between-runs context compaction, background process monitoring,
+  and `/btw` side questions.
+- **`p`** — lean environment with Voice STT, `/btw` side questions, and the same two
+  compaction extensions, but no browser, monitor, workflows, or skills.
 
 Both commands run the same Pi installation through Pi's Bun entrypoint. They share
 authentication, model catalogs, sessions, helper binaries, and installed package files.
@@ -72,6 +72,7 @@ Extension forks and the upstream releases they are based on:
 | `pi-dynamic-workflows-safe` | `@quintinshaw/pi-dynamic-workflows` | `3.5.0` |
 | `pi-process-monitor-safe` | `pi-process-monitor` | rewrite, built on `1.3.0`, `2.0.0` reviewed and declined |
 | `pi-context-handoff` | — | first-party |
+| `pi-codex-compaction` | — | first-party |
 | `pi-btw-side` | — | first-party |
 | `pi-setup-maintenance` | — | first-party, skills only |
 
@@ -138,6 +139,7 @@ standalone diffs.
 - workflow authoring and built-in workflow skills
 - the `update-pi-setup` maintenance skill
 - compaction handoff briefs that keep a long run going
+- mid-run context folding, so one long run stays inside the context window
 - background process monitoring (`monitor`, `/watch`)
 - side questions in an ephemeral fork (`/btw`, escape to return)
 - project `AGENTS.md` / `CLAUDE.md` context
@@ -151,7 +153,7 @@ standalone diffs.
 --no-extensions --no-skills
 ```
 
-It explicitly reloads only Voice STT, `/btw`, compaction handoff briefs, and a tiny
+It explicitly reloads only Voice STT, `/btw`, both compaction extensions, and a tiny
 local extension that removes Pi's documentation block from the system prompt. The exact
 allowlist keeps the heavier browser, monitor, and workflow extensions out. It also:
 
@@ -352,6 +354,10 @@ The wrappers locate the installed Pi package dynamically, so they need no change
 `pi-context-handoff` uses only Pi's public API (`compact`, and the
 `session_before_compact` hook), so a Pi upgrade should not disturb it. If Pi ever changes
 that hook's contract the extension degrades to native compaction rather than failing.
+`pi-codex-compaction` is public API too, with one exception it checks at runtime: it builds
+Pi's `compactionSummary` message by hand, because `createCompactionSummaryMessage` is not
+exported from the package root, and verifies once per session that `convertToLlm` still
+renders it — falling back to a plain user message if a Pi release ever stops.
 
 ## Performance
 

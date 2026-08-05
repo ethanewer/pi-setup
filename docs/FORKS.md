@@ -195,6 +195,75 @@ installed, so the worst case is a less useful summary. It uses only Pi's public 
 also removes the deep private-module imports that made the previous extension fragile
 across Pi releases.
 
+## pi-codex-compaction
+
+First-party, not a fork. Ports Codex's mid-turn compaction into Pi.
+
+Pi checks its compaction threshold only outside an agent run — `_handlePostAgentRun` after
+`agent.prompt()` returns, and again before a new prompt — so everything inside one long run
+accumulates unchecked. Codex has no such gap: `codex-rs/core/src/session/turn.rs:493` checks
+after every sampling request and compacts inline, then `continue`s the loop.
+
+The intervention point is the `context` hook, which is "fired before each LLM call, can
+modify messages" and whose returned array is what the provider receives
+(`agent-loop.js:181`). Earlier revisions of `docs/LONG_RUNS.md` concluded no extension could
+close this gap; that survey covered the compaction API and the turn hooks and never asked
+what shapes the request, which is where the answer was.
+
+Above 90% of the window — Codex's own `(context_window * 9) / 10`, clamped so config can
+only lower it — the old prefix is replaced for that request with a summary, the user's
+instructions from it verbatim (Codex's `COMPACT_USER_MESSAGE_MAX_TOKENS`, 20000 tokens), and
+the recent tail untouched.
+
+Three deliberate divergences from Codex, all recorded because each one is a judgement call:
+
+- **Not persistent.** Codex calls `replace_compacted_history`; a `context` handler shapes one
+  request. So the session keeps everything, the fold is recomputed every call, and every
+  failure path returns the original messages — the behaviour of not installing it. Codex ends
+  the turn when compaction fails (`turn.rs:504`). Nothing here can make a run worse than it
+  already was, at the cost of no guarantee that a fold happens.
+- **Summary first, not last.** Codex appends it last because its model is trained to see it
+  there after a mid-turn compaction. Pi's native compaction puts the summary first and the
+  tail after, so that is the shape a Pi-configured model already knows.
+- **Pinned instructions are framed, not replayed bare.** Codex re-injects real user messages
+  and relies on training to make them unambiguous. Here they go in one message that says they
+  are a record and not a new request; without that a replayed instruction reads as something
+  to answer again.
+
+An adversarial pass against Codex on 2026-08-05 changed four things. Trimming a too-large
+summarization prefix now happens only for errors that are actually about size, mirroring Codex's
+branch on a typed `ContextWindowExceeded`; previously a rate limit would have spent the whole
+trim budget on a fault shrinking cannot fix. A smaller selected model now summarizes with the
+*previous*, wider one, which is Codex's `maybe_run_previous_model_inline_compact` and matters
+because history accumulated under the old window may not be readable by the new model at all.
+Codex's warning that repeated compaction costs accuracy is emitted, once rather than every time.
+And the tail is now surrendered in stages when the tail is what does not fit, which is a step
+toward Codex keeping no tail at all.
+
+That last change introduced a bug and verification caught it. Sacrificing the tail whenever the
+normal fold found nothing conflated two unrelated causes: "the tail is too big to send" and
+"the conversation is smaller than the tail budget, so there is nothing to fold". Under a low
+trigger the second fired on every call, folding all but one message each time and leaving the
+model to rediscover its task from the summary — one run stopped making progress for over six
+minutes. Pressure is now gated on the estimated size of what a full-budget fold would keep, and
+a separate guard stands down after two folds that fail to get under the trigger. Codex needs
+neither: its compaction reduces to roughly 20k, so far below any trigger that its own comment
+says an infinite loop is not a concern. Both guards are the price of keeping a recent tail.
+
+Two mechanisms exist because verification found them necessary rather than by design. The
+fold's own summary message is built by hand, since `createCompactionSummaryMessage` is not
+exported from the package root, so `index.ts` checks once per session that `convertToLlm`
+still renders it and falls back to a plain user message otherwise — an unrendered summary
+would mean history folded away and nothing put in its place. And token measurement ignores
+usage records from before a fold took effect: the assistant message that triggered a fold
+carries the *pre-fold* request's usage, and trusting it made the very next call believe the
+folded request was still oversized. That was caught first as a wrong number in the audit
+entry during verification.
+
+Each fold appends a `codex-compaction-fold` custom entry, which Pi persists and never puts in
+LLM context — otherwise a mid-run behaviour change would leave no trace in the session, which
+is the exact failure this repository keeps having to diagnose after the fact.
+
 ## pi-btw-side
 
 First-party, not a fork. Implements Codex's `/side` — aliased `/btw` there too — as

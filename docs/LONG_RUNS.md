@@ -139,17 +139,29 @@ at both ends, and the low end is the one that actually bit.
 > so a session spends less time near the ceiling — that is worth having, and it is all it
 > buys.
 >
-> **There is no code fix available to an extension.** The one extension-facing trigger,
-> `ctx.compact()`, delegates to `AgentSession.compact()`, which opens with
-> `this._disconnectFromAgent(); await this.abort();`. Calling it from `turn_end` would
-> abort the very run it was trying to protect. Pi exposes no `maxTurns`, `maxSteps`, or
-> equivalent, and `compaction` settings are only `enabled`, `reserveTokens`, and
-> `keepRecentTokens`. Nothing in this repository can bound within-run growth.
+> **Pi cannot be made to compact within a run, but the request can be shrunk before it is
+> sent.** `ctx.compact()` is no use: it delegates to `AgentSession.compact()`, which opens
+> with `this._disconnectFromAgent(); await this.abort();`, so calling it from `turn_end`
+> aborts the very run it was protecting. Pi also exposes no `maxTurns` or `maxSteps`, and
+> `compaction` settings are only `enabled`, `reserveTokens`, and `keepRecentTokens`.
 >
-> What actually bounds it is **ending the run**. A turn that finishes lets the check run,
-> and compaction happens immediately. That is exactly the yield-and-be-woken pattern the
-> monitor exists for: report progress, end the turn, and let a watcher steer you back when
-> the job moves. A run that never yields will keep growing no matter how it is configured.
+> Earlier revisions of this document concluded from that "there is no code fix available to
+> an extension". That was wrong, and the mistake is worth recording: the survey covered the
+> compaction API and the turn hooks, and never asked what shapes the *request*. The `context`
+> hook — "fired before each LLM call, can modify messages" — returns the array the provider
+> actually receives (`agent-loop.js:181`). That is the same position in the loop where Codex
+> makes its own mid-turn compaction decision, and it is reachable from an extension.
+>
+> [`pi-codex-compaction`](../forks/pi-codex-compaction/README.md) uses it. See
+> [Folding context inside a run](#folding-context-inside-a-run) below for what that does and
+> does not change. Two things stay true regardless: within-run *history* still grows, because
+> that fold shapes one request and never rewrites the session; and a run that never yields
+> still relies on a mechanism that can fail.
+>
+> So what bounds growth for certain is still **ending the run**. A turn that finishes lets
+> Pi's own check run, and compaction happens immediately — the yield-and-be-woken pattern the
+> monitor exists for: report progress, end the turn, let a watcher steer you back when the job
+> moves.
 >
 ## When the model is truncated, Pi compacts and then abandons the run
 
@@ -213,9 +225,9 @@ checked too and inject nothing.
 
 **The bounds, stated plainly.** It gives up after three consecutive unfinished resumes and
 says why, because an unrecoverable context is better ended than looped on. It cannot help if
-the `pi` process itself dies, and it does not stop context from growing inside a run — that
-is the architectural limit above. What it does guarantee is that Pi deciding to stop a run
-at a compaction boundary no longer ends it silently.
+the `pi` process itself dies, and it does not stop context from growing inside a run — for
+that see [Folding context inside a run](#folding-context-inside-a-run). What it does guarantee
+is that Pi deciding to stop a run at a compaction boundary no longer ends it silently.
 
 See [`forks/pi-context-handoff/extensions/context-handoff/resume.ts`](../forks/pi-context-handoff/extensions/context-handoff/resume.ts).
 
@@ -238,6 +250,47 @@ compaction off will hit the context limit and stop.
 
 Retries are on by default and unset in this setup (`retry.enabled` defaults true,
 `maxRetries` 3, `baseDelayMs` 2000). Leave them on.
+
+## Folding context inside a run
+
+Everything above treats within-run growth as unbounded, because Pi checks its threshold only
+between runs. Codex does not have that gap: `codex-rs/core/src/session/turn.rs:493` checks
+after every sampling request, compacts inline, and `continue`s the loop, so compaction is a
+step in the loop rather than a verdict on whether the loop survives.
+
+[`pi-codex-compaction`](../forks/pi-codex-compaction/README.md) puts that decision at the
+same point in Pi's loop, using the `context` hook. Above 90% of the context window — Codex's
+own trigger, `(context_window * 9) / 10`, and configurable only downward — the old part of the
+history is replaced, *for that request only*, with a summary of it, the user's instructions
+from it verbatim, and the recent tail untouched.
+
+**What it changes.** A single long run stops walking off the end of the window. Verified with
+the `PI_CODEX_COMPACTION_FORCE_TRIGGER_TOKENS` seam, since a 245000-token conversation cannot
+be produced on demand: across four tool calls in one run the provider's own usage records went
+6352 → 8186 → 10822 → **9442** → **9470** tokens, falling at the first fold and then staying
+flat while two more tool results arrived. Both folds discarded the original user message and
+both rescued it verbatim, and the run still answered the literal string it had been asked for.
+The audit trail is in the session: one `codex-compaction-fold` custom entry per fold, which
+Pi persists and never shows the model.
+
+**What it does not change.** Four things, all of them load-bearing:
+
+1. **History still grows.** The `context` hook shapes one request; it does not rewrite the
+   session. The transcript, and Pi's own footer percentage, keep counting everything. Only
+   what is *sent* shrinks. `/codex-compaction` shows the real figure.
+2. **It is not a replacement for Pi's compaction.** Pi's between-runs compaction is the one
+   that genuinely shrinks history, and `reserveTokens` still governs it. When it fires, the
+   fold's fingerprints stop matching and the fold is discarded in favour of it.
+3. **It cannot make things worse, and that is the trade.** Codex ends the turn when its
+   compaction fails (`turn.rs:504`). Every failure path here — no credential, empty summary,
+   provider outage, aborted signal, nothing left to fold, three failures in a row — returns
+   the messages Pi handed in, which is exactly the behaviour of not installing it. The price
+   is that a fold is never guaranteed to happen.
+4. **`reserveTokens` stays at 68000 for now.** Codex can afford a 90% trigger *because* it
+   checks after every sampling request; the 68000 here exists because Pi cannot. It is
+   tempting to lower it now toward Codex's ~27200, and that would be premature: the fold has
+   been demonstrated with a forced trigger, not yet by carrying a real run past 245000 tokens.
+   Revisit once a production run has done that.
 
 ## What can still stop a run
 

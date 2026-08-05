@@ -11,7 +11,7 @@ AGENT_BROWSER_VERSION="0.33.2"
 # Extensions are installed as Pi "local" packages from forks/ in this repository,
 # never from npm. Pi never rewrites local packages, so the security fixes in these
 # forks cannot be silently reverted by a later `bun install` or package update.
-FORKS="pi-voice-stt-safe pi-agent-browser-native-safe pi-dynamic-workflows-safe pi-context-handoff pi-btw-side pi-process-monitor-safe pi-setup-maintenance"
+FORKS="pi-voice-stt-safe pi-agent-browser-native-safe pi-dynamic-workflows-safe pi-context-handoff pi-codex-compaction pi-btw-side pi-process-monitor-safe pi-setup-maintenance"
 
 REPO_URL="${PI_SETUP_REPO_URL:-https://github.com/ethanewer/pi-setup.git}"
 REPO_REF="${PI_SETUP_REF:-main}"
@@ -217,6 +217,7 @@ do
       --no-skills \
       --extension "$MAIN_DIR/local/pi-voice-stt-safe/extensions/voice-stt/index.ts" \
       --extension "$MAIN_DIR/local/pi-context-handoff/extensions/context-handoff/index.ts" \
+      --extension "$MAIN_DIR/local/pi-codex-compaction/extensions/codex-compaction/index.ts" \
       --extension "$MAIN_DIR/local/pi-btw-side/extensions/btw/index.ts" \
       --extension "$MAIN_DIR/p/remove-pi-documentation.js" \
       "$@"
@@ -293,6 +294,7 @@ const wanted = [
   "local/pi-agent-browser-native-safe",
   "local/pi-dynamic-workflows-safe",
   "local/pi-context-handoff",
+  "local/pi-codex-compaction",
   "local/pi-btw-side",
   "local/pi-process-monitor-safe",
   "local/pi-setup-maintenance",
@@ -307,6 +309,7 @@ const managed = new Set([
   "pi-agent-browser-native-safe",
   "pi-dynamic-workflows-safe",
   "pi-context-handoff",
+  "pi-codex-compaction",
   "pi-btw-side",
   "pi-process-monitor-safe",
   "pi-setup-maintenance",
@@ -334,7 +337,9 @@ main.packages = [
 ];
 writeJson(mainPath, main);
 
-// p runs context-handoff too, so it needs the same compaction headroom.
+// p runs both compaction extensions too, so it needs the same compaction headroom.
+// codex-compaction folds inside a run and context-handoff shapes the summary between
+// runs; the reserve below is what Pi's own between-runs check still uses.
 const lean = {
   lastChangelogVersion: main.lastChangelogVersion,
   defaultThinkingLevel: main.defaultThinkingLevel,

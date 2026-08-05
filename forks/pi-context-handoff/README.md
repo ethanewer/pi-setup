@@ -39,8 +39,10 @@ and no resume to dispatch, so the machinery that made the previous extension fra
 nothing to do.
 
 Note the check runs *after* an agent run returns, not inside one — so it cannot stop
-context from overshooting the window during a single long run. Nothing in this extension
-can change that; see [`docs/LONG_RUNS.md`](../../docs/LONG_RUNS.md).
+context from overshooting the window during a single long run. Nothing in this extension can
+change that. [`pi-codex-compaction`](../pi-codex-compaction/README.md) is the companion that
+does, by shrinking the request through the `context` hook rather than compacting; see
+[`docs/LONG_RUNS.md`](../../docs/LONG_RUNS.md).
 
 ## Resuming a run Pi abandoned
 
