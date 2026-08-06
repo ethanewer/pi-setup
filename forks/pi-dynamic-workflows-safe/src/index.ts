@@ -92,6 +92,8 @@ export {
   fenceUntrusted,
   installResultDelivery,
   installTaskPanel,
+  resumeResultDelivery,
+  suspendResultDelivery,
   type TaskPanelOptions,
 } from "./task-panel.js";
 export type {

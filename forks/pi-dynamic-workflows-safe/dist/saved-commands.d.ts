@@ -32,8 +32,19 @@ export declare function parseCommandArgs(raw: string, parameters?: SavedWorkflow
  * registerAllSavedWorkflows only registers what's in storage). The optional
  * `exists` predicate lets the handler detect that case at invocation time and
  * tell the user to reload rather than silently re-running a deleted workflow. */
-export declare function registerSavedWorkflow(pi: ExtensionAPI, cwd: string, wf: SavedWorkflow, manager?: WorkflowManager, exists?: () => boolean): void;
+export declare function registerSavedWorkflow(pi: ExtensionAPI, cwd: string | (() => string), wf: Pick<SavedWorkflow, "name" | "description" | "script" | "parameters" | "path" | "repoLocal" | "scriptOrigin">, manager?: WorkflowManager | (() => WorkflowManager | undefined), exists?: () => boolean, 
+/**
+ * Live loader for this command's workflow. Prefer this over the registration-
+ * time `wf` snapshot: after an in-process project switch the same slash
+ * command name may resolve to a different script (or nothing) in the new
+ * project's storage. When omitted, `wf` is used as a frozen snapshot.
+ */
+loadWorkflow?: () => Pick<SavedWorkflow, "name" | "description" | "script" | "parameters" | "path" | "repoLocal" | "scriptOrigin"> | null | undefined): void;
 /** Register every saved workflow found in storage.
  * When a WorkflowManager is provided, workflows run through it (visible in
- * /workflows TUI, background execution, task panel). */
-export declare function registerAllSavedWorkflows(pi: ExtensionAPI, cwd: string, storage: WorkflowStorage, manager?: WorkflowManager): void;
+ * /workflows TUI, background execution, task panel). Idempotent: names already
+ * registered (including from a previous project) are skipped at registration
+ * time, but each handler re-loads by name from the live storage so a later
+ * project switch executes the target project's script. Call again after a
+ * cross-project session_start to pick up target-only names. */
+export declare function registerAllSavedWorkflows(pi: ExtensionAPI, cwd: string | (() => string), storage: WorkflowStorage | (() => WorkflowStorage), manager?: WorkflowManager | (() => WorkflowManager | undefined)): void;

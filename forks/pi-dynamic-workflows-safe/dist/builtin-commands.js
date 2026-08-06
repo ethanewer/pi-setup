@@ -87,8 +87,14 @@ function resolveBuiltinOrNotify(name, cwd, args, ctx) {
     }
 }
 export function registerBuiltinWorkflows(pi, opts) {
-    const { cwd, manager } = opts;
-    const storage = opts.storage ?? createWorkflowStorage(cwd);
+    const getManager = () => {
+        const m = opts.getManager?.() ?? opts.manager;
+        if (!m)
+            throw new Error("registerBuiltinWorkflows: no WorkflowManager");
+        return m;
+    };
+    const getCwd = () => opts.getCwd?.() ?? opts.cwd ?? process.cwd();
+    const getStorage = () => opts.getStorage?.() ?? opts.storage ?? createWorkflowStorage(getCwd());
     /**
      * A project/user saved workflow always takes precedence over a built-in of
      * the same name — on every path, not just the `workflow` tool's `name`
@@ -108,13 +114,14 @@ export function registerBuiltinWorkflows(pi, opts) {
         // must not take over a built-in command silently. It may still take over —
         // that is the documented precedence — but only after a prompt naming the
         // file, and declining falls through to the built-in rather than failing.
+        const storage = getStorage();
         const saved = storage.load(name) ?? storage.list().find((candidate) => candidate.name === name);
         if (!saved)
             return false;
-        if (!(await confirmRepoLocalWorkflow(ctx, saved, cwd, `Run the project's own /${name} instead of the built-in?`))) {
+        if (!(await confirmRepoLocalWorkflow(ctx, saved, getCwd(), `Run the project's own /${name} instead of the built-in?`))) {
             return false;
         }
-        startBackground(manager, ctx, name, saved.script, parseCommandArgs(rawArgs, saved.parameters));
+        startBackground(getManager(), ctx, name, saved.script, parseCommandArgs(rawArgs, saved.parameters));
         return true;
     }
     if (!alreadyRegistered(pi, "deep-research")) {
@@ -129,10 +136,10 @@ export function registerBuiltinWorkflows(pi, opts) {
                 // Resolve through the shared builtin registry (builtin-workflows.ts) so
                 // this command and the workflow tool's `name` input always run the exact
                 // same generated script and exec context (tools/toolset) for this pattern.
-                const resolved = resolveBuiltinOrNotify("deep-research", cwd, { question }, ctx);
+                const resolved = resolveBuiltinOrNotify("deep-research", getCwd(), { question }, ctx);
                 if (!resolved)
                     return;
-                startBackground(manager, ctx, "deep-research", resolved.script, { question }, {
+                startBackground(getManager(), ctx, "deep-research", resolved.script, { question }, {
                     tools: resolved.tools,
                     toolset: resolved.toolset,
                 });
@@ -148,10 +155,10 @@ export function registerBuiltinWorkflows(pi, opts) {
                 const task = args.trim();
                 if (!task)
                     return ctx.ui.notify("Usage: /adversarial-review <task or question>", "warning");
-                const resolved = resolveBuiltinOrNotify("adversarial-review", cwd, { task }, ctx);
+                const resolved = resolveBuiltinOrNotify("adversarial-review", getCwd(), { task }, ctx);
                 if (!resolved)
                     return;
-                startBackground(manager, ctx, "adversarial-review", resolved.script, { task });
+                startBackground(getManager(), ctx, "adversarial-review", resolved.script, { task });
             },
         });
     }
@@ -199,7 +206,7 @@ export function registerBuiltinWorkflows(pi, opts) {
                     // execFile (not exec/shell) + array args: input can't break out into a
                     // shell command. maxBuffer raised well past Node's 1MB default so a
                     // large `gh pr diff` doesn't throw ERR_CHILD_PROCESS_STDOUT_MAXBUFFER.
-                    const { stdout } = await execFileAsync(cmd, cmdArgs, { cwd, maxBuffer: DIFF_EXEC_MAX_BUFFER });
+                    const { stdout } = await execFileAsync(cmd, cmdArgs, { cwd: getCwd(), maxBuffer: DIFF_EXEC_MAX_BUFFER });
                     diff = stdout;
                     if (!diff.trim()) {
                         return ctx.ui.notify(`No diff output from: ${diffSource}`, "warning");
@@ -222,10 +229,10 @@ export function registerBuiltinWorkflows(pi, opts) {
                     ctx.ui.notify(`Diff is ${originalLength.toLocaleString()} characters — truncated to the first ` +
                         `${MAX_DIFF_CHARS.toLocaleString()} for the review. Findings past the cut are not covered.`, "warning");
                 }
-                const resolved = resolveBuiltinOrNotify("code-review", cwd, { diff, diffSource }, ctx);
+                const resolved = resolveBuiltinOrNotify("code-review", getCwd(), { diff, diffSource }, ctx);
                 if (!resolved)
                     return;
-                startBackground(manager, ctx, "code-review", resolved.script, { diff, diffSource });
+                startBackground(getManager(), ctx, "code-review", resolved.script, { diff, diffSource });
             },
         });
     }
@@ -241,10 +248,10 @@ export function registerBuiltinWorkflows(pi, opts) {
                 }
                 // resolve() falls back to a broadly-useful default set when fewer than
                 // two perspectives are given (see builtin-workflows.ts).
-                const resolved = resolveBuiltinOrNotify("multi-perspective", cwd, { topic, perspectives: rest }, ctx);
+                const resolved = resolveBuiltinOrNotify("multi-perspective", getCwd(), { topic, perspectives: rest }, ctx);
                 if (!resolved)
                     return;
-                startBackground(manager, ctx, "multi-perspective", resolved.script);
+                startBackground(getManager(), ctx, "multi-perspective", resolved.script);
             },
         });
     }
@@ -258,10 +265,10 @@ export function registerBuiltinWorkflows(pi, opts) {
                 if (!scope || checks.length === 0) {
                     return ctx.ui.notify('Usage: /codebase-audit <scope> "<check1>" ["<check2>" …]', "warning");
                 }
-                const resolved = resolveBuiltinOrNotify("codebase-audit", cwd, { scope, checks }, ctx);
+                const resolved = resolveBuiltinOrNotify("codebase-audit", getCwd(), { scope, checks }, ctx);
                 if (!resolved)
                     return;
-                startBackground(manager, ctx, "codebase-audit", resolved.script);
+                startBackground(getManager(), ctx, "codebase-audit", resolved.script);
             },
         });
     }

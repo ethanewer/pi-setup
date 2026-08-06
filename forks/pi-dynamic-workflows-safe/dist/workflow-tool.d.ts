@@ -33,8 +33,18 @@ export interface WorkflowToolOptions {
     concurrency?: number;
     /** Shared manager so background runs are reachable from the `/workflows` command. */
     manager?: WorkflowManager;
+    /**
+     * Live manager accessor. Prefer this over a closed-over `manager` when the
+     * extension may replace the manager after session_start (cross-project resume).
+     * Falls back to `manager` / a freshly constructed default.
+     */
+    getManager?: () => WorkflowManager;
     /** Shared saved-workflow storage. */
     storage?: WorkflowStorage;
+    /** Live storage accessor; same rationale as getManager. */
+    getStorage?: () => WorkflowStorage;
+    /** Live project cwd for name-resolution / settings. */
+    getCwd?: () => string;
     /** Default per-agent timeout for runs created by this tool. null means no hard timeout. */
     defaultAgentTimeoutMs?: number | null;
     /** Default max concurrent agents when no tool-level concurrency is passed. */

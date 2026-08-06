@@ -8,7 +8,9 @@ declare const workflowControlSchema: Type.TObject<{
 }>;
 export type WorkflowControlInput = Static<typeof workflowControlSchema>;
 export interface WorkflowControlToolOptions {
-    manager: WorkflowManager;
+    manager?: WorkflowManager;
+    /** Live manager accessor; prefer over a closed-over manager when the extension may replace it. */
+    getManager?: () => WorkflowManager;
 }
 export interface WorkflowControlRunDetails {
     runId: string;

@@ -170,7 +170,17 @@ export declare function keyToAction(keyId: string | undefined, kind: ViewKind, i
 import type { OverlayAnchor } from "@earendil-works/pi-tui";
 export interface NavigatorOptions {
     storage?: WorkflowStorage;
+    /** Live storage accessor when the extension may replace storage after session_start. */
+    getStorage?: () => WorkflowStorage | undefined;
     cwd?: string;
+    /** Live cwd accessor. */
+    getCwd?: () => string;
+    /**
+     * Live manager accessor used when registering a saved `/name` command from the
+     * navigator. Prefer this over the closed-over `manager` argument so saves run
+     * through the current session's manager (background path), not a stale snapshot.
+     */
+    getManager?: () => WorkflowManager;
     /** Overlay anchor position: "center" (default) or "right-center" for sidebar. */
     anchor?: OverlayAnchor;
 }

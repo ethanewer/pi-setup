@@ -1341,7 +1341,7 @@ function footerHint(state: NavigatorState, model: NavigatorModel, theme: ThemeLi
           "g/G ends",
           `t tail:${state.tailing ? "on" : "off"}`,
           "enter summary",
-          "esc summary",
+          "esc back",
         );
       } else {
         parts.push("enter open pager", "t tail", "esc back");
@@ -1537,7 +1537,17 @@ import type { OverlayAnchor } from "@earendil-works/pi-tui";
 
 export interface NavigatorOptions {
   storage?: WorkflowStorage;
+  /** Live storage accessor when the extension may replace storage after session_start. */
+  getStorage?: () => WorkflowStorage | undefined;
   cwd?: string;
+  /** Live cwd accessor. */
+  getCwd?: () => string;
+  /**
+   * Live manager accessor used when registering a saved `/name` command from the
+   * navigator. Prefer this over the closed-over `manager` argument so saves run
+   * through the current session's manager (background path), not a stale snapshot.
+   */
+  getManager?: () => WorkflowManager;
   /** Overlay anchor position: "center" (default) or "right-center" for sidebar. */
   anchor?: OverlayAnchor;
 }
@@ -1709,13 +1719,14 @@ export function openWorkflowNavigator(
             case "save": {
               const id = state.activeRunId(model);
               const run = id ? manager.listRuns().find((r) => r.runId === id) : undefined;
+              const storage = opts.getStorage?.() ?? opts.storage;
               if (!run?.script) {
                 ui.notify("No saved run script to save", "warning");
-              } else if (!opts.storage) {
+              } else if (!storage) {
                 ui.notify("Saving is not available (no storage)", "error");
               } else {
-                const storage = opts.storage;
                 const name = run.workflowName || "workflow";
+                const script = run.script;
                 const scriptOrigin = runScriptOrigin(run);
                 const persist = () => {
                   let saved: ReturnType<WorkflowStorage["save"]>;
@@ -1723,7 +1734,7 @@ export function openWorkflowNavigator(
                     saved = storage.save({
                       name,
                       description: run.workflowName,
-                      script: run.script,
+                      script,
                       location: "project",
                       scriptOrigin,
                     });
@@ -1731,8 +1742,20 @@ export function openWorkflowNavigator(
                     ui.notify(error instanceof Error ? error.message : String(error), "error");
                     return;
                   }
-                  registerSavedWorkflow(pi, opts.cwd ?? process.cwd(), saved, undefined, () =>
-                    storage.list().some((w) => w.name === saved.name),
+                  // Match /workflows save and registerAllSavedWorkflows: live
+                  // getters + load-by-name so a same-name overwrite executes the
+                  // latest script via the manager background path (not a frozen
+                  // registration-time snapshot / inline fallback).
+                  const getCwd = opts.getCwd ?? (() => opts.cwd ?? process.cwd());
+                  const getManager = opts.getManager ?? (() => manager);
+                  const getLiveStorage = () => opts.getStorage?.() ?? opts.storage ?? storage;
+                  registerSavedWorkflow(
+                    pi,
+                    getCwd,
+                    saved,
+                    getManager,
+                    () => getLiveStorage()?.load(saved.name) != null,
+                    () => getLiveStorage()?.load(saved.name),
                   );
                   ui.notify(
                     scriptOrigin ? `Saved /${name} (script came from ${scriptOrigin}, recorded)` : `Saved /${name}`,

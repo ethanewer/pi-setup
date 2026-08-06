@@ -116,6 +116,10 @@ export class WorkflowManager extends EventEmitter {
         // value falls back to the finite default (see DEFAULT_AGENT_TIMEOUT_MS).
         this.defaultAgentTimeoutMs =
             options.defaultAgentTimeoutMs !== undefined ? options.defaultAgentTimeoutMs : DEFAULT_AGENT_TIMEOUT_MS;
+        // `?? 0` made the fork's DEFAULT_AGENT_RETRIES unreachable: the extension passes
+        // `settings.defaultAgentRetries`, which is undefined unless the user wrote a settings
+        // file, so every real run got 0 retries while the docs promised 2. Zero stays
+        // honoured when it is set deliberately.
         this.defaultAgentRetries = options.defaultAgentRetries !== undefined ? options.defaultAgentRetries : DEFAULT_AGENT_RETRIES;
         this.defaultTokenBudget = options.defaultTokenBudget ?? null;
         this.toolsets = options.toolsets;
@@ -132,6 +136,40 @@ export class WorkflowManager extends EventEmitter {
      * the navigator/task-panel show only this session's runs (set on session_start). */
     setSessionId(id) {
         this.sessionId = id;
+    }
+    /** Project cwd this manager was constructed for (persistence + agent tools). */
+    getCwd() {
+        return this.cwd;
+    }
+    /**
+     * Every live in-memory run, regardless of the navigator's session filter.
+     * Stranded-pause / cross-session recovery must use this — listRuns() hides
+     * runs whose frozen sessionId no longer matches the bound session.
+     */
+    listLiveRuns() {
+        return [...this.runs.values()];
+    }
+    /**
+     * After an in-process session replacement keeps this manager, re-home every
+     * still-running (or paused-in-memory) run onto the new session so the panel,
+     * workflow_control, and a later stranded-pause all see them. Completed runs
+     * keep their original sessionId so history stays with the session that ran
+     * them. No-op when `sessionId` is undefined.
+     */
+    adoptLiveRunsToSession(sessionId) {
+        if (!sessionId)
+            return 0;
+        let adopted = 0;
+        for (const managed of this.runs.values()) {
+            if (managed.status !== "running" && managed.status !== "paused")
+                continue;
+            if (managed.sessionId === sessionId)
+                continue;
+            managed.sessionId = sessionId;
+            this.persistRun(managed);
+            adopted++;
+        }
+        return adopted;
     }
     /**
      * On startup, any persisted run still marked "running" belongs to a process
@@ -276,6 +314,7 @@ export class WorkflowManager extends EventEmitter {
             args,
             journal: [],
             background: true,
+            sessionId: this.sessionId,
             lease,
             autoResume: exec.autoResume,
             // Resolve the budget once at start and freeze it on the run (see
@@ -300,7 +339,7 @@ export class WorkflowManager extends EventEmitter {
                 workflowName: parsed.meta.name,
                 script,
                 args,
-                sessionId: this.sessionId,
+                sessionId: managed.sessionId,
                 installId: this.installId,
                 status: "running",
                 phases: managed.snapshot.phases,
@@ -388,6 +427,7 @@ export class WorkflowManager extends EventEmitter {
             args,
             journal: [],
             background: false,
+            sessionId: this.sessionId,
             agentTimestamps: new Map(),
             agentsById: new Map(),
         };
@@ -837,7 +877,10 @@ export class WorkflowManager extends EventEmitter {
                 // fs-persistence.ts) — protected by file permissions, not by blanking.
                 script: managed.script,
                 args: managed.args,
-                sessionId: this.sessionId,
+                // Always the run's own frozen owner — never this.sessionId. A mid-flight
+                // setSessionId() (session replacement) must not re-home a still-running
+                // run out from under stranded-pause / the originating panel.
+                sessionId: managed.sessionId,
                 // Provenance: this install wrote this record, so auto-resume may pick it
                 // up later (see PersistedRunState.installId). A run adopted from a
                 // project-local store keeps its foreignSource marker instead, which
@@ -995,6 +1038,9 @@ export class WorkflowManager extends EventEmitter {
             args,
             journal: persisted.journal ?? [],
             background: true,
+            // Prefer the frozen owner on disk; fall back to the manager's current
+            // session only for legacy runs that predate per-run sessionId.
+            sessionId: persisted.sessionId ?? this.sessionId,
             lease,
             // Carry the original opt-out forward across resumes; it's fixed at
             // run-start and persistRun() re-persists it on every subsequent write.

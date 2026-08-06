@@ -13,7 +13,11 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import type { WorkflowManager } from "./workflow-manager.js";
 import { type WorkflowStorage } from "./workflow-saved.js";
 export declare function registerBuiltinWorkflows(pi: ExtensionAPI, opts: {
-    cwd: string;
-    manager: WorkflowManager;
+    cwd?: string;
+    manager?: WorkflowManager;
     storage?: WorkflowStorage;
+    /** Live accessors — preferred when the extension may replace manager/cwd after session_start. */
+    getManager?: () => WorkflowManager;
+    getCwd?: () => string;
+    getStorage?: () => WorkflowStorage;
 }): void;

@@ -33,7 +33,7 @@ bin/pi-setup-vendor --verify <fork>
 
 ## pi-dynamic-workflows-safe
 
-Based on `@quintinshaw/pi-dynamic-workflows@3.5.0`. `src/**/*.ts` is the tree Pi loads;
+Based on `@quintinshaw/pi-dynamic-workflows@3.5.1`. `src/**/*.ts` is the tree Pi loads;
 `dist/` is the compiled mirror shipped through the package `exports` field.
 
 **Closed.** The zero-click RCE chain is broken at every link: persisted run records are
@@ -68,6 +68,26 @@ its `dist` mirror and both authoring-skill references. The hardening was re-veri
 against the merged tree: cold-start rearm provenance, the vm timeout, the web-fetch host
 gate, project-local workflow trust, the worktree fallback gate and the agent ceiling are
 all still in place.
+
+Re-vendored onto 3.5.1 on 2026-08-06. Six source hunks rejected, because upstream moved to
+live `getManager`/`getCwd`/`getStorage` getters throughout and more than doubled the
+extension entrypoint (151 to 338 lines) for cross-project session handling. Each was
+resolved by hand onto the new structure: the `installId`/`foreignSource` provenance stamps,
+the project-supplied-workflow save gate, the repo-local gate on shadowed built-in commands,
+the `fenceUntrusted` export, and — on the rewritten entrypoint — the web-fetch policy, the
+agent ceiling, the worktree-isolation fallback, the foreign-run confirmation and the
+one-shot active-tool registration.
+
+Two things changed rather than transferred. Upstream now pauses stranded runs itself on
+every non-handoff shutdown, which is what this fork added at 3.5.0, so that hunk is
+retired rather than reapplied. And upstream narrowed `registerSavedWorkflow`'s `wf`
+parameter to the four execution fields, dropping `path`, `repoLocal` and `scriptOrigin` —
+exactly the provenance the trust gate reads. Reapplying the gate verbatim would have
+compiled only because the old wider type was still in place; on 3.5.1 it is a type error,
+caught by typecheck. The parameter and the live-loader return type were widened back, and
+the gate now reads the *live* workflow rather than the registration-time snapshot, so a
+name that resolves to a repo-local script after an in-process project switch is still
+gated.
 
 **Default changes.** A run defaults to 100 agents (was 1000).
 `DEFAULT_AGENT_TIMEOUT_MS` is 60 minutes (was unbounded), sized so a legitimately long

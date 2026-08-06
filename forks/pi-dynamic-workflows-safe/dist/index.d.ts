@@ -29,7 +29,7 @@ export { confirmRepoLocalWorkflow, parseCommandArgs, registerAllSavedWorkflows, 
 export { SharedStore } from "./shared-store.js";
 export type { StructuredOutputCapture, StructuredOutputToolOptions } from "./structured-output.js";
 export { createStructuredOutputTool } from "./structured-output.js";
-export { deliverText, fenceUntrusted, installResultDelivery, installTaskPanel, type TaskPanelOptions, } from "./task-panel.js";
+export { deliverText, fenceUntrusted, installResultDelivery, installTaskPanel, resumeResultDelivery, suspendResultDelivery, type TaskPanelOptions, } from "./task-panel.js";
 export type { AutoResumeDelayParams, SchedulableWorkflowManager, TimerHandle, UsageLimitSchedulerOptions, } from "./usage-limit-scheduler.js";
 export { computeAutoResumeDelayMs, parseResetHintMs, UsageLimitScheduler } from "./usage-limit-scheduler.js";
 export type { WebFetchPolicy } from "./web-tools.js";

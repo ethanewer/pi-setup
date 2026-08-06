@@ -23,7 +23,12 @@ const workflowControlSchema = Type.Object({
     })),
 }, { additionalProperties: false });
 export function createWorkflowControlTool(options) {
-    const manager = options.manager;
+    const getManager = () => {
+        const m = options.getManager?.() ?? options.manager;
+        if (!m)
+            throw new Error("workflow_control: no WorkflowManager configured");
+        return m;
+    };
     return defineTool({
         name: "workflow_control",
         label: "Workflow Control",
@@ -36,6 +41,7 @@ export function createWorkflowControlTool(options) {
         parameters: workflowControlSchema,
         prepareArguments: normalizeInput,
         async execute(_toolCallId, params) {
+            const manager = getManager();
             if (params.action === "list") {
                 const runs = manager.listRuns();
                 const summaries = runs.map((run) => summarizeRun(run, manager.getSnapshot(run.runId)));

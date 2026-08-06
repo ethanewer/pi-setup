@@ -31,6 +31,14 @@ export interface ManagedRun {
      */
     background: boolean;
     /**
+     * Pi session that owned this run at start (or the session it was explicitly
+     * adopted into on an in-process session replacement). Frozen on the live
+     * object and written on every persist — never re-read from the manager's
+     * current sessionId, or a mid-flight setSessionId() would silently re-home
+     * the run and hide it from stranded-pause / the originating session's panel.
+     */
+    sessionId?: string;
+    /**
      * Auto-resume eligibility for this run (see ExecOptions.autoResume). Set once
      * at creation and carried through resume() so it survives pause/resume cycles.
      * Undefined means eligible (default-on); false opts out.
@@ -336,6 +344,22 @@ export declare class WorkflowManager extends EventEmitter {
     /** Bind the manager to the current pi session, so new runs are tagged with it and
      * the navigator/task-panel show only this session's runs (set on session_start). */
     setSessionId(id: string | undefined): void;
+    /** Project cwd this manager was constructed for (persistence + agent tools). */
+    getCwd(): string;
+    /**
+     * Every live in-memory run, regardless of the navigator's session filter.
+     * Stranded-pause / cross-session recovery must use this — listRuns() hides
+     * runs whose frozen sessionId no longer matches the bound session.
+     */
+    listLiveRuns(): ManagedRun[];
+    /**
+     * After an in-process session replacement keeps this manager, re-home every
+     * still-running (or paused-in-memory) run onto the new session so the panel,
+     * workflow_control, and a later stranded-pause all see them. Completed runs
+     * keep their original sessionId so history stays with the session that ran
+     * them. No-op when `sessionId` is undefined.
+     */
+    adoptLiveRunsToSession(sessionId: string | undefined): number;
     /**
      * On startup, any persisted run still marked "running" belongs to a process
      * that died mid-run (this fresh manager has it nowhere in memory). Reconcile it

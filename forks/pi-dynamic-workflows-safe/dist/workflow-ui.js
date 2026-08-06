@@ -1194,7 +1194,7 @@ function footerHint(state, model, theme) {
     switch (state.kind) {
         case "detail":
             if (state.pagerOpen) {
-                parts.push("↑/↓ line", "PgUp/PgDn page", "g/G ends", `t tail:${state.tailing ? "on" : "off"}`, "enter summary", "esc summary");
+                parts.push("↑/↓ line", "PgUp/PgDn page", "g/G ends", `t tail:${state.tailing ? "on" : "off"}`, "enter summary", "esc back");
             }
             else {
                 parts.push("enter open pager", "t tail", "esc back");
@@ -1513,15 +1513,16 @@ export function openWorkflowNavigator(pi, manager, ui, opts = {}) {
                     case "save": {
                         const id = state.activeRunId(model);
                         const run = id ? manager.listRuns().find((r) => r.runId === id) : undefined;
+                        const storage = opts.getStorage?.() ?? opts.storage;
                         if (!run?.script) {
                             ui.notify("No saved run script to save", "warning");
                         }
-                        else if (!opts.storage) {
+                        else if (!storage) {
                             ui.notify("Saving is not available (no storage)", "error");
                         }
                         else {
-                            const storage = opts.storage;
                             const name = run.workflowName || "workflow";
+                            const script = run.script;
                             const scriptOrigin = runScriptOrigin(run);
                             const persist = () => {
                                 let saved;
@@ -1529,7 +1530,7 @@ export function openWorkflowNavigator(pi, manager, ui, opts = {}) {
                                     saved = storage.save({
                                         name,
                                         description: run.workflowName,
-                                        script: run.script,
+                                        script,
                                         location: "project",
                                         scriptOrigin,
                                     });
@@ -1538,7 +1539,14 @@ export function openWorkflowNavigator(pi, manager, ui, opts = {}) {
                                     ui.notify(error instanceof Error ? error.message : String(error), "error");
                                     return;
                                 }
-                                registerSavedWorkflow(pi, opts.cwd ?? process.cwd(), saved, undefined, () => storage.list().some((w) => w.name === saved.name));
+                                // Match /workflows save and registerAllSavedWorkflows: live
+                                // getters + load-by-name so a same-name overwrite executes the
+                                // latest script via the manager background path (not a frozen
+                                // registration-time snapshot / inline fallback).
+                                const getCwd = opts.getCwd ?? (() => opts.cwd ?? process.cwd());
+                                const getManager = opts.getManager ?? (() => manager);
+                                const getLiveStorage = () => opts.getStorage?.() ?? opts.storage ?? storage;
+                                registerSavedWorkflow(pi, getCwd, saved, getManager, () => getLiveStorage()?.load(saved.name) != null, () => getLiveStorage()?.load(saved.name));
                                 ui.notify(scriptOrigin ? `Saved /${name} (script came from ${scriptOrigin}, recorded)` : `Saved /${name}`, "info");
                             };
                             // The listing includes runs read from the project's own run

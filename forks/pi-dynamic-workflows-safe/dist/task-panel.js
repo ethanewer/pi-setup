@@ -135,6 +135,75 @@ function deliveredMaxChars(opts) {
         return DEFAULT_DELIVERED_MAX_CHARS;
     }
 }
+function deliveryManager(manager) {
+    return manager;
+}
+function enqueuePending(holder, content) {
+    // Soft-cap only: warn loudly, never drop. The full result is also on disk
+    // via the run JSON pointer in deliverText, but conversation delivery is the
+    // contract the tool promises — silent shift() would break it.
+    if (holder.pending.length >= 32) {
+        console.warn(`[workflow-delivery] pending queue at ${holder.pending.length} entries; ` +
+            "delivery is stalled (no successful flush since suspend/failure). " +
+            "Results remain on disk via /workflows.");
+    }
+    holder.pending.push(content);
+}
+function trySend(holder, content) {
+    const startedGeneration = holder.generation;
+    try {
+        const ret = holder.pi.sendMessage({ customType: "workflow-result", content, display: true }, { triggerTurn: true, deliverAs: "followUp" });
+        // sendMessage may return a promise (defensive — current pi types it void).
+        // On rejection: re-queue, and if a newer generation already installed
+        // while we were in flight, flush now so the content is not stranded.
+        void Promise.resolve(ret).catch((err) => {
+            enqueuePending(holder, content);
+            const msg = err instanceof Error ? err.message : String(err);
+            console.warn(`[workflow-delivery] async send failed; queued for retry: ${msg}`);
+            if (holder.generation !== startedGeneration && !holder.suspended) {
+                flushPending(holder);
+            }
+        });
+    }
+    catch (err) {
+        enqueuePending(holder, content);
+        const msg = err instanceof Error ? err.message : String(err);
+        console.warn(`[workflow-delivery] send failed; queued for retry: ${msg}`);
+    }
+}
+function flushPending(holder) {
+    if (holder.suspended || holder.pending.length === 0)
+        return;
+    const queued = holder.pending.splice(0, holder.pending.length);
+    for (const content of queued)
+        trySend(holder, content);
+}
+/**
+ * Stop live sends on this manager. In-flight completions only enqueue until
+ * {@link resumeResultDelivery} runs (from session_start, after Pi has bound
+ * the extension runtime) or the process exits (quit — results stay on disk).
+ *
+ * Call from session_shutdown BEFORE handoff or discard so a completion that
+ * races the teardown cannot deliver into the outgoing session.
+ */
+export function suspendResultDelivery(manager) {
+    const holder = deliveryManager(manager).__holder;
+    if (holder)
+        holder.suspended = true;
+}
+/**
+ * Unsuspend and flush any queued deliveries. Must run only after Pi has
+ * finished constructing the AgentSession and bound sendMessage (i.e. from
+ * session_start) — calling it from the extension factory hits the
+ * "runtime not initialized" stub and re-queues forever.
+ */
+export function resumeResultDelivery(manager) {
+    const holder = deliveryManager(manager).__holder;
+    if (!holder)
+        return;
+    holder.suspended = false;
+    flushPending(holder);
+}
 /**
  * When a background run finishes (or fails), deliver its result back into the
  * conversation AND continue the turn so the assistant can act on it — without
@@ -145,33 +214,38 @@ function deliveredMaxChars(opts) {
  *  - `deliverAs: "followUp"` means that if the user is busy in another turn, the
  *    result is queued and picked up after that turn finishes — never interrupting.
  *
- * Set up once per extension; idempotent via an internal guard.
+ * Set up once per extension; idempotent via an internal guard. Across session
+ * replacement the manager (and this listener) survive via the handoff path;
+ * each new generation only refreshes `holder.pi` and flushes any messages that
+ * failed or arrived while delivery was suspended.
  */
 export function installResultDelivery(pi, manager, opts = {}) {
-    // Mutable holder on the manager shared by extension generations across /reload.
-    const m = manager;
+    const m = deliveryManager(manager);
     if (m.__deliveryInstalled) {
-        // The manager and listeners survive /reload. Refresh every generation-bound
-        // dependency while leaving listener registration exactly-once.
+        // The manager and listeners survive session replacement. Refresh every
+        // generation-bound dependency and bump the generation (so in-flight
+        // rejects from the previous pi can self-flush once resumed). Do NOT
+        // unsuspend or flush here: the factory runs before Pi bindCore(), so
+        // sendMessage is still the "runtime not initialized" stub. session_start
+        // calls resumeResultDelivery() once the runtime is live.
         if (m.__holder) {
             m.__holder.pi = pi;
             m.__holder.loadSettings = opts.loadSettings;
+            m.__holder.generation += 1;
         }
         return;
     }
     m.__deliveryInstalled = true;
-    m.__holder = { pi, loadSettings: opts.loadSettings };
+    m.__holder = { pi, loadSettings: opts.loadSettings, suspended: false, pending: [], generation: 0 };
     const deliver = (content) => {
-        try {
-            const ret = m.__holder?.pi.sendMessage({ customType: "workflow-result", content, display: true }, { triggerTurn: true, deliverAs: "followUp" });
-            // sendMessage may return a promise; a sync try/catch can't catch its
-            // rejection, so swallow the async path too. A stale ctx after /reload is
-            // the expected failure — the result is still visible via /workflows.
-            void Promise.resolve(ret).catch(() => { });
+        const holder = m.__holder;
+        if (!holder)
+            return;
+        if (holder.suspended) {
+            enqueuePending(holder, content);
+            return;
         }
-        catch {
-            // Synchronous failure (e.g. stale ctx) — result still visible via /workflows.
-        }
+        trySend(holder, content);
     };
     manager.on("complete", ({ runId }) => {
         const run = manager.getRun(runId);

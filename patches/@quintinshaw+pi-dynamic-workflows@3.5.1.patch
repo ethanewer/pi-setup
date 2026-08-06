@@ -1,6 +1,6 @@
 diff -ruN --exclude=node_modules a/README.md b/README.md
 --- a/README.md	1985-10-26 03:15:00
-+++ b/README.md	2026-07-30 18:22:49
++++ b/README.md	2026-08-06 11:22:16
 @@ -75,10 +75,10 @@
  
  ## Why use it
@@ -102,7 +102,7 @@ diff -ruN --exclude=node_modules a/README.md b/README.md
  
 diff -ruN --exclude=node_modules a/dist/agent-registry.d.ts b/dist/agent-registry.d.ts
 --- a/dist/agent-registry.d.ts	1985-10-26 03:15:00
-+++ b/dist/agent-registry.d.ts	2026-07-30 17:44:46
++++ b/dist/agent-registry.d.ts	2026-08-06 11:30:28
 @@ -12,7 +12,8 @@
   * a deprecated fallback (with a one-time warning) so users who followed this repo's
   * earlier docs are not silently broken; the new location wins on a name collision.
@@ -137,7 +137,7 @@ diff -ruN --exclude=node_modules a/dist/agent-registry.d.ts b/dist/agent-registr
  export declare function resolveAgentType(name: string | undefined, registry: AgentRegistry): AgentDefinition | undefined;
 diff -ruN --exclude=node_modules a/dist/agent-registry.js b/dist/agent-registry.js
 --- a/dist/agent-registry.js	1985-10-26 03:15:00
-+++ b/dist/agent-registry.js	2026-07-30 17:44:46
++++ b/dist/agent-registry.js	2026-08-06 11:30:28
 @@ -12,7 +12,8 @@
   * a deprecated fallback (with a one-time warning) so users who followed this repo's
   * earlier docs are not silently broken; the new location wins on a name collision.
@@ -213,7 +213,7 @@ diff -ruN --exclude=node_modules a/dist/agent-registry.js b/dist/agent-registry.
          for (const def of readDefsFromDir(userDir, "user")) {
 diff -ruN --exclude=node_modules a/dist/builtin-commands.js b/dist/builtin-commands.js
 --- a/dist/builtin-commands.js	1985-10-26 03:15:00
-+++ b/dist/builtin-commands.js	2026-07-30 17:44:46
++++ b/dist/builtin-commands.js	2026-08-06 11:30:28
 @@ -13,7 +13,7 @@
  import { promisify } from "node:util";
  import { findBuiltinWorkflow } from "./builtin-workflows.js";
@@ -223,28 +223,29 @@ diff -ruN --exclude=node_modules a/dist/builtin-commands.js b/dist/builtin-comma
  import { createWorkflowStorage } from "./workflow-saved.js";
  const execFileAsync = promisify(execFile);
  /**
-@@ -102,10 +102,18 @@
+@@ -108,10 +108,19 @@
       * context) so a shadowed command behaves identically to how it would if the
       * saved workflow itself had been registered under this name.
       */
 -    function runSavedShadowIfPresent(name, rawArgs, ctx) {
--        const saved = storage.load(name);
+-        const saved = getStorage().load(name);
 +    async function runSavedShadowIfPresent(name, rawArgs, ctx) {
 +        // load() resolves a project-local file only for a trusted project, so look
 +        // through the listing too: a repo-supplied `.pi/workflows/saved/<name>.json`
 +        // must not take over a built-in command silently. It may still take over —
 +        // that is the documented precedence — but only after a prompt naming the
 +        // file, and declining falls through to the built-in rather than failing.
++        const storage = getStorage();
 +        const saved = storage.load(name) ?? storage.list().find((candidate) => candidate.name === name);
          if (!saved)
              return false;
-+        if (!(await confirmRepoLocalWorkflow(ctx, saved, cwd, `Run the project's own /${name} instead of the built-in?`))) {
++        if (!(await confirmRepoLocalWorkflow(ctx, saved, getCwd(), `Run the project's own /${name} instead of the built-in?`))) {
 +            return false;
 +        }
-         startBackground(manager, ctx, name, saved.script, parseCommandArgs(rawArgs, saved.parameters));
+         startBackground(getManager(), ctx, name, saved.script, parseCommandArgs(rawArgs, saved.parameters));
          return true;
      }
-@@ -113,7 +121,7 @@
+@@ -119,7 +128,7 @@
          pi.registerCommand("deep-research", {
              description: "Research a question across the web with cross-checked sources",
              async handler(args, ctx) {
@@ -253,7 +254,7 @@ diff -ruN --exclude=node_modules a/dist/builtin-commands.js b/dist/builtin-comma
                      return;
                  const question = args.trim();
                  if (!question)
-@@ -135,7 +143,7 @@
+@@ -141,7 +150,7 @@
          pi.registerCommand("adversarial-review", {
              description: "Investigate a task, then cross-check each finding with skeptical reviewers",
              async handler(args, ctx) {
@@ -262,7 +263,7 @@ diff -ruN --exclude=node_modules a/dist/builtin-commands.js b/dist/builtin-comma
                      return;
                  const task = args.trim();
                  if (!task)
-@@ -151,11 +159,18 @@
+@@ -157,11 +166,18 @@
          pi.registerCommand("code-review", {
              description: "Multi-angle parallel code review: 7 specialized finders (correctness, reuse, simplification, efficiency, altitude) + verify pass → ranked findings",
              async handler(args, ctx) {
@@ -282,7 +283,7 @@ diff -ruN --exclude=node_modules a/dist/builtin-commands.js b/dist/builtin-comma
                  try {
                      let cmd;
                      let cmdArgs;
-@@ -170,9 +185,11 @@
+@@ -176,9 +192,11 @@
                          cmdArgs = ["pr", "diff", input];
                      }
                      else if (input.includes("..")) {
@@ -296,7 +297,7 @@ diff -ruN --exclude=node_modules a/dist/builtin-commands.js b/dist/builtin-comma
                      }
                      else {
                          diffSource = `git diff HEAD -- ${input}`;
-@@ -216,7 +233,7 @@
+@@ -222,7 +240,7 @@
          pi.registerCommand("multi-perspective", {
              description: "Analyze a topic from several independent perspectives in parallel, then synthesize",
              async handler(args, ctx) {
@@ -305,7 +306,7 @@ diff -ruN --exclude=node_modules a/dist/builtin-commands.js b/dist/builtin-comma
                      return;
                  const [topic, ...rest] = tokenizeArgs(args);
                  if (!topic) {
-@@ -235,7 +252,7 @@
+@@ -241,7 +259,7 @@
          pi.registerCommand("codebase-audit", {
              description: "Run parallel checks against a codebase scope, then cross-validate and report",
              async handler(args, ctx) {
@@ -316,7 +317,7 @@ diff -ruN --exclude=node_modules a/dist/builtin-commands.js b/dist/builtin-comma
                  if (!scope || checks.length === 0) {
 diff -ruN --exclude=node_modules a/dist/builtin-workflows.js b/dist/builtin-workflows.js
 --- a/dist/builtin-workflows.js	1985-10-26 03:15:00
-+++ b/dist/builtin-workflows.js	2026-07-30 17:44:46
++++ b/dist/builtin-workflows.js	2026-08-06 11:30:28
 @@ -16,6 +16,7 @@
  import { generateCodeReviewWorkflow } from "./code-review.js";
  import { generateCodebaseAuditWorkflow, generateDeepResearchWorkflow } from "./deep-research.js";
@@ -350,7 +351,7 @@ diff -ruN --exclude=node_modules a/dist/builtin-workflows.js b/dist/builtin-work
          },
 diff -ruN --exclude=node_modules a/dist/config.d.ts b/dist/config.d.ts
 --- a/dist/config.d.ts	1985-10-26 03:15:00
-+++ b/dist/config.d.ts	2026-07-30 17:44:46
++++ b/dist/config.d.ts	2026-08-06 11:30:28
 @@ -1,14 +1,70 @@
  /**
   * Configuration constants for pi-dynamic-workflows.
@@ -427,7 +428,7 @@ diff -ruN --exclude=node_modules a/dist/config.d.ts b/dist/config.d.ts
  /** Legacy project-relative directory for persisted workflow run state. New writes use workflowProjectPaths(). */
 diff -ruN --exclude=node_modules a/dist/config.js b/dist/config.js
 --- a/dist/config.js	1985-10-26 03:15:00
-+++ b/dist/config.js	2026-07-30 17:44:46
++++ b/dist/config.js	2026-08-06 11:30:28
 @@ -1,14 +1,70 @@
  /**
   * Configuration constants for pi-dynamic-workflows.
@@ -504,7 +505,7 @@ diff -ruN --exclude=node_modules a/dist/config.js b/dist/config.js
  /** Legacy project-relative directory for persisted workflow run state. New writes use workflowProjectPaths(). */
 diff -ruN --exclude=node_modules a/dist/errors.d.ts b/dist/errors.d.ts
 --- a/dist/errors.d.ts	1985-10-26 03:15:00
-+++ b/dist/errors.d.ts	2026-07-30 17:44:46
++++ b/dist/errors.d.ts	2026-08-06 11:30:28
 @@ -61,6 +61,14 @@
      /** Unknown error. */
      UNKNOWN = "UNKNOWN"
@@ -546,7 +547,7 @@ diff -ruN --exclude=node_modules a/dist/errors.d.ts b/dist/errors.d.ts
   */
 diff -ruN --exclude=node_modules a/dist/errors.js b/dist/errors.js
 --- a/dist/errors.js	1985-10-26 03:15:00
-+++ b/dist/errors.js	2026-07-30 17:44:46
++++ b/dist/errors.js	2026-08-06 11:30:28
 @@ -37,6 +37,14 @@
      /** Unknown error. */
      WorkflowErrorCode["UNKNOWN"] = "UNKNOWN";
@@ -641,7 +642,7 @@ diff -ruN --exclude=node_modules a/dist/errors.js b/dist/errors.js
  }
 diff -ruN --exclude=node_modules a/dist/fs-persistence.d.ts b/dist/fs-persistence.d.ts
 --- a/dist/fs-persistence.d.ts	1985-10-26 03:15:00
-+++ b/dist/fs-persistence.d.ts	2026-07-30 17:44:46
++++ b/dist/fs-persistence.d.ts	2026-08-06 11:30:28
 @@ -13,8 +13,12 @@
   *  3. A missing or unreadable directory degrades to "no files" rather than
   *     throwing — a listing must never crash because one storage location is
@@ -675,7 +676,7 @@ diff -ruN --exclude=node_modules a/dist/fs-persistence.d.ts b/dist/fs-persistenc
   * Atomically write JSON to `path`: tmp-write + rename (atomic on the same
 diff -ruN --exclude=node_modules a/dist/fs-persistence.js b/dist/fs-persistence.js
 --- a/dist/fs-persistence.js	1985-10-26 03:15:00
-+++ b/dist/fs-persistence.js	2026-07-30 17:44:46
++++ b/dist/fs-persistence.js	2026-08-06 11:30:28
 @@ -13,8 +13,12 @@
   *  3. A missing or unreadable directory degrades to "no files" rather than
   *     throwing — a listing must never crash because one storage location is
@@ -728,7 +729,7 @@ diff -ruN --exclude=node_modules a/dist/fs-persistence.js b/dist/fs-persistence.
          // Backup is best-effort; the primary write already succeeded.
 diff -ruN --exclude=node_modules a/dist/index.d.ts b/dist/index.d.ts
 --- a/dist/index.d.ts	1985-10-26 03:15:00
-+++ b/dist/index.d.ts	2026-07-30 17:44:46
++++ b/dist/index.d.ts	2026-08-06 11:30:28
 @@ -14,7 +14,7 @@
  export type { WorkflowAgentSnapshot, WorkflowAgentStatus, WorkflowDisplay, WorkflowDisplayOptions, WorkflowSnapshot, } from "./display.js";
  export { createToolUpdateWorkflowDisplay, createWidgetWorkflowDisplay, createWorkflowSnapshot, preview, recomputeWorkflowSnapshot, renderWorkflowLines, renderWorkflowText, } from "./display.js";
@@ -749,8 +750,8 @@ diff -ruN --exclude=node_modules a/dist/index.d.ts b/dist/index.d.ts
  export { SharedStore } from "./shared-store.js";
  export type { StructuredOutputCapture, StructuredOutputToolOptions } from "./structured-output.js";
  export { createStructuredOutputTool } from "./structured-output.js";
--export { deliverText, installResultDelivery, installTaskPanel, type TaskPanelOptions } from "./task-panel.js";
-+export { deliverText, fenceUntrusted, installResultDelivery, installTaskPanel, type TaskPanelOptions, } from "./task-panel.js";
+-export { deliverText, installResultDelivery, installTaskPanel, resumeResultDelivery, suspendResultDelivery, type TaskPanelOptions, } from "./task-panel.js";
++export { deliverText, fenceUntrusted, installResultDelivery, installTaskPanel, resumeResultDelivery, suspendResultDelivery, type TaskPanelOptions, } from "./task-panel.js";
  export type { AutoResumeDelayParams, SchedulableWorkflowManager, TimerHandle, UsageLimitSchedulerOptions, } from "./usage-limit-scheduler.js";
  export { computeAutoResumeDelayMs, parseResetHintMs, UsageLimitScheduler } from "./usage-limit-scheduler.js";
 -export { createWebFetchTool, createWebSearchTool, createWebTools } from "./web-tools.js";
@@ -782,7 +783,7 @@ diff -ruN --exclude=node_modules a/dist/index.d.ts b/dist/index.d.ts
 +export { createWorktree, removeWorktree, worktreeId } from "./worktree.js";
 diff -ruN --exclude=node_modules a/dist/index.js b/dist/index.js
 --- a/dist/index.js	1985-10-26 03:15:00
-+++ b/dist/index.js	2026-07-30 17:44:46
++++ b/dist/index.js	2026-08-06 11:30:28
 @@ -8,28 +8,28 @@
  export { generateCodebaseAuditWorkflow, generateDeepResearchWorkflow } from "./deep-research.js";
  export { createToolUpdateWorkflowDisplay, createWidgetWorkflowDisplay, createWorkflowSnapshot, preview, recomputeWorkflowSnapshot, renderWorkflowLines, renderWorkflowText, } from "./display.js";
@@ -799,8 +800,8 @@ diff -ruN --exclude=node_modules a/dist/index.js b/dist/index.js
 +export { confirmRepoLocalWorkflow, parseCommandArgs, registerAllSavedWorkflows, registerSavedWorkflow, } from "./saved-commands.js";
  export { SharedStore } from "./shared-store.js";
  export { createStructuredOutputTool } from "./structured-output.js";
--export { deliverText, installResultDelivery, installTaskPanel } from "./task-panel.js";
-+export { deliverText, fenceUntrusted, installResultDelivery, installTaskPanel, } from "./task-panel.js";
+-export { deliverText, installResultDelivery, installTaskPanel, resumeResultDelivery, suspendResultDelivery, } from "./task-panel.js";
++export { deliverText, fenceUntrusted, installResultDelivery, installTaskPanel, resumeResultDelivery, suspendResultDelivery, } from "./task-panel.js";
  export { computeAutoResumeDelayMs, parseResetHintMs, UsageLimitScheduler } from "./usage-limit-scheduler.js";
 -export { createWebFetchTool, createWebSearchTool, createWebTools } from "./web-tools.js";
 +export { assertUrlAllowed, createWebFetchTool, createWebSearchTool, createWebTools, isPrivateAddress, } from "./web-tools.js";
@@ -821,7 +822,7 @@ diff -ruN --exclude=node_modules a/dist/index.js b/dist/index.js
 +export { createWorktree, removeWorktree, worktreeId } from "./worktree.js";
 diff -ruN --exclude=node_modules a/dist/logger.js b/dist/logger.js
 --- a/dist/logger.js	1985-10-26 03:15:00
-+++ b/dist/logger.js	2026-07-30 17:44:46
++++ b/dist/logger.js	2026-08-06 11:30:28
 @@ -3,12 +3,30 @@
   */
  import { appendFileSync, mkdirSync, writeFileSync } from "node:fs";
@@ -886,7 +887,7 @@ diff -ruN --exclude=node_modules a/dist/logger.js b/dist/logger.js
          catch {
 diff -ruN --exclude=node_modules a/dist/run-persistence.d.ts b/dist/run-persistence.d.ts
 --- a/dist/run-persistence.d.ts	1985-10-26 03:15:00
-+++ b/dist/run-persistence.d.ts	2026-07-30 17:44:46
++++ b/dist/run-persistence.d.ts	2026-08-06 11:30:28
 @@ -96,7 +96,7 @@
      toolset?: string;
      /**
@@ -1011,7 +1012,7 @@ diff -ruN --exclude=node_modules a/dist/run-persistence.d.ts b/dist/run-persiste
   * Generate a unique run ID.
 diff -ruN --exclude=node_modules a/dist/run-persistence.js b/dist/run-persistence.js
 --- a/dist/run-persistence.js	1985-10-26 03:15:00
-+++ b/dist/run-persistence.js	2026-07-30 17:44:46
++++ b/dist/run-persistence.js	2026-08-06 11:30:28
 @@ -1,8 +1,9 @@
  /**
   * Workflow run state persistence for pause/resume support.
@@ -1632,8 +1633,8 @@ diff -ruN --exclude=node_modules a/dist/run-persistence.js b/dist/run-persistenc
                  if (existing?.token === lease.token)
 diff -ruN --exclude=node_modules a/dist/saved-commands.d.ts b/dist/saved-commands.d.ts
 --- a/dist/saved-commands.d.ts	1985-10-26 03:15:00
-+++ b/dist/saved-commands.d.ts	2026-07-30 17:44:46
-@@ -2,9 +2,20 @@
++++ b/dist/saved-commands.d.ts	2026-08-06 11:30:28
+@@ -2,10 +2,21 @@
   * Saved workflows as `/<name>` slash commands. Each saved workflow becomes a
   * command that runs its script, passing parsed arguments through as `args`.
   */
@@ -1641,7 +1642,7 @@ diff -ruN --exclude=node_modules a/dist/saved-commands.d.ts b/dist/saved-command
 +import { type ExtensionAPI, type ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
  import type { WorkflowManager } from "./workflow-manager.js";
  import type { SavedWorkflow, WorkflowStorage } from "./workflow-saved.js";
-+/**
+ /**
 + * Ask before running a workflow whose script came from the project rather than
 + * from the user. The prompt names the exact source: a repository can ship
 + * `.pi/workflows/saved/<name>.json`, and cloning it must not be enough to make
@@ -1652,12 +1653,30 @@ diff -ruN --exclude=node_modules a/dist/saved-commands.d.ts b/dist/saved-command
 + * trustProjectLocalWorkflows.
 + */
 +export declare function confirmRepoLocalWorkflow(ctx: ExtensionCommandContext, wf: Pick<SavedWorkflow, "name" | "path" | "repoLocal" | "scriptOrigin">, cwd: string, purpose?: string): Promise<boolean>;
- /**
++/**
   * Parse a command argument string into an `args` object for the script.
   * Supports `key=value` tokens; everything else collects into `_` (and `_raw`).
+  * Declared parameter defaults fill in missing keys.
+@@ -21,14 +32,14 @@
+  * registerAllSavedWorkflows only registers what's in storage). The optional
+  * `exists` predicate lets the handler detect that case at invocation time and
+  * tell the user to reload rather than silently re-running a deleted workflow. */
+-export declare function registerSavedWorkflow(pi: ExtensionAPI, cwd: string | (() => string), wf: Pick<SavedWorkflow, "name" | "description" | "script" | "parameters">, manager?: WorkflowManager | (() => WorkflowManager | undefined), exists?: () => boolean, 
++export declare function registerSavedWorkflow(pi: ExtensionAPI, cwd: string | (() => string), wf: Pick<SavedWorkflow, "name" | "description" | "script" | "parameters" | "path" | "repoLocal" | "scriptOrigin">, manager?: WorkflowManager | (() => WorkflowManager | undefined), exists?: () => boolean, 
+ /**
+  * Live loader for this command's workflow. Prefer this over the registration-
+  * time `wf` snapshot: after an in-process project switch the same slash
+  * command name may resolve to a different script (or nothing) in the new
+  * project's storage. When omitted, `wf` is used as a frozen snapshot.
+  */
+-loadWorkflow?: () => Pick<SavedWorkflow, "name" | "description" | "script" | "parameters"> | null | undefined): void;
++loadWorkflow?: () => Pick<SavedWorkflow, "name" | "description" | "script" | "parameters" | "path" | "repoLocal" | "scriptOrigin"> | null | undefined): void;
+ /** Register every saved workflow found in storage.
+  * When a WorkflowManager is provided, workflows run through it (visible in
+  * /workflows TUI, background execution, task panel). Idempotent: names already
 diff -ruN --exclude=node_modules a/dist/saved-commands.js b/dist/saved-commands.js
 --- a/dist/saved-commands.js	1985-10-26 03:15:00
-+++ b/dist/saved-commands.js	2026-07-30 17:44:46
++++ b/dist/saved-commands.js	2026-08-06 11:30:28
 @@ -4,6 +4,7 @@
   */
  import { createCodingTools } from "@earendil-works/pi-coding-agent";
@@ -1696,18 +1715,18 @@ diff -ruN --exclude=node_modules a/dist/saved-commands.js b/dist/saved-commands.
  function reportText(result) {
      const r = result.result;
      if (r && typeof r.report === "string" && r.report.trim())
-@@ -61,6 +85,8 @@
-                 ctx.ui.notify(`/${wf.name} was deleted — reload the session to remove this command.`, "warning");
+@@ -74,6 +98,8 @@
+                 ctx.ui.notify(`/${wf.name} is not available in this project — reload the session to drop the stale command.`, "warning");
                  return;
              }
-+            if (!(await confirmRepoLocalWorkflow(ctx, wf, cwd)))
++            if (!(await confirmRepoLocalWorkflow(ctx, liveWf, getCwd())))
 +                return;
              try {
-                 if (manager) {
-                     // Run through the WorkflowManager's background path: the handler
+                 const liveManager = getManager();
+                 if (liveManager) {
 diff -ruN --exclude=node_modules a/dist/task-panel.d.ts b/dist/task-panel.d.ts
 --- a/dist/task-panel.d.ts	1985-10-26 03:15:00
-+++ b/dist/task-panel.d.ts	2026-07-30 17:44:46
++++ b/dist/task-panel.d.ts	2026-08-06 11:30:28
 @@ -19,6 +19,7 @@
       */
      loadSettings?: () => WorkflowSettings;
@@ -1716,7 +1735,7 @@ diff -ruN --exclude=node_modules a/dist/task-panel.d.ts b/dist/task-panel.d.ts
  export declare function deliverText(run: ManagedRun, opts?: {
      resultPath?: string;
      maxChars?: number;
-@@ -56,6 +57,8 @@
+@@ -75,6 +76,8 @@
  /**
   * Install the live "workflows running" panel below the editor. Re-rendered on
   * every manager event. Informational only — the user opens the navigator with
@@ -1728,7 +1747,7 @@ diff -ruN --exclude=node_modules a/dist/task-panel.d.ts b/dist/task-panel.d.ts
  export declare function installTaskPanel(_pi: ExtensionAPI, manager: WorkflowManager, ui: ExtensionUIContext, opts?: TaskPanelOptions): void;
 diff -ruN --exclude=node_modules a/dist/task-panel.js b/dist/task-panel.js
 --- a/dist/task-panel.js	1985-10-26 03:15:00
-+++ b/dist/task-panel.js	2026-07-30 17:44:46
++++ b/dist/task-panel.js	2026-08-06 11:30:28
 @@ -75,6 +75,27 @@
          return line;
      return truncateToWidth(line, maxWidth);
@@ -1766,7 +1785,7 @@ diff -ruN --exclude=node_modules a/dist/task-panel.js b/dist/task-panel.js
      ];
      // Always point at the full persisted result so the tail is never lost — even when
      // the summary above is a complete verdict/summary field or an untruncated dump.
-@@ -166,7 +187,9 @@
+@@ -240,7 +261,9 @@
      manager.on("error", ({ runId, error }) => {
          if (!manager.getRun(runId)?.background)
              return;
@@ -1777,7 +1796,7 @@ diff -ruN --exclude=node_modules a/dist/task-panel.js b/dist/task-panel.js
      });
      // A provider usage/quota limit checkpoints the run as paused (not failed): tell the
      // user it is resumable once their budget refills, rather than letting it look dead.
-@@ -359,7 +382,9 @@
+@@ -433,7 +456,9 @@
  /**
   * Install the live "workflows running" panel below the editor. Re-rendered on
   * every manager event. Informational only — the user opens the navigator with
@@ -1788,7 +1807,7 @@ diff -ruN --exclude=node_modules a/dist/task-panel.js b/dist/task-panel.js
   */
  export function installTaskPanel(_pi, manager, ui, opts = {}) {
      // Live-read settings with a ~1s TTL: a render-path disk read every frame would
-@@ -383,10 +408,16 @@
+@@ -457,10 +482,16 @@
          return cached;
      };
      const hasActiveRun = () => manager.listRuns().some((r) => r.status === "running" || r.status === "paused");
@@ -1808,7 +1827,7 @@ diff -ruN --exclude=node_modules a/dist/task-panel.js b/dist/task-panel.js
          const onRunEnd = ({ runId }) => clearTokenSamples(runId);
          for (const ev of RUN_END_EVENTS)
              manager.on(ev, onRunEnd);
-@@ -394,10 +425,24 @@
+@@ -468,10 +499,24 @@
          // token/s rate keeps updating between sparse token events — and decays to 0
          // when an agent stalls. Gated + unref'd so it costs nothing when idle.
          const timer = setInterval(() => {
@@ -1835,7 +1854,7 @@ diff -ruN --exclude=node_modules a/dist/task-panel.js b/dist/task-panel.js
          // Purely informational: it lists running runs and re-renders on events. To
          // open the navigator, the user runs /workflows (the panel takes no input).
          const comp = {
-@@ -410,11 +455,7 @@
+@@ -484,11 +529,7 @@
              },
              invalidate: () => { },
              dispose: () => {
@@ -1850,7 +1869,7 @@ diff -ruN --exclude=node_modules a/dist/task-panel.js b/dist/task-panel.js
          return comp;
 diff -ruN --exclude=node_modules a/dist/usage-limit-scheduler.d.ts b/dist/usage-limit-scheduler.d.ts
 --- a/dist/usage-limit-scheduler.d.ts	1985-10-26 03:15:00
-+++ b/dist/usage-limit-scheduler.d.ts	2026-07-30 17:44:46
++++ b/dist/usage-limit-scheduler.d.ts	2026-08-06 11:30:28
 @@ -15,7 +15,7 @@
   * (in-memory, best-effort persisted) — it does not rely on manager.stop(), which
   * only operates on in-memory runs.
@@ -1916,7 +1935,7 @@ diff -ruN --exclude=node_modules a/dist/usage-limit-scheduler.d.ts b/dist/usage-
      /**
 diff -ruN --exclude=node_modules a/dist/usage-limit-scheduler.js b/dist/usage-limit-scheduler.js
 --- a/dist/usage-limit-scheduler.js	1985-10-26 03:15:00
-+++ b/dist/usage-limit-scheduler.js	2026-07-30 17:44:46
++++ b/dist/usage-limit-scheduler.js	2026-08-06 11:30:28
 @@ -15,10 +15,13 @@
   * (in-memory, best-effort persisted) — it does not rely on manager.stop(), which
   * only operates on in-memory runs.
@@ -2034,7 +2053,7 @@ diff -ruN --exclude=node_modules a/dist/usage-limit-scheduler.js b/dist/usage-li
      safeLoad(runId) {
 diff -ruN --exclude=node_modules a/dist/web-tools.d.ts b/dist/web-tools.d.ts
 --- a/dist/web-tools.d.ts	1985-10-26 03:15:00
-+++ b/dist/web-tools.d.ts	2026-07-30 17:44:46
++++ b/dist/web-tools.d.ts	2026-08-06 11:30:28
 @@ -3,18 +3,63 @@
   * process (which has network access), not in a subagent sandbox, so they perform
   * genuine HTTP requests via Node's fetch.
@@ -2105,7 +2124,7 @@ diff -ruN --exclude=node_modules a/dist/web-tools.d.ts b/dist/web-tools.d.ts
 +export declare function createWebTools(policy?: WebFetchPolicy): ToolDefinition[];
 diff -ruN --exclude=node_modules a/dist/web-tools.js b/dist/web-tools.js
 --- a/dist/web-tools.js	1985-10-26 03:15:00
-+++ b/dist/web-tools.js	2026-07-30 17:44:46
++++ b/dist/web-tools.js	2026-08-06 11:30:28
 @@ -3,18 +3,236 @@
   * process (which has network access), not in a subagent sandbox, so they perform
   * genuine HTTP requests via Node's fetch.
@@ -2403,7 +2422,7 @@ diff -ruN --exclude=node_modules a/dist/web-tools.js b/dist/web-tools.js
  }
 diff -ruN --exclude=node_modules a/dist/workflow-capability-contract.js b/dist/workflow-capability-contract.js
 --- a/dist/workflow-capability-contract.js	1985-10-26 03:15:00
-+++ b/dist/workflow-capability-contract.js	2026-07-30 18:22:49
++++ b/dist/workflow-capability-contract.js	2026-08-06 11:30:28
 @@ -132,7 +132,7 @@
              "selector priority is explicit model > agentType model > tier > phase model > metadata model > implicit medium > session default",
              "an explicit model, agentType model, tier, or phase model that resolves to an unavailable model throws MODEL_NOT_FOUND naming the source (e.g. the tier and what it resolved to) instead of falling back",
@@ -2429,7 +2448,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-capability-contract.js b/dist/w
      ]),
 diff -ruN --exclude=node_modules a/dist/workflow-commands.js b/dist/workflow-commands.js
 --- a/dist/workflow-commands.js	1985-10-26 03:15:00
-+++ b/dist/workflow-commands.js	2026-07-30 17:44:46
++++ b/dist/workflow-commands.js	2026-08-06 11:30:28
 @@ -4,6 +4,7 @@
   */
  import { fmtFull, fmtTokenSegment, recomputeWorkflowSnapshot, renderWorkflowText, tokenFigures, } from "./display.js";
@@ -2464,7 +2483,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-commands.js b/dist/workflow-com
          }
      };
      for (const ev of progressEvents)
-@@ -127,10 +137,15 @@
+@@ -134,10 +144,15 @@
                      }
                      // Best-effort: ensure the workflow tool is active (session_start usually has).
                      // Add-only so this does not interfere with the keyword hook's save/restore state.
@@ -2481,7 +2500,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-commands.js b/dist/workflow-com
                      }
                      catch {
                          // ignore — the forced directive is the real forcing primitive
-@@ -217,7 +232,14 @@
+@@ -236,7 +251,14 @@
                  case "rm": {
                      if (!id)
                          return ctx.ui.notify(USAGE, "warning");
@@ -2497,7 +2516,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-commands.js b/dist/workflow-com
                      return;
                  }
                  case "save": {
-@@ -235,6 +257,21 @@
+@@ -254,6 +276,21 @@
                          ctx.ui.notify(runIdArg ? `No run ${runIdArg} with a script` : "No saved run to save", "error");
                          return;
                      }
@@ -2519,7 +2538,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-commands.js b/dist/workflow-com
                      let saved;
                      try {
                          saved = storage.save({
-@@ -242,6 +279,7 @@
+@@ -261,6 +298,7 @@
                              description: run.workflowName,
                              script: run.script,
                              location: "project",
@@ -2527,10 +2546,10 @@ diff -ruN --exclude=node_modules a/dist/workflow-commands.js b/dist/workflow-com
                          });
                      }
                      catch (error) {
-@@ -249,7 +287,9 @@
-                         return;
-                     }
-                     registerSavedWorkflow(pi, opts.cwd ?? process.cwd(), saved, undefined, () => storage.list().some((w) => w.name === saved.name));
+@@ -272,7 +310,9 @@
+                     // instance from this save call, or a later project switch leaves
+                     // the loader pointed at the source project's store.
+                     () => getStorage()?.load(name) != null, () => getStorage()?.load(name) ?? null);
 -                    ctx.ui.notify(`Saved /${name} (from ${run.runId})`, "info");
 +                    ctx.ui.notify(scriptOrigin
 +                        ? `Saved /${name} (from ${run.runId}; script came from ${scriptOrigin}, recorded on the saved workflow)`
@@ -2540,7 +2559,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-commands.js b/dist/workflow-com
                  default:
 diff -ruN --exclude=node_modules a/dist/workflow-editor.js b/dist/workflow-editor.js
 --- a/dist/workflow-editor.js	1985-10-26 03:15:00
-+++ b/dist/workflow-editor.js	2026-07-30 17:44:46
++++ b/dist/workflow-editor.js	2026-08-06 11:30:28
 @@ -236,15 +236,18 @@
      };
      registerWorkflowTriggerCommand(pi, state, settingsStore);
@@ -2611,8 +2630,8 @@ diff -ruN --exclude=node_modules a/dist/workflow-editor.js b/dist/workflow-edito
      return state;
 diff -ruN --exclude=node_modules a/dist/workflow-manager.d.ts b/dist/workflow-manager.d.ts
 --- a/dist/workflow-manager.d.ts	1985-10-26 03:15:00
-+++ b/dist/workflow-manager.d.ts	2026-07-30 17:44:46
-@@ -37,6 +37,13 @@
++++ b/dist/workflow-manager.d.ts	2026-08-06 11:30:28
+@@ -45,6 +45,13 @@
       */
      autoResume?: boolean;
      /**
@@ -2626,7 +2645,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-manager.d.ts b/dist/workflow-ma
       * The run's resolved hard token budget (per-run value, else the manager
       * default), fixed at run start and carried through resume() — a resumed run
       * must keep the budget it started with, not re-resolve against the current
-@@ -76,7 +83,7 @@
+@@ -84,7 +91,7 @@
      agentsById: Map<string, WorkflowAgentSnapshot>;
      /**
       * The run's cap on total agents (per-run value, else left undefined so
@@ -2635,7 +2654,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-manager.d.ts b/dist/workflow-ma
       * start/resume and carried through resume() — mirrors ManagedRun.tokenBudget
       * exactly: a resumed run must keep the cap it started with, not silently
       * regain the (much larger) default because ExecOptions.maxAgents isn't
-@@ -213,11 +220,45 @@
+@@ -221,11 +228,45 @@
       * to observe eviction without creating dozens of runs.
       */
      maxTerminalRunsInMemory?: number;
@@ -2682,7 +2701,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-manager.d.ts b/dist/workflow-ma
  export declare class WorkflowManager extends EventEmitter {
      /**
       * Lifecycle contract for `runs`:
-@@ -286,6 +327,11 @@
+@@ -294,6 +335,11 @@
      private toolsets?;
      private excludeSubagentTools?;
      private persistAgentSessions;
@@ -2694,7 +2713,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-manager.d.ts b/dist/workflow-ma
      constructor(options?: WorkflowManagerOptions);
      /** Bind the manager to the current pi session, so new runs are tagged with it and
       * the navigator/task-panel show only this session's runs (set on session_start). */
-@@ -295,6 +341,23 @@
+@@ -319,6 +365,23 @@
       * that died mid-run (this fresh manager has it nowhere in memory). Reconcile it
       * to "paused" — never "failed" — so its journal is preserved and resume() can
       * replay the completed prefix and finish the rest.
@@ -2718,7 +2737,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-manager.d.ts b/dist/workflow-ma
       */
      private recoverStaleRuns;
      /**
-@@ -432,6 +495,18 @@
+@@ -456,6 +519,18 @@
          script?: string;
          args?: unknown;
      }): Promise<boolean>;
@@ -2739,7 +2758,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-manager.d.ts b/dist/workflow-ma
       *
 diff -ruN --exclude=node_modules a/dist/workflow-manager.js b/dist/workflow-manager.js
 --- a/dist/workflow-manager.js	1985-10-26 03:15:00
-+++ b/dist/workflow-manager.js	2026-07-30 17:44:46
++++ b/dist/workflow-manager.js	2026-08-06 11:30:28
 @@ -2,10 +2,12 @@
   * Workflow manager for background execution, pause/resume, and run management.
   */
@@ -2766,7 +2785,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-manager.js b/dist/workflow-mana
      constructor(options = {}) {
          super();
          this.cwd = options.cwd ?? process.cwd();
-@@ -105,12 +112,18 @@
+@@ -105,12 +112,22 @@
          this.mainModel = options.mainModel;
          this.modelRegistry = options.modelRegistry;
          this.sessionId = options.sessionId;
@@ -2776,6 +2795,10 @@ diff -ruN --exclude=node_modules a/dist/workflow-manager.js b/dist/workflow-mana
 +        // value falls back to the finite default (see DEFAULT_AGENT_TIMEOUT_MS).
 +        this.defaultAgentTimeoutMs =
 +            options.defaultAgentTimeoutMs !== undefined ? options.defaultAgentTimeoutMs : DEFAULT_AGENT_TIMEOUT_MS;
++        // `?? 0` made the fork's DEFAULT_AGENT_RETRIES unreachable: the extension passes
++        // `settings.defaultAgentRetries`, which is undefined unless the user wrote a settings
++        // file, so every real run got 0 retries while the docs promised 2. Zero stays
++        // honoured when it is set deliberately.
 +        this.defaultAgentRetries = options.defaultAgentRetries !== undefined ? options.defaultAgentRetries : DEFAULT_AGENT_RETRIES;
          this.defaultTokenBudget = options.defaultTokenBudget ?? null;
          this.toolsets = options.toolsets;
@@ -2787,7 +2810,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-manager.js b/dist/workflow-mana
          this.maxTerminalRunsInMemory = options.maxTerminalRunsInMemory ?? DEFAULT_MAX_TERMINAL_RUNS_IN_MEMORY;
          this.persistence = createRunPersistence(this.cwd);
          this.recoverStaleRuns();
-@@ -125,21 +138,65 @@
+@@ -159,21 +176,65 @@
       * that died mid-run (this fresh manager has it nowhere in memory). Reconcile it
       * to "paused" — never "failed" — so its journal is preserved and resume() can
       * replay the completed prefix and finish the rest.
@@ -2864,7 +2887,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-manager.js b/dist/workflow-mana
              }
          }
          catch {
-@@ -155,12 +212,16 @@
+@@ -189,12 +250,16 @@
      reconfigureAfterReload(options) {
          this.concurrency = options.concurrency ?? 8;
          this.loadSavedWorkflow = options.loadSavedWorkflow;
@@ -2883,7 +2906,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-manager.js b/dist/workflow-mana
      }
      /** Set the session's main model (provider/id). Used to auto-tier explore agents. */
      setMainModel(spec) {
-@@ -224,7 +285,7 @@
+@@ -259,7 +324,7 @@
              // Same freeze-at-start pattern as tokenBudget, for the same reason: a
              // resumed run must keep these values, not re-resolve against the
              // manager's current defaults (see ManagedRun doc comments).
@@ -2892,15 +2915,15 @@ diff -ruN --exclude=node_modules a/dist/workflow-manager.js b/dist/workflow-mana
              agentTimeoutMs: exec.agentTimeoutMs !== undefined ? exec.agentTimeoutMs : this.defaultAgentTimeoutMs,
              concurrency: exec.concurrency !== undefined ? exec.concurrency : this.concurrency,
              agentRetries: exec.agentRetries !== undefined ? exec.agentRetries : this.defaultAgentRetries,
-@@ -240,6 +301,7 @@
+@@ -275,6 +340,7 @@
                  script,
                  args,
-                 sessionId: this.sessionId,
+                 sessionId: managed.sessionId,
 +                installId: this.installId,
                  status: "running",
                  phases: managed.snapshot.phases,
                  agents: [],
-@@ -285,7 +347,7 @@
+@@ -320,7 +386,7 @@
          managed.tokenBudget = exec.tokenBudget !== undefined ? exec.tokenBudget : this.defaultTokenBudget;
          managed.toolset = exec.toolset;
          // Same freeze-at-start pattern as tokenBudget (see startInBackground/ManagedRun).
@@ -2909,7 +2932,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-manager.js b/dist/workflow-mana
          managed.agentTimeoutMs = exec.agentTimeoutMs !== undefined ? exec.agentTimeoutMs : this.defaultAgentTimeoutMs;
          managed.concurrency = exec.concurrency !== undefined ? exec.concurrency : this.concurrency;
          managed.agentRetries = exec.agentRetries !== undefined ? exec.agentRetries : this.defaultAgentRetries;
-@@ -392,6 +454,7 @@
+@@ -428,6 +494,7 @@
                  tokenBudget: resolvedTokenBudget,
                  tools: resolvedTools,
                  excludeTools: this.excludeSubagentTools,
@@ -2917,7 +2940,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-manager.js b/dist/workflow-mana
                  confirm,
                  loadSavedWorkflow: this.loadSavedWorkflow,
                  resumeJournal,
-@@ -770,10 +833,17 @@
+@@ -806,13 +873,20 @@
                  runId: managed.runId,
                  workflowName: managed.snapshot.name,
                  // Persist the real script + journal so the run can be resumed. Runs live
@@ -2926,7 +2949,10 @@ diff -ruN --exclude=node_modules a/dist/workflow-manager.js b/dist/workflow-mana
 +                // fs-persistence.ts) — protected by file permissions, not by blanking.
                  script: managed.script,
                  args: managed.args,
-                 sessionId: this.sessionId,
+                 // Always the run's own frozen owner — never this.sessionId. A mid-flight
+                 // setSessionId() (session replacement) must not re-home a still-running
+                 // run out from under stranded-pause / the originating panel.
+                 sessionId: managed.sessionId,
 +                // Provenance: this install wrote this record, so auto-resume may pick it
 +                // up later (see PersistedRunState.installId). A run adopted from a
 +                // project-local store keeps its foreignSource marker instead, which
@@ -2936,7 +2962,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-manager.js b/dist/workflow-mana
                  journal: keepsResumeJournal ? managed.journal : undefined,
                  status: managed.status,
                  // Persisted every write (not just at pause) so a stale read during the
-@@ -872,6 +942,13 @@
+@@ -911,6 +985,13 @@
          const persisted = this.persistence.load(runId);
          if (!persisted?.script || persisted.status === "completed" || persisted.status === "aborted")
              return false;
@@ -2950,7 +2976,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-manager.js b/dist/workflow-mana
          const lease = this.persistence.acquireRunLease(runId);
          if (!lease)
              return false;
-@@ -922,6 +999,11 @@
+@@ -964,6 +1045,11 @@
              // Carry the original opt-out forward across resumes; it's fixed at
              // run-start and persistRun() re-persists it on every subsequent write.
              autoResume: persisted.autoResume,
@@ -2962,7 +2988,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-manager.js b/dist/workflow-mana
              // Restore start-time execution context: the budget the run started with
              // (legacy runs without one resume unbudgeted — never re-apply the current
              // default to a run that predates it) and the toolset tag executeRun
-@@ -932,7 +1014,7 @@
+@@ -974,7 +1060,7 @@
              // per-run knobs (see ManagedRun doc comments) — same rationale as
              // tokenBudget: never re-resolve against the manager's CURRENT defaults.
              // maxAgents: legacy/never-set runs resume with no cap carried forward
@@ -2971,7 +2997,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-manager.js b/dist/workflow-mana
              // maxAgents had never been passed at all.
              maxAgents: persisted.maxAgents,
              // agentTimeoutMs: unlike tokenBudget, a legacy run's real timeout at
-@@ -986,6 +1068,42 @@
+@@ -1028,6 +1114,42 @@
          // cumulative cap across resume with no extra seeding required.
          void this.executeRun(managed, script, args, { resumeJournal, initialTokenUsage: priorTokenUsage }).catch(() => { });
          return true;
@@ -3016,7 +3042,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-manager.js b/dist/workflow-mana
       * Stop a running workflow.
 diff -ruN --exclude=node_modules a/dist/workflow-paths.d.ts b/dist/workflow-paths.d.ts
 --- a/dist/workflow-paths.d.ts	1985-10-26 03:15:00
-+++ b/dist/workflow-paths.d.ts	2026-07-30 17:44:46
++++ b/dist/workflow-paths.d.ts	2026-08-06 11:30:28
 @@ -7,6 +7,7 @@
   */
  export declare const WORKFLOW_HOME_RELATIVE_DIR = ".pi/workflows";
@@ -3043,7 +3069,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-paths.d.ts b/dist/workflow-path
  export declare function workflowProjectPaths(cwd: string): WorkflowProjectPaths;
 diff -ruN --exclude=node_modules a/dist/workflow-paths.js b/dist/workflow-paths.js
 --- a/dist/workflow-paths.js	1985-10-26 03:15:00
-+++ b/dist/workflow-paths.js	2026-07-30 17:44:46
++++ b/dist/workflow-paths.js	2026-08-06 11:30:28
 @@ -5,12 +5,15 @@
   * scattered `.pi/workflows` directories. Project-scoped state is still isolated
   * by a stable cwd-derived namespace.
@@ -3118,7 +3144,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-paths.js b/dist/workflow-paths.
          .toLowerCase()
 diff -ruN --exclude=node_modules a/dist/workflow-saved.d.ts b/dist/workflow-saved.d.ts
 --- a/dist/workflow-saved.d.ts	1985-10-26 03:15:00
-+++ b/dist/workflow-saved.d.ts	2026-07-30 17:44:46
++++ b/dist/workflow-saved.d.ts	2026-08-06 11:30:28
 @@ -22,6 +22,25 @@
      path: string;
      /** When it was saved. */
@@ -3161,7 +3187,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-saved.d.ts b/dist/workflow-save
 +export declare function createWorkflowStorage(cwd: string, fsOverride?: Partial<PersistenceFsLayer>, options?: WorkflowStorageOptions): WorkflowStorage;
 diff -ruN --exclude=node_modules a/dist/workflow-saved.js b/dist/workflow-saved.js
 --- a/dist/workflow-saved.js	1985-10-26 03:15:00
-+++ b/dist/workflow-saved.js	2026-07-30 17:44:46
++++ b/dist/workflow-saved.js	2026-08-06 11:30:28
 @@ -4,6 +4,7 @@
  import { join } from "node:path";
  import { ensureDir as ensureDirFs, listJsonFilesSafe, readJsonWithBackupRecovery, resolvePersistenceFs, unlinkIfExistsSafe, writeJsonAtomicWithBackup, } from "./fs-persistence.js";
@@ -3274,7 +3300,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-saved.js b/dist/workflow-saved.
          },
 diff -ruN --exclude=node_modules a/dist/workflow-settings.d.ts b/dist/workflow-settings.d.ts
 --- a/dist/workflow-settings.d.ts	1985-10-26 03:15:00
-+++ b/dist/workflow-settings.d.ts	2026-07-30 17:44:46
++++ b/dist/workflow-settings.d.ts	2026-08-06 11:30:28
 @@ -17,6 +17,12 @@
      defaultTokenBudget?: number | null;
      /** Default max concurrent agents per run. Clamped to the runtime maximum. */
@@ -3332,7 +3358,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-settings.d.ts b/dist/workflow-s
      load(): WorkflowSettings;
 diff -ruN --exclude=node_modules a/dist/workflow-settings.js b/dist/workflow-settings.js
 --- a/dist/workflow-settings.js	1985-10-26 03:15:00
-+++ b/dist/workflow-settings.js	2026-07-30 17:44:46
++++ b/dist/workflow-settings.js	2026-08-06 11:30:28
 @@ -6,7 +6,7 @@
   */
  import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -3375,7 +3401,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-settings.js b/dist/workflow-set
      if (deliveredResultMaxChars !== undefined)
 diff -ruN --exclude=node_modules a/dist/workflow-tool.js b/dist/workflow-tool.js
 --- a/dist/workflow-tool.js	1985-10-26 03:15:00
-+++ b/dist/workflow-tool.js	2026-07-30 18:22:49
++++ b/dist/workflow-tool.js	2026-08-06 11:30:28
 @@ -2,6 +2,7 @@
  import { Text } from "@earendil-works/pi-tui";
  import { Type } from "typebox";
@@ -3406,7 +3432,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-tool.js b/dist/workflow-tool.js
      })),
      tokenBudget: Type.Optional(Type.Number({
          description: "Optional user-requested soft spend gate, not a planning target. Do not set `tokenBudget` unless the user explicitly supplies a cap or asks you to choose one; never infer or invent one from task size. If omitted, the configured `defaultTokenBudget` applies; without one, the run is unlimited. Reaching the gate blocks later `agent()` calls; concurrent in-flight work can overshoot.",
-@@ -273,9 +276,11 @@
+@@ -279,9 +282,11 @@
      return {
          agentTimeoutMs: options.defaultAgentTimeoutMs !== undefined
              ? options.defaultAgentTimeoutMs
@@ -3422,7 +3448,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-tool.js b/dist/workflow-tool.js
  /**
 diff -ruN --exclude=node_modules a/dist/workflow-ui.js b/dist/workflow-ui.js
 --- a/dist/workflow-ui.js	1985-10-26 03:15:00
-+++ b/dist/workflow-ui.js	2026-07-30 17:44:46
++++ b/dist/workflow-ui.js	2026-08-06 11:30:28
 @@ -15,6 +15,7 @@
  import { getLanguageFromPath, getMarkdownTheme, renderDiff, } from "@earendil-works/pi-coding-agent";
  import { Markdown, parseKey, truncateToWidth, visibleWidth, wrapTextWithAnsi } from "@earendil-works/pi-tui";
@@ -3470,9 +3496,9 @@ diff -ruN --exclude=node_modules a/dist/workflow-ui.js b/dist/workflow-ui.js
                          break;
                      }
                      case "save": {
-@@ -1502,21 +1522,44 @@
+@@ -1502,28 +1522,52 @@
+                         }
                          else {
-                             const storage = opts.storage;
                              const name = run.workflowName || "workflow";
 -                            let saved;
 -                            try {
@@ -3485,6 +3511,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-ui.js b/dist/workflow-ui.js
 -                            }
 -                            catch (error) {
 -                                ui.notify(error instanceof Error ? error.message : String(error), "error");
++                            const script = run.script;
 +                            const scriptOrigin = runScriptOrigin(run);
 +                            const persist = () => {
 +                                let saved;
@@ -3492,7 +3519,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-ui.js b/dist/workflow-ui.js
 +                                    saved = storage.save({
 +                                        name,
 +                                        description: run.workflowName,
-+                                        script: run.script,
++                                        script,
 +                                        location: "project",
 +                                        scriptOrigin,
 +                                    });
@@ -3501,7 +3528,14 @@ diff -ruN --exclude=node_modules a/dist/workflow-ui.js b/dist/workflow-ui.js
 +                                    ui.notify(error instanceof Error ? error.message : String(error), "error");
 +                                    return;
 +                                }
-+                                registerSavedWorkflow(pi, opts.cwd ?? process.cwd(), saved, undefined, () => storage.list().some((w) => w.name === saved.name));
++                                // Match /workflows save and registerAllSavedWorkflows: live
++                                // getters + load-by-name so a same-name overwrite executes the
++                                // latest script via the manager background path (not a frozen
++                                // registration-time snapshot / inline fallback).
++                                const getCwd = opts.getCwd ?? (() => opts.cwd ?? process.cwd());
++                                const getManager = opts.getManager ?? (() => manager);
++                                const getLiveStorage = () => opts.getStorage?.() ?? opts.storage ?? storage;
++                                registerSavedWorkflow(pi, getCwd, saved, getManager, () => getLiveStorage()?.load(saved.name) != null, () => getLiveStorage()?.load(saved.name));
 +                                ui.notify(scriptOrigin ? `Saved /${name} (script came from ${scriptOrigin}, recorded)` : `Saved /${name}`, "info");
 +                            };
 +                            // The listing includes runs read from the project's own run
@@ -3522,7 +3556,14 @@ diff -ruN --exclude=node_modules a/dist/workflow-ui.js b/dist/workflow-ui.js
 +                                })();
                                  break;
                              }
--                            registerSavedWorkflow(pi, opts.cwd ?? process.cwd(), saved, undefined, () => storage.list().some((w) => w.name === saved.name));
+-                            // Match /workflows save and registerAllSavedWorkflows: live
+-                            // getters + load-by-name so a same-name overwrite executes the
+-                            // latest script via the manager background path (not a frozen
+-                            // registration-time snapshot / inline fallback).
+-                            const getCwd = opts.getCwd ?? (() => opts.cwd ?? process.cwd());
+-                            const getManager = opts.getManager ?? (() => manager);
+-                            const getLiveStorage = () => opts.getStorage?.() ?? opts.storage ?? storage;
+-                            registerSavedWorkflow(pi, getCwd, saved, getManager, () => getLiveStorage()?.load(saved.name) != null, () => getLiveStorage()?.load(saved.name));
 -                            ui.notify(`Saved /${name}`, "info");
 +                            persist();
                          }
@@ -3530,7 +3571,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-ui.js b/dist/workflow-ui.js
                      }
 diff -ruN --exclude=node_modules a/dist/workflow.d.ts b/dist/workflow.d.ts
 --- a/dist/workflow.d.ts	1985-10-26 03:15:00
-+++ b/dist/workflow.d.ts	2026-07-30 17:44:46
++++ b/dist/workflow.d.ts	2026-08-06 11:30:28
 @@ -154,6 +154,24 @@
      agentTimeoutMs?: number | null;
      /** Whether to persist logs to disk. Default: true */
@@ -3572,7 +3613,7 @@ diff -ruN --exclude=node_modules a/dist/workflow.d.ts b/dist/workflow.d.ts
      meta: WorkflowMeta;
 diff -ruN --exclude=node_modules a/dist/workflow.js b/dist/workflow.js
 --- a/dist/workflow.js	1985-10-26 03:15:00
-+++ b/dist/workflow.js	2026-07-30 17:44:46
++++ b/dist/workflow.js	2026-08-06 11:30:28
 @@ -1,11 +1,11 @@
  import { AsyncLocalStorage } from "node:async_hooks";
 -import { createHash } from "node:crypto";
@@ -4120,7 +4161,7 @@ diff -ruN --exclude=node_modules a/dist/workflow.js b/dist/workflow.js
          return promise;
 diff -ruN --exclude=node_modules a/dist/worktree.d.ts b/dist/worktree.d.ts
 --- a/dist/worktree.d.ts	1985-10-26 03:15:00
-+++ b/dist/worktree.d.ts	2026-07-30 17:44:46
++++ b/dist/worktree.d.ts	2026-08-06 11:30:28
 @@ -14,11 +14,29 @@
      repoRoot?: string;
      /** Why isolation was skipped, when isolated === false. */
@@ -4156,7 +4197,7 @@ diff -ruN --exclude=node_modules a/dist/worktree.d.ts b/dist/worktree.d.ts
  /** Remove a worktree and its branch. Best-effort; safe to call on a no-op Worktree. */
 diff -ruN --exclude=node_modules a/dist/worktree.js b/dist/worktree.js
 --- a/dist/worktree.js	1985-10-26 03:15:00
-+++ b/dist/worktree.js	2026-07-30 17:44:46
++++ b/dist/worktree.js	2026-08-06 11:30:28
 @@ -5,32 +5,82 @@
   * the caller to inspect. Falls back to a logged no-op when isolation isn't possible.
   */
@@ -4252,14 +4293,18 @@ diff -ruN --exclude=node_modules a/dist/worktree.js b/dist/worktree.js
          await exec("git", ["-C", repoRoot, "worktree", "add", "-b", branch, path, "HEAD"]);
 diff -ruN --exclude=node_modules a/extensions/workflow/index.ts b/extensions/workflow/index.ts
 --- a/extensions/workflow/index.ts	1969-12-31 18:00:00
-+++ b/extensions/workflow/index.ts	2026-07-30 17:44:46
-@@ -0,0 +1,210 @@
++++ b/extensions/workflow/index.ts	2026-08-06 11:27:50
+@@ -0,0 +1,402 @@
++import { closeSync, existsSync, openSync, readSync } from "node:fs";
++import { resolve } from "node:path";
++import { StringDecoder } from "node:string_decoder";
 +import { createCodingTools, type ExtensionAPI, type ExtensionContext } from "@earendil-works/pi-coding-agent";
 +import {
 +  claimWorkflowRuntime,
 +  discardWorkflowRuntime,
 +  handoffWorkflowRuntime,
 +  pauseStrandedWorkflowRuntime,
++  SESSION_REPLACEMENT_REASONS,
 +  WORKFLOW_EXTENSION_VERSION,
 +  type WorkflowReloadRuntime,
 +} from "../../src/extension-reload.js";
@@ -4269,6 +4314,7 @@ diff -ruN --exclude=node_modules a/extensions/workflow/index.ts b/extensions/wor
 +  createWorkflowControlTool,
 +  createWorkflowStorage,
 +  createWorkflowTool,
++  type EffortState,
 +  installResultDelivery,
 +  installTaskPanel,
 +  installWorkflowKeywordArming,
@@ -4278,10 +4324,68 @@ diff -ruN --exclude=node_modules a/extensions/workflow/index.ts b/extensions/wor
 +  registerEffortCommand,
 +  registerWorkflowCommands,
 +  registerWorkflowModelsCommand,
++  resumeResultDelivery,
 +  saveWorkflowSettingsForCwd,
++  suspendResultDelivery,
 +  UsageLimitScheduler,
 +  WorkflowManager,
 +} from "../../src/index.js";
++import type { WorkflowStorage } from "../../src/workflow-saved.js";
++
++/**
++ * Bound for the read-only session-header probe (first line only). Independent of
++ * pi's own ~1MiB session scan — we only need the header and keep the read small.
++ */
++const SESSION_HEADER_SCAN_BYTES = 64 * 1024;
++
++/**
++ * Read-only probe of a session JSONL file's project cwd from its header line.
++ * Does NOT call SessionManager.open() — that API creates directories, may rewrite
++ * empty/legacy files, and loads the full history. Used on session_shutdown for
++ * resume/fork destination checks. Unreadable / oversized / non-session files
++ * return undefined; callers decide fail-closed vs allow based on the shutdown reason.
++ */
++export function sessionFileCwd(sessionFile: string | undefined): string | undefined {
++  if (!sessionFile || !existsSync(sessionFile)) return undefined;
++  let fd: number | undefined;
++  try {
++    fd = openSync(sessionFile, "r");
++    const decoder = new StringDecoder("utf8");
++    const buffer = Buffer.allocUnsafe(4096);
++    const chunks: string[] = [];
++    let scanned = 0;
++    while (scanned < SESSION_HEADER_SCAN_BYTES) {
++      const n = readSync(fd, buffer, 0, Math.min(buffer.length, SESSION_HEADER_SCAN_BYTES - scanned), null);
++      if (n === 0) {
++        chunks.push(decoder.end());
++        break;
++      }
++      scanned += n;
++      const chunk = decoder.write(buffer.subarray(0, n));
++      const nl = chunk.indexOf("\n");
++      if (nl !== -1) {
++        chunks.push(chunk.slice(0, nl));
++        break;
++      }
++      chunks.push(chunk);
++    }
++    const line = chunks.join("").trim();
++    if (!line) return undefined;
++    const entry = JSON.parse(line) as { type?: string; cwd?: unknown };
++    if (entry.type !== "session" || typeof entry.cwd !== "string" || !entry.cwd) return undefined;
++    return resolve(entry.cwd);
++  } catch {
++    return undefined;
++  } finally {
++    if (fd !== undefined) {
++      try {
++        closeSync(fd);
++      } catch {
++        // ignore close errors on the probe fd
++      }
++    }
++  }
++}
 +
 +/** Where the web tools may fetch, from settings (see WebFetchPolicy). */
 +function webFetchPolicy(settings: {
@@ -4294,23 +4398,19 @@ diff -ruN --exclude=node_modules a/extensions/workflow/index.ts b/extensions/wor
 +  };
 +}
 +
-+export default function extension(pi: ExtensionAPI) {
-+  // Single manager shared by the workflow tool and /workflows command. Pi loads
-+  // a fresh extension factory for /reload, so explicitly claim the old live
-+  // manager when session_shutdown staged one; otherwise in-flight promises,
-+  // controls, event delivery, and live UI updates would stay on an unreachable
-+  // manager even though their persisted snapshots remained visible on disk.
-+  const cwd = process.cwd();
-+  const storage = createWorkflowStorage(cwd);
++function buildManagerOptions(
++  cwd: string,
++  storage: WorkflowStorage,
++  confirmForeignRun: (info: {
++    runId: string;
++    workflowName: string;
++    path: string;
++    projectLocal: boolean;
++  }) => Promise<boolean>,
++) {
 +  const settings = loadWorkflowSettings({ cwd });
-+  // Set at session_start (the first point a UI exists) and used by the
-+  // foreign-run gate below, which can be reached long after registration.
-+  let sessionConfirm: ((title: string, message: string) => Promise<boolean>) | undefined;
-+  const managerOptions = {
++  return {
 +    loadSavedWorkflow: (name: string) => storage.load(name)?.script,
-+    // Named toolsets survive on the persisted run (the tag, not the functions),
-+    // so a resumed run re-resolves the tools it started with — e.g. a paused
-+    // /deep-research keeps web access instead of degrading to coding tools.
 +    toolsets: {
 +      "web-research": () => [
 +        ...createCodingTools(cwd),
@@ -4319,8 +4419,6 @@ diff -ruN --exclude=node_modules a/extensions/workflow/index.ts b/extensions/wor
 +        ...createWebTools(webFetchPolicy(loadWorkflowSettings({ cwd }))),
 +      ],
 +    },
-+    // On top of the always-on workflow/workflow_control denial in subagents
-+    // (#107), let users block additional recursive-orchestration tools.
 +    excludeSubagentTools: settings.excludeSubagentTools,
 +    // Left undefined when unset so the manager applies DEFAULT_AGENT_TIMEOUT_MS;
 +    // an explicit null in settings still means "no hard timeout".
@@ -4338,102 +4436,227 @@ diff -ruN --exclude=node_modules a/extensions/workflow/index.ts b/extensions/wor
 +    // Resuming a run record this install never wrote executes a script that
 +    // came from somewhere else — most plausibly the checked-out project. Ask,
 +    // naming the file. Auto-resume never asks: it skips such runs entirely.
-+    confirmForeignRun: async (info: {
-+      runId: string;
-+      workflowName: string;
-+      path: string;
-+      projectLocal: boolean;
-+    }) => {
-+      if (!sessionConfirm) return false;
-+      return sessionConfirm(
-+        info.projectLocal ? "Project-supplied workflow run" : "Workflow run from another install",
-+        `Resume ${info.workflowName || info.runId}?\n\nIts script comes from:\n${info.path}\n\n` +
-+          "It will run subagents with your tools and permissions. Only continue if you trust its source.",
-+      );
-+    },
++    confirmForeignRun,
 +  };
-+  const runtimeClaim = claimWorkflowRuntime(cwd);
-+  const previousRuntime = runtimeClaim.compatible;
-+  const pausedForVersionChange = runtimeClaim.versionMismatch
-+    ? pauseStrandedWorkflowRuntime(runtimeClaim.versionMismatch)
-+    : 0;
-+  const manager = previousRuntime?.manager ?? new WorkflowManager({ cwd, ...managerOptions });
-+  if (previousRuntime) manager.reconfigureAfterReload(managerOptions);
-+  // /effort is independent of the manager implementation and can safely
-+  // survive an extension-version fallback to a fresh manager.
-+  const effort = (previousRuntime ?? runtimeClaim.versionMismatch)?.effort ?? createEffortState();
-+  const runtime: WorkflowReloadRuntime = {
-+    cwd,
-+    extensionVersion: WORKFLOW_EXTENSION_VERSION,
-+    manager,
-+    effort,
-+  };
-+  // Refresh the delivery holder immediately after claiming the manager. On a
-+  // reload handoff its listener survives, but Pi invalidates the old ExtensionAPI
-+  // before loading this generation.
-+  installResultDelivery(pi, manager, { loadSettings: () => loadWorkflowSettings({ cwd }) });
++}
 +
-+  const workflowTool = createWorkflowTool({ cwd, manager, storage });
-+  const workflowControlTool = createWorkflowControlTool({ manager });
++export default function extension(pi: ExtensionAPI) {
++  // Mutable host state. Tools/commands resolve through getters so a
++  // session_start that discovers a cross-project cwd can replace the manager
++  // without leaving closed-over references pointing at the source project.
++  //
++  // Factory-time cwd is process.cwd() only (Pi does not pass the host session
++  // cwd into the factory). The real session cwd arrives on session_start as
++  // ctx.cwd; if it differs we rebuild manager/storage against it and pause
++  // any foreign live runs that rode in via handoff.
++  // Set at session_start (the first point a UI exists) and used by the
++  // foreign-run gate below, which can be reached long after registration.
++  let sessionConfirm: ((title: string, message: string) => Promise<boolean>) | undefined;
++  const confirmForeignRun = async (info: {
++    runId: string;
++    workflowName: string;
++    path: string;
++    projectLocal: boolean;
++  }): Promise<boolean> => {
++    if (!sessionConfirm) return false;
++    return sessionConfirm(
++      info.projectLocal ? "Project-supplied workflow run" : "Workflow run from another install",
++      `Resume ${info.workflowName || info.runId}?\n\nIts script comes from:\n${info.path}\n\n` +
++        "It will run subagents with your tools and permissions. Only continue if you trust its source.",
++    );
++  };
++
++  let cwd = resolve(process.cwd());
++  let storage = createWorkflowStorage(cwd);
++  let managerOptions = buildManagerOptions(cwd, storage, confirmForeignRun);
++
++  // Process-wide handoff slot (not cwd-keyed): the previous generation may have
++  // been bound to ctx.cwd while this factory only sees process.cwd(). Claim
++  // whatever is staged; session_start then keeps or rebuilds based on the true
++  // session project (manager.getCwd() vs ctx.cwd).
++  const runtimeClaim = claimWorkflowRuntime();
++  const previousRuntime = runtimeClaim.compatible;
++  let pausedForMismatch = runtimeClaim.versionMismatch ? pauseStrandedWorkflowRuntime(runtimeClaim.versionMismatch) : 0;
++
++  // Prefer the claimed manager's own project path for construction defaults
++  // when it already points at a real project (not just the launch dir).
++  if (previousRuntime) {
++    const claimedCwd = resolve(previousRuntime.manager.getCwd());
++    if (claimedCwd !== cwd) {
++      cwd = claimedCwd;
++      storage = createWorkflowStorage(cwd);
++      managerOptions = buildManagerOptions(cwd, storage, confirmForeignRun);
++    }
++  }
++
++  let manager = previousRuntime?.manager ?? new WorkflowManager({ cwd, ...managerOptions });
++  if (previousRuntime) manager.reconfigureAfterReload(managerOptions);
++
++  // Stable effort object: /effort and keyword arming close over this reference.
++  // When a handoff brings a different EffortState, copy the level in place
++  // rather than rebinding the local binding.
++  const effort: EffortState = (previousRuntime ?? runtimeClaim.versionMismatch)?.effort ?? createEffortState();
++  if (previousRuntime?.effort && previousRuntime.effort !== effort) {
++    effort.level = previousRuntime.effort.level;
++  }
++
++  const getManager = () => manager;
++  const getCwd = () => cwd;
++  const getStorage = () => storage;
++
++  // Install delivery listeners once. Keep suspended until session_start —
++  // factory runs before Pi bindCore(), so sendMessage is still the
++  // "runtime not initialized" stub. Flushing here would re-queue forever.
++  installResultDelivery(pi, manager, { loadSettings: () => loadWorkflowSettings({ cwd: getCwd() }) });
++  suspendResultDelivery(manager);
++
++  const workflowTool = createWorkflowTool({
++    getManager,
++    getCwd,
++    getStorage,
++    get manager() {
++      return manager;
++    },
++    get cwd() {
++      return cwd;
++    },
++    get storage() {
++      return storage;
++    },
++  });
++  const workflowControlTool = createWorkflowControlTool({ getManager });
 +  pi.registerTool(workflowTool);
 +  pi.registerTool(workflowControlTool);
-+  // Auto-resume runs that paused on a provider usage limit once the quota is
-+  // likely refilled. Standalone: only consumes the manager's public surface, so
-+  // it stays decoupled from manager/persistence internals. Its constructor also
-+  // re-arms any run that was already paused-on-usage_limit before this process
-+  // started (cold start), so restarting pi doesn't strand a paused run.
-+  const usageLimitScheduler = new UsageLimitScheduler(manager);
-+  pi.on("session_shutdown", (event?: { reason?: string }) => {
++
++  let usageLimitScheduler = new UsageLimitScheduler(manager);
++
++  pi.on("session_shutdown", (event?: { reason?: string; targetSessionFile?: string }) => {
 +    usageLimitScheduler.dispose();
-+    if (event?.reason === "reload") {
++    // Always stop live sends first so a completion racing teardown cannot
++    // deliver into the outgoing session (or throw on a just-stale ctx and be
++    // lost). Replacement reasons stage the runtime for the next generation
++    // only when the destination is the same project; quit/unknown/cross-project
++    // pause in-flight runs onto the journal path.
++    suspendResultDelivery(manager);
++
++    const reason = event?.reason;
++    const runtime: WorkflowReloadRuntime = {
++      cwd,
++      extensionVersion: WORKFLOW_EXTENSION_VERSION,
++      manager,
++      effort,
++    };
++
++    if (reason && SESSION_REPLACEMENT_REASONS.has(reason)) {
++      // Destination checks differ by reason:
++      // - resume: fail-closed. Only hand off when the target session header
++      //   positively reads as this same project. Missing/corrupt/unreadable
++      //   headers must not smuggle a source-project manager across.
++      // - fork: Pi forks stay in the same project; the new session file may
++      //   not exist yet so a missing header is not a cross-project signal.
++      //   Only refuse when we positively read a different cwd.
++      // - reload/new: same project; always hand off.
++      if (reason === "resume") {
++        const targetCwd = sessionFileCwd(event?.targetSessionFile);
++        if (targetCwd !== cwd) {
++          pauseStrandedWorkflowRuntime(runtime);
++          discardWorkflowRuntime(cwd, runtime);
++          return;
++        }
++        handoffWorkflowRuntime(runtime);
++        return;
++      }
++      if (reason === "fork") {
++        const targetCwd = sessionFileCwd(event?.targetSessionFile);
++        if (targetCwd && targetCwd !== cwd) {
++          pauseStrandedWorkflowRuntime(runtime);
++          discardWorkflowRuntime(cwd, runtime);
++          return;
++        }
++        handoffWorkflowRuntime(runtime);
++        return;
++      }
 +      handoffWorkflowRuntime(runtime);
-+    } else {
-+      // Every other shutdown — /new, /resume, a fork — replaces the extension without
-+      // handing the runtime over, so anything still running would keep executing on an
-+      // orphaned manager and deliver its results into an invalidated ExtensionAPI.
-+      // Checkpointing it as paused puts it on the journal-recovery path instead, so the
-+      // next generation's cold start can pick it up rather than losing the work.
-+      pauseStrandedWorkflowRuntime(runtime);
-+      discardWorkflowRuntime(cwd, runtime);
++      return;
 +    }
++
++    pauseStrandedWorkflowRuntime(runtime);
++    discardWorkflowRuntime(cwd, runtime);
 +  });
-+  // Standing /effort opt-in (off|high|ultra): auto-arms a workflow for substantive
-+  // messages, like CC's ultracode. Shared with the editor's input hook below and
-+  // with the explicit /workflows run <prompt> manual trigger. It is part of the
-+  // reload handoff so /reload does not silently turn the selected effort off.
-+  registerWorkflowCommands(pi, manager, { storage, cwd, effort });
++
++  registerWorkflowCommands(pi, getManager, {
++    getStorage,
++    getCwd,
++    effort,
++  });
 +  registerWorkflowModelsCommand(pi);
-+  registerBuiltinWorkflows(pi, { cwd, manager, storage });
-+  registerAllSavedWorkflows(pi, cwd, storage, manager);
++  registerBuiltinWorkflows(pi, { getManager, getCwd, getStorage });
++  // Saved project commands are registered on session_start (after the real
++  // ctx.cwd is known and any cross-project rebuild has finished). Registering
++  // them in the factory would stamp source-project descriptions onto slash
++  // commands before a resume into another project could correct the cwd —
++  // and Pi cannot unregister/replace a command's metadata once registered.
 +  registerEffortCommand(pi, effort);
-+  // "Workflows mode": type `workflow(s)` to arm a forced workflow at submit
-+  // time. Installed once (guarded below) inside session_start alongside the
-+  // other per-session installers.
++
 +  let armingInstalled = false;
-+  // Registration of the workflow tools into the active set happens on the FIRST
-+  // session_start only. Re-adding them on every session would override a user
-+  // who deactivated them on purpose (their absence at a later session_start is
-+  // the only signal of that choice the host gives us). /workflows run still
-+  // reactivates on demand, and says so.
 +  let workflowToolsRegistered = false;
 +
 +  pi.on("session_start", (_event: unknown, ctx: ExtensionContext) => {
++    // True project cwd for this session. Pi keeps process.cwd() on the
++    // launching directory across /resume into another project; ctx.cwd is
++    // the session header's project path.
 +    sessionConfirm = (title, message) => ctx.ui.confirm(title, message);
-+    if (pausedForVersionChange > 0) {
++    const sessionCwd = resolve(ctx.cwd || process.cwd());
++
++    if (sessionCwd !== resolve(manager.getCwd())) {
++      // Cross-project: the live manager is for the wrong tree. Pause anything
++      // still on it, then rebuild against the real session project.
++      const stranded: WorkflowReloadRuntime = {
++        cwd: manager.getCwd(),
++        extensionVersion: WORKFLOW_EXTENSION_VERSION,
++        manager,
++        effort,
++      };
++      const n = pauseStrandedWorkflowRuntime(stranded);
++      if (n > 0) pausedForMismatch += n;
++
++      cwd = sessionCwd;
++      storage = createWorkflowStorage(cwd);
++      managerOptions = buildManagerOptions(cwd, storage, confirmForeignRun);
++      manager = new WorkflowManager({ cwd, ...managerOptions });
++      installResultDelivery(pi, manager, { loadSettings: () => loadWorkflowSettings({ cwd: getCwd() }) });
++      usageLimitScheduler.dispose();
++      usageLimitScheduler = new UsageLimitScheduler(manager);
++    } else if (cwd !== sessionCwd) {
++      // Manager already owns the session project; just align the local cwd/storage.
++      cwd = sessionCwd;
++      storage = createWorkflowStorage(cwd);
++      managerOptions = buildManagerOptions(cwd, storage, confirmForeignRun);
++      manager.reconfigureAfterReload(managerOptions);
++    }
++
++    // First registration (and post-rebuild catch-up for target-only names).
++    // Handlers load by name from the live storage, so a later same-session
++    // overwrite picks up the new script; Pi still cannot drop source-only
++    // names left over from a prior generation — those handlers notify.
++    registerAllSavedWorkflows(pi, getCwd, getStorage, getManager);
++
++    if (pausedForMismatch > 0) {
 +      ctx.ui.notify(
-+        `Workflow extension updated during /reload; paused ${pausedForVersionChange} active workflow(s) for safe resume.`,
++        `Paused ${pausedForMismatch} active workflow(s) that could not safely continue in this session (extension update or project switch). Resume them from /workflows when ready.`,
 +        "warning",
 +      );
++      pausedForMismatch = 0;
 +    }
-+    // Tell the manager the session's main model so "explore" agents auto-tier
-+    // down to a lighter same-family sibling (e.g. Claude → Haiku).
++
 +    manager.setMainModel(ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : undefined);
-+    // Share the host session's model registry so tier/phase routing resolves
-+    // extension-registered providers (e.g. ollama-cloud) consistently. Set it
-+    // before activating the tool: the tool's promptGuidelines read the
-+    // manager's registry lazily, so tool-registry refreshes from here on
-+    // advertise the shared registry's models.
 +    manager.setModelRegistry(ctx.modelRegistry);
++
++    // Registration of the workflow tools into the active set happens on the FIRST
++    // session_start only. Re-adding them on every session would override a user
++    // who deactivated them on purpose (their absence at a later session_start is
++    // the only signal of that choice the host gives us). /workflows run still
++    // reactivates on demand, and says so.
 +    if (!workflowToolsRegistered) {
 +      const active = pi.getActiveTools();
 +      const workflowTools = [workflowTool.name, workflowControlTool.name];
@@ -4441,23 +4664,33 @@ diff -ruN --exclude=node_modules a/extensions/workflow/index.ts b/extensions/wor
 +      if (missing.length) pi.setActiveTools([...active, ...missing]);
 +      workflowToolsRegistered = true;
 +    }
-+    // Scope the /workflows history to this session: runs persist on disk across
-+    // sessions, but the navigator/task panel show only the current session's runs.
-+    // Switching back to a previous session re-shows that session's runs.
++
++    // Bind + adopt before resuming delivery so a flushed completion is tagged
++    // with this session and visible in its panel.
++    let sessionId: string | undefined;
 +    try {
-+      manager.setSessionId(ctx.sessionManager?.getSessionId());
++      sessionId = ctx.sessionManager?.getSessionId();
 +    } catch {
-+      // sessionManager may be unavailable in some contexts — fall back to global history.
++      // sessionManager may be unavailable — fall back to global history.
 +    }
-+    // Live "workflows running" panel below the input (focus + enter to open).
-+    // Pass a live settings loader so /workflows-progress (compact|detailed) takes
-+    // effect without a restart.
-+    installTaskPanel(pi, manager, ctx.ui, { storage, cwd, loadSettings: () => loadWorkflowSettings({ cwd }) });
++    manager.setSessionId(sessionId);
++    manager.adoptLiveRunsToSession(sessionId);
++
++    // Runtime is bound now (session_start fires after bindCore). Unsuspend and
++    // flush anything queued while the previous ctx was dying or this factory
++    // was still loading.
++    resumeResultDelivery(manager);
++
++    installTaskPanel(pi, manager, ctx.ui, {
++      storage,
++      cwd,
++      loadSettings: () => loadWorkflowSettings({ cwd: getCwd() }),
++    });
 +    if (!armingInstalled) {
 +      installWorkflowKeywordArming(pi, effort, {
 +        settingsStore: {
-+          load: () => loadWorkflowSettings({ cwd }),
-+          save: (nextSettings) => saveWorkflowSettingsForCwd(nextSettings, cwd),
++          load: () => loadWorkflowSettings({ cwd: getCwd() }),
++          save: (nextSettings) => saveWorkflowSettingsForCwd(nextSettings, getCwd()),
 +        },
 +      });
 +      armingInstalled = true;
@@ -4467,13 +4700,17 @@ diff -ruN --exclude=node_modules a/extensions/workflow/index.ts b/extensions/wor
 diff -ruN --exclude=node_modules a/extensions/workflow.ts b/extensions/workflow.ts
 --- a/extensions/workflow.ts	1985-10-26 03:15:00
 +++ b/extensions/workflow.ts	1969-12-31 18:00:00
-@@ -1,151 +0,0 @@
+@@ -1,338 +0,0 @@
+-import { closeSync, existsSync, openSync, readSync } from "node:fs";
+-import { resolve } from "node:path";
+-import { StringDecoder } from "node:string_decoder";
 -import { createCodingTools, type ExtensionAPI, type ExtensionContext } from "@earendil-works/pi-coding-agent";
 -import {
 -  claimWorkflowRuntime,
 -  discardWorkflowRuntime,
 -  handoffWorkflowRuntime,
 -  pauseStrandedWorkflowRuntime,
+-  SESSION_REPLACEMENT_REASONS,
 -  WORKFLOW_EXTENSION_VERSION,
 -  type WorkflowReloadRuntime,
 -} from "../src/extension-reload.js";
@@ -4483,6 +4720,7 @@ diff -ruN --exclude=node_modules a/extensions/workflow.ts b/extensions/workflow.
 -  createWorkflowControlTool,
 -  createWorkflowStorage,
 -  createWorkflowTool,
+-  type EffortState,
 -  installResultDelivery,
 -  installTaskPanel,
 -  installWorkflowKeywordArming,
@@ -4492,30 +4730,76 @@ diff -ruN --exclude=node_modules a/extensions/workflow.ts b/extensions/workflow.
 -  registerEffortCommand,
 -  registerWorkflowCommands,
 -  registerWorkflowModelsCommand,
+-  resumeResultDelivery,
 -  saveWorkflowSettingsForCwd,
+-  suspendResultDelivery,
 -  UsageLimitScheduler,
 -  WorkflowManager,
 -} from "../src/index.js";
+-import type { WorkflowStorage } from "../src/workflow-saved.js";
 -
--export default function extension(pi: ExtensionAPI) {
--  // Single manager shared by the workflow tool and /workflows command. Pi loads
--  // a fresh extension factory for /reload, so explicitly claim the old live
--  // manager when session_shutdown staged one; otherwise in-flight promises,
--  // controls, event delivery, and live UI updates would stay on an unreachable
--  // manager even though their persisted snapshots remained visible on disk.
--  const cwd = process.cwd();
--  const storage = createWorkflowStorage(cwd);
+-/**
+- * Bound for the read-only session-header probe (first line only). Independent of
+- * pi's own ~1MiB session scan — we only need the header and keep the read small.
+- */
+-const SESSION_HEADER_SCAN_BYTES = 64 * 1024;
+-
+-/**
+- * Read-only probe of a session JSONL file's project cwd from its header line.
+- * Does NOT call SessionManager.open() — that API creates directories, may rewrite
+- * empty/legacy files, and loads the full history. Used on session_shutdown for
+- * resume/fork destination checks. Unreadable / oversized / non-session files
+- * return undefined; callers decide fail-closed vs allow based on the shutdown reason.
+- */
+-export function sessionFileCwd(sessionFile: string | undefined): string | undefined {
+-  if (!sessionFile || !existsSync(sessionFile)) return undefined;
+-  let fd: number | undefined;
+-  try {
+-    fd = openSync(sessionFile, "r");
+-    const decoder = new StringDecoder("utf8");
+-    const buffer = Buffer.allocUnsafe(4096);
+-    const chunks: string[] = [];
+-    let scanned = 0;
+-    while (scanned < SESSION_HEADER_SCAN_BYTES) {
+-      const n = readSync(fd, buffer, 0, Math.min(buffer.length, SESSION_HEADER_SCAN_BYTES - scanned), null);
+-      if (n === 0) {
+-        chunks.push(decoder.end());
+-        break;
+-      }
+-      scanned += n;
+-      const chunk = decoder.write(buffer.subarray(0, n));
+-      const nl = chunk.indexOf("\n");
+-      if (nl !== -1) {
+-        chunks.push(chunk.slice(0, nl));
+-        break;
+-      }
+-      chunks.push(chunk);
+-    }
+-    const line = chunks.join("").trim();
+-    if (!line) return undefined;
+-    const entry = JSON.parse(line) as { type?: string; cwd?: unknown };
+-    if (entry.type !== "session" || typeof entry.cwd !== "string" || !entry.cwd) return undefined;
+-    return resolve(entry.cwd);
+-  } catch {
+-    return undefined;
+-  } finally {
+-    if (fd !== undefined) {
+-      try {
+-        closeSync(fd);
+-      } catch {
+-        // ignore close errors on the probe fd
+-      }
+-    }
+-  }
+-}
+-
+-function buildManagerOptions(cwd: string, storage: WorkflowStorage) {
 -  const settings = loadWorkflowSettings({ cwd });
--  const managerOptions = {
+-  return {
 -    loadSavedWorkflow: (name: string) => storage.load(name)?.script,
--    // Named toolsets survive on the persisted run (the tag, not the functions),
--    // so a resumed run re-resolves the tools it started with — e.g. a paused
--    // /deep-research keeps web access instead of degrading to coding tools.
 -    toolsets: {
 -      "web-research": () => [...createCodingTools(cwd), ...createWebTools()],
 -    },
--    // On top of the always-on workflow/workflow_control denial in subagents
--    // (#107), let users block additional recursive-orchestration tools.
 -    excludeSubagentTools: settings.excludeSubagentTools,
 -    defaultAgentTimeoutMs: settings.defaultAgentTimeoutMs ?? null,
 -    defaultTokenBudget: settings.defaultTokenBudget ?? null,
@@ -4523,96 +4807,232 @@ diff -ruN --exclude=node_modules a/extensions/workflow.ts b/extensions/workflow.
 -    defaultAgentRetries: settings.defaultAgentRetries,
 -    persistAgentSessions: settings.persistAgentSessions,
 -  };
--  const runtimeClaim = claimWorkflowRuntime(cwd);
--  const previousRuntime = runtimeClaim.compatible;
--  const pausedForVersionChange = runtimeClaim.versionMismatch
--    ? pauseStrandedWorkflowRuntime(runtimeClaim.versionMismatch)
--    : 0;
--  const manager = previousRuntime?.manager ?? new WorkflowManager({ cwd, ...managerOptions });
--  if (previousRuntime) manager.reconfigureAfterReload(managerOptions);
--  // /effort is independent of the manager implementation and can safely
--  // survive an extension-version fallback to a fresh manager.
--  const effort = (previousRuntime ?? runtimeClaim.versionMismatch)?.effort ?? createEffortState();
--  const runtime: WorkflowReloadRuntime = {
--    cwd,
--    extensionVersion: WORKFLOW_EXTENSION_VERSION,
--    manager,
--    effort,
--  };
--  // Refresh the delivery holder immediately after claiming the manager. On a
--  // reload handoff its listener survives, but Pi invalidates the old ExtensionAPI
--  // before loading this generation.
--  installResultDelivery(pi, manager, { loadSettings: () => loadWorkflowSettings({ cwd }) });
+-}
 -
--  const workflowTool = createWorkflowTool({ cwd, manager, storage });
--  const workflowControlTool = createWorkflowControlTool({ manager });
+-export default function extension(pi: ExtensionAPI) {
+-  // Mutable host state. Tools/commands resolve through getters so a
+-  // session_start that discovers a cross-project cwd can replace the manager
+-  // without leaving closed-over references pointing at the source project.
+-  //
+-  // Factory-time cwd is process.cwd() only (Pi does not pass the host session
+-  // cwd into the factory). The real session cwd arrives on session_start as
+-  // ctx.cwd; if it differs we rebuild manager/storage against it and pause
+-  // any foreign live runs that rode in via handoff.
+-  let cwd = resolve(process.cwd());
+-  let storage = createWorkflowStorage(cwd);
+-  let managerOptions = buildManagerOptions(cwd, storage);
+-
+-  // Process-wide handoff slot (not cwd-keyed): the previous generation may have
+-  // been bound to ctx.cwd while this factory only sees process.cwd(). Claim
+-  // whatever is staged; session_start then keeps or rebuilds based on the true
+-  // session project (manager.getCwd() vs ctx.cwd).
+-  const runtimeClaim = claimWorkflowRuntime();
+-  const previousRuntime = runtimeClaim.compatible;
+-  let pausedForMismatch = runtimeClaim.versionMismatch ? pauseStrandedWorkflowRuntime(runtimeClaim.versionMismatch) : 0;
+-
+-  // Prefer the claimed manager's own project path for construction defaults
+-  // when it already points at a real project (not just the launch dir).
+-  if (previousRuntime) {
+-    const claimedCwd = resolve(previousRuntime.manager.getCwd());
+-    if (claimedCwd !== cwd) {
+-      cwd = claimedCwd;
+-      storage = createWorkflowStorage(cwd);
+-      managerOptions = buildManagerOptions(cwd, storage);
+-    }
+-  }
+-
+-  let manager = previousRuntime?.manager ?? new WorkflowManager({ cwd, ...managerOptions });
+-  if (previousRuntime) manager.reconfigureAfterReload(managerOptions);
+-
+-  // Stable effort object: /effort and keyword arming close over this reference.
+-  // When a handoff brings a different EffortState, copy the level in place
+-  // rather than rebinding the local binding.
+-  const effort: EffortState = (previousRuntime ?? runtimeClaim.versionMismatch)?.effort ?? createEffortState();
+-  if (previousRuntime?.effort && previousRuntime.effort !== effort) {
+-    effort.level = previousRuntime.effort.level;
+-  }
+-
+-  const getManager = () => manager;
+-  const getCwd = () => cwd;
+-  const getStorage = () => storage;
+-
+-  // Install delivery listeners once. Keep suspended until session_start —
+-  // factory runs before Pi bindCore(), so sendMessage is still the
+-  // "runtime not initialized" stub. Flushing here would re-queue forever.
+-  installResultDelivery(pi, manager, { loadSettings: () => loadWorkflowSettings({ cwd: getCwd() }) });
+-  suspendResultDelivery(manager);
+-
+-  const workflowTool = createWorkflowTool({
+-    getManager,
+-    getCwd,
+-    getStorage,
+-    get manager() {
+-      return manager;
+-    },
+-    get cwd() {
+-      return cwd;
+-    },
+-    get storage() {
+-      return storage;
+-    },
+-  });
+-  const workflowControlTool = createWorkflowControlTool({ getManager });
 -  pi.registerTool(workflowTool);
 -  pi.registerTool(workflowControlTool);
--  // Auto-resume runs that paused on a provider usage limit once the quota is
--  // likely refilled. Standalone: only consumes the manager's public surface, so
--  // it stays decoupled from manager/persistence internals. Its constructor also
--  // re-arms any run that was already paused-on-usage_limit before this process
--  // started (cold start), so restarting pi doesn't strand a paused run.
--  const usageLimitScheduler = new UsageLimitScheduler(manager);
--  pi.on("session_shutdown", (event?: { reason?: string }) => {
+-
+-  let usageLimitScheduler = new UsageLimitScheduler(manager);
+-
+-  pi.on("session_shutdown", (event?: { reason?: string; targetSessionFile?: string }) => {
 -    usageLimitScheduler.dispose();
--    if (event?.reason === "reload") {
+-    // Always stop live sends first so a completion racing teardown cannot
+-    // deliver into the outgoing session (or throw on a just-stale ctx and be
+-    // lost). Replacement reasons stage the runtime for the next generation
+-    // only when the destination is the same project; quit/unknown/cross-project
+-    // pause in-flight runs onto the journal path.
+-    suspendResultDelivery(manager);
+-
+-    const reason = event?.reason;
+-    const runtime: WorkflowReloadRuntime = {
+-      cwd,
+-      extensionVersion: WORKFLOW_EXTENSION_VERSION,
+-      manager,
+-      effort,
+-    };
+-
+-    if (reason && SESSION_REPLACEMENT_REASONS.has(reason)) {
+-      // Destination checks differ by reason:
+-      // - resume: fail-closed. Only hand off when the target session header
+-      //   positively reads as this same project. Missing/corrupt/unreadable
+-      //   headers must not smuggle a source-project manager across.
+-      // - fork: Pi forks stay in the same project; the new session file may
+-      //   not exist yet so a missing header is not a cross-project signal.
+-      //   Only refuse when we positively read a different cwd.
+-      // - reload/new: same project; always hand off.
+-      if (reason === "resume") {
+-        const targetCwd = sessionFileCwd(event?.targetSessionFile);
+-        if (targetCwd !== cwd) {
+-          pauseStrandedWorkflowRuntime(runtime);
+-          discardWorkflowRuntime(cwd, runtime);
+-          return;
+-        }
+-        handoffWorkflowRuntime(runtime);
+-        return;
+-      }
+-      if (reason === "fork") {
+-        const targetCwd = sessionFileCwd(event?.targetSessionFile);
+-        if (targetCwd && targetCwd !== cwd) {
+-          pauseStrandedWorkflowRuntime(runtime);
+-          discardWorkflowRuntime(cwd, runtime);
+-          return;
+-        }
+-        handoffWorkflowRuntime(runtime);
+-        return;
+-      }
 -      handoffWorkflowRuntime(runtime);
--    } else {
--      discardWorkflowRuntime(cwd, runtime);
+-      return;
 -    }
+-
+-    pauseStrandedWorkflowRuntime(runtime);
+-    discardWorkflowRuntime(cwd, runtime);
 -  });
--  // Standing /effort opt-in (off|high|ultra): auto-arms a workflow for substantive
--  // messages, like CC's ultracode. Shared with the editor's input hook below and
--  // with the explicit /workflows run <prompt> manual trigger. It is part of the
--  // reload handoff so /reload does not silently turn the selected effort off.
--  registerWorkflowCommands(pi, manager, { storage, cwd, effort });
+-
+-  registerWorkflowCommands(pi, getManager, {
+-    getStorage,
+-    getCwd,
+-    effort,
+-  });
 -  registerWorkflowModelsCommand(pi);
--  registerBuiltinWorkflows(pi, { cwd, manager, storage });
--  registerAllSavedWorkflows(pi, cwd, storage, manager);
+-  registerBuiltinWorkflows(pi, { getManager, getCwd, getStorage });
+-  // Saved project commands are registered on session_start (after the real
+-  // ctx.cwd is known and any cross-project rebuild has finished). Registering
+-  // them in the factory would stamp source-project descriptions onto slash
+-  // commands before a resume into another project could correct the cwd —
+-  // and Pi cannot unregister/replace a command's metadata once registered.
 -  registerEffortCommand(pi, effort);
--  // "Workflows mode": type `workflow(s)` to arm a forced workflow at submit
--  // time. Installed once (guarded below) inside session_start alongside the
--  // other per-session installers.
+-
 -  let armingInstalled = false;
 -
 -  pi.on("session_start", (_event: unknown, ctx: ExtensionContext) => {
--    if (pausedForVersionChange > 0) {
+-    // True project cwd for this session. Pi keeps process.cwd() on the
+-    // launching directory across /resume into another project; ctx.cwd is
+-    // the session header's project path.
+-    const sessionCwd = resolve(ctx.cwd || process.cwd());
+-
+-    if (sessionCwd !== resolve(manager.getCwd())) {
+-      // Cross-project: the live manager is for the wrong tree. Pause anything
+-      // still on it, then rebuild against the real session project.
+-      const stranded: WorkflowReloadRuntime = {
+-        cwd: manager.getCwd(),
+-        extensionVersion: WORKFLOW_EXTENSION_VERSION,
+-        manager,
+-        effort,
+-      };
+-      const n = pauseStrandedWorkflowRuntime(stranded);
+-      if (n > 0) pausedForMismatch += n;
+-
+-      cwd = sessionCwd;
+-      storage = createWorkflowStorage(cwd);
+-      managerOptions = buildManagerOptions(cwd, storage);
+-      manager = new WorkflowManager({ cwd, ...managerOptions });
+-      installResultDelivery(pi, manager, { loadSettings: () => loadWorkflowSettings({ cwd: getCwd() }) });
+-      usageLimitScheduler.dispose();
+-      usageLimitScheduler = new UsageLimitScheduler(manager);
+-    } else if (cwd !== sessionCwd) {
+-      // Manager already owns the session project; just align the local cwd/storage.
+-      cwd = sessionCwd;
+-      storage = createWorkflowStorage(cwd);
+-      managerOptions = buildManagerOptions(cwd, storage);
+-      manager.reconfigureAfterReload(managerOptions);
+-    }
+-
+-    // First registration (and post-rebuild catch-up for target-only names).
+-    // Handlers load by name from the live storage, so a later same-session
+-    // overwrite picks up the new script; Pi still cannot drop source-only
+-    // names left over from a prior generation — those handlers notify.
+-    registerAllSavedWorkflows(pi, getCwd, getStorage, getManager);
+-
+-    if (pausedForMismatch > 0) {
 -      ctx.ui.notify(
--        `Workflow extension updated during /reload; paused ${pausedForVersionChange} active workflow(s) for safe resume.`,
+-        `Paused ${pausedForMismatch} active workflow(s) that could not safely continue in this session (extension update or project switch). Resume them from /workflows when ready.`,
 -        "warning",
 -      );
+-      pausedForMismatch = 0;
 -    }
--    // Tell the manager the session's main model so "explore" agents auto-tier
--    // down to a lighter same-family sibling (e.g. Claude → Haiku).
+-
 -    manager.setMainModel(ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : undefined);
--    // Share the host session's model registry so tier/phase routing resolves
--    // extension-registered providers (e.g. ollama-cloud) consistently. Set it
--    // before activating the tool: the tool's promptGuidelines read the
--    // manager's registry lazily, so tool-registry refreshes from here on
--    // advertise the shared registry's models.
 -    manager.setModelRegistry(ctx.modelRegistry);
+-
 -    const active = pi.getActiveTools();
 -    const workflowTools = [workflowTool.name, workflowControlTool.name];
 -    const missing = workflowTools.filter((name) => !active.includes(name));
 -    if (missing.length) pi.setActiveTools([...active, ...missing]);
--    // Scope the /workflows history to this session: runs persist on disk across
--    // sessions, but the navigator/task panel show only the current session's runs.
--    // Switching back to a previous session re-shows that session's runs.
+-
+-    // Bind + adopt before resuming delivery so a flushed completion is tagged
+-    // with this session and visible in its panel.
+-    let sessionId: string | undefined;
 -    try {
--      manager.setSessionId(ctx.sessionManager?.getSessionId());
+-      sessionId = ctx.sessionManager?.getSessionId();
 -    } catch {
--      // sessionManager may be unavailable in some contexts — fall back to global history.
+-      // sessionManager may be unavailable — fall back to global history.
 -    }
--    // Live "workflows running" panel below the input (focus + enter to open).
--    // Pass a live settings loader so /workflows-progress (compact|detailed) takes
--    // effect without a restart.
--    installTaskPanel(pi, manager, ctx.ui, { storage, cwd, loadSettings: () => loadWorkflowSettings({ cwd }) });
+-    manager.setSessionId(sessionId);
+-    manager.adoptLiveRunsToSession(sessionId);
+-
+-    // Runtime is bound now (session_start fires after bindCore). Unsuspend and
+-    // flush anything queued while the previous ctx was dying or this factory
+-    // was still loading.
+-    resumeResultDelivery(manager);
+-
+-    installTaskPanel(pi, manager, ctx.ui, {
+-      storage,
+-      cwd,
+-      loadSettings: () => loadWorkflowSettings({ cwd: getCwd() }),
+-    });
 -    if (!armingInstalled) {
 -      installWorkflowKeywordArming(pi, effort, {
 -        settingsStore: {
--          load: () => loadWorkflowSettings({ cwd }),
--          save: (nextSettings) => saveWorkflowSettingsForCwd(nextSettings, cwd),
+-          load: () => loadWorkflowSettings({ cwd: getCwd() }),
+-          save: (nextSettings) => saveWorkflowSettingsForCwd(nextSettings, getCwd()),
 -        },
 -      });
 -      armingInstalled = true;
@@ -4621,17 +5041,15 @@ diff -ruN --exclude=node_modules a/extensions/workflow.ts b/extensions/workflow.
 -}
 diff -ruN --exclude=node_modules a/package.json b/package.json
 --- a/package.json	1985-10-26 03:15:00
-+++ b/package.json	2026-07-30 17:45:31
-@@ -1,7 +1,8 @@
++++ b/package.json	2026-08-06 11:25:34
+@@ -1,6 +1,7 @@
  {
    "name": "@quintinshaw/pi-dynamic-workflows",
-   "version": "3.5.0",
--  "description": "Claude-Code-style dynamic workflows for Pi — fan a task out across 100s of subagents with real model routing, token/cost accounting, resume, git-worktree isolation, an interactive /workflows TUI, and a real /deep-research.",
+   "version": "3.5.1",
 +  "private": true,
-+  "description": "Claude-Code-style dynamic workflows for Pi \u2014 fan a task out across 100s of subagents with real model routing, token/cost accounting, resume, git-worktree isolation, an interactive /workflows TUI, and a real /deep-research.",
+   "description": "Claude-Code-style dynamic workflows for Pi — fan a task out across 100s of subagents with real model routing, token/cost accounting, resume, git-worktree isolation, an interactive /workflows TUI, and a real /deep-research.",
    "type": "module",
    "main": "./dist/index.js",
-   "types": "./dist/index.d.ts",
 @@ -65,7 +66,7 @@
    ],
    "pi": {
@@ -4643,7 +5061,7 @@ diff -ruN --exclude=node_modules a/package.json b/package.json
        "skills/workflow-authoring",
 diff -ruN --exclude=node_modules a/skills/workflow-authoring/references/capabilities.md b/skills/workflow-authoring/references/capabilities.md
 --- a/skills/workflow-authoring/references/capabilities.md	1985-10-26 03:15:00
-+++ b/skills/workflow-authoring/references/capabilities.md	2026-07-30 18:22:49
++++ b/skills/workflow-authoring/references/capabilities.md	2026-08-06 11:22:16
 @@ -32,10 +32,10 @@
  | name | workflow-tool-input | `name?: string` | — |
  | args | workflow-tool-input | `args?: unknown` | — |
@@ -4660,7 +5078,7 @@ diff -ruN --exclude=node_modules a/skills/workflow-authoring/references/capabili
  <!-- END GENERATED SUPPORTED WORKFLOW CAPABILITIES -->
 diff -ruN --exclude=node_modules a/skills/workflow-authoring/references/capability-details.md b/skills/workflow-authoring/references/capability-details.md
 --- a/skills/workflow-authoring/references/capability-details.md	1985-10-26 03:15:00
-+++ b/skills/workflow-authoring/references/capability-details.md	2026-07-30 18:22:49
++++ b/skills/workflow-authoring/references/capability-details.md	2026-08-06 11:22:16
 @@ -29,7 +29,7 @@
  - Constraint: selector priority is explicit model > agentType model > tier > phase model > metadata model > implicit medium > session default
  - Constraint: an explicit model, agentType model, tier, or phase model that resolves to an unavailable model throws MODEL_NOT_FOUND naming the source (e.g. the tier and what it resolved to) instead of falling back
@@ -4701,7 +5119,7 @@ diff -ruN --exclude=node_modules a/skills/workflow-authoring/references/capabili
  ## tokenBudget
 diff -ruN --exclude=node_modules a/skills/workflow-authoring/references/lifecycle.md b/skills/workflow-authoring/references/lifecycle.md
 --- a/skills/workflow-authoring/references/lifecycle.md	1985-10-26 03:15:00
-+++ b/skills/workflow-authoring/references/lifecycle.md	2026-07-30 17:44:46
++++ b/skills/workflow-authoring/references/lifecycle.md	2026-08-06 11:22:16
 @@ -2,7 +2,7 @@
  
  ## Bounds and budget
@@ -4713,7 +5131,7 @@ diff -ruN --exclude=node_modules a/skills/workflow-authoring/references/lifecycl
  
 diff -ruN --exclude=node_modules a/skills/workflow-authoring/references/runtime.md b/skills/workflow-authoring/references/runtime.md
 --- a/skills/workflow-authoring/references/runtime.md	1985-10-26 03:15:00
-+++ b/skills/workflow-authoring/references/runtime.md	2026-07-30 17:45:31
++++ b/skills/workflow-authoring/references/runtime.md	2026-08-06 11:22:16
 @@ -22,6 +22,6 @@
  
  ## Routing and support
@@ -4724,7 +5142,7 @@ diff -ruN --exclude=node_modules a/skills/workflow-authoring/references/runtime.
  Generated entries marked `supported` are authoring API. `console` and whole-script Markdown fences are compatibility-only. VM realm facilities are internal. Active model routes and agent types are dynamic. Use `log()` in new scripts.
 diff -ruN --exclude=node_modules a/src/agent-registry.ts b/src/agent-registry.ts
 --- a/src/agent-registry.ts	1985-10-26 03:15:00
-+++ b/src/agent-registry.ts	2026-07-30 17:44:46
++++ b/src/agent-registry.ts	2026-08-06 11:22:16
 @@ -12,7 +12,8 @@
   * a deprecated fallback (with a one-time warning) so users who followed this repo's
   * earlier docs are not silently broken; the new location wins on a name collision.
@@ -4803,7 +5221,7 @@ diff -ruN --exclude=node_modules a/src/agent-registry.ts b/src/agent-registry.ts
      for (const def of readDefsFromDir(userDir, "user")) {
 diff -ruN --exclude=node_modules a/src/builtin-commands.ts b/src/builtin-commands.ts
 --- a/src/builtin-commands.ts	1985-10-26 03:15:00
-+++ b/src/builtin-commands.ts	2026-07-30 17:44:46
++++ b/src/builtin-commands.ts	2026-08-06 11:26:10
 @@ -16,7 +16,7 @@
  import type { BuiltinWorkflowInvocation } from "./builtin-workflows.js";
  import { findBuiltinWorkflow } from "./builtin-workflows.js";
@@ -4813,12 +5231,12 @@ diff -ruN --exclude=node_modules a/src/builtin-commands.ts b/src/builtin-command
  import type { WorkflowManager } from "./workflow-manager.js";
  import { createWorkflowStorage, type WorkflowStorage } from "./workflow-saved.js";
  
-@@ -129,9 +129,21 @@
+@@ -142,9 +142,24 @@
     * context) so a shadowed command behaves identically to how it would if the
     * saved workflow itself had been registered under this name.
     */
 -  function runSavedShadowIfPresent(name: string, rawArgs: string, ctx: ExtensionCommandContext): boolean {
--    const saved = storage.load(name);
+-    const saved = getStorage().load(name);
 +  async function runSavedShadowIfPresent(
 +    name: string,
 +    rawArgs: string,
@@ -4829,15 +5247,18 @@ diff -ruN --exclude=node_modules a/src/builtin-commands.ts b/src/builtin-command
 +    // must not take over a built-in command silently. It may still take over —
 +    // that is the documented precedence — but only after a prompt naming the
 +    // file, and declining falls through to the built-in rather than failing.
++    const storage = getStorage();
 +    const saved = storage.load(name) ?? storage.list().find((candidate) => candidate.name === name);
      if (!saved) return false;
-+    if (!(await confirmRepoLocalWorkflow(ctx, saved, cwd, `Run the project's own /${name} instead of the built-in?`))) {
++    if (
++      !(await confirmRepoLocalWorkflow(ctx, saved, getCwd(), `Run the project's own /${name} instead of the built-in?`))
++    ) {
 +      return false;
 +    }
-     startBackground(manager, ctx, name, saved.script, parseCommandArgs(rawArgs, saved.parameters));
+     startBackground(getManager(), ctx, name, saved.script, parseCommandArgs(rawArgs, saved.parameters));
      return true;
    }
-@@ -140,7 +152,7 @@
+@@ -153,7 +168,7 @@
      pi.registerCommand("deep-research", {
        description: "Research a question across the web with cross-checked sources",
        async handler(args: string, ctx: ExtensionCommandContext) {
@@ -4846,7 +5267,7 @@ diff -ruN --exclude=node_modules a/src/builtin-commands.ts b/src/builtin-command
          const question = args.trim();
          if (!question) return ctx.ui.notify("Usage: /deep-research <question>", "warning");
          // Resolve through the shared builtin registry (builtin-workflows.ts) so
-@@ -167,7 +179,7 @@
+@@ -180,7 +195,7 @@
      pi.registerCommand("adversarial-review", {
        description: "Investigate a task, then cross-check each finding with skeptical reviewers",
        async handler(args: string, ctx: ExtensionCommandContext) {
@@ -4854,8 +5275,8 @@ diff -ruN --exclude=node_modules a/src/builtin-commands.ts b/src/builtin-command
 +        if (await runSavedShadowIfPresent("adversarial-review", args, ctx)) return;
          const task = args.trim();
          if (!task) return ctx.ui.notify("Usage: /adversarial-review <task or question>", "warning");
-         const resolved = resolveBuiltinOrNotify("adversarial-review", cwd, { task }, ctx);
-@@ -182,11 +194,22 @@
+         const resolved = resolveBuiltinOrNotify("adversarial-review", getCwd(), { task }, ctx);
+@@ -195,11 +210,22 @@
        description:
          "Multi-angle parallel code review: 7 specialized finders (correctness, reuse, simplification, efficiency, altitude) + verify pass → ranked findings",
        async handler(args: string, ctx: ExtensionCommandContext) {
@@ -4879,7 +5300,7 @@ diff -ruN --exclude=node_modules a/src/builtin-commands.ts b/src/builtin-command
          try {
            let cmd: string;
            let cmdArgs: string[];
-@@ -199,9 +222,11 @@
+@@ -212,9 +238,11 @@
              cmd = "gh";
              cmdArgs = ["pr", "diff", input];
            } else if (input.includes("..")) {
@@ -4893,7 +5314,7 @@ diff -ruN --exclude=node_modules a/src/builtin-commands.ts b/src/builtin-command
            } else {
              diffSource = `git diff HEAD -- ${input}`;
              cmd = "git";
-@@ -254,7 +279,7 @@
+@@ -267,7 +295,7 @@
      pi.registerCommand("multi-perspective", {
        description: "Analyze a topic from several independent perspectives in parallel, then synthesize",
        async handler(args: string, ctx: ExtensionCommandContext) {
@@ -4902,7 +5323,7 @@ diff -ruN --exclude=node_modules a/src/builtin-commands.ts b/src/builtin-command
          const [topic, ...rest] = tokenizeArgs(args);
          if (!topic) {
            return ctx.ui.notify('Usage: /multi-perspective "<topic>" [perspective1] [perspective2] …', "warning");
-@@ -272,7 +297,7 @@
+@@ -285,7 +313,7 @@
      pi.registerCommand("codebase-audit", {
        description: "Run parallel checks against a codebase scope, then cross-validate and report",
        async handler(args: string, ctx: ExtensionCommandContext) {
@@ -4913,7 +5334,7 @@ diff -ruN --exclude=node_modules a/src/builtin-commands.ts b/src/builtin-command
            return ctx.ui.notify('Usage: /codebase-audit <scope> "<check1>" ["<check2>" …]', "warning");
 diff -ruN --exclude=node_modules a/src/builtin-workflows.ts b/src/builtin-workflows.ts
 --- a/src/builtin-workflows.ts	1985-10-26 03:15:00
-+++ b/src/builtin-workflows.ts	2026-07-30 17:44:46
++++ b/src/builtin-workflows.ts	2026-08-06 11:22:16
 @@ -18,6 +18,7 @@
  import { generateCodebaseAuditWorkflow, generateDeepResearchWorkflow } from "./deep-research.js";
  import { createWebTools } from "./web-tools.js";
@@ -4947,7 +5368,7 @@ diff -ruN --exclude=node_modules a/src/builtin-workflows.ts b/src/builtin-workfl
      },
 diff -ruN --exclude=node_modules a/src/config.ts b/src/config.ts
 --- a/src/config.ts	1985-10-26 03:15:00
-+++ b/src/config.ts	2026-07-30 17:44:46
++++ b/src/config.ts	2026-08-06 11:22:16
 @@ -2,17 +2,80 @@
   * Configuration constants for pi-dynamic-workflows.
   */
@@ -5034,7 +5455,7 @@ diff -ruN --exclude=node_modules a/src/config.ts b/src/config.ts
  export const DEFAULT_TOKEN_BUDGET = null;
 diff -ruN --exclude=node_modules a/src/errors.ts b/src/errors.ts
 --- a/src/errors.ts	1985-10-26 03:15:00
-+++ b/src/errors.ts	2026-07-30 17:44:46
++++ b/src/errors.ts	2026-08-06 11:22:16
 @@ -63,6 +63,15 @@
    UNKNOWN = "UNKNOWN",
  }
@@ -5134,7 +5555,7 @@ diff -ruN --exclude=node_modules a/src/errors.ts b/src/errors.ts
      error instanceof Error ? error.message : String(error),
 diff -ruN --exclude=node_modules a/src/fs-persistence.ts b/src/fs-persistence.ts
 --- a/src/fs-persistence.ts	1985-10-26 03:15:00
-+++ b/src/fs-persistence.ts	2026-07-30 17:44:46
++++ b/src/fs-persistence.ts	2026-08-06 11:22:16
 @@ -13,8 +13,12 @@
   *  3. A missing or unreadable directory degrades to "no files" rather than
   *     throwing — a listing must never crash because one storage location is
@@ -5188,7 +5609,7 @@ diff -ruN --exclude=node_modules a/src/fs-persistence.ts b/src/fs-persistence.ts
    }
 diff -ruN --exclude=node_modules a/src/index.ts b/src/index.ts
 --- a/src/index.ts	1985-10-26 03:15:00
-+++ b/src/index.ts	2026-07-30 17:44:46
++++ b/src/index.ts	2026-08-06 11:25:58
 @@ -36,9 +36,11 @@
    registerEffortCommand,
  } from "./effort-command.js";
@@ -5220,22 +5641,15 @@ diff -ruN --exclude=node_modules a/src/index.ts b/src/index.ts
    parseCommandArgs,
    registerAllSavedWorkflows,
    registerSavedWorkflow,
-@@ -76,7 +87,13 @@
- export { SharedStore } from "./shared-store.js";
- export type { StructuredOutputCapture, StructuredOutputToolOptions } from "./structured-output.js";
+@@ -78,6 +89,7 @@
  export { createStructuredOutputTool } from "./structured-output.js";
--export { deliverText, installResultDelivery, installTaskPanel, type TaskPanelOptions } from "./task-panel.js";
-+export {
-+  deliverText,
+ export {
+   deliverText,
 +  fenceUntrusted,
-+  installResultDelivery,
-+  installTaskPanel,
-+  type TaskPanelOptions,
-+} from "./task-panel.js";
- export type {
-   AutoResumeDelayParams,
-   SchedulableWorkflowManager,
-@@ -84,7 +101,14 @@
+   installResultDelivery,
+   installTaskPanel,
+   resumeResultDelivery,
+@@ -91,7 +103,14 @@
    UsageLimitSchedulerOptions,
  } from "./usage-limit-scheduler.js";
  export { computeAutoResumeDelayMs, parseResetHintMs, UsageLimitScheduler } from "./usage-limit-scheduler.js";
@@ -5251,7 +5665,7 @@ diff -ruN --exclude=node_modules a/src/index.ts b/src/index.ts
  export type {
    AgentOptions,
    JournalEntry,
-@@ -139,18 +163,20 @@
+@@ -146,18 +165,20 @@
    registerWorkflowTriggerCommand,
    type WorkflowModeState,
  } from "./workflow-editor.js";
@@ -5274,7 +5688,7 @@ diff -ruN --exclude=node_modules a/src/index.ts b/src/index.ts
  export { assertSafeSavedWorkflowName, createWorkflowStorage, isSafeSavedWorkflowName } from "./workflow-saved.js";
  export type { WorkflowSettings, WorkflowSettingsOptions, WorkflowSettingsStore } from "./workflow-settings.js";
  export {
-@@ -173,4 +199,4 @@
+@@ -180,4 +201,4 @@
  } from "./workflow-ui.js";
  export { registerWorkflowModelsCommand } from "./workflows-models-command.js";
  export type { Worktree } from "./worktree.js";
@@ -5282,7 +5696,7 @@ diff -ruN --exclude=node_modules a/src/index.ts b/src/index.ts
 +export { createWorktree, removeWorktree, worktreeId } from "./worktree.js";
 diff -ruN --exclude=node_modules a/src/logger.ts b/src/logger.ts
 --- a/src/logger.ts	1985-10-26 03:15:00
-+++ b/src/logger.ts	2026-07-30 17:44:46
++++ b/src/logger.ts	2026-08-06 11:22:16
 @@ -4,6 +4,8 @@
  
  import { appendFileSync, mkdirSync, writeFileSync } from "node:fs";
@@ -5353,7 +5767,7 @@ diff -ruN --exclude=node_modules a/src/logger.ts b/src/logger.ts
        // Silent fail
 diff -ruN --exclude=node_modules a/src/run-persistence.ts b/src/run-persistence.ts
 --- a/src/run-persistence.ts	1985-10-26 03:15:00
-+++ b/src/run-persistence.ts	2026-07-30 17:44:46
++++ b/src/run-persistence.ts	2026-08-06 11:22:16
 @@ -2,6 +2,7 @@
   * Workflow run state persistence for pause/resume support.
   */
@@ -6060,7 +6474,7 @@ diff -ruN --exclude=node_modules a/src/run-persistence.ts b/src/run-persistence.
          if (existing?.token === lease.token) _unlinkSync(primaryLockPath(lease.runId));
 diff -ruN --exclude=node_modules a/src/saved-commands.ts b/src/saved-commands.ts
 --- a/src/saved-commands.ts	1985-10-26 03:15:00
-+++ b/src/saved-commands.ts	2026-07-30 17:44:46
++++ b/src/saved-commands.ts	2026-08-06 11:29:02
 @@ -7,6 +7,7 @@
  import { runWorkflow, type WorkflowRunResult } from "./workflow.js";
  import type { WorkflowManager } from "./workflow-manager.js";
@@ -6106,17 +6520,38 @@ diff -ruN --exclude=node_modules a/src/saved-commands.ts b/src/saved-commands.ts
  function reportText(result: WorkflowRunResult): string {
    const r = result.result as { report?: unknown } | undefined;
    if (r && typeof r.report === "string" && r.report.trim()) return r.report;
-@@ -68,6 +99,7 @@
-         ctx.ui.notify(`/${wf.name} was deleted — reload the session to remove this command.`, "warning");
+@@ -56,7 +87,7 @@
+ export function registerSavedWorkflow(
+   pi: ExtensionAPI,
+   cwd: string | (() => string),
+-  wf: Pick<SavedWorkflow, "name" | "description" | "script" | "parameters">,
++  wf: Pick<SavedWorkflow, "name" | "description" | "script" | "parameters" | "path" | "repoLocal" | "scriptOrigin">,
+   manager?: WorkflowManager | (() => WorkflowManager | undefined),
+   exists?: () => boolean,
+   /**
+@@ -65,7 +96,10 @@
+    * command name may resolve to a different script (or nothing) in the new
+    * project's storage. When omitted, `wf` is used as a frozen snapshot.
+    */
+-  loadWorkflow?: () => Pick<SavedWorkflow, "name" | "description" | "script" | "parameters"> | null | undefined,
++  loadWorkflow?: () => Pick<
++    SavedWorkflow,
++    "name" | "description" | "script" | "parameters" | "path" | "repoLocal" | "scriptOrigin"
++  > | null | undefined,
+ ): void {
+   if (isRegistered(pi, wf.name)) return;
+   const getCwd = typeof cwd === "function" ? cwd : () => cwd;
+@@ -84,6 +118,7 @@
+         );
          return;
        }
-+      if (!(await confirmRepoLocalWorkflow(ctx, wf, cwd))) return;
++      if (!(await confirmRepoLocalWorkflow(ctx, liveWf, getCwd()))) return;
        try {
-         if (manager) {
-           // Run through the WorkflowManager's background path: the handler
+         const liveManager = getManager();
+         if (liveManager) {
 diff -ruN --exclude=node_modules a/src/task-panel.ts b/src/task-panel.ts
 --- a/src/task-panel.ts	1985-10-26 03:15:00
-+++ b/src/task-panel.ts	2026-07-30 17:44:46
++++ b/src/task-panel.ts	2026-08-06 11:22:16
 @@ -98,6 +98,29 @@
    return truncateToWidth(line, maxWidth);
  }
@@ -6156,7 +6591,7 @@ diff -ruN --exclude=node_modules a/src/task-panel.ts b/src/task-panel.ts
    ];
    // Always point at the full persisted result so the tail is never lost — even when
    // the summary above is a complete verdict/summary field or an untruncated dump.
-@@ -201,7 +224,9 @@
+@@ -306,7 +329,9 @@
    });
    manager.on("error", ({ runId, error }: { runId: string; error?: { message?: string } }) => {
      if (!manager.getRun(runId)?.background) return;
@@ -6167,7 +6602,7 @@ diff -ruN --exclude=node_modules a/src/task-panel.ts b/src/task-panel.ts
    });
    // A provider usage/quota limit checkpoints the run as paused (not failed): tell the
    // user it is resumable once their budget refills, rather than letting it look dead.
-@@ -422,9 +447,26 @@
+@@ -527,9 +552,26 @@
  }
  
  /**
@@ -6195,7 +6630,7 @@ diff -ruN --exclude=node_modules a/src/task-panel.ts b/src/task-panel.ts
   */
  export function installTaskPanel(
    _pi: ExtensionAPI,
-@@ -452,20 +494,38 @@
+@@ -557,20 +599,38 @@
    };
    const hasActiveRun = () => manager.listRuns().some((r) => r.status === "running" || r.status === "paused");
  
@@ -6245,7 +6680,7 @@ diff -ruN --exclude=node_modules a/src/task-panel.ts b/src/task-panel.ts
        // Purely informational: it lists running runs and re-renders on events. To
        // open the navigator, the user runs /workflows (the panel takes no input).
        const comp: Component & { dispose?(): void } = {
-@@ -478,9 +538,7 @@
+@@ -583,9 +643,7 @@
          },
          invalidate: () => {},
          dispose: () => {
@@ -6258,7 +6693,7 @@ diff -ruN --exclude=node_modules a/src/task-panel.ts b/src/task-panel.ts
        return comp;
 diff -ruN --exclude=node_modules a/src/usage-limit-scheduler.ts b/src/usage-limit-scheduler.ts
 --- a/src/usage-limit-scheduler.ts	1985-10-26 03:15:00
-+++ b/src/usage-limit-scheduler.ts	2026-07-30 17:44:46
++++ b/src/usage-limit-scheduler.ts	2026-08-06 11:22:16
 @@ -16,7 +16,13 @@
   * only operates on in-memory runs.
   */
@@ -6431,7 +6866,7 @@ diff -ruN --exclude=node_modules a/src/usage-limit-scheduler.ts b/src/usage-limi
    // ---- helpers --------------------------------------------------------------
 diff -ruN --exclude=node_modules a/src/web-tools.ts b/src/web-tools.ts
 --- a/src/web-tools.ts	1985-10-26 03:15:00
-+++ b/src/web-tools.ts	2026-07-30 17:44:46
++++ b/src/web-tools.ts	2026-08-06 11:22:16
 @@ -3,22 +3,255 @@
   * process (which has network access), not in a subagent sandbox, so they perform
   * genuine HTTP requests via Node's fetch.
@@ -6754,7 +7189,7 @@ diff -ruN --exclude=node_modules a/src/web-tools.ts b/src/web-tools.ts
  }
 diff -ruN --exclude=node_modules a/src/workflow-capability-contract.ts b/src/workflow-capability-contract.ts
 --- a/src/workflow-capability-contract.ts	1985-10-26 03:15:00
-+++ b/src/workflow-capability-contract.ts	2026-07-30 18:22:49
++++ b/src/workflow-capability-contract.ts	2026-08-06 11:22:16
 @@ -311,7 +311,7 @@
        "selector priority is explicit model > agentType model > tier > phase model > metadata model > implicit medium > session default",
        "an explicit model, agentType model, tier, or phase model that resolves to an unavailable model throws MODEL_NOT_FOUND naming the source (e.g. the tier and what it resolved to) instead of falling back",
@@ -6780,7 +7215,7 @@ diff -ruN --exclude=node_modules a/src/workflow-capability-contract.ts b/src/wor
    ]),
 diff -ruN --exclude=node_modules a/src/workflow-commands.ts b/src/workflow-commands.ts
 --- a/src/workflow-commands.ts	1985-10-26 03:15:00
-+++ b/src/workflow-commands.ts	2026-07-30 17:44:46
++++ b/src/workflow-commands.ts	2026-08-06 11:22:16
 @@ -13,7 +13,7 @@
    type WorkflowSnapshot,
  } from "./display.js";
@@ -6815,7 +7250,7 @@ diff -ruN --exclude=node_modules a/src/workflow-commands.ts b/src/workflow-comma
      }
    };
    for (const ev of progressEvents) manager.on(ev, onEvent);
-@@ -155,9 +163,15 @@
+@@ -168,9 +176,15 @@
  
            // Best-effort: ensure the workflow tool is active (session_start usually has).
            // Add-only so this does not interfere with the keyword hook's save/restore state.
@@ -6832,7 +7267,7 @@ diff -ruN --exclude=node_modules a/src/workflow-commands.ts b/src/workflow-comma
            } catch {
              // ignore — the forced directive is the real forcing primitive
            }
-@@ -245,7 +259,17 @@
+@@ -270,7 +284,17 @@
          }
          case "rm": {
            if (!id) return ctx.ui.notify(USAGE, "warning");
@@ -6851,7 +7286,7 @@ diff -ruN --exclude=node_modules a/src/workflow-commands.ts b/src/workflow-comma
            return;
          }
          case "save": {
-@@ -261,6 +285,24 @@
+@@ -286,6 +310,24 @@
              ctx.ui.notify(runIdArg ? `No run ${runIdArg} with a script` : "No saved run to save", "error");
              return;
            }
@@ -6876,7 +7311,7 @@ diff -ruN --exclude=node_modules a/src/workflow-commands.ts b/src/workflow-comma
            let saved: ReturnType<WorkflowStorage["save"]>;
            try {
              saved = storage.save({
-@@ -268,6 +310,7 @@
+@@ -293,6 +335,7 @@
                description: run.workflowName,
                script: run.script,
                location: "project",
@@ -6884,9 +7319,9 @@ diff -ruN --exclude=node_modules a/src/workflow-commands.ts b/src/workflow-comma
              });
            } catch (error) {
              ctx.ui.notify(error instanceof Error ? error.message : String(error), "error");
-@@ -276,7 +319,12 @@
-           registerSavedWorkflow(pi, opts.cwd ?? process.cwd(), saved, undefined, () =>
-             storage.list().some((w) => w.name === saved.name),
+@@ -309,7 +352,12 @@
+             () => getStorage()?.load(name) != null,
+             () => getStorage()?.load(name) ?? null,
            );
 -          ctx.ui.notify(`Saved /${name} (from ${run.runId})`, "info");
 +          ctx.ui.notify(
@@ -6900,7 +7335,7 @@ diff -ruN --exclude=node_modules a/src/workflow-commands.ts b/src/workflow-comma
          default:
 diff -ruN --exclude=node_modules a/src/workflow-editor.ts b/src/workflow-editor.ts
 --- a/src/workflow-editor.ts	1985-10-26 03:15:00
-+++ b/src/workflow-editor.ts	2026-07-30 17:44:46
++++ b/src/workflow-editor.ts	2026-08-06 11:22:16
 @@ -316,16 +316,19 @@
    registerWorkflowTriggerCommand(pi, state, settingsStore);
    registerWorkflowProgressCommands(pi, settingsStore);
@@ -6970,7 +7405,7 @@ diff -ruN --exclude=node_modules a/src/workflow-editor.ts b/src/workflow-editor.
  
 diff -ruN --exclude=node_modules a/src/workflow-manager.ts b/src/workflow-manager.ts
 --- a/src/workflow-manager.ts	1985-10-26 03:15:00
-+++ b/src/workflow-manager.ts	2026-07-30 17:44:46
++++ b/src/workflow-manager.ts	2026-08-06 11:26:23
 @@ -5,17 +5,20 @@
  import { EventEmitter } from "node:events";
  import type { ModelRegistry, ToolDefinition } from "@earendil-works/pi-coding-agent";
@@ -6992,7 +7427,7 @@ diff -ruN --exclude=node_modules a/src/workflow-manager.ts b/src/workflow-manage
  
  export interface ManagedRun {
    runId: string;
-@@ -46,6 +49,13 @@
+@@ -54,6 +57,13 @@
     */
    autoResume?: boolean;
    /**
@@ -7006,7 +7441,7 @@ diff -ruN --exclude=node_modules a/src/workflow-manager.ts b/src/workflow-manage
     * The run's resolved hard token budget (per-run value, else the manager
     * default), fixed at run start and carried through resume() — a resumed run
     * must keep the budget it started with, not re-resolve against the current
-@@ -82,7 +92,7 @@
+@@ -90,7 +100,7 @@
    agentsById: Map<string, WorkflowAgentSnapshot>;
    /**
     * The run's cap on total agents (per-run value, else left undefined so
@@ -7015,7 +7450,7 @@ diff -ruN --exclude=node_modules a/src/workflow-manager.ts b/src/workflow-manage
     * start/resume and carried through resume() — mirrors ManagedRun.tokenBudget
     * exactly: a resumed run must keep the cap it started with, not silently
     * regain the (much larger) default because ExecOptions.maxAgents isn't
-@@ -221,8 +231,43 @@
+@@ -229,8 +239,43 @@
     * to observe eviction without creating dozens of runs.
     */
    maxTerminalRunsInMemory?: number;
@@ -7059,7 +7494,7 @@ diff -ruN --exclude=node_modules a/src/workflow-manager.ts b/src/workflow-manage
  /** Options that a fresh extension generation may safely refresh on a live
   * manager handed across `/reload`. Execution identity (`cwd`, persistence,
   * injected agent, and in-memory runs) is intentionally excluded. */
-@@ -236,6 +281,9 @@
+@@ -244,6 +289,9 @@
    | "toolsets"
    | "excludeSubagentTools"
    | "persistAgentSessions"
@@ -7069,7 +7504,7 @@ diff -ruN --exclude=node_modules a/src/workflow-manager.ts b/src/workflow-manage
  >;
  
  /**
-@@ -330,6 +378,11 @@
+@@ -338,6 +386,11 @@
    private toolsets?: Record<string, () => ToolDefinition[]>;
    private excludeSubagentTools?: string[];
    private persistAgentSessions: boolean;
@@ -7081,7 +7516,7 @@ diff -ruN --exclude=node_modules a/src/workflow-manager.ts b/src/workflow-manage
  
    constructor(options: WorkflowManagerOptions = {}) {
      super();
-@@ -340,12 +393,22 @@
+@@ -348,12 +401,22 @@
      this.mainModel = options.mainModel;
      this.modelRegistry = options.modelRegistry;
      this.sessionId = options.sessionId;
@@ -7106,7 +7541,7 @@ diff -ruN --exclude=node_modules a/src/workflow-manager.ts b/src/workflow-manage
      this.maxTerminalRunsInMemory = options.maxTerminalRunsInMemory ?? DEFAULT_MAX_TERMINAL_RUNS_IN_MEMORY;
      this.persistence = createRunPersistence(this.cwd);
      this.recoverStaleRuns();
-@@ -362,18 +425,62 @@
+@@ -404,18 +467,62 @@
     * that died mid-run (this fresh manager has it nowhere in memory). Reconcile it
     * to "paused" — never "failed" — so its journal is preserved and resume() can
     * replay the completed prefix and finish the rest.
@@ -7178,7 +7613,7 @@ diff -ruN --exclude=node_modules a/src/workflow-manager.ts b/src/workflow-manage
          }
        }
      } catch {
-@@ -390,12 +497,16 @@
+@@ -432,12 +539,16 @@
    reconfigureAfterReload(options: WorkflowManagerReloadOptions): void {
      this.concurrency = options.concurrency ?? 8;
      this.loadSavedWorkflow = options.loadSavedWorkflow;
@@ -7197,7 +7632,7 @@ diff -ruN --exclude=node_modules a/src/workflow-manager.ts b/src/workflow-manage
    }
  
    /** Set the session's main model (provider/id). Used to auto-tier explore agents. */
-@@ -467,7 +578,7 @@
+@@ -510,7 +621,7 @@
        // Same freeze-at-start pattern as tokenBudget, for the same reason: a
        // resumed run must keep these values, not re-resolve against the
        // manager's current defaults (see ManagedRun doc comments).
@@ -7206,15 +7641,15 @@ diff -ruN --exclude=node_modules a/src/workflow-manager.ts b/src/workflow-manage
        agentTimeoutMs: exec.agentTimeoutMs !== undefined ? exec.agentTimeoutMs : this.defaultAgentTimeoutMs,
        concurrency: exec.concurrency !== undefined ? exec.concurrency : this.concurrency,
        agentRetries: exec.agentRetries !== undefined ? exec.agentRetries : this.defaultAgentRetries,
-@@ -485,6 +596,7 @@
+@@ -528,6 +639,7 @@
          script,
          args,
-         sessionId: this.sessionId,
+         sessionId: managed.sessionId,
 +        installId: this.installId,
          status: "running",
          phases: managed.snapshot.phases,
          agents: [],
-@@ -531,7 +643,7 @@
+@@ -574,7 +686,7 @@
      managed.tokenBudget = exec.tokenBudget !== undefined ? exec.tokenBudget : this.defaultTokenBudget;
      managed.toolset = exec.toolset;
      // Same freeze-at-start pattern as tokenBudget (see startInBackground/ManagedRun).
@@ -7223,7 +7658,7 @@ diff -ruN --exclude=node_modules a/src/workflow-manager.ts b/src/workflow-manage
      managed.agentTimeoutMs = exec.agentTimeoutMs !== undefined ? exec.agentTimeoutMs : this.defaultAgentTimeoutMs;
      managed.concurrency = exec.concurrency !== undefined ? exec.concurrency : this.concurrency;
      managed.agentRetries = exec.agentRetries !== undefined ? exec.agentRetries : this.defaultAgentRetries;
-@@ -657,6 +769,7 @@
+@@ -701,6 +813,7 @@
          tokenBudget: resolvedTokenBudget,
          tools: resolvedTools,
          excludeTools: this.excludeSubagentTools,
@@ -7231,7 +7666,7 @@ diff -ruN --exclude=node_modules a/src/workflow-manager.ts b/src/workflow-manage
          confirm,
          loadSavedWorkflow: this.loadSavedWorkflow,
          resumeJournal,
-@@ -1046,10 +1159,17 @@
+@@ -1090,13 +1203,20 @@
          runId: managed.runId,
          workflowName: managed.snapshot.name,
          // Persist the real script + journal so the run can be resumed. Runs live
@@ -7240,7 +7675,10 @@ diff -ruN --exclude=node_modules a/src/workflow-manager.ts b/src/workflow-manage
 +        // fs-persistence.ts) — protected by file permissions, not by blanking.
          script: managed.script,
          args: managed.args,
-         sessionId: this.sessionId,
+         // Always the run's own frozen owner — never this.sessionId. A mid-flight
+         // setSessionId() (session replacement) must not re-home a still-running
+         // run out from under stranded-pause / the originating panel.
+         sessionId: managed.sessionId,
 +        // Provenance: this install wrote this record, so auto-resume may pick it
 +        // up later (see PersistedRunState.installId). A run adopted from a
 +        // project-local store keeps its foreignSource marker instead, which
@@ -7250,7 +7688,7 @@ diff -ruN --exclude=node_modules a/src/workflow-manager.ts b/src/workflow-manage
          journal: keepsResumeJournal ? managed.journal : undefined,
          status: managed.status,
          // Persisted every write (not just at pause) so a stale read during the
-@@ -1148,6 +1268,12 @@
+@@ -1195,6 +1315,12 @@
  
      const persisted = this.persistence.load(runId);
      if (!persisted?.script || persisted.status === "completed" || persisted.status === "aborted") return false;
@@ -7263,7 +7701,7 @@ diff -ruN --exclude=node_modules a/src/workflow-manager.ts b/src/workflow-manage
      const lease = this.persistence.acquireRunLease(runId);
      if (!lease) return false;
  
-@@ -1200,6 +1326,12 @@
+@@ -1250,6 +1376,12 @@
        // Carry the original opt-out forward across resumes; it's fixed at
        // run-start and persistRun() re-persists it on every subsequent write.
        autoResume: persisted.autoResume,
@@ -7276,7 +7714,7 @@ diff -ruN --exclude=node_modules a/src/workflow-manager.ts b/src/workflow-manage
        // Restore start-time execution context: the budget the run started with
        // (legacy runs without one resume unbudgeted — never re-apply the current
        // default to a run that predates it) and the toolset tag executeRun
-@@ -1210,7 +1342,7 @@
+@@ -1260,7 +1392,7 @@
        // per-run knobs (see ManagedRun doc comments) — same rationale as
        // tokenBudget: never re-resolve against the manager's CURRENT defaults.
        // maxAgents: legacy/never-set runs resume with no cap carried forward
@@ -7285,7 +7723,7 @@ diff -ruN --exclude=node_modules a/src/workflow-manager.ts b/src/workflow-manage
        // maxAgents had never been passed at all.
        maxAgents: persisted.maxAgents,
        // agentTimeoutMs: unlike tokenBudget, a legacy run's real timeout at
-@@ -1265,6 +1397,48 @@
+@@ -1315,6 +1447,48 @@
      // cumulative cap across resume with no extra seeding required.
      void this.executeRun(managed, script, args, { resumeJournal, initialTokenUsage: priorTokenUsage }).catch(() => {});
      return true;
@@ -7336,7 +7774,7 @@ diff -ruN --exclude=node_modules a/src/workflow-manager.ts b/src/workflow-manage
    /**
 diff -ruN --exclude=node_modules a/src/workflow-paths.ts b/src/workflow-paths.ts
 --- a/src/workflow-paths.ts	1985-10-26 03:15:00
-+++ b/src/workflow-paths.ts	2026-07-30 17:44:46
++++ b/src/workflow-paths.ts	2026-08-06 11:22:16
 @@ -6,13 +6,16 @@
   * by a stable cwd-derived namespace.
   */
@@ -7412,7 +7850,7 @@ diff -ruN --exclude=node_modules a/src/workflow-paths.ts b/src/workflow-paths.ts
    const sanitized = value
 diff -ruN --exclude=node_modules a/src/workflow-saved.ts b/src/workflow-saved.ts
 --- a/src/workflow-saved.ts	1985-10-26 03:15:00
-+++ b/src/workflow-saved.ts	2026-07-30 17:44:46
++++ b/src/workflow-saved.ts	2026-08-06 11:22:16
 @@ -13,6 +13,7 @@
    writeJsonAtomicWithBackup,
  } from "./fs-persistence.js";
@@ -7567,7 +8005,7 @@ diff -ruN --exclude=node_modules a/src/workflow-saved.ts b/src/workflow-saved.ts
        return workflows.sort((a, b) => a.name.localeCompare(b.name));
 diff -ruN --exclude=node_modules a/src/workflow-settings.ts b/src/workflow-settings.ts
 --- a/src/workflow-settings.ts	1985-10-26 03:15:00
-+++ b/src/workflow-settings.ts	2026-07-30 17:44:46
++++ b/src/workflow-settings.ts	2026-08-06 11:22:16
 @@ -7,7 +7,7 @@
  
  import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -7663,7 +8101,7 @@ diff -ruN --exclude=node_modules a/src/workflow-settings.ts b/src/workflow-setti
    if (deliveredResultMaxChars !== undefined) settings.deliveredResultMaxChars = deliveredResultMaxChars;
 diff -ruN --exclude=node_modules a/src/workflow-tool.ts b/src/workflow-tool.ts
 --- a/src/workflow-tool.ts	1985-10-26 03:15:00
-+++ b/src/workflow-tool.ts	2026-07-30 18:22:49
++++ b/src/workflow-tool.ts	2026-08-06 11:22:16
 @@ -3,6 +3,12 @@
  import { Type } from "typebox";
  import { BUILTIN_WORKFLOW_NAMES, resolveWorkflowInvocation } from "./builtin-workflows.js";
@@ -7704,7 +8142,7 @@ diff -ruN --exclude=node_modules a/src/workflow-tool.ts b/src/workflow-tool.ts
      }),
    ),
    tokenBudget: Type.Optional(
-@@ -366,9 +374,11 @@
+@@ -382,9 +390,11 @@
      agentTimeoutMs:
        options.defaultAgentTimeoutMs !== undefined
          ? options.defaultAgentTimeoutMs
@@ -7720,7 +8158,7 @@ diff -ruN --exclude=node_modules a/src/workflow-tool.ts b/src/workflow-tool.ts
  
 diff -ruN --exclude=node_modules a/src/workflow-ui.ts b/src/workflow-ui.ts
 --- a/src/workflow-ui.ts	1985-10-26 03:15:00
-+++ b/src/workflow-ui.ts	2026-07-30 17:44:46
++++ b/src/workflow-ui.ts	2026-08-06 11:26:40
 @@ -26,7 +26,7 @@
  import type { AgentUsage } from "./agent.js";
  import type { ThemeLike, WorkflowAgentSnapshot, WorkflowSnapshot } from "./display.js";
@@ -7730,7 +8168,7 @@ diff -ruN --exclude=node_modules a/src/workflow-ui.ts b/src/workflow-ui.ts
  import { registerSavedWorkflow } from "./saved-commands.js";
  import type { WorkflowManager } from "./workflow-manager.js";
  import type { SavedWorkflow, WorkflowStorage } from "./workflow-saved.js";
-@@ -1675,15 +1675,35 @@
+@@ -1685,15 +1685,35 @@
                  ui.notify(id ? `Cannot restart ${id} (no script saved)` : "No run selected to restart", "warning");
                  break;
                }
@@ -7774,9 +8212,9 @@ diff -ruN --exclude=node_modules a/src/workflow-ui.ts b/src/workflow-ui.ts
                break;
              }
              case "save": {
-@@ -1696,22 +1716,49 @@
+@@ -1706,34 +1726,62 @@
+                 ui.notify("Saving is not available (no storage)", "error");
                } else {
-                 const storage = opts.storage;
                  const name = run.workflowName || "workflow";
 -                let saved: ReturnType<WorkflowStorage["save"]>;
 -                try {
@@ -7788,6 +8226,7 @@ diff -ruN --exclude=node_modules a/src/workflow-ui.ts b/src/workflow-ui.ts
 -                  });
 -                } catch (error) {
 -                  ui.notify(error instanceof Error ? error.message : String(error), "error");
++                const script = run.script;
 +                const scriptOrigin = runScriptOrigin(run);
 +                const persist = () => {
 +                  let saved: ReturnType<WorkflowStorage["save"]>;
@@ -7795,7 +8234,7 @@ diff -ruN --exclude=node_modules a/src/workflow-ui.ts b/src/workflow-ui.ts
 +                    saved = storage.save({
 +                      name,
 +                      description: run.workflowName,
-+                      script: run.script,
++                      script,
 +                      location: "project",
 +                      scriptOrigin,
 +                    });
@@ -7803,8 +8242,20 @@ diff -ruN --exclude=node_modules a/src/workflow-ui.ts b/src/workflow-ui.ts
 +                    ui.notify(error instanceof Error ? error.message : String(error), "error");
 +                    return;
 +                  }
-+                  registerSavedWorkflow(pi, opts.cwd ?? process.cwd(), saved, undefined, () =>
-+                    storage.list().some((w) => w.name === saved.name),
++                  // Match /workflows save and registerAllSavedWorkflows: live
++                  // getters + load-by-name so a same-name overwrite executes the
++                  // latest script via the manager background path (not a frozen
++                  // registration-time snapshot / inline fallback).
++                  const getCwd = opts.getCwd ?? (() => opts.cwd ?? process.cwd());
++                  const getManager = opts.getManager ?? (() => manager);
++                  const getLiveStorage = () => opts.getStorage?.() ?? opts.storage ?? storage;
++                  registerSavedWorkflow(
++                    pi,
++                    getCwd,
++                    saved,
++                    getManager,
++                    () => getLiveStorage()?.load(saved.name) != null,
++                    () => getLiveStorage()?.load(saved.name),
 +                  );
 +                  ui.notify(
 +                    scriptOrigin ? `Saved /${name} (script came from ${scriptOrigin}, recorded)` : `Saved /${name}`,
@@ -7830,8 +8281,20 @@ diff -ruN --exclude=node_modules a/src/workflow-ui.ts b/src/workflow-ui.ts
 +                  })();
                    break;
                  }
--                registerSavedWorkflow(pi, opts.cwd ?? process.cwd(), saved, undefined, () =>
--                  storage.list().some((w) => w.name === saved.name),
+-                // Match /workflows save and registerAllSavedWorkflows: live
+-                // getters + load-by-name so a same-name overwrite executes the
+-                // latest script via the manager background path (not a frozen
+-                // registration-time snapshot / inline fallback).
+-                const getCwd = opts.getCwd ?? (() => opts.cwd ?? process.cwd());
+-                const getManager = opts.getManager ?? (() => manager);
+-                const getLiveStorage = () => opts.getStorage?.() ?? opts.storage ?? storage;
+-                registerSavedWorkflow(
+-                  pi,
+-                  getCwd,
+-                  saved,
+-                  getManager,
+-                  () => getLiveStorage()?.load(saved.name) != null,
+-                  () => getLiveStorage()?.load(saved.name),
 -                );
 -                ui.notify(`Saved /${name}`, "info");
 +                persist();
@@ -7840,7 +8303,7 @@ diff -ruN --exclude=node_modules a/src/workflow-ui.ts b/src/workflow-ui.ts
              }
 diff -ruN --exclude=node_modules a/src/workflow.ts b/src/workflow.ts
 --- a/src/workflow.ts	1985-10-26 03:15:00
-+++ b/src/workflow.ts	2026-07-30 17:44:46
++++ b/src/workflow.ts	2026-08-06 11:22:16
 @@ -1,5 +1,5 @@
  import { AsyncLocalStorage } from "node:async_hooks";
 -import { createHash } from "node:crypto";
@@ -8491,7 +8954,7 @@ diff -ruN --exclude=node_modules a/src/workflow.ts b/src/workflow.ts
    ms: number | null,
 diff -ruN --exclude=node_modules a/src/worktree.ts b/src/worktree.ts
 --- a/src/worktree.ts	1985-10-26 03:15:00
-+++ b/src/worktree.ts	2026-07-30 17:44:46
++++ b/src/worktree.ts	2026-08-06 11:22:16
 @@ -6,6 +6,8 @@
   */
  
@@ -8602,7 +9065,7 @@ diff -ruN --exclude=node_modules a/src/worktree.ts b/src/worktree.ts
      await exec("git", ["-C", repoRoot, "worktree", "add", "-b", branch, path, "HEAD"]);
 diff -ruN --exclude=node_modules a/tsconfig.json b/tsconfig.json
 --- a/tsconfig.json	1969-12-31 18:00:00
-+++ b/tsconfig.json	2026-07-30 17:44:46
++++ b/tsconfig.json	2026-08-06 11:22:16
 @@ -0,0 +1,17 @@
 +{
 +  "compilerOptions": {

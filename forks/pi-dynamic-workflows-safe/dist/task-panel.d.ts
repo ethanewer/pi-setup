@@ -25,6 +25,22 @@ export declare function deliverText(run: ManagedRun, opts?: {
     maxChars?: number;
 }): string;
 /**
+ * Stop live sends on this manager. In-flight completions only enqueue until
+ * {@link resumeResultDelivery} runs (from session_start, after Pi has bound
+ * the extension runtime) or the process exits (quit — results stay on disk).
+ *
+ * Call from session_shutdown BEFORE handoff or discard so a completion that
+ * races the teardown cannot deliver into the outgoing session.
+ */
+export declare function suspendResultDelivery(manager: WorkflowManager): void;
+/**
+ * Unsuspend and flush any queued deliveries. Must run only after Pi has
+ * finished constructing the AgentSession and bound sendMessage (i.e. from
+ * session_start) — calling it from the extension factory hits the
+ * "runtime not initialized" stub and re-queues forever.
+ */
+export declare function resumeResultDelivery(manager: WorkflowManager): void;
+/**
  * When a background run finishes (or fails), deliver its result back into the
  * conversation AND continue the turn so the assistant can act on it — without
  * blocking the user meanwhile:
@@ -34,7 +50,10 @@ export declare function deliverText(run: ManagedRun, opts?: {
  *  - `deliverAs: "followUp"` means that if the user is busy in another turn, the
  *    result is queued and picked up after that turn finishes — never interrupting.
  *
- * Set up once per extension; idempotent via an internal guard.
+ * Set up once per extension; idempotent via an internal guard. Across session
+ * replacement the manager (and this listener) survive via the handoff path;
+ * each new generation only refreshes `holder.pi` and flushes any messages that
+ * failed or arrived while delivery was suspended.
  */
 export declare function installResultDelivery(pi: ExtensionAPI, manager: WorkflowManager, opts?: {
     loadSettings?: () => WorkflowSettings;

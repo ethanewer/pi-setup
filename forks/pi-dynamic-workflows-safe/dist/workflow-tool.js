@@ -78,17 +78,20 @@ const workflowToolSchema = Type.Object({
     })),
 });
 export function createWorkflowTool(options = {}) {
-    const storage = options.storage ?? createWorkflowStorage(options.cwd ?? process.cwd());
-    const cwd = options.cwd ?? process.cwd();
-    const defaults = resolveWorkflowToolDefaults(options, cwd);
-    const manager = options.manager ??
+    const fallbackCwd = options.cwd ?? process.cwd();
+    const fallbackStorage = options.storage ?? createWorkflowStorage(fallbackCwd);
+    const defaults = resolveWorkflowToolDefaults(options, fallbackCwd);
+    const fallbackManager = options.manager ??
         new WorkflowManager({
             cwd: options.cwd,
             concurrency: defaults.concurrency,
-            loadSavedWorkflow: (name) => storage.load(name)?.script,
+            loadSavedWorkflow: (name) => fallbackStorage.load(name)?.script,
             defaultAgentTimeoutMs: defaults.agentTimeoutMs,
             defaultAgentRetries: defaults.agentRetries,
         });
+    const getManager = () => options.getManager?.() ?? fallbackManager;
+    const getStorage = () => options.getStorage?.() ?? fallbackStorage;
+    const getCwd = () => options.getCwd?.() ?? fallbackCwd;
     return defineTool({
         name: "workflow",
         label: "Workflow",
@@ -102,6 +105,9 @@ export function createWorkflowTool(options = {}) {
             return normalizeWorkflowToolArgs(args);
         },
         async execute(_toolCallId, params, signal, onUpdate, ctx) {
+            const manager = getManager();
+            const storage = getStorage();
+            const cwd = getCwd();
             // `name` resolves through the same registry the built-in slash commands
             // and saved-workflow commands use (see builtin-workflows.ts /
             // workflow-saved.ts): a project/user saved workflow of that name wins on

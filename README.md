@@ -60,7 +60,7 @@ rather than as a supported claim.
 
 | Component | Version |
 |---|---:|
-| `@earendil-works/pi-coding-agent` | `0.83.0` |
+| `@earendil-works/pi-coding-agent` | `0.84.0` |
 | `agent-browser` | `0.33.2` |
 
 Extension forks and the upstream releases they are based on:
@@ -69,7 +69,7 @@ Extension forks and the upstream releases they are based on:
 |---|---|---:|
 | `pi-voice-stt-safe` | `pi-voice-stt` | `0.4.0` |
 | `pi-agent-browser-native-safe` | `pi-agent-browser-native` | `0.2.77` |
-| `pi-dynamic-workflows-safe` | `@quintinshaw/pi-dynamic-workflows` | `3.5.0` |
+| `pi-dynamic-workflows-safe` | `@quintinshaw/pi-dynamic-workflows` | `3.5.1` |
 | `pi-process-monitor-safe` | `pi-process-monitor` | rewrite, built on `1.3.0`, `2.0.0` reviewed and declined |
 | `pi-context-handoff` | — | first-party |
 | `pi-codex-compaction` | — | first-party |

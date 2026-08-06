@@ -97,6 +97,14 @@ It also cannot quietly consume the context it was meant to protect. The side con
 is discarded when the view closes, and even with `record: true` what it leaves behind is a
 custom entry, which Pi never sends to a model.
 
+The inherited history is capped to leave the fork a guaranteed output budget. This matters
+most in exactly the situation the rest of this document describes: a long run holds the
+main thread near the top of its window for minutes at a time, and `/btw` forks *history*,
+which is the thing neither the fold nor the reserve shrinks mid-run. Forking a parent at
+269,066 tokens of a 272,000-token window left the side thread `max_tokens = 1`, so every
+answer stopped mid-sentence. See
+[the fork's README](../forks/pi-btw-side/README.md#why-the-inherited-history-is-trimmed).
+
 ## Configuration for long runs
 
 Compaction is Pi's job, not an extension's. `install.sh` writes it into
@@ -164,6 +172,28 @@ at both ends, and the low end is the one that actually bit.
 > moves.
 >
 ## When the model is truncated, Pi compacts and then abandons the run
+
+> **Fixed upstream in Pi 0.84.0 (2026-08-06).** The gap described below is closed. Pi now
+> also treats a `length` stop as recoverable when the output ended below the model's own
+> desired limit, independent of context size:
+>
+> ```js
+> // pi-ai/dist/utils/overflow.js
+> export function isRecoverableLength(message, desiredMaxOutput) {
+>   return message.stopReason === "length" && desiredMaxOutput > 0 && message.usage.output < desiredMaxOutput;
+> }
+> ```
+>
+> The occurrences below had `output: 16` against a far larger `model.maxTokens`, so they
+> now satisfy it, and `_checkCompaction` compacts and retries instead of returning false.
+> The 0.99-of-window and `output === 0` conditions that both missed are no longer the only
+> route in.
+>
+> Two limits keep `pi-context-handoff` earning its place. The retry is **once per turn**
+> (`_overflowRecoveryAttempted`, reset only at turn boundaries), and it covers truncation
+> only — the extension resumes from every path Pi can stop a run on, which is why it was
+> broadened beyond truncation in the first place. The rest of this section is kept as the
+> evidence trail for how the failure was diagnosed.
 
 This is a separate failure, seen three times on 2026-08-04, and it is the one that looks
 most like "the agent just stopped".
