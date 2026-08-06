@@ -63,6 +63,44 @@ Deliberately different:
 - **The main thread's status is on screen.** Codex shows parent status in the side view's
   footer; this shows `main thread: working` / `idle` in the header, driven by the host's
   own `agent_start` / `agent_settled` events.
+- **The inherited history is capped.** Codex forks a persisted rollout that its own
+  compaction has already shrunk. Pi checks its compaction threshold only *between* runs,
+  and `/btw` is designed to be used *during* one, so the parent can be far past that
+  threshold at the moment it is forked. See below.
+
+## Why the inherited history is trimmed
+
+Pi derives the output budget as `contextWindow - contextTokens - 4096`. Fork a parent
+sitting near the top of its window and the side thread is handed almost nothing to answer
+in — reasoning tokens come out of that same budget, so the model thinks until it runs out
+and the reply stops mid-sentence with *"reached the maximum output token limit"*.
+
+Reconstructed from a real session at the parent's worst turn — 269,066 tokens of a 272,000
+window — the fork was being handed **`max_tokens = 1`**, the clamp's own floor. With the
+cap in place the same fork gets **42,531**, after dropping the 11 oldest messages of 341.
+
+Two things had to change together, and neither works alone:
+
+- **The parent's `usage` figures are cleared.** Pi's estimator anchors on the newest
+  assistant `usage` it can find, which in a fork describes the *parent's* request, not the
+  fork's. It is completely insensitive to the fork's contents: on a real 797-message
+  history, dropping the oldest half moved the estimate by exactly zero. Trimming against
+  it could never have worked.
+- **The history is then measured and cut** to leave a guaranteed output reserve — 32,768
+  tokens, or 35% of the window on models too small for that. Oldest-first, since a
+  follow-up question is usually about the recent end. It is re-checked before every turn,
+  because the side thread's own answers accumulate and would otherwise walk it back into
+  the same state.
+
+A parent that comfortably fits is not touched at all. When anything is dropped the view
+says so, because a silently shortened context reads as the model forgetting.
+
+Inherited messages are flattened with Pi's `convertToLlm` before any of this. That is what
+the provider is really sent, so it is the honest thing to measure — and it is required,
+not cosmetic: a `compactionSummary` keeps its text in `summary` rather than `content`, and
+a `custom` message's content can be a bare string, and Pi's own estimator throws on both.
+It survives them today only because the `usage` anchor short-circuits before reaching
+them, which is exactly what clearing the anchor stops it doing.
 
 ## Configuration
 

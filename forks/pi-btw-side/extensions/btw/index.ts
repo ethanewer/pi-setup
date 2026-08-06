@@ -167,6 +167,12 @@ export default function btwExtension(pi: ExtensionAPI) {
 						status: result.aborted ? "aborted" : "ok",
 					};
 				}
+				if (result.droppedMessages > 0) {
+					view?.addNotice(
+						`dropped ${result.droppedMessages} more of the oldest inherited message(s) to keep room to answer`,
+						"dim",
+					);
+				}
 				if (result.timedOut) {
 					view?.addNotice(`stopped at the ${Math.round(config.timeoutMs / 1000)}s limit`, "error");
 				} else if (result.aborted) {
@@ -204,6 +210,13 @@ export default function btwExtension(pi: ExtensionAPI) {
 					view.setMainStatus(mainBusy ? "working" : "idle");
 					if (thread.inheritedMessages === 0 && hasConversation(ctx)) {
 						view.addNotice("could not inherit this conversation's history; starting empty", "error");
+					} else if (thread.droppedMessages > 0) {
+						// Never silent. A shortened context reads as the model forgetting things
+						// it was just told, and the main thread is the obvious place to ask again.
+						view.addNotice(
+							`main thread is too large to fork whole; dropped its ${thread.droppedMessages} oldest message(s) to keep room to answer`,
+							"dim",
+						);
 					}
 					if (question) submit(question);
 					return view;
