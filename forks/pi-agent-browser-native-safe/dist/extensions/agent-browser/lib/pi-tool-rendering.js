@@ -1,5 +1,8 @@
 import { getKeybindings, Text, truncateToWidth } from "@earendil-works/pi-tui";
-import { compileAgentBrowserElectron, compileAgentBrowserJob, compileAgentBrowserNetworkSourceLookup, compileAgentBrowserQaPreset, compileAgentBrowserSemanticAction, compileAgentBrowserSourceLookup, } from "./input-modes.js";
+import { compileAgentBrowserElectron } from "./input-modes/electron.js";
+import { compileAgentBrowserJob, compileAgentBrowserQaPreset } from "./input-modes/job.js";
+import { compileAgentBrowserNetworkSourceLookup, compileAgentBrowserSourceLookup } from "./input-modes/lookups.js";
+import { compileAgentBrowserSemanticAction } from "./input-modes/semantic-action.js";
 import { isRecord } from "./parsing.js";
 import { redactInvocationArgs } from "./runtime.js";
 const TUI_INVOCATION_PREVIEW_MAX_CHARS = 160;

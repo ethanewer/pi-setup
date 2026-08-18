@@ -150,7 +150,23 @@ export interface PersistedRunState {
      * confirmation regardless of where the file now lives.
      */
     foreignSource?: string;
+    /**
+     * Undelivered background-result payload waiting for the originating session's
+     * delivery endpoint. Written before the send attempt (fail-closed); cleared
+     * only after a successful session-routed delivery.
+     */
+    pendingDelivery?: PendingDeliveryMarker;
 }
+/**
+ * Disk/memory marker for a background result that still needs conversation
+ * delivery. Kept small on purpose — never store full agent transcripts here.
+ */
+export type PendingDeliveryMarker = {
+    kind: "complete";
+} | {
+    kind: "text";
+    text: string;
+};
 export interface RunPersistence {
     /**
      * Save current run state. `updatedAt` is restamped to now, since every write

@@ -6,7 +6,7 @@ import type { ModelRegistry, ToolDefinition } from "@earendil-works/pi-coding-ag
 import type { WorkflowAgent } from "./agent.js";
 import { type WorkflowAgentSnapshot, type WorkflowSnapshot } from "./display.js";
 import { WorkflowError } from "./errors.js";
-import { type PersistedRunState, type RunLease, type RunPersistence, type RunStatus } from "./run-persistence.js";
+import { type PendingDeliveryMarker, type PersistedRunState, type RunLease, type RunPersistence, type RunStatus } from "./run-persistence.js";
 import { type JournalEntry, type WorkflowRunResult } from "./workflow.js";
 export interface ManagedRun {
     runId: string;
@@ -38,6 +38,12 @@ export interface ManagedRun {
      * the run and hide it from stranded-pause / the originating session's panel.
      */
     sessionId?: string;
+    /**
+     * Background result still waiting for session-routed conversation delivery.
+     * Set before the send attempt and cleared only after a successful deliver so a
+     * missing/suspended endpoint cannot lose the result (see task-panel delivery).
+     */
+    pendingDelivery?: PendingDeliveryMarker;
     /**
      * Auto-resume eligibility for this run (see ExecOptions.autoResume). Set once
      * at creation and carried through resume() so it survives pause/resume cycles.
@@ -344,6 +350,8 @@ export declare class WorkflowManager extends EventEmitter {
     /** Bind the manager to the current pi session, so new runs are tagged with it and
      * the navigator/task-panel show only this session's runs (set on session_start). */
     setSessionId(id: string | undefined): void;
+    /** Currently bound pi session id (set on session_start), if any. */
+    getSessionId(): string | undefined;
     /** Project cwd this manager was constructed for (persistence + agent tools). */
     getCwd(): string;
     /**
@@ -353,13 +361,17 @@ export declare class WorkflowManager extends EventEmitter {
      */
     listLiveRuns(): ManagedRun[];
     /**
-     * After an in-process session replacement keeps this manager, re-home every
-     * still-running (or paused-in-memory) run onto the new session so the panel,
-     * workflow_control, and a later stranded-pause all see them. Completed runs
-     * keep their original sessionId so history stays with the session that ran
-     * them. No-op when `sessionId` is undefined.
+     * After an in-process session replacement keeps this manager, re-home work
+     * that still needs this conversation onto `sessionId`:
+     *  - still-running / paused-in-memory runs (panel, workflow_control, stranded-pause)
+     *  - any run (live or disk-only) with an undelivered `pendingDelivery` marker
+     *
+     * Terminal runs *without* pending keep their original sessionId so history
+     * stays with the session that ran them. `previousSessionId` scopes disk-only
+     * pending re-home so a parallel sibling in the same runsDir cannot steal
+     * another session's undelivered work. No-op when `sessionId` is undefined.
      */
-    adoptLiveRunsToSession(sessionId: string | undefined): number;
+    adoptLiveRunsToSession(sessionId: string | undefined, previousSessionId?: string): number;
     /**
      * On startup, any persisted run still marked "running" belongs to a process
      * that died mid-run (this fresh manager has it nowhere in memory). Reconcile it
@@ -518,6 +530,7 @@ export declare class WorkflowManager extends EventEmitter {
     resume(runId: string, opts?: {
         script?: string;
         args?: unknown;
+        maxAgents?: number;
     }): Promise<boolean>;
     /**
      * Ask the host whether a run record this install did not write may be

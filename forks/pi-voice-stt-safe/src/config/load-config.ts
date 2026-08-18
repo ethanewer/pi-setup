@@ -36,6 +36,7 @@ import { resolvePath } from "../utils/path";
 import { deepMerge } from "../utils/merge";
 import { modeOverrideFrom } from "../core/modes";
 import { formatError } from "../utils/text";
+import { applyProfileOverride, DEFAULT_PROFILE, profileOverrideFrom } from "./profiles";
 
 export const readConfigFile = async (filePath: string): Promise<Record<string, unknown>> => {
   if (!filePath) return {};
@@ -50,9 +51,11 @@ export const readConfigFile = async (filePath: string): Promise<Record<string, u
 
 const mergedInput = async (options: Record<string, unknown>): Promise<Record<string, unknown>> => {
   const fileConfig = await readConfigFile(textFrom(options.configPath));
+  const profileName = textFrom(options.profile, textFrom(fileConfig.profile, DEFAULT_PROFILE));
   const modeName = textFrom(options.mode, textFrom(fileConfig.mode, "default"));
   const merged = { ...options, ...fileConfig };
-  return deepMerge(merged, modeOverrideFrom(fileConfig, modeName));
+  const withProfile = applyProfileOverride(merged, profileOverrideFrom(merged, profileName));
+  return deepMerge(withProfile, modeOverrideFrom(merged, modeName));
 };
 
 const readTextFile = async (filePath: string, label: string): Promise<string> => {

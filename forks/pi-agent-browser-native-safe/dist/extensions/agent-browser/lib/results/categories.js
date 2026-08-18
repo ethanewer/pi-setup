@@ -1,11 +1,4 @@
-/**
- * Purpose: Classify successful and failed agent-browser outcomes into stable result categories.
- * Responsibilities: Map artifacts, inspection calls, errors, refs, selectors, downloads, drift, and timeouts to small enums.
- * Scope: Category policy only; next-action recommendations and presentation formatting live elsewhere.
- * Usage: Called by presentation and extension result assembly before details are exposed to Pi.
- * Invariants/Assumptions: Category strings are public machine-readable contracts covered by tests and docs.
- */
-import { isPendingRecordingArtifact } from "./artifact-state.js";
+import { isPendingRecordingArtifact } from "./artifact-manifest.js";
 function hasUnverifiedFileArtifact(artifacts) {
     return (artifacts ?? []).some((artifact) => !isPendingRecordingArtifact(artifact) && artifact.exists !== true);
 }

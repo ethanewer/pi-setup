@@ -398,7 +398,7 @@ export async function runWorkflow(script, options = {}) {
         spent: () => shared.spent,
         remaining: () => (options.tokenBudget == null ? Infinity : Math.max(0, options.tokenBudget - shared.spent)),
     });
-    const agentLimitError = () => new WorkflowError(`Agent limit exceeded (${maxAgents}). Use maxAgents option to increase the limit.`, WorkflowErrorCode.AGENT_LIMIT_EXCEEDED, { recoverable: false });
+    const agentLimitError = () => new WorkflowError(`Agent limit exceeded (${shared.agentCount}/${maxAgents}). Re-call workflow with resumeFromRunId="${runId}", the same script, and maxAgents: N (N>${maxAgents}) — journaled prefix replays free. /workflows resume alone cannot raise the cap.`, WorkflowErrorCode.AGENT_LIMIT_EXCEEDED, { recoverable: false });
     // True on an intentional external abort (pause/stop/Esc, via options.signal)
     // OR once this run's fate has been sealed (shared.runFatalController — see
     // its doc comment). Every abort check in this file goes through this so the

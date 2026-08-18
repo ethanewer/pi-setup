@@ -1,5 +1,5 @@
 import { isRecord } from "../../../parsing.js";
-import { buildAgentBrowserResultCategoryDetails } from "../../../results.js";
+import { buildAgentBrowserResultCategoryDetails } from "../../../results/categories.js";
 import { buildSnapshotPresentation } from "../../../results/snapshot.js";
 import { extractRefSnapshotFromData } from "../../../session-page-state.js";
 import { collectScrollPositionSnapshot } from "../diagnostics.js";

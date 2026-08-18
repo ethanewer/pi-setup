@@ -1,8 +1,3 @@
-/**
- * Purpose: Compile constrained job and lightweight QA wrapper inputs to upstream batch commands.
- * Responsibilities: Validate job/QA fields, produce argv/stdin, and summarize QA diagnostic results.
- * Scope: Job and QA modes only.
- */
 import { isRecord } from "../parsing.js";
 import { summarizeNetworkFailures } from "../results/network.js";
 import { getBatchResultItems, getCommandNameFromBatchItem, getSelectValues } from "./shared.js";

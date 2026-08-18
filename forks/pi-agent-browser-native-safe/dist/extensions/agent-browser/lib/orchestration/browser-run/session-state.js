@@ -1,6 +1,7 @@
 import { rm } from "node:fs/promises";
 import { runAgentBrowserProcess } from "../../process.js";
-import { buildAgentBrowserNextActions, parseAgentBrowserEnvelope } from "../../results.js";
+import { buildAgentBrowserNextActions } from "../../results/action-recommendations.js";
+import { parseAgentBrowserEnvelope } from "../../results/envelope.js";
 import { buildNextToolAction, withOptionalNamespaceArgs, withOptionalSessionArgs } from "../../results/next-actions.js";
 import { getSessionPageStateKey, isAboutBlankUrl, normalizeComparableUrl, normalizeSessionTabTarget, targetsMatch, } from "../../session-page-state.js";
 import { isCloseCommand, isElectronPostCommandHealthCommand, isNavigationObservableCommandName, isRefGuardedCommand, isRefInvalidatingBatchCommand, isSessionTabPinningExcludedCommand, isSessionTabPostCommandCorrectionExcludedCommand, } from "../../command-taxonomy.js";
@@ -21,6 +22,10 @@ export function applyBrowserRunStatePatch(state, patch) {
         state.managedSessionActive = patch.managedSessionActive;
     if ("managedSessionCompatibilityWorkaround" in patch)
         state.managedSessionCompatibilityWorkaround = patch.managedSessionCompatibilityWorkaround;
+    if (patch.managedSessionHeadedAutosaveDisabled !== undefined)
+        state.managedSessionHeadedAutosaveDisabled = patch.managedSessionHeadedAutosaveDisabled;
+    if ("managedSessionHeadedAutosaveInterval" in patch)
+        state.managedSessionHeadedAutosaveInterval = patch.managedSessionHeadedAutosaveInterval;
     if (patch.managedSessionCwd !== undefined)
         state.managedSessionCwd = patch.managedSessionCwd;
     if (patch.managedSessionName !== undefined)
@@ -136,6 +141,12 @@ function formatManagedSessionOutcomeRecoveryGuidance(outcome) {
 export function formatManagedSessionOutcomeText(outcome) {
     if (!outcome)
         return undefined;
+    if (outcome.replacedSessionClosed === false) {
+        const cleanupWarning = "Cleanup warning: Automatic close of the previous wrapper-managed session failed, so it remains wrapper-owned. Use details.managedSessionOutcome for its exact identity and close it explicitly when safe.";
+        return outcome.succeeded
+            ? ["Managed session outcome: The fresh browser became current.", cleanupWarning].join("\n")
+            : [formatManagedSessionOutcomeHeadline(outcome), formatManagedSessionOutcomeRecoveryGuidance(outcome), cleanupWarning].join("\n");
+    }
     if (outcome.status === "closed" && outcome.succeeded) {
         return [
             "Managed session outcome: The current wrapper-managed browser session was closed.",
@@ -753,3 +764,8 @@ export function formatElectronRefFreshnessText(diagnostic) {
     return diagnostic?.summary;
 }
 export { extractBatchResultCommand };
+export function getPersistentSessionArtifactStore(ctx) {
+    const sessionDir = typeof ctx.sessionManager.getSessionDir === "function" ? ctx.sessionManager.getSessionDir() : undefined;
+    const sessionId = ctx.sessionManager.getSessionId();
+    return sessionDir && sessionId ? { sessionDir, sessionId } : undefined;
+}

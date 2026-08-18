@@ -5,8 +5,11 @@ import { OPEN_RESULT_TAB_CORRECTION_FLAGS } from "../../launch-scoped-flags.js";
 import { cleanupElectronLaunchResources, inspectElectronLaunchStatus } from "../../electron/cleanup.js";
 import { getAllowedDomainsViolation, getLocalAppFileRootsForLaunch, parseAllowedDomainsPolicyFromArgs } from "../../navigation-policy.js";
 import { getManagedSessionResultingPageState, getObservedBrowserPageValidationError, managedSessionCommandRequiresLivePageVerification } from "../../managed-session-state-policy.js";
-import { analyzeNetworkSourceLookupResults, analyzeQaPresetResults, analyzeQaPresetTimeout, analyzeSourceLookupResults, buildQaCompactPassText, extractQaPageContext, redactNetworkSourceLookupAnalysis, } from "../../input-modes.js";
-import { applyNetworkRouteRecords, buildNetworkRouteDiagnostics, buildToolPresentation, getAgentBrowserErrorText, parseAgentBrowserEnvelope, } from "../../results.js";
+import { analyzeNetworkSourceLookupResults, analyzeSourceLookupResults, redactNetworkSourceLookupAnalysis } from "../../input-modes/lookups.js";
+import { analyzeQaPresetResults, analyzeQaPresetTimeout, buildQaCompactPassText, extractQaPageContext } from "../../input-modes/job.js";
+import { applyNetworkRouteRecords, buildNetworkRouteDiagnostics } from "../../results/network-routes.js";
+import { buildToolPresentation } from "../../results/presentation.js";
+import { getAgentBrowserErrorText, parseAgentBrowserEnvelope } from "../../results/envelope.js";
 import { getClipboardWritePayloadCandidates, redactClipboardPermissionEcho, redactClipboardPermissionErrorValue } from "../../results/presentation/errors.js";
 import { shouldCaptureSemanticActionNavigationSummary } from "../../results/presentation/semantic-action.js";
 import { commandExplicitlyTargetsAboutBlank, deriveSessionTabTarget, extractLatestRefSnapshotStateFromBatchResults, extractRefSnapshotFromData, extractSessionTabTargetFromBatchResults, extractSessionTabTargetFromCommandData, isAboutBlankSessionTabTarget, normalizeSessionTabTarget, } from "../../session-page-state.js";
@@ -23,7 +26,7 @@ import { buildScrollNoopDiagnostic, collectComboboxFocusDiagnostic, collectElect
  * the command they describe has already failed. */
 const TIMEOUT_RECOVERY_BUDGET_MS = 5000;
 import { repairScreenshotData } from "./prepare.js";
-import { getPersistentSessionArtifactStore } from "./session-artifacts.js";
+import { getPersistentSessionArtifactStore } from "./session-state.js";
 import { buildFinalAgentBrowserToolResult, buildRedactedPresentationContent, buildWrapperRecoveryHint, prepareFinalResultRecoveryState, redactExactSensitiveValue, } from "./final-result.js";
 async function repairScreenshotArtifact(options) {
     const { cwd, envelope, request } = options;
@@ -109,6 +112,8 @@ export async function processBrowserOutput(input) {
     let freshSessionOrdinal = state.freshSessionOrdinal;
     let managedSessionActive = state.managedSessionActive;
     let managedSessionCompatibilityWorkaround = state.managedSessionCompatibilityWorkaround;
+    let managedSessionHeadedAutosaveDisabled = state.managedSessionHeadedAutosaveDisabled === true;
+    let managedSessionHeadedAutosaveInterval = state.managedSessionHeadedAutosaveInterval;
     let managedSessionCwd = state.managedSessionCwd;
     let managedSessionName = state.managedSessionName;
     let managedSessionNamespace = state.managedSessionNamespace;
@@ -346,6 +351,7 @@ export async function processBrowserOutput(input) {
         }
         const priorManagedSessionActive = managedSessionActive;
         const priorManagedSessionCwd = managedSessionCwd;
+        const priorManagedSessionHeadedAutosaveInterval = managedSessionHeadedAutosaveInterval;
         const priorManagedSessionName = managedSessionName;
         const priorManagedSessionNamespace = managedSessionNamespace;
         const commandClosesSession = isCloseCommand(prepared.executionPlan.commandInfo.command);
@@ -363,6 +369,7 @@ export async function processBrowserOutput(input) {
         const failedFreshDaemon = failedFreshSessionMayHaveStarted && prepared.executionPlan.sessionName
             ? await inspectManagedSessionDaemon({
                 cwd,
+                headedManagedAutosaveInterval: prepared.ownedManagedSessionContext?.headedManagedAutosaveInterval,
                 namespace: prepared.executionPlan.namespace,
                 sessionName: prepared.executionPlan.sessionName,
                 timeoutMs: Math.min(implicitSessionCloseTimeoutMs, 2_000),
@@ -387,9 +394,13 @@ export async function processBrowserOutput(input) {
                 === getAgentBrowserSessionIdentityKey(managedSessionName, managedSessionNamespace);
         if (!managedSessionActive) {
             managedSessionCompatibilityWorkaround = undefined;
+            managedSessionHeadedAutosaveDisabled = false;
+            managedSessionHeadedAutosaveInterval = undefined;
         }
         else if (managedTransitionSucceeded && executionTargetsManagedSession) {
             managedSessionCompatibilityWorkaround = prepared.compatibilityWorkaround;
+            managedSessionHeadedAutosaveDisabled = prepared.ownedManagedSessionContext?.headedManagedAutosaveDisabled === true;
+            managedSessionHeadedAutosaveInterval = prepared.ownedManagedSessionContext?.headedManagedAutosaveInterval;
         }
         if (commandClosesSession && succeeded && managedCloseSessionName === priorManagedSessionName && !managedSessionActive) {
             const daemonRestoreKey = state.managedSessionRestoreState.getDaemonRestoreKey(managedCloseSessionName, priorManagedSessionNamespace);
@@ -425,7 +436,16 @@ export async function processBrowserOutput(input) {
             networkRoutesBySession.delete(replacedSessionStateKey ?? replacedManagedSessionName);
             sessionPageState.clearSession(replacedSessionStateKey ?? replacedManagedSessionName);
             const replacedSessionKey = replacedSessionStateKey ?? replacedManagedSessionName;
-            const replacedCloseError = await closeManagedSession({ cwd: priorManagedSessionCwd, namespace: priorManagedSessionNamespace, preserveAttachedBrowserSession: state.attachedSessionKeys.has(replacedSessionKey), restoreState: state.managedSessionRestoreState, sessionName: replacedManagedSessionName, timeoutMs: implicitSessionCloseTimeoutMs });
+            const replacedCloseError = await closeManagedSession({ cwd: priorManagedSessionCwd, headedManagedAutosaveInterval: priorManagedSessionHeadedAutosaveInterval, namespace: priorManagedSessionNamespace, preserveAttachedBrowserSession: state.attachedSessionKeys.has(replacedSessionKey), restoreState: state.managedSessionRestoreState, sessionName: replacedManagedSessionName, timeoutMs: implicitSessionCloseTimeoutMs });
+            if (managedSessionOutcome) {
+                managedSessionOutcome = {
+                    ...managedSessionOutcome,
+                    replacedSessionClosed: !replacedCloseError,
+                    summary: replacedCloseError
+                        ? `${managedSessionOutcome.summary} Previous session ${replacedManagedSessionName} remains wrapper-owned because automatic close failed; retry an explicit close.`
+                        : managedSessionOutcome.summary,
+                };
+            }
             if (!replacedCloseError) {
                 state.attachedSessionKeys.delete(replacedSessionKey);
                 state.closedManagedSessionNames.add(replacedSessionKey);
@@ -453,7 +473,7 @@ export async function processBrowserOutput(input) {
                 if (electronHandoff.error) {
                     succeeded = false;
                     presentationEnvelope = { error: electronHandoff.error, success: false };
-                    const closeError = await closeManagedSession({ cwd, namespace: prepared.executionPlan.namespace, policyLock: prepared.managedSessionPolicyLock, preserveAttachedBrowserSession: input.preserveAttachedBrowserSession, restoreState: state.managedSessionRestoreState, sessionName: electronSessionName, timeoutMs: implicitSessionCloseTimeoutMs });
+                    const closeError = await closeManagedSession({ cwd, headedManagedAutosaveInterval: prepared.ownedManagedSessionContext?.headedManagedAutosaveInterval, namespace: prepared.executionPlan.namespace, policyLock: prepared.managedSessionPolicyLock, preserveAttachedBrowserSession: input.preserveAttachedBrowserSession, restoreState: state.managedSessionRestoreState, sessionName: electronSessionName, timeoutMs: implicitSessionCloseTimeoutMs });
                     electronFailedConnectCleanup = await cleanupElectronLaunchResources({ child: prepared.electronLaunch.child, record: electronLaunchRecord, timeoutMs: implicitSessionCloseTimeoutMs });
                     electronLaunchRecord = electronFailedConnectCleanup.record;
                     if (electronFailedConnectCleanup.partial) {
@@ -607,8 +627,16 @@ export async function processBrowserOutput(input) {
         if (sessionStateKey)
             currentSessionTabTarget = authoritativePageState?.tabTarget;
         const currentSessionTabTargetUnknown = authoritativePageState?.tabTargetUnknown === true ? true : undefined;
-        const result = buildFinalAgentBrowserToolResult({ aboutBlankSessionMismatch, artifactCleanup, categoryDetails: finalRecoveryState.categoryDetails, clickDispatchDiagnostic, commandTokens: prepared.commandTokens, comboboxFocusDiagnostic, compiledNetworkSourceLookup: prepared.compiledNetworkSourceLookup, compiledSemanticAction: prepared.compiledSemanticAction, compatibilityWorkaround: prepared.compatibilityWorkaround, currentRefSnapshot, currentRefSnapshotInvalidation, currentSessionTabTarget, currentSessionTabTargetUnknown, electronBroadGetTextScopeDiagnostics, electronFailedConnectCleanup, electronHandoff, electronLaunch: prepared.electronLaunch, electronLaunchRecord, electronLaunchRecords, electronPostCommandHealth, electronProfileIsolationDetails: input.electronProfileIsolationDetails, electronRefFreshnessDiagnostic, electronSessionMismatch, errorText, evalResultWarning, evalStdinHint, exactSensitiveValues: prepared.exactSensitiveValues, executionPlan: prepared.executionPlan, fillVerificationDiagnostic, inspectionText, managedSessionOutcome, managedSessionRestoreDisabled: state.managedSessionRestoreState.isDisabled(prepared.executionPlan.sessionName, prepared.executionPlan.namespace), navigationSummary, networkSourceLookup, noActivePageSnapshotFailure: finalRecoveryState.noActivePageSnapshotFailure, openResultTabCorrection, overlayBlockerDiagnostic, parseError, parseFailureOutput, parseSucceeded, plainTextInspection, presentation, presentationEnvelope, priorSessionTabTarget: prepared.priorSessionTabTarget, processResult, qaAttachedTarget, qaPreset, recordingDependencyWarning, redactedArgs: prepared.redactedArgs, redactedCompiledElectron: prepared.redactedCompiledElectron, redactedCompiledJob: prepared.redactedCompiledJob, redactedCompiledNetworkSourceLookup: prepared.redactedCompiledNetworkSourceLookup, redactedCompiledQaPreset: prepared.redactedCompiledQaPreset, redactedCompiledSemanticAction: prepared.redactedCompiledSemanticAction, redactedCompiledSourceLookup: prepared.redactedCompiledSourceLookup, redactedContent, redactedProcessArgs: prepared.redactedProcessArgs, redactedRecoveryHint: prepared.redactedRecoveryHint, resultArtifactManifest, richInputRecoveryDiagnostic: finalRecoveryState.richInputRecoveryDiagnostic, scrollNoopDiagnostic, selectorTextVisibilityDiagnostics, sessionMode: prepared.sessionMode, sessionTabCorrection, sourceLookup, succeeded, timeoutPartialProgress, userRequestedJson: prepared.userRequestedJson, visibleRefFallbackDiagnostic: finalRecoveryState.visibleRefFallbackDiagnostic, visibleRefFallbackSessionName: finalRecoveryState.visibleRefFallbackSessionName });
-        const statePatch = { allowedDomainsBySession, artifactManifest, freshSessionOrdinal, managedSessionActive, managedSessionCompatibilityWorkaround, managedSessionCwd, managedSessionName, managedSessionNamespace, networkRoutesBySession };
+        const resultRetainsPreparedManagedSession = !managedSessionOutcome || (managedSessionOutcome.activeAfter
+            && managedSessionOutcome.attemptedSessionName === managedSessionOutcome.currentSessionName);
+        const resultHeadedManagedAutosaveDisabled = prepared.ownedManagedSessionContext?.headedManagedAutosaveDisabled === true
+            && resultRetainsPreparedManagedSession
+            && !(commandClosesSession && succeeded);
+        const resultHeadedManagedAutosaveInterval = resultRetainsPreparedManagedSession && !(commandClosesSession && succeeded)
+            ? prepared.ownedManagedSessionContext?.headedManagedAutosaveInterval
+            : undefined;
+        const result = buildFinalAgentBrowserToolResult({ aboutBlankSessionMismatch, artifactCleanup, categoryDetails: finalRecoveryState.categoryDetails, clickDispatchDiagnostic, commandTokens: prepared.commandTokens, comboboxFocusDiagnostic, compiledNetworkSourceLookup: prepared.compiledNetworkSourceLookup, compiledSemanticAction: prepared.compiledSemanticAction, compatibilityWorkaround: prepared.compatibilityWorkaround, currentRefSnapshot, currentRefSnapshotInvalidation, currentSessionTabTarget, currentSessionTabTargetUnknown, electronBroadGetTextScopeDiagnostics, electronFailedConnectCleanup, electronHandoff, electronLaunch: prepared.electronLaunch, electronLaunchRecord, electronLaunchRecords, electronPostCommandHealth, electronProfileIsolationDetails: input.electronProfileIsolationDetails, electronRefFreshnessDiagnostic, electronSessionMismatch, errorText, evalResultWarning, evalStdinHint, exactSensitiveValues: prepared.exactSensitiveValues, executionPlan: prepared.executionPlan, fillVerificationDiagnostic, inspectionText, managedSessionHeadedAutosaveDisabled: resultHeadedManagedAutosaveDisabled || undefined, managedSessionHeadedAutosaveInterval: resultHeadedManagedAutosaveInterval, managedSessionOutcome, managedSessionRestoreDisabled: state.managedSessionRestoreState.isDisabled(prepared.executionPlan.sessionName, prepared.executionPlan.namespace), navigationSummary, networkSourceLookup, noActivePageSnapshotFailure: finalRecoveryState.noActivePageSnapshotFailure, openResultTabCorrection, overlayBlockerDiagnostic, parseError, parseFailureOutput, parseSucceeded, plainTextInspection, presentation, presentationEnvelope, priorSessionTabTarget: prepared.priorSessionTabTarget, processResult, qaAttachedTarget, qaPreset, recordingDependencyWarning, redactedArgs: prepared.redactedArgs, redactedCompiledElectron: prepared.redactedCompiledElectron, redactedCompiledJob: prepared.redactedCompiledJob, redactedCompiledNetworkSourceLookup: prepared.redactedCompiledNetworkSourceLookup, redactedCompiledQaPreset: prepared.redactedCompiledQaPreset, redactedCompiledSemanticAction: prepared.redactedCompiledSemanticAction, redactedCompiledSourceLookup: prepared.redactedCompiledSourceLookup, redactedContent, redactedProcessArgs: prepared.redactedProcessArgs, redactedRecoveryHint: prepared.redactedRecoveryHint, resultArtifactManifest, richInputRecoveryDiagnostic: finalRecoveryState.richInputRecoveryDiagnostic, scrollNoopDiagnostic, selectorTextVisibilityDiagnostics, sessionMode: prepared.sessionMode, sessionTabCorrection, sourceLookup, succeeded, timeoutPartialProgress, userRequestedJson: prepared.userRequestedJson, visibleRefFallbackDiagnostic: finalRecoveryState.visibleRefFallbackDiagnostic, visibleRefFallbackSessionName: finalRecoveryState.visibleRefFallbackSessionName });
+        const statePatch = { allowedDomainsBySession, artifactManifest, freshSessionOrdinal, managedSessionActive, managedSessionCompatibilityWorkaround, managedSessionHeadedAutosaveDisabled, managedSessionHeadedAutosaveInterval, managedSessionCwd, managedSessionName, managedSessionNamespace, networkRoutesBySession };
         return { result, statePatch };
     }
     finally {

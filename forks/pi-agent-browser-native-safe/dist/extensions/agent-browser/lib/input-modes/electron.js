@@ -1,8 +1,3 @@
-/**
- * Purpose: Compile top-level Electron wrapper inputs into validated Electron actions.
- * Responsibilities: Enforce action-specific fields, launch-target rules, and wrapper-owned flag safety.
- * Scope: Electron input-mode validation only; launch/probe/cleanup execution stays in the extension entrypoint.
- */
 import { isRecord } from "../parsing.js";
 import { getFlagName } from "../argv-grammar.js";
 import { ELECTRON_EXTRA_APP_ARGS_ENV, isAllowedElectronAppArgFlag, isCodeExecutionLaunchFlag, isElectronExtraAppArgsAllowed, normalizeLaunchFlag, } from "../launch-flag-policy.js";

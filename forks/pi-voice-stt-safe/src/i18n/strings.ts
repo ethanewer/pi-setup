@@ -30,6 +30,17 @@ export type Strings = {
     cleanupFailed: string;
     cleared: string;
   };
+  /** Profile switching menu and toasts. */
+  profile: {
+    menuTitle: string;
+    activeMarker: string;
+    set: (name: string) => string;
+    unknown: (name: string) => string;
+    list: (current: string, names: string[]) => string;
+    none: string;
+    persistFailed: string;
+    busy: string;
+  };
 };
 
 export const DEFAULT_LOCALE = "en";
@@ -56,6 +67,16 @@ const en: Strings = {
     cleanupFailed: "Cleanup failed; using the raw transcript.",
     cleared: "Transcript discarded.",
   },
+  profile: {
+    menuTitle: "Select STT profile",
+    activeMarker: "active",
+    set: (name) => `Profile "${name}" selected; it applies to the next recording.`,
+    unknown: (name) => `Unknown profile "${name}".`,
+    list: (current, names) => `STT profile: ${current} · available: ${names.join(", ")}`,
+    none: "No profiles defined. Add a top-level \"profiles\" section to your STT config.",
+    persistFailed: "Could not persist the profile; it applies to this session only.",
+    busy: "Cannot switch profile while transcribing.",
+  },
 };
 
 const fr: Strings = {
@@ -79,6 +100,16 @@ const fr: Strings = {
     transcriptionCancelled: "Transcription annulée.",
     cleanupFailed: "Échec du nettoyage ; transcription brute utilisée.",
     cleared: "Transcription ignorée.",
+  },
+  profile: {
+    menuTitle: "Choisir le profil STT",
+    activeMarker: "actif",
+    set: (name) => `Profil "${name}" sélectionné ; il s'applique au prochain enregistrement.`,
+    unknown: (name) => `Profil inconnu "${name}".`,
+    list: (current, names) => `Profil STT : ${current} · disponibles : ${names.join(", ")}`,
+    none: "Aucun profil défini. Ajoute une section \"profiles\" de premier niveau à ta config STT.",
+    persistFailed: "Impossible de persister le profil ; il ne s'applique qu'à cette session.",
+    busy: "Impossible de changer de profil pendant la transcription.",
   },
 };
 

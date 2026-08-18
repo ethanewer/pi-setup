@@ -1,10 +1,3 @@
-/**
- * Purpose: Own machine-readable agent_browser next-action contracts and merge policy.
- * Responsibilities: Define the stable nextAction shape, build basic argv follow-ups, and provide deterministic action-list collection helpers.
- * Scope: Result follow-up action mechanics only; command-specific recovery and artifact policies live in neighboring modules.
- * Usage: Imported by result presentation helpers and the extension entrypoint when attaching details.nextActions.
- * Invariants/Assumptions: Action ids are stable machine-readable contracts; dedupe preserves first occurrence order.
- */
 export function withOptionalNamespaceArgs(namespace, args) {
     return namespace && args[0] !== "--namespace" ? ["--namespace", namespace, ...args] : args;
 }
@@ -64,27 +57,4 @@ export function alignPageChangeSummaryNextActionIds(summary, nextActions) {
     const nextActionIds = new Set(nextActions.map((action) => action.id));
     const alignedIds = summary.nextActionIds.filter((id) => nextActionIds.has(id));
     return alignedIds.length > 0 ? { ...summary, nextActionIds: alignedIds } : { ...summary, nextActionIds: undefined };
-}
-export class AgentBrowserNextActionCollector {
-    actions;
-    constructor(initialActions = undefined) {
-        this.actions = initialActions ? [...initialActions] : [];
-    }
-    append(actions) {
-        if (!actions || actions.length === 0)
-            return;
-        this.actions.push(...actions);
-    }
-    appendUnique(actions) {
-        appendUniqueAgentBrowserNextActions(this.actions, actions);
-    }
-    replace(actions) {
-        this.actions = actions ? [...actions] : [];
-    }
-    removeWhere(predicate) {
-        this.actions = this.actions.filter((action) => !predicate(action));
-    }
-    toArray() {
-        return this.actions.length > 0 ? [...this.actions] : undefined;
-    }
 }

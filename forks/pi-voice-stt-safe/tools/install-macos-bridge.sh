@@ -2,14 +2,18 @@
 #
 # install-macos-bridge.sh — install the Pi Voice STT Mac microphone bridge.
 #
-# This lets Pi running on a VPS (over SSH) use your Mac's microphone: a small
-# local daemon captures audio and a reverse SSH tunnel exposes it to the VPS.
+# Installs either:
+#   - a local native recorder for Pi running on this Mac, or
+#   - a recorder plus reverse SSH tunnel for Pi running on a VPS.
 #
 # Usage:
-#   ./install-macos-bridge.sh <vps-ssh-host-alias> [options]
+#   ./install-macos-bridge.sh --local
+#   ./install-macos-bridge.sh <vps-ssh-host-alias>
 #
-#   vps-ssh-host-alias   SSH host alias of your VPS, as configured in ~/.ssh/config.
-#                        (e.g. "my-vps", "prod", "user@1.2.3.4")
+#   --local               Run Pi and the recorder on this Mac. No SSH or
+#                         ~/.ssh/config changes are made.
+#   vps-ssh-host-alias    SSH host alias of your VPS, as configured in ~/.ssh/config.
+#                         (e.g. "my-vps", "prod", "user@1.2.3.4")
 #
 # Environment overrides:
 #   PI_STT_BRIDGE_PORT                local port shared by the daemon and tunnel (default 18765)
@@ -19,11 +23,11 @@
 #   PI_STT_BRIDGE_CMUX                optional cmux binary (auto-detected if unset)
 #
 # What it creates (all under $HOME):
-#   - ~/.local/share/pi-voice-stt-bridge/   daemon + launcher + tunnel script
+#   - ~/.local/share/pi-voice-stt-bridge/   daemon + launcher + optional tunnel script
 #   - ~/.config/pi-voice-stt-bridge/token   shared bearer token (chmod 600)
 #   - ~/Applications/Pi Voice STT Bridge.app native macOS capture app (if swiftc is available)
-#   - LaunchAgents: app.pi-voice-stt.bridge and app.pi-voice-stt.tunnel
-#   - an SSH config block for <vps>-voice-tunnel with RemoteForward
+#   - LaunchAgent: app.pi-voice-stt.bridge
+#   - VPS mode only: app.pi-voice-stt.tunnel and an SSH RemoteForward config block
 #
 # Uninstall:
 #   launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/app.pi-voice-stt.bridge.plist 2>/dev/null
@@ -34,12 +38,19 @@
 #   (and remove the "<vps>-voice-tunnel" Host block from ~/.ssh/config if desired)
 set -euo pipefail
 
+LOCAL_ONLY=0
+if [[ "${1:-}" == "--local" ]]; then
+  LOCAL_ONLY=1
+  shift
+fi
+
 VPS_HOST_ALIAS="${1:-${PI_STT_BRIDGE_VPS_HOST_ALIAS:-}}"
-if [[ -z "$VPS_HOST_ALIAS" ]]; then
-  echo "Usage: $(basename "$0") <vps-ssh-host-alias>" >&2
-  echo "  Provide the SSH host alias of your VPS (as configured in ~/.ssh/config)." >&2
-  echo "  Example: $(basename "$0") my-vps" >&2
+if [[ "$LOCAL_ONLY" == "0" && -z "$VPS_HOST_ALIAS" ]]; then
+  echo "Usage: $(basename "$0") --local | <vps-ssh-host-alias>" >&2
   exit 1
+fi
+if [[ "$LOCAL_ONLY" == "1" && $# -gt 0 ]]; then
+  echo "Warning: --local mode ignores extra argument(s): $*" >&2
 fi
 
 PORT="${PI_STT_BRIDGE_PORT:-18765}"
@@ -166,6 +177,7 @@ exec "\$NODE_BIN" "\$SERVER_DST"
 LAUNCHER
 chmod 0755 "$LAUNCHER_DST"
 
+if [[ "$LOCAL_ONLY" == "0" ]]; then
 cat > "$TUNNEL_SCRIPT" <<'TUNNEL'
 #!/usr/bin/env bash
 set -euo pipefail
@@ -249,6 +261,7 @@ lines.extend([
 config_path.write_text(text.rstrip() + "\n" + "\n".join(lines))
 config_path.chmod(0o600)
 PY
+fi
 
 if [[ "$USE_NATIVE" == "1" ]]; then
   cat > "$BRIDGE_PLIST" <<PLIST
@@ -315,6 +328,7 @@ else
 PLIST
 fi
 
+if [[ "$LOCAL_ONLY" == "0" ]]; then
 cat > "$TUNNEL_PLIST" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -339,27 +353,44 @@ cat > "$TUNNEL_PLIST" <<PLIST
 </dict>
 </plist>
 PLIST
+fi
 
 launchctl bootout "gui/$UID_VALUE" "$BRIDGE_LABEL" >/dev/null 2>&1 || true
-launchctl bootout "gui/$UID_VALUE" "$TUNNEL_LABEL" >/dev/null 2>&1 || true
-# Best-effort cleanup of legacy personal-label agents from earlier previews.
+if [[ "$LOCAL_ONLY" == "0" ]]; then
+  launchctl bootout "gui/$UID_VALUE" "$TUNNEL_LABEL" >/dev/null 2>&1 || true
+fi
+# Best-effort cleanup of legacy personal-label bridge agents from earlier previews.
 launchctl bootout "gui/$UID_VALUE/com.cgarrot.pi-voice-stt-bridge" >/dev/null 2>&1 || true
-launchctl bootout "gui/$UID_VALUE/com.cgarrot.pi-voice-stt-tunnel" >/dev/null 2>&1 || true
-rm -f "$LAUNCH_DIR/com.cgarrot.pi-voice-stt-bridge.plist" "$LAUNCH_DIR/com.cgarrot.pi-voice-stt-tunnel.plist" 2>/dev/null || true
+if [[ "$LOCAL_ONLY" == "0" ]]; then
+  launchctl bootout "gui/$UID_VALUE/com.cgarrot.pi-voice-stt-tunnel" >/dev/null 2>&1 || true
+fi
+rm -f "$LAUNCH_DIR/com.cgarrot.pi-voice-stt-bridge.plist" 2>/dev/null || true
+if [[ "$LOCAL_ONLY" == "0" ]]; then
+  rm -f "$LAUNCH_DIR/com.cgarrot.pi-voice-stt-tunnel.plist" 2>/dev/null || true
+fi
 for pid in $(/usr/sbin/lsof -tiTCP:"$PORT" -sTCP:LISTEN 2>/dev/null || true); do
   kill "$pid" 2>/dev/null || true
 done
 launchctl bootstrap "gui/$UID_VALUE" "$BRIDGE_PLIST"
-launchctl bootstrap "gui/$UID_VALUE" "$TUNNEL_PLIST"
+if [[ "$LOCAL_ONLY" == "0" ]]; then
+  launchctl bootstrap "gui/$UID_VALUE" "$TUNNEL_PLIST"
+fi
 launchctl kickstart -k "gui/$UID_VALUE/$BRIDGE_LABEL" >/dev/null 2>&1 || true
-launchctl kickstart -k "gui/$UID_VALUE/$TUNNEL_LABEL" >/dev/null 2>&1 || true
+if [[ "$LOCAL_ONLY" == "0" ]]; then
+  launchctl kickstart -k "gui/$UID_VALUE/$TUNNEL_LABEL" >/dev/null 2>&1 || true
+fi
 
 echo "Installed Pi Voice STT Mac bridge on http://127.0.0.1:$PORT"
-echo "  VPS host alias : $VPS_HOST_ALIAS"
-echo "  Tunnel alias   : $TUNNEL_HOST_ALIAS"
 echo "  Recorder       : $([[ "$USE_NATIVE" == "1" ]] && echo native-macos-app || echo ffmpeg-node-fallback)"
 echo "  Token file     : $TOKEN_FILE"
 echo ""
-echo "Next: on your VPS, point Pi at the bridge with capture.type \"bridge\","
-echo "endpoint http://127.0.0.1:$PORT and tokenFile pointing at a copy of the token."
+if [[ "$LOCAL_ONLY" == "1" ]]; then
+  echo "Next: point Pi at this local bridge with capture.type \"bridge\","
+  echo "endpoint http://127.0.0.1:$PORT, and tokenFile $TOKEN_FILE."
+else
+  echo "  VPS host alias : $VPS_HOST_ALIAS"
+  echo "  Tunnel alias   : $TUNNEL_HOST_ALIAS"
+  echo "Next: on your VPS, point Pi at the bridge with capture.type \"bridge\","
+  echo "endpoint http://127.0.0.1:$PORT and tokenFile pointing at a copy of the token."
+fi
 echo "See docs/macos-bridge.md for the full setup guide."

@@ -77,5 +77,5 @@ export declare function resumedText(name: string, runId: string): string;
  * tool error instead of a silent failure. Inspects live + persisted state to
  * name the concrete reason (not found / running / completed / stopped).
  */
-export declare function resumeFailureText(manager: WorkflowManager, runId: string): string;
+export declare function resumeFailureText(manager: WorkflowManager, runId: string, requestedMaxAgents?: number): string;
 export {};

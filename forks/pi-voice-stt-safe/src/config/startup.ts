@@ -4,6 +4,7 @@ import { homedir } from "node:os";
 import { objectFrom, textFrom } from "../utils/coerce";
 import { DEFAULT_KEYBINDS, describeKeybinds, parseKeybinds } from "../core/keybind";
 import { resolvePath } from "../utils/path";
+import { DEFAULT_PROFILE } from "./profiles";
 
 export type StartupOptions = {
   configPath: string;
@@ -11,8 +12,10 @@ export type StartupOptions = {
   keybind: string;
   /** Every key that toggles dictation. See core/keybind.ts for why there is more than one. */
   keybinds: string[];
+  profileKeybind: string;
   locale: string;
   mode: string;
+  profile: string;
 };
 
 export const DEFAULT_CONFIG_PATH = join(homedir(), ".pi", "agent", "stt.json");
@@ -31,6 +34,8 @@ export const resolveStartupOptions = (): StartupOptions => {
   const keybind = describeKeybinds(keybinds);
   const locale = textFrom(process.env.PI_STT_LOCALE, textFrom(config.locale, "en"));
   const mode = textFrom(process.env.PI_STT_MODE, textFrom(config.mode, "default"));
+  const profileKeybind = textFrom(process.env.PI_STT_PROFILE_KEYBIND, textFrom(config.profileKeybind, "alt+r"));
+  const profile = textFrom(process.env.PI_STT_PROFILE, textFrom(config.profile, DEFAULT_PROFILE));
 
-  return { configPath, keybind, keybinds, locale, mode };
+  return { configPath, keybind, keybinds, profileKeybind, locale, mode, profile };
 };

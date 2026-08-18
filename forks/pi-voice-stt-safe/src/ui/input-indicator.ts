@@ -6,16 +6,19 @@ import {
   visibleWidth,
   type EditorComponent,
   type EditorTheme,
+  type KeyId,
   type TUI,
 } from "@earendil-works/pi-tui";
 import type { DictationMode } from "../core/dictation-controller";
 import { matchesAnyKeybind } from "../core/keybind";
+import { DEFAULT_PROFILE } from "../config/profiles";
 import type { Strings } from "../i18n/strings";
 import { composeCursorLine } from "./cursor-cell";
 import { animateRenderedLines, frameAt } from "./transcribing";
 
 type VoiceEditorOptions = {
   keybinds: string[];
+  profileKeybind: string;
   ctx: ExtensionContext;
   keybindings: KeybindingsManager;
   getMode(): DictationMode;
@@ -27,6 +30,7 @@ type VoiceEditorOptions = {
   onQueue(ctx: ExtensionContext): void;
   /** Stop recording, leave the transcript in the editor, then apply this keystroke. */
   onInsertThen(ctx: ExtensionContext, data: string): void;
+  onShowProfileMenu(ctx: ExtensionContext): void;
 };
 
 /**
@@ -183,6 +187,13 @@ class VoiceEditorWrapper implements EditorComponent {
       return;
     }
 
+    // The profile menu keybind is handled here (editor-focused path), in addition to
+    // pi.registerShortcut. The voice keys win first if a user configures a collision.
+    if (matchesKey(data, this.options.profileKeybind as KeyId)) {
+      this.options.onShowProfileMenu(this.options.ctx);
+      return;
+    }
+
     if (mode === "recording") {
       if (matchesKey(data, "escape")) {
         this.options.onCancel(this.options.ctx);
@@ -256,6 +267,7 @@ class VoiceEditorWrapper implements EditorComponent {
 
 export const createInputIndicator = (keybind: string, strings: Strings) => {
   let mode: DictationMode = "idle";
+  let activeProfile = "";
   let tui: TUI | undefined;
   let tick = 0;
   let placeholders = 0;
@@ -303,19 +315,21 @@ export const createInputIndicator = (keybind: string, strings: Strings) => {
       requestRender();
     },
     getTick: () => tick,
-    /**
-     * Only the idle affordance is a label. Recording is the pulsing cursor and
-     * transcribing is the placeholder, both of which sit where the text is — so adding a
-     * banner for either would just be a second thing to read.
-     */
+    setProfile(nextProfile: string) {
+      activeProfile = nextProfile;
+      requestRender();
+    },
+    /** Recording uses the cursor and transcribing uses the placeholder, so only idle needs a label. */
     renderLabel(theme: Theme): string {
       if (mode !== "idle") return "";
-      return `${theme.fg("dim", strings.indicator.idle)} ${theme.fg("accent", keybind)}`;
+      const label = activeProfile && activeProfile !== DEFAULT_PROFILE ? `${strings.indicator.idle} · ${activeProfile}` : strings.indicator.idle;
+      return `${theme.fg("dim", label)} ${theme.fg("accent", keybind)}`;
     },
     dispose() {
       stopAnimation();
       tui = undefined;
       mode = "idle";
+      activeProfile = "";
     },
   };
 };

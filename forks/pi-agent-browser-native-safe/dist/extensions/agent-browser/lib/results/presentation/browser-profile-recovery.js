@@ -1,8 +1,3 @@
-/**
- * Purpose: Build browser profile/config recovery hints for launch/setup failures.
- * Responsibilities: Recognize local Chrome/profile setup errors, avoid self-loop diagnostics, and emit canonical next actions.
- * Scope: Error presentation only; upstream profile discovery and doctor execution remain normal agent_browser commands.
- */
 import { isOpenNavigationCommand } from "../../command-taxonomy.js";
 import { getStartupScopedFlags } from "../../runtime.js";
 import { buildNextToolAction } from "../next-actions.js";

@@ -1,10 +1,3 @@
-/**
- * Purpose: Select the omitted snapshot refs most likely to be actionable controls.
- * Responsibilities: Classify editable, surface, primary-action, and role-based control refs with deterministic diversity and top-up rules.
- * Scope: High-value control ranking only; snapshot parsing, noise filtering, and presentation text live in neighboring modules.
- * Usage: Snapshot presentation passes already-visible, non-noise omitted refs and receives the bounded high-value subset to surface.
- * Invariants/Assumptions: Ranking must preserve scarce control categories before filling dominant buckets so dense desktop hosts stay navigable.
- */
 import { compareRefIds } from "./text.js";
 const SNAPSHOT_HIGH_VALUE_EDITABLE_REF_FILL_TARGET_LINES = 4;
 const SNAPSHOT_HIGH_VALUE_SURFACE_REF_FILL_TARGET_LINES = 3;

@@ -68,7 +68,7 @@ export {
   saveModelTierConfig,
   sortedTierNames,
 } from "./model-tier-config.js";
-export type { PersistedRunState, RunPersistence, RunStatus } from "./run-persistence.js";
+export type { PendingDeliveryMarker, PersistedRunState, RunPersistence, RunStatus } from "./run-persistence.js";
 export {
   createRunPersistence,
   generateRunId,
@@ -88,12 +88,16 @@ export { SharedStore } from "./shared-store.js";
 export type { StructuredOutputCapture, StructuredOutputToolOptions } from "./structured-output.js";
 export { createStructuredOutputTool } from "./structured-output.js";
 export {
+  bindSessionDelivery,
   deliverText,
+  dropSessionDelivery,
   fenceUntrusted,
   installResultDelivery,
   installTaskPanel,
   resumeResultDelivery,
+  resumeSessionDelivery,
   suspendResultDelivery,
+  suspendSessionDelivery,
   type TaskPanelOptions,
 } from "./task-panel.js";
 export type {

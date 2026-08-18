@@ -1,8 +1,3 @@
-/**
- * Purpose: Map successful semanticAction results to the same presentation signals as direct ref commands.
- * Responsibilities: Resolve presentation command names, compact action prose, and navigation-summary probe gates.
- * Scope: semanticAction success presentation only.
- */
 import { getCompiledSemanticActionCommandIndex, isCompiledSemanticActionFindCommand, } from "../../input-modes/semantic-action.js";
 import { isRecord } from "../../parsing.js";
 import { formatNavigationSummary, getNavigationSummary, isNavigationObservableCommand, } from "./navigation.js";

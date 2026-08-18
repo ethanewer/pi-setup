@@ -33,7 +33,7 @@ bin/pi-setup-vendor --verify <fork>
 
 ## pi-dynamic-workflows-safe
 
-Based on `@quintinshaw/pi-dynamic-workflows@3.5.1`. `src/**/*.ts` is the tree Pi loads;
+Based on `@quintinshaw/pi-dynamic-workflows@3.6.0`. `src/**/*.ts` is the tree Pi loads;
 `dist/` is the compiled mirror shipped through the package `exports` field.
 
 **Closed.** The zero-click RCE chain is broken at every link: persisted run records are
@@ -89,6 +89,13 @@ the gate now reads the *live* workflow rather than the registration-time snapsho
 name that resolves to a repo-local script after an in-process project switch is still
 gated.
 
+Re-vendored onto 3.6.0 on 2026-08-18. Upstream added strict model-spec parsing, bounded
+code-review diff capture with generated-artifact auto-scoping, increase-only `maxAgents`
+on resume, and durable background-result delivery. The merge retained this fork's
+option-shaped git argument rejection and revision terminator, install/run provenance,
+untrusted-result fencing, agent defaults and ceiling, and rebuilt `dist/` from the merged
+`src/` tree.
+
 **Default changes.** A run defaults to 100 agents (was 1000).
 `DEFAULT_AGENT_TIMEOUT_MS` is 60 minutes (was unbounded), sized so a legitimately long
 subagent is not silently degraded to `null`. `DEFAULT_AGENT_RETRIES` is 2 with exponential
@@ -110,7 +117,7 @@ lock is reclaimable after a staleness window rather than immediately.
 
 ## pi-agent-browser-native-safe
 
-Based on `pi-agent-browser-native@0.2.77`, which targets `agent-browser 0.33.2` (which
+Based on `pi-agent-browser-native@0.3.0`, which targets `agent-browser 0.33.2` (which
 `install.sh` pins). Only `dist/` is shipped, so the fixes are in the compiled tree.
 
 **Re-vendored 0.2.72 -> 0.2.77 on 2026-08-04, and this one was a real merge.** Five upstream
@@ -150,6 +157,13 @@ One upstream behaviour change to expect: 0.2.77 verifies artifacts, so a `close`
 a refused screenshot is itself policy-blocked until the artifact is resolved. That is
 upstream working as designed, not a merge defect — it surfaced as a confusing
 "artifact guard blocked close" during verification.
+
+Re-vendored onto 0.3.0 on 2026-08-18. This release raises the Pi support floor to 0.84.0
+and reorganizes input/result modules while retaining the `agent-browser 0.33.2` capability
+baseline. A three-way merge kept config trust fail-closed, credential commands shell-free,
+write-path and Electron confinement, launch-flag policy, and managed-session protections.
+The external CLI pin therefore remains 0.33.2; 0.34.0 is a separate re-baseline rather
+than part of this extension update.
 
 **Closed.** `isProjectSafeCredentialValueForProvider` — a stub that returned `true` for any
 non-empty string — is implemented, so a project-scope credential can no longer be a
@@ -313,7 +327,12 @@ half-finished turn cannot produce an invalid request.
 
 ## pi-voice-stt-safe
 
-Based on `pi-voice-stt@0.4.0`.
+Based on `pi-voice-stt@0.6.0`.
+
+Re-vendored onto 0.6.0 on 2026-08-18. Upstream added named profiles, a profile switch
+shortcut, Kitty keyboard fallback, and native local macOS bridge installation. The merge
+kept the hardened endpoint/credential and recorder controls plus this fork's non-modal,
+placeholder-based dictation UI and multi-key voice binding.
 
 **Closed.** A named vendor alias is pinned to that vendor's host, and — the gap that survived
 the first two rounds — a defaulted `OPENAI_API_KEY` can never follow a non-OpenAI host. A
@@ -372,7 +391,7 @@ original commit history. It adds a watcher cap, kill-all, aggregated heartbeats,
 session shutdown with no persistence or restore. Not re-vendorable with
 `bin/pi-setup-vendor`; maintained directly.
 
-### Upstream 2.0.0 was reviewed and declined
+### Upstream 2.0.2 was reviewed and declined
 
 2.0.0 rebuilds the extension around crash-safe persistence: logical watcher UUIDs, source
 fingerprints, lifecycle revisions, cross-process leases validated against boot id and
@@ -381,8 +400,12 @@ process start, abnormal-restart quarantine, versioned checkpoints, and
 nothing — watcher definitions never reach the session file, so nothing can be restored or
 leaked across restarts. Adopting 2.0.0 would reverse that decision rather than upgrade it,
 so the fork stays on its 1.3.0 review baseline. `vendor.json` records this as
-`reviewedAgainst: "2.0.0"`, which is a different claim from `version` and suppresses the
-drift note for that release only.
+`reviewedAgainst: "2.0.2"`, which is a different claim from `version` and suppresses the
+drift note through that release only. Releases 2.0.1–2.0.2 migrate upstream's seven-source
+persistent tool interface to a strict-schema-safe discriminated object. This fork has only
+spawn, poll and tail, does not opt the tool into strict constrained sampling, and has none
+of the structured probe/recovery placeholders involved in that bug, so no code was ported.
+Revisit that schema if strict constrained sampling is enabled for this tool.
 
 **One fix was ported: the per-tick poll timeout.** The fork's no-overlap guard had no
 bound, so a poll child that never exited — a hung SSH, which is the case poll mode exists
@@ -465,7 +488,7 @@ dynamic-workflows the entry file moved into its own directory and its two relati
 were repointed. Nothing else changed.
 
 A stray upstream package is still distinguishable at a glance: Pi prefixes `npm:` and
-`git:` sources with the package spec (`pi-voice-stt@0.4.0:src`) and leaves `local/`
+`git:` sources with the package spec (`pi-voice-stt@0.6.0:src`) and leaves `local/`
 sources bare, so anything showing a version prefix is not one of these forks.
 
 The lean `p` wrapper disables extension and skill discovery, then explicitly loads only

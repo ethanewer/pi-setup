@@ -1,27 +1,28 @@
 import { copyFile, mkdir } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
+import { getBooleanFlagValue, isUpstreamEnvFlagEnabled } from "../../argv-grammar.js";
 import { isCloseCommand } from "../../command-taxonomy.js";
 import { cleanupElectronLaunchResources } from "../../electron/cleanup.js";
 import { launchElectronApp } from "../../electron/launch.js";
 import { pathExists } from "../../fs-utils.js";
 import { getFlagName } from "../../argv-grammar.js";
 import { getGitMetadataWriteError, getWritePathConfinementError } from "../../write-path-policy.js";
-import { getCompiledSemanticActionSessionPrefix } from "../../input-modes.js";
+import { getCompiledSemanticActionSessionPrefix } from "../../input-modes/semantic-action.js";
 import { tryDirectAnchorDownload } from "./prepare/direct-anchor-download.js";
 import { tryNetworkRequestsPageFilter } from "./prepare/network-page-filter.js";
 import { tryContainerScroll, tryPageScrollTo } from "./prepare/scroll-shims.js";
 import { trySnapshotFilter } from "./prepare/snapshot-filter.js";
 import { commandTimeoutNeedsActivePageUrl, getCommandAwareProcessTimeoutMs } from "./prepare/wait-timeouts.js";
-import { getPersistentSessionArtifactStore } from "./session-artifacts.js";
-import { buildAgentBrowserResultCategoryDetails } from "../../results.js";
+import { getPersistentSessionArtifactStore } from "./session-state.js";
+import { buildAgentBrowserResultCategoryDetails } from "../../results/categories.js";
 import { applyNamespaceToNextActions } from "../../results/next-actions.js";
 import { buildSessionAwareStaleRefNextActions, buildSessionTabRecoveryNextActions } from "../../results/recovery-next-actions.js";
 import { resolveVisibleRefActionFromSnapshot } from "../../results/selector-recovery.js";
 import { extractRefSnapshotFromData } from "../../session-page-state.js";
 import { buildExecutionPlan, createFreshSessionName, extractCommandTokens, getDefaultHeadlessCompatUserAgent, redactInvocationArgs, } from "../../runtime.js";
-import { buildOwnedManagedSessionRestoreContext, canonicalizeOwnedManagedSessionCloseArgs, withOwnedManagedSessionContext, } from "../../managed-session-restore.js";
+import { buildOwnedManagedSessionRestoreContext, canonicalizeOwnedManagedSessionCloseArgs, resolveExplicitAutosaveInterval, withOwnedManagedSessionContext, } from "../../managed-session-restore.js";
 import { getCallerOwnedSessionLivePageVerificationRequirement, getManagedSessionStateAccessValidationError, getManagedSessionTargetAccessValidationError, } from "../../managed-session-state-policy.js";
-import { acquireOwnedManagedSessionDaemonPolicy } from "./managed-session-daemon-policy.js";
+import { acquireOwnedManagedSessionDaemonPolicy, getRunningHeadedAutosavePolicyChangeError } from "./managed-session-daemon-policy.js";
 import { applyOpenResultTabCorrection, buildManagedSessionOutcome, buildPinnedBatchPlan, buildSessionDetailFields, buildStaleRefPreflight, getSessionContextKey, extractStringResultField, collectAnySessionTabSelection, collectSessionTabSelection, getGuardedRefUsage, getTraceOwnerGuardMessage, runSessionCommandData, shouldPinSessionTabForCommand, } from "./session-state.js";
 import { parseBatchStdinJsonArray } from "../batch-stdin.js";
 import { buildElectronHostFailureResult, getElectronLaunchFailureCategory, redactRecoveryHint } from "./final-result.js";
@@ -535,11 +536,27 @@ export async function prepareBrowserRun(options) {
         if (!executionPlan.validationError && managedStateAccessError)
             executionPlan = { ...executionPlan, recoveryHint: undefined, validationError: managedStateAccessError };
         const recordedOwnedSession = ownedSessionKey ? state.ownedManagedSessions.get(ownedSessionKey) : undefined;
+        const targetsCurrentManagedSession = state.managedSessionActive
+            && ownedSessionKey === getSessionContextKey(state.managedSessionName, state.managedSessionNamespace);
+        const retainedHeadedAutosaveDisabled = recordedOwnedSession?.headedManagedAutosaveDisabled === true
+            || (targetsCurrentManagedSession && state.managedSessionHeadedAutosaveDisabled === true);
+        const retainedHeadedAutosaveInterval = recordedOwnedSession?.headedManagedAutosaveInterval
+            ?? (targetsCurrentManagedSession ? state.managedSessionHeadedAutosaveInterval : undefined);
+        const explicitAutosaveInterval = resolveExplicitAutosaveInterval(process.env.AGENT_BROWSER_AUTOSAVE_INTERVAL_MS);
+        const autosavePolicyChangeError = getRunningHeadedAutosavePolicyChangeError(retainedHeadedAutosaveInterval, isCloseCommand(executionPlan.commandInfo.command));
+        if (!executionPlan.validationError && autosavePolicyChangeError) {
+            executionPlan = { ...executionPlan, recoveryHint: undefined, validationError: autosavePolicyChangeError };
+        }
+        const headedLaunch = getBooleanFlagValue(executionPlan.effectiveArgs, "--headed") ?? isUpstreamEnvFlagEnabled(process.env.AGENT_BROWSER_HEADED);
+        const headedManagedAutosaveDisabled = retainedHeadedAutosaveDisabled || (explicitAutosaveInterval === undefined && headedLaunch);
+        const headedManagedAutosaveInterval = retainedHeadedAutosaveInterval ?? (headedLaunch ? explicitAutosaveInterval ?? "0" : undefined);
         const ownedManagedSession = buildOwnedManagedSessionRestoreContext({
             args: executionPlan.effectiveArgs,
             cwd: recordedOwnedSession?.cwd ?? cwd,
             currentManagedSessionName: state.managedSessionName,
             currentManagedSessionNamespace: state.managedSessionNamespace,
+            headedManagedAutosaveDisabled,
+            headedManagedAutosaveInterval,
             managedSessionName: executionPlan.managedSessionName,
             namespace: executionPlan.namespace,
             recordedOwnedSession,

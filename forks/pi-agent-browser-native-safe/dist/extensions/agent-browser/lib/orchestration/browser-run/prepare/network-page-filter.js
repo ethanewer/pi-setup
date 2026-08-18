@@ -1,5 +1,5 @@
 import { isRecord } from "../../../parsing.js";
-import { buildAgentBrowserResultCategoryDetails } from "../../../results.js";
+import { buildAgentBrowserResultCategoryDetails } from "../../../results/categories.js";
 import { redactSensitiveText } from "../../../runtime.js";
 import { buildSessionDetailFields, runSessionCommandData } from "../session-state.js";
 function parseNetworkRequestsPageFilterRequest(commandTokens) {

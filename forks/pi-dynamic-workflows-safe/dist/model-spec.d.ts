@@ -32,4 +32,6 @@ export declare function splitModelSpecThinking(spec: string | undefined, knownMo
  * a real `ModelRuntime`, which has a private constructor pi doesn't expose a
  * lightweight adapter for).
  */
-export declare function resolveModelSpecWithThinking(spec: string, modelRegistry: Pick<ModelRegistry, "getAll"> & Partial<Pick<ModelRegistry, "hasConfiguredAuth">>): ResolvedModelSpec;
+export declare function resolveModelSpecWithThinking(spec: string, modelRegistry: Pick<ModelRegistry, "getAll"> & Partial<Pick<ModelRegistry, "hasConfiguredAuth">>, options?: {
+    preferredProvider?: string;
+}): ResolvedModelSpec;

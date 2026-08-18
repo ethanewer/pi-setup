@@ -2,7 +2,7 @@
  * Workflow manager for background execution, pause/resume, and run management.
  */
 import { EventEmitter } from "node:events";
-import { DEFAULT_AGENT_RETRIES, DEFAULT_AGENT_TIMEOUT_MS } from "./config.js";
+import { DEFAULT_AGENT_RETRIES, DEFAULT_AGENT_TIMEOUT_MS, MAX_AGENTS_PER_RUN } from "./config.js";
 import { preview } from "./display.js";
 import { isProviderUsageLimit, WorkflowError, WorkflowErrorCode } from "./errors.js";
 import { createRunPersistence, generateRunId, isInstallOwnedRun, } from "./run-persistence.js";
@@ -137,6 +137,10 @@ export class WorkflowManager extends EventEmitter {
     setSessionId(id) {
         this.sessionId = id;
     }
+    /** Currently bound pi session id (set on session_start), if any. */
+    getSessionId() {
+        return this.sessionId;
+    }
     /** Project cwd this manager was constructed for (persistence + agent tools). */
     getCwd() {
         return this.cwd;
@@ -150,24 +154,51 @@ export class WorkflowManager extends EventEmitter {
         return [...this.runs.values()];
     }
     /**
-     * After an in-process session replacement keeps this manager, re-home every
-     * still-running (or paused-in-memory) run onto the new session so the panel,
-     * workflow_control, and a later stranded-pause all see them. Completed runs
-     * keep their original sessionId so history stays with the session that ran
-     * them. No-op when `sessionId` is undefined.
+     * After an in-process session replacement keeps this manager, re-home work
+     * that still needs this conversation onto `sessionId`:
+     *  - still-running / paused-in-memory runs (panel, workflow_control, stranded-pause)
+     *  - any run (live or disk-only) with an undelivered `pendingDelivery` marker
+     *
+     * Terminal runs *without* pending keep their original sessionId so history
+     * stays with the session that ran them. `previousSessionId` scopes disk-only
+     * pending re-home so a parallel sibling in the same runsDir cannot steal
+     * another session's undelivered work. No-op when `sessionId` is undefined.
      */
-    adoptLiveRunsToSession(sessionId) {
+    adoptLiveRunsToSession(sessionId, previousSessionId) {
         if (!sessionId)
             return 0;
+        const prev = previousSessionId !== undefined ? previousSessionId : this.sessionId;
         let adopted = 0;
         for (const managed of this.runs.values()) {
-            if (managed.status !== "running" && managed.status !== "paused")
+            const active = managed.status === "running" || managed.status === "paused";
+            const undelivered = managed.pendingDelivery != null;
+            if (!active && !undelivered)
                 continue;
             if (managed.sessionId === sessionId)
                 continue;
             managed.sessionId = sessionId;
             this.persistRun(managed);
             adopted++;
+        }
+        // Disk-only undelivered rows (terminal runs already evicted from memory).
+        // Re-home markers tagged with the previous session id; never claim foreign
+        // or null sessionIds here (null live rows are claimed at bind flush).
+        try {
+            for (const state of this.persistence.list()) {
+                if (!state.pendingDelivery)
+                    continue;
+                if (this.runs.has(state.runId))
+                    continue;
+                if (state.sessionId === sessionId)
+                    continue;
+                if (prev == null || state.sessionId !== prev)
+                    continue;
+                this.persistence.save({ ...state, sessionId });
+                adopted++;
+            }
+        }
+        catch {
+            // best-effort — live adopt above is the critical path
         }
         return adopted;
     }
@@ -881,12 +912,10 @@ export class WorkflowManager extends EventEmitter {
                 // setSessionId() (session replacement) must not re-home a still-running
                 // run out from under stranded-pause / the originating panel.
                 sessionId: managed.sessionId,
-                // Provenance: this install wrote this record, so auto-resume may pick it
-                // up later (see PersistedRunState.installId). A run adopted from a
-                // project-local store keeps its foreignSource marker instead, which
-                // persistence preserves ahead of this stamp.
+                // Provenance and fail-closed delivery state both survive persistence.
                 installId: this.installId,
                 foreignSource: managed.foreignSource,
+                pendingDelivery: managed.pendingDelivery,
                 journal: keepsResumeJournal ? managed.journal : undefined,
                 status: managed.status,
                 // Persisted every write (not just at pause) so a stale read during the
@@ -1011,6 +1040,23 @@ export class WorkflowManager extends EventEmitter {
                 cacheWrite: persisted.tokenUsage.cacheWrite ?? 0,
             }
             : undefined;
+        // maxAgents: omit keeps the persisted cap (undefined means runWorkflow's
+        // MAX_AGENTS_PER_RUN default). A finite opts.maxAgents is increase-only vs
+        // that effective prior — never pin a lower ceiling onto a never-set run.
+        // A non-raise request refuses the whole resume so callers don't think
+        // recovery worked.
+        const priorMaxAgents = persisted.maxAgents;
+        const requestedMaxAgents = opts?.maxAgents;
+        let resolvedMaxAgents = priorMaxAgents;
+        if (typeof requestedMaxAgents === "number" && Number.isFinite(requestedMaxAgents)) {
+            const raised = Math.floor(requestedMaxAgents);
+            const effectivePrior = priorMaxAgents ?? MAX_AGENTS_PER_RUN;
+            if (raised <= effectivePrior) {
+                this.persistence.releaseRunLease(lease);
+                return false;
+            }
+            resolvedMaxAgents = raised;
+        }
         const controller = new AbortController();
         const managed = {
             runId,
@@ -1041,6 +1087,9 @@ export class WorkflowManager extends EventEmitter {
             // Prefer the frozen owner on disk; fall back to the manager's current
             // session only for legacy runs that predate per-run sessionId.
             sessionId: persisted.sessionId ?? this.sessionId,
+            // Carry any undelivered conversation payload across resume so session_start
+            // flush can still re-inject after a pause/restart gap.
+            pendingDelivery: persisted.pendingDelivery,
             lease,
             // Carry the original opt-out forward across resumes; it's fixed at
             // run-start and persistRun() re-persists it on every subsequent write.
@@ -1059,10 +1108,8 @@ export class WorkflowManager extends EventEmitter {
             // Restore the same start-time execution context for the other four
             // per-run knobs (see ManagedRun doc comments) — same rationale as
             // tokenBudget: never re-resolve against the manager's CURRENT defaults.
-            // maxAgents: legacy/never-set runs resume with no cap carried forward
-            // (runWorkflow's own DEFAULT_MAX_AGENTS_PER_RUN applies), exactly as if
-            // maxAgents had never been passed at all.
-            maxAgents: persisted.maxAgents,
+            // A finite resume override is increase-only versus the persisted/default cap.
+            maxAgents: resolvedMaxAgents,
             // agentTimeoutMs: unlike tokenBudget, a legacy run's real timeout at
             // start was never "no timeout" by omission — it was always
             // this.defaultAgentTimeoutMs, because pre-A1 resume() never threaded

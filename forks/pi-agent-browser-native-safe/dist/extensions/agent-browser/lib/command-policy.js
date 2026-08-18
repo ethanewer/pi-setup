@@ -1,8 +1,3 @@
-/**
- * Purpose: Own upstream command-shape policies that decide whether the wrapper should allocate a managed browser session.
- * Responsibilities: Keep local/sessionless command grammar out of the runtime execution planner while preserving exact upstream shapes.
- * Scope: Pure argv-token policy; command discovery, subprocess execution, and presentation live in focused modules.
- */
 import { hasOnlyBooleanFlags, hasOnlyOptionFlags, isNonFlagToken, stripSessionlessShapeGlobalFlags } from "./argv-grammar.js";
 const SESSIONLESS_AUTH_SUBCOMMANDS = new Set(["save", "list", "show", "delete", "remove"]);
 const PLUGIN_SESSIONLESS_SUBCOMMANDS = new Set(["list", "show", "add", "run"]);

@@ -1,8 +1,3 @@
-/**
- * Purpose: Shared argv flag-shape metadata and helpers for command discovery and sessionless policy checks.
- * Responsibilities: Own global/command value-flag sets and boolean/value-flag validation used during argv parsing.
- * Scope: Pure token grammar; command semantics and subprocess execution live elsewhere.
- */
 import { isKnownCommandToken } from "./command-taxonomy.js";
 export const GLOBAL_VALUE_FLAGS = [
     "--session",
@@ -124,6 +119,10 @@ export function getBooleanFlagValue(args, flag) {
 }
 export function isBooleanFlagEnabled(args, flag) {
     return getBooleanFlagValue(args, flag) ?? false;
+}
+/** Match upstream env_var_is_truthy exactly: lowercase only, without trimming or accepting "off". */
+export function isUpstreamEnvFlagEnabled(value) {
+    return value !== undefined && !["", "0", "false", "no"].includes(value.toLowerCase());
 }
 /** Mirror upstream sanitize_session_component for namespace/socket/state identity. */
 export function canonicalizeAgentBrowserNamespace(value) {

@@ -1,7 +1,7 @@
 import { stat } from "node:fs/promises";
 import { isAbsolute, resolve } from "node:path";
 import { isCloseCommand, isOpenNavigationCommand } from "../../command-taxonomy.js";
-import { boundElectronProbeString } from "../../electron/text.js";
+import { boundElectronProbeString } from "../../electron/cdp.js";
 import { executableExistsOnPath } from "../../executable-path.js";
 import { isHttpOrHttpsUrl } from "../../input-modes/job.js";
 import { formatSessionArtifactRetentionSummary } from "../../results/artifact-manifest.js";

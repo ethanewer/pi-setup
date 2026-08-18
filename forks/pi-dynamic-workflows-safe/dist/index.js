@@ -17,7 +17,7 @@ export { createRunPersistence, generateRunId, isAutoResumeEligibleRun, isInstall
 export { confirmRepoLocalWorkflow, parseCommandArgs, registerAllSavedWorkflows, registerSavedWorkflow, } from "./saved-commands.js";
 export { SharedStore } from "./shared-store.js";
 export { createStructuredOutputTool } from "./structured-output.js";
-export { deliverText, fenceUntrusted, installResultDelivery, installTaskPanel, resumeResultDelivery, suspendResultDelivery, } from "./task-panel.js";
+export { bindSessionDelivery, deliverText, dropSessionDelivery, fenceUntrusted, installResultDelivery, installTaskPanel, resumeResultDelivery, resumeSessionDelivery, suspendResultDelivery, suspendSessionDelivery, } from "./task-panel.js";
 export { computeAutoResumeDelayMs, parseResetHintMs, UsageLimitScheduler } from "./usage-limit-scheduler.js";
 export { assertUrlAllowed, createWebFetchTool, createWebSearchTool, createWebTools, isPrivateAddress, } from "./web-tools.js";
 export { parseWorkflowScript, runWorkflow } from "./workflow.js";

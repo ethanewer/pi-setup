@@ -154,3 +154,20 @@ export type VoiceCommandsConfig = {
   clear: string[];
   newline: string[];
 };
+
+/**
+ * Named profiles: partial configs deep-merged over the base config, selected
+ * by the top-level `profile` key, the PI_STT_PROFILE env var, or the persisted
+ * last-selection state file. Profiles are the persistent counterpart of
+ * runtime modes: switching a profile changes provider/capture/output and the
+ * last selection is reused as the default for every session.
+ */
+export type ProfilesConfig = {
+  profiles: Record<string, Record<string, unknown>>;
+  profile: string;
+};
+
+/** Persisted last-selection state, stored as <configPath>.profile.json. */
+export type ProfileState = {
+  profile: string;
+};

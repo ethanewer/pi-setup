@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-PI_VERSION="0.84.0"
+PI_VERSION="0.84.2"
 AGENT_BROWSER_VERSION="0.33.2"
 
 # Upstream versions live in vendor.json, which is what bin/pi-setup-doctor and

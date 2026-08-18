@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, realpath, stat, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, resolve } from "node:path";
 import { getAgentBrowserStoragePathValidationError } from "../managed-session-state-policy.js";
 import { isRecord } from "../parsing.js";
@@ -32,6 +32,33 @@ function appendOutputFileNotice(result, message) {
 export function getAgentBrowserOutputPathValidationError(outputPath, cwd) {
     return outputPath ? getAgentBrowserStoragePathValidationError(normalizeRequestedOutputPath(outputPath), cwd) : undefined;
 }
+function getArtifactPaths(result, cwd) {
+    const details = isRecord(result.details) ? result.details : undefined;
+    if (!details || !Array.isArray(details.artifacts))
+        return [];
+    return details.artifacts.flatMap((artifact) => {
+        if (!isRecord(artifact))
+            return [];
+        const path = typeof artifact.absolutePath === "string" ? artifact.absolutePath : typeof artifact.path === "string" ? artifact.path : undefined;
+        return path ? [isAbsolute(path) ? path : resolve(cwd, path)] : [];
+    });
+}
+async function pathsReferToSameFile(left, right) {
+    if (resolve(left) === resolve(right))
+        return true;
+    try {
+        if (await realpath(left) === await realpath(right))
+            return true;
+    }
+    catch { }
+    try {
+        const [leftStat, rightStat] = await Promise.all([stat(left), stat(right)]);
+        return leftStat.dev === rightStat.dev && leftStat.ino === rightStat.ino;
+    }
+    catch {
+        return false;
+    }
+}
 export async function applyAgentBrowserOutputPath(options) {
     if (!options.outputPath)
         return options.result;
@@ -48,6 +75,20 @@ export async function applyAgentBrowserOutputPath(options) {
     const requestedPath = normalizeRequestedOutputPath(options.outputPath);
     const absolutePath = isAbsolute(requestedPath) ? requestedPath : resolve(options.cwd, requestedPath);
     const payload = getOutputPayload(options.result);
+    for (const artifactPath of getArtifactPaths(options.result, options.cwd)) {
+        if (!await pathsReferToSameFile(absolutePath, artifactPath))
+            continue;
+        const message = "outputPath resolves to the same file as a browser artifact destination; choose a separate outputPath or omit it. The browser artifact was preserved.";
+        const outputFile = { absolutePath, error: message, path: requestedPath, source: payload.source, status: "failed" };
+        const details = isRecord(options.result.details) ? { ...options.result.details } : {};
+        delete details.successCategory;
+        return {
+            ...options.result,
+            content: appendOutputFileNotice(options.result, `Output file rejected: ${message}`),
+            details: { ...details, failureCategory: "validation-error", outputFile, resultCategory: "failure" },
+            isError: true,
+        };
+    }
     try {
         const confinementError = getWritePathConfinementError(requestedPath, options.cwd, "outputPath");
         if (confinementError)

@@ -1,6 +1,6 @@
 diff -ruN --exclude=node_modules a/README.md b/README.md
 --- a/README.md	1985-10-26 03:15:00
-+++ b/README.md	2026-07-30 17:31:07
++++ b/README.md	2026-08-18 11:03:35
 @@ -4,29 +4,34 @@
  
  Provider-agnostic speech-to-text dictation for the [Pi coding agent](https://github.com/earendil-works/pi-coding-agent) TUI.
@@ -23,8 +23,8 @@ diff -ruN --exclude=node_modules a/README.md b/README.md
 +- Indicators live at the cursor: `[● recording]` while capturing, `[⠏ transcribing]` while the
 +  provider works. Nothing is sent to the model until the transcript exists.
  - `ffmpeg` microphone capture to temporary WAV files.
--- Optional Mac microphone bridge for Pi sessions running on a VPS over SSH.
-+- Optional Mac microphone bridge for Pi sessions running on a VPS over SSH, token-authenticated and loopback-bound by default.
+-- Optional native Mac microphone bridge for local Pi sessions or Pi sessions running on a VPS over SSH.
++- Optional native Mac microphone bridge for local Pi sessions or Pi sessions running on a VPS over SSH, token-authenticated and loopback-bound by default.
  - Mistral Voxtral provider.
  - OpenAI / Groq / generic OpenAI-compatible provider for hosted and local Whisper-style endpoints.
  - Native provider integrations for Deepgram, ElevenLabs Scribe, Gladia, and AssemblyAI.
@@ -58,7 +58,7 @@ diff -ruN --exclude=node_modules a/README.md b/README.md
  
  ```json
  {
-@@ -147,7 +150,7 @@
+@@ -202,7 +205,7 @@
  }
  ```
  
@@ -67,7 +67,7 @@ diff -ruN --exclude=node_modules a/README.md b/README.md
  - `clear`: discard the current dictation without inserting anything.
  - `newline`: insert the text followed by a line break.
  
-@@ -172,7 +175,7 @@
+@@ -227,7 +230,7 @@
  ```
  
  - `enabled` (default `false`): turn the cleanup pass on.
@@ -76,7 +76,7 @@ diff -ruN --exclude=node_modules a/README.md b/README.md
  - `language` (default `"auto"`): `"auto"` keeps the spoken language; set e.g. `"fr"` to normalize the output.
  - `prompt`: override the base system prompt.
  - `projectTerms`: glossary of terms the model should spell correctly (e.g. `"super base"` → `Supabase`).
-@@ -248,11 +251,14 @@
+@@ -303,11 +306,14 @@
      "endpoint": "https://api.openai.com/v1/audio/transcriptions",
      "model": "whisper-1",
      "apiKeyEnv": "OPENAI_API_KEY",
@@ -91,7 +91,7 @@ diff -ruN --exclude=node_modules a/README.md b/README.md
  ### Deepgram
  
  ```json
-@@ -323,8 +329,12 @@
+@@ -378,8 +384,12 @@
  }
  ```
  
@@ -102,10 +102,10 @@ diff -ruN --exclude=node_modules a/README.md b/README.md
 +
 +`openai-compatible` accepts any HTTPS host by design, but the `OPENAI_API_KEY` default only follows it while `endpoint` stays on OpenAI's own domain. For any other host, name the credential that host may receive — `apiKeyEnv`, `apiKeyFile`, `keychainService`, or `apiKeyEnv: ""` for a server that takes no key — otherwise the config is rejected instead of shipping the OpenAI key along with the audio. `local` defaults to no key at all, and a loopback endpoint never needs one. Because `local` names a server on this machine, pointing its `endpoint` off loopback is refused until the config says so on purpose — name the credential that host receives, or set `apiKeyEnv: ""` to keep sending it audio with none. `openai-compatible` is the type for a remote OpenAI-compatible server.
 +
- ### Mac microphone bridge for VPS usage
+ ### Mac native microphone bridge
  
- Use this when Pi runs on a VPS but your real microphone is on your Mac. The extension keeps the same `Ctrl+R` UX, but audio capture is delegated to a small local Mac daemon through a reverse SSH tunnel. The bridge is **opt-in**: it only activates when you set `capture.type: "bridge"` — the default `ffmpeg` recorder is unchanged.
-@@ -368,6 +378,8 @@
+ Use the bridge when direct `ffmpeg` capture cannot receive microphone frames on macOS. The bridge is **opt-in**: it activates only with `capture.type: "bridge"`; the default `ffmpeg` recorder remains unchanged.
+@@ -444,6 +454,8 @@
  
  Run `/stt doctor` in Pi to verify the bridge health. The daemon only accesses the microphone when Pi calls `/start` after `Ctrl+R`; `/stop` returns the WAV to the VPS for transcription by your configured provider. On macOS the installer prefers a tiny native background app (`Pi Voice STT Bridge.app`) so microphone permission works without keeping a terminal open — the first `/start` may trigger a permission prompt.
  
@@ -114,7 +114,7 @@ diff -ruN --exclude=node_modules a/README.md b/README.md
  ## Audio capture notes
  
  With `capture.type: "ffmpeg"`, the extension records through `ffmpeg`. Platform defaults are:
-@@ -378,6 +390,8 @@
+@@ -454,6 +466,8 @@
  | Linux | `pulse` | `default` |
  | Windows | `dshow` | `audio=Microphone` |
  
@@ -123,7 +123,7 @@ diff -ruN --exclude=node_modules a/README.md b/README.md
  On macOS, list devices with:
  
  ```bash
-@@ -409,22 +423,33 @@
+@@ -485,22 +499,33 @@
  
  ## Usage
  
@@ -164,7 +164,7 @@ diff -ruN --exclude=node_modules a/README.md b/README.md
  ## Secret handling
  
  Prefer environment variables:
-@@ -438,6 +463,8 @@
+@@ -514,6 +539,8 @@
  export GLADIA_API_KEY=...
  export ASSEMBLYAI_API_KEY=...
  ```
@@ -175,7 +175,7 @@ diff -ruN --exclude=node_modules a/README.md b/README.md
  
 diff -ruN --exclude=node_modules a/SECURITY.md b/SECURITY.md
 --- a/SECURITY.md	1985-10-26 03:15:00
-+++ b/SECURITY.md	2026-07-28 23:35:24
++++ b/SECURITY.md	2026-08-18 11:02:06
 @@ -6,9 +6,19 @@
  
  Pi Voice STT never intentionally writes API keys to session history. Prefer environment variables or macOS Keychain for secrets. Do not commit config files containing `apiKey`.
@@ -199,7 +199,7 @@ diff -ruN --exclude=node_modules a/SECURITY.md b/SECURITY.md
  
 diff -ruN --exclude=node_modules a/docs/macos-bridge.md b/docs/macos-bridge.md
 --- a/docs/macos-bridge.md	1969-12-31 18:00:00
-+++ b/docs/macos-bridge.md	2026-07-28 23:31:44
++++ b/docs/macos-bridge.md	2026-08-18 11:02:06
 @@ -0,0 +1,160 @@
 +# Mac microphone bridge
 +
@@ -363,7 +363,7 @@ diff -ruN --exclude=node_modules a/docs/macos-bridge.md b/docs/macos-bridge.md
 +need it, and drop `capture.type: "bridge"` from the config on the VPS.
 diff -ruN --exclude=node_modules a/examples/stt.fr.json b/examples/stt.fr.json
 --- a/examples/stt.fr.json	1985-10-26 03:15:00
-+++ b/examples/stt.fr.json	2026-07-30 18:26:54
++++ b/examples/stt.fr.json	2026-08-18 11:02:06
 @@ -18,7 +18,6 @@
      "language": "fr"
    },
@@ -375,7 +375,7 @@ diff -ruN --exclude=node_modules a/examples/stt.fr.json b/examples/stt.fr.json
  }
 diff -ruN --exclude=node_modules a/extensions/voice-stt/index.ts b/extensions/voice-stt/index.ts
 --- a/extensions/voice-stt/index.ts	1969-12-31 18:00:00
-+++ b/extensions/voice-stt/index.ts	2026-07-29 12:06:05
++++ b/extensions/voice-stt/index.ts	2026-08-18 11:02:06
 @@ -0,0 +1,9 @@
 +/**
 + * Extension entry point.
@@ -388,11 +388,11 @@ diff -ruN --exclude=node_modules a/extensions/voice-stt/index.ts b/extensions/vo
 +export { default } from "../../src/index.js";
 diff -ruN --exclude=node_modules a/package.json b/package.json
 --- a/package.json	1985-10-26 03:15:00
-+++ b/package.json	2026-07-29 12:06:12
++++ b/package.json	2026-08-18 11:03:32
 @@ -1,6 +1,7 @@
  {
    "name": "pi-voice-stt",
-   "version": "0.4.0",
+   "version": "0.6.0",
 +  "private": true,
    "description": "Provider-agnostic speech-to-text dictation extension for the Pi TUI.",
    "license": "MIT",
@@ -418,7 +418,7 @@ diff -ruN --exclude=node_modules a/package.json b/package.json
    },
 diff -ruN --exclude=node_modules a/src/audio/bridge-recorder.ts b/src/audio/bridge-recorder.ts
 --- a/src/audio/bridge-recorder.ts	1985-10-26 03:15:00
-+++ b/src/audio/bridge-recorder.ts	2026-07-28 19:03:43
++++ b/src/audio/bridge-recorder.ts	2026-08-18 11:02:06
 @@ -51,6 +51,7 @@
        method: options.method,
        headers: headersFrom(config),
@@ -429,7 +429,7 @@ diff -ruN --exclude=node_modules a/src/audio/bridge-recorder.ts b/src/audio/brid
        const body = await response.text().catch(() => "");
 diff -ruN --exclude=node_modules a/src/audio/ffmpeg-recorder.ts b/src/audio/ffmpeg-recorder.ts
 --- a/src/audio/ffmpeg-recorder.ts	1985-10-26 03:15:00
-+++ b/src/audio/ffmpeg-recorder.ts	2026-07-28 21:20:35
++++ b/src/audio/ffmpeg-recorder.ts	2026-08-18 11:02:06
 @@ -4,6 +4,7 @@
  import { tmpdir } from "node:os";
  import { join } from "node:path";
@@ -462,7 +462,7 @@ diff -ruN --exclude=node_modules a/src/audio/ffmpeg-recorder.ts b/src/audio/ffmp
      ], {
 diff -ruN --exclude=node_modules a/src/cleanup/openai-compatible.ts b/src/cleanup/openai-compatible.ts
 --- a/src/cleanup/openai-compatible.ts	1985-10-26 03:15:00
-+++ b/src/cleanup/openai-compatible.ts	2026-07-28 21:20:30
++++ b/src/cleanup/openai-compatible.ts	2026-08-18 11:02:06
 @@ -1,5 +1,6 @@
  import { endpointRequiresAuth } from "../config/endpoint";
  import type { CleanupConfig } from "../config/types";
@@ -495,7 +495,7 @@ diff -ruN --exclude=node_modules a/src/cleanup/openai-compatible.ts b/src/cleanu
          max_tokens: config.maxTokens,
 diff -ruN --exclude=node_modules a/src/config/defaults.ts b/src/config/defaults.ts
 --- a/src/config/defaults.ts	1985-10-26 03:15:00
-+++ b/src/config/defaults.ts	2026-07-30 16:34:04
++++ b/src/config/defaults.ts	2026-08-18 11:02:06
 @@ -22,6 +22,7 @@
  export const defaultFfmpegCaptureConfig = {
    type: "ffmpeg",
@@ -514,7 +514,7 @@ diff -ruN --exclude=node_modules a/src/config/defaults.ts b/src/config/defaults.
  
 diff -ruN --exclude=node_modules a/src/config/endpoint.ts b/src/config/endpoint.ts
 --- a/src/config/endpoint.ts	1985-10-26 03:15:00
-+++ b/src/config/endpoint.ts	2026-07-28 23:16:05
++++ b/src/config/endpoint.ts	2026-08-18 11:02:06
 @@ -1,25 +1,231 @@
  import { textFrom } from "../utils/coerce";
  
@@ -761,7 +761,7 @@ diff -ruN --exclude=node_modules a/src/config/endpoint.ts b/src/config/endpoint.
  export const endpointRequiresAuth = (endpoint: string): boolean => {
 diff -ruN --exclude=node_modules a/src/config/load-config.ts b/src/config/load-config.ts
 --- a/src/config/load-config.ts	1985-10-26 03:15:00
-+++ b/src/config/load-config.ts	2026-07-30 16:34:04
++++ b/src/config/load-config.ts	2026-08-18 11:02:06
 @@ -13,7 +13,7 @@
    defaultOutputConfig,
    defaultVoiceCommandsConfig,
@@ -779,7 +779,7 @@ diff -ruN --exclude=node_modules a/src/config/load-config.ts b/src/config/load-c
  import { resolvePath } from "../utils/path";
  import { deepMerge } from "../utils/merge";
  import { modeOverrideFrom } from "../core/modes";
-@@ -69,6 +70,19 @@
+@@ -72,6 +73,19 @@
    return fallback;
  };
  
@@ -799,7 +799,7 @@ diff -ruN --exclude=node_modules a/src/config/load-config.ts b/src/config/load-c
  const commonCaptureFields = (
    capture: Record<string, unknown>,
    merged: Record<string, unknown>,
-@@ -78,9 +92,22 @@
+@@ -81,9 +95,22 @@
    minBytes: Math.max(44, positiveIntegerFrom(capture.minBytes ?? merged.minBytes, defaults.minBytes)),
  });
  
@@ -824,7 +824,7 @@ diff -ruN --exclude=node_modules a/src/config/load-config.ts b/src/config/load-c
    inputFormat: textFrom(capture.inputFormat, textFrom(merged.inputFormat, defaultFfmpegCaptureConfig.inputFormat)),
    input: textFrom(capture.input, textFrom(merged.input, defaultFfmpegCaptureConfig.input)),
    sampleRate: positiveIntegerFrom(capture.sampleRate ?? merged.sampleRate, defaultFfmpegCaptureConfig.sampleRate),
-@@ -127,6 +154,52 @@
+@@ -130,6 +157,52 @@
    keychainAccount: provider.keychainAccount ?? merged.keychainAccount,
  });
  
@@ -877,7 +877,7 @@ diff -ruN --exclude=node_modules a/src/config/load-config.ts b/src/config/load-c
  const commonProviderFields = async <TDefault extends { apiKeyEnv: string; timeoutSeconds: number }>(
    merged: Record<string, unknown>,
    provider: Record<string, unknown>,
-@@ -145,7 +218,7 @@
+@@ -148,7 +221,7 @@
  
  const mistralProviderFrom = async (merged: Record<string, unknown>, provider: Record<string, unknown>): Promise<MistralProviderConfig> => ({
    type: "mistral",
@@ -886,7 +886,7 @@ diff -ruN --exclude=node_modules a/src/config/load-config.ts b/src/config/load-c
    model: textFrom(provider.model, textFrom(merged.model, defaultMistralProviderConfig.model)),
    language: textFrom(provider.language, textFrom(merged.language, defaultMistralProviderConfig.language)),
    ...(await commonProviderFields(merged, provider, defaultMistralProviderConfig)),
-@@ -154,18 +227,44 @@
+@@ -157,18 +230,44 @@
  const openAiCompatibleProviderFrom = async (
    merged: Record<string, unknown>,
    provider: Record<string, unknown>,
@@ -940,7 +940,7 @@ diff -ruN --exclude=node_modules a/src/config/load-config.ts b/src/config/load-c
    model: textFrom(provider.model, textFrom(merged.model, defaultDeepgramProviderConfig.model)),
    language: textFrom(provider.language, textFrom(merged.language, defaultDeepgramProviderConfig.language)),
    smartFormat: booleanFrom(provider.smartFormat ?? merged.smartFormat, defaultDeepgramProviderConfig.smartFormat),
-@@ -177,7 +276,7 @@
+@@ -180,7 +279,7 @@
    provider: Record<string, unknown>,
  ): Promise<ElevenLabsProviderConfig> => ({
    type: "elevenlabs",
@@ -949,7 +949,7 @@ diff -ruN --exclude=node_modules a/src/config/load-config.ts b/src/config/load-c
    model: textFrom(provider.model, textFrom(merged.model, defaultElevenLabsProviderConfig.model)),
    language: textFrom(provider.language, textFrom(merged.language, defaultElevenLabsProviderConfig.language)),
    ...(await commonProviderFields(merged, provider, defaultElevenLabsProviderConfig)),
-@@ -185,10 +284,11 @@
+@@ -188,10 +287,11 @@
  
  const gladiaProviderFrom = async (merged: Record<string, unknown>, provider: Record<string, unknown>): Promise<GladiaProviderConfig> => ({
    type: "gladia",
@@ -962,7 +962,7 @@ diff -ruN --exclude=node_modules a/src/config/load-config.ts b/src/config/load-c
    ),
    model: textFrom(provider.model, textFrom(merged.model, defaultGladiaProviderConfig.model)),
    language: textFrom(provider.language, textFrom(merged.language, defaultGladiaProviderConfig.language)),
-@@ -201,10 +301,11 @@
+@@ -204,10 +304,11 @@
    provider: Record<string, unknown>,
  ): Promise<AssemblyAiProviderConfig> => ({
    type: "assemblyai",
@@ -975,7 +975,7 @@ diff -ruN --exclude=node_modules a/src/config/load-config.ts b/src/config/load-c
    ),
    model: textFrom(provider.model, textFrom(merged.model, defaultAssemblyAiProviderConfig.model)),
    language: textFrom(provider.language, textFrom(merged.language, defaultAssemblyAiProviderConfig.language)),
-@@ -212,6 +313,13 @@
+@@ -215,6 +316,13 @@
    ...(await commonProviderFields(merged, provider, defaultAssemblyAiProviderConfig)),
  });
  
@@ -989,7 +989,7 @@ diff -ruN --exclude=node_modules a/src/config/load-config.ts b/src/config/load-c
  const providerFrom = async (merged: Record<string, unknown>): Promise<ProviderConfig> => {
    const provider = objectFrom(merged.provider);
    const providerType = textFrom(provider.type, textFrom(merged.provider, defaultMistralProviderConfig.type)).toLowerCase();
-@@ -222,11 +330,21 @@
+@@ -225,11 +333,21 @@
      const providerDefaults = providerType === "groq"
        ? { endpoint: "https://api.groq.com/openai/v1/audio/transcriptions", model: "whisper-large-v3-turbo", apiKeyEnv: "GROQ_API_KEY" }
        : providerType === "local"
@@ -1013,7 +1013,7 @@ diff -ruN --exclude=node_modules a/src/config/load-config.ts b/src/config/load-c
    }
  
    if (providerType === "deepgram") return deepgramProviderFrom(merged, provider);
-@@ -241,16 +359,26 @@
+@@ -244,16 +362,26 @@
    const output = objectFrom(merged.output);
    return {
      appendTrailingSpace: booleanFrom(output.appendTrailingSpace ?? merged.appendTrailingSpace, defaultOutputConfig.appendTrailingSpace),
@@ -1043,7 +1043,7 @@ diff -ruN --exclude=node_modules a/src/config/load-config.ts b/src/config/load-c
      model: textFrom(cleanup.model, defaultCleanupConfig.model),
      language: textFrom(cleanup.language, defaultCleanupConfig.language),
      prompt: textFrom(cleanup.prompt, defaultCleanupConfig.prompt),
-@@ -258,8 +386,8 @@
+@@ -261,8 +389,8 @@
      useRepoContext: booleanFrom(cleanup.useRepoContext, defaultCleanupConfig.useRepoContext),
      maxTokens: positiveIntegerFrom(cleanup.maxTokens, defaultCleanupConfig.maxTokens),
      timeoutSeconds: positiveIntegerFrom(cleanup.timeoutSeconds, defaultCleanupConfig.timeoutSeconds),
@@ -1056,13 +1056,14 @@ diff -ruN --exclude=node_modules a/src/config/load-config.ts b/src/config/load-c
      keychainAccount: textFrom(cleanup.keychainAccount),
 diff -ruN --exclude=node_modules a/src/config/startup.ts b/src/config/startup.ts
 --- a/src/config/startup.ts	1985-10-26 03:15:00
-+++ b/src/config/startup.ts	2026-07-30 14:33:12
-@@ -2,11 +2,15 @@
++++ b/src/config/startup.ts	2026-08-18 11:02:24
+@@ -2,12 +2,16 @@
  import { join } from "node:path";
  import { homedir } from "node:os";
  import { objectFrom, textFrom } from "../utils/coerce";
 +import { DEFAULT_KEYBINDS, describeKeybinds, parseKeybinds } from "../core/keybind";
  import { resolvePath } from "../utils/path";
+ import { DEFAULT_PROFILE } from "./profiles";
  
  export type StartupOptions = {
    configPath: string;
@@ -1070,10 +1071,10 @@ diff -ruN --exclude=node_modules a/src/config/startup.ts b/src/config/startup.ts
    keybind: string;
 +  /** Every key that toggles dictation. See core/keybind.ts for why there is more than one. */
 +  keybinds: string[];
+   profileKeybind: string;
    locale: string;
    mode: string;
- };
-@@ -22,9 +26,11 @@
+@@ -25,11 +29,13 @@
    const envConfigPath = textFrom(process.env.PI_STT_CONFIG);
    const configPath = envConfigPath ? resolvePath(envConfigPath) : existsSync(DEFAULT_CONFIG_PATH) ? DEFAULT_CONFIG_PATH : "";
    const config = readJsonIfPresent(configPath);
@@ -1083,13 +1084,15 @@ diff -ruN --exclude=node_modules a/src/config/startup.ts b/src/config/startup.ts
 +  const keybind = describeKeybinds(keybinds);
    const locale = textFrom(process.env.PI_STT_LOCALE, textFrom(config.locale, "en"));
    const mode = textFrom(process.env.PI_STT_MODE, textFrom(config.mode, "default"));
+   const profileKeybind = textFrom(process.env.PI_STT_PROFILE_KEYBIND, textFrom(config.profileKeybind, "alt+r"));
+   const profile = textFrom(process.env.PI_STT_PROFILE, textFrom(config.profile, DEFAULT_PROFILE));
  
--  return { configPath, keybind, locale, mode };
-+  return { configPath, keybind, keybinds, locale, mode };
+-  return { configPath, keybind, profileKeybind, locale, mode, profile };
++  return { configPath, keybind, keybinds, profileKeybind, locale, mode, profile };
  };
 diff -ruN --exclude=node_modules a/src/config/types.ts b/src/config/types.ts
 --- a/src/config/types.ts	1985-10-26 03:15:00
-+++ b/src/config/types.ts	2026-07-30 16:34:04
++++ b/src/config/types.ts	2026-08-18 11:02:06
 @@ -1,6 +1,13 @@
  export type FfmpegCaptureConfig = {
    type: "ffmpeg";
@@ -1123,7 +1126,7 @@ diff -ruN --exclude=node_modules a/src/config/types.ts b/src/config/types.ts
     * { "super base": "Supabase" }. Case-insensitive, word-boundary aware.
 diff -ruN --exclude=node_modules a/src/core/dictation-controller.ts b/src/core/dictation-controller.ts
 --- a/src/core/dictation-controller.ts	1985-10-26 03:15:00
-+++ b/src/core/dictation-controller.ts	2026-07-30 17:29:54
++++ b/src/core/dictation-controller.ts	2026-08-18 11:02:06
 @@ -10,6 +10,19 @@
  
  export type DictationMode = "idle" | "recording" | "processing" | "polishing";
@@ -1457,7 +1460,7 @@ diff -ruN --exclude=node_modules a/src/core/dictation-controller.ts b/src/core/d
      getMode: () => mode,
 diff -ruN --exclude=node_modules a/src/core/keybind.ts b/src/core/keybind.ts
 --- a/src/core/keybind.ts	1969-12-31 18:00:00
-+++ b/src/core/keybind.ts	2026-07-30 15:10:26
++++ b/src/core/keybind.ts	2026-08-18 11:02:06
 @@ -0,0 +1,77 @@
 +import { matchesKey, type KeyId } from "@earendil-works/pi-tui";
 +
@@ -1538,7 +1541,7 @@ diff -ruN --exclude=node_modules a/src/core/keybind.ts b/src/core/keybind.ts
 +export const describeKeybinds = (keybinds: readonly string[]): string => keybinds[0] ?? "";
 diff -ruN --exclude=node_modules a/src/core/replacements.ts b/src/core/replacements.ts
 --- a/src/core/replacements.ts	1985-10-26 03:15:00
-+++ b/src/core/replacements.ts	2026-07-28 19:17:00
++++ b/src/core/replacements.ts	2026-08-18 11:02:06
 @@ -6,6 +6,22 @@
   */
  const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -1577,7 +1580,7 @@ diff -ruN --exclude=node_modules a/src/core/replacements.ts b/src/core/replaceme
  };
 diff -ruN --exclude=node_modules a/src/core/voice-commands.ts b/src/core/voice-commands.ts
 --- a/src/core/voice-commands.ts	1985-10-26 03:15:00
-+++ b/src/core/voice-commands.ts	2026-07-28 19:06:36
++++ b/src/core/voice-commands.ts	2026-08-18 11:02:06
 @@ -10,6 +10,21 @@
  const TRAILING_PUNCTUATION = /[\s.!?,;:]+$/u;
  
@@ -1611,14 +1614,14 @@ diff -ruN --exclude=node_modules a/src/core/voice-commands.ts b/src/core/voice-c
            return { command, text: stripped.slice(0, start).replace(TRAILING_PUNCTUATION, "") };
 diff -ruN --exclude=node_modules a/src/index.ts b/src/index.ts
 --- a/src/index.ts	1985-10-26 03:15:00
-+++ b/src/index.ts	2026-07-30 16:34:46
++++ b/src/index.ts	2026-08-18 11:03:28
 @@ -1,4 +1,5 @@
  import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 +import type { EditorComponent } from "@earendil-works/pi-tui";
  import { checkBridgeRecorderHealth } from "./audio/bridge-recorder";
  import { createRecorder } from "./audio/factory";
  import { loadConfig, readConfigFile } from "./config/load-config";
-@@ -10,7 +11,12 @@
+@@ -11,10 +12,14 @@
  import { assertProviderReady } from "./providers/readiness";
  import { createInputIndicator, createVoiceEditorFactory } from "./ui/input-indicator";
  import { resolveStrings } from "./i18n/strings";
@@ -1629,14 +1632,19 @@ diff -ruN --exclude=node_modules a/src/index.ts b/src/index.ts
 +import type { Delivery } from "./core/dictation-controller";
 +import { nextFreeSlot, placeholderText, replacePlaceholder } from "./ui/transcribing";
 +import { createPendingStore } from "./ui/pending-message";
+ import { textFrom } from "./utils/coerce";
+ import { kittyCtrlShiftLetterRegex } from "./utils/keybind";
+-import type { KeyId } from "@earendil-works/pi-tui";
  
  const toastType = (variant: DictationToast["variant"]): "info" | "warning" | "error" => {
    if (variant === "error") return "error";
-@@ -34,31 +40,217 @@
+@@ -39,8 +44,15 @@
    const strings = resolveStrings(startup.locale);
    const inputIndicator = createInputIndicator(keybind, strings);
    let activeMode = startup.mode || DEFAULT_MODE;
 +  let activeEditor: EditorComponent | undefined;
+   let activeProfile = startup.profile;
+   const terminalInputCleanup: Array<() => void> = [];
 +  // Prompt as it stood right after the transcript was inserted. Anything typed
 +  // afterwards stays in the editor instead of being swept into the sent message.
 +  // Kept in both forms: getEditorText() expands pi paste markers, the editor's
@@ -1644,7 +1652,11 @@ diff -ruN --exclude=node_modules a/src/index.ts b/src/index.ts
 +  let insertedPrompt: string | undefined;
 +  let insertedEditorText: string | undefined;
  
-   const getConfig = () => loadConfig({ configPath: startup.configPath, mode: activeMode });
+   // Apply the persisted last-selection (sidecar state) once loaded; env and
+   // the config `profile` key are already folded into startup.profile.
+@@ -60,28 +72,207 @@
+ 
+   const getConfig = () => loadConfig({ configPath: startup.configPath, mode: activeMode, profile: activeProfile });
  
 +  const pendingMessages = createPendingStore(() => inputIndicator.getTick());
 +
@@ -1866,7 +1878,7 @@ diff -ruN --exclude=node_modules a/src/index.ts b/src/index.ts
      notify,
      onModeChange: (mode) => inputIndicator.setMode(mode),
      onError: reportError,
-@@ -120,13 +312,18 @@
+@@ -198,13 +389,18 @@
          try {
            const config = await getConfig();
            assertProviderReady(config.provider);
@@ -1886,18 +1898,18 @@ diff -ruN --exclude=node_modules a/src/index.ts b/src/index.ts
          } catch (error) {
            reportError(ctx, error);
          }
-@@ -139,7 +336,17 @@
+@@ -217,7 +413,17 @@
        }
  
        const configPath = startup.configPath || "defaults only (set PI_STT_CONFIG or ~/.pi/agent/stt.json)";
--      ctx.ui.notify(`Pi Voice STT: ${controller.getMode()} · mode ${activeMode} · keybind ${keybind} · config ${configPath}`, "info");
+-      ctx.ui.notify(`Pi Voice STT: ${controller.getMode()} · mode ${activeMode} · profile ${activeProfile} · keybind ${keybind} · config ${configPath}`, "info");
 +      // Status stays cheap and side-effect free: parsing the config file is the
 +      // only I/O, so no PATH scan for ffmpeg, no key file read and no Keychain
 +      // lookup happens here. Resolving those lives in `/stt doctor`.
 +      const problem = startup.configPath
 +        ? await readConfigFile(startup.configPath).then(() => "").catch((error: unknown) => formatError(error))
 +        : "";
-+      const status = `Pi Voice STT: ${controller.getMode()} · mode ${activeMode} · keybind ${keybind} · config ${configPath}`;
++      const status = `Pi Voice STT: ${controller.getMode()} · mode ${activeMode} · profile ${activeProfile} · keybind ${keybind} · config ${configPath}`;
 +      ctx.ui.notify(
 +        problem ? `${status} · problem: ${problem}` : `${status} · run /stt doctor to check capture and provider`,
 +        problem ? "warning" : "info",
@@ -1905,12 +1917,13 @@ diff -ruN --exclude=node_modules a/src/index.ts b/src/index.ts
      },
    });
  
-@@ -148,27 +355,20 @@
+@@ -250,28 +456,21 @@
  
      const previousEditor = ctx.ui.getEditorComponent();
      ctx.ui.setEditorComponent(createVoiceEditorFactory(previousEditor, {
 -      keybind,
 +      keybinds: startup.keybinds,
+       profileKeybind,
        ctx,
        getMode: () => controller.getMode(),
 +      getTick: () => inputIndicator.getTick(),
@@ -1942,7 +1955,7 @@ diff -ruN --exclude=node_modules a/src/index.ts b/src/index.ts
        },
        onCancel: (handlerCtx) => {
          void controller.cancel(handlerCtx).catch((error: unknown) => reportError(handlerCtx, error));
-@@ -176,11 +376,24 @@
+@@ -279,6 +478,17 @@
        onSend: (handlerCtx) => {
          void controller.stopAndSubmit(handlerCtx).catch((error: unknown) => reportError(handlerCtx, error));
        },
@@ -1957,11 +1970,16 @@ diff -ruN --exclude=node_modules a/src/index.ts b/src/index.ts
 +        void controller.stop(handlerCtx, "insert").catch((error: unknown) => reportError(handlerCtx, error));
 +        activeEditor?.handleInput(data);
 +      },
-     }));
+       onShowProfileMenu: (handlerCtx) => {
+         void showProfileMenu(handlerCtx).catch((error: unknown) => reportError(handlerCtx, error));
+       },
+@@ -286,9 +496,11 @@
    });
  
    pi.on("session_shutdown", async () => {
 +    pendingMessages.dispose();
+     for (const unsubscribe of terminalInputCleanup) unsubscribe();
+     terminalInputCleanup.length = 0;
      await controller.dispose();
      inputIndicator.dispose();
 +    activeEditor = undefined;
@@ -1969,7 +1987,7 @@ diff -ruN --exclude=node_modules a/src/index.ts b/src/index.ts
  }
 diff -ruN --exclude=node_modules a/src/providers/gladia.ts b/src/providers/gladia.ts
 --- a/src/providers/gladia.ts	1985-10-26 03:15:00
-+++ b/src/providers/gladia.ts	2026-07-28 21:22:04
++++ b/src/providers/gladia.ts	2026-08-18 11:02:06
 @@ -1,3 +1,4 @@
 +import { isSameSiteEndpoint, secureEndpointFrom } from "../config/endpoint";
  import type { GladiaProviderConfig } from "../config/types";
@@ -2003,7 +2021,7 @@ diff -ruN --exclude=node_modules a/src/providers/gladia.ts b/src/providers/gladi
    if (!id) return "";
 diff -ruN --exclude=node_modules a/src/providers/openai-compatible.ts b/src/providers/openai-compatible.ts
 --- a/src/providers/openai-compatible.ts	1985-10-26 03:15:00
-+++ b/src/providers/openai-compatible.ts	2026-07-28 21:20:19
++++ b/src/providers/openai-compatible.ts	2026-08-18 11:02:06
 @@ -1,5 +1,6 @@
  import { endpointRequiresAuth } from "../config/endpoint";
  import type { OpenAiCompatibleProviderConfig } from "../config/types";
@@ -2022,7 +2040,7 @@ diff -ruN --exclude=node_modules a/src/providers/openai-compatible.ts b/src/prov
        apiKey: config.apiKey,
 diff -ruN --exclude=node_modules a/src/providers/readiness.ts b/src/providers/readiness.ts
 --- a/src/providers/readiness.ts	1985-10-26 03:15:00
-+++ b/src/providers/readiness.ts	2026-07-28 21:20:06
++++ b/src/providers/readiness.ts	2026-08-18 11:02:06
 @@ -1,5 +1,6 @@
  import { endpointRequiresAuth } from "../config/endpoint";
  import type { ProviderConfig } from "../config/types";
@@ -2046,7 +2064,7 @@ diff -ruN --exclude=node_modules a/src/providers/readiness.ts b/src/providers/re
    }
 diff -ruN --exclude=node_modules a/src/secrets/keychain.ts b/src/secrets/keychain.ts
 --- a/src/secrets/keychain.ts	1985-10-26 03:15:00
-+++ b/src/secrets/keychain.ts	2026-07-28 19:03:35
++++ b/src/secrets/keychain.ts	2026-08-18 11:02:06
 @@ -1,6 +1,10 @@
  import { spawn } from "node:child_process";
  import { textFrom } from "../utils/coerce";
@@ -2087,7 +2105,7 @@ diff -ruN --exclude=node_modules a/src/secrets/keychain.ts b/src/secrets/keychai
  };
 diff -ruN --exclude=node_modules a/src/secrets/resolve-api-key.ts b/src/secrets/resolve-api-key.ts
 --- a/src/secrets/resolve-api-key.ts	1985-10-26 03:15:00
-+++ b/src/secrets/resolve-api-key.ts	2026-07-28 21:42:42
++++ b/src/secrets/resolve-api-key.ts	2026-08-18 11:02:06
 @@ -1,9 +1,29 @@
  import { readFile } from "node:fs/promises";
 +import type { SecretConfig } from "../config/types";
@@ -2153,7 +2171,7 @@ diff -ruN --exclude=node_modules a/src/secrets/resolve-api-key.ts b/src/secrets/
  };
 diff -ruN --exclude=node_modules a/src/ui/cursor-cell.ts b/src/ui/cursor-cell.ts
 --- a/src/ui/cursor-cell.ts	1969-12-31 18:00:00
-+++ b/src/ui/cursor-cell.ts	2026-07-30 17:29:29
++++ b/src/ui/cursor-cell.ts	2026-08-18 11:02:06
 @@ -0,0 +1,87 @@
 +/**
 + * Drawing the recording indicator into the editor's cursor cell.
@@ -2244,21 +2262,20 @@ diff -ruN --exclude=node_modules a/src/ui/cursor-cell.ts b/src/ui/cursor-cell.ts
 +};
 diff -ruN --exclude=node_modules a/src/ui/input-indicator.ts b/src/ui/input-indicator.ts
 --- a/src/ui/input-indicator.ts	1985-10-26 03:15:00
-+++ b/src/ui/input-indicator.ts	2026-07-30 16:08:18
-@@ -1,26 +1,45 @@
++++ b/src/ui/input-indicator.ts	2026-08-18 11:03:05
+@@ -1,5 +1,6 @@
  import { CustomEditor, type AppKeybinding, type ExtensionContext, type KeybindingsManager, type Theme } from "@earendil-works/pi-coding-agent";
  import {
 +  CURSOR_MARKER,
    matchesKey,
    truncateToWidth,
    visibleWidth,
-   type EditorComponent,
-   type EditorTheme,
--  type KeyId,
+@@ -9,21 +10,40 @@
    type TUI,
  } from "@earendil-works/pi-tui";
  import type { DictationMode } from "../core/dictation-controller";
 +import { matchesAnyKeybind } from "../core/keybind";
+ import { DEFAULT_PROFILE } from "../config/profiles";
  import type { Strings } from "../i18n/strings";
 +import { composeCursorLine } from "./cursor-cell";
 +import { animateRenderedLines, frameAt } from "./transcribing";
@@ -2266,6 +2283,7 @@ diff -ruN --exclude=node_modules a/src/ui/input-indicator.ts b/src/ui/input-indi
  type VoiceEditorOptions = {
 -  keybind: string;
 +  keybinds: string[];
+   profileKeybind: string;
    ctx: ExtensionContext;
 +  keybindings: KeybindingsManager;
    getMode(): DictationMode;
@@ -2277,6 +2295,7 @@ diff -ruN --exclude=node_modules a/src/ui/input-indicator.ts b/src/ui/input-indi
 +  onQueue(ctx: ExtensionContext): void;
 +  /** Stop recording, leave the transcript in the editor, then apply this keystroke. */
 +  onInsertThen(ctx: ExtensionContext, data: string): void;
+   onShowProfileMenu(ctx: ExtensionContext): void;
  };
  
 +/**
@@ -2293,13 +2312,23 @@ diff -ruN --exclude=node_modules a/src/ui/input-indicator.ts b/src/ui/input-indi
  const injectRightLabel = (line: string, width: number, label: string): string => {
    const labelWidth = visibleWidth(label);
    if (width <= 0) return "";
-@@ -101,49 +120,88 @@
+@@ -44,7 +64,6 @@
+   constructor(
+     private readonly base: EditorComponent,
+     private readonly options: VoiceEditorOptions,
+-    private readonly defaultBorderColor: (str: string) => string,
+   ) {}
+ 
+   // Proxy CustomEditor action handlers and app-level callbacks to the base
+@@ -105,58 +124,95 @@
      (this.base as EditorComponent & { focused?: boolean }).focused = value;
    }
  
 -  // While recording/processing, tint the whole prompt border so the state is
 -  // impossible to miss (red = recording, orange = transcribing). Idle restores
--  // whatever border color pi set on the wrapper.
+-  // whatever border color pi set on the wrapper, falling back to the base
+-  // editor's default so the tint is cleared without ever leaving borderColor
+-  // undefined (pi-tui calls borderColor as a function during render).
 -  private applyModeBorder(): void {
 -    const mode = this.options.getMode();
 +  /**
@@ -2314,8 +2343,7 @@ diff -ruN --exclude=node_modules a/src/ui/input-indicator.ts b/src/ui/input-indi
 -    if (mode === "recording") this.base.borderColor = (str: string) => theme.fg("error", str);
 -    else if (mode === "processing") this.base.borderColor = (str: string) => theme.fg("warning", str);
 -    else if (mode === "polishing") this.base.borderColor = (str: string) => theme.fg("accent", str);
--    else if (this.borderColor) this.base.borderColor = this.borderColor;
--    else delete (this.base as EditorComponent & { borderColor?: (str: string) => string }).borderColor;
+-    else this.base.borderColor = this.borderColor ?? this.defaultBorderColor;
 +    const lit = Math.floor(this.options.getTick() / BLINK_TICKS) % 2 === 0;
 +    const dot = theme.fg(lit ? "error" : "dim", "●");
 +    // Brackets in the same grey as the label, so the block reads as one thing and the
@@ -2374,6 +2402,16 @@ diff -ruN --exclude=node_modules a/src/ui/input-indicator.ts b/src/ui/input-indi
        return;
      }
  
+-    // The profile menu keybind is handled here (editor-focused path), in
+-    // addition to pi.registerShortcut, so the menu opens reliably even when a
+-    // custom editor component is installed. ctrl+r (recording) wins first.
++    // The profile menu keybind is handled here (editor-focused path), in addition to
++    // pi.registerShortcut. The voice keys win first if a user configures a collision.
+     if (matchesKey(data, this.options.profileKeybind as KeyId)) {
+       this.options.onShowProfileMenu(this.options.ctx);
+       return;
+     }
+ 
 -    if (mode !== "idle" && matchesKey(data, "escape")) {
 -      this.options.onCancel(this.options.ctx);
 +    if (mode === "recording") {
@@ -2403,7 +2441,7 @@ diff -ruN --exclude=node_modules a/src/ui/input-indicator.ts b/src/ui/input-indi
      this.base.handleInput(data);
    }
  
-@@ -164,8 +222,15 @@
+@@ -177,8 +233,15 @@
      this.base.addToHistory?.(text);
    }
  
@@ -2420,7 +2458,7 @@ diff -ruN --exclude=node_modules a/src/ui/input-indicator.ts b/src/ui/input-indi
    }
  
    getExpandedText(): string {
-@@ -189,12 +254,11 @@
+@@ -202,13 +265,12 @@
    }
  }
  
@@ -2428,13 +2466,14 @@ diff -ruN --exclude=node_modules a/src/ui/input-indicator.ts b/src/ui/input-indi
 -
  export const createInputIndicator = (keybind: string, strings: Strings) => {
    let mode: DictationMode = "idle";
+   let activeProfile = "";
    let tui: TUI | undefined;
    let tick = 0;
 +  let placeholders = 0;
    let timer: ReturnType<typeof setInterval> | undefined;
  
    const requestRender = () => tui?.requestRender();
-@@ -205,8 +269,10 @@
+@@ -219,8 +281,10 @@
      timer = undefined;
    };
  
@@ -2446,7 +2485,7 @@ diff -ruN --exclude=node_modules a/src/ui/input-indicator.ts b/src/ui/input-indi
      timer = setInterval(() => {
        tick += 1;
        requestRender();
-@@ -214,8 +280,8 @@
+@@ -228,8 +292,8 @@
    };
  
    const syncAnimation = () => {
@@ -2457,7 +2496,7 @@ diff -ruN --exclude=node_modules a/src/ui/input-indicator.ts b/src/ui/input-indi
    };
  
    return {
-@@ -230,23 +296,20 @@
+@@ -244,27 +308,20 @@
        syncAnimation();
        requestRender();
      },
@@ -2468,11 +2507,11 @@ diff -ruN --exclude=node_modules a/src/ui/input-indicator.ts b/src/ui/input-indi
 +      requestRender();
 +    },
 +    getTick: () => tick,
-+    /**
-+     * Only the idle affordance is a label. Recording is the pulsing cursor and
-+     * transcribing is the placeholder, both of which sit where the text is — so adding a
-+     * banner for either would just be a second thing to read.
-+     */
+     setProfile(nextProfile: string) {
+       activeProfile = nextProfile;
+       requestRender();
+     },
++    /** Recording uses the cursor and transcribing uses the placeholder, so only idle needs a label. */
      renderLabel(theme: Theme): string {
 -      if (mode === "recording") {
 -        // Clear on/off blink in red so the recording state is obvious.
@@ -2491,10 +2530,10 @@ diff -ruN --exclude=node_modules a/src/ui/input-indicator.ts b/src/ui/input-indi
 -      }
 -
 +      if (mode !== "idle") return "";
-       return `${theme.fg("dim", strings.indicator.idle)} ${theme.fg("accent", keybind)}`;
+       const label = activeProfile && activeProfile !== DEFAULT_PROFILE ? `${strings.indicator.idle} · ${activeProfile}` : strings.indicator.idle;
+       return `${theme.fg("dim", label)} ${theme.fg("accent", keybind)}`;
      },
-     dispose() {
-@@ -259,11 +322,21 @@
+@@ -279,12 +336,21 @@
  
  export const createVoiceEditorFactory = (
    previousFactory: ((tui: TUI, theme: EditorTheme, keybindings: KeybindingsManager) => EditorComponent) | undefined,
@@ -2512,7 +2551,8 @@ diff -ruN --exclude=node_modules a/src/ui/input-indicator.ts b/src/ui/input-indi
      options.attachTui(tui);
 +    options.attachKeybindings?.(keybindings);
      const base = previousFactory?.(tui, theme, keybindings) ?? new CustomEditor(tui, theme, keybindings);
--    return new VoiceEditorWrapper(base, options);
+-    const defaultBorderColor = base.borderColor ?? theme.borderColor;
+-    return new VoiceEditorWrapper(base, options, defaultBorderColor);
 +    const editor = new VoiceEditorWrapper(base, { ...options, keybindings });
 +    options.attachEditor?.(editor);
 +    return editor;
@@ -2520,7 +2560,7 @@ diff -ruN --exclude=node_modules a/src/ui/input-indicator.ts b/src/ui/input-indi
  };
 diff -ruN --exclude=node_modules a/src/ui/pending-message.ts b/src/ui/pending-message.ts
 --- a/src/ui/pending-message.ts	1969-12-31 18:00:00
-+++ b/src/ui/pending-message.ts	2026-07-30 16:26:53
++++ b/src/ui/pending-message.ts	2026-08-18 11:02:06
 @@ -0,0 +1,142 @@
 +/**
 + * A message the user has committed to sending, whose text does not exist yet.
@@ -2666,7 +2706,7 @@ diff -ruN --exclude=node_modules a/src/ui/pending-message.ts b/src/ui/pending-me
 +}
 diff -ruN --exclude=node_modules a/src/ui/transcribing.ts b/src/ui/transcribing.ts
 --- a/src/ui/transcribing.ts	1969-12-31 18:00:00
-+++ b/src/ui/transcribing.ts	2026-07-30 17:29:29
++++ b/src/ui/transcribing.ts	2026-08-18 11:02:06
 @@ -0,0 +1,151 @@
 +/**
 + * The `[⠏ transcribing]` placeholder.
@@ -2821,7 +2861,7 @@ diff -ruN --exclude=node_modules a/src/ui/transcribing.ts b/src/ui/transcribing.
 +};
 diff -ruN --exclude=node_modules a/src/utils/executable.ts b/src/utils/executable.ts
 --- a/src/utils/executable.ts	1969-12-31 18:00:00
-+++ b/src/utils/executable.ts	2026-07-28 18:47:47
++++ b/src/utils/executable.ts	2026-08-18 11:02:06
 @@ -0,0 +1,63 @@
 +import { accessSync, constants, statSync } from "node:fs";
 +import { access, realpath, stat } from "node:fs/promises";
@@ -2888,7 +2928,7 @@ diff -ruN --exclude=node_modules a/src/utils/executable.ts b/src/utils/executabl
 +};
 diff -ruN --exclude=node_modules a/src/utils/text.ts b/src/utils/text.ts
 --- a/src/utils/text.ts	1985-10-26 03:15:00
-+++ b/src/utils/text.ts	2026-07-28 22:37:20
++++ b/src/utils/text.ts	2026-08-18 11:02:06
 @@ -4,6 +4,17 @@
    return String(error);
  };
@@ -2909,7 +2949,7 @@ diff -ruN --exclude=node_modules a/src/utils/text.ts b/src/utils/text.ts
    return `${value.slice(0, length)}…`;
 diff -ruN --exclude=node_modules a/tools/macos-bridge-native.swift b/tools/macos-bridge-native.swift
 --- a/tools/macos-bridge-native.swift	1985-10-26 03:15:00
-+++ b/tools/macos-bridge-native.swift	2026-07-28 21:25:25
++++ b/tools/macos-bridge-native.swift	2026-08-18 11:02:06
 @@ -12,7 +12,38 @@
  let channels = Int(env["PI_STT_BRIDGE_CHANNELS"] ?? "1") ?? 1
  let minBytes = Int(env["PI_STT_BRIDGE_MIN_BYTES"] ?? "4096") ?? 4096
@@ -2983,7 +3023,7 @@ diff -ruN --exclude=node_modules a/tools/macos-bridge-native.swift b/tools/macos
      pointer.withMemoryRebound(to: sockaddr.self, capacity: 1) { sockaddrPointer in
 diff -ruN --exclude=node_modules a/tools/macos-bridge-server.mjs b/tools/macos-bridge-server.mjs
 --- a/tools/macos-bridge-server.mjs	1985-10-26 03:15:00
-+++ b/tools/macos-bridge-server.mjs	2026-07-28 21:29:55
++++ b/tools/macos-bridge-server.mjs	2026-08-18 11:02:06
 @@ -1,6 +1,8 @@
  #!/usr/bin/env node
  import { createServer } from "node:http";

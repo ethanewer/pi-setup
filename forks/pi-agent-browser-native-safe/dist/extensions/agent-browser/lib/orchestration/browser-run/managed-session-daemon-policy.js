@@ -1,24 +1,28 @@
-/**
- * Purpose: Coordinate wrapper-owned managed-session daemon inspection, reuse, and cleanup policy.
- * Responsibilities: Serialize daemon policy decisions, verify live restore keys, and close owned sessions with snapshot cleanup.
- * Scope: Managed-session daemon policy only; page state and browser-result shaping live in sibling modules.
- * Usage: Called by browser-run preparation, Electron host probes, result handling, and extension shutdown cleanup.
- * Invariants/Assumptions: Every owned daemon decision holds the cross-process policy lock until its caller finishes the related operation.
- */
 import { rm } from "node:fs/promises";
 import { acquireManagedSessionPolicyLock } from "../../managed-session-policy-lock.js";
-import { pruneOwnedManagedSessionRestoreSnapshots, } from "../../managed-session-restore.js";
+import { pruneOwnedManagedSessionRestoreSnapshots, resolveExplicitAutosaveInterval, } from "../../managed-session-restore.js";
 import { isManagedSessionRestoreKey } from "../../managed-session-storage.js";
 import { isRecord } from "../../parsing.js";
 import { runAgentBrowserProcess } from "../../process.js";
-import { getAgentBrowserErrorText, parseAgentBrowserEnvelope } from "../../results.js";
+import { getAgentBrowserErrorText, parseAgentBrowserEnvelope } from "../../results/envelope.js";
 import { redactInvocationArgs } from "../../runtime.js";
-const MANAGED_SESSION_DAEMON_INSPECTION_TIMEOUT_MS = 5_000;
+const MANAGED_SESSION_DAEMON_INSPECTION_TIMEOUT_MS = 35_000;
+const RUNNING_HEADED_AUTOSAVE_POLICY_CHANGE_ERROR = "AGENT_BROWSER_AUTOSAVE_INTERVAL_MS cannot change a running wrapper-owned headed session's launch-time periodic autosave interval. Close that session first, then retry with sessionMode: \"fresh\" so the new daemon starts with the requested interval.";
+export function getRunningHeadedAutosavePolicyChangeError(recordedInterval, closeCommand = false) {
+    const explicitInterval = resolveExplicitAutosaveInterval(process.env.AGENT_BROWSER_AUTOSAVE_INTERVAL_MS);
+    return recordedInterval !== undefined && !closeCommand && explicitInterval !== undefined && explicitInterval !== recordedInterval
+        ? RUNNING_HEADED_AUTOSAVE_POLICY_CHANGE_ERROR
+        : undefined;
+}
+function getHeadedManagedAutosaveEnv(interval) {
+    return interval !== undefined ? { AGENT_BROWSER_AUTOSAVE_INTERVAL_MS: interval } : undefined;
+}
 export async function inspectManagedSessionDaemon(options) {
     const processResult = await runAgentBrowserProcess({
         allowManagedSessionTarget: options.allowManagedSessionTarget,
         args: ["--json", "--namespace", options.namespace ?? "", "--session", options.sessionName, "session", "info"],
         cwd: options.cwd,
+        env: getHeadedManagedAutosaveEnv(options.headedManagedAutosaveInterval),
         preserveAttachedBrowserSession: options.preserveAttachedBrowserSession,
         signal: options.signal,
         timeoutMs: options.timeoutMs ?? MANAGED_SESSION_DAEMON_INSPECTION_TIMEOUT_MS,
@@ -65,6 +69,7 @@ export async function acquireOwnedManagedSessionDaemonPolicy(options) {
         const daemon = await inspectManagedSessionDaemon({
             allowManagedSessionTarget: true,
             cwd: context.cwd,
+            headedManagedAutosaveInterval: context.headedManagedAutosaveInterval,
             namespace: context.namespace,
             sessionName: context.sessionName,
             signal,
@@ -128,6 +133,7 @@ export async function closeManagedSession(options) {
         const daemon = await inspectManagedSessionDaemon({
             allowManagedSessionTarget: true,
             cwd: options.cwd,
+            headedManagedAutosaveInterval: options.headedManagedAutosaveInterval,
             namespace: options.namespace,
             preserveAttachedBrowserSession: options.preserveAttachedBrowserSession,
             sessionName: options.sessionName,
@@ -142,7 +148,7 @@ export async function closeManagedSession(options) {
         const processResult = await runAgentBrowserProcess({
             args: closeArgs,
             cwd: options.cwd,
-            env: { AGENT_BROWSER_JSON: "1" },
+            env: { AGENT_BROWSER_JSON: "1", ...getHeadedManagedAutosaveEnv(options.headedManagedAutosaveInterval) },
             managedSessionRestoreState: options.restoreState,
             ownedManagedSession: true,
             preserveAttachedBrowserSession: options.preserveAttachedBrowserSession,

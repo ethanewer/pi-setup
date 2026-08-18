@@ -1,5 +1,5 @@
 import { isRecord } from "../../../parsing.js";
-import { buildAgentBrowserResultCategoryDetails } from "../../../results.js";
+import { buildAgentBrowserResultCategoryDetails } from "../../../results/categories.js";
 import { applyNamespaceToNextActions } from "../../../results/next-actions.js";
 import { buildScrollNoopNextActions } from "../diagnostics.js";
 import { buildSessionDetailFields, runSessionCommandData } from "../session-state.js";

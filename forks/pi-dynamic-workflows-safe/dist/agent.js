@@ -540,7 +540,9 @@ export class WorkflowAgent {
         let resolvedModel;
         let resolvedThinkingLevel;
         if (modelSpec) {
-            const resolved = resolveModelSpecWithThinking(modelSpec, modelRegistry);
+            const resolved = resolveModelSpecWithThinking(modelSpec, modelRegistry, {
+                preferredProvider: this.mainModel?.split("/", 1)[0],
+            });
             if (resolved.warning)
                 console.warn(`[workflow] ${resolved.warning}`);
             if (!resolved.model) {

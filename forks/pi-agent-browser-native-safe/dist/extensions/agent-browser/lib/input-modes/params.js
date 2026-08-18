@@ -1,8 +1,3 @@
-/**
- * Purpose: Define the Pi tool input schema for the native agent_browser wrapper.
- * Responsibilities: Keep TypeBox schema construction separate from runtime execution and input-mode compilers.
- * Scope: Schema-only; behavioral validation lives in the mode compilers.
- */
 import { JsonSchema } from "../json-schema.js";
 import { StringEnum as localStringEnum } from "../string-enum-schema.js";
 import { ELECTRON_DISCOVERY_DEFAULT_MAX_RESULTS, ELECTRON_DISCOVERY_MAX_RESULTS, } from "../electron/discovery.js";
@@ -128,7 +123,7 @@ export function createAgentBrowserParamsSchema(Type = JsonSchema, StringEnum = l
             }, { additionalProperties: false }), { minItems: 1 }),
         }, { additionalProperties: false, description: "Constrained multi-step batch." })),
         stdin: Type.Optional(Type.String({ description: "Raw stdin for batch, eval --stdin, or auth save --password-stdin; unavailable with structured modes and electron." })),
-        outputPath: Type.Optional(Type.String({ description: "Workspace-relative or absolute result path.", minLength: 1 })),
+        outputPath: Type.Optional(Type.String({ description: "Workspace-relative or absolute result-data path; keep it distinct from screenshot, download, recording, and other browser artifact destinations.", minLength: 1 })),
         timeoutMs: Type.Optional(Type.Integer({ description: "Wrapper timeout in ms; exceed explicit waits. Electron uses electron.timeoutMs.", minimum: 1 })),
         sessionMode: Type.Optional(StringEnum(["auto", "fresh"], {
             description: "auto reuses the managed session; fresh starts one for launch-only flags, then makes it the managed session.",

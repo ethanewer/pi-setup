@@ -1,13 +1,8 @@
-/**
- * Purpose: Own automatic restore policy for wrapper-managed browser sessions.
- * Responsibilities: Resolve owned session identity, isolate per-call policy, reject incompatible argv/env/config, and persist sticky restore-disable state.
- * Scope: Restore policy only; storage identity and snapshot retention live in focused sibling modules.
- */
 import { AsyncLocalStorage } from "node:async_hooks";
 import { chmodSync, lstatSync, readFileSync, unlinkSync } from "node:fs";
 import { join } from "node:path";
 import { extractCommandTokens, parseCommandInfo } from "./argv-descriptor.js";
-import { canonicalizeAgentBrowserNamespace, extractExplicitNamespace, extractExplicitSessionName, extractRequestedRestoreKey, getAgentBrowserSessionIdentityKey, scanUpstreamGlobalFlagOccurrences, } from "./argv-grammar.js";
+import { canonicalizeAgentBrowserNamespace, extractExplicitNamespace, extractExplicitSessionName, extractRequestedRestoreKey, getAgentBrowserSessionIdentityKey, isUpstreamEnvFlagEnabled, scanUpstreamGlobalFlagOccurrences, } from "./argv-grammar.js";
 import { hasLaunchScopedFlagToken, MANAGED_RESTORE_INCOMPATIBLE_BOOLEAN_ENVS, MANAGED_RESTORE_INCOMPATIBLE_ENVS, MANAGED_RESTORE_INCOMPATIBLE_FLAGS, } from "./launch-scoped-flags.js";
 import { createManagedSessionRestoreKey, ensureManagedSessionRestoreStorageIsSecure, getManagedSessionRestoreProtectedStorageEnv, hasManagedSessionRestoreProjectIdentity, resolveManagedSessionRestoreHome, } from "./managed-session-storage.js";
 import { parseUserBatchStdin } from "./orchestration/batch-stdin.js";
@@ -27,10 +22,6 @@ function isDisabledEnvFlag(value) {
     if (value === undefined)
         return false;
     return ["0", "false", "no", "off"].includes(value.trim().toLowerCase());
-}
-/** Match upstream env_var_is_truthy exactly: lowercase only, without trimming or accepting "off". */
-function isUpstreamEnvFlagEnabled(value) {
-    return value !== undefined && !["", "0", "false", "no"].includes(value.toLowerCase());
 }
 function hasUpstreamEnvValue(env, name) {
     return env?.[name] !== undefined;
@@ -194,11 +185,35 @@ export function getOwnedManagedSessionNamespaceEnv(options) {
     const { namespace, owned, ownedContext } = resolveManagedSessionRestorePolicy(options);
     return owned ? { AGENT_BROWSER_NAMESPACE: ownedContext?.namespace ?? namespace ?? "" } : {};
 }
+const DEFAULT_AUTOSAVE_INTERVAL_MS = "30000";
+const MAX_U64 = 18446744073709551615n;
+export function resolveExplicitAutosaveInterval(value) {
+    if (value === undefined)
+        return undefined;
+    if (!/^\+?\d+$/.test(value))
+        return DEFAULT_AUTOSAVE_INTERVAL_MS;
+    try {
+        const parsed = BigInt(value);
+        return parsed <= MAX_U64 ? parsed.toString() : DEFAULT_AUTOSAVE_INTERVAL_MS;
+    }
+    catch {
+        return DEFAULT_AUTOSAVE_INTERVAL_MS;
+    }
+}
 export function getOwnedManagedSessionCompatibilityEnv(options) {
     const { owned, ownedContext } = resolveManagedSessionRestorePolicy(options);
-    return owned && ownedContext?.compatibilityUserAgent
-        ? { AGENT_BROWSER_USER_AGENT: ownedContext.compatibilityUserAgent }
-        : {};
+    if (!owned || !ownedContext)
+        return {};
+    const parentEnv = options.parentEnv ?? process.env;
+    const callEnv = options.env ?? {};
+    const explicitRawInterval = Object.hasOwn(callEnv, "AGENT_BROWSER_AUTOSAVE_INTERVAL_MS")
+        ? callEnv.AGENT_BROWSER_AUTOSAVE_INTERVAL_MS
+        : parentEnv.AGENT_BROWSER_AUTOSAVE_INTERVAL_MS;
+    const explicitIntervalMatches = resolveExplicitAutosaveInterval(explicitRawInterval) === ownedContext.headedManagedAutosaveInterval;
+    return {
+        ...(ownedContext.compatibilityUserAgent ? { AGENT_BROWSER_USER_AGENT: ownedContext.compatibilityUserAgent } : {}),
+        ...(ownedContext.headedManagedAutosaveInterval !== undefined && !explicitIntervalMatches ? { AGENT_BROWSER_AUTOSAVE_INTERVAL_MS: ownedContext.headedManagedAutosaveInterval } : {}),
+    };
 }
 export function shouldOmitOwnedManagedSessionRestoreEnv(options) {
     return resolveManagedSessionRestorePolicy(options).owned && closesBrowserSession(options.args);
@@ -365,6 +380,8 @@ export function buildOwnedManagedSessionRestoreContext(options) {
     return {
         ...owned,
         compatibilityUserAgent: options.compatibilityUserAgent,
+        headedManagedAutosaveDisabled: options.headedManagedAutosaveDisabled,
+        headedManagedAutosaveInterval: options.headedManagedAutosaveInterval,
         expectedDaemonRestoreKey: enabled ? restoreKey : extractRequestedRestoreKey(options.args, owned.sessionName, effectiveEnv[AGENT_BROWSER_RESTORE_ENV]),
         protectedStorageEnv: enabled ? getManagedSessionRestoreProtectedStorageEnv(true, effectiveEnv) : undefined,
         restoreDecision: optedOut ? "opted-out" : incompatible ? "incompatible" : "enabled",

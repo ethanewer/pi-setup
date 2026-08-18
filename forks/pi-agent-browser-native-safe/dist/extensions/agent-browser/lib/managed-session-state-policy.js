@@ -1,6 +1,3 @@
-// Purpose: Prevent native tool calls from crossing wrapper-owned managed-state boundaries.
-// Responsibilities: Guard destructive global state operations, foreign checkout restore/state references, and browser file access to local agent-browser state.
-// Scope: Pre-spawn policy only; result redaction and managed snapshot retention live elsewhere.
 import { realpathSync } from "node:fs";
 import { basename, dirname, isAbsolute, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -9,7 +6,7 @@ import { needsManagedSession } from "./command-policy.js";
 import { getScreenshotPathTokenIndex } from "./orchestration/browser-run/artifact-paths.js";
 import { parseBatchCommandArgument, parseUserBatchStdin } from "./orchestration/batch-stdin.js";
 import { isUnverifiedPageTransitionCommand } from "./command-taxonomy.js";
-import { GLOBAL_BOOLEAN_FLAGS_WITH_OPTIONAL_VALUES, VALUE_FLAGS, extractExplicitSessionName, optionalGlobalValueFlagConsumesNext, } from "./argv-grammar.js";
+import { GLOBAL_BOOLEAN_FLAGS_WITH_OPTIONAL_VALUES, VALUE_FLAGS, extractExplicitSessionName, isUpstreamEnvFlagEnabled, optionalGlobalValueFlagConsumesNext, } from "./argv-grammar.js";
 import { extractManagedSessionRestoreKeys, isWrapperManagedSessionName } from "./managed-session-capabilities.js";
 import { agentBrowserConfigIsPresent } from "./managed-session-restore.js";
 import { createManagedSessionRestoreKey, hasManagedSessionRestoreProjectIdentity } from "./managed-session-storage.js";
@@ -261,9 +258,6 @@ function getBrowserFileOperands(args, env) {
     if (command === "record" && ["start", "restart"].includes(subcommand ?? ""))
         values.push(...positionals.slice(1));
     return values.filter((value) => typeof value === "string" && value.length > 0);
-}
-function isUpstreamEnvFlagEnabled(value) {
-    return value !== undefined && !["", "0", "false", "no"].includes(value.toLowerCase());
 }
 function rawBrowserArgsEnableFileAccess(args, env) {
     return getRawBrowserArgsValues(args, env).some((value) => typeof value === "string" && /(?:^|[,\p{White_Space}])--(?:allow-file-access(?:-from-files)?|disable-web-security)(?=$|[=,\p{White_Space}])/iu.test(value));

@@ -1,9 +1,3 @@
-/**
- * Purpose: Centralize upstream agent-browser command capabilities that wrapper behavior depends on.
- * Responsibilities: Normalize command aliases once and expose capability predicates for runtime planning,
- * session/ref guards, result recommendations, and presentation summaries without coupling unrelated behaviors.
- * Scope: Static command capability taxonomy only; command-shape parsing, spawning, and formatting live elsewhere.
- */
 const ADDITIONAL_COMMAND_TOKENS = [
     "a11y", "auth", "chat", "clipboard", "confirm", "connect", "dashboard", "deny", "device", "dialog", "diff", "doctor", "errors", "eval", "find", "frame", "get", "highlight", "inspect", "install", "is", "mcp", "plugin", "plugins", "profiles", "profiler", "react", "record", "removeinitscript", "session", "set", "skills", "snapshot", "state", "stream", "trace", "upgrade", "vitals", "wait", "web-vitals", "window",
 ];

@@ -1,8 +1,3 @@
-/**
- * Purpose: Compact oversized model-facing tool output into bounded previews and spill artifacts.
- * Responsibilities: Write full output to persistent/session temp storage, update artifact manifests, and preserve safe previews.
- * Scope: Large-output compaction only.
- */
 import { writePersistentSessionArtifactFile, writeSecureTempFile, } from "../../temp.js";
 import { buildEvictedSessionArtifactEntries } from "../artifact-manifest.js";
 import { countLines, truncateText } from "../text.js";

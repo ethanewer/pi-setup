@@ -19,7 +19,7 @@ This project is intentionally small and hackable: a Pi extension, local/bridge a
 - Indicators live at the cursor: `[● recording]` while capturing, `[⠏ transcribing]` while the
   provider works. Nothing is sent to the model until the transcript exists.
 - `ffmpeg` microphone capture to temporary WAV files.
-- Optional Mac microphone bridge for Pi sessions running on a VPS over SSH, token-authenticated and loopback-bound by default.
+- Optional native Mac microphone bridge for local Pi sessions or Pi sessions running on a VPS over SSH, token-authenticated and loopback-bound by default.
 - Mistral Voxtral provider.
 - OpenAI / Groq / generic OpenAI-compatible provider for hosted and local Whisper-style endpoints.
 - Native provider integrations for Deepgram, ElevenLabs Scribe, Gladia, and AssemblyAI.
@@ -134,6 +134,61 @@ Modes are named presets that override any part of the configuration. Built-in mo
 ```
 
 A user mode overrides the built-in of the same name. `/stt mode` with no argument prints the active mode and the available list. The mode applies on top of the base config, so it can change the provider, cleanup, language or replacements.
+
+### Profiles
+
+Profiles are named presets that group a full configuration (provider, capture, cleanup, output…), so you can switch models or providers without editing the config file. Unlike modes, profiles persist: the last profile you select becomes the default for every session that reads the same config file.
+
+Define profiles under the top-level `profiles` key. Each profile is a partial config that is deep-merged over the base config, so you only override what differs. The top-level `profile` key sets the initial default before anything is persisted:
+
+```json
+{
+  "profile": "local",
+  "capture": {
+    "type": "ffmpeg",
+    "ffmpegPath": "ffmpeg",
+    "inputFormat": "avfoundation",
+    "input": ":0"
+  },
+  "profiles": {
+    "local": {
+      "provider": {
+        "type": "openai-compatible",
+        "endpoint": "http://127.0.0.1:8788/v1/audio/transcriptions",
+        "model": "crisperwhisper-large",
+        "language": "fr"
+      }
+    },
+    "mistral": {
+      "provider": {
+        "type": "mistral",
+        "model": "voxtral-mini-2602",
+        "apiKeyEnv": "MISTRAL_API_KEY",
+        "language": "fr"
+      }
+    }
+  }
+}
+```
+
+When a profile changes the provider or capture `type`, that block is replaced entirely, so the base endpoint/model/apiKey never leak into the new provider.
+
+Press the profile shortcut (default `Alt+R`) to open a menu and pick the profile to use. Override it with the top-level `profileKeybind` setting or the `PI_STT_PROFILE_KEYBIND` environment variable:
+
+```bash
+PI_STT_PROFILE_KEYBIND=ctrl+shift+p pi
+```
+
+> **Note on `Ctrl+Shift+R`:** the key parser bundled with Pi (pi-tui ≤ 0.80.x) misreads the Kitty keyboard-protocol modifier for `ctrl+shift+<letter>` as plain `ctrl+<letter>` (an upstream off-by-one), so `ctrl+shift+r` is indistinguishable from `ctrl+r` in most terminals. The extension therefore defaults to `Alt+R`, which is reliable everywhere. If you still want `Ctrl+Shift+R`, set `profileKeybind` to it: the extension matches the raw Kitty sequence, which works on terminals that forward the Kitty keyboard protocol (iTerm2, WezTerm, kitty) — inside tmux, also run `set -s extended-keys on`.
+
+The selection applies to the next recording. The last selected profile is persisted in a sidecar state file next to your config (`<config path>.profile.json`) and reused as the default for every session. Effective profile resolution: `PI_STT_PROFILE` environment variable > persisted selection > top-level `profile` key > `default` (no overrides).
+
+Commands:
+
+- `/stt profile` — show the active profile and the available list.
+- `/stt profile <name>` — switch profile directly.
+
+The active profile is shown in the input-border indicator while idle (`voice · local`). Like modes, profiles apply on top of the base config, and modes then apply on top of the selected profile.
 
 ### Voice commands
 
@@ -335,27 +390,48 @@ Named vendor providers (`openai`, `groq`, `mistral`/`voxtral`, `deepgram`, `elev
 
 `openai-compatible` accepts any HTTPS host by design, but the `OPENAI_API_KEY` default only follows it while `endpoint` stays on OpenAI's own domain. For any other host, name the credential that host may receive — `apiKeyEnv`, `apiKeyFile`, `keychainService`, or `apiKeyEnv: ""` for a server that takes no key — otherwise the config is rejected instead of shipping the OpenAI key along with the audio. `local` defaults to no key at all, and a loopback endpoint never needs one. Because `local` names a server on this machine, pointing its `endpoint` off loopback is refused until the config says so on purpose — name the credential that host receives, or set `apiKeyEnv: ""` to keep sending it audio with none. `openai-compatible` is the type for a remote OpenAI-compatible server.
 
-### Mac microphone bridge for VPS usage
+### Mac native microphone bridge
 
-Use this when Pi runs on a VPS but your real microphone is on your Mac. The extension keeps the same `Ctrl+R` UX, but audio capture is delegated to a small local Mac daemon through a reverse SSH tunnel. The bridge is **opt-in**: it only activates when you set `capture.type: "bridge"` — the default `ffmpeg` recorder is unchanged.
+Use the bridge when direct `ffmpeg` capture cannot receive microphone frames on macOS. The bridge is **opt-in**: it activates only with `capture.type: "bridge"`; the default `ffmpeg` recorder remains unchanged.
 
-> See **[docs/macos-bridge.md](docs/macos-bridge.md)** for the full setup guide (architecture, prerequisites, security model, troubleshooting, uninstall).
+> See **[docs/macos-bridge.md](docs/macos-bridge.md)** for architecture, security, troubleshooting, and uninstall details.
 
-**1. On your Mac**, run the installer with the SSH alias of your VPS (as configured in `~/.ssh/config`):
+**Pi running on this Mac:** install the native loopback bridge. It makes no SSH or `~/.ssh/config` changes.
+
+```bash
+tools/install-macos-bridge.sh --local
+```
+
+Configure the extension to use its local endpoint and generated token:
+
+```json
+{
+  "capture": {
+    "type": "bridge",
+    "endpoint": "http://127.0.0.1:18765",
+    "tokenFile": "~/.config/pi-voice-stt-bridge/token",
+    "requestTimeoutSeconds": 30,
+    "maxSeconds": 120,
+    "minBytes": 4096
+  }
+}
+```
+
+**Pi running on a VPS:** run the installer with the SSH alias of the VPS (as configured in `~/.ssh/config`):
 
 ```bash
 tools/install-macos-bridge.sh my-vps
 ```
 
-This installs the daemon, a reverse-SSH-tunnel LaunchAgent, generates a shared bearer token, and adds a `<vps>-voice-tunnel` SSH host with `RemoteForward`. See the installer header (`tools/install-macos-bridge.sh`) for env overrides (port, node/ffmpeg/cmux paths).
+VPS mode installs the daemon, a reverse-SSH-tunnel LaunchAgent, generates a shared bearer token, and adds a `<vps>-voice-tunnel` SSH host with `RemoteForward`. See the installer header for port, node, ffmpeg, and cmux overrides.
 
-**2. Copy the token to your VPS** so Pi on the VPS can authenticate to the tunnel:
+**VPS step 2. Copy the token** so Pi on the VPS can authenticate to the tunnel:
 
 ```bash
 scp ~/.config/pi-voice-stt-bridge/token my-vps:~/.pi/agent/pi-voice-stt-bridge.token
 ```
 
-**3. On your VPS**, point Pi at the bridge (e.g. `~/.pi/agent/stt.json`):
+**VPS step 3.** Point Pi at the bridge (e.g. `~/.pi/agent/stt.json`):
 
 ```json
 {

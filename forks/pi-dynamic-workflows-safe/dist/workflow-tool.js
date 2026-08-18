@@ -143,9 +143,15 @@ export function createWorkflowTool(options = {}) {
             // detached and its result is delivered back into the conversation).
             if (params.resumeFromRunId) {
                 const runId = params.resumeFromRunId;
-                const resumed = await manager.resume(runId, { script, args: params.args });
+                const resumed = await manager.resume(runId, {
+                    script,
+                    args: params.args,
+                    // Explicit raise only — resume keeps the start-time cap unless the
+                    // caller passes a higher maxAgents (see WorkflowManager.resume, #146).
+                    maxAgents: params.maxAgents,
+                });
                 if (!resumed) {
-                    throw new Error(resumeFailureText(manager, runId));
+                    throw new Error(resumeFailureText(manager, runId, params.maxAgents));
                 }
                 return {
                     content: [{ type: "text", text: resumedText(parsed.meta.name, runId) }],
@@ -338,7 +344,7 @@ export function resumedText(name, runId) {
  * tool error instead of a silent failure. Inspects live + persisted state to
  * name the concrete reason (not found / running / completed / stopped).
  */
-export function resumeFailureText(manager, runId) {
+export function resumeFailureText(manager, runId, requestedMaxAgents) {
     const active = manager.getRun(runId);
     if (active?.status === "running") {
         return `Cannot resume workflow run "${runId}": it is still running. Wait for it to finish (or /workflows stop ${runId}) before resuming with an edited script.`;
@@ -355,6 +361,12 @@ export function resumeFailureText(manager, runId) {
     }
     if (!persisted.script) {
         return `Cannot resume workflow run "${runId}": it has no persisted script to resume. Start a new run instead (omit resumeFromRunId).`;
+    }
+    if (typeof requestedMaxAgents === "number" && Number.isFinite(requestedMaxAgents)) {
+        const effectivePrior = persisted.maxAgents ?? MAX_AGENTS_PER_RUN;
+        if (Math.floor(requestedMaxAgents) <= effectivePrior) {
+            return `Cannot resume workflow run "${runId}": cannot lower or keep maxAgents at ${effectivePrior}; pass maxAgents > ${effectivePrior}.`;
+        }
     }
     return `Cannot resume workflow run "${runId}": it is not currently resumable (it may be busy under another process). Try again shortly, or start a new run.`;
 }
