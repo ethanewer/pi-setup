@@ -332,6 +332,18 @@ const applyCompaction = (settings) => {
 };
 applyCompaction(main);
 
+// The default model scope (Ctrl+P cycling via `/scoped-models`) is restricted to these
+// models on the full entrypoints. Patterns are canonical provider/id so each matches
+// exactly one model (the openrouter ids contain a slash of their own).
+const MODEL_SCOPE = [
+  "openrouter/z-ai/glm-5.3",
+  "openai/gpt-5.6-luna",
+  "openai/gpt-5.6-sol",
+  "openai/gpt-5.6-terra",
+  "openrouter/deepseek/deepseek-v4-flash-0731",
+  "openrouter/deepseek/deepseek-v4-pro-0813",
+];
+
 // Every extension is a hardened local fork. The upstream npm identities are dropped
 // so a previously npm-installed copy cannot shadow the fork.
 const wanted = [
@@ -384,6 +396,7 @@ main.packages = [
   ...(main.packages ?? []).filter((entry) => !managed.has(identity(entry))),
   ...mainWanted,
 ];
+main.enabledModels = MODEL_SCOPE;
 writeJson(mainPath, main);
 
 // piwf is the full environment incl. dynamic workflows — the historical `pi`. Its own
@@ -398,6 +411,7 @@ const full = {
   packages: [...wanted],
   compaction: { ...(read(wfPath).compaction ?? {}) },
 };
+full.enabledModels = MODEL_SCOPE;
 applyCompaction(full);
 writeJson(wfPath, full);
 

@@ -188,6 +188,24 @@ profile, not another Pi installation. The `pi` wrapper explicitly rejects an inh
 `p` or `piwf` profile environment, so a tmux server started from either cannot
 accidentally turn later `pi` sessions into a different configuration.
 
+## Default model scope
+
+Both full entrypoints (`pi` and `piwf`) restrict Ctrl+P model cycling (the
+`/scoped-models` list) to exactly these models via `enabledModels` under
+`~/.pi/agent/settings.json` and `~/.pi/agent-wf/settings.json`:
+
+```text
+openrouter/z-ai/glm-5.3
+openai/gpt-5.6-luna
+openai/gpt-5.6-sol
+openai/gpt-5.6-terra
+openrouter/deepseek/deepseek-v4-flash-0731
+openrouter/deepseek/deepseek-v4-pro-0813
+```
+
+The patterns are canonical `provider/id`, so each matches exactly one model. The lean `p`
+profile does not set `enabledModels` and keeps its own default model.
+
 ## Local MLX models (`/mlx`, macOS only)
 
 The `mlx` extension is installed for both `p` and `pi`, but registers itself only on macOS.
