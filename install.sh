@@ -46,10 +46,11 @@ fi
 export PATH="$HOME/.local/bin:$BUN_INSTALL/bin:$PATH"
 MAIN_DIR="${PI_CODING_AGENT_DIR:-$HOME/.pi/agent}"
 P_DIR="$HOME/.pi/agent-p"
+WF_DIR="$HOME/.pi/agent-wf"
 LOCAL_BIN="$HOME/.local/bin"
 NPM_DIR="$MAIN_DIR/npm"
 LOCAL_PKG_DIR="$MAIN_DIR/local"
-mkdir -p "$LOCAL_BIN" "$MAIN_DIR/bin" "$MAIN_DIR/p" "$NPM_DIR" "$LOCAL_PKG_DIR" "$P_DIR" "$P_DIR/npm"
+mkdir -p "$LOCAL_BIN" "$MAIN_DIR/bin" "$MAIN_DIR/p" "$NPM_DIR" "$LOCAL_PKG_DIR" "$P_DIR" "$P_DIR/npm" "$WF_DIR" "$WF_DIR/npm"
 
 # Locate forks/. When this script runs from a checkout we use it directly; when it is
 # piped from curl we clone the repository so the forks are available.
@@ -149,11 +150,12 @@ if command -v bun >/dev/null 2>&1; then
 else
   BUN_BIN="${BUN_INSTALL:-$HOME/.bun}/bin/bun"
 fi
-# A tmux server started from `p` can retain p's profile variables. Normal `pi`
-# must never inherit that lean profile accidentally.
-if [ "${PI_CODING_AGENT_DIR:-}" = "$HOME/.pi/agent-p" ]; then
-  unset PI_CODING_AGENT_DIR PI_CODING_AGENT_SESSION_DIR PI_SKIP_VERSION_CHECK
-fi
+# A tmux server started from `p` or `piwf` can retain that profile's variables.
+# Normal `pi` must never inherit a profile accidentally.
+case "${PI_CODING_AGENT_DIR:-}" in
+  "$HOME/.pi/agent-p"|"$HOME/.pi/agent-wf")
+    unset PI_CODING_AGENT_DIR PI_CODING_AGENT_SESSION_DIR PI_SKIP_VERSION_CHECK ;;
+esac
 for ROOT in \
   "${PI_PACKAGE_ROOT:-}" \
   "${BUN_INSTALL:-$HOME/.bun}/install/global/node_modules/@earendil-works/pi-coding-agent" \
@@ -201,6 +203,7 @@ JS
 # sessions, so a stale copy here would shadow the managed ~/.local/bin/p wrapper.
 rm -f "$MAIN_DIR/bin/p"
 rm -f "$LOCAL_BIN/p"
+rm -f "$LOCAL_BIN/piwf"
 # The one install-time value is printed separately so the body can stay a quoted heredoc:
 # the installer honours PI_CODING_AGENT_DIR, so the lean profile must point at the directory
 # actually installed into rather than assume ~/.pi/agent, and everything else in the script
@@ -240,7 +243,36 @@ echo "p: could not locate @earendil-works/pi-coding-agent" >&2
 exit 1
 SH
 } > "$LOCAL_BIN/p"
-chmod 755 "$LOCAL_BIN/pi" "$LOCAL_BIN/p" "$LOCAL_BIN/agent-browser"
+
+# piwf is the full environment with dynamic workflows — the historical `pi`. It runs
+# against its own agent directory ~/.pi/agent-wf (whose settings.json lists all eight
+# local forks there) but shares the main session directory, auth, and models exactly
+# like `p`, so its state stays contiguous with the ordinary `pi`.
+{
+  printf '#!/bin/sh\nset -eu\nMAIN_DIR="%s"\n' "$MAIN_DIR"
+  cat <<'SH'
+export PI_CODING_AGENT_DIR="$HOME/.pi/agent-wf"
+export PI_CODING_AGENT_SESSION_DIR="$MAIN_DIR/sessions"
+if command -v bun >/dev/null 2>&1; then
+  BUN_BIN="$(command -v bun)"
+else
+  BUN_BIN="${BUN_INSTALL:-$HOME/.bun}/bin/bun"
+fi
+for ROOT in \
+  "${PI_PACKAGE_ROOT:-}" \
+  "${BUN_INSTALL:-$HOME/.bun}/install/global/node_modules/@earendil-works/pi-coding-agent" \
+  "/opt/homebrew/lib/node_modules/@earendil-works/pi-coding-agent" \
+  "/usr/local/lib/node_modules/@earendil-works/pi-coding-agent"
+do
+  if [ -n "$ROOT" ] && [ -f "$ROOT/dist/bun/cli.js" ]; then
+    exec "$BUN_BIN" --use-system-ca "$ROOT/dist/bun/cli.js" "$@"
+  fi
+done
+echo "piwf: could not locate @earendil-works/pi-coding-agent" >&2
+exit 1
+SH
+} > "$LOCAL_BIN/piwf"
+chmod 755 "$LOCAL_BIN/pi" "$LOCAL_BIN/p" "$LOCAL_BIN/piwf" "$LOCAL_BIN/agent-browser"
 
 # `bun add --global` links its own pi/agent-browser shims into $BUN_INSTALL/bin. They
 # point at the same single installation, but they bypass the wrappers above - notably
@@ -254,7 +286,7 @@ log "Writing Pi configuration"
 CONFIG_SCRIPT="$(mktemp)"
 cat > "$CONFIG_SCRIPT" <<'JS'
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-const [mainPath, pPath, sttPath, npmPkgPath, pNpmPkgPath, piVersion, keybindingsSrcPath, mainKeybindsPath, pKeybindsPath, compactionSrcPath, modelsStorePath] = process.argv.slice(2);
+const [mainPath, pPath, wfPath, sttPath, npmPkgPath, pNpmPkgPath, wfNpmPkgPath, piVersion, keybindingsSrcPath, mainKeybindsPath, pKeybindsPath, wfKeybindsPath, compactionSrcPath, modelsStorePath] = process.argv.slice(2);
 const read = (path) => existsSync(path) ? JSON.parse(readFileSync(path, "utf8")) : {};
 const writeJson = (path, value) => writeFileSync(path, JSON.stringify(value, null, 2) + "\n");
 
@@ -344,11 +376,30 @@ const identity = (entry) => {
   if (spec.startsWith("@")) return spec.split("@").slice(0, 2).join("@");
   return spec.split("@")[0];
 };
+// `pi` deliberately excludes the workflows fork — the dynamic-workflows extension,
+// its skills, and the /workflows commands now live behind the `piwf` entrypoint.
+// `pi` keeps every other hardened fork.
+const mainWanted = wanted.filter((w) => w !== "local/pi-dynamic-workflows-safe");
 main.packages = [
   ...(main.packages ?? []).filter((entry) => !managed.has(identity(entry))),
-  ...wanted,
+  ...mainWanted,
 ];
 writeJson(mainPath, main);
+
+// piwf is the full environment incl. dynamic workflows — the historical `pi`. Its own
+// agent directory gets the complete package list plus the same compaction headroom; it
+// is not quiet, to match the ordinary `pi` startup listing.
+const full = {
+  lastChangelogVersion: main.lastChangelogVersion,
+  defaultThinkingLevel: main.defaultThinkingLevel,
+  defaultProvider: main.defaultProvider,
+  defaultModel: main.defaultModel,
+  theme: main.theme,
+  packages: [...wanted],
+  compaction: { ...(read(wfPath).compaction ?? {}) },
+};
+applyCompaction(full);
+writeJson(wfPath, full);
 
 // p runs both compaction extensions too, so it needs the same compaction headroom.
 // codex-compaction folds inside a run and context-handoff shapes the summary between
@@ -369,7 +420,7 @@ writeJson(pPath, lean);
 // repository manages are touched, so any other binding the user added survives.
 // docs/KEYBINDINGS.md records what each one is and why.
 const managedKeys = read(keybindingsSrcPath);
-for (const path of [mainKeybindsPath, pKeybindsPath]) {
+for (const path of [mainKeybindsPath, pKeybindsPath, wfKeybindsPath]) {
   if (!path) continue;
   writeJson(path, { ...read(path), ...managedKeys });
 }
@@ -387,9 +438,9 @@ writeJson(sttPath, stt);
 // Drop the extensions from the npm manifests so the old, unpatched copies are pruned,
 // while leaving any unrelated package the user added in place. The lean profile keeps its
 // own agent dir and npm tree, and an unreferenced copy there is still unpatched code on
-// disk, so clean both.
+// disk, so clean all three (main, p, piwf).
 let removed = false;
-for (const path of [npmPkgPath, pNpmPkgPath]) {
+for (const path of [npmPkgPath, pNpmPkgPath, wfNpmPkgPath]) {
   if (!path) continue;
   const pkg = read(path);
   const deps = pkg.dependencies ?? {};
@@ -408,13 +459,16 @@ JS
 "$BUN_BIN" "$CONFIG_SCRIPT" \
   "$MAIN_DIR/settings.json" \
   "$P_DIR/settings.json" \
+  "$WF_DIR/settings.json" \
   "$MAIN_DIR/stt.json" \
   "$NPM_DIR/package.json" \
   "$P_DIR/npm/package.json" \
+  "$WF_DIR/npm/package.json" \
   "$PI_VERSION" \
   "$SRC_DIR/config/keybindings.json" \
   "$MAIN_DIR/keybindings.json" \
   "$P_DIR/keybindings.json" \
+  "$WF_DIR/keybindings.json" \
   "$SRC_DIR/config/compaction.json" \
   "$MAIN_DIR/models-store.json"
 rm -f "$CONFIG_SCRIPT"
@@ -430,8 +484,16 @@ chmod 600 "$MAIN_DIR/stt.json" 2>/dev/null || true
 
 ln -sfn "$MAIN_DIR/auth.json" "$P_DIR/auth.json"
 ln -sfn "$MAIN_DIR/models-store.json" "$P_DIR/models-store.json"
+ln -sfn "$MAIN_DIR/auth.json" "$WF_DIR/auth.json"
+ln -sfn "$MAIN_DIR/models-store.json" "$WF_DIR/models-store.json"
+ln -sfn "$MAIN_DIR/stt.json" "$WF_DIR/stt.json"
 rm -rf "$P_DIR/bin"
 ln -s "$MAIN_DIR/bin" "$P_DIR/bin"
+rm -rf "$WF_DIR/bin" "$WF_DIR/local"
+ln -s "$MAIN_DIR/bin" "$WF_DIR/bin"
+# piwf resolves its local/ packages from its own agent directory, so share main's
+# hardened fork install rather than duplicating it.
+ln -s "$MAIN_DIR/local" "$WF_DIR/local"
 
 add_path_line() {
   local file="$1"
@@ -462,6 +524,7 @@ fi
 log "Verifying installation"
 "$LOCAL_BIN/pi" --version
 "$LOCAL_BIN/p" --version
+"$LOCAL_BIN/piwf" --version
 "$LOCAL_BIN/agent-browser" --version
 if [[ -x "$SRC_DIR/bin/pi-setup-doctor" ]]; then
   "$SRC_DIR/bin/pi-setup-doctor" --quiet || warn "pi-setup-doctor reported problems; run 'bin/pi-setup-doctor' for detail."
@@ -472,8 +535,9 @@ cat <<EOF
 Installed successfully.
 
 Open a new terminal, then use:
-  pi  Full setup: Voice STT + browser + workflows + handoff briefs + monitor + /btw + MLX (macOS)
-  p   Lean setup: Voice STT + /btw + handoff briefs + MLX (macOS), quiet startup
+  pi   Full setup minus dynamic workflows: Voice STT + browser + handoff briefs + monitor + /btw + MLX
+  piwf Full setup with dynamic workflows (the historical pi): adds workflow + /workflows + workflow skills
+  p    Lean setup: Voice STT + /btw + handoff briefs + MLX (macOS), quiet startup
 
 Voice dictation: Option+P (or the π it composes) on macOS, Alt+P on Linux.
 Side questions:  /btw <question>, escape to return.

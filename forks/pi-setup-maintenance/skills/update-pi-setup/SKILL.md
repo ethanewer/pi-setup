@@ -274,17 +274,25 @@ UI has a test seam for the paths a script cannot reach otherwise:
 provider with a fixed answer, so the placeholder lifecycle can be driven without a
 microphone or an API call.
 
-Then start `pi` once interactively and confirm the startup listing is intact:
+Then start `pi` and `piwf` once interactively and confirm each startup listing is intact.
+`pi` must NOT list the workflow extension or workflow skills; `piwf` must list both:
 
 ```text
-[Skills]
-  monitor, update-pi-setup, workflow-authoring, workflow-patterns
+pi   (must omit workflow and the workflow skills/commands)
+     [Skills]
+       monitor, update-pi-setup
+     [Prompts]
+       /watch
+     [Extensions]
+       agent-browser, btw, context-handoff, monitor, voice-stt
 
-[Prompts]
-  /watch
-
-[Extensions]
-  agent-browser, btw, context-handoff, monitor, voice-stt, workflow
+piwf (must include workflow)
+     [Skills]
+       monitor, update-pi-setup, workflow-authoring, workflow-patterns
+     [Prompts]
+       /watch
+     [Extensions]
+       agent-browser, btw, context-handoff, monitor, voice-stt, workflow
 ```
 
 A fork that failed to load is **silently absent** from that listing rather than raising

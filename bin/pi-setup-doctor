@@ -43,6 +43,7 @@ fixable() { # fixable <what> <message>
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MAIN_DIR="${PI_CODING_AGENT_DIR:-$HOME/.pi/agent}"
+WF_DIR="$HOME/.pi/agent-wf"
 LOCAL_PKG_DIR="$MAIN_DIR/local"
 
 PROBLEMS=0
@@ -99,16 +100,18 @@ done
 
 say ""
 say "Pi settings"
+# pi (MAIN_DIR) deliberately excludes the workflows fork, which now lives behind the
+# piwf profile (~/.pi/agent-wf). piwf must load every fork, including workflows.
 SETTINGS="$MAIN_DIR/settings.json"
+WF_SETTINGS="$HOME/.pi/agent-wf/settings.json"
 if [[ ! -f "$SETTINGS" ]]; then
   bad "missing $SETTINGS (install.sh writes it; run bin/pi-setup-doctor --fix)"
   fixable install
 else
   SETTINGS_REPORT="$("$JS" -e '
-const { readFileSync } = require("node:fs");
-const [settingsPath, repoDir] = process.argv.slice(1);
+const { readFileSync, existsSync } = require("node:fs");
+const [settingsPath, wfSettingsPath, repoDir] = process.argv.slice(1);
 const vendor = require(repoDir + "/vendor.json");
-const settings = JSON.parse(readFileSync(settingsPath, "utf8"));
 const identity = (entry) => {
   const source = typeof entry === "string" ? entry : entry?.source;
   if (typeof source !== "string") return "";
@@ -117,20 +120,37 @@ const identity = (entry) => {
   if (spec.startsWith("@")) return spec.split("@").slice(0, 2).join("@");
   return spec.split("@")[0];
 };
-const entries = settings.packages ?? [];
-const ids = entries.map(identity);
-const out = [];
-for (const fork of Object.keys(vendor.forks)) {
-  if (ids.includes(fork)) out.push("ok\tsettings load local/" + fork);
-  else out.push("bad\tsettings do not load local/" + fork + " (bin/pi-setup-doctor --fix)");
-}
-for (const [fork, meta] of Object.entries(vendor.forks)) {
-  if (ids.includes(meta.upstream)) {
-    out.push("bad\tsettings still load the unpatched npm package " + meta.upstream + " (it can shadow the fork; bin/pi-setup-doctor --fix)");
+// The workflows fork is intentionally excluded from the plain pi profile; it must be
+// present in the piwf profile and absent from pi.
+const WF_ONLY = "pi-dynamic-workflows-safe";
+const allForks = Object.keys(vendor.forks);
+const shadowForks = Object.entries(vendor.forks).filter(([, m]) => m.upstream);
+const check = (path, label, required) => {
+  const out = [];
+  if (!existsSync(path)) return ["bad\tmissing " + path + " (bin/pi-setup-doctor --fix)"];
+  let settings;
+  try { settings = JSON.parse(readFileSync(path, "utf8")); }
+  catch (error) { return ["bad\t" + path + " is not valid JSON (" + error.message + "; bin/pi-setup-doctor --fix)"]; }
+  const ids = (settings.packages ?? []).map(identity);
+  for (const fork of required) {
+    if (ids.includes(fork)) out.push("ok\t" + label + " settings load local/" + fork);
+    else out.push("bad\t" + label + " settings do not load local/" + fork + " (bin/pi-setup-doctor --fix)");
   }
+  for (const [fork, meta] of shadowForks) {
+    if (ids.includes(meta.upstream)) {
+      out.push("bad\t" + label + " settings still load the unpatched npm package " + meta.upstream + " (it can shadow the fork; bin/pi-setup-doctor --fix)");
+    }
+  }
+  return out;
+};
+const out = check(settingsPath, "pi", allForks.filter((f) => f !== WF_ONLY));
+if (readFileSync(settingsPath, "utf8").length > 0) {
+  const ids = (JSON.parse(readFileSync(settingsPath, "utf8")).packages ?? []).map(identity);
+  if (ids.includes(WF_ONLY)) out.push("bad\tpi settings load local/" + WF_ONLY + ", which must remain behind the piwf profile (bin/pi-setup-doctor --fix)");
 }
+out.push(...check(wfSettingsPath, "piwf", allForks));
 console.log(out.join("\n"));
-' "$SETTINGS" "$REPO_DIR")"
+' "$SETTINGS" "$WF_SETTINGS" "$REPO_DIR")"
   while IFS=$'\t' read -r kind message; do
     [[ -z "${kind:-}" ]] && continue
     if [[ "$kind" == "ok" ]]; then
@@ -226,14 +246,14 @@ fi
 
 say ""
 say "Keybindings and the p profile"
-# config/keybindings.json is merged into both agent directories by install.sh. Nothing
-# checked that it arrived, so a remap could silently apply to neither.
+# config/keybindings.json is merged into all three agent directories by install.sh.
+# Nothing checked that it arrived, so a remap could silently apply to none of them.
 KEYBINDS_SRC="$REPO_DIR/config/keybindings.json"
 P_DIR="$HOME/.pi/agent-p"
 if [[ ! -f "$KEYBINDS_SRC" ]]; then
   bad "missing $KEYBINDS_SRC; install.sh has nothing to merge into the agent directories"
 else
-  for target in "$MAIN_DIR/keybindings.json" "$P_DIR/keybindings.json"; do
+  for target in "$MAIN_DIR/keybindings.json" "$P_DIR/keybindings.json" "$WF_DIR/keybindings.json"; do
     if [[ ! -f "$target" ]]; then
       bad "$target is missing; the remapped keys are not in effect there (bin/pi-setup-doctor --fix)"
       fixable install
@@ -343,6 +363,20 @@ process.stdout.write(names.join(", "));
     bad "$P_WRAPPER does not match the lean profile install.sh declares: $P_PROFILE_REPORT (bin/pi-setup-doctor --fix)"
     fixable install
   fi
+fi
+
+# piwf is the third entrypoint: full environment incl. dynamic workflows. It must exist
+# and point at its own agent directory, where the settings check above requires it to
+# load every fork including the workflows one.
+WF_WRAPPER="$HOME/.local/bin/piwf"
+if [[ ! -x "$WF_WRAPPER" ]]; then
+  bad "$WF_WRAPPER is missing or not executable (bin/pi-setup-doctor --fix)"
+  fixable install
+elif ! grep -q 'PI_CODING_AGENT_DIR="\$HOME/.pi/agent-wf"' "$WF_WRAPPER"; then
+  bad "$WF_WRAPPER does not point at ~/.pi/agent-wf (bin/pi-setup-doctor --fix)"
+  fixable install
+else
+  ok "the piwf wrapper points at ~/.pi/agent-wf"
 fi
 
 # A keybind Pi cannot parse falls back to the upstream default without saying so.

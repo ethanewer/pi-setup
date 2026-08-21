@@ -1,15 +1,18 @@
 # Ethan's Pi setup
 
-A reproducible, fast [Pi coding agent](https://pi.dev) setup with two entrypoints:
+A reproducible, fast [Pi coding agent](https://pi.dev) setup with three entrypoints:
 
-- **`pi`** — full environment with Voice STT, native browser automation, dynamic
-  workflows, mid-run and between-runs context compaction, background process monitoring,
+- **`pi`** — full environment without dynamic workflows: Voice STT, native browser
+  automation, mid-run and between-runs context compaction, background process monitoring,
   `/btw` side questions, and local MLX model management on macOS.
+- **`piwf`** — the same full environment **with** dynamic workflows (the historical `pi`):
+  everything `pi` has, plus the `workflow` tool, `/workflows` and `/deep-research`, and the
+  workflow-authoring / workflow-patterns skills.
 - **`p`** — lean environment with Voice STT, `/btw` side questions, the same two
   compaction extensions, and local MLX model management on macOS, but no browser,
   monitor, workflows, or skills.
 
-Both commands run the same Pi installation through Pi's Bun entrypoint. They share
+All three commands run the same Pi installation through Pi's Bun entrypoint. They share
 authentication, model catalogs, sessions, helper binaries, and installed package files.
 
 Every extension is installed from `forks/` as a **security-hardened local fork**, not
@@ -129,15 +132,14 @@ standalone diffs.
 
 ## Entrypoints
 
-### `pi`: full environment
+### `pi`: full environment without dynamic workflows
 
-`pi` loads the normal package configuration:
+`pi` loads the normal package configuration, minus the dynamic-workflows fork. Everything
+else ships:
 
 - built-in `read`, `bash`, `edit`, and `write` tools
 - Voice STT
 - `agent_browser`
-- `workflow` and `workflow_control`
-- workflow authoring and built-in workflow skills
 - the `update-pi-setup` maintenance skill
 - compaction handoff briefs that keep a long run going
 - mid-run context folding, so one long run stays inside the context window
@@ -145,6 +147,23 @@ standalone diffs.
 - side questions in an ephemeral fork (`/btw`, escape to return)
 - project `AGENTS.md` / `CLAUDE.md` context
 - visible startup resource listing
+
+The `workflow` tool, `/workflows` and `/deep-research`, and the workflow-authoring skills
+are deliberately not loaded — they live behind the `piwf` entrypoint.
+
+### `piwf`: full environment with dynamic workflows
+
+`piwf` is the historical `pi`: the full environment **including** the dynamic-workflows
+extension. It runs against its own agent directory `~/.pi/agent-wf` whose settings load
+all eight hardened forks. On top of everything `pi` lists, `piwf` adds:
+
+- the `workflow` tool and `workflow_control`
+- `/workflows`, `/deep-research`, `/code-review`, and the other built-in workflow commands
+- the `workflow-authoring` and `workflow-patterns` skills
+
+`piwf` shares main's session directory, auth, model catalogs, helper binaries, and the
+installed package files, exactly like `p`, so its state stays contiguous with the ordinary
+`pi`.
 
 ### `p`: lean environment
 
@@ -166,8 +185,8 @@ extensions out. It also:
 
 `p` uses a small settings overlay at `~/.pi/agent-p/settings.json`; it is a configuration
 profile, not another Pi installation. The `pi` wrapper explicitly rejects an inherited
-lean-profile environment, so a tmux server started from `p` cannot accidentally turn later
-`pi` sessions into the lean configuration.
+`p` or `piwf` profile environment, so a tmux server started from either cannot
+accidentally turn later `pi` sessions into a different configuration.
 
 ## Local MLX models (`/mlx`, macOS only)
 
@@ -403,12 +422,13 @@ added to that profile; the full-profile measurements predate context handoff and
 ## Files created
 
 ```text
-~/.local/bin/pi                              Bun-backed full entrypoint (only one)
+~/.local/bin/pi                              Full entrypoint (no dynamic workflows)
+~/.local/bin/piwf                            Full entrypoint with dynamic workflows
 ~/.local/bin/p                               Lean entrypoint
 ~/.local/bin/agent-browser                   Bun-backed agent-browser entrypoint
 ~/.local/bin/pi-agent-browser-config         Browser config CLI
 ~/.local/bin/pi-agent-browser-doctor         Browser diagnostics CLI
-~/.pi/agent/settings.json                    Main Pi settings
+~/.pi/agent/settings.json                    Main Pi settings (no workflow package)
 ~/.pi/agent/stt.json                         Voice STT configuration (mode 600)
 ~/.pi/agent/keybindings.json                 Keys remapped for tmux and Kitty terminals
 ~/.pi/agent/local/                           Hardened extension forks
@@ -423,6 +443,13 @@ added to that profile; the full-profile measurements predate context handoff and
 ~/.pi/agent-p/auth.json                      Symlink to main auth
 ~/.pi/agent-p/models-store.json              Symlink to main model catalog
 ~/.pi/agent-p/bin                            Symlink to main helper binaries
+~/.pi/agent-wf/settings.json                 Full settings overlay incl. the workflow fork
+~/.pi/agent-wf/keybindings.json              The same remapped keys for the piwf profile
+~/.pi/agent-wf/auth.json                     Symlink to main auth
+~/.pi/agent-wf/models-store.json             Symlink to main model catalog
+~/.pi/agent-wf/bin                           Symlink to main helper binaries
+~/.pi/agent-wf/local                         Symlink to main hardened fork install
+~/.pi/agent-wf/stt.json                      Symlink to main voice STT configuration
 ```
 
 The installer adds `~/.local/bin` and `~/.bun/bin` to `.zshrc` and `.bashrc`.
@@ -430,8 +457,9 @@ The installer adds `~/.local/bin` and `~/.bun/bin` to `.zshrc` and `.bashrc`.
 There is exactly one entrypoint per command. Pi is installed once, globally, by Bun;
 `bun add --global` also links its own `pi` and `agent-browser` shims into `~/.bun/bin`,
 and the installer removes them. Those shims point at the same installation but bypass the
-wrappers above — notably `pi`'s guard against inheriting the lean `p` profile from a tmux
-server. If you previously installed Pi another way (npm global, Homebrew), remove it:
+wrappers above — notably `pi`'s guard against inheriting the lean `p` or full `piwf`
+profile environment from a tmux server. If you previously installed Pi another way (npm
+global, Homebrew), remove it:
 `npm uninstall -g @earendil-works/pi-coding-agent agent-browser`.
 
 ## Session archives
