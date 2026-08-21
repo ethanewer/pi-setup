@@ -4,9 +4,10 @@ A reproducible, fast [Pi coding agent](https://pi.dev) setup with two entrypoint
 
 - **`pi`** — full environment with Voice STT, native browser automation, dynamic
   workflows, mid-run and between-runs context compaction, background process monitoring,
-  and `/btw` side questions.
-- **`p`** — lean environment with Voice STT, `/btw` side questions, and the same two
-  compaction extensions, but no browser, monitor, workflows, or skills.
+  `/btw` side questions, and local MLX model management on macOS.
+- **`p`** — lean environment with Voice STT, `/btw` side questions, the same two
+  compaction extensions, and local MLX model management on macOS, but no browser,
+  monitor, workflows, or skills.
 
 Both commands run the same Pi installation through Pi's Bun entrypoint. They share
 authentication, model catalogs, sessions, helper binaries, and installed package files.
@@ -153,9 +154,10 @@ standalone diffs.
 --no-extensions --no-skills
 ```
 
-It explicitly reloads only Voice STT, `/btw`, both compaction extensions, and a tiny
-local extension that removes Pi's documentation block from the system prompt. The exact
-allowlist keeps the heavier browser, monitor, and workflow extensions out. It also:
+It explicitly reloads only Voice STT, `/btw`, both compaction extensions, the conditional
+`mlx` extension, and a tiny local extension that removes Pi's documentation block from the
+system prompt. The exact allowlist keeps the heavier browser, monitor, and workflow
+extensions out. It also:
 
 - uses quiet startup
 - skips the Pi version check
@@ -166,6 +168,23 @@ allowlist keeps the heavier browser, monitor, and workflow extensions out. It al
 profile, not another Pi installation. The `pi` wrapper explicitly rejects an inherited
 lean-profile environment, so a tmux server started from `p` cannot accidentally turn later
 `pi` sessions into the lean configuration.
+
+## Local MLX models (`/mlx`, macOS only)
+
+The `mlx` extension is installed for both `p` and `pi`, but registers itself only on macOS.
+It owns the server it starts and never takes over an occupied port.
+
+```text
+/mlx download optimized-ornith
+/mlx list
+/mlx load mlx-works/Ornith-1.5-35B-A3B-oQ4e-mtp
+/mlx stop
+```
+
+The download command fetches the calibrated Ornith-35B oQ4e trunk and builds the locally
+optimized Qwen3.6-donor overlay. Only the actively served model appears in Pi's `/model`
+list; downloaded models remain visible through `/mlx list`. MTP is off by default after an
+agentic A/B regression and can be enabled for diagnostics with `MLX_ORNITH_MTP=1`.
 
 ## Side questions (`/btw`)
 
@@ -393,6 +412,7 @@ added to that profile; the full-profile measurements predate context handoff and
 ~/.pi/agent/stt.json                         Voice STT configuration (mode 600)
 ~/.pi/agent/keybindings.json                 Keys remapped for tmux and Kitty terminals
 ~/.pi/agent/local/                           Hardened extension forks
+~/.pi/agent/extensions/mlx/                  Conditional local MLX extension
 ~/.pi/agent/npm/                             Shared extension packages (no longer used
                                              by this setup; pruned on install)
 ~/.pi/agent/setup-src/                       Clone of this repository, when the

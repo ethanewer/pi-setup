@@ -108,6 +108,14 @@ for fork in $FORKS; do
   fi
 done
 
+log "Installing the conditional MLX extension"
+[[ -d "$SRC_DIR/extensions/mlx" ]] || fail "Missing extension: $SRC_DIR/extensions/mlx"
+mkdir -p "$MAIN_DIR/extensions"
+rm -f "$MAIN_DIR/extensions/mlx.ts"
+rm -rf "$MAIN_DIR/extensions/mlx"
+mkdir -p "$MAIN_DIR/extensions/mlx"
+(cd "$SRC_DIR/extensions/mlx" && tar cf - .) | (cd "$MAIN_DIR/extensions/mlx" && tar xf -)
+
 # The browser fork ships two CLIs that npm used to link. Local packages get no bin
 # links from Pi, so wrap them explicitly to keep both commands available.
 for cli in config doctor; do
@@ -219,6 +227,7 @@ do
       --extension "$MAIN_DIR/local/pi-context-handoff/extensions/context-handoff/index.ts" \
       --extension "$MAIN_DIR/local/pi-codex-compaction/extensions/codex-compaction/index.ts" \
       --extension "$MAIN_DIR/local/pi-btw-side/extensions/btw/index.ts" \
+      --extension "$MAIN_DIR/extensions/mlx/index.ts" \
       --extension "$MAIN_DIR/p/remove-pi-documentation.js" \
       "$@"
   fi
@@ -459,8 +468,8 @@ cat <<EOF
 Installed successfully.
 
 Open a new terminal, then use:
-  pi  Full setup: Voice STT + browser + workflows + handoff briefs + monitor + /btw
-  p   Lean setup: Voice STT + /btw + handoff briefs, quiet startup
+  pi  Full setup: Voice STT + browser + workflows + handoff briefs + monitor + /btw + MLX (macOS)
+  p   Lean setup: Voice STT + /btw + handoff briefs + MLX (macOS), quiet startup
 
 Voice dictation: Option+P (or the π it composes) on macOS, Alt+P on Linux.
 Side questions:  /btw <question>, escape to return.

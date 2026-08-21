@@ -55,12 +55,12 @@ bad() { PROBLEMS=$((PROBLEMS + 1)); printf '  PROBLEM  %s\n' "$*"; }
 # The installer guarantees bun, not node: a clean machine that never had Node.js still has
 # to be able to run this. bun -e takes the same code-then-argv shape as node -e, so either
 # works for the small scripts below.
-if command -v node >/dev/null 2>&1; then
-  JS="node"
-elif command -v bun >/dev/null 2>&1; then
+if command -v bun >/dev/null 2>&1; then
   JS="bun"
 elif [[ -x "${BUN_INSTALL:-$HOME/.bun}/bin/bun" ]]; then
   JS="${BUN_INSTALL:-$HOME/.bun}/bin/bun"
+elif command -v node >/dev/null 2>&1; then
+  JS="node"
 else
   printf '%s: needs node or bun on PATH\n' "$(basename "$0")" >&2
   exit 2
@@ -330,8 +330,11 @@ process.stdout.write(problems.join("; "));
 const { readFileSync } = require("node:fs");
 const names = readFileSync(process.argv[1], "utf8").split(/\r?\n/)
   .flatMap((line) => {
-    const m = line.trim().match(/^--extension\s+"[^"]*\/local\/([^/]+)\//);
-    return m ? [m[1].replace(/^pi-/, "").replace(/-safe$/, "")] : [];
+    const value = line.trim();
+    const local = value.match(/^--extension\s+"[^"]*\/local\/([^/]+)\//);
+    if (local) return [local[1].replace(/^pi-/, "").replace(/-safe$/, "")];
+    const direct = value.match(/^--extension\s+"[^"]*\/extensions\/([^/]+)\/index\.ts"/);
+    return direct ? [direct[1]] : [];
   });
 process.stdout.write(names.join(", "));
 ' "$P_WRAPPER" 2>/dev/null)"

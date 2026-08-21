@@ -38,12 +38,12 @@ command -v npm >/dev/null 2>&1 || die "npm is required (it fetches upstream tarb
 # The installer guarantees bun, not node: a clean machine that never had Node.js still has
 # to be able to run this. bun -e takes the same code-then-argv shape as node -e, so either
 # works for the small scripts below.
-if command -v node >/dev/null 2>&1; then
-  JS="node"
-elif command -v bun >/dev/null 2>&1; then
+if command -v bun >/dev/null 2>&1; then
   JS="bun"
 elif [[ -x "${BUN_INSTALL:-$HOME/.bun}/bin/bun" ]]; then
   JS="${BUN_INSTALL:-$HOME/.bun}/bin/bun"
+elif command -v node >/dev/null 2>&1; then
+  JS="node"
 else
   die "needs node or bun on PATH"
 fi
