@@ -79,7 +79,9 @@ fi
 [[ -d "$SRC_DIR/forks" ]] || fail "Could not find forks/ in $SRC_DIR."
 
 log "Installing Pi and agent-browser with Bun"
-"$BUN_BIN" add --global \
+# Bun's bundled CA set does not include every CA trusted by the OS (notably
+# enterprise TLS-inspection roots). Install through the system store as well.
+"$BUN_BIN" --use-system-ca add --global \
   "@earendil-works/pi-coding-agent@$PI_VERSION" \
   "agent-browser@$AGENT_BROWSER_VERSION"
 
@@ -130,7 +132,7 @@ if command -v bun >/dev/null 2>&1; then
 else
   BUN_BIN="\${BUN_INSTALL:-\$HOME/.bun}/bin/bun"
 fi
-exec "\$BUN_BIN" "$TARGET" "\$@"
+exec "\$BUN_BIN" --use-system-ca "$TARGET" "\$@"
 SH
     chmod 755 "$LOCAL_BIN/pi-agent-browser-$cli"
   fi
@@ -159,7 +161,8 @@ for ROOT in \
   "/usr/local/lib/node_modules/@earendil-works/pi-coding-agent"
 do
   if [ -n "$ROOT" ] && [ -f "$ROOT/dist/bun/cli.js" ]; then
-    exec "$BUN_BIN" "$ROOT/dist/bun/cli.js" "$@"
+    # Use the OS trust store: Bun's bundled CA set may omit a trusted enterprise CA.
+    exec "$BUN_BIN" --use-system-ca "$ROOT/dist/bun/cli.js" "$@"
   fi
 done
 echo "pi: could not locate @earendil-works/pi-coding-agent" >&2
@@ -176,7 +179,7 @@ else
   BUN_BIN="${BUN_INSTALL:-$HOME/.bun}/bin/bun"
 fi
 ROOT="${BUN_INSTALL:-$HOME/.bun}/install/global/node_modules/agent-browser"
-exec "$BUN_BIN" "$ROOT/bin/agent-browser.js" "$@"
+exec "$BUN_BIN" --use-system-ca "$ROOT/bin/agent-browser.js" "$@"
 SH
 
 cat > "$MAIN_DIR/p/remove-pi-documentation.js" <<'JS'
@@ -220,7 +223,8 @@ for ROOT in \
   "/usr/local/lib/node_modules/@earendil-works/pi-coding-agent"
 do
   if [ -n "$ROOT" ] && [ -f "$ROOT/dist/bun/cli.js" ]; then
-    exec "$BUN_BIN" "$ROOT/dist/bun/cli.js" \
+    # Keep the lean profile on the same OS trust store as normal Pi.
+    exec "$BUN_BIN" --use-system-ca "$ROOT/dist/bun/cli.js" \
       --no-extensions \
       --no-skills \
       --extension "$MAIN_DIR/local/pi-voice-stt-safe/extensions/voice-stt/index.ts" \
