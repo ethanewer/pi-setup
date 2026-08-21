@@ -121,11 +121,12 @@ const identity = (entry) => {
   return spec.split("@")[0];
 };
 // The workflows fork is intentionally excluded from the plain pi profile; it must be
-// present in the piwf profile and absent from pi.
+// present in the piwf profile and absent from pi. `forbidden` lists forks that must NOT
+// be loaded, so the whole check (parsing included) lives in one guarded path.
 const WF_ONLY = "pi-dynamic-workflows-safe";
 const allForks = Object.keys(vendor.forks);
 const shadowForks = Object.entries(vendor.forks).filter(([, m]) => m.upstream);
-const check = (path, label, required) => {
+const check = (path, label, required, forbidden = []) => {
   const out = [];
   if (!existsSync(path)) return ["bad\tmissing " + path + " (bin/pi-setup-doctor --fix)"];
   let settings;
@@ -136,6 +137,11 @@ const check = (path, label, required) => {
     if (ids.includes(fork)) out.push("ok\t" + label + " settings load local/" + fork);
     else out.push("bad\t" + label + " settings do not load local/" + fork + " (bin/pi-setup-doctor --fix)");
   }
+  for (const fork of forbidden) {
+    if (ids.includes(fork)) {
+      out.push("bad\t" + label + " settings load local/" + fork + ", which must remain behind the piwf profile (bin/pi-setup-doctor --fix)");
+    }
+  }
   for (const [fork, meta] of shadowForks) {
     if (ids.includes(meta.upstream)) {
       out.push("bad\t" + label + " settings still load the unpatched npm package " + meta.upstream + " (it can shadow the fork; bin/pi-setup-doctor --fix)");
@@ -143,11 +149,7 @@ const check = (path, label, required) => {
   }
   return out;
 };
-const out = check(settingsPath, "pi", allForks.filter((f) => f !== WF_ONLY));
-if (readFileSync(settingsPath, "utf8").length > 0) {
-  const ids = (JSON.parse(readFileSync(settingsPath, "utf8")).packages ?? []).map(identity);
-  if (ids.includes(WF_ONLY)) out.push("bad\tpi settings load local/" + WF_ONLY + ", which must remain behind the piwf profile (bin/pi-setup-doctor --fix)");
-}
+const out = check(settingsPath, "pi", allForks.filter((f) => f !== WF_ONLY), [WF_ONLY]);
 out.push(...check(wfSettingsPath, "piwf", allForks));
 console.log(out.join("\n"));
 ' "$SETTINGS" "$WF_SETTINGS" "$REPO_DIR")"

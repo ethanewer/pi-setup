@@ -190,9 +190,9 @@ accidentally turn later `pi` sessions into a different configuration.
 
 ## Default model scope
 
-Both full entrypoints (`pi` and `piwf`) restrict Ctrl+P model cycling (the
-`/scoped-models` list) to exactly these models via `enabledModels` under
-`~/.pi/agent/settings.json` and `~/.pi/agent-wf/settings.json`:
+All three entrypoints (`pi`, `piwf`, and `p`) restrict Ctrl+P model cycling (the
+`/scoped-models` list) to exactly these models via `enabledModels` in each profile's
+settings (`~/.pi/agent`, `~/.pi/agent-wf`, and `~/.pi/agent-p`):
 
 ```text
 openrouter/z-ai/glm-5.3
@@ -203,8 +203,15 @@ openrouter/deepseek/deepseek-v4-flash-0731
 openrouter/deepseek/deepseek-v4-pro-0813
 ```
 
-The patterns are canonical `provider/id`, so each matches exactly one model. The lean `p`
-profile does not set `enabledModels` and keeps its own default model.
+The patterns are canonical `provider/id`, so each matches exactly one model. Two
+consequences of how Pi applies the list are worth knowing:
+
+- It is a managed default: `install.sh` rewrites `enabledModels` on every install, so a
+  scope changed through `/scoped-models` reverts at the next reinstall.
+- When a profile's saved default model is **not** in the scope, Pi starts new sessions on
+  the first scoped model (`openrouter/z-ai/glm-5.3`) instead of the saved default. All
+  three profiles' current defaults are inside the scope, so this only bites if the
+  default is later changed to something outside it.
 
 ## Local MLX models (`/mlx`, macOS only)
 
@@ -467,7 +474,6 @@ added to that profile; the full-profile measurements predate context handoff and
 ~/.pi/agent-wf/models-store.json             Symlink to main model catalog
 ~/.pi/agent-wf/bin                           Symlink to main helper binaries
 ~/.pi/agent-wf/local                         Symlink to main hardened fork install
-~/.pi/agent-wf/stt.json                      Symlink to main voice STT configuration
 ```
 
 The installer adds `~/.local/bin` and `~/.bun/bin` to `.zshrc` and `.bashrc`.

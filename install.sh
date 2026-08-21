@@ -251,6 +251,13 @@ SH
 {
   printf '#!/bin/sh\nset -eu\nMAIN_DIR="%s"\n' "$MAIN_DIR"
   cat <<'SH'
+# A tmux server started from `p` retains the lean profile's variables, notably
+# PI_SKIP_VERSION_CHECK. piwf pins its own agent directory below, but must still
+# drop the rest rather than inherit the lean profile's environment.
+case "${PI_CODING_AGENT_DIR:-}" in
+  "$HOME/.pi/agent-p")
+    unset PI_CODING_AGENT_DIR PI_CODING_AGENT_SESSION_DIR PI_SKIP_VERSION_CHECK ;;
+esac
 export PI_CODING_AGENT_DIR="$HOME/.pi/agent-wf"
 export PI_CODING_AGENT_SESSION_DIR="$MAIN_DIR/sessions"
 if command -v bun >/dev/null 2>&1; then
@@ -333,8 +340,11 @@ const applyCompaction = (settings) => {
 applyCompaction(main);
 
 // The default model scope (Ctrl+P cycling via `/scoped-models`) is restricted to these
-// models on the full entrypoints. Patterns are canonical provider/id so each matches
-// exactly one model (the openrouter ids contain a slash of their own).
+// models on every entrypoint (pi, piwf, p). Patterns are canonical provider/id so each
+// matches exactly one model (the openrouter ids contain a slash of their own). Note two
+// consequences: install.sh rewrites the list on every install (a scope changed through
+// /scoped-models reverts on reinstall), and when a profile's saved default model is not
+// in the scope, Pi starts new sessions on the first scoped model rather than the default.
 const MODEL_SCOPE = [
   "openrouter/z-ai/glm-5.3",
   "openai/gpt-5.6-luna",
@@ -399,34 +409,38 @@ main.packages = [
 main.enabledModels = MODEL_SCOPE;
 writeJson(mainPath, main);
 
-// piwf is the full environment incl. dynamic workflows — the historical `pi`. Its own
-// agent directory gets the complete package list plus the same compaction headroom; it
-// is not quiet, to match the ordinary `pi` startup listing.
-const full = {
-  lastChangelogVersion: main.lastChangelogVersion,
-  defaultThinkingLevel: main.defaultThinkingLevel,
-  defaultProvider: main.defaultProvider,
-  defaultModel: main.defaultModel,
-  theme: main.theme,
-  packages: [...wanted],
-  compaction: { ...(read(wfPath).compaction ?? {}) },
-};
+// piwf is the full environment incl. dynamic workflows — the historical `pi`. Read-modify-
+// write, like main: a value the user or Pi itself persisted to this profile (defaultModel,
+// a /scoped-models choice, anything else) survives a reinstall, and only the managed keys
+// are rewritten. It is not quiet, to match the ordinary `pi` startup listing.
+const full = read(wfPath);
+full.lastChangelogVersion ??= main.lastChangelogVersion;
+full.defaultThinkingLevel ??= main.defaultThinkingLevel;
+full.defaultProvider ??= main.defaultProvider;
+full.defaultModel ??= main.defaultModel;
+full.theme ??= main.theme;
+delete full.quietStartup;
+full.packages = [
+  ...(full.packages ?? []).filter((entry) => !managed.has(identity(entry))),
+  ...wanted,
+];
 full.enabledModels = MODEL_SCOPE;
 applyCompaction(full);
 writeJson(wfPath, full);
 
 // p runs both compaction extensions too, so it needs the same compaction headroom.
 // codex-compaction folds inside a run and context-handoff shapes the summary between
-// runs; the reserve below is what Pi's own between-runs check still uses.
-const lean = {
-  lastChangelogVersion: main.lastChangelogVersion,
-  defaultThinkingLevel: main.defaultThinkingLevel,
-  defaultProvider: main.defaultProvider,
-  defaultModel: main.defaultModel,
-  theme: main.theme,
-  quietStartup: true,
-  compaction: { ...(read(pPath).compaction ?? {}) },
-};
+// runs; the reserve below is what Pi's own between-runs check still uses. Same
+// read-modify-write rule as piwf: only managed keys are rewritten, everything a
+// previous run persisted to the lean profile (its default model included) survives.
+const lean = read(pPath);
+lean.lastChangelogVersion ??= main.lastChangelogVersion;
+lean.defaultThinkingLevel ??= main.defaultThinkingLevel;
+lean.defaultProvider ??= main.defaultProvider;
+lean.defaultModel ??= main.defaultModel;
+lean.theme ??= main.theme;
+lean.quietStartup = true;
+lean.enabledModels = MODEL_SCOPE;
 applyCompaction(lean);
 writeJson(pPath, lean);
 
@@ -500,10 +514,13 @@ ln -sfn "$MAIN_DIR/auth.json" "$P_DIR/auth.json"
 ln -sfn "$MAIN_DIR/models-store.json" "$P_DIR/models-store.json"
 ln -sfn "$MAIN_DIR/auth.json" "$WF_DIR/auth.json"
 ln -sfn "$MAIN_DIR/models-store.json" "$WF_DIR/models-store.json"
-ln -sfn "$MAIN_DIR/stt.json" "$WF_DIR/stt.json"
 rm -rf "$P_DIR/bin"
 ln -s "$MAIN_DIR/bin" "$P_DIR/bin"
 rm -rf "$WF_DIR/bin" "$WF_DIR/local"
+# A stale stt.json symlink from an older install is redundant (the voice fork always
+# reads ~/.pi/agent/stt.json), so remove it rather than leave a dangling link if main
+# ever changes shape.
+rm -f "$WF_DIR/stt.json"
 ln -s "$MAIN_DIR/bin" "$WF_DIR/bin"
 # piwf resolves its local/ packages from its own agent directory, so share main's
 # hardened fork install rather than duplicating it.

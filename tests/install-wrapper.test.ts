@@ -10,3 +10,9 @@ test("every Bun entry point uses the operating system CA store", () => {
 	expect(installer).toContain('exec "$BUN_BIN" --use-system-ca "$ROOT/bin/agent-browser.js" "$@"');
 	expect(installer).toContain('exec "\\$BUN_BIN" --use-system-ca "$TARGET" "\\$@"');
 });
+
+test("pi and piwf both reject an inherited p profile environment", () => {
+	// A tmux server started from `p` retains PI_SKIP_VERSION_CHECK (and friends). Both
+	// full wrappers must drop them, or a later session silently runs a different profile.
+	expect(installer.match(/unset PI_CODING_AGENT_DIR PI_CODING_AGENT_SESSION_DIR PI_SKIP_VERSION_CHECK/g)).toHaveLength(2);
+});
