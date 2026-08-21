@@ -464,7 +464,7 @@ With `capture.type: "ffmpeg"`, the extension records through `ffmpeg`. Platform 
 | --- | --- | --- |
 | macOS | `avfoundation` | `:0` |
 | Linux | `pulse` | `default` |
-| Windows | `dshow` | `audio=Microphone` |
+| Windows | `dshow` | first physical microphone, probed on first recording |
 
 `capture.maxSeconds` (default `120`) is passed to the recorder itself (`ffmpeg -t`, or the bridge daemon's own limit), so capture always stops at the cap even if the session is busy; the extension then transcribes what was recorded.
 
@@ -494,6 +494,14 @@ This means the configured audio source produced no data. To fix it:
    ```
    List ALSA devices with `arecord -L` (common inputs: `default`, `hw:0`, `plughw:0`).
 4. **macOS** — confirm the device with `ffmpeg -f avfoundation -list_devices true -i ""` and set `capture.input` (e.g. `":1"`).
+5. **Windows** — the fork probes DirectShow on first recording. It prefers a physical USB microphone over Steam/Oculus virtual devices. Override with the exact friendly name:
+   ```bash
+   ffmpeg -f dshow -list_devices true -i dummy
+   ```
+   ```json
+   { "capture": { "inputFormat": "dshow", "input": "audio=Microphone (USB Advanced Audio Device)" } }
+   ```
+   Allow desktop apps to use the microphone in Windows privacy settings. The name `audio=Microphone` alone is not a real device.
 
 You can also lower the threshold with `capture.minBytes` (default `4096`), but a working source should far exceed it. See [docs/macos-bridge.md](docs/macos-bridge.md) for the VPS bridge as an alternative when the VPS has no local microphone.
 

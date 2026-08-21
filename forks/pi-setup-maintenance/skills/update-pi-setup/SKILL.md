@@ -5,15 +5,17 @@ description: Update this machine's Pi installation, the pinned agent-browser, or
 
 # Updating this Pi setup
 
-Everything is driven from the git repository at `~/pi-setup`. `install.sh` there is the
-single source of truth: it pins the Pi and `agent-browser` versions, copies each fork
-from `forks/` into `~/.pi/agent/local/`, rewrites the `pi`, `p`, and `agent-browser`
-wrappers in `~/.local/bin`, and prunes stale npm copies of the extensions.
+Everything is driven from the git repository at `~/pi-setup` (or `%USERPROFILE%\pi-setup`
+on Windows). `lib/install.mjs` there is the single source of truth: `install.sh` and
+`install.ps1` bootstrap Bun and run it. It pins the Pi and `agent-browser` versions in
+`lib/versions.json`, copies each fork from `forks/` into `~/.pi/agent/local/`, rewrites
+the `pi`, `p`, and `agent-browser` wrappers in `~/.local/bin` (plus `.cmd` shims on
+Windows), and prunes stale npm copies of the extensions.
 
 ## Rules
 
 1. **Never** run `pi update`, `bun add --global @earendil-works/pi-coding-agent`, or
-   `pi package add` for these extensions. They bypass the pin, the next `./install.sh`
+   `pi package add` for these extensions. They bypass the pin, the next installer run
    silently reverts them, and `bin/pi-setup-doctor` reports the drift as a PROBLEM.
 2. **Never** edit anything under `~/.pi/agent/local/`. That directory is install output.
    Edit `forks/<name>/` in the repository and reinstall.
@@ -63,13 +65,13 @@ section can emit a PROBLEM and fail the exit code.
 
 | Section | What a finding means |
 |---|---|
-| Forks: repository vs installed | An installed copy no longer matches `forks/`. Re-run `./install.sh`. |
+| Forks: repository vs installed | An installed copy no longer matches `forks/`. Re-run the installer. |
 | Pi settings | `settings.json` does not load a fork, or still loads the unpatched npm package that would shadow it. |
-| Configuration hygiene | `stt.json` is not mode 600, or `trust.json` trusts a directory that every repository sits under. |
+| Configuration hygiene | `stt.json` is not mode 600 (Unix), or `trust.json` trusts a directory that every repository sits under. |
 | Compiled mirrors | `pi-dynamic-workflows-safe`'s `dist/` no longer matches its `src/`. Both are reachable through the package exports, so a stale `dist` exports code nobody audited. Run `npm run build` in that fork. |
-| Keybindings and the p profile | An agent directory is missing a binding from `config/keybindings.json`, or the `p` profile is gone. Re-run `./install.sh`. See `docs/KEYBINDINGS.md`. |
+| Keybindings and the p profile | An agent directory is missing a binding from `config/keybindings.json`, or the `p` profile is gone. Re-run the installer. See `docs/KEYBINDINGS.md`. |
 | Retired and unknown local packages | A package on disk that `vendor.json` does not know about — dead code that can still be loaded if it is re-added to settings. |
-| Pi and agent-browser | Installed version differs from the pin in `install.sh` — something bypassed the installer. |
+| Pi and agent-browser | Installed version differs from the pin in `lib/versions.json` — something bypassed the installer. |
 | Compaction settings | `reserveTokens` outside the band in `config/compaction.json`, or compaction disabled. Too small is the common one: Pi only checks the threshold *after an agent run finishes*, so a reserve that covers one reply but not one whole run lets context overshoot the window. Too large stalls the summarization call. Note the reserve is slack, not a bound — a long enough run passes any threshold, and no setting or extension prevents that. See [`LONG_RUNS.md`](../../../../docs/LONG_RUNS.md). |
 | Upstream releases | npm has a newer release than this repository pins. A note, not a problem: upgrading is a deliberate act. |
 
@@ -95,7 +97,7 @@ not touch anything that needs a decision, and says so rather than pretending. Th
 | `trust.json trusts <path>` | Remove that key and re-approve individual repositories. Trust inherits down the tree, so a home-wide entry trusts every repository you ever clone. |
 | `compaction.reserveTokens is …` / `compaction is disabled` | For a reserve below the floor, `--fix` reinstalls and applies `config/compaction.json`. For a hand-set value that is too large, or `enabled: false`, edit `~/.pi/agent/settings.json` — deleting the key lets the installer reapply the policy. See [`LONG_RUNS.md`](../../../../docs/LONG_RUNS.md). |
 | `<name> is installed at … but is not in vendor.json` | A retired package. Confirm it is not wanted, then `rm -rf` that directory — `--fix` will not delete for you. |
-| `stt.json is not valid JSON` / `no usable keybind` | Fix the file by hand; `install.sh` only rewrites the keys it manages, so a syntax error survives a reinstall. |
+| `stt.json is not valid JSON` / `no usable keybind` | Fix the file by hand; the installer only rewrites the keys it manages, so a syntax error survives a reinstall. |
 | A fork does not reproduce from its patch (`bin/pi-setup-vendor --verify --all`) | Someone edited `forks/` without regenerating. Run `bin/pi-setup-vendor --regenerate-patch <fork>` and review the diff. |
 
 If the problem is a defect in an extension rather than a broken install, that is a code
@@ -122,10 +124,10 @@ grep -rn "Type\.Base\|Type\.Awaited\|Type\.Promise\|Value\.Mutate" --include="*.
 
 Then:
 
-1. Set `PI_VERSION` in `install.sh`.
+1. Set `pi` in `lib/versions.json`.
 2. Update the version table in `README.md`.
-3. `./install.sh` — use `PI_SETUP_SKIP_BROWSER_INSTALL=1 ./install.sh` to skip the Chrome
-   check while iterating.
+3. Re-run the installer — `./install.sh` or `./install.ps1`. Use
+   `PI_SETUP_SKIP_BROWSER_INSTALL=1` to skip the Chrome check while iterating.
 4. [Verify](#verify), then commit.
 
 ## 4. Move a fork onto a newer upstream release
@@ -159,7 +161,7 @@ After any re-vendor, treat the hardening as unverified until you have re-checked
    for byte.
 5. Update the table in `README.md`. `vendor.json` is the machine-readable record and
    `bin/pi-setup-vendor` already updated it.
-6. `./install.sh`, then [Verify](#verify).
+6. Re-run the installer, then [Verify](#verify).
 
 If you hand-edit a fork instead, regenerate its patch so it stays the reviewable record:
 
@@ -196,7 +198,7 @@ again at the next release, because `reviewedAgainst` will no longer equal latest
 
 `pi-context-handoff`, `pi-btw-side`, and `pi-setup-maintenance` have no upstream. Edit
 them directly, bump `version` in both `package.json` and `vendor.json` if the change is
-worth marking, then `./install.sh`.
+worth marking, then re-run the installer.
 
 `config/keybindings.json` is the other tree the installer owns: it is merged into
 `~/.pi/agent/keybindings.json` and the `p` profile's copy, touching only the ids listed in
@@ -228,7 +230,7 @@ artefacts of the invocation rather than defects in the code.
 
 ## 6. agent-browser is pinned to the fork's baseline, on purpose
 
-`AGENT_BROWSER_VERSION` in `install.sh` is not "whatever npm has latest". The
+`agentBrowser` in `lib/versions.json` is not "whatever npm has latest". The
 `pi-agent-browser-native-safe` wrapper is validated against one specific CLI release —
 `docs/SUPPORT_MATRIX.md` in that fork names it as the capability baseline. Raising it is
 a re-baseline job. Note that the fork vendors only `dist/`, `scripts/` and `docs/` — the
@@ -258,15 +260,15 @@ the repository root collects those files too but they error, because that fork h
 `node_modules`; the script links Bun's global tree in for the run and removes the link
 after. Use the script, not a bare `bun test`.
 
-After changing `install.sh` or `bin/pi-setup-doctor`, also run:
+After changing `install.sh`, `install.ps1`, `lib/install.mjs`, or `bin/pi-setup-doctor`, also run:
 
 ```bash
 tests/linux-install.sh           # needs Docker; push first, it tests the published install.sh
 ```
 
-Everything else here runs on macOS, so Linux-only breakage — GNU vs BSD `stat`, a
-missing `unzip`, assuming `node` exists — is invisible without it. That class of bug has
-shipped before.
+Linux-only breakage — GNU vs BSD `stat`, a missing `unzip`, assuming `node` exists — is
+invisible without that container. Windows is exercised on a real machine with
+`install.ps1` and `bun test tests/`. That class of bug has shipped before.
 
 `tests/smoke.sh --quick` skips the browser and workflow runs while iterating. The voice
 UI has a test seam for the paths a script cannot reach otherwise:
@@ -308,12 +310,12 @@ review notes is worse than no bump.
 
 ## Rollback
 
-Every version is pinned in `install.sh`, so rolling back is a git operation plus a
+Every version is pinned in `lib/versions.json`, so rolling back is a git operation plus a
 reinstall:
 
 ```bash
 cd ~/pi-setup
-git revert <commit>     # or: git checkout <good-commit> -- install.sh forks/ patches/ vendor.json config/
-./install.sh
+git revert <commit>     # or: git checkout <good-commit> -- lib/versions.json forks/ patches/ vendor.json config/
+./install.sh            # or ./install.ps1 on Windows
 bin/pi-setup-doctor
 ```

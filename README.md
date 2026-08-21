@@ -17,22 +17,36 @@ from npm. See [Extensions are hardened forks](#extensions-are-hardened-forks) an
 
 ## Install
 
-On a fresh macOS or Linux machine, run:
+This branch is `windows`. Piped installs must fetch it (not `main`) — `install.ps1`
+and `lib/install.mjs` are not on `main` yet. Both bootstraps default `PI_SETUP_REF` to
+`windows` so the clone matches the script you downloaded.
+
+macOS or Linux:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/ethanewer/pi-setup/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/ethanewer/pi-setup/windows/install.sh | bash
 ```
 
-Open a new terminal afterward. The installer is idempotent and preserves unrelated
-existing Pi packages and settings.
+Windows (PowerShell):
 
-> Review [`install.sh`](install.sh) before piping it to a shell if you do not trust
-> remote scripts. The installer does not copy credentials or API keys.
+```powershell
+irm https://raw.githubusercontent.com/ethanewer/pi-setup/windows/install.ps1 | iex
+```
+
+Git Bash on Windows can run the `install.sh` one-liner instead. Open a new terminal
+afterward. The installer is idempotent and preserves unrelated existing Pi packages and
+settings.
+
+> Review [`install.sh`](install.sh) or [`install.ps1`](install.ps1) before piping it if
+> you do not trust remote scripts. The installer does not copy credentials or API keys.
+
+Both bootstraps run the same [`lib/install.mjs`](lib/install.mjs) once Bun is available.
+Pinned versions live in [`lib/versions.json`](lib/versions.json).
 
 ## Requirements
 
-- macOS or Linux, x86-64 or ARM64
-- `curl` and `git`
+- macOS, Linux, or Windows 10+, x86-64 or ARM64 (Windows x64 for `agent-browser`)
+- `curl` and `git` (Git for Windows on Windows — Pi needs `bash.exe`)
 - `OPENAI_API_KEY` for the configured Pi model and OpenAI transcription
 - `ffmpeg` plus microphone permission for Voice STT
 
@@ -46,6 +60,7 @@ attention.
 |---|---|---|
 | macOS 15 on Apple Silicon | the machine this is developed on | everything, continuously |
 | Ubuntu 24.04 x86-64 | [`tests/linux-install.sh`](tests/linux-install.sh) | the piped install as a non-root user, the missing-`unzip` refusal, and `bin/pi-setup-doctor` on a host with no `node` |
+| Windows 10 x64 | PowerShell `install.ps1` + `.cmd` shims | installer, `pi`/`p`/`agent-browser` launchers, doctor (via Git Bash), process-tree kill |
 
 Run `tests/linux-install.sh` to reproduce the Linux row; it needs Docker and takes a few
 minutes. It sets `PI_SETUP_SKIP_BROWSER_INSTALL=1`, so **Chrome and `agent-browser` are not
@@ -95,7 +110,7 @@ what can still stop a run.
 
 ### Why forks rather than patches applied at install time
 
-`install.sh` regenerates `~/.pi/agent/npm/package.json` and runs `bun install`, and Pi's
+The installer regenerates `~/.pi/agent/npm/package.json` and runs `bun install`, and Pi's
 own package manager can reinstall or update npm packages at any time. Anything patched in
 place under `node_modules` is silently reverted the next time that happens — an
 unacceptable failure mode for security fixes, because nothing would signal that the
@@ -221,7 +236,7 @@ Voice dictation is configured for OpenAI:
 }
 ```
 
-Use **Option+P** on macOS or **Alt+P** on Linux to start recording. The text cursor
+Use **Option+P** on macOS or **Alt+P** on Linux and Windows to start recording. The text cursor
 becomes `[● recording]`, a slowly pulsing red dot in a grey bracketed block — the input
 box itself does not change colour, and nothing is announced in a banner. Mid-text, where
 there is no blank space to write into, it is the dot alone. It gives way to
@@ -269,7 +284,7 @@ Read it at
 [`forks/pi-setup-maintenance/skills/update-pi-setup/SKILL.md`](forks/pi-setup-maintenance/skills/update-pi-setup/SKILL.md)
 or invoke it with `/skill:update-pi-setup`.
 
-> Do not run `pi update` or `bun add --global` for Pi or the extensions. `install.sh`
+> Do not run `pi update` or `bun add --global` for Pi or the extensions. The installer
 > pins both versions and rewrites the wrappers; anything installed around it is reverted
 > by the next run and reported as drift by `bin/pi-setup-doctor`.
 
@@ -282,11 +297,11 @@ bin/pi-setup-doctor
 Verifies that every fork in `forks/` matches the copy installed under
 `~/.pi/agent/local/`, that Pi's settings load the forks and not the unpatched npm
 packages, that `stt.json` is owner-only, that `trust.json` has no home-wide entry, and
-that the installed Pi and `agent-browser` match the versions `install.sh` pins, and that
+that the installed Pi and `agent-browser` match the versions `lib/versions.json` pins, and that
 `pi-dynamic-workflows-safe`'s `dist/` still mirrors its `src/` — the package exports reach
 both, so a stale `dist` would export code nobody audited. It also checks
 `compaction.reserveTokens` against [`config/compaction.json`](config/compaction.json),
-which is the same file `install.sh` applies: too small and a long agentic turn overshoots
+which is the same file the installer applies: too small and a long agentic turn overshoots
 the context window, too large and the summarization call stalls. See
 [`docs/LONG_RUNS.md`](docs/LONG_RUNS.md). Also reports when npm has published a newer
 release than this repository pins, for Pi, `agent-browser`, or a fork's upstream. Exits
@@ -328,7 +343,7 @@ Edit `forks/<name>-safe/` directly, then:
 
 ```bash
 bin/pi-setup-vendor --regenerate-patch <name>-safe   # keep the patch in sync
-./install.sh                                         # reinstall
+./install.sh                                         # reinstall (or .\install.ps1 on Windows)
 bin/pi-setup-doctor                                  # verify
 ```
 
@@ -349,7 +364,7 @@ the doctor, and update the version table above.
 
 ### Upgrade Pi itself
 
-Update `PI_VERSION` in `install.sh`, test on macOS and Linux, and rerun the installer.
+Update `pi` in `lib/versions.json`, test on macOS, Linux, and Windows, and rerun the installer.
 The wrappers locate the installed Pi package dynamically, so they need no changes.
 `pi-context-handoff` uses only Pi's public API (`compact`, and the
 `session_before_compact` hook), so a Pi upgrade should not disturb it. If Pi ever changes
@@ -389,23 +404,26 @@ added to that profile; the full-profile measurements predate context handoff and
 ~/.local/bin/agent-browser                   Bun-backed agent-browser entrypoint
 ~/.local/bin/pi-agent-browser-config         Browser config CLI
 ~/.local/bin/pi-agent-browser-doctor         Browser diagnostics CLI
+~/.local/bin/*.cmd                           Windows cmd.exe/PowerShell shims (Windows only)
+~/.local/lib/pi-coding-agent/pi.exe          Compiled Pi binary (Windows only, optional)
 ~/.pi/agent/settings.json                    Main Pi settings
-~/.pi/agent/stt.json                         Voice STT configuration (mode 600)
-~/.pi/agent/keybindings.json                 Keys remapped for tmux and Kitty terminals
+~/.pi/agent/stt.json                         Voice STT configuration (mode 600 on Unix)
+~/.pi/agent/keybindings.json                 Keys remapped for tmux, Kitty, and Windows Terminal
 ~/.pi/agent/local/                           Hardened extension forks
 ~/.pi/agent/npm/                             Shared extension packages (no longer used
                                              by this setup; pruned on install)
 ~/.pi/agent/setup-src/                       Clone of this repository, when the
-                                             installer is piped from curl
+                                             installer is piped from curl or irm
 ~/.pi/agent/p/remove-pi-documentation.js     Lean prompt filter
 ~/.pi/agent-p/settings.json                  Quiet lean settings overlay
 ~/.pi/agent-p/keybindings.json               The same remapped keys for the lean profile
-~/.pi/agent-p/auth.json                      Symlink to main auth
-~/.pi/agent-p/models-store.json              Symlink to main model catalog
-~/.pi/agent-p/bin                            Symlink to main helper binaries
+~/.pi/agent-p/auth.json                      Symlink (or copy on Windows without Developer Mode) to main auth
+~/.pi/agent-p/models-store.json              Symlink/copy to main model catalog
+~/.pi/agent-p/bin                            Symlink/junction to main helper binaries
 ```
 
-The installer adds `~/.local/bin` and `~/.bun/bin` to `.zshrc` and `.bashrc`.
+The installer adds `~/.local/bin` and `~/.bun/bin` to `.zshrc` and `.bashrc`, and on
+Windows to the user PATH plus the PowerShell profile.
 
 There is exactly one entrypoint per command. Pi is installed once, globally, by Bun;
 `bun add --global` also links its own `pi` and `agent-browser` shims into `~/.bun/bin`,

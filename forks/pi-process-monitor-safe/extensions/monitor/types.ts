@@ -99,8 +99,9 @@ export interface ProcessAdapter {
   spawn(command: string, cwd: string): ChildHandle;
   /**
    * Signal the process group rooted at `pid`. Returns false when process
-   * groups are unavailable (e.g. Windows or an already-reaped group), in
-   * which case the caller falls back to direct-child signaling.
+   * groups are unavailable or the group is already gone, in which case the
+   * caller falls back to direct-child signaling. On Windows this is
+   * `taskkill /T` (forced for SIGKILL).
    */
   killGroup(pid: number, signal: KillSignal): boolean;
 }

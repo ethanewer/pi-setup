@@ -180,7 +180,7 @@ refuses to signal a pid or remove a profile it cannot prove it owns (`lib/temp.j
 
 Amplifier: the config is re-read on **every dictation** (`index.ts:37`), so any change
 takes effect with no restart, and `~/.pi/agent/stt.json` shipped world-readable.
-`install.sh` now sets it to `600` and `bin/pi-setup-doctor` checks it.
+The installer now sets it to `600` on Unix and `bin/pi-setup-doctor` checks it.
 
 ### MEDIUM and LOW
 

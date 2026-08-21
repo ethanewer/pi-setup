@@ -11,10 +11,17 @@
 # --fix handles exactly the problems whose repair is deterministic: an installed copy that
 # no longer matches forks/, settings that do not load a fork or still load the npm package
 # that would shadow it, a version that drifted from the pin, and an stt.json that is not
-# owner-only. The first three are all one thing — re-running install.sh — so that is what it
+# owner-only. The first three are all one thing — re-running the installer — so that is what it
 # does. It never deletes anything, never edits a fork, and never touches trust.json or the
 # compaction settings, because those need a judgement it cannot make.
 set -uo pipefail
+
+is_windows() {
+  case "$(uname -s)" in
+    MINGW*|MSYS*|CYGWIN*) return 0 ;;
+  esac
+  return 1
+}
 
 QUIET=0
 OFFLINE=0
@@ -58,9 +65,11 @@ bad() { PROBLEMS=$((PROBLEMS + 1)); printf '  PROBLEM  %s\n' "$*"; }
 if command -v node >/dev/null 2>&1; then
   JS="node"
 elif command -v bun >/dev/null 2>&1; then
-  JS="bun"
+  JS="$(command -v bun)"
 elif [[ -x "${BUN_INSTALL:-$HOME/.bun}/bin/bun" ]]; then
   JS="${BUN_INSTALL:-$HOME/.bun}/bin/bun"
+elif [[ -x "${BUN_INSTALL:-$HOME/.bun}/bin/bun.exe" ]]; then
+  JS="${BUN_INSTALL:-$HOME/.bun}/bin/bun.exe"
 else
   printf '%s: needs node or bun on PATH\n' "$(basename "$0")" >&2
   exit 2
@@ -87,9 +96,29 @@ for fork in $FORK_NAMES; do
   fi
   # .git is present when a fork was installed from its own checkout; node_modules and
   # bun.lock are produced by the dependency install. None is part of the fork's content.
-  DIFF="$(diff -rq --exclude=node_modules --exclude=.git --exclude=bun.lock "$SRC" "$DST" 2>&1)"
-  if [[ -z "$DIFF" ]]; then
-    ok "$fork matches the installed copy"
+  # TypeScript live entries are compiled to a sibling .js at install time. Ignore that
+  # extra file in the tree diff, but still require it to exist and still compare every
+  # other index.js (including audited dist/ entries).
+  COMPILED="$(
+    REPO_DIR="$REPO_DIR" FORK="$fork" "$JS" -e '
+const live = require(process.env.REPO_DIR + "/vendor.json").forks[process.env.FORK]?.live;
+if (typeof live === "string" && /\.ts$/i.test(live)) process.stdout.write(live.replace(/\.ts$/i, ".js"));
+'
+  )"
+  if [[ -n "$COMPILED" && ! -f "$DST/$COMPILED" ]]; then
+    bad "$fork is missing the install-time compiled $COMPILED (bin/pi-setup-doctor --fix)"
+    fixable install
+  fi
+  DIFF="$(diff -rq --exclude=node_modules --exclude=.git --exclude=bun.lock "$SRC" "$DST" 2>&1 || true)"
+  if [[ -n "$COMPILED" && -n "$DIFF" ]]; then
+    compiled_dir="${COMPILED%/*}"
+    compiled_base="${COMPILED##*/}"
+    DIFF="$(printf '%s\n' "$DIFF" | grep -v -F "${compiled_dir}: ${compiled_base}" || true)"
+  fi
+  if [[ -z "${DIFF:-}" ]]; then
+    if [[ -z "$COMPILED" || -f "$DST/$COMPILED" ]]; then
+      ok "$fork matches the installed copy"
+    fi
   else
     bad "$fork differs from the installed copy (bin/pi-setup-doctor --fix reinstalls from forks/):"
     fixable install
@@ -147,16 +176,20 @@ say ""
 say "Configuration hygiene"
 STT="$MAIN_DIR/stt.json"
 if [[ -f "$STT" ]]; then
-  # GNU stat -f means --file-system and *succeeds* with unrelated output, so trying BSD
-  # first silently produced a non-mode on Linux and reported a false problem on every
-  # install there. Try GNU, then fall back only if the result is not an octal mode.
-  MODE="$(stat -c '%a' "$STT" 2>/dev/null)"
-  case "$MODE" in ''|*[!0-7]*) MODE="$(stat -f '%Lp' "$STT" 2>/dev/null)" ;; esac
-  if [[ "$MODE" == "600" ]]; then
-    ok "stt.json is owner-only (600)"
+  if is_windows; then
+    ok "stt.json is present (Unix file modes are not used on Windows)"
   else
-    bad "stt.json is mode $MODE; it selects the transcription host and capture binary, so it should be 600 (chmod 600 $STT)"
-    fixable stt "$STT"
+    # GNU stat -f means --file-system and *succeeds* with unrelated output, so trying BSD
+    # first silently produced a non-mode on Linux and reported a false problem on every
+    # install there. Try GNU, then fall back only if the result is not an octal mode.
+    MODE="$(stat -c '%a' "$STT" 2>/dev/null)"
+    case "$MODE" in ''|*[!0-7]*) MODE="$(stat -f '%Lp' "$STT" 2>/dev/null)" ;; esac
+    if [[ "$MODE" == "600" ]]; then
+      ok "stt.json is owner-only (600)"
+    else
+      bad "stt.json is mode $MODE; it selects the transcription host and capture binary, so it should be 600 (chmod 600 $STT)"
+      fixable stt "$STT"
+    fi
   fi
 fi
 
@@ -264,15 +297,20 @@ fi
 # browser, monitor, workflows, and every skill out, so checking only that the wrapper exists
 # would miss both accidental additions and missing lightweight extensions.
 #
-# The expected allowlist is read out of install.sh rather than restated here. Restating it
-# would make this check assert a second, independent opinion about what p should load: edit
-# install.sh, reinstall, and the doctor would report a PROBLEM whose suggested fix re-runs
-# install.sh and reproduces the same wrapper — a false PROBLEM that --fix cannot clear.
-# Derived from install.sh, a mismatch can only mean the installed wrapper is stale, which is
-# exactly what reinstalling fixes.
+# The expected allowlist is read out of lib/wrappers/p.sh rather than restated here.
+# Restating it would make this check assert a second, independent opinion about what p
+# should load. Derived from the wrapper template, a mismatch can only mean the installed
+# wrapper is stale, which is exactly what reinstalling fixes.
 P_WRAPPER="$HOME/.local/bin/p"
-if [[ ! -x "$P_WRAPPER" ]]; then
+P_WRAPPER_OK=0
+if [[ -f "$P_WRAPPER" ]]; then
+  if is_windows || [[ -x "$P_WRAPPER" ]]; then P_WRAPPER_OK=1; fi
+fi
+if [[ "$P_WRAPPER_OK" != "1" ]]; then
   bad "$P_WRAPPER is missing or not executable (bin/pi-setup-doctor --fix)"
+  fixable install
+elif is_windows && [[ ! -f "$HOME/.local/bin/p.cmd" ]]; then
+  bad "$HOME/.local/bin/p.cmd is missing, so PowerShell/cmd cannot launch the lean profile (bin/pi-setup-doctor --fix)"
   fixable install
 elif [[ ! -f "$P_DIR/settings.json" ]]; then
   bad "$P_DIR/settings.json is missing, so the lean profile has no configuration (bin/pi-setup-doctor --fix)"
@@ -280,7 +318,7 @@ elif [[ ! -f "$P_DIR/settings.json" ]]; then
 else
   if ! P_PROFILE_REPORT="$("$JS" -e '
 const { readFileSync } = require("node:fs");
-const [wrapper, installer] = process.argv.slice(1);
+const [wrapper, template] = process.argv.slice(1);
 
 const parse = (text) => {
   const lines = text.split(/\r?\n/).map((line) => line.trim());
@@ -294,35 +332,20 @@ const parse = (text) => {
   };
 };
 
-// install.sh writes the wrapper from a single quoted heredoc, so the block reaches disk
-// verbatim — $MAIN_DIR included, which the wrapper assigns itself on line 3. Locating the
-// block by its own error string keeps this from matching some other future heredoc.
-const source = readFileSync(installer, "utf8");
-// \x27 is a single quote: this whole program is a single-quoted argument to the shell,
-// so a literal quote here would end it and leave the rest as stray shell words.
-const blocks = source.split(/^[ \t]*cat <<\x27SH\x27[ \t]*$/m).slice(1);
-const block = blocks.map((b) => b.split(/^[ \t]*SH[ \t]*$/m)[0]).find((b) => b.includes("p: could not locate"));
-if (block === undefined) {
-  process.stdout.write("could not find the p wrapper heredoc in " + installer);
-  process.exit(0);
-}
-
-const want = parse(block);
+const want = parse(readFileSync(template, "utf8"));
 const got = parse(readFileSync(wrapper, "utf8"));
 const problems = [];
-// A malformed source block would otherwise make every install look correct by matching an
-// empty expectation against an empty reading.
-if (want.extensions.length === 0) problems.push("install.sh declares no --extension for p; the contract cannot be checked");
-if (want.noExtensions !== 1 || want.noSkills !== 1) problems.push("install.sh does not pass --no-extensions and --no-skills exactly once for p");
+if (want.extensions.length === 0) problems.push("lib/wrappers/p.sh declares no --extension for p; the contract cannot be checked");
+if (want.noExtensions !== 1 || want.noSkills !== 1) problems.push("lib/wrappers/p.sh does not pass --no-extensions and --no-skills exactly once for p");
 if (problems.length === 0) {
   if (got.noExtensions !== want.noExtensions) problems.push("--no-extensions appears " + got.noExtensions + " time(s), expected " + want.noExtensions);
   if (got.noSkills !== want.noSkills) problems.push("--no-skills appears " + got.noSkills + " time(s), expected " + want.noSkills);
   if (JSON.stringify(got.extensions) !== JSON.stringify(want.extensions)) {
-    problems.push("extension allowlist is [" + got.extensions.join(", ") + "]; install.sh declares [" + want.extensions.join(", ") + "]");
+    problems.push("extension allowlist is [" + got.extensions.join(", ") + "]; lib/wrappers/p.sh declares [" + want.extensions.join(", ") + "]");
   }
 }
 process.stdout.write(problems.join("; "));
-' "$P_WRAPPER" "$REPO_DIR/install.sh" 2>/dev/null)"; then
+' "$P_WRAPPER" "$REPO_DIR/lib/wrappers/p.sh" 2>/dev/null)"; then
     bad "could not inspect $P_WRAPPER's lean profile contract (bin/pi-setup-doctor --fix)"
     fixable install
   elif [[ -z "$P_PROFILE_REPORT" ]]; then
@@ -335,11 +358,22 @@ const names = readFileSync(process.argv[1], "utf8").split(/\r?\n/)
   });
 process.stdout.write(names.join(", "));
 ' "$P_WRAPPER" 2>/dev/null)"
-    ok "the p profile matches install.sh: ${P_EXT_NAMES:-no local extensions}, no skills"
+    ok "the p profile matches lib/wrappers/p.sh: ${P_EXT_NAMES:-no local extensions}, no skills"
   else
-    bad "$P_WRAPPER does not match the lean profile install.sh declares: $P_PROFILE_REPORT (bin/pi-setup-doctor --fix)"
+    bad "$P_WRAPPER does not match the lean profile lib/wrappers/p.sh declares: $P_PROFILE_REPORT (bin/pi-setup-doctor --fix)"
     fixable install
   fi
+fi
+
+if is_windows; then
+  for name in pi agent-browser; do
+    if [[ ! -f "$HOME/.local/bin/${name}.cmd" ]]; then
+      bad "$HOME/.local/bin/${name}.cmd is missing, so cmd.exe/PowerShell cannot launch ${name} (bin/pi-setup-doctor --fix)"
+      fixable install
+    else
+      ok "${name}.cmd shim is present"
+    fi
+  done
 fi
 
 # A keybind Pi cannot parse falls back to the upstream default without saying so.
@@ -375,13 +409,12 @@ fi
 
 say ""
 say "Pi and agent-browser"
-# install.sh is the single source of truth for both versions: it pins them, installs
-# them, and rewrites the wrappers. An installation that has drifted from the pin means
-# something bypassed it (`pi update`, a manual `bun add --global`), and the next
-# ./install.sh run would silently move it back.
+# lib/versions.json is the single source of truth for both versions. An installation
+# that has drifted from the pin means something bypassed the installer (`pi update`, a
+# manual `bun add --global`), and the next install would silently move it back.
 BUN_GLOBAL="${BUN_INSTALL:-$HOME/.bun}/install/global/node_modules"
-PINNED_PI="$(sed -n 's/^PI_VERSION="\(.*\)"$/\1/p' "$REPO_DIR/install.sh" | head -1)"
-PINNED_AB="$(sed -n 's/^AGENT_BROWSER_VERSION="\(.*\)"$/\1/p' "$REPO_DIR/install.sh" | head -1)"
+PINNED_PI="$("$JS" -e 'process.stdout.write(String(require(process.argv[1] + "/lib/versions.json").pi ?? ""))' "$REPO_DIR")"
+PINNED_AB="$("$JS" -e 'process.stdout.write(String(require(process.argv[1] + "/lib/versions.json").agentBrowser ?? ""))' "$REPO_DIR")"
 pkg_version() { # pkg_version <package-dir>
   "$JS" -e '
 const { existsSync, readFileSync } = require("node:fs");
@@ -395,14 +428,14 @@ INSTALLED_AB="$(pkg_version "$BUN_GLOBAL/agent-browser")"
 for entry in "Pi|$PINNED_PI|$INSTALLED_PI" "agent-browser|$PINNED_AB|$INSTALLED_AB"; do
   IFS='|' read -r NAME PINNED INSTALLED <<< "$entry"
   if [[ -z "$PINNED" ]]; then
-    bad "could not read the $NAME version pinned in install.sh"
+    bad "could not read the $NAME version pinned in lib/versions.json"
   elif [[ -z "$INSTALLED" ]]; then
-    bad "$NAME is pinned at $PINNED but is not installed under $BUN_GLOBAL (run ./install.sh)"
+    bad "$NAME is pinned at $PINNED but is not installed under $BUN_GLOBAL (run the installer)"
     fixable install
   elif [[ "$INSTALLED" == "$PINNED" ]]; then
-    ok "$NAME $INSTALLED matches the version install.sh pins"
+    ok "$NAME $INSTALLED matches the version lib/versions.json pins"
   else
-    bad "$NAME $INSTALLED is installed but install.sh pins $PINNED; the next ./install.sh run would change it. Update the pin or reinstall."
+    bad "$NAME $INSTALLED is installed but lib/versions.json pins $PINNED; the next install would change it. Update the pin or reinstall."
     fixable install
   fi
 done
@@ -531,7 +564,9 @@ say ""
 if [[ "$PROBLEMS" -gt 0 && "$FIX" == "1" ]]; then
   printf '\nRepairing what can be repaired mechanically.\n'
   if [[ -n "$FIXABLE_STT" ]]; then
-    if chmod 600 "$FIXABLE_STT" 2>/dev/null; then
+    if is_windows; then
+      printf '  skipped  chmod 600 %s (Unix file modes are not used on Windows)\n' "$FIXABLE_STT"
+    elif chmod 600 "$FIXABLE_STT" 2>/dev/null; then
       printf '  fixed    chmod 600 %s\n' "$FIXABLE_STT"
       FIXED=$((FIXED + 1))
     else
@@ -539,16 +574,27 @@ if [[ "$PROBLEMS" -gt 0 && "$FIX" == "1" ]]; then
     fi
   fi
   if [[ "$NEEDS_INSTALL" == "1" ]]; then
-    if [[ ! -x "$REPO_DIR/install.sh" ]]; then
-      printf '  failed   %s/install.sh is missing or not executable\n' "$REPO_DIR"
-    else
-      printf '  running  %s/install.sh (Chrome check skipped)\n' "$REPO_DIR"
-      if PI_SETUP_SKIP_BROWSER_INSTALL=1 "$REPO_DIR/install.sh" >/tmp/pi-setup-fix.log 2>&1; then
+    FIX_LOG="${TMPDIR:-${TMP:-${TEMP:-/tmp}}}/pi-setup-fix.log"
+    if is_windows && [[ -f "$REPO_DIR/install.ps1" ]]; then
+      printf '  running  %s/install.ps1 (Chrome check skipped)\n' "$REPO_DIR"
+      PS1="$REPO_DIR/install.ps1"
+      command -v cygpath >/dev/null 2>&1 && PS1="$(cygpath -w "$PS1")"
+      if PI_SETUP_SKIP_BROWSER_INSTALL=1 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$PS1" >"$FIX_LOG" 2>&1; then
         printf '  fixed    reinstalled from forks/\n'
         FIXED=$((FIXED + 1))
       else
-        printf '  failed   install.sh exited non-zero; see /tmp/pi-setup-fix.log\n'
+        printf '  failed   install.ps1 exited non-zero; see %s\n' "$FIX_LOG"
       fi
+    elif [[ -f "$REPO_DIR/install.sh" ]]; then
+      printf '  running  %s/install.sh (Chrome check skipped)\n' "$REPO_DIR"
+      if PI_SETUP_SKIP_BROWSER_INSTALL=1 bash "$REPO_DIR/install.sh" >"$FIX_LOG" 2>&1; then
+        printf '  fixed    reinstalled from forks/\n'
+        FIXED=$((FIXED + 1))
+      else
+        printf '  failed   install.sh exited non-zero; see %s\n' "$FIX_LOG"
+      fi
+    else
+      printf '  failed   installer is missing in %s\n' "$REPO_DIR"
     fi
   fi
   if [[ "$FIXED" == "0" ]]; then

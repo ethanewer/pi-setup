@@ -6,11 +6,11 @@
 # Defaults to ubuntu:24.04 and the main branch. Needs Docker. Takes a few minutes,
 # nearly all of it Bun and Pi downloading.
 #
-# This exists because everything else here runs on macOS. Portability bugs in
-# install.sh and bin/pi-setup-doctor — GNU vs BSD stat, /usr/bin/git being a stub on
-# macOS but real on Linux, a missing unzip, no node anywhere — are invisible from a
-# Mac by construction. One of them shipped: a check that produced a false PROBLEM on
-# every Linux install, fixed without anyone ever seeing a Linux install.
+# This exists because portability bugs in install.sh, install.ps1, lib/install.mjs and
+# bin/pi-setup-doctor — GNU vs BSD stat, /usr/bin/git being a stub on macOS but real on
+# Linux, a missing unzip, no node anywhere — are invisible from a Mac by construction.
+# One of them shipped: a check that produced a false PROBLEM on every Linux install,
+# fixed without anyone ever seeing a Linux install.
 #
 # It tests the published install.sh over the network rather than the working tree, so
 # commit and push before running it. That is deliberate: the piped one-liner in the
@@ -49,12 +49,12 @@ echo
 echo "=== [1] no unzip installed: the installer must refuse at the door"
 # Bun's own installer needs unzip. Without this precondition the install dies partway
 # through with Bun's error, after having already written half a setup.
-su - tester -c "curl -fsSL '$URL' | PI_SETUP_SKIP_BROWSER_INSTALL=1 bash" 2>&1 | tail -2
+su - tester -c "curl -fsSL '$URL' | PI_SETUP_REF='$REF' PI_SETUP_SKIP_BROWSER_INSTALL=1 bash" 2>&1 | tail -2
 
 echo
 echo "=== [2] install unzip, then the real thing"
 apt-get install -y -qq unzip >/dev/null 2>&1
-su - tester -c "curl -fsSL '$URL' | PI_SETUP_SKIP_BROWSER_INSTALL=1 bash" >/tmp/out.log 2>&1
+su - tester -c "curl -fsSL '$URL' | PI_SETUP_REF='$REF' PI_SETUP_SKIP_BROWSER_INSTALL=1 bash" >/tmp/out.log 2>&1
 INSTALL_EXIT=$?
 echo "install exit=$INSTALL_EXIT"
 [[ "$INSTALL_EXIT" == "0" ]] || { echo "--- install log ---"; cat /tmp/out.log; }

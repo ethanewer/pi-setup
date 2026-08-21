@@ -1,10 +1,10 @@
 /**
  * Real-child integration smoke tests: everything else in test/ drives the
- * runtime with deterministic fakes; these two tests use the production
- * adapters (real bash children, real timers, real process groups) to pin the
- * behaviors fakes cannot prove — that final pipe output is never dropped
- * before the exit event, and that stopping a watcher tears down the whole
- * process group.
+ * runtime with deterministic fakes; these tests use the production adapters
+ * (real bash children, real timers, real process groups) to pin the behaviors
+ * fakes cannot prove — that final pipe output is never dropped before the exit
+ * event, and that stopping a watcher tears down the whole process tree
+ * (POSIX process groups, `taskkill /T` on Windows).
  */
 
 import { test } from "node:test";
@@ -16,12 +16,16 @@ import {
   createRealClock,
   createRealFileAdapter,
   createRealProcessAdapter,
+  findBashCommand,
   randomWatcherId,
 } from "../extensions/monitor/adapters.ts";
 import { createMonitorRuntime } from "../extensions/monitor/runtime.ts";
 import type { MonitorCustomMessage } from "../extensions/monitor/types.ts";
 
 const isUnix = process.platform !== "win32";
+const bashPath = findBashCommand();
+const hasRealBash =
+  bashPath.length > 0 && (process.platform !== "win32" || /git/i.test(bashPath));
 
 function makeRealRuntime() {
   const sent: MonitorCustomMessage[] = [];
@@ -44,7 +48,7 @@ async function waitFor(cond: () => boolean, what: string, timeoutMs = 10_000): P
   }
 }
 
-test("real spawn: final unterminated output arrives before the exit event", { skip: !isUnix }, async () => {
+test("real spawn: final unterminated output arrives before the exit event", { skip: !hasRealBash }, async () => {
   const { runtime, sent } = makeRealRuntime();
   // No trailing newline: the last chunk is only delivered if exit handling
   // waits for the stdio pipes to close (Node 'close', not 'exit').
@@ -128,5 +132,21 @@ test("real kill: stopping a watcher terminates the whole process group", { skip:
       }
     }
     fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("real kill: taskkill /T stops a spawned bash child", { skip: process.platform !== "win32" || !hasRealBash }, async () => {
+  const proc = createRealProcessAdapter();
+  const handle = proc.spawn("sleep 300", process.cwd());
+  let exited = false;
+  handle.onExit(() => {
+    exited = true;
+  });
+  try {
+    await waitFor(() => handle.pid !== undefined, "bash child pid");
+    assert.equal(proc.killGroup(handle.pid as number, "SIGKILL"), true);
+    await waitFor(() => exited, "bash tree exited after taskkill");
+  } finally {
+    if (!exited && handle.pid !== undefined) proc.killGroup(handle.pid, "SIGKILL");
   }
 });

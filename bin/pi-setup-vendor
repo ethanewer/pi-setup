@@ -41,9 +41,11 @@ command -v npm >/dev/null 2>&1 || die "npm is required (it fetches upstream tarb
 if command -v node >/dev/null 2>&1; then
   JS="node"
 elif command -v bun >/dev/null 2>&1; then
-  JS="bun"
+  JS="$(command -v bun)"
 elif [[ -x "${BUN_INSTALL:-$HOME/.bun}/bin/bun" ]]; then
   JS="${BUN_INSTALL:-$HOME/.bun}/bin/bun"
+elif [[ -x "${BUN_INSTALL:-$HOME/.bun}/bin/bun.exe" ]]; then
+  JS="${BUN_INSTALL:-$HOME/.bun}/bin/bun.exe"
 else
   die "needs node or bun on PATH"
 fi

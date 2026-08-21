@@ -3,8 +3,9 @@
  * Node.js timers, child processes, and filesystem access.
  */
 
-import { spawn, type ChildProcess } from "node:child_process";
+import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 import * as fs from "node:fs";
+import * as path from "node:path";
 import {
   type ChildHandle,
   type Clock,
@@ -89,25 +90,89 @@ class RealChildHandle implements ChildHandle {
   }
 }
 
+const WIN32 = process.platform === "win32";
+
+function isWslBash(p: string): boolean {
+  const normalized = p.replace(/\//g, "\\").toLowerCase();
+  return (
+    normalized.includes("\\windows\\system32\\bash.exe") ||
+    normalized.includes("\\windows\\sysnative\\bash.exe") ||
+    normalized.includes("\\windows\\syswow64\\bash.exe")
+  );
+}
+
+function whichOnPath(name: string): string {
+  const pathEnv = process.env.PATH || "";
+  const delimiter = WIN32 ? ";" : ":";
+  const exts = WIN32 ? (process.env.PATHEXT || ".EXE;.CMD;.BAT").split(";").concat("") : [""];
+  for (const dir of pathEnv.split(delimiter)) {
+    if (!dir) continue;
+    for (const ext of exts) {
+      const candidate = path.join(dir, name + ext);
+      if (fs.existsSync(candidate)) return candidate;
+    }
+  }
+  return "";
+}
+
+/** Locate bash so spawn/poll commands use the same shell Pi requires on Windows. */
+export function findBashCommand(): string {
+  if (!WIN32) return "bash";
+  const candidates = [
+    process.env.PI_BASH,
+    process.env.GIT_BASH,
+    "C:\\Program Files\\Git\\bin\\bash.exe",
+    "C:\\Program Files\\Git\\usr\\bin\\bash.exe",
+    "C:\\Program Files (x86)\\Git\\bin\\bash.exe",
+  ].filter((p): p is string => typeof p === "string" && p.length > 0);
+  const git = whichOnPath("git");
+  if (git) {
+    const gitDir = path.dirname(git);
+    candidates.push(
+      path.join(gitDir, "bash.exe"),
+      path.join(gitDir, "..", "bin", "bash.exe"),
+      path.join(gitDir, "..", "usr", "bin", "bash.exe"),
+    );
+  }
+  const fromPath = whichOnPath("bash");
+  if (fromPath && /git/i.test(fromPath)) candidates.push(fromPath);
+  for (const c of candidates) {
+    if (c && fs.existsSync(c) && !isWslBash(c)) return c;
+  }
+  return "";
+}
+
+function killWindowsTree(pid: number, force: boolean): boolean {
+  const args = ["/PID", String(pid), "/T"];
+  if (force) args.push("/F");
+  const result = spawnSync("taskkill", args, {
+    stdio: "ignore",
+    windowsHide: true,
+  });
+  // 0 = signaled, 128 = already gone. Anything else falls back to the direct child.
+  return result.status === 0 || result.status === 128;
+}
+
 /**
  * Spawn/poll children run in their own process group (`detached: true`) on
- * Unix so teardown can signal the whole tree via the negative PID. On
- * platforms without process groups, `killGroup` returns false and the runtime
- * falls back to signaling the direct child.
+ * Unix so teardown can signal the whole tree via the negative PID. On Windows
+ * the same `detached` flag creates a new process tree, which `taskkill /T`
+ * then tears down — SIGTERM without `/F`, SIGKILL with it.
  */
 export function createRealProcessAdapter(): ProcessAdapter {
-  const detached = process.platform !== "win32";
+  const bash = findBashCommand();
   return {
     spawn(command: string, cwd: string): ChildHandle {
-      const child = spawn("bash", ["-c", command], {
+      const child = spawn(bash, ["-c", command], {
         cwd,
-        detached,
+        detached: true,
         stdio: ["ignore", "pipe", "pipe"],
+        windowsHide: true,
       });
       return new RealChildHandle(child);
     },
     killGroup(pid: number, signal: KillSignal): boolean {
-      if (process.platform === "win32") return false;
+      if (WIN32) return killWindowsTree(pid, signal === "SIGKILL");
       try {
         process.kill(-pid, signal);
         return true;

@@ -382,7 +382,7 @@ driven end to end without a microphone or an API call.
 microphone audio to an arbitrary HTTPS host by naming a credential explicitly, or run any
 already-executable binary via `capture.ffmpegPath`. Both are the documented feature set; the
 fix removed the *silent* variants, where a defaulted key followed a host you never named.
-`install.sh` keeps that file mode `600` and `bin/pi-setup-doctor` checks it.
+`install.sh` keeps that file mode `600` on Unix and `bin/pi-setup-doctor` checks it (skipped on Windows, where NTFS has no Unix modes).
 
 ## pi-process-monitor-safe
 
@@ -411,7 +411,7 @@ Revisit that schema if strict constrained sampling is enabled for this tool.
 bound, so a poll child that never exited — a hung SSH, which is the case poll mode exists
 for — held the guard forever and the watcher went permanently silent, with no error to
 latch onto. A tick now gets `intervalMs - 1000` and is killed through the existing
-process-group escalation, reported once through the existing failure latch.
+process-group escalation (POSIX negative PID, `taskkill /T` on Windows), reported once through the existing failure latch.
 
 Declined from 2.0.0, with reasons:
 
@@ -458,10 +458,10 @@ beyond one skill description. It carries `update-pi-setup`, the procedure for up
 roll back.
 
 It exists because the failure mode is predictable: an agent told to "update pi" reaches
-for `pi update`, which bypasses the version pin in `install.sh`, is silently reverted by
+for `pi update`, which bypasses the version pin in `lib/versions.json`, is silently reverted by
 the next install, and shows up later as drift. The skill puts the pinned path where an
 agent will find it. `bin/pi-setup-doctor` now reports that drift directly, comparing the
-installed Pi and `agent-browser` against the versions `install.sh` pins.
+installed Pi and `agent-browser` against the versions `lib/versions.json` pins.
 
 ## Startup labels
 
@@ -470,7 +470,9 @@ filename when the entry is not an `index.*` (`modes/interactive/interactive-mode
 Upstream `pi-voice-stt` points at `src/index.ts` and upstream dynamic-workflows at
 `extensions/workflow.ts`, so the startup listing read `src` and `workflow.ts`. Both forks
 now use the `extensions/<name>/index.ts` convention the other three already followed, so
-the listing identifies every extension by name:
+the listing identifies every extension by name. The installer compiles each TypeScript
+entry to a sibling `index.js` in the same folder so Pi does not pay jiti transpile cost
+on every startup, and the listing still uses the `extensions/<name>/` directory name:
 
 ```text
 [Skills]

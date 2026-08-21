@@ -37,13 +37,38 @@ Voice dictation works either way: the fork accepts a list of bindings and compar
 characters as well as key ids, so `alt+p` and `π` are both bound — including the `ESC [ 960 u`
 form a Kitty-protocol terminal uses to report a composed `π`.
 
+## Windows Terminal
+
+Windows Terminal binds **Alt+Enter** to fullscreen by default, so this setup's
+`alt+enter` newline chord never reaches Pi until that action is remapped. Add to
+Windows Terminal `settings.json` (Ctrl+Shift+, → Open JSON file):
+
+```json
+{
+  "actions": [
+    {
+      "command": { "action": "sendInput", "input": "\u001b[13;2u" },
+      "keys": "shift+enter"
+    },
+    {
+      "command": { "action": "sendInput", "input": "\u001b[13;3u" },
+      "keys": "alt+enter"
+    }
+  ]
+}
+```
+
+`Ctrl+Enter` and `Ctrl+J` insert a newline without that remap. Voice dictation is
+`Alt+P`. Pi itself still needs Git Bash (`bash.exe`); the installer sets `shellPath`
+when it finds Git for Windows.
+
 ## What this setup binds
 
 `config/keybindings.json`, installed to `~/.pi/agent/keybindings.json` and the `p` profile.
 
 | Action | Pi default | Bound here | Why |
 |---|---|---|---|
-| `tui.input.newLine` | `shift+enter`, `ctrl+j` | `alt+enter`, `shift+enter`, `ctrl+j` | Option+Enter is `alt+enter` in both modes. `shift+enter` is kept because it *does* work under the protocol, and because a Kitty-mode terminal reports `ESC CR` as `shift+enter`. `ctrl+j` (`0x0a`) needs no Meta and no protocol at all. |
+| `tui.input.newLine` | `shift+enter`, `ctrl+j` | `alt+enter`, `shift+enter`, `ctrl+enter`, `ctrl+j` | Option+Enter is `alt+enter` in both modes. `shift+enter` is kept because it *does* work under the protocol, and because a Kitty-mode terminal reports `ESC CR` as `shift+enter`. `ctrl+enter` is what Windows Terminal and Pi's Windows docs use for newline. `ctrl+j` (`0x0a`) needs no Meta and no protocol at all. |
 | `app.message.followUp` | `alt+enter` | `alt+tab`, `ctrl+alt+i` | Freed `alt+enter` for the newline. Option+Tab is `alt+tab` under the protocol and `ctrl+alt+i` without it — Pi decodes legacy `ESC` + `0x09` as ctrl+alt+i, since `0x09` is in the control range. Binding only one of the two is why this silently did nothing in Ghostty at first. |
 | `app.message.dequeue` | `alt+up` | `ctrl+alt+u` | Real conflict, not hygiene: Pi maps the legacy sequence `ESC p` to `alt+up`, so with Meta on, Option+P fired dictation *and* restored queued messages. |
 | `app.model.cycleBackward` | `shift+ctrl+p` | `ctrl+alt+p` | `ctrl+shift+<letter>` is indistinguishable from `ctrl+<letter>` without CSI-u. |

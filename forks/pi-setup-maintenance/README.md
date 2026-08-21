@@ -8,7 +8,7 @@ the agent's tool surface and cannot affect a running session.
 The procedure for updating this machine: Pi itself, the pinned `agent-browser`, and each
 hardened fork in `~/pi-setup/forks/`. It exists so an agent asked to "update pi" finds
 the pinned, verified path instead of reaching for `pi update` — which bypasses
-`install.sh`, gets silently reverted by the next install, and is reported as drift by
+`lib/versions.json`, gets silently reverted by the next install, and is reported as drift by
 `bin/pi-setup-doctor`.
 
 It covers where the version pins live, how to read a changelog for breaking changes
