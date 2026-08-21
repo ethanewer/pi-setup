@@ -36,6 +36,11 @@ bin/pi-setup-vendor --verify <fork>
 Based on `@quintinshaw/pi-dynamic-workflows@3.6.0`. `src/**/*.ts` is the tree Pi loads;
 `dist/` is the compiled mirror shipped through the package `exports` field.
 
+This fork is loaded only by the `piwf` entrypoint (`~/.pi/agent-wf/settings.json`), the
+historical `pi`. The default `pi` profile deliberately excludes it, so `pi` has no
+`workflow` tool, `/workflows` commands, or workflow skills. Re-adding it to `pi`
+(not just `piwf`) makes `bin/pi-setup-doctor` report it so the split stays intentional.
+
 **Closed.** The zero-click RCE chain is broken at every link: persisted run records are
 schema-validated instead of trusted, each record carries the provenance of the install that
 wrote it, and `coldStartRearm` will only auto-resume a run this install created in its own
@@ -472,17 +477,26 @@ Upstream `pi-voice-stt` points at `src/index.ts` and upstream dynamic-workflows 
 now use the `extensions/<name>/index.ts` convention the other three already followed, so
 the listing identifies every extension by name. The installer compiles each TypeScript
 entry to a sibling `index.js` in the same folder so Pi does not pay jiti transpile cost
-on every startup, and the listing still uses the `extensions/<name>/` directory name:
+on every startup, and the listing still uses the `extensions/<name>/` directory name.
+The listing differs between the two full entrypoints — `pi` deliberately excludes the
+workflow fork, `piwf` loads it:
 
 ```text
-[Skills]
-  monitor, update-pi-setup, workflow-authoring, workflow-patterns
+pi   (full, without dynamic workflows)
+     [Skills]
+       monitor, update-pi-setup
+     [Prompts]
+       /watch
+     [Extensions]
+       agent-browser, btw, context-handoff, monitor, voice-stt
 
-[Prompts]
-  /watch
-
-[Extensions]
-  agent-browser, btw, context-handoff, monitor, voice-stt, workflow
+piwf (full, with dynamic workflows — the historical `pi`)
+     [Skills]
+       monitor, update-pi-setup, workflow-authoring, workflow-patterns
+     [Prompts]
+       /watch
+     [Extensions]
+       agent-browser, btw, context-handoff, monitor, voice-stt, workflow
 ```
 
 For voice-stt that entry is a one-line re-export; `src/` is still the implementation. For
@@ -494,9 +508,12 @@ A stray upstream package is still distinguishable at a glance: Pi prefixes `npm:
 sources bare, so anything showing a version prefix is not one of these forks.
 
 The lean `p` wrapper disables extension and skill discovery, then explicitly loads only
-`voice-stt`, `btw`, and `context-handoff` (plus its prompt-removal helper). Browser,
-monitor, and workflow are full-profile-only. `bin/pi-setup-doctor` checks this exact
-allowlist so an accidental addition or omission is install-fixable drift.
+`voice-stt`, `btw`, `context-handoff`, and the conditional `mlx` extension (plus its
+prompt-removal helper). Browser and
+monitor are in both full entrypoints (`pi`, `piwf`); workflow is full-profile-only and, of
+the two full entrypoints, only `piwf` loads it. `bin/pi-setup-doctor` checks the `p`
+allowlist and enforces that the workflow fork is absent from `pi` and present in `piwf`, so
+an accidental addition or omission is install-fixable drift.
 
 ## Now needs an opt-in
 

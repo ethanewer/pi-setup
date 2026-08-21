@@ -31,11 +31,27 @@ run() { run_with pi "$@"; }
 printf '\nVersions\n'
 printf '  pi             %s\n' "$(pi --version 2>&1 | tail -1)"
 printf '  p              %s\n' "$(p --version 2>&1 | tail -1)"
+printf '  piwf           %s\n' "$(piwf --version 2>&1 | tail -1)"
 printf '  agent-browser  %s\n' "$(agent-browser --version 2>&1 | tail -1)"
 
 printf '\nChecks\n'
-# Every extension's tools must be registered. A fork that failed to load is silently
-# absent from this list rather than raising an error at startup.
+# The whole point of piwf: the workflow tool must be absent from plain pi and present
+# in piwf. A fork that loads or fails to load is silently reflected in the tool list, so
+# assert both sides rather than assuming.
+wow_pi="$(cd "$WORK" && pi -p 'List the name of every tool you have, one per line, nothing else.' 2>&1)"
+wow_piwf="$(cd "$WORK" && piwf -p 'List the name of every tool you have, one per line, nothing else.' 2>&1)"
+if grep -qi 'workflow' <<< "$wow_pi"; then
+  FAIL=$((FAIL + 1)); printf '  FAIL  pi must NOT expose the workflow tool\n'
+else
+  PASS=$((PASS + 1)); printf '  PASS  pi has no workflow tool\n'
+fi
+if grep -qi 'workflow' <<< "$wow_piwf"; then
+  PASS=$((PASS + 1)); printf '  PASS  piwf exposes the workflow tool\n'
+else
+  FAIL=$((FAIL + 1)); printf '  FAIL  piwf does not expose the workflow tool\n'
+fi
+# Every extension's tools must be registered in pi. A fork that failed to load is
+# silently absent from this list rather than raising an error at startup.
 run "tools registered" "monitor_kill_all" \
   "List the names of every tool you have available, comma separated, nothing else."
 run "built-in bash" "SMOKE-BASH-OK" \
@@ -48,7 +64,7 @@ run_with p "lean p btw side conversation" "hello-from-alpha" \
 if [[ "$QUICK" == "0" ]]; then
   run "agent_browser" "Example Domain" \
     "Use agent_browser to open https://example.com and reply with only the page title."
-  run "dynamic workflow" "GAMMA-DELTA" \
+  run_with piwf "dynamic workflow" "GAMMA-DELTA" \
     "Run a dynamic workflow with a single agent whose only job is to return the exact string GAMMA-DELTA, then reply with only what it returned."
 else
   printf '  skip  agent_browser and dynamic workflow (--quick)\n'

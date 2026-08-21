@@ -15,5 +15,5 @@ if not defined BUN_BIN (
   exit /b 1
 )
 
-"%BUN_BIN%" "__TARGET__" %*
+"%BUN_BIN%" --use-system-ca "__TARGET__" %*
 exit /b %ERRORLEVEL%

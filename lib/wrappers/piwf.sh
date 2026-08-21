@@ -1,5 +1,15 @@
 #!/bin/sh
 set -eu
+MAIN_DIR="__MAIN_DIR__"
+# A tmux server started from `p` retains the lean profile's variables, notably
+# PI_SKIP_VERSION_CHECK. piwf pins its own agent directory below, but must still
+# drop the rest rather than inherit the lean profile's environment.
+case "${PI_CODING_AGENT_DIR:-}" in
+  "$HOME/.pi/agent-p")
+    unset PI_CODING_AGENT_DIR PI_CODING_AGENT_SESSION_DIR PI_SKIP_VERSION_CHECK ;;
+esac
+export PI_CODING_AGENT_DIR="$HOME/.pi/agent-wf"
+export PI_CODING_AGENT_SESSION_DIR="$MAIN_DIR/sessions"
 if command -v bun >/dev/null 2>&1; then
   BUN_BIN="$(command -v bun)"
 elif [ -x "${BUN_INSTALL:-$HOME/.bun}/bin/bun" ]; then
@@ -7,12 +17,6 @@ elif [ -x "${BUN_INSTALL:-$HOME/.bun}/bin/bun" ]; then
 else
   BUN_BIN="${BUN_INSTALL:-$HOME/.bun}/bin/bun.exe"
 fi
-# A tmux server started from `p` or `piwf` can retain that profile's variables.
-# Normal `pi` must never inherit a profile accidentally.
-case "${PI_CODING_AGENT_DIR:-}" in
-  "$HOME/.pi/agent-p"|"$HOME/.pi/agent-wf")
-    unset PI_CODING_AGENT_DIR PI_CODING_AGENT_SESSION_DIR PI_SKIP_VERSION_CHECK ;;
-esac
 for ROOT in \
   "${PI_PACKAGE_ROOT:-}" \
   "${BUN_INSTALL:-$HOME/.bun}/install/global/node_modules/@earendil-works/pi-coding-agent" \
@@ -23,5 +27,5 @@ do
     exec "$BUN_BIN" --use-system-ca "$ROOT/dist/bun/cli.js" "$@"
   fi
 done
-echo "pi: could not locate @earendil-works/pi-coding-agent" >&2
+echo "piwf: could not locate @earendil-works/pi-coding-agent" >&2
 exit 1

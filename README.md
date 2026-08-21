@@ -1,14 +1,18 @@
 # Ethan's Pi setup
 
-A reproducible, fast [Pi coding agent](https://pi.dev) setup with two entrypoints:
+A reproducible, fast [Pi coding agent](https://pi.dev) setup with three entrypoints:
 
-- **`pi`** — full environment with Voice STT, native browser automation, dynamic
-  workflows, mid-run and between-runs context compaction, background process monitoring,
-  and `/btw` side questions.
-- **`p`** — lean environment with Voice STT, `/btw` side questions, and the same two
-  compaction extensions, but no browser, monitor, workflows, or skills.
+- **`pi`** — full environment without dynamic workflows: Voice STT, native browser
+  automation, mid-run and between-runs context compaction, background process monitoring,
+  `/btw` side questions, and local MLX model management on macOS.
+- **`piwf`** — the same full environment **with** dynamic workflows (the historical `pi`):
+  everything `pi` has, plus the `workflow` tool, `/workflows` and `/deep-research`, and the
+  workflow-authoring / workflow-patterns skills.
+- **`p`** — lean environment with Voice STT, `/btw` side questions, the same two
+  compaction extensions, and local MLX model management on macOS, but no browser,
+  monitor, workflows, or skills.
 
-Both commands run the same Pi installation through Pi's Bun entrypoint. They share
+All three commands run the same Pi installation through Pi's Bun entrypoint. They share
 authentication, model catalogs, sessions, helper binaries, and installed package files.
 
 Every extension is installed from `forks/` as a **security-hardened local fork**, not
@@ -60,7 +64,7 @@ attention.
 |---|---|---|
 | macOS 15 on Apple Silicon | the machine this is developed on | everything, continuously |
 | Ubuntu 24.04 x86-64 | [`tests/linux-install.sh`](tests/linux-install.sh) | the piped install as a non-root user, the missing-`unzip` refusal, and `bin/pi-setup-doctor` on a host with no `node` |
-| Windows 10 x64 | PowerShell `install.ps1` + `.cmd` shims | installer, `pi`/`p`/`agent-browser` launchers, doctor (via Git Bash), process-tree kill |
+| Windows 10 x64 | PowerShell `install.ps1` + `.cmd` shims | installer, `pi`/`p`/`piwf`/`agent-browser` launchers, doctor (via Git Bash), process-tree kill |
 
 Run `tests/linux-install.sh` to reproduce the Linux row; it needs Docker and takes a few
 minutes. It sets `PI_SETUP_SKIP_BROWSER_INSTALL=1`, so **Chrome and `agent-browser` are not
@@ -143,15 +147,14 @@ standalone diffs.
 
 ## Entrypoints
 
-### `pi`: full environment
+### `pi`: full environment without dynamic workflows
 
-`pi` loads the normal package configuration:
+`pi` loads the normal package configuration, minus the dynamic-workflows fork. Everything
+else ships:
 
 - built-in `read`, `bash`, `edit`, and `write` tools
 - Voice STT
 - `agent_browser`
-- `workflow` and `workflow_control`
-- workflow authoring and built-in workflow skills
 - the `update-pi-setup` maintenance skill
 - compaction handoff briefs that keep a long run going
 - mid-run context folding, so one long run stays inside the context window
@@ -159,6 +162,23 @@ standalone diffs.
 - side questions in an ephemeral fork (`/btw`, escape to return)
 - project `AGENTS.md` / `CLAUDE.md` context
 - visible startup resource listing
+
+The `workflow` tool, `/workflows` and `/deep-research`, and the workflow-authoring skills
+are deliberately not loaded — they live behind the `piwf` entrypoint.
+
+### `piwf`: full environment with dynamic workflows
+
+`piwf` is the historical `pi`: the full environment **including** the dynamic-workflows
+extension. It runs against its own agent directory `~/.pi/agent-wf` whose settings load
+all eight hardened forks. On top of everything `pi` lists, `piwf` adds:
+
+- the `workflow` tool and `workflow_control`
+- `/workflows`, `/deep-research`, `/code-review`, and the other built-in workflow commands
+- the `workflow-authoring` and `workflow-patterns` skills
+
+`piwf` shares main's session directory, auth, model catalogs, helper binaries, and the
+installed package files, exactly like `p`, so its state stays contiguous with the ordinary
+`pi`.
 
 ### `p`: lean environment
 
@@ -168,9 +188,10 @@ standalone diffs.
 --no-extensions --no-skills
 ```
 
-It explicitly reloads only Voice STT, `/btw`, both compaction extensions, and a tiny
-local extension that removes Pi's documentation block from the system prompt. The exact
-allowlist keeps the heavier browser, monitor, and workflow extensions out. It also:
+It explicitly reloads only Voice STT, `/btw`, both compaction extensions, the conditional
+`mlx` extension, and a tiny local extension that removes Pi's documentation block from the
+system prompt. The exact allowlist keeps the heavier browser, monitor, and workflow
+extensions out. It also:
 
 - uses quiet startup
 - skips the Pi version check
@@ -179,8 +200,50 @@ allowlist keeps the heavier browser, monitor, and workflow extensions out. It al
 
 `p` uses a small settings overlay at `~/.pi/agent-p/settings.json`; it is a configuration
 profile, not another Pi installation. The `pi` wrapper explicitly rejects an inherited
-lean-profile environment, so a tmux server started from `p` cannot accidentally turn later
-`pi` sessions into the lean configuration.
+`p` or `piwf` profile environment, so a tmux server started from either cannot
+accidentally turn later `pi` sessions into a different configuration.
+
+## Default model scope
+
+All three entrypoints (`pi`, `piwf`, and `p`) restrict Ctrl+P model cycling (the
+`/scoped-models` list) to exactly these models via `enabledModels` in each profile's
+settings (`~/.pi/agent`, `~/.pi/agent-wf`, and `~/.pi/agent-p`):
+
+```text
+openrouter/z-ai/glm-5.3
+openai/gpt-5.6-luna
+openai/gpt-5.6-sol
+openai/gpt-5.6-terra
+openrouter/deepseek/deepseek-v4-flash-0731
+openrouter/deepseek/deepseek-v4-pro-0813
+```
+
+The patterns are canonical `provider/id`, so each matches exactly one model. Two
+consequences of how Pi applies the list are worth knowing:
+
+- It is a managed default: `install.sh` rewrites `enabledModels` on every install, so a
+  scope changed through `/scoped-models` reverts at the next reinstall.
+- When a profile's saved default model is **not** in the scope, Pi starts new sessions on
+  the first scoped model (`openrouter/z-ai/glm-5.3`) instead of the saved default. All
+  three profiles' current defaults are inside the scope, so this only bites if the
+  default is later changed to something outside it.
+
+## Local MLX models (`/mlx`, macOS only)
+
+The `mlx` extension is installed for both `p` and `pi`, but registers itself only on macOS.
+It owns the server it starts and never takes over an occupied port.
+
+```text
+/mlx download optimized-ornith
+/mlx list
+/mlx load mlx-works/Ornith-1.5-35B-A3B-oQ4e-mtp
+/mlx stop
+```
+
+The download command fetches the calibrated Ornith-35B oQ4e trunk and builds the locally
+optimized Qwen3.6-donor overlay. Only the actively served model appears in Pi's `/model`
+list; downloaded models remain visible through `/mlx list`. MTP is off by default after an
+agentic A/B regression and can be enabled for diagnostics with `MLX_ORNITH_MTP=1`.
 
 ## Side questions (`/btw`)
 
@@ -399,17 +462,19 @@ added to that profile; the full-profile measurements predate context handoff and
 ## Files created
 
 ```text
-~/.local/bin/pi                              Bun-backed full entrypoint (only one)
+~/.local/bin/pi                              Full entrypoint (no dynamic workflows)
+~/.local/bin/piwf                            Full entrypoint with dynamic workflows
 ~/.local/bin/p                               Lean entrypoint
 ~/.local/bin/agent-browser                   Bun-backed agent-browser entrypoint
 ~/.local/bin/pi-agent-browser-config         Browser config CLI
 ~/.local/bin/pi-agent-browser-doctor         Browser diagnostics CLI
 ~/.local/bin/*.cmd                           Windows cmd.exe/PowerShell shims (Windows only)
 ~/.local/lib/pi-coding-agent/pi.exe          Compiled Pi binary (Windows only, optional)
-~/.pi/agent/settings.json                    Main Pi settings
+~/.pi/agent/settings.json                    Main Pi settings (no workflow package)
 ~/.pi/agent/stt.json                         Voice STT configuration (mode 600 on Unix)
 ~/.pi/agent/keybindings.json                 Keys remapped for tmux, Kitty, and Windows Terminal
 ~/.pi/agent/local/                           Hardened extension forks
+~/.pi/agent/extensions/mlx/                  Conditional local MLX extension
 ~/.pi/agent/npm/                             Shared extension packages (no longer used
                                              by this setup; pruned on install)
 ~/.pi/agent/setup-src/                       Clone of this repository, when the
@@ -420,6 +485,12 @@ added to that profile; the full-profile measurements predate context handoff and
 ~/.pi/agent-p/auth.json                      Symlink (or copy on Windows without Developer Mode) to main auth
 ~/.pi/agent-p/models-store.json              Symlink/copy to main model catalog
 ~/.pi/agent-p/bin                            Symlink/junction to main helper binaries
+~/.pi/agent-wf/settings.json                 Full settings overlay incl. the workflow fork
+~/.pi/agent-wf/keybindings.json              The same remapped keys for the piwf profile
+~/.pi/agent-wf/auth.json                     Symlink/copy to main auth
+~/.pi/agent-wf/models-store.json             Symlink/copy to main model catalog
+~/.pi/agent-wf/bin                           Symlink/junction to main helper binaries
+~/.pi/agent-wf/local                         Symlink/junction to main hardened fork install
 ```
 
 The installer adds `~/.local/bin` and `~/.bun/bin` to `.zshrc` and `.bashrc`, and on
@@ -428,8 +499,9 @@ Windows to the user PATH plus the PowerShell profile.
 There is exactly one entrypoint per command. Pi is installed once, globally, by Bun;
 `bun add --global` also links its own `pi` and `agent-browser` shims into `~/.bun/bin`,
 and the installer removes them. Those shims point at the same installation but bypass the
-wrappers above — notably `pi`'s guard against inheriting the lean `p` profile from a tmux
-server. If you previously installed Pi another way (npm global, Homebrew), remove it:
+wrappers above — notably `pi`'s guard against inheriting the lean `p` or full `piwf`
+profile environment from a tmux server. If you previously installed Pi another way (npm
+global, Homebrew), remove it:
 `npm uninstall -g @earendil-works/pi-coding-agent agent-browser`.
 
 ## Session archives

@@ -8,4 +8,4 @@ else
   BUN_BIN="${BUN_INSTALL:-$HOME/.bun}/bin/bun.exe"
 fi
 ROOT="${BUN_INSTALL:-$HOME/.bun}/install/global/node_modules/agent-browser"
-exec "$BUN_BIN" "$ROOT/bin/agent-browser.js" "$@"
+exec "$BUN_BIN" --use-system-ca "$ROOT/bin/agent-browser.js" "$@"

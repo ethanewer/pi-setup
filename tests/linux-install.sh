@@ -62,7 +62,7 @@ tail -4 /tmp/out.log
 
 echo
 echo "=== [3] versions"
-su - tester -c 'export PATH=$HOME/.local/bin:$PATH; pi --version; p --version; agent-browser --version'
+su - tester -c 'export PATH=$HOME/.local/bin:$PATH; pi --version; p --version; piwf --version; agent-browser --version'
 
 echo
 echo "=== [4] doctor, on a machine with no node at all"

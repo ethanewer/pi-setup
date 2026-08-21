@@ -112,6 +112,7 @@ describe("addPowerShellPiCommand", () => {
       expect(body).toContain("# pi-setup: pi-command");
       expect(body).toContain("# pi-setup: end-pi-command");
       expect(body).toContain("Join-Path $env:USERPROFILE '.pi\\agent-p'");
+      expect(body).toContain("Join-Path $env:USERPROFILE '.pi\\agent-wf'");
       expect(body).toContain("Remove-Item Env:PI_CODING_AGENT_DIR, Env:PI_CODING_AGENT_SESSION_DIR, Env:PI_SKIP_VERSION_CHECK");
       expect(body).toContain("C:\\pi.exe");
     } finally {

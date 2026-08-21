@@ -1,15 +1,13 @@
 @echo off
 setlocal EnableExtensions
+set "MAIN_DIR=__MAIN_DIR__"
 if /I "%PI_CODING_AGENT_DIR%"=="%USERPROFILE%\.pi\agent-p" (
   set "PI_CODING_AGENT_DIR="
   set "PI_CODING_AGENT_SESSION_DIR="
   set "PI_SKIP_VERSION_CHECK="
 )
-if /I "%PI_CODING_AGENT_DIR%"=="%USERPROFILE%\.pi\agent-wf" (
-  set "PI_CODING_AGENT_DIR="
-  set "PI_CODING_AGENT_SESSION_DIR="
-  set "PI_SKIP_VERSION_CHECK="
-)
+set "PI_CODING_AGENT_DIR=%USERPROFILE%\.pi\agent-wf"
+set "PI_CODING_AGENT_SESSION_DIR=%MAIN_DIR%\sessions"
 
 if exist "%USERPROFILE%\.local\lib\pi-coding-agent\pi.exe" (
   "%USERPROFILE%\.local\lib\pi-coding-agent\pi.exe" %*
@@ -27,7 +25,7 @@ if not defined BUN_BIN (
 )
 :have_bun
 if not defined BUN_BIN (
-  echo pi: bun not found 1>&2
+  echo piwf: bun not found 1>&2
   exit /b 1
 )
 
@@ -43,7 +41,7 @@ if not defined CLI if exist "%BUN_HOME%\install\global\node_modules\@earendil-wo
   set "CLI=%BUN_HOME%\install\global\node_modules\@earendil-works\pi-coding-agent\dist\bun\cli.js"
 )
 if not defined CLI (
-  echo pi: could not locate @earendil-works/pi-coding-agent 1>&2
+  echo piwf: could not locate @earendil-works/pi-coding-agent 1>&2
   exit /b 1
 )
 

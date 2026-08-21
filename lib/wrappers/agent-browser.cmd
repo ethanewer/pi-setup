@@ -27,5 +27,5 @@ if not exist "%ROOT%\bin\agent-browser.js" (
   exit /b 1
 )
 
-"%BUN_BIN%" "%ROOT%\bin\agent-browser.js" %*
+"%BUN_BIN%" --use-system-ca "%ROOT%\bin\agent-browser.js" %*
 exit /b %ERRORLEVEL%

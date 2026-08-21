@@ -18,13 +18,14 @@ for ROOT in \
   "/usr/local/lib/node_modules/@earendil-works/pi-coding-agent"
 do
   if [ -n "$ROOT" ] && [ -f "$ROOT/dist/bun/cli.js" ]; then
-    exec "$BUN_BIN" "$ROOT/dist/bun/cli.js" \
+    exec "$BUN_BIN" --use-system-ca "$ROOT/dist/bun/cli.js" \
       --no-extensions \
       --no-skills \
       --extension "$MAIN_DIR/local/pi-voice-stt-safe/extensions/voice-stt/index.js" \
       --extension "$MAIN_DIR/local/pi-context-handoff/extensions/context-handoff/index.js" \
       --extension "$MAIN_DIR/local/pi-codex-compaction/extensions/codex-compaction/index.js" \
       --extension "$MAIN_DIR/local/pi-btw-side/extensions/btw/index.js" \
+      --extension "$MAIN_DIR/extensions/mlx/index.js" \
       --extension "$MAIN_DIR/p/remove-pi-documentation.js" \
       "$@"
   fi

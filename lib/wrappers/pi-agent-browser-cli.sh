@@ -7,4 +7,4 @@ elif [ -x "${BUN_INSTALL:-$HOME/.bun}/bin/bun" ]; then
 else
   BUN_BIN="${BUN_INSTALL:-$HOME/.bun}/bin/bun.exe"
 fi
-exec "$BUN_BIN" "__TARGET__" "$@"
+exec "$BUN_BIN" --use-system-ca "__TARGET__" "$@"

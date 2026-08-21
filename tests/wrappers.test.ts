@@ -30,6 +30,7 @@ describe("lean p wrapper contract", () => {
       "$MAIN_DIR/local/pi-context-handoff/extensions/context-handoff/index.js",
       "$MAIN_DIR/local/pi-codex-compaction/extensions/codex-compaction/index.js",
       "$MAIN_DIR/local/pi-btw-side/extensions/btw/index.js",
+      "$MAIN_DIR/extensions/mlx/index.js",
       "$MAIN_DIR/p/remove-pi-documentation.js",
     ]);
   });
@@ -42,6 +43,7 @@ describe("lean p wrapper contract", () => {
       "pi-codex-compaction",
       "pi-btw-side",
       "remove-pi-documentation.js",
+      "mlx",
     ]) {
       expect(cmd).toContain(name);
     }
@@ -76,7 +78,7 @@ describe("lib/versions.json", () => {
 
 describe("Windows cmd shims", () => {
   test("every cmd wrapper honors BUN_INSTALL before the default ~/.bun path", () => {
-    for (const name of ["pi.cmd", "p.cmd", "agent-browser.cmd", "pi-agent-browser-cli.cmd"]) {
+    for (const name of ["pi.cmd", "p.cmd", "piwf.cmd", "agent-browser.cmd", "pi-agent-browser-cli.cmd"]) {
       const body = readFileSync(join(root, "lib/wrappers", name), "utf8");
       const installIdx = body.indexOf("%BUN_INSTALL%\\bin\\bun.exe");
       const homeIdx = body.indexOf("%USERPROFILE%\\.bun\\bin\\bun.exe");
@@ -89,5 +91,6 @@ describe("Windows cmd shims", () => {
     const body = readFileSync(join(root, "lib/wrappers/pi.cmd"), "utf8");
     expect(body).toContain("%USERPROFILE%\\.local\\lib\\pi-coding-agent\\pi.exe");
     expect(body).toContain('if /I "%PI_CODING_AGENT_DIR%"=="%USERPROFILE%\\.pi\\agent-p"');
+    expect(body).toContain('if /I "%PI_CODING_AGENT_DIR%"=="%USERPROFILE%\\.pi\\agent-wf"');
   });
 });
