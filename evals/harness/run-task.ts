@@ -63,6 +63,9 @@ const fixtureHashes: Record<string, string> = {};
 hashTree(workDir, workDir, fixtureHashes);
 
 const prompt = readFileSync(path.join(taskDir, "prompt.txt"), "utf8");
+// Match pi's TUI: the agent process cwd is the session cwd, so relative paths in
+// monitor/poll commands resolve where the model expects.
+process.chdir(workDir);
 process.env.SEED = SEED;
 process.env.PYTHONUNBUFFERED = "1";
 // Per-run values baked into job artifacts so ground truth depends on actually running.
