@@ -1,0 +1,32 @@
+{
+  "name": "pi-model-prices",
+  "version": "1.0.0",
+  "private": true,
+  "description": "/models: a model picker that shows API prices — per-million-token in/out/cache-write/cache-read rates from the model catalog, a sub marker for subscription logins, and long-context tier notes. Mirrors the built-in /model selector's search/scope/keys.",
+  "type": "module",
+  "license": "MIT",
+  "keywords": [
+    "pi-package",
+    "pi",
+    "pi-coding-agent",
+    "model-picker",
+    "pricing"
+  ],
+  "files": [
+    "extensions",
+    "README.md"
+  ],
+  "pi": {
+    "extensions": [
+      "./extensions/model-prices/index.ts"
+    ]
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-ai": ">=0.82.0",
+    "@earendil-works/pi-coding-agent": ">=0.82.0",
+    "@earendil-works/pi-tui": ">=0.82.0"
+  },
+  "engines": {
+    "node": ">=22.18"
+  }
+}
