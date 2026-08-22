@@ -604,13 +604,20 @@ def _blk_text(blk: Any) -> str:
 
 
 def _detect_language(tool_calls: list[dict]) -> tuple[str, str]:
-    """Best-effort (language, domain) from file extensions in tool-call args."""
+    """Best-effort (language, domain) from file extensions in tool-call args.
+
+    Accepts either the converted OpenAI tool_call shape (name/arguments under
+    ``tc["function"]``) or the raw pi ``toolCall`` event shape (name/arguments
+    at the top level). ``convert_session`` passes the converted shape, so the
+    ``.function`` path is the one used in practice.
+    """
     exts: Counter[str] = Counter()
     for tc in tool_calls:
-        args = tc.get("arguments") or {}
+        fn = tc.get("function") if isinstance(tc.get("function"), dict) else tc
+        args = fn.get("arguments") or {}
         if not isinstance(args, dict):
             continue
-        blob = json.dumps(args) + " " + str(tc.get("name", ""))
+        blob = json.dumps(args) + " " + str(fn.get("name", ""))
         # capture file paths in args
         for token in re.findall(r"[\w/.\-]+\.\w{1,5}", blob):
             ext = os.path.splitext(token)[1].lower()
