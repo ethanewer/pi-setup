@@ -15,12 +15,15 @@ const configScript = installer.slice(start + START.length, end);
 
 const REPO = join(import.meta.dir, "..");
 const SCOPE = [
-	"openrouter/z-ai/glm-5.3",
-	"openai/gpt-5.6-luna",
-	"openai/gpt-5.6-sol",
-	"openai/gpt-5.6-terra",
 	"openrouter/deepseek/deepseek-v4-flash-0731",
 	"openrouter/deepseek/deepseek-v4-pro-0813",
+	"openrouter/z-ai/glm-5.2",
+	"openrouter/z-ai/glm-5.3",
+	"openrouter/moonshotai/kimi-k3",
+	"openrouter/qwen/qwen3.8-max",
+	"openai/gpt-5.6-sol",
+	"openai/gpt-5.6-terra",
+	"openai/gpt-5.6-luna",
 ];
 const FORKS_MINUS_WORKFLOWS = [
 	"local/pi-voice-stt-safe",

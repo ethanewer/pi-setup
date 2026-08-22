@@ -195,12 +195,15 @@ All three entrypoints (`pi`, `piwf`, and `p`) restrict Ctrl+P model cycling (the
 settings (`~/.pi/agent`, `~/.pi/agent-wf`, and `~/.pi/agent-p`):
 
 ```text
-openrouter/z-ai/glm-5.3
-openai/gpt-5.6-luna
-openai/gpt-5.6-sol
-openai/gpt-5.6-terra
 openrouter/deepseek/deepseek-v4-flash-0731
 openrouter/deepseek/deepseek-v4-pro-0813
+openrouter/z-ai/glm-5.2
+openrouter/z-ai/glm-5.3
+openrouter/moonshotai/kimi-k3
+openrouter/qwen/qwen3.8-max
+openai/gpt-5.6-sol
+openai/gpt-5.6-terra
+openai/gpt-5.6-luna
 ```
 
 The patterns are canonical `provider/id`, so each matches exactly one model. Two
@@ -209,7 +212,7 @@ consequences of how Pi applies the list are worth knowing:
 - It is a managed default: `install.sh` rewrites `enabledModels` on every install, so a
   scope changed through `/scoped-models` reverts at the next reinstall.
 - When a profile's saved default model is **not** in the scope, Pi starts new sessions on
-  the first scoped model (`openrouter/z-ai/glm-5.3`) instead of the saved default. All
+  the first scoped model (`openrouter/deepseek/deepseek-v4-flash-0731`) instead of the saved default. All
   three profiles' current defaults are inside the scope, so this only bites if the
   default is later changed to something outside it.
 

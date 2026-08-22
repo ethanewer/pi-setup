@@ -346,12 +346,15 @@ applyCompaction(main);
 // /scoped-models reverts on reinstall), and when a profile's saved default model is not
 // in the scope, Pi starts new sessions on the first scoped model rather than the default.
 const MODEL_SCOPE = [
-  "openrouter/z-ai/glm-5.3",
-  "openai/gpt-5.6-luna",
-  "openai/gpt-5.6-sol",
-  "openai/gpt-5.6-terra",
   "openrouter/deepseek/deepseek-v4-flash-0731",
   "openrouter/deepseek/deepseek-v4-pro-0813",
+  "openrouter/z-ai/glm-5.2",
+  "openrouter/z-ai/glm-5.3",
+  "openrouter/moonshotai/kimi-k3",
+  "openrouter/qwen/qwen3.8-max",
+  "openai/gpt-5.6-sol",
+  "openai/gpt-5.6-terra",
+  "openai/gpt-5.6-luna",
 ];
 
 // Every extension is a hardened local fork. The upstream npm identities are dropped
