@@ -511,6 +511,27 @@ preserve paths inside the archive and verify it before deleting originals.
 Authentication files, model credentials, session transcripts, SSH material, and API keys
 must never be committed here.
 
+### Exporting traces to a dataset
+
+`bin/convert-pi-traces` turns local pi sessions into the row format of the private
+[`eewer/glm-5.2-multi-harness-agent`](https://huggingface.co/datasets/eewer/glm-5.2-multi-harness-agent)
+dataset and uploads the compressed result to
+[`eewer/pi-trace-cache`](https://huggingface.co/datasets/eewer/pi-trace-cache) when
+`HF_TOKEN` has write access. It enforces three invariants by default:
+
+- **OpenAI and Anthropic models are dropped** (by provider and model id).
+- **Fake test/mock models are dropped** — pi's `faux` provider and the Qwen3 0.6B
+  model are test fixtures, not real sessions.
+- **Every API key is replaced with a deterministic, format-valid fake** — the same
+  real key always maps to the same fake, so traces stay valid while no real secret
+  leaves the machine.
+
+Benchmark rollouts (TerminalBench, tau-bench, …) are also dropped; a dev session
+that merely *mentions* a benchmark is kept. Run `bin/convert-pi-traces --dry-run`
+to preview, and inspect `~/pi-trace-cache-tool/out/*.jsonl` before sharing. It is a
+standalone Python tool (`pip install zstandard huggingface_hub`), not part of the
+install.
+
 ## Security
 
 The installed Pi extensions execute with the user's full permissions. The forks in this

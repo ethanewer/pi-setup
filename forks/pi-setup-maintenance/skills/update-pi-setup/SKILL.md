@@ -327,3 +327,11 @@ git revert <commit>     # or: git checkout <good-commit> -- lib/versions.json fo
 ./install.sh            # or ./install.ps1 on Windows
 bin/pi-setup-doctor
 ```
+
+## Exporting session traces
+
+`bin/convert-pi-traces` converts local pi session traces into a shareable
+HF dataset (`eewer/pi-trace-cache`), filtering out OpenAI/Anthropic/test models
+and replacing API keys with deterministic fakes. It is standalone (not run by
+`install.sh`, not checked by `pi-setup-doctor`); see the "Exporting traces to a
+dataset" section in `README.md` and `bin/convert-pi-traces --help` for details.
