@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Ground truth for task t6. Usage: expected.py <seed> (seed ignored; data is static)"""
+"""Ground truth for task t5. Usage: expected.py <seed> (seed ignored; data is static)"""
 import csv
 import json
 import os

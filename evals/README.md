@@ -21,11 +21,11 @@ fork — identical across models, so the model is the only variable.
 | t2 | ETL pipeline that crashes mid-run on a corrupt row; fix + re-run | react to the failure ping |
 | t3 | HTTP service with 45–120 s boot; verify `/status` once listening | wait for the ready line without blocking |
 | t4 | Detached batch job writing `batch.log` for 90–180 s | tail the log, react to the final line |
-| t6 | Control: three <5-second chores | should NOT use a monitor |
+| t5 | Control: three <5-second chores | should NOT use a monitor |
 
 ### Metrics
 
-- **Adoption** — `monitor` used on t1–t4 (want yes), t6 (want no).
+- **Adoption** — `monitor` used on t1–t4 (want yes), t5 (want no).
 - **Trust** — `bash_blocking_seconds`: wall time in bash calls >15 s (sleep loops, inline waits).
   A model can "adopt" the tool yet still block; the interesting signal is going idle and
   letting pings drive the session (`spontaneous_wakeups`).
@@ -37,7 +37,7 @@ fork — identical across models, so the model is the only variable.
   fixture source (t3's build id is derived from the server's pid, not the seed).
 - **Integrity** — shipped fixture files are hashed before the run; the scorer flags any
   modification outside the sanctioned edit targets (`t1: src/parse_duration.py`,
-  `t2: etl/run_pipeline.py`, `t6: greet.py`), e.g. a model editing a job script to
+  `t2: etl/run_pipeline.py`, `t5: greet.py`), e.g. a model editing a job script to
   shorten its runtime.
 
 The watcher accounting used for quiescence and metrics has its own self-test:
@@ -75,11 +75,10 @@ and results themselves are runtime-bound (see evidence checks above).
 | t2 | no · 0 · 162 | no · 0 · 103 |
 | t3 | yes · 2 · 0 | yes (decorative) · 0 · 105 |
 | t4 | yes · 3 · 0 | yes · 0 · 150 |
-| t6 | correctly none | correctly none |
+| t5 | correctly none | correctly none |
 
 Both models completed every goal; the gap is in trust — gpt-5.6-sol idled and waited for
 pings (3/4 long-job tasks), while deepseek set watchers then slept in bash anyway (1/4).
 
-(t5, a two-parallel-jobs task, existed in early versions but was removed: realistic in
-structure, contrived in dressing. Reintroduce a two-job task if multi-watcher coverage is
-wanted.)
+(History: an earlier two-parallel-render-jobs task occupied the t5 slot but was removed
+as contrived; the control task was renamed t6 → t5 to close the gap.)
