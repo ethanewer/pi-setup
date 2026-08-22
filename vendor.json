@@ -63,14 +63,6 @@
       "liveTree": "extensions/codex-compaction",
       "patch": null,
       "note": "First-party. Ports Codex's mid-turn compaction (codex-rs/core/src/session/turn.rs:493) onto Pi's `context` hook, which is the only extension-facing point inside an agent run: Pi checks its own threshold only in _handlePostAgentRun and before a new prompt, and ctx.compact() aborts the agent. Trigger is 90% of the context window, derived and clamped the way Codex derives it (protocol/src/openai_models.rs:310); a configured value can only lower it. Unlike Codex it does not rewrite session history - the hook shapes one request - so every failure path sends the original messages and behaves as if uninstalled. Depends on one shape Pi does not export from its package root, the compactionSummary message built by createCompactionSummaryMessage; index.ts verifies once per session that convertToLlm still renders it and falls back to a plain user message if not."
-    },
-    "pi-model-prices": {
-      "upstream": null,
-      "version": "1.0.0",
-      "live": "extensions/model-prices/index.ts",
-      "liveTree": "extensions/model-prices",
-      "patch": null,
-      "note": "First-party extension, not a fork. Adds /models: the built-in /model selector with per-million-token API prices from the model catalog, a sub marker for subscription logins, and long-context tier notes. Reads only model.cost metadata and the same isUsingOAuth + auth.oauth.isSubscription condition Pi's footer uses; switching goes through pi.setModel and never rewrites the saved default. No upstream to track and nothing to re-vendor."
     }
   }
 }

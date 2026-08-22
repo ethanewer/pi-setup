@@ -11,7 +11,7 @@ AGENT_BROWSER_VERSION="0.33.2"
 # Extensions are installed as Pi "local" packages from forks/ in this repository,
 # never from npm. Pi never rewrites local packages, so the security fixes in these
 # forks cannot be silently reverted by a later `bun install` or package update.
-FORKS="pi-voice-stt-safe pi-agent-browser-native-safe pi-dynamic-workflows-safe pi-context-handoff pi-codex-compaction pi-btw-side pi-process-monitor-safe pi-setup-maintenance pi-model-prices"
+FORKS="pi-voice-stt-safe pi-agent-browser-native-safe pi-dynamic-workflows-safe pi-context-handoff pi-codex-compaction pi-btw-side pi-process-monitor-safe pi-setup-maintenance"
 
 REPO_URL="${PI_SETUP_REPO_URL:-https://github.com/ethanewer/pi-setup.git}"
 REPO_REF="${PI_SETUP_REF:-main}"
@@ -234,7 +234,6 @@ do
       --extension "$MAIN_DIR/local/pi-context-handoff/extensions/context-handoff/index.ts" \
       --extension "$MAIN_DIR/local/pi-codex-compaction/extensions/codex-compaction/index.ts" \
       --extension "$MAIN_DIR/local/pi-btw-side/extensions/btw/index.ts" \
-      --extension "$MAIN_DIR/local/pi-model-prices/extensions/model-prices/index.ts" \
       --extension "$MAIN_DIR/extensions/mlx/index.ts" \
       --extension "$MAIN_DIR/p/remove-pi-documentation.js" \
       "$@"
@@ -366,7 +365,6 @@ const wanted = [
   "local/pi-btw-side",
   "local/pi-process-monitor-safe",
   "local/pi-setup-maintenance",
-  "local/pi-model-prices",
 ];
 const managed = new Set([
   "pi-voice-stt",
@@ -382,7 +380,6 @@ const managed = new Set([
   "pi-btw-side",
   "pi-process-monitor-safe",
   "pi-setup-maintenance",
-  "pi-model-prices",
   // Unrelated npm packages that also register /btw through a TUI overlay. Listed so an
   // existing install of one is dropped rather than left racing pi-btw-side for the name.
   "pi-btw",

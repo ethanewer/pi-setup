@@ -30,7 +30,6 @@ const FORKS_MINUS_WORKFLOWS = [
 	"local/pi-btw-side",
 	"local/pi-process-monitor-safe",
 	"local/pi-setup-maintenance",
-	"local/pi-model-prices",
 ];
 const ALL_FORKS = [
 	"local/pi-voice-stt-safe",
@@ -41,7 +40,6 @@ const ALL_FORKS = [
 	"local/pi-btw-side",
 	"local/pi-process-monitor-safe",
 	"local/pi-setup-maintenance",
-	"local/pi-model-prices",
 ];
 
 const dir = mkdtempSync(join(tmpdir(), "pi-config-writer-"));
@@ -124,7 +122,7 @@ test("the model scope lands on all three profiles", () => {
 	expect(JSON.parse(readFileSync(pPath, "utf8")).enabledModels).toEqual(SCOPE);
 });
 
-test("pi loads every fork except workflows; piwf loads all nine", () => {
+test("pi loads every fork except workflows; piwf loads all eight", () => {
 	runWriter();
 	const main = JSON.parse(readFileSync(mainPath, "utf8"));
 	expect(main.packages).toEqual(["npm:user-pkg", ...FORKS_MINUS_WORKFLOWS]);

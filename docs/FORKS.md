@@ -468,37 +468,6 @@ the next install, and shows up later as drift. The skill puts the pinned path wh
 agent will find it. `bin/pi-setup-doctor` now reports that drift directly, comparing the
 installed Pi and `agent-browser` against the versions `install.sh` pins.
 
-## pi-model-prices
-
-First-party, not a fork. Pi's built-in `/model` selector shows `id [provider]`
-only and offers no extension hook into its rendering, so this package registers
-`/models`: the same picker — fuzzy search, wrapping arrow keys, Enter to switch,
-Esc to cancel, Tab for the scoped/all scope, current model first with `✓` — with
-each row annotated with API prices:
-
-```
-→ z-ai/glm-5.3 [openrouter, $1.40 in, $4.40 out, $0.26 cache read] ✓
-  gpt-5.6-luna [openai, $0.20 in, $1.20 out, $0.25 cache write, $0.02 cache read]
-```
-
-Rates are dollars per million tokens read from the model catalog's `model.cost`
-— the same metadata Pi's cost accounting uses, including the refreshed
-OpenRouter catalog — not a hand-maintained price list, so they track whatever
-Pi believes rather than drifting from it. Zero components are omitted; cache
-write precedes cache read when charged. A model reached through a subscription
-login shows `[provider, sub]`, using the same condition Pi's own footer uses
-(`isUsingOAuth` plus the provider's OAuth flow marked `isSubscription`). A model
-with input-based pricing tiers gets a footer line for the selected row, because
-the row's rates are the short-context ones and a long session is priced by the
-tier, not the row.
-
-It is display-plus-switch and nothing else: `/models <provider/model>` switches
-directly like the built-in argument form, switching goes through `pi.setModel`
-(which does not rewrite the saved default — that stays the built-in selector's
-job), and the picker reads model metadata read-only. Pricing-label logic lives
-in `pricing.ts` with no TUI imports and is unit-tested from
-`tests/model-prices.test.ts`.
-
 ## Startup labels
 
 Pi labels an extension by the directory holding its index file, falling back to the bare
