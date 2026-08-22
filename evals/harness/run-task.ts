@@ -9,6 +9,7 @@
  */
 import { cpSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync, appendFileSync, existsSync, symlinkSync } from "node:fs";
 import { createHash, randomBytes } from "node:crypto";
+import net from "node:net";
 import { createTracker, textOf } from "./accounting.ts";
 import path from "node:path";
 import { createAgentSession, DefaultResourceLoader, SessionManager } from "@earendil-works/pi-coding-agent";
@@ -66,8 +67,16 @@ process.env.SEED = SEED;
 process.env.PYTHONUNBUFFERED = "1";
 // Per-run values baked into job artifacts so ground truth depends on actually running.
 const NONCE = randomBytes(6).toString("hex");
-const runHash = createHash("sha256").update(runDir).digest().readUInt32BE(0);
-const MB_PORT = 8500 + (runHash % 1000);
+// Grab a real free port (hash-based picks collide across large parallel batches).
+const MB_PORT: number = await new Promise((resolve, reject) => {
+  const srv = net.createServer();
+  srv.unref();
+  srv.on("error", reject);
+  srv.listen(0, "127.0.0.1", () => {
+    const port = (srv.address() as net.AddressInfo).port;
+    srv.close(() => resolve(port));
+  });
+});
 process.env.MB_NONCE = NONCE;
 process.env.MB_PORT = String(MB_PORT);
 

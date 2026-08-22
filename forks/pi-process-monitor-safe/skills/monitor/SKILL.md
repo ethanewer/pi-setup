@@ -13,6 +13,14 @@ failures) plus process-exit get pushed to the session, instead of one LLM turn
 per stdout line. Rapid matches are coalesced. Keeps context lean and the
 session unblocked.
 
+## The rule after starting one
+
+`monitor` returns in milliseconds. When it does, say one line of status and **end
+your turn** — the matching ping starts your next turn automatically. Never follow a
+`monitor` call with `sleep`, wait loops, or repeated `tail`/`curl` checks; that
+re-blocks exactly what the watcher exists to prevent. If you have other work, do it
+now; otherwise stop and wait for the ping.
+
 ## When to use this
 
 Any task that could plausibly run **longer than a few seconds** AND you want to
