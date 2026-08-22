@@ -1,0 +1,1301 @@
+#!/usr/bin/env python3
+"""
+convert_pi_traces.py
+====================
+
+Convert every pi coding-agent trace on this machine into the row format used by
+the private HuggingFace dataset `eewer/glm-5.2-multi-harness-agent` (default /
+"pi" coding-agent config), then optionally upload the result -- compressed with
+zstd to save space -- to the `eewer/pi-trace-cache` dataset, if a HuggingFace
+access token with write access is present.
+
+What counts as a "pi trace"
+----------------------------
+A pi session is a JSONL event stream whose first line is
+`{"type":"session","version":3,"id":...,"timestamp":...,"cwd":...}` and whose
+subsequent lines are events of `type` in {model_change, thinking_level_change,
+message, custom_message, custom, compaction}. The script discovers these by
+walking the configured roots and by extracting the session-archives tarballs.
+
+Target row schema (matches glm-5.2-multi-harness-agent default config)
+------------------------------------------------------------------------
+One JSON object per converted trace. `messages` is rendered in OpenAI chat
+format (system/user/assistant/tool), the same convention the reference dataset
+uses for `harness == "pi"` rows:
+  * user      -> {role:"user",      content:[{type:"text", text}]}
+  * assistant -> {role:"assistant", content:str|null, reasoning_content:str,
+                  tool_calls:[{id,type:"function",function:{name,arguments}}],
+                  reasoning_tokens?, reasoning_status?}
+  * tool      -> {role:"tool", content:str, tool_call_id:str}
+System prompts are NOT persisted in pi session traces, so no system message is
+emitted (the reference rows had one only because data-gen captured it).
+
+Filtering
+---------
+Traces whose effective model is an OpenAI model are dropped (provider ==
+"openai", or model id matches the OpenAI family: gpt-*, o1/o3/o4-*, chatgpt-*,
+text-*, davinci/curie/babbage/ada, openai/*). The effective model is the last
+`model_change` event (falling back to the last assistant turn); a trace whose
+every assistant turn is OpenAI is also dropped.
+
+Upload
+------
+If HF_TOKEN (or HUGGING_FACE_HUB_TOKEN) is set and the token has `write` access,
+the compressed `.jsonl.zst` shard(s) are uploaded to `eewer/pi-trace-cache`
+(repo_type=dataset). `*.zst` is already LFS-tracked there. `--no-upload` skips.
+
+Usage
+-----
+  python3 convert_pi_traces.py                 # convert + upload
+  python3 convert_pi_traces.py --dry-run       # convert only, print summary
+  python3 convert_pi_traces.py --no-upload     # convert, write local files, no upload
+  python3 convert_pi_traces.py --scan-home     # also walk all of ~ (slower)
+  python3 convert_pi_traces.py --max-files 20  # cap discovered traces (debug)
+"""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import os
+import re
+import string
+import sys
+import tarfile
+import tempfile
+from collections import Counter
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any, Iterable
+
+try:
+    import zstandard as zstd  # type: ignore
+except Exception:  # pragma: no cover
+    zstd = None
+
+# --------------------------------------------------------------------------- #
+# Constants
+# --------------------------------------------------------------------------- #
+
+HOME = Path.home()
+
+DEFAULT_ROOTS = [
+    HOME / ".pi" / "agent" / "sessions",
+    HOME / "mk-sessions",
+    Path("/tmp"),
+    Path("/private/tmp"),
+]
+
+# Always also pull the archived sessions out of the pi session-archives dir.
+DEFAULT_ARCHIVE_GLOBS = [HOME / ".pi" / "agent" / "session-archives"]
+
+UPLOAD_REPO = "eewer/pi-trace-cache"
+DEFAULT_OUT = HOME / "pi-trace-cache-tool" / "out"
+
+ZSTD_LEVEL = 19  # high ratio; the reference dataset ships .jsonl.zst
+
+# Directories to never descend into while walking for traces.
+SKIP_DIRS = {
+    "node_modules", ".git", ".svn", ".hg", "Library", "Pictures", "Movies",
+    "Music", ".Trash", ".cache", "site-packages", "dist", "build", ".next",
+    "__pycache__", ".venv", "venv", ".tox", ".mypy_cache", ".pytest_cache",
+}
+
+# OpenAI model family detection.
+OPENAI_MODEL_RE = re.compile(
+    r"^(gpt-|o\d|-gpt|chatgpt-|text-embedding-|text-davinci-|davinci-|"
+    r"curie-|babbage-|ada-|code-davinci-|openai/)",
+    re.IGNORECASE,
+)
+
+# --------------------------------------------------------------------------- #
+# Benchmark-rollout detection
+# --------------------------------------------------------------------------- #
+#
+# A "benchmark rollout" is a session where pi is the agent-under-test in a
+# benchmark harness (TerminalBench, tau-bench, SWE-bench, ...) rather than a
+# real interactive dev session. We exclude these from the dataset.
+#
+# Detection is deliberately conservative: a dev session that merely *mentions*
+# "terminalbench" (reading docs, writing eval code, discussing results) is NOT
+# a rollout. A rollout is identified by *structural* signatures that only appear
+# when a harness drives the agent:
+#   1. The first user message IS a known harness prompt template.
+#   2. Recurring per-turn harness feedback (>=2 turns).
+#   3. Orchestrator env vars set as real `VAR=value` assignments (not string
+#      mentions) in an env-dump tool result.
+#   4. A container/sandbox cwd (/, /testbed, /root, /workspace) combined with
+#      an impersonal task-like first user message.
+
+# TerminalBench (terminus / justbash) harness prompt signatures.
+TB_TEMPLATE_OPENERS = [
+    "ai assistant tasked with solving command-line tasks in a linux environment",
+    "your goal is to solve the task by providing batches of shell commands",
+]
+TB_TURN_MARKERS = [
+    "current terminal state:",            # per-turn rendered prompt
+    "are you sure you want to mark the task as complete",  # completion confirm
+    "previous response had warnings:",   # warning feedback
+]
+TB_ENV_VARS = [
+    "TB_TASK_ID", "TERMINALBENCH_TASK_ID", "TERMINAL_BENCH_TASK_ID",
+]
+# A terminal-bench task-name identifier, e.g. `terminal-bench/path-tracing`.
+TB_TASKNAME_RE = re.compile(r"terminal-bench/[a-z0-9][a-z0-9_-]*", re.IGNORECASE)
+
+# Other known agent-benchmark harness prompt signatures (first-user-message).
+OTHER_HARNESS_OPENERS = [
+    ("tau-bench", "you are a customer service agent"),
+    ("tau-bench", "you are a customer service representative"),
+    ("tau2-bench", "you are a customer service agent"),
+    ("webshop", "you are shopping on the internet"),
+    ("alfworld", "you are interacting with a household simulator"),
+]
+
+# Orchestrator env vars that indicate a benchmark harness launched the run.
+OTHER_ORCHESTRATOR_ENV_VARS = [
+    "HARNESS", "BENCHMARK", "AGENT_EVAL", "EVAL_TASK_ID",
+]
+
+# Sandbox / container cwd patterns typical of benchmark task containers.
+SANDBOX_CWD_RE = re.compile(r"^(/|/testbed|/root|/workspace|/tmp/agent[^/]*)$")
+
+# Personal-language openers that indicate a *human* dev request, not a bare
+# task prompt. Used only to disambiguate weak signals (container cwd +
+# task-name mention) so we don't drop real dev work on benchmark repos.
+PERSONAL_OPENER_RE = re.compile(
+    r"^(i want|i'd|i would|can you|could you|please|how|why|what|review|let'?s|"
+    r"investigate|explain|compare|find|show|tell|write|run|add|fix|update|"
+    r"make|build|set up|configure|deploy|debug|check|merge|explore)\b",
+    re.IGNORECASE,
+)
+
+# Env-var assignment regex: VAR=... (used to detect real env values, not
+# prose mentions of a variable name).
+ENV_ASSIGN_RE = re.compile(
+    r"(?:^|[\s\"'`])([A-Z][A-Z0-9_]*)=([A-Za-z0-9_./:+-]{8,})",
+    re.MULTILINE,
+)
+
+
+def _collect_texts(events: list[dict]) -> tuple[str, list[str], list[str]]:
+    """Return (first_user_text, all_user_texts, all_toolresult_texts)."""
+    user_texts: list[str] = []
+    tool_texts: list[str] = []
+    first_user = ""
+    for ev in events:
+        if ev.get("type") != "message":
+            continue
+        m = ev.get("message") or {}
+        role = m.get("role")
+        content = m.get("content") or []
+        if role == "user":
+            parts = [
+                str(b.get("text") or "")
+                for b in content
+                if isinstance(b, dict) and b.get("type") == "text"
+            ]
+            t = "\n".join(parts)
+            if t.strip():
+                if not first_user:
+                    first_user = t
+                user_texts.append(t)
+        elif role == "toolResult":
+            parts = [
+                str(b.get("text") or "")
+                for b in content
+                if isinstance(b, dict) and b.get("type") == "text"
+            ]
+            tool_texts.append("\n".join(parts))
+    return first_user, user_texts, tool_texts
+
+
+def detect_benchmark_rollout(events: list[dict], cwd: str) -> str | None:
+    """Return a rollout reason string if the session is a benchmark rollout,
+    else None. Conservative: dev sessions discussing benchmarks are kept."""
+    first_user, user_texts, tool_texts = _collect_texts(events)
+    fu_lower = first_user.lower()
+    all_blob = "\n".join(user_texts + tool_texts)
+
+    # --- TerminalBench (terminus/justbash) ----------------------------- #
+    # 1. First user message IS the TB harness prompt template.
+    if any(sig in fu_lower for sig in TB_TEMPLATE_OPENERS):
+        return "terminalbench"
+
+    # 2. Recurring per-turn TB feedback (>=2 turns) — distinguishes a real
+    #    rollout from a dev session that pasted one TB snippet.
+    tb_turn_hits = sum(
+        1 for t in user_texts
+        if any(m in t.lower() for m in TB_TURN_MARKERS)
+    )
+    if tb_turn_hits >= 2:
+        return "terminalbench"
+
+    # 3. TB orchestrator env vars assigned as real VAR=value (in env dumps).
+    env_set = {
+        name for name, _ in ENV_ASSIGN_RE.findall(all_blob)
+    }
+    if any(v in env_set for v in TB_ENV_VARS):
+        return "terminalbench"
+
+    # --- Other known harness prompt signatures (first user message) ---- #
+    for _name, opener in OTHER_HARNESS_OPENERS:
+        if opener in fu_lower:
+            return "benchmark_rollout"
+
+    # --- General orchestrator-driven rollout --------------------------- #
+    # Orchestrator env vars + an impersonal (non-human) first user message.
+    has_orch = any(v in env_set for v in OTHER_ORCHESTRATOR_ENV_VARS)
+    impersonal = bool(first_user.strip()) and not PERSONAL_OPENER_RE.match(first_user.strip())
+    if has_orch and impersonal:
+        return "benchmark_rollout"
+
+    # --- Container/sandbox rollout ------------------------------------- #
+    # A sandbox cwd + an impersonal, task-like first user message + a TB
+    # task-name identifier in content. Requires the conjunction so dev work
+    # inside benchmark repos (sandbox-ish cwd but human-phrased request) is
+    # kept.
+    if SANDBOX_CWD_RE.match(cwd or "") and impersonal and TB_TASKNAME_RE.search(all_blob):
+        return "terminalbench"
+
+    return None
+
+# Map of file extension -> (language, domain) matching the reference dataset.
+EXT_LANG = {
+    ".py": ("python", "python"),
+    ".pyi": ("python", "python"),
+    ".js": ("javascript", "js"),
+    ".mjs": ("javascript", "js"),
+    ".cjs": ("javascript", "js"),
+    ".jsx": ("javascript", "js"),
+    ".ts": ("typescript", "ts"),
+    ".tsx": ("typescript", "ts"),
+    ".go": ("go", "go"),
+    ".rs": ("rust", "rust"),
+    ".java": ("java", "java"),
+}
+
+
+# --------------------------------------------------------------------------- #
+# Secret redaction
+# --------------------------------------------------------------------------- #
+#
+# Every API-key-like string in a converted trace is replaced with a
+# deterministic fake that (a) looks like the same kind of key (same prefix,
+# same length, valid charset) and (b) is stable: the same real key always maps
+# to the same fake key, across messages, traces, and runs. Stability comes
+# from hashing a fixed salt + the real key, NOT from a stored real->fake table,
+# so no secrets are persisted anywhere by the redactor (an in-memory cache is
+# used purely for speed within a single run).
+#
+# Redaction is applied to every string value in the converted row (user text,
+# assistant text + reasoning, tool results, tool-call arguments, etc.). The
+# detection regexes are specific enough (prefixed key formats, `Bearer ...`,
+# `<NAME>(PASSWORD|SECRET|TOKEN|API_KEY)...=VALUE`, PEM blocks) that ordinary
+# content (file paths, code) is left untouched.
+
+REDACT_SALT = b"pi-trace-cache-tool/v1"
+ALNUM = string.ascii_letters + string.digits  # 62
+
+CHARSETS = {
+    "url": string.ascii_letters + string.digits + "_-",  # 64
+    "alnum": string.ascii_letters + string.digits,         # 62
+    "ualnum": string.ascii_letters + string.digits + "_", # 63
+    "upper": string.ascii_uppercase + string.digits,      # 36
+    "b64": string.ascii_letters + string.digits + "+/",   # 64
+}
+
+# Each spec: (regex matching the full key with (prefix)(body) groups, charset)
+# used to regenerate the body while preserving the prefix + length.
+KEY_SPECS: list[tuple["re.Pattern", str]] = [
+    (re.compile(r"(sk-proj-)([A-Za-z0-9_-]{20,})"), "url"),       # OpenAI project keys
+    (re.compile(r"(sk-or-v[0-9]+-)([A-Za-z0-9]{40,})"), "alnum"), # OpenRouter
+    (re.compile(r"(sk-ant-)([A-Za-z0-9_-]{20,})"), "url"),        # Anthropic
+    (re.compile(r"(github_pat_)([A-Za-z0-9_]{60,})"), "ualnum"),  # GitHub fine-grained PAT
+    (re.compile(r"(gh[opsru]_)([A-Za-z0-9]{36,})"), "alnum"),     # GitHub classic PAT
+    (re.compile(r"(hf_)([A-Za-z0-9]{30,})"), "alnum"),            # HuggingFace
+    (re.compile(r"(fw_)([A-Za-z0-9]{20,})"), "alnum"),            # Fireworks
+    (re.compile(r"(AKIA)([0-9A-Z]{16})\b"), "upper"),            # AWS access key id
+    (re.compile(r"(sk-)([A-Za-z0-9]{40,})"), "alnum"),            # OpenAI legacy (last among sk-)
+]
+
+# Combined in-text finder. Named groups so we know which branch matched and
+# can split bearer / envkey matches into keep-prefix + redact-value.
+_NAMED = [
+    ("skproj",   r"sk-proj-[A-Za-z0-9_-]{20,}"),
+    ("skor",     r"sk-or-v[0-9]+-[A-Za-z0-9]{40,}"),
+    ("skant",    r"sk-ant-[A-Za-z0-9_-]{20,}"),
+    ("ghpat",    r"github_pat_[A-Za-z0-9_]{60,}"),
+    ("gh",       r"gh[opsru]_[A-Za-z0-9]{36,}"),
+    ("hf",       r"hf_[A-Za-z0-9]{30,}"),
+    ("fw",       r"fw_[A-Za-z0-9]{20,}"),
+    ("aws",      r"AKIA[0-9A-Z]{16}\b"),
+    ("sklegacy", r"sk-[A-Za-z0-9]{40,}"),
+    ("bearer",   r"Bearer\s+[A-Za-z0-9._-]{20,}"),
+    # env-style assignment: VAR...PASSWORD|SECRET|TOKEN|API_KEY... = VALUE
+    ("envkey",   r"(?:[A-Za-z0-9_]*)(?:PASSWORD|SECRET|TOKEN|API[_-]?KEY|APIKEY)[A-Za-z0-9_]*\s*[:=]\s*[\"']?[A-Za-z0-9._\-+/=]{16,}"),
+    ("pem",      r"-----BEGIN [A-Z ]*PRIVATE KEY-----.*?-----END [A-Z ]*PRIVATE KEY-----"),
+]
+FIND_RE = re.compile(
+    "|".join(f"(?P<{n}>{p})" for n, p in _NAMED),
+    re.IGNORECASE | re.DOTALL,
+)
+BEARER_SPLIT = re.compile(r"(Bearer\s+)([A-Za-z0-9._-]{20,})")
+ENVKEY_SPLIT = re.compile(
+    r"((?:[A-Za-z0-9_]*)(?:PASSWORD|SECRET|TOKEN|API[_-]?KEY|APIKEY)[A-Za-z0-9_]*\s*[:=]\s*[\"']?)([A-Za-z0-9._\-+/=]{16,})",
+    re.IGNORECASE,
+)
+PEM_BODY = re.compile(
+    r"(-----BEGIN [A-Z ]*PRIVATE KEY-----\n)(.*?)(\n-----END [A-Z ]*PRIVATE KEY-----)",
+    re.DOTALL,
+)
+
+
+class Redactor:
+    """Deterministic secret redactor.
+
+    `fake_for(real)` returns a stable, format-valid fake for a given secret.
+    `redact_text` finds secrets in running text and replaces them. `redact_obj`
+    / `redact_row` recurse over JSON-like structures.
+    """
+
+    def __init__(self) -> None:
+        self._cache: dict[str, str] = {}
+        self.counts: Counter = Counter()
+
+    # -- deterministic byte stream seeded by the real secret -------------
+    def _keystream(self, seed: str):
+        counter = 0
+        while True:
+            h = hashlib.sha256(
+                REDACT_SALT + seed.encode("utf-8") + str(counter).encode()
+            ).digest()
+            for b in h:
+                yield b
+            counter += 1
+
+    def _gen(self, length: int, charset: str, seed: str) -> str:
+        ks = self._keystream(seed)
+        n = len(charset)
+        return "".join(charset[next(ks) % n] for _ in range(length))
+
+    def _gen_preserving(self, s: str, seed: str) -> str:
+        # Randomize [A-Za-z0-9] in place; keep all other chars (., -, _, +, /,
+        # =, newlines) so structure (JWT dots, PEM line breaks) is preserved.
+        ks = self._keystream(seed)
+        out = []
+        for ch in s:
+            if ch.isalnum():
+                out.append(ALNUM[next(ks) % len(ALNUM)])
+            else:
+                out.append(ch)
+        return "".join(out)
+
+    # -- core mapping ----------------------------------------------------
+    def fake_for(self, real: str) -> str:
+        cached = self._cache.get(real)
+        if cached is not None:
+            return cached
+        out = self._fake(real)
+        self._cache[real] = out
+        return out
+
+    def _fake(self, real: str) -> str:
+        for rx, charset in KEY_SPECS:
+            m = rx.match(real)
+            if m:
+                prefix, body = m.group(1), m.group(2)
+                return prefix + self._gen(len(body), CHARSETS[charset], real)
+        # Unknown shape (bare bearer token, env value, PEM body): preserve
+        # structure, randomize alphanumerics.
+        return self._gen_preserving(real, real)
+
+    def _fake_pem(self, block: str) -> str:
+        m = PEM_BODY.match(block)
+        if not m:
+            return self._gen_preserving(block, block)
+        head, body, foot = m.group(1), m.group(2), m.group(3)
+        return head + self._gen_preserving(body, body) + foot
+
+    # -- public API ------------------------------------------------------
+    def redact_text(self, s: str) -> str:
+        if not isinstance(s, str) or not s:
+            return s
+
+        def repl(m: re.Match) -> str:
+            s0 = m.group(0)
+            which = m.lastgroup
+            if which == "pem":
+                self.counts["pem"] += 1
+                return self._fake_pem(s0)
+            if which == "bearer":
+                self.counts["bearer"] += 1
+                bm = BEARER_SPLIT.match(s0)
+                p, t = bm.group(1), bm.group(2)
+                return p + self.fake_for(t)
+            if which == "envkey":
+                self.counts["envkey"] += 1
+                em = ENVKEY_SPLIT.match(s0)
+                p, v = em.group(1), em.group(2)
+                return p + self.fake_for(v)
+            if which is None:
+                return self.fake_for(s0)
+            self.counts[which] += 1
+            return self.fake_for(s0)
+
+        return FIND_RE.sub(repl, s)
+
+    def redact_obj(self, o: Any) -> Any:
+        if isinstance(o, str):
+            return self.redact_text(o)
+        if isinstance(o, list):
+            return [self.redact_obj(x) for x in o]
+        if isinstance(o, dict):
+            return {k: self.redact_obj(v) for k, v in o.items()}
+        return o
+
+    def redact_row(self, row: dict) -> dict:
+        return self.redact_obj(row)  # returns a rebuilt structure
+
+
+REDACTOR = Redactor()
+
+
+# --------------------------------------------------------------------------- #
+# Discovery
+# --------------------------------------------------------------------------- #
+
+def looks_like_pi_session(path: Path) -> bool:
+    """True if the first JSONL line is a pi `session` event."""
+    try:
+        with open(path, "rb") as f:
+            head = f.readline(4096)
+        if not head.startswith(b"{"):
+            return False
+        obj = json.loads(head)
+        return obj.get("type") == "session" and "id" in obj and "timestamp" in obj
+    except Exception:
+        return False
+
+
+def walk_for_traces(roots: Iterable[Path]) -> list[Path]:
+    """Walk roots looking for pi session JSONL files. Skips heavy/system dirs."""
+    out: list[Path] = []
+    seen: set[Path] = set()
+    for root in roots:
+        root = root.expanduser()
+        if not root.exists():
+            continue
+        if root.is_file():
+            if root.suffix == ".jsonl" and root not in seen and looks_like_pi_session(root):
+                seen.add(root)
+                out.append(root)
+            continue
+        for dp, dns, fns in os.walk(root):
+            dns[:] = [d for d in dns if d not in SKIP_DIRS]
+            # Don't go absurdly deep.
+            if dp.count(os.sep) > 10:
+                dns[:] = []
+                continue
+            for fn in fns:
+                if not fn.endswith(".jsonl"):
+                    continue
+                p = Path(dp) / fn
+                if p in seen:
+                    continue
+                if looks_like_pi_session(p):
+                    seen.add(p)
+                    out.append(p)
+    return sorted(out)
+
+
+def extract_archives(archive_dirs: Iterable[Path], tmpdir: Path) -> list[tuple[Path, str]]:
+    """Extract *.tar.gz / *.tar session archives into tmpdir.
+
+    Returns list of (jsonl_path, archive_basename) for extracted pi sessions.
+    """
+    extracted: list[tuple[Path, str]] = []
+    for ad in archive_dirs:
+        ad = ad.expanduser()
+        if not ad.exists():
+            continue
+        archives: list[Path] = []
+        archives.extend(sorted(ad.glob("*.tar.gz")))
+        archives.extend(sorted(ad.glob("*.tar")))
+        archives.extend(sorted(ad.glob("*.tgz")))
+        for arc in archives:
+            try:
+                dest = tmpdir / (arc.stem + "_extracted")
+                dest.mkdir(parents=True, exist_ok=True)
+                with tarfile.open(arc, "r:*") as tf:
+                    tf.extractall(dest)  # noqa: S202 - trusted local archives
+                for p in dest.rglob("*.jsonl"):
+                    if looks_like_pi_session(p):
+                        extracted.append((p, arc.name))
+            except Exception as e:  # pragma: no cover
+                print(f"  [warn] could not extract {arc}: {e}", file=sys.stderr)
+    return extracted
+
+
+# --------------------------------------------------------------------------- #
+# Model filtering
+# --------------------------------------------------------------------------- #
+
+def is_openai_model(provider: str | None, model: str | None) -> bool:
+    if provider and provider.lower() == "openai":
+        return True
+    if model and OPENAI_MODEL_RE.match(str(model)):
+        return True
+    return False
+
+
+# Additional model filters — drop entire providers/model families from
+# the dataset. Each entry: (label, provider-match set, model regex).
+#   - anthropic: ANY model whose provider is "anthropic" OR whose id matches
+#     claude (claude-opus-*, claude-sonnet-*, claude-haiku-*, anthropic/claude-*).
+#   - qwen3-0.6b: the Qwen3 0.6B models (e.g. mlx-community/Qwen3-0.6B-4bit).
+#   - faux:       pi's internal test/mock provider (provider="faux", model
+#                 "faux-1"/"faux-2"). Zero-cost, canned responses
+#                 ("hello"->"one"), lives in test scratch dirs. Not real sessions.
+EXTRA_MODEL_FILTERS: list[tuple[str, set[str], re.Pattern]] = [
+    ("anthropic",  {"anthropic"}, re.compile(r"claude", re.IGNORECASE)),
+    ("qwen3-0.6b", set(),         re.compile(r"qwen3.*0\.?6b|0\.?6b.*qwen3", re.IGNORECASE)),
+    ("faux",       {"faux"},      re.compile(r"^faux(?:-\d+)?$", re.IGNORECASE)),
+]
+
+
+def extra_filter_match(provider: str | None, model: str | None) -> str | None:
+    """Return the filter label if the (provider, model) matches an extra
+    filter, else None. A filter matches if the provider is in its provider set
+    OR the model matches its regex."""
+    prov_l = provider.lower() if provider else ""
+    mdl = str(model) if model else ""
+    for label, provs, rx in EXTRA_MODEL_FILTERS:
+        if prov_l and prov_l in provs:
+            return label
+        if mdl and rx.search(mdl):
+            return label
+    return None
+
+
+# --------------------------------------------------------------------------- #
+# Conversion
+# --------------------------------------------------------------------------- #
+
+@dataclass
+class ConvStats:
+    discovered: int = 0
+    converted: int = 0
+    skipped_openai: int = 0
+    skipped_terminalbench: int = 0
+    skipped_benchmark: int = 0
+    skipped_model_filter: int = 0
+    skipped_empty: int = 0
+    skipped_parse: int = 0
+    tools_used: set[str] = field(default_factory=set)
+
+
+def _blk_text(blk: Any) -> str:
+    if isinstance(blk, dict):
+        return str(blk.get("text") or blk.get("content") or "")
+    return str(blk)
+
+
+def _detect_language(tool_calls: list[dict]) -> tuple[str, str]:
+    """Best-effort (language, domain) from file extensions in tool-call args."""
+    exts: Counter[str] = Counter()
+    for tc in tool_calls:
+        args = tc.get("arguments") or {}
+        if not isinstance(args, dict):
+            continue
+        blob = json.dumps(args) + " " + str(tc.get("name", ""))
+        # capture file paths in args
+        for token in re.findall(r"[\w/.\-]+\.\w{1,5}", blob):
+            ext = os.path.splitext(token)[1].lower()
+            if ext in EXT_LANG:
+                exts[ext] += 1
+    if not exts:
+        return ("", "")
+    ext = exts.most_common(1)[0][0]
+    lang, domain = EXT_LANG[ext]
+    return (lang, domain)
+
+
+def convert_messages(events: list[dict]) -> tuple[list[dict], dict]:
+    """Build the OpenAI-style `messages` list from pi message events.
+
+    Returns (messages, meta) where meta carries usage/tools/exception info.
+    """
+    messages: list[dict] = []
+    usage_inputs: list[int] = []
+    usage_outputs: list[int] = []
+    usage_reasoning: list[int] = []
+    usage_total: list[int] = []
+    all_tools: set[str] = set()
+    exception_message: str | None = None
+    exception_type: str | None = None
+    assistant_turns = 0
+    openai_turns = 0
+    reasoning_present = False
+
+    for ev in events:
+        if ev.get("type") != "message":
+            continue
+        m = ev.get("message") or {}
+        role = m.get("role")
+        content = m.get("content") or []
+
+        if role == "user":
+            blocks = [
+                {"type": "text", "text": _blk_text(b)}
+                for b in content
+                if isinstance(b, dict) and b.get("type") == "text"
+            ]
+            if not blocks:
+                # user message with no text blocks -> still keep a placeholder
+                blocks = [{"type": "text", "text": ""}]
+            messages.append({"role": "user", "content": blocks})
+
+        elif role == "assistant":
+            assistant_turns += 1
+            prov = m.get("provider")
+            mdl = m.get("model")
+            if is_openai_model(prov, mdl):
+                openai_turns += 1
+            texts: list[str] = []
+            thinks: list[str] = []
+            tool_calls: list[dict] = []
+            for b in content:
+                if not isinstance(b, dict):
+                    continue
+                t = b.get("type")
+                if t == "text":
+                    tx = _blk_text(b)
+                    if tx:
+                        texts.append(tx)
+                elif t == "thinking":
+                    tk = b.get("thinking") or b.get("content") or ""
+                    if tk:
+                        thinks.append(str(tk))
+                        reasoning_present = True
+                elif t == "toolCall":
+                    name = b.get("name")
+                    if name:
+                        all_tools.add(str(name))
+                    fn = {
+                        "name": str(name) if name is not None else "",
+                        "arguments": b.get("arguments") if isinstance(b.get("arguments"), (dict, list)) else {},
+                    }
+                    tool_calls.append({
+                        "id": str(b.get("id") or ""),
+                        "type": "function",
+                        "function": fn,
+                    })
+            # usage
+            u = m.get("usage") or {}
+            if isinstance(u, dict):
+                usage_inputs.append(int(u.get("input") or 0))
+                usage_outputs.append(int(u.get("output") or 0))
+                usage_reasoning.append(int(u.get("reasoning") or 0))
+                usage_total.append(int(u.get("totalTokens") or 0))
+            # error
+            if m.get("errorMessage") and exception_message is None:
+                exception_message = str(m["errorMessage"])
+                exception_type = m.get("stopReason") or "assistant_error"
+
+            msg: dict = {
+                "role": "assistant",
+                "content": "\n".join(texts) if texts else None,
+                "reasoning_content": "\n".join(thinks) if thinks else "",
+                "tool_calls": tool_calls or None,
+            }
+            # Drop None tool_calls to keep it clean (matches dataset rows that
+            # sometimes omit it); keep reasoning tokens when we have usage.
+            if tool_calls:
+                msg["tool_calls"] = tool_calls
+            else:
+                msg.pop("tool_calls", None)
+            if usage_reasoning:
+                msg["reasoning_tokens"] = usage_reasoning[-1]
+            # reasoning_status mirrors the dataset's convention:
+            #   native_empty = reasoning-capable turn produced no thinking
+            msg["reasoning_status"] = "present" if reasoning_present and thinks else "native_empty"
+            messages.append(msg)
+
+        elif role == "toolResult":
+            tr_content = m.get("content") or []
+            text = "\n".join(
+                _blk_text(b) for b in tr_content
+                if isinstance(b, dict) and b.get("type") == "text"
+            )
+            if m.get("isError") and exception_message is None:
+                exception_message = text[:4000] or "tool error"
+                exception_type = "tool_error"
+            tn = m.get("toolName")
+            if tn:
+                all_tools.add(str(tn))
+            messages.append({
+                "role": "tool",
+                "content": text,
+                "tool_call_id": str(m.get("toolCallId") or ""),
+            })
+
+    meta = {
+        "assistant_turns": assistant_turns,
+        "openai_turns": openai_turns,
+        "tools_used": all_tools,
+        "usage_inputs": usage_inputs,
+        "usage_outputs": usage_outputs,
+        "usage_reasoning": usage_reasoning,
+        "usage_total": usage_total,
+        "exception_message": exception_message,
+        "exception_type": exception_type,
+        "reasoning_present": reasoning_present,
+    }
+    return messages, meta
+
+
+def _iso_to_date(ts: str) -> str:
+    # pi timestamps look like "2026-07-31T03:11:22.340Z"
+    try:
+        return ts[:10]
+    except Exception:
+        return ""
+
+
+def convert_session(
+    events: list[dict],
+    source_path: str,
+    source_archive: str,
+) -> tuple[dict | None, str]:
+    """Convert a parsed session event list to a target row.
+
+    Returns (row_or_None, skip_reason).
+    """
+    session = next((e for e in events if e.get("type") == "session"), None)
+    if session is None:
+        return None, "no_session_event"
+
+    session_id = str(session.get("id") or "")
+    session_ts = str(session.get("timestamp") or "")
+    cwd = str(session.get("cwd") or "")
+
+    # effective model = last model_change, else last assistant message
+    model_changes = [e for e in events if e.get("type") == "model_change"]
+    eff_provider = None
+    eff_model = None
+    if model_changes:
+        last = model_changes[-1]
+        eff_provider = last.get("provider")
+        eff_model = last.get("modelId")
+    # fall back to last assistant turn
+    messages, meta = convert_messages(events)
+    if eff_provider is None or eff_model is None:
+        for ev in reversed(events):
+            if ev.get("type") == "message" and (ev.get("message") or {}).get("role") == "assistant":
+                m = ev["message"]
+                eff_provider = eff_provider or m.get("provider")
+                eff_model = eff_model or m.get("model")
+                break
+
+    # ---- OpenAI filter -------------------------------------------------- #
+    if is_openai_model(eff_provider, eff_model):
+        return None, "openai"
+    if meta["assistant_turns"] > 0 and meta["openai_turns"] == meta["assistant_turns"]:
+        return None, "openai"
+    if not messages:
+        return None, "empty"
+
+    # ---- Extra model-family filter (anthropic, qwen3-0.6b, faux) ----- #
+    extra = extra_filter_match(eff_provider, eff_model)
+    if extra:
+        return None, f"model:{extra}"
+
+    # ---- Benchmark-rollout filter -------------------------------------- #
+    rollout = detect_benchmark_rollout(events, cwd)
+    if rollout:
+        return None, rollout
+
+    # ---- Token accounting (matches glm-5.2-multi-harness-agent) -------- #
+    first_input = meta["usage_inputs"][0] if meta["usage_inputs"] else 0
+    completion = sum(meta["usage_outputs"])
+    last_input = meta["usage_inputs"][-1] if meta["usage_inputs"] else 0
+    last_total = meta["usage_total"][-1] if meta["usage_total"] else (last_input + completion)
+    prompt_tokens = first_input
+    total_tokens = prompt_tokens + completion
+    api_usage_complete = bool(meta["usage_inputs"]) and len(meta["usage_inputs"]) == meta["assistant_turns"]
+
+    # ---- Language detection -------------------------------------------- #
+    lang, domain = _detect_language(
+        [tc for msg in messages for tc in (msg.get("tool_calls") or [])]
+    )
+
+    # ---- Description (first user text) --------------------------------- #
+    description = ""
+    for m in messages:
+        if m["role"] == "user":
+            c = m["content"]
+            if isinstance(c, list) and c and isinstance(c[0], dict):
+                description = (c[0].get("text") or "")[:500]
+            break
+
+    date = _iso_to_date(session_ts)
+    tools_used = sorted(meta["tools_used"])
+    row_id = f"pi:{session_id}" if session_id else f"pi:{abs(hash(source_path))}"
+
+    row = {
+        "agent": "pi",
+        "api_completion_tokens": completion,
+        "api_exchange_count": meta["assistant_turns"],
+        "api_prompt_tokens": last_input,
+        "api_provider": "auto",
+        "api_reasoning_complete": meta["reasoning_present"] or not meta["assistant_turns"],
+        "api_row_id": row_id,
+        "api_session_id": session_id,
+        "api_session_key": f"pi:{session_id}" if session_id else "",
+        "api_total_tokens": last_total,
+        "api_usage_complete": api_usage_complete,
+        "command_complexity": "",
+        "completion_tokens": completion,
+        "container_def": "",
+        "date": date,
+        "description": description,
+        "domain": domain,
+        "exception_message": meta["exception_message"],
+        "exception_type": meta["exception_type"],
+        "harness": "pi",
+        "harness_completion_tokens": 0,
+        "harness_prompt_tokens": 0,
+        "language": lang,
+        "messages": messages,
+        "model": str(eff_model or ""),
+        "model_provider": str(eff_provider or ""),
+        "outcome": {
+            "completion_tokens": completion,
+            "exception_message": meta["exception_message"],
+            "exception_type": meta["exception_type"],
+            "harness": "pi",
+            "passed": None,
+            "prompt_tokens": prompt_tokens,
+            "result_path": source_path,
+            "reward": None,
+            "task_name": session_id,
+            "trial_name": "",
+        },
+        "parent_row_id": None,
+        "passed": None,
+        "primitive_skills": json.dumps([lang]) if lang else "[]",
+        "prompt_tokens": prompt_tokens,
+        "provider_metadata": {"api_base": ""},
+        "reasoning_complete": meta["reasoning_present"] or not meta["assistant_turns"],
+        "result_path": source_path,
+        "reward": None,
+        "root_row_id": row_id,
+        "run_id": session_id,
+        "scenario": "",
+        "segment_index": 0,
+        "segment_reason": "root",
+        "skill_type": domain,
+        "source": "local/pi",
+        "source_archive": source_archive,
+        "source_metadata": {
+            "cwd": cwd,
+            "host": os.uname().nodename if hasattr(os, "uname") else "",
+            "pi_session_file": source_path,
+        },
+        "source_path": source_path,
+        "task": f"pi-session/{session_id}" if session_id else "pi-session",
+        "task_complexity": "",
+        "task_id": session_id,
+        "test_final_state": "",
+        "test_initial_state": "",
+        "token_accounting": "conversation_delta_from_api_usage" if api_usage_complete else "estimated",
+        "tools": [],  # pi traces don't persist tool schemas; see README
+        "total_tokens": total_tokens,
+        "trace_key": f"pi-session:{session_id}" if session_id else f"pi-session:{row_id}",
+        "trial_name": "",
+        "truth": "",
+    }
+    return row, ""
+
+
+def parse_session_file(path: Path) -> list[dict] | None:
+    """Load a pi session JSONL into a list of events. None on parse failure."""
+    events: list[dict] = []
+    try:
+        with open(path, "r", encoding="utf-8", errors="replace") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                events.append(json.loads(line))
+    except Exception as e:
+        print(f"  [warn] parse error in {path}: {e}", file=sys.stderr)
+        return None
+    return events if events else None
+
+
+# --------------------------------------------------------------------------- #
+# Output / compression
+# --------------------------------------------------------------------------- #
+
+def write_jsonl(rows: Iterable[dict], path: Path) -> int:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    n = 0
+    with open(path, "w", encoding="utf-8") as f:
+        for r in rows:
+            f.write(json.dumps(r, ensure_ascii=False) + "\n")
+            n += 1
+    return n
+
+
+def compress_zst(src: Path, dst: Path, level: int = ZSTD_LEVEL) -> None:
+    if zstd is None:
+        raise RuntimeError("zstandard is required for compression (pip install zstandard)")
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    cctx = zstd.ZstdCompressor(level=level)
+    with open(src, "rb") as fin, open(dst, "wb") as fout:
+        cctx.copy_stream(fin, fout)
+
+
+# --------------------------------------------------------------------------- #
+# Upload
+# --------------------------------------------------------------------------- #
+
+def token_has_write(token: str) -> tuple[bool, str]:
+    """Check the token can write to UPLOAD_REPO's owner. Returns (ok, who)."""
+    try:
+        import urllib.request
+        req = urllib.request.Request(
+            "https://huggingface.co/api/whoami-v2",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        with urllib.request.urlopen(req, timeout=20) as r:
+            d = json.load(r)
+        name = d.get("name", "")
+        auth = (d.get("auth") or {}).get("accessToken", {}) or {}
+        role = auth.get("role", "")
+        return (role == "write", name)
+    except Exception as e:
+        print(f"  [warn] whoami failed: {e}", file=sys.stderr)
+        return (False, "")
+
+
+def upload_to_hub(files: list[Path], repo: str, token: str, dry_run: bool) -> None:
+    if not files:
+        print("  [upload] nothing to upload")
+        return
+    try:
+        from huggingface_hub import HfApi  # type: ignore
+    except Exception as e:
+        print(f"  [warn] huggingface_hub not available, skipping upload: {e}", file=sys.stderr)
+        return
+    api = HfApi(token=token)
+    for f in files:
+        path_in_repo = f"data/{f.name}"
+        if dry_run:
+            print(f"  [dry-run] would upload {f} -> {repo}:{path_in_repo}")
+            continue
+        print(f"  [upload] {f} -> {repo}:{path_in_repo} ...", flush=True)
+        api.upload_file(
+            path_or_fileobj=str(f),
+            path_in_repo=path_in_repo,
+            repo_id=repo,
+            repo_type="dataset",
+            token=token,
+        )
+        print(f"  [upload] done: https://huggingface.co/datasets/{repo}/blob/main/{path_in_repo}")
+
+
+def load_rows_from_zst(path: Path) -> list[dict]:
+    """Decompress a .jsonl.zst shard and return its rows."""
+    rows: list[dict] = []
+    if zstd is None:
+        return rows
+    dctx = zstd.ZstdDecompressor()
+    try:
+        with open(path, "rb") as f:
+            with dctx.stream_reader(f) as r:
+                data = r.read()
+        for line in data.decode("utf-8", errors="replace").splitlines():
+            line = line.strip()
+            if line:
+                rows.append(json.loads(line))
+    except Exception as e:
+        print(f"  [warn] could not read shard {path}: {e}", file=sys.stderr)
+    return rows
+
+
+def list_remote_shards(repo: str, token: str) -> list[str]:
+    """Return repo paths of data/*.jsonl.zst shards in the remote dataset."""
+    try:
+        from huggingface_hub import HfApi  # type: ignore
+    except Exception as e:
+        print(f"  [warn] huggingface_hub not available: {e}", file=sys.stderr)
+        return []
+    api = HfApi(token=token)
+    try:
+        files = api.list_repo_files(repo_id=repo, repo_type="dataset")
+    except Exception as e:
+        print(f"  [warn] could not list {repo}: {e}", file=sys.stderr)
+        return []
+    return [f for f in files if f.startswith("data/") and f.endswith(".jsonl.zst")]
+
+
+def download_remote_rows(repo: str, token: str, tmpdir: Path) -> tuple[list[dict], list[str]]:
+    """Download all remote shards; return (rows, shard_repo_paths).
+
+    Used to compute the union of already-uploaded data and local data so a run
+    on one machine never clobbers traces uploaded by another.
+    """
+    shard_paths = list_remote_shards(repo, token)
+    if not shard_paths:
+        return [], []
+    rows: list[dict] = []
+    try:
+        from huggingface_hub import hf_hub_download  # type: ignore
+    except Exception as e:
+        print(f"  [warn] huggingface_hub not available: {e}", file=sys.stderr)
+        return [], shard_paths
+    for sp in shard_paths:
+        try:
+            local = hf_hub_download(
+                repo_id=repo, repo_type="dataset", filename=sp,
+                token=token, cache_dir=str(tmpdir / "hf_cache"),
+            )
+            rows.extend(load_rows_from_zst(Path(local)))
+            print(f"  [upload] downloaded {sp} ({len(rows)} rows so far)")
+        except Exception as e:
+            print(f"  [warn] could not download {sp}: {e}", file=sys.stderr)
+    return rows, shard_paths
+
+
+def delete_remote_shards(repo: str, token: str, repo_paths: list[str]) -> None:
+    """Delete superseded remote shards after a union upload."""
+    if not repo_paths:
+        return
+    try:
+        from huggingface_hub import HfApi  # type: ignore
+    except Exception:
+        return
+    api = HfApi(token=token)
+    for sp in repo_paths:
+        try:
+            api.delete_file(path_in_repo=sp, repo_id=repo, repo_type="dataset")
+            print(f"  [upload] deleted superseded shard {sp}")
+        except Exception as e:
+            print(f"  [warn] could not delete {sp}: {e}", file=sys.stderr)
+
+
+# --------------------------------------------------------------------------- #
+# Main
+# --------------------------------------------------------------------------- #
+
+def main(argv: list[str] | None = None) -> int:
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--roots", nargs="*", default=None,
+                    help="Extra directories to scan for pi session .jsonl files.")
+    ap.add_argument("--archives", nargs="*", default=None,
+                    help="Extra dirs containing session .tar.gz archives to extract.")
+    ap.add_argument("--scan-home", action="store_true",
+                    help=f"Also walk all of {HOME} (slow; adds ~30s).")
+    ap.add_argument("--out", default=str(DEFAULT_OUT),
+                    help=f"Local output dir (default {DEFAULT_OUT}).")
+    ap.add_argument("--repo", default=UPLOAD_REPO, help="HF dataset repo to upload to.")
+    ap.add_argument("--no-upload", action="store_true", help="Convert + write local files, do not upload.")
+    ap.add_argument("--dry-run", action="store_true", help="Convert + print summary, write local files, do not upload.")
+    ap.add_argument("--max-files", type=int, default=0, help="Cap number of discovered traces (debug).")
+    ap.add_argument("--zstd-level", type=int, default=ZSTD_LEVEL, help="zstd compression level.")
+    ap.add_argument("--no-redact", action="store_true",
+                    help="Disable secret redaction (default: redact API keys in all text).")
+    args = ap.parse_args(argv)
+
+    if zstd is None:
+        print("ERROR: zstandard is required. `pip install zstandard`", file=sys.stderr)
+        return 2
+
+    out_dir = Path(args.out).expanduser()
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    roots: list[Path] = list(DEFAULT_ROOTS)
+    if args.roots:
+        roots += [Path(r).expanduser() for r in args.roots]
+    if args.scan_home:
+        roots.append(HOME)
+    archive_dirs = list(DEFAULT_ARCHIVE_GLOBS)
+    if args.archives:
+        archive_dirs += [Path(a).expanduser() for a in args.archives]
+
+    print(f"== discovering pi traces under: {[str(r) for r in roots]}")
+    live = walk_for_traces(roots)
+    print(f"   live sessions found: {len(live)}")
+
+    extracted: list[tuple[Path, str]] = []
+    with tempfile.TemporaryDirectory(prefix="pi-traces-archive-") as tmpd:
+        extracted = extract_archives(archive_dirs, Path(tmpd))
+        print(f"   archived sessions extracted: {len(extracted)}")
+
+        all_sources: list[tuple[Path, str]] = (
+            [(p, "") for p in live] + extracted
+        )
+        if args.max_files:
+            all_sources = all_sources[: args.max_files]
+
+        stats = ConvStats(discovered=len(all_sources))
+        rows: list[dict] = []
+        seen_keys: set[str] = set()
+        for path, archive in all_sources:
+            stats.discovered = len(all_sources)
+            events = parse_session_file(path)
+            if events is None:
+                stats.skipped_parse += 1
+                continue
+            row, reason = convert_session(events, str(path), archive)
+            if row is None:
+                if reason == "openai":
+                    stats.skipped_openai += 1
+                elif reason in ("terminalbench", "benchmark_rollout"):
+                    if reason == "terminalbench":
+                        stats.skipped_terminalbench += 1
+                    else:
+                        stats.skipped_benchmark += 1
+                elif reason and reason.startswith("model:"):
+                    stats.skipped_model_filter += 1
+                elif reason == "empty":
+                    stats.skipped_empty += 1
+                else:
+                    stats.skipped_parse += 1
+                continue
+            if row["trace_key"] in seen_keys:
+                # same session id already converted (e.g. live + archive overlap)
+                continue
+            seen_keys.add(row["trace_key"])
+            if not args.no_redact:
+                row = REDACTOR.redact_row(row)
+                # Re-derive description from redacted messages so a key split by
+                # the 500-char truncation can't leak as a partial real key.
+                row["description"] = _first_user_text(row["messages"])
+            stats.converted += 1
+            stats.tools_used |= set(_tools_from_row(row))
+            rows.append(row)
+
+        # ---- write local output ------------------------------------------- #
+        ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        jsonl_path = out_dir / f"pi-traces-{ts}.jsonl"
+        zst_path = out_dir / f"pi-traces-{ts}.jsonl.zst"
+        n = write_jsonl(rows, jsonl_path)
+        compress_zst(jsonl_path, zst_path, level=args.zstd_level)
+
+        raw_bytes = jsonl_path.stat().st_size
+        zst_bytes = zst_path.stat().st_size
+        print()
+        print("== summary ==")
+        print(f"  discovered:      {stats.discovered}")
+        print(f"  converted:       {stats.converted}")
+        print(f"  skipped openai:  {stats.skipped_openai}")
+        print(f"  skipped terminalbench: {stats.skipped_terminalbench}")
+        print(f"  skipped benchmark (other): {stats.skipped_benchmark}")
+        print(f"  skipped model filter (anthropic/faux/qwen3-0.6b): {stats.skipped_model_filter}")
+        print(f"  skipped empty:   {stats.skipped_empty}")
+        print(f"  skipped parse:   {stats.skipped_parse}")
+        print(f"  tools seen:      {sorted(stats.tools_used)}")
+        if not args.no_redact and REDACTOR.counts:
+            print(f"  redactions:      {dict(REDACTOR.counts)} "
+                  f"(total {sum(REDACTOR.counts.values())}, "
+                  f"{len(REDACTOR._cache)} unique keys)")
+        print(f"  local jsonl:     {jsonl_path}  ({n} rows, {raw_bytes:,} B)")
+        print(f"  local zst:       {zst_path}      ({zst_bytes:,} B, {zst_bytes*100/max(raw_bytes,1):.1f}% of raw)")
+
+        # ---- upload ------------------------------------------------------- #
+        do_upload = (not args.no_upload) and (not args.dry_run)
+        if do_upload:
+            token = os.environ.get("HF_TOKEN") or os.environ.get("HUGGING_FACE_HUB_TOKEN")
+            if not token:
+                print("\n[upload] no HF_TOKEN/HUGGING_FACE_HUB_TOKEN; skipping upload.")
+            else:
+                ok, who = token_has_write(token)
+                print(f"\n[upload] token user={who!r} write_access={ok}")
+                if not ok:
+                    print("[upload] token lacks write access; skipping upload.")
+                else:
+                    # ---- union merge: remote + local, dedup by trace_key ---- #
+                    # The uploaded data is the union of whatever is already in the
+                    # repo (from this or another machine) and the local conversion.
+                    # Traces are deduped by trace_key (pi session id); local wins on
+                    # conflict since it is the freshest conversion. Old remote
+                    # shards are deleted only after the merged shard uploads, so a
+                    # run never loses data another machine put there. Note: two
+                    # machines running concurrently can still race (HF has no lock);
+                    # run uploads sequentially across machines.
+                    with tempfile.TemporaryDirectory(prefix="pi-traces-remote-") as rtmpd:
+                        remote_rows, remote_shards = download_remote_rows(
+                            args.repo, token, Path(rtmpd)
+                        )
+                    remote_keys = {r.get("trace_key") for r in remote_rows if r.get("trace_key")}
+                    local_keys = {r.get("trace_key") for r in rows if r.get("trace_key")}
+                    new_keys = local_keys - remote_keys
+                    print(f"\n[upload] union: remote={len(remote_rows)} rows "
+                          f"({len(remote_shards)} shard{'s' if len(remote_shards) != 1 else ''}), "
+                          f"local={len(rows)} rows, new={len(new_keys)}")
+                    if remote_shards and not new_keys:
+                        print("[upload] no new traces; remote already up to date — nothing to upload.")
+                    else:
+                        # merged set: remote first, local overwrites (freshest)
+                        merged: dict[str, dict] = {}
+                        for r in remote_rows:
+                            k = r.get("trace_key")
+                            if k:
+                                merged[k] = r
+                        for r in rows:
+                            k = r.get("trace_key")
+                            if k:
+                                merged[k] = r
+                        if remote_rows:
+                            uts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+                            u_jsonl = out_dir / f"pi-traces-union-{uts}.jsonl"
+                            upload_zst = out_dir / f"pi-traces-union-{uts}.jsonl.zst"
+                            write_jsonl(list(merged.values()), u_jsonl)
+                            compress_zst(u_jsonl, upload_zst, level=args.zstd_level)
+                            print(f"  union shard: {upload_zst} "
+                                  f"({len(merged)} rows, {upload_zst.stat().st_size:,} B)")
+                        else:
+                            upload_zst = zst_path
+                        upload_to_hub([upload_zst], args.repo, token, dry_run=False)
+                        if remote_shards:
+                            delete_remote_shards(args.repo, token, remote_shards)
+        elif args.dry_run:
+            print("\n[dry-run] not uploading.")
+        else:
+            print("\n[--no-upload] not uploading.")
+
+    print("\nDone.")
+    return 0
+
+
+def _first_user_text(messages: list[dict], limit: int = 500) -> str:
+    """Return the text of the first user message, truncated."""
+    for m in messages:
+        if m.get("role") == "user":
+            c = m.get("content")
+            if isinstance(c, list) and c and isinstance(c[0], dict):
+                return (c[0].get("text") or "")[:limit]
+            if isinstance(c, str):
+                return c[:limit]
+            break
+    return ""
+
+
+def _tools_from_row(row: dict) -> set[str]:
+    s: set[str] = set()
+    for m in row.get("messages", []):
+        for tc in m.get("tool_calls") or []:
+            n = tc.get("function", {}).get("name")
+            if n:
+                s.add(str(n))
+    return s
+
+
+if __name__ == "__main__":
+    sys.exit(main())
