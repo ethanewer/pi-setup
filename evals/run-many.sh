@@ -3,7 +3,7 @@
 # Ports are derived per-run, so multiple invocations can also run concurrently.
 set -uo pipefail
 cd "$(dirname "$0")"
-SEEDS="${SEEDS:-1 2 3 4 5}"
+SEEDS="${SEEDS:-1 2 3}"
 MODEL="${MODEL:-openrouter/deepseek/deepseek-v4-flash-0731}"
 for s in $SEEDS; do
   echo "=== seed $s ==="
