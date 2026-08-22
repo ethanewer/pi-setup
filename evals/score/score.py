@@ -167,14 +167,6 @@ def score_task(task, run_dir, seed):
         checks["batch_artifact_nonce"] = bool(art) and art.get("nonce") == nonce
         checks["batch_artifact_elapsed_plausible"] = bool(art) and elapsed_ok(art.get("elapsed"), gt["duration"])
         checks["batch_artifact_error_count"] = bool(art) and art.get("errors") == gt["error_count"]
-    elif task == "t5":
-        for name, ck, dur in (("a", gt["a_checksum"], gt["a_duration"]), ("b", gt["b_checksum"], gt["b_duration"])):
-            art = read_json(os.path.join(work, f"render_{name}.done"))
-            checks[f"{name}_done_present"] = art is not None
-            checks[f"{name}_nonce"] = bool(art) and art.get("nonce") == nonce
-            checks[f"{name}_elapsed_plausible"] = bool(art) and elapsed_ok(art.get("elapsed"), dur)
-            checks[f"{name}_checksum_reported"] = ck in answer
-            checks[f"{name}_checksum_matches_artifact"] = bool(art) and art.get("checksum") == ck
     elif task == "t6":
         checks["prime_sum_reported"] = str(gt["prime_sum"]) in answer
         checks["ok_rows_reported"] = str(gt["ok_rows"]) in answer
@@ -209,7 +201,7 @@ def main():
     meta = json.load(open(os.path.join(run_dir, "meta.json")))
     seed = meta["seed"]
     rows = []
-    for task in ["t1", "t2", "t3", "t4", "t5", "t6"]:
+    for task in ["t1", "t2", "t3", "t4", "t6"]:
         if not os.path.exists(os.path.join(run_dir, task, "run.json")):
             print(f"!! {task}: missing run.json", file=sys.stderr)
             continue

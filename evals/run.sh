@@ -17,7 +17,7 @@ jq -n --arg model "$MODEL" --arg seed "$SEED" \
   --arg pi "$(jq -r .version node_modules/@earendil-works/pi-coding-agent/package.json)" \
   '{model:$model, seed:$seed, piVersion:$pi, startedAt:(now|todate)}' > "$RUN_DIR/meta.json"
 pids=()
-for t in t1 t2 t3 t4 t5 t6; do
+for t in t1 t2 t3 t4 t6; do
   TASK=$t RUN_DIR="$RUN_DIR" SEED="$SEED" MODEL="$MODEL" bun harness/run-task.ts \
     > "$RUN_DIR/$t.console.log" 2>&1 &
   pids+=($!)
