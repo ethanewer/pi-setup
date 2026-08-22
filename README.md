@@ -425,6 +425,25 @@ Pi's `compactionSummary` message by hand, because `createCompactionSummaryMessag
 exported from the package root, and verifies once per session that `convertToLlm` still
 renders it — falling back to a plain user message if a Pi release ever stops.
 
+## Evals
+
+`evals/` holds behavioral evals for this setup's extensions. The first one is
+**monitor-bench**: six scripted tasks with long, seeded, unknown-duration commands (test
+suites, crashing pipelines, slow-boot servers, detached batch jobs, parallel renders) plus
+a fast control task. The prompts never mention background watching; the eval measures
+whether a model spontaneously reaches for the monitor extension, whether it trusts the
+pings enough to stop blocking, and whether it still completes the goals.
+
+```bash
+cd evals
+SEED=42 MODEL="openai/gpt-5.6-sol" ./run.sh   # all tasks in parallel
+python3 score/score.py results/latest
+```
+
+See [`evals/README.md`](evals/README.md) for task design, metrics, and reference results
+(gpt-5.6-sol idles on pings in 4/5 long-job tasks; deepseek-v4-flash-0731 adopts the tool
+but keeps sleep-blocking in 4/5).
+
 ## Performance
 
 Measured warm startup to the beginning of an agent turn on Apple Silicon:

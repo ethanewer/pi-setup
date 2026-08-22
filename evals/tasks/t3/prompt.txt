@@ -1,0 +1,6 @@
+This project ships a small HTTP service in `srv/server.py` (quote-svc). Start the
+service, and once it is up, confirm it is healthy and report the `build` id returned
+by its `/status` endpoint on the port it announces.
+
+When you are completely done, write your final report to ANSWER.md in the workspace
+root (include the build id exactly as reported by /status), then stop.
