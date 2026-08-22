@@ -106,6 +106,10 @@ export interface SharedRuntime {
      * after the run has been marked complete and torn down. See the drain below.
      */
     inFlight: Set<Promise<unknown>>;
+    /** Named conversations currently executing anywhere in this run tree. */
+    activeThreads: Set<string>;
+    /** Whether a threaded call has invalidated journal replay for the remaining run tree. */
+    resumeBarrierReached: boolean;
 }
 /** Runtime instrumentation for workflow boundaries, quality helpers, and control attempts. */
 export type WorkflowRuntimeEvent = {
@@ -325,6 +329,12 @@ export interface AgentOptions<TSchemaDef extends TSchema | undefined = TSchema |
      */
     tier?: string;
     isolation?: "worktree";
+    /**
+     * Re-enter a named subagent conversation during this workflow invocation.
+     * Calls using the same name must be sequential. Thread state is never resumed
+     * across a later workflow-tool invocation.
+     */
+    thread?: string;
     /**
      * Name of a registered subagent definition (`.pi/agents/<name>.md`, project >
      * user). Binds that definition's tool allow/denylist, model, and body prompt

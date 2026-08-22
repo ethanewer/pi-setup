@@ -348,6 +348,13 @@ export class WorkflowAgent {
      * run. See onModelFallback below for the (still-loud) degrade path.
      */
     warnedDefaultTierUnavailable = false;
+    /**
+     * Named conversations live for this WorkflowAgent instance. Production creates
+     * one instance per workflow invocation; embedders that inject and reuse an
+     * agent are responsible for choosing the longer thread lifetime deliberately.
+     */
+    threadSessions = new Map();
+    activeThreads = new Set();
     constructor(options = {}) {
         this.cwd = options.cwd ?? process.cwd();
         this.baseTools = options.tools ?? createCodingTools(this.cwd);
@@ -466,19 +473,30 @@ export class WorkflowAgent {
      * agent to an in-memory session instead — the run continues, just without a
      * persisted transcript.
      */
-    createSessionManager() {
-        if (!this.persistAgentSessions)
-            return SessionManager.inMemory();
-        try {
-            const manager = SessionManager.create(this.cwd);
-            this.assertSessionDirWritable(manager.getSessionDir());
-            warnPersistSecretsOnce(manager.getSessionDir());
-            return manager;
+    createSessionManager(thread) {
+        if (thread) {
+            const existing = this.threadSessions.get(thread);
+            if (existing)
+                return existing;
         }
-        catch (error) {
-            console.warn(`[workflow] persistAgentSessions: could not persist this agent's session (${error instanceof Error ? error.message : String(error)}); continuing with an in-memory session`);
-            return SessionManager.inMemory();
+        let manager;
+        if (!this.persistAgentSessions) {
+            manager = SessionManager.inMemory();
         }
+        else {
+            try {
+                manager = SessionManager.create(this.cwd);
+                this.assertSessionDirWritable(manager.getSessionDir());
+                warnPersistSecretsOnce(manager.getSessionDir());
+            }
+            catch (error) {
+                console.warn(`[workflow] persistAgentSessions: could not persist this agent's session (${error instanceof Error ? error.message : String(error)}); continuing with an in-memory session`);
+                manager = SessionManager.inMemory();
+            }
+        }
+        if (thread)
+            this.threadSessions.set(thread, manager);
+        return manager;
     }
     /** Best-effort write probe: throws if the session directory isn't actually writable. */
     assertSessionDirWritable(dir) {
@@ -487,6 +505,24 @@ export class WorkflowAgent {
         unlinkSync(probePath);
     }
     async run(prompt, options = {}) {
+        const thread = options.thread;
+        if (thread && this.activeThreads.has(thread)) {
+            throw new WorkflowError(`agent thread "${thread}" is already running; same-thread calls must be sequential`, WorkflowErrorCode.SCRIPT_VALIDATION_ERROR, {
+                recoverable: false,
+                agentLabel: options.label,
+            });
+        }
+        if (thread)
+            this.activeThreads.add(thread);
+        try {
+            return await this.runTurn(prompt, options);
+        }
+        finally {
+            if (thread)
+                this.activeThreads.delete(thread);
+        }
+    }
+    async runTurn(prompt, options = {}) {
         const capture = { called: false, value: undefined };
         // Per-call cwd (e.g. a worktree) needs coding tools bound to that directory,
         // since tools capture their cwd at construction and can't be relocated.
@@ -576,38 +612,65 @@ export class WorkflowAgent {
         // per-call runCwd: agents working in short-lived git worktrees should still
         // group under the project's session dir instead of scattering across
         // temporary worktree paths.
-        const sessionManager = this.createSessionManager();
-        const { session } = await createAgentSession({
-            cwd: runCwd,
-            agentDir,
-            sessionManager,
-            // Use real SettingsManager to inherit user's default provider/model settings.
-            // SettingsManager.inMemory() doesn't load ~/.pi/settings.json, so subagents
-            // would fall back to the first available model (e.g. openai-codex) which may
-            // not have valid auth, causing silent empty responses.
-            settingsManager: SettingsManager.create(this.cwd, agentDir),
-            customTools,
-            // Shared per-run loader with no host extensions (#109) — see
-            // getSharedResourceLoader. An injected resourceLoader (tests / embedders)
-            // wins and skips the shared build entirely; the ...this.sessionOptions
-            // spread below re-applies the same injected value harmlessly.
-            resourceLoader: this.sessionOptions.resourceLoader ?? (await this.getSharedResourceLoader(agentDir)),
-            // Share the resolved registry's ModelRuntime (catalog + auth, including
-            // extension-registered providers) with the subagent session. pi >= 0.80.8
-            // takes modelRuntime here; the old modelRegistry option is gone.
-            ...(modelRuntime ? { modelRuntime } : {}),
-            ...this.sessionOptions,
-            // Per-call model/thinking wins over any sessionOptions defaults.
-            ...(resolvedModel ? { model: resolvedModel } : {}),
-            ...(resolvedThinkingLevel ? { thinkingLevel: resolvedThinkingLevel } : {}),
-            // Deny recursive-orchestration tools in the subagent (#107). Placed after
-            // the sessionOptions spread so it always applies; folds in any denylist
-            // the caller set on sessionOptions rather than dropping it.
-            excludeTools: subagentExcludedTools(this.excludeTools, this.sessionOptions.excludeTools),
-        });
+        const sessionManager = this.createSessionManager(options.thread);
+        const threadLeaf = options.thread ? sessionManager.getLeafId() : null;
+        let session;
+        try {
+            ({ session } = await createAgentSession({
+                cwd: runCwd,
+                agentDir,
+                sessionManager,
+                // Use real SettingsManager to inherit user's default provider/model settings.
+                // SettingsManager.inMemory() doesn't load ~/.pi/settings.json, so subagents
+                // would fall back to the first available model (e.g. openai-codex) which may
+                // not have valid auth, causing silent empty responses.
+                settingsManager: SettingsManager.create(this.cwd, agentDir),
+                customTools,
+                // Shared per-run loader with no host extensions (#109) — see
+                // getSharedResourceLoader. An injected resourceLoader (tests / embedders)
+                // wins and skips the shared build entirely; the ...this.sessionOptions
+                // spread below re-applies the same injected value harmlessly.
+                resourceLoader: this.sessionOptions.resourceLoader ?? (await this.getSharedResourceLoader(agentDir)),
+                // Share the resolved registry's ModelRuntime (catalog + auth, including
+                // extension-registered providers) with the subagent session. pi >= 0.80.8
+                // takes modelRuntime here; the old modelRegistry option is gone.
+                ...(modelRuntime ? { modelRuntime } : {}),
+                ...this.sessionOptions,
+                // Named threads must retain their own manager even when an embedder supplied
+                // a default manager for ordinary one-shot calls.
+                ...(options.thread ? { sessionManager } : {}),
+                // Per-call model/thinking wins over any sessionOptions defaults.
+                ...(resolvedModel ? { model: resolvedModel } : {}),
+                ...(resolvedThinkingLevel ? { thinkingLevel: resolvedThinkingLevel } : {}),
+                // Deny recursive-orchestration tools in the subagent (#107). Placed after
+                // the sessionOptions spread so it always applies; folds in any denylist
+                // the caller set on sessionOptions rather than dropping it.
+                excludeTools: subagentExcludedTools(this.excludeTools, this.sessionOptions.excludeTools),
+            }));
+        }
+        catch (error) {
+            if (options.thread)
+                this.restoreThreadLeaf(sessionManager, threadLeaf);
+            throw error;
+        }
+        const usageBeforeTurn = options.thread ? session.getSessionStats() : undefined;
+        // This turn's own transcript, collected from message_end events below rather
+        // than sliced out of session.messages with a pre-prompt() length snapshot.
+        // Auto-compaction (on by default) can rewrite session.messages inside
+        // prompt() — the array is rebuilt shorter (summary + kept tail) — so any
+        // index captured here goes stale and a slice from it comes back empty,
+        // misclassifying a successful turn as AGENT_EMPTY_OUTPUT and rolling back a
+        // threaded turn that actually landed. Events are append-only per turn, so
+        // the collected window survives compaction, and it naturally spans the
+        // schema path's repair re-prompts, which run on this same session.
+        const turnMessages = [];
         // Name the persisted session so it's identifiable in session pickers.
-        // Skip when an injected session.sessionManager override won (tests/embedders).
-        if (this.persistAgentSessions && !this.sessionOptions.sessionManager && options.sessionName) {
+        // Skip when an injected session.sessionManager override won (tests/embedders),
+        // and name a threaded session only on its first turn.
+        if (this.persistAgentSessions &&
+            (!this.sessionOptions.sessionManager || options.thread) &&
+            (!options.thread || !threadLeaf) &&
+            options.sessionName) {
             try {
                 sessionManager.appendSessionInfo(options.sessionName);
             }
@@ -617,7 +680,9 @@ export class WorkflowAgent {
         }
         let removeAbortListener;
         let removeHistoryListener;
+        let removeTurnListener;
         let lastHistoryEmit = 0;
+        let threadTurnSucceeded = false;
         const emitHistory = () => options.onHistory?.(compactAgentHistory(session.messages));
         const maybeEmitHistory = () => {
             if (!options.onHistory)
@@ -639,6 +704,10 @@ export class WorkflowAgent {
             if (options.onHistory) {
                 removeHistoryListener = session.subscribe(() => maybeEmitHistory());
             }
+            removeTurnListener = session.subscribe((event) => {
+                if (event.type === "message_end")
+                    turnMessages.push(event.message);
+            });
             await session.prompt(this.buildPrompt(prompt, options, Boolean(options.schema)));
             if (options.signal?.aborted)
                 throw new Error("Subagent was aborted");
@@ -648,34 +717,55 @@ export class WorkflowAgent {
             // (schema path) or a silent empty-output null (non-schema path).
             throwIfProviderLimit(session.messages, options.label);
             if (options.schema) {
-                return (await resolveStructuredOutput(session, capture, options.schema, options, (m) => this.lastAssistantText(m)));
+                const result = (await resolveStructuredOutput(session, capture, options.schema, options, () => this.lastAssistantText(turnMessages)));
+                threadTurnSucceeded = true;
+                return result;
             }
             // Unstructured result: require assistant text AFTER the last tool result.
             // Text emitted before it is stale progress (the agent's last real action was
             // a tool call) — accepting it would report an incomplete run as successful
-            // and suppress the AGENT_EMPTY_OUTPUT retry (#111).
-            const text = this.finalAssistantText(session.messages);
+            // and suppress the AGENT_EMPTY_OUTPUT retry (#111). A threaded session's
+            // restored transcript never enters turnMessages, so an empty turn cannot
+            // reuse an old answer.
+            const text = this.finalAssistantText(turnMessages);
             if (!text.trim()) {
                 throw new WorkflowError("Subagent produced no assistant output", WorkflowErrorCode.AGENT_EMPTY_OUTPUT, {
                     recoverable: true,
                     agentLabel: options.label,
                 });
             }
+            threadTurnSucceeded = true;
             return text;
         }
         finally {
             removeAbortListener?.();
             removeHistoryListener?.();
+            removeTurnListener?.();
             try {
                 emitHistory();
             }
             catch {
                 // History is diagnostic only; never let it mask the real result/error.
             }
+            if (options.thread && !threadTurnSucceeded) {
+                this.restoreThreadLeaf(sessionManager, threadLeaf);
+            }
             // Read real usage before disposing — dispose tears down the session state.
             if (options.onUsage) {
                 try {
-                    const usage = usageFromStats(session.getSessionStats());
+                    const stats = session.getSessionStats();
+                    const usage = usageFromStats(usageBeforeTurn
+                        ? {
+                            tokens: {
+                                input: Math.max(0, stats.tokens.input - usageBeforeTurn.tokens.input),
+                                output: Math.max(0, stats.tokens.output - usageBeforeTurn.tokens.output),
+                                cacheRead: Math.max(0, stats.tokens.cacheRead - usageBeforeTurn.tokens.cacheRead),
+                                cacheWrite: Math.max(0, stats.tokens.cacheWrite - usageBeforeTurn.tokens.cacheWrite),
+                                total: Math.max(0, stats.tokens.total - usageBeforeTurn.tokens.total),
+                            },
+                            cost: Math.max(0, stats.cost - usageBeforeTurn.cost),
+                        }
+                        : stats);
                     if (usage)
                         options.onUsage(usage);
                 }
@@ -685,6 +775,12 @@ export class WorkflowAgent {
             }
             session.dispose();
         }
+    }
+    restoreThreadLeaf(sessionManager, leafId) {
+        if (leafId)
+            sessionManager.branch(leafId);
+        else
+            sessionManager.resetLeaf();
     }
     buildPrompt(prompt, options, structured) {
         const parts = [

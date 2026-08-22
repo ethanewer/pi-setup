@@ -1,6 +1,6 @@
 diff -ruN --exclude=node_modules a/README.md b/README.md
 --- a/README.md	1985-10-26 03:15:00
-+++ b/README.md	2026-08-18 11:06:56
++++ b/README.md	2026-08-22 14:35:10
 @@ -75,10 +75,10 @@
  
  ## Why use it
@@ -53,7 +53,7 @@ diff -ruN --exclude=node_modules a/README.md b/README.md
 +
 +A finished background run's result is delivered back into the conversation inside an `<untrusted-workflow-output>` fence: subagents routinely return text they read from the web or from files, and that text is data for the model to evaluate, not instructions for it to follow.
 +
- Subagents are in-memory by default. Set `persistAgentSessions: true` to retain full transcripts in Pi's standard session directory. This creates one file per agent and may store sensitive material that an agent read, so enable it deliberately.
+ Subagents are in-memory by default. Set `persistAgentSessions: true` to retain full transcripts in Pi's standard session directory. This creates one file per unthreaded call or named thread and may store sensitive material that an agent read, so enable it deliberately.
  
  Completed background runs persist their full result in the project run JSON. The conversation delivery includes a pointer to that file when the visible summary is shortened.
 @@ -261,6 +273,24 @@
@@ -102,7 +102,7 @@ diff -ruN --exclude=node_modules a/README.md b/README.md
  
 diff -ruN --exclude=node_modules a/dist/agent-registry.d.ts b/dist/agent-registry.d.ts
 --- a/dist/agent-registry.d.ts	1985-10-26 03:15:00
-+++ b/dist/agent-registry.d.ts	2026-08-18 11:08:35
++++ b/dist/agent-registry.d.ts	2026-08-22 14:38:17
 @@ -12,7 +12,8 @@
   * a deprecated fallback (with a one-time warning) so users who followed this repo's
   * earlier docs are not silently broken; the new location wins on a name collision.
@@ -137,7 +137,7 @@ diff -ruN --exclude=node_modules a/dist/agent-registry.d.ts b/dist/agent-registr
  export declare function resolveAgentType(name: string | undefined, registry: AgentRegistry): AgentDefinition | undefined;
 diff -ruN --exclude=node_modules a/dist/agent-registry.js b/dist/agent-registry.js
 --- a/dist/agent-registry.js	1985-10-26 03:15:00
-+++ b/dist/agent-registry.js	2026-08-18 11:08:35
++++ b/dist/agent-registry.js	2026-08-22 14:38:17
 @@ -12,7 +12,8 @@
   * a deprecated fallback (with a one-time warning) so users who followed this repo's
   * earlier docs are not silently broken; the new location wins on a name collision.
@@ -213,7 +213,7 @@ diff -ruN --exclude=node_modules a/dist/agent-registry.js b/dist/agent-registry.
          for (const def of readDefsFromDir(userDir, "user")) {
 diff -ruN --exclude=node_modules a/dist/builtin-commands.js b/dist/builtin-commands.js
 --- a/dist/builtin-commands.js	1985-10-26 03:15:00
-+++ b/dist/builtin-commands.js	2026-08-18 11:08:35
++++ b/dist/builtin-commands.js	2026-08-22 14:38:17
 @@ -12,7 +12,7 @@
  import { spawn } from "node:child_process";
  import { findBuiltinWorkflow } from "./builtin-workflows.js";
@@ -318,7 +318,7 @@ diff -ruN --exclude=node_modules a/dist/builtin-commands.js b/dist/builtin-comma
                  if (!scope || checks.length === 0) {
 diff -ruN --exclude=node_modules a/dist/builtin-workflows.js b/dist/builtin-workflows.js
 --- a/dist/builtin-workflows.js	1985-10-26 03:15:00
-+++ b/dist/builtin-workflows.js	2026-08-18 11:08:35
++++ b/dist/builtin-workflows.js	2026-08-22 14:38:17
 @@ -16,6 +16,7 @@
  import { generateCodeReviewWorkflow } from "./code-review.js";
  import { generateCodebaseAuditWorkflow, generateDeepResearchWorkflow } from "./deep-research.js";
@@ -352,7 +352,7 @@ diff -ruN --exclude=node_modules a/dist/builtin-workflows.js b/dist/builtin-work
          },
 diff -ruN --exclude=node_modules a/dist/config.d.ts b/dist/config.d.ts
 --- a/dist/config.d.ts	1985-10-26 03:15:00
-+++ b/dist/config.d.ts	2026-08-18 11:08:35
++++ b/dist/config.d.ts	2026-08-22 14:38:17
 @@ -1,14 +1,70 @@
  /**
   * Configuration constants for pi-dynamic-workflows.
@@ -429,7 +429,7 @@ diff -ruN --exclude=node_modules a/dist/config.d.ts b/dist/config.d.ts
  /** Legacy project-relative directory for persisted workflow run state. New writes use workflowProjectPaths(). */
 diff -ruN --exclude=node_modules a/dist/config.js b/dist/config.js
 --- a/dist/config.js	1985-10-26 03:15:00
-+++ b/dist/config.js	2026-08-18 11:08:35
++++ b/dist/config.js	2026-08-22 14:38:17
 @@ -1,14 +1,70 @@
  /**
   * Configuration constants for pi-dynamic-workflows.
@@ -506,7 +506,7 @@ diff -ruN --exclude=node_modules a/dist/config.js b/dist/config.js
  /** Legacy project-relative directory for persisted workflow run state. New writes use workflowProjectPaths(). */
 diff -ruN --exclude=node_modules a/dist/errors.d.ts b/dist/errors.d.ts
 --- a/dist/errors.d.ts	1985-10-26 03:15:00
-+++ b/dist/errors.d.ts	2026-08-18 11:08:35
++++ b/dist/errors.d.ts	2026-08-22 14:38:17
 @@ -61,6 +61,14 @@
      /** Unknown error. */
      UNKNOWN = "UNKNOWN"
@@ -548,7 +548,7 @@ diff -ruN --exclude=node_modules a/dist/errors.d.ts b/dist/errors.d.ts
   */
 diff -ruN --exclude=node_modules a/dist/errors.js b/dist/errors.js
 --- a/dist/errors.js	1985-10-26 03:15:00
-+++ b/dist/errors.js	2026-08-18 11:08:35
++++ b/dist/errors.js	2026-08-22 14:38:17
 @@ -37,6 +37,14 @@
      /** Unknown error. */
      WorkflowErrorCode["UNKNOWN"] = "UNKNOWN";
@@ -643,7 +643,7 @@ diff -ruN --exclude=node_modules a/dist/errors.js b/dist/errors.js
  }
 diff -ruN --exclude=node_modules a/dist/fs-persistence.d.ts b/dist/fs-persistence.d.ts
 --- a/dist/fs-persistence.d.ts	1985-10-26 03:15:00
-+++ b/dist/fs-persistence.d.ts	2026-08-18 11:08:35
++++ b/dist/fs-persistence.d.ts	2026-08-22 14:38:17
 @@ -13,8 +13,12 @@
   *  3. A missing or unreadable directory degrades to "no files" rather than
   *     throwing — a listing must never crash because one storage location is
@@ -677,7 +677,7 @@ diff -ruN --exclude=node_modules a/dist/fs-persistence.d.ts b/dist/fs-persistenc
   * Atomically write JSON to `path`: tmp-write + rename (atomic on the same
 diff -ruN --exclude=node_modules a/dist/fs-persistence.js b/dist/fs-persistence.js
 --- a/dist/fs-persistence.js	1985-10-26 03:15:00
-+++ b/dist/fs-persistence.js	2026-08-18 11:08:35
++++ b/dist/fs-persistence.js	2026-08-22 14:38:17
 @@ -13,8 +13,12 @@
   *  3. A missing or unreadable directory degrades to "no files" rather than
   *     throwing — a listing must never crash because one storage location is
@@ -730,7 +730,7 @@ diff -ruN --exclude=node_modules a/dist/fs-persistence.js b/dist/fs-persistence.
          // Backup is best-effort; the primary write already succeeded.
 diff -ruN --exclude=node_modules a/dist/index.d.ts b/dist/index.d.ts
 --- a/dist/index.d.ts	1985-10-26 03:15:00
-+++ b/dist/index.d.ts	2026-08-18 11:08:35
++++ b/dist/index.d.ts	2026-08-22 14:38:17
 @@ -14,7 +14,7 @@
  export type { WorkflowAgentSnapshot, WorkflowAgentStatus, WorkflowDisplay, WorkflowDisplayOptions, WorkflowSnapshot, } from "./display.js";
  export { createToolUpdateWorkflowDisplay, createWidgetWorkflowDisplay, createWorkflowSnapshot, preview, recomputeWorkflowSnapshot, renderWorkflowLines, renderWorkflowText, } from "./display.js";
@@ -784,7 +784,7 @@ diff -ruN --exclude=node_modules a/dist/index.d.ts b/dist/index.d.ts
 +export { createWorktree, removeWorktree, worktreeId } from "./worktree.js";
 diff -ruN --exclude=node_modules a/dist/index.js b/dist/index.js
 --- a/dist/index.js	1985-10-26 03:15:00
-+++ b/dist/index.js	2026-08-18 11:08:35
++++ b/dist/index.js	2026-08-22 14:38:17
 @@ -8,28 +8,28 @@
  export { generateCodebaseAuditWorkflow, generateDeepResearchWorkflow } from "./deep-research.js";
  export { createToolUpdateWorkflowDisplay, createWidgetWorkflowDisplay, createWorkflowSnapshot, preview, recomputeWorkflowSnapshot, renderWorkflowLines, renderWorkflowText, } from "./display.js";
@@ -823,7 +823,7 @@ diff -ruN --exclude=node_modules a/dist/index.js b/dist/index.js
 +export { createWorktree, removeWorktree, worktreeId } from "./worktree.js";
 diff -ruN --exclude=node_modules a/dist/logger.js b/dist/logger.js
 --- a/dist/logger.js	1985-10-26 03:15:00
-+++ b/dist/logger.js	2026-08-18 11:08:35
++++ b/dist/logger.js	2026-08-22 14:38:17
 @@ -3,12 +3,30 @@
   */
  import { appendFileSync, mkdirSync, writeFileSync } from "node:fs";
@@ -888,7 +888,7 @@ diff -ruN --exclude=node_modules a/dist/logger.js b/dist/logger.js
          catch {
 diff -ruN --exclude=node_modules a/dist/run-persistence.d.ts b/dist/run-persistence.d.ts
 --- a/dist/run-persistence.d.ts	1985-10-26 03:15:00
-+++ b/dist/run-persistence.d.ts	2026-08-18 11:08:35
++++ b/dist/run-persistence.d.ts	2026-08-22 14:38:17
 @@ -96,7 +96,7 @@
      toolset?: string;
      /**
@@ -1023,7 +1023,7 @@ diff -ruN --exclude=node_modules a/dist/run-persistence.d.ts b/dist/run-persiste
   * Generate a unique run ID.
 diff -ruN --exclude=node_modules a/dist/run-persistence.js b/dist/run-persistence.js
 --- a/dist/run-persistence.js	1985-10-26 03:15:00
-+++ b/dist/run-persistence.js	2026-08-18 11:08:35
++++ b/dist/run-persistence.js	2026-08-22 14:38:17
 @@ -1,8 +1,9 @@
  /**
   * Workflow run state persistence for pause/resume support.
@@ -1644,7 +1644,7 @@ diff -ruN --exclude=node_modules a/dist/run-persistence.js b/dist/run-persistenc
                  if (existing?.token === lease.token)
 diff -ruN --exclude=node_modules a/dist/saved-commands.d.ts b/dist/saved-commands.d.ts
 --- a/dist/saved-commands.d.ts	1985-10-26 03:15:00
-+++ b/dist/saved-commands.d.ts	2026-08-18 11:08:35
++++ b/dist/saved-commands.d.ts	2026-08-22 14:38:17
 @@ -2,10 +2,21 @@
   * Saved workflows as `/<name>` slash commands. Each saved workflow becomes a
   * command that runs its script, passing parsed arguments through as `args`.
@@ -1687,7 +1687,7 @@ diff -ruN --exclude=node_modules a/dist/saved-commands.d.ts b/dist/saved-command
   * /workflows TUI, background execution, task panel). Idempotent: names already
 diff -ruN --exclude=node_modules a/dist/saved-commands.js b/dist/saved-commands.js
 --- a/dist/saved-commands.js	1985-10-26 03:15:00
-+++ b/dist/saved-commands.js	2026-08-18 11:08:35
++++ b/dist/saved-commands.js	2026-08-22 14:38:17
 @@ -4,6 +4,7 @@
   */
  import { createCodingTools } from "@earendil-works/pi-coding-agent";
@@ -1737,7 +1737,7 @@ diff -ruN --exclude=node_modules a/dist/saved-commands.js b/dist/saved-commands.
                  if (liveManager) {
 diff -ruN --exclude=node_modules a/dist/task-panel.d.ts b/dist/task-panel.d.ts
 --- a/dist/task-panel.d.ts	1985-10-26 03:15:00
-+++ b/dist/task-panel.d.ts	2026-08-18 11:08:35
++++ b/dist/task-panel.d.ts	2026-08-22 14:38:17
 @@ -19,6 +19,7 @@
       */
      loadSettings?: () => WorkflowSettings;
@@ -1759,7 +1759,7 @@ diff -ruN --exclude=node_modules a/dist/task-panel.d.ts b/dist/task-panel.d.ts
  export {};
 diff -ruN --exclude=node_modules a/dist/task-panel.js b/dist/task-panel.js
 --- a/dist/task-panel.js	1985-10-26 03:15:00
-+++ b/dist/task-panel.js	2026-08-18 11:08:35
++++ b/dist/task-panel.js	2026-08-22 14:38:17
 @@ -76,6 +76,27 @@
          return line;
      return truncateToWidth(line, maxWidth);
@@ -1880,7 +1880,7 @@ diff -ruN --exclude=node_modules a/dist/task-panel.js b/dist/task-panel.js
          return comp;
 diff -ruN --exclude=node_modules a/dist/usage-limit-scheduler.d.ts b/dist/usage-limit-scheduler.d.ts
 --- a/dist/usage-limit-scheduler.d.ts	1985-10-26 03:15:00
-+++ b/dist/usage-limit-scheduler.d.ts	2026-08-18 11:08:35
++++ b/dist/usage-limit-scheduler.d.ts	2026-08-22 14:38:17
 @@ -15,7 +15,7 @@
   * (in-memory, best-effort persisted) — it does not rely on manager.stop(), which
   * only operates on in-memory runs.
@@ -1946,7 +1946,7 @@ diff -ruN --exclude=node_modules a/dist/usage-limit-scheduler.d.ts b/dist/usage-
      /**
 diff -ruN --exclude=node_modules a/dist/usage-limit-scheduler.js b/dist/usage-limit-scheduler.js
 --- a/dist/usage-limit-scheduler.js	1985-10-26 03:15:00
-+++ b/dist/usage-limit-scheduler.js	2026-08-18 11:08:35
++++ b/dist/usage-limit-scheduler.js	2026-08-22 14:38:17
 @@ -15,10 +15,13 @@
   * (in-memory, best-effort persisted) — it does not rely on manager.stop(), which
   * only operates on in-memory runs.
@@ -2064,7 +2064,7 @@ diff -ruN --exclude=node_modules a/dist/usage-limit-scheduler.js b/dist/usage-li
      safeLoad(runId) {
 diff -ruN --exclude=node_modules a/dist/web-tools.d.ts b/dist/web-tools.d.ts
 --- a/dist/web-tools.d.ts	1985-10-26 03:15:00
-+++ b/dist/web-tools.d.ts	2026-08-18 11:08:35
++++ b/dist/web-tools.d.ts	2026-08-22 14:38:17
 @@ -3,18 +3,63 @@
   * process (which has network access), not in a subagent sandbox, so they perform
   * genuine HTTP requests via Node's fetch.
@@ -2135,7 +2135,7 @@ diff -ruN --exclude=node_modules a/dist/web-tools.d.ts b/dist/web-tools.d.ts
 +export declare function createWebTools(policy?: WebFetchPolicy): ToolDefinition[];
 diff -ruN --exclude=node_modules a/dist/web-tools.js b/dist/web-tools.js
 --- a/dist/web-tools.js	1985-10-26 03:15:00
-+++ b/dist/web-tools.js	2026-08-18 11:08:35
++++ b/dist/web-tools.js	2026-08-22 14:38:17
 @@ -3,18 +3,236 @@
   * process (which has network access), not in a subagent sandbox, so they perform
   * genuine HTTP requests via Node's fetch.
@@ -2433,8 +2433,8 @@ diff -ruN --exclude=node_modules a/dist/web-tools.js b/dist/web-tools.js
  }
 diff -ruN --exclude=node_modules a/dist/workflow-capability-contract.js b/dist/workflow-capability-contract.js
 --- a/dist/workflow-capability-contract.js	1985-10-26 03:15:00
-+++ b/dist/workflow-capability-contract.js	2026-08-18 11:08:35
-@@ -132,7 +132,7 @@
++++ b/dist/workflow-capability-contract.js	2026-08-22 14:38:17
+@@ -136,7 +136,7 @@
              "selector priority is explicit model > agentType model > tier > phase model > metadata model > implicit medium > session default",
              "an explicit model, agentType model, tier, or phase model that resolves to an unavailable model throws MODEL_NOT_FOUND naming the source (e.g. the tier and what it resolved to) instead of falling back",
              "only the implicit default medium tier (no explicit model, tier, agentType, or phase model requested) degrades to the session default when unavailable, logging a one-time run-visible warning instead of throwing",
@@ -2443,7 +2443,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-capability-contract.js b/dist/w
          ],
          evidence: ["tests/workflow-runtime.test.ts", "tests/agent-registry.test.ts", "tests/structured-output.test.ts"],
      }),
-@@ -275,10 +275,10 @@
+@@ -279,10 +279,10 @@
      toolInput("background", "background?: boolean = true", [
          "background workflows are headless; use background false when checkpoint must show foreground confirmation",
      ]),
@@ -2459,7 +2459,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-capability-contract.js b/dist/w
      ]),
 diff -ruN --exclude=node_modules a/dist/workflow-commands.js b/dist/workflow-commands.js
 --- a/dist/workflow-commands.js	1985-10-26 03:15:00
-+++ b/dist/workflow-commands.js	2026-08-18 11:08:35
++++ b/dist/workflow-commands.js	2026-08-22 14:38:17
 @@ -4,6 +4,7 @@
   */
  import { fmtFull, fmtTokenSegment, recomputeWorkflowSnapshot, renderWorkflowText, tokenFigures, } from "./display.js";
@@ -2570,7 +2570,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-commands.js b/dist/workflow-com
                  default:
 diff -ruN --exclude=node_modules a/dist/workflow-editor.js b/dist/workflow-editor.js
 --- a/dist/workflow-editor.js	1985-10-26 03:15:00
-+++ b/dist/workflow-editor.js	2026-08-18 11:08:35
++++ b/dist/workflow-editor.js	2026-08-22 14:38:17
 @@ -236,15 +236,18 @@
      };
      registerWorkflowTriggerCommand(pi, state, settingsStore);
@@ -2641,7 +2641,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-editor.js b/dist/workflow-edito
      return state;
 diff -ruN --exclude=node_modules a/dist/workflow-manager.d.ts b/dist/workflow-manager.d.ts
 --- a/dist/workflow-manager.d.ts	1985-10-26 03:15:00
-+++ b/dist/workflow-manager.d.ts	2026-08-18 11:08:35
++++ b/dist/workflow-manager.d.ts	2026-08-22 14:38:17
 @@ -51,6 +51,13 @@
       */
      autoResume?: boolean;
@@ -2769,7 +2769,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-manager.d.ts b/dist/workflow-ma
       *
 diff -ruN --exclude=node_modules a/dist/workflow-manager.js b/dist/workflow-manager.js
 --- a/dist/workflow-manager.js	1985-10-26 03:15:00
-+++ b/dist/workflow-manager.js	2026-08-18 11:08:35
++++ b/dist/workflow-manager.js	2026-08-22 14:38:17
 @@ -2,11 +2,12 @@
   * Workflow manager for background execution, pause/resume, and run management.
   */
@@ -3056,7 +3056,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-manager.js b/dist/workflow-mana
       * Stop a running workflow.
 diff -ruN --exclude=node_modules a/dist/workflow-paths.d.ts b/dist/workflow-paths.d.ts
 --- a/dist/workflow-paths.d.ts	1985-10-26 03:15:00
-+++ b/dist/workflow-paths.d.ts	2026-08-18 11:08:35
++++ b/dist/workflow-paths.d.ts	2026-08-22 14:38:17
 @@ -7,6 +7,7 @@
   */
  export declare const WORKFLOW_HOME_RELATIVE_DIR = ".pi/workflows";
@@ -3083,7 +3083,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-paths.d.ts b/dist/workflow-path
  export declare function workflowProjectPaths(cwd: string): WorkflowProjectPaths;
 diff -ruN --exclude=node_modules a/dist/workflow-paths.js b/dist/workflow-paths.js
 --- a/dist/workflow-paths.js	1985-10-26 03:15:00
-+++ b/dist/workflow-paths.js	2026-08-18 11:08:35
++++ b/dist/workflow-paths.js	2026-08-22 14:38:17
 @@ -5,12 +5,15 @@
   * scattered `.pi/workflows` directories. Project-scoped state is still isolated
   * by a stable cwd-derived namespace.
@@ -3158,7 +3158,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-paths.js b/dist/workflow-paths.
          .toLowerCase()
 diff -ruN --exclude=node_modules a/dist/workflow-saved.d.ts b/dist/workflow-saved.d.ts
 --- a/dist/workflow-saved.d.ts	1985-10-26 03:15:00
-+++ b/dist/workflow-saved.d.ts	2026-08-18 11:08:35
++++ b/dist/workflow-saved.d.ts	2026-08-22 14:38:17
 @@ -22,6 +22,25 @@
      path: string;
      /** When it was saved. */
@@ -3201,7 +3201,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-saved.d.ts b/dist/workflow-save
 +export declare function createWorkflowStorage(cwd: string, fsOverride?: Partial<PersistenceFsLayer>, options?: WorkflowStorageOptions): WorkflowStorage;
 diff -ruN --exclude=node_modules a/dist/workflow-saved.js b/dist/workflow-saved.js
 --- a/dist/workflow-saved.js	1985-10-26 03:15:00
-+++ b/dist/workflow-saved.js	2026-08-18 11:08:35
++++ b/dist/workflow-saved.js	2026-08-22 14:38:17
 @@ -4,6 +4,7 @@
  import { join } from "node:path";
  import { ensureDir as ensureDirFs, listJsonFilesSafe, readJsonWithBackupRecovery, resolvePersistenceFs, unlinkIfExistsSafe, writeJsonAtomicWithBackup, } from "./fs-persistence.js";
@@ -3314,7 +3314,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-saved.js b/dist/workflow-saved.
          },
 diff -ruN --exclude=node_modules a/dist/workflow-settings.d.ts b/dist/workflow-settings.d.ts
 --- a/dist/workflow-settings.d.ts	1985-10-26 03:15:00
-+++ b/dist/workflow-settings.d.ts	2026-08-18 11:08:35
++++ b/dist/workflow-settings.d.ts	2026-08-22 14:38:17
 @@ -17,6 +17,12 @@
      defaultTokenBudget?: number | null;
      /** Default max concurrent agents per run. Clamped to the runtime maximum. */
@@ -3372,7 +3372,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-settings.d.ts b/dist/workflow-s
      load(): WorkflowSettings;
 diff -ruN --exclude=node_modules a/dist/workflow-settings.js b/dist/workflow-settings.js
 --- a/dist/workflow-settings.js	1985-10-26 03:15:00
-+++ b/dist/workflow-settings.js	2026-08-18 11:08:35
++++ b/dist/workflow-settings.js	2026-08-22 14:38:17
 @@ -6,7 +6,7 @@
   */
  import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -3415,7 +3415,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-settings.js b/dist/workflow-set
      if (deliveredResultMaxChars !== undefined)
 diff -ruN --exclude=node_modules a/dist/workflow-tool.js b/dist/workflow-tool.js
 --- a/dist/workflow-tool.js	1985-10-26 03:15:00
-+++ b/dist/workflow-tool.js	2026-08-18 11:08:35
++++ b/dist/workflow-tool.js	2026-08-22 14:38:17
 @@ -2,7 +2,7 @@
  import { Text } from "@earendil-works/pi-tui";
  import { Type } from "typebox";
@@ -3463,7 +3463,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-tool.js b/dist/workflow-tool.js
  /**
 diff -ruN --exclude=node_modules a/dist/workflow-ui.js b/dist/workflow-ui.js
 --- a/dist/workflow-ui.js	1985-10-26 03:15:00
-+++ b/dist/workflow-ui.js	2026-08-18 11:08:35
++++ b/dist/workflow-ui.js	2026-08-22 14:38:17
 @@ -15,6 +15,7 @@
  import { getLanguageFromPath, getMarkdownTheme, renderDiff, } from "@earendil-works/pi-coding-agent";
  import { Markdown, parseKey, truncateToWidth, visibleWidth, wrapTextWithAnsi } from "@earendil-works/pi-tui";
@@ -3586,8 +3586,8 @@ diff -ruN --exclude=node_modules a/dist/workflow-ui.js b/dist/workflow-ui.js
                      }
 diff -ruN --exclude=node_modules a/dist/workflow.d.ts b/dist/workflow.d.ts
 --- a/dist/workflow.d.ts	1985-10-26 03:15:00
-+++ b/dist/workflow.d.ts	2026-08-18 11:08:35
-@@ -154,6 +154,24 @@
++++ b/dist/workflow.d.ts	2026-08-22 14:38:17
+@@ -158,6 +158,24 @@
      agentTimeoutMs?: number | null;
      /** Whether to persist logs to disk. Default: true */
      persistLogs?: boolean;
@@ -3612,7 +3612,7 @@ diff -ruN --exclude=node_modules a/dist/workflow.d.ts b/dist/workflow.d.ts
      /** Run ID for persistence. Auto-generated if not provided. */
      runId?: string;
      /**
-@@ -263,6 +281,13 @@
+@@ -267,6 +285,13 @@
          cacheRead?: number;
          cacheWrite?: number;
      }) => void;
@@ -3628,7 +3628,7 @@ diff -ruN --exclude=node_modules a/dist/workflow.d.ts b/dist/workflow.d.ts
      meta: WorkflowMeta;
 diff -ruN --exclude=node_modules a/dist/workflow.js b/dist/workflow.js
 --- a/dist/workflow.js	1985-10-26 03:15:00
-+++ b/dist/workflow.js	2026-08-18 11:08:35
++++ b/dist/workflow.js	2026-08-22 14:38:17
 @@ -1,11 +1,11 @@
  import { AsyncLocalStorage } from "node:async_hooks";
 -import { createHash } from "node:crypto";
@@ -3914,7 +3914,7 @@ diff -ruN --exclude=node_modules a/dist/workflow.js b/dist/workflow.js
      const agentTimeoutMs = options.agentTimeoutMs !== undefined ? options.agentTimeoutMs : DEFAULT_AGENT_TIMEOUT_MS;
      const runId = options.runId ?? `run-${started.toString(36)}`;
      const baseCwd = options.cwd ?? process.cwd();
-@@ -187,6 +421,11 @@
+@@ -206,6 +440,11 @@
          // with the returned promise) also means an un-awaited call's eventual
          // rejection never becomes a process-crashing unhandled rejection.
          call.catch(() => { }).finally(() => shared.inFlight.delete(call));
@@ -3926,7 +3926,7 @@ diff -ruN --exclude=node_modules a/dist/workflow.js b/dist/workflow.js
          return call;
      };
      const agentImpl = async (prompt, agentOptions = {}) => {
-@@ -302,7 +541,7 @@
+@@ -326,7 +565,7 @@
              state.firstMiss = Math.min(state.firstMiss, callIndex);
          return limiter(async () => {
              const timeout = agentOptions.timeoutMs !== undefined ? agentOptions.timeoutMs : agentTimeoutMs;
@@ -3935,7 +3935,7 @@ diff -ruN --exclude=node_modules a/dist/workflow.js b/dist/workflow.js
              const maxAttempts = retryAttempts + 1;
              options.onAgentStart?.({ id: deltaKey, label, phase: assignedPhase, prompt, model: displayModel });
              // Optional per-agent worktree isolation (deterministic name -> stable resume keys).
-@@ -314,8 +553,43 @@
+@@ -338,8 +577,43 @@
              const resolvedIsolation = agentOptions.isolation ?? agentDef?.isolation;
              if (resolvedIsolation === "worktree") {
                  worktree = await createWorktree(baseCwd, `${runId}-${callIndex}-${label}`);
@@ -3980,7 +3980,7 @@ diff -ruN --exclude=node_modules a/dist/workflow.js b/dist/workflow.js
              }
              const runCwd = worktree?.isolated ? worktree.cwd : undefined;
              // Captured from the subagent's real session usage; falls back to an
-@@ -455,12 +729,17 @@
+@@ -494,12 +768,17 @@
                          // result this attempt's writes should be attributed to.
                          store.discardDelta(deltaKey);
                          if (workflowError.recoverable && attempt < maxAttempts) {
@@ -3999,7 +3999,7 @@ diff -ruN --exclude=node_modules a/dist/workflow.js b/dist/workflow.js
                              continue;
                          }
                          options.onAgentEnd?.({
-@@ -821,16 +1100,84 @@
+@@ -863,16 +1142,84 @@
      const { globals: projectGlobals, diagnostics: bindingDiagnostics } = WORKFLOW_CAPABILITY_CONTRACT.assembleRuntimeBindings(runtimeImplementations);
      for (const diagnostic of bindingDiagnostics)
          logger.warn(diagnostic.message);
@@ -4092,7 +4092,7 @@ diff -ruN --exclude=node_modules a/dist/workflow.js b/dist/workflow.js
          // Persist logs
          const logFile = logger.persist();
          if (logFile) {
-@@ -875,7 +1222,10 @@
+@@ -917,7 +1264,10 @@
          // the paused run resumes (it was never journaled, so it isn't cached).
          if (isTopLevelRun)
              shared.runFatalController.abort();
@@ -4104,7 +4104,7 @@ diff -ruN --exclude=node_modules a/dist/workflow.js b/dist/workflow.js
      }
      finally {
          // Only the top-level frame drains/disposes (see isTopLevelRun) — a nested
-@@ -889,20 +1239,45 @@
+@@ -931,20 +1281,45 @@
              // (not a single Promise.allSettled) because draining can itself let a
              // still-running call schedule further work that adds to the set.
              //
@@ -4160,7 +4160,7 @@ diff -ruN --exclude=node_modules a/dist/workflow.js b/dist/workflow.js
              }
              store.dispose();
          }
-@@ -1129,6 +1504,13 @@
+@@ -1172,6 +1547,13 @@
   * background with the whole session graph (messages, etc.) retained (#109). The
   * losing promise still settles later; the caller must swallow its rejection.
   */
@@ -4176,7 +4176,7 @@ diff -ruN --exclude=node_modules a/dist/workflow.js b/dist/workflow.js
          return promise;
 diff -ruN --exclude=node_modules a/dist/worktree.d.ts b/dist/worktree.d.ts
 --- a/dist/worktree.d.ts	1985-10-26 03:15:00
-+++ b/dist/worktree.d.ts	2026-08-18 11:08:35
++++ b/dist/worktree.d.ts	2026-08-22 14:38:17
 @@ -14,11 +14,29 @@
      repoRoot?: string;
      /** Why isolation was skipped, when isolated === false. */
@@ -4212,7 +4212,7 @@ diff -ruN --exclude=node_modules a/dist/worktree.d.ts b/dist/worktree.d.ts
  /** Remove a worktree and its branch. Best-effort; safe to call on a no-op Worktree. */
 diff -ruN --exclude=node_modules a/dist/worktree.js b/dist/worktree.js
 --- a/dist/worktree.js	1985-10-26 03:15:00
-+++ b/dist/worktree.js	2026-08-18 11:08:35
++++ b/dist/worktree.js	2026-08-22 14:38:17
 @@ -5,32 +5,82 @@
   * the caller to inspect. Falls back to a logged no-op when isolation isn't possible.
   */
@@ -4308,7 +4308,7 @@ diff -ruN --exclude=node_modules a/dist/worktree.js b/dist/worktree.js
          await exec("git", ["-C", repoRoot, "worktree", "add", "-b", branch, path, "HEAD"]);
 diff -ruN --exclude=node_modules a/extensions/workflow/index.ts b/extensions/workflow/index.ts
 --- a/extensions/workflow/index.ts	1969-12-31 18:00:00
-+++ b/extensions/workflow/index.ts	2026-08-18 11:06:57
++++ b/extensions/workflow/index.ts	2026-08-22 14:34:22
 @@ -0,0 +1,425 @@
 +import { closeSync, existsSync, openSync, readSync } from "node:fs";
 +import { resolve } from "node:path";
@@ -5102,11 +5102,11 @@ diff -ruN --exclude=node_modules a/extensions/workflow.ts b/extensions/workflow.
 -}
 diff -ruN --exclude=node_modules a/package.json b/package.json
 --- a/package.json	1985-10-26 03:15:00
-+++ b/package.json	2026-08-18 11:08:08
++++ b/package.json	2026-08-22 14:35:17
 @@ -1,6 +1,7 @@
  {
    "name": "@quintinshaw/pi-dynamic-workflows",
-   "version": "3.6.0",
+   "version": "3.7.0",
 +  "private": true,
    "description": "Claude-Code-style dynamic workflows for Pi — fan a task out across 100s of subagents with real model routing, token/cost accounting, resume, git-worktree isolation, an interactive /workflows TUI, and a real /deep-research.",
    "type": "module",
@@ -5122,7 +5122,7 @@ diff -ruN --exclude=node_modules a/package.json b/package.json
        "skills/workflow-authoring",
 diff -ruN --exclude=node_modules a/skills/workflow-authoring/references/capabilities.md b/skills/workflow-authoring/references/capabilities.md
 --- a/skills/workflow-authoring/references/capabilities.md	1985-10-26 03:15:00
-+++ b/skills/workflow-authoring/references/capabilities.md	2026-08-18 11:06:57
++++ b/skills/workflow-authoring/references/capabilities.md	2026-08-22 14:34:22
 @@ -32,10 +32,10 @@
  | name | workflow-tool-input | `name?: string` | — |
  | args | workflow-tool-input | `args?: unknown` | — |
@@ -5139,8 +5139,8 @@ diff -ruN --exclude=node_modules a/skills/workflow-authoring/references/capabili
  <!-- END GENERATED SUPPORTED WORKFLOW CAPABILITIES -->
 diff -ruN --exclude=node_modules a/skills/workflow-authoring/references/capability-details.md b/skills/workflow-authoring/references/capability-details.md
 --- a/skills/workflow-authoring/references/capability-details.md	1985-10-26 03:15:00
-+++ b/skills/workflow-authoring/references/capability-details.md	2026-08-18 11:06:57
-@@ -29,7 +29,7 @@
++++ b/skills/workflow-authoring/references/capability-details.md	2026-08-22 14:34:22
+@@ -33,7 +33,7 @@
  - Constraint: selector priority is explicit model > agentType model > tier > phase model > metadata model > implicit medium > session default
  - Constraint: an explicit model, agentType model, tier, or phase model that resolves to an unavailable model throws MODEL_NOT_FOUND naming the source (e.g. the tier and what it resolved to) instead of falling back
  - Constraint: only the implicit default medium tier (no explicit model, tier, agentType, or phase model requested) degrades to the session default when unavailable, logging a one-time run-visible warning instead of throwing
@@ -5149,7 +5149,7 @@ diff -ruN --exclude=node_modules a/skills/workflow-authoring/references/capabili
  
  <a id="parallel"></a>
  ## parallel
-@@ -253,8 +253,8 @@
+@@ -257,8 +257,8 @@
  
  - Classification: `workflow-tool-input`
  - Support: `supported`
@@ -5160,7 +5160,7 @@ diff -ruN --exclude=node_modules a/skills/workflow-authoring/references/capabili
  
  <a id="tool-input-concurrency"></a>
  ## concurrency
-@@ -269,7 +269,7 @@
+@@ -273,7 +273,7 @@
  
  - Classification: `workflow-tool-input`
  - Support: `supported`
@@ -5169,7 +5169,7 @@ diff -ruN --exclude=node_modules a/skills/workflow-authoring/references/capabili
  - Constraint: floored and clamped to 0..3
  
  <a id="tool-input-agenttimeoutms"></a>
-@@ -277,7 +277,7 @@
+@@ -281,7 +281,7 @@
  
  - Classification: `workflow-tool-input`
  - Support: `supported`
@@ -5180,7 +5180,7 @@ diff -ruN --exclude=node_modules a/skills/workflow-authoring/references/capabili
  ## tokenBudget
 diff -ruN --exclude=node_modules a/skills/workflow-authoring/references/lifecycle.md b/skills/workflow-authoring/references/lifecycle.md
 --- a/skills/workflow-authoring/references/lifecycle.md	1985-10-26 03:15:00
-+++ b/skills/workflow-authoring/references/lifecycle.md	2026-08-18 11:06:57
++++ b/skills/workflow-authoring/references/lifecycle.md	2026-08-22 14:34:22
 @@ -2,7 +2,7 @@
  
  ## Bounds and budget
@@ -5192,8 +5192,8 @@ diff -ruN --exclude=node_modules a/skills/workflow-authoring/references/lifecycl
  
 diff -ruN --exclude=node_modules a/skills/workflow-authoring/references/runtime.md b/skills/workflow-authoring/references/runtime.md
 --- a/skills/workflow-authoring/references/runtime.md	1985-10-26 03:15:00
-+++ b/skills/workflow-authoring/references/runtime.md	2026-08-18 11:06:57
-@@ -22,6 +22,6 @@
++++ b/skills/workflow-authoring/references/runtime.md	2026-08-22 14:34:22
+@@ -24,6 +24,6 @@
  
  ## Routing and support
  
@@ -5203,7 +5203,7 @@ diff -ruN --exclude=node_modules a/skills/workflow-authoring/references/runtime.
  Generated entries marked `supported` are authoring API. `console` and whole-script Markdown fences are compatibility-only. VM realm facilities are internal. Active model routes and agent types are dynamic. Use `log()` in new scripts.
 diff -ruN --exclude=node_modules a/src/agent-registry.ts b/src/agent-registry.ts
 --- a/src/agent-registry.ts	1985-10-26 03:15:00
-+++ b/src/agent-registry.ts	2026-08-18 11:06:57
++++ b/src/agent-registry.ts	2026-08-22 14:34:22
 @@ -12,7 +12,8 @@
   * a deprecated fallback (with a one-time warning) so users who followed this repo's
   * earlier docs are not silently broken; the new location wins on a name collision.
@@ -5282,7 +5282,7 @@ diff -ruN --exclude=node_modules a/src/agent-registry.ts b/src/agent-registry.ts
      for (const def of readDefsFromDir(userDir, "user")) {
 diff -ruN --exclude=node_modules a/src/builtin-commands.ts b/src/builtin-commands.ts
 --- a/src/builtin-commands.ts	1985-10-26 03:15:00
-+++ b/src/builtin-commands.ts	2026-08-18 11:07:25
++++ b/src/builtin-commands.ts	2026-08-22 14:34:22
 @@ -15,7 +15,7 @@
  import type { BuiltinWorkflowInvocation } from "./builtin-workflows.js";
  import { findBuiltinWorkflow } from "./builtin-workflows.js";
@@ -5396,7 +5396,7 @@ diff -ruN --exclude=node_modules a/src/builtin-commands.ts b/src/builtin-command
            return ctx.ui.notify('Usage: /codebase-audit <scope> "<check1>" ["<check2>" …]', "warning");
 diff -ruN --exclude=node_modules a/src/builtin-workflows.ts b/src/builtin-workflows.ts
 --- a/src/builtin-workflows.ts	1985-10-26 03:15:00
-+++ b/src/builtin-workflows.ts	2026-08-18 11:06:57
++++ b/src/builtin-workflows.ts	2026-08-22 14:34:22
 @@ -18,6 +18,7 @@
  import { generateCodebaseAuditWorkflow, generateDeepResearchWorkflow } from "./deep-research.js";
  import { createWebTools } from "./web-tools.js";
@@ -5430,7 +5430,7 @@ diff -ruN --exclude=node_modules a/src/builtin-workflows.ts b/src/builtin-workfl
      },
 diff -ruN --exclude=node_modules a/src/config.ts b/src/config.ts
 --- a/src/config.ts	1985-10-26 03:15:00
-+++ b/src/config.ts	2026-08-18 11:06:57
++++ b/src/config.ts	2026-08-22 14:34:22
 @@ -2,17 +2,80 @@
   * Configuration constants for pi-dynamic-workflows.
   */
@@ -5517,7 +5517,7 @@ diff -ruN --exclude=node_modules a/src/config.ts b/src/config.ts
  export const DEFAULT_TOKEN_BUDGET = null;
 diff -ruN --exclude=node_modules a/src/errors.ts b/src/errors.ts
 --- a/src/errors.ts	1985-10-26 03:15:00
-+++ b/src/errors.ts	2026-08-18 11:06:57
++++ b/src/errors.ts	2026-08-22 14:34:22
 @@ -63,6 +63,15 @@
    UNKNOWN = "UNKNOWN",
  }
@@ -5617,7 +5617,7 @@ diff -ruN --exclude=node_modules a/src/errors.ts b/src/errors.ts
      error instanceof Error ? error.message : String(error),
 diff -ruN --exclude=node_modules a/src/fs-persistence.ts b/src/fs-persistence.ts
 --- a/src/fs-persistence.ts	1985-10-26 03:15:00
-+++ b/src/fs-persistence.ts	2026-08-18 11:06:57
++++ b/src/fs-persistence.ts	2026-08-22 14:34:22
 @@ -13,8 +13,12 @@
   *  3. A missing or unreadable directory degrades to "no files" rather than
   *     throwing — a listing must never crash because one storage location is
@@ -5671,7 +5671,7 @@ diff -ruN --exclude=node_modules a/src/fs-persistence.ts b/src/fs-persistence.ts
    }
 diff -ruN --exclude=node_modules a/src/index.ts b/src/index.ts
 --- a/src/index.ts	1985-10-26 03:15:00
-+++ b/src/index.ts	2026-08-18 11:07:33
++++ b/src/index.ts	2026-08-22 14:34:22
 @@ -36,9 +36,11 @@
    registerEffortCommand,
  } from "./effort-command.js";
@@ -5758,7 +5758,7 @@ diff -ruN --exclude=node_modules a/src/index.ts b/src/index.ts
 +export { createWorktree, removeWorktree, worktreeId } from "./worktree.js";
 diff -ruN --exclude=node_modules a/src/logger.ts b/src/logger.ts
 --- a/src/logger.ts	1985-10-26 03:15:00
-+++ b/src/logger.ts	2026-08-18 11:06:57
++++ b/src/logger.ts	2026-08-22 14:34:22
 @@ -4,6 +4,8 @@
  
  import { appendFileSync, mkdirSync, writeFileSync } from "node:fs";
@@ -5829,7 +5829,7 @@ diff -ruN --exclude=node_modules a/src/logger.ts b/src/logger.ts
        // Silent fail
 diff -ruN --exclude=node_modules a/src/run-persistence.ts b/src/run-persistence.ts
 --- a/src/run-persistence.ts	1985-10-26 03:15:00
-+++ b/src/run-persistence.ts	2026-08-18 11:07:50
++++ b/src/run-persistence.ts	2026-08-22 14:34:22
 @@ -2,6 +2,7 @@
   * Workflow run state persistence for pause/resume support.
   */
@@ -6545,7 +6545,7 @@ diff -ruN --exclude=node_modules a/src/run-persistence.ts b/src/run-persistence.
          if (existing?.token === lease.token) _unlinkSync(primaryLockPath(lease.runId));
 diff -ruN --exclude=node_modules a/src/saved-commands.ts b/src/saved-commands.ts
 --- a/src/saved-commands.ts	1985-10-26 03:15:00
-+++ b/src/saved-commands.ts	2026-08-18 11:06:57
++++ b/src/saved-commands.ts	2026-08-22 14:34:22
 @@ -7,6 +7,7 @@
  import { runWorkflow, type WorkflowRunResult } from "./workflow.js";
  import type { WorkflowManager } from "./workflow-manager.js";
@@ -6622,7 +6622,7 @@ diff -ruN --exclude=node_modules a/src/saved-commands.ts b/src/saved-commands.ts
          if (liveManager) {
 diff -ruN --exclude=node_modules a/src/task-panel.ts b/src/task-panel.ts
 --- a/src/task-panel.ts	1985-10-26 03:15:00
-+++ b/src/task-panel.ts	2026-08-18 11:07:55
++++ b/src/task-panel.ts	2026-08-22 14:34:22
 @@ -105,6 +105,29 @@
    return truncateToWidth(line, maxWidth);
  }
@@ -6763,7 +6763,7 @@ diff -ruN --exclude=node_modules a/src/task-panel.ts b/src/task-panel.ts
        return comp;
 diff -ruN --exclude=node_modules a/src/usage-limit-scheduler.ts b/src/usage-limit-scheduler.ts
 --- a/src/usage-limit-scheduler.ts	1985-10-26 03:15:00
-+++ b/src/usage-limit-scheduler.ts	2026-08-18 11:06:57
++++ b/src/usage-limit-scheduler.ts	2026-08-22 14:34:22
 @@ -16,7 +16,13 @@
   * only operates on in-memory runs.
   */
@@ -6936,7 +6936,7 @@ diff -ruN --exclude=node_modules a/src/usage-limit-scheduler.ts b/src/usage-limi
    // ---- helpers --------------------------------------------------------------
 diff -ruN --exclude=node_modules a/src/web-tools.ts b/src/web-tools.ts
 --- a/src/web-tools.ts	1985-10-26 03:15:00
-+++ b/src/web-tools.ts	2026-08-18 11:06:57
++++ b/src/web-tools.ts	2026-08-22 14:34:22
 @@ -3,22 +3,255 @@
   * process (which has network access), not in a subagent sandbox, so they perform
   * genuine HTTP requests via Node's fetch.
@@ -7259,8 +7259,8 @@ diff -ruN --exclude=node_modules a/src/web-tools.ts b/src/web-tools.ts
  }
 diff -ruN --exclude=node_modules a/src/workflow-capability-contract.ts b/src/workflow-capability-contract.ts
 --- a/src/workflow-capability-contract.ts	1985-10-26 03:15:00
-+++ b/src/workflow-capability-contract.ts	2026-08-18 11:06:57
-@@ -311,7 +311,7 @@
++++ b/src/workflow-capability-contract.ts	2026-08-22 14:34:22
+@@ -315,7 +315,7 @@
        "selector priority is explicit model > agentType model > tier > phase model > metadata model > implicit medium > session default",
        "an explicit model, agentType model, tier, or phase model that resolves to an unavailable model throws MODEL_NOT_FOUND naming the source (e.g. the tier and what it resolved to) instead of falling back",
        "only the implicit default medium tier (no explicit model, tier, agentType, or phase model requested) degrades to the session default when unavailable, logging a one-time run-visible warning instead of throwing",
@@ -7269,7 +7269,7 @@ diff -ruN --exclude=node_modules a/src/workflow-capability-contract.ts b/src/wor
      ],
      evidence: ["tests/workflow-runtime.test.ts", "tests/agent-registry.test.ts", "tests/structured-output.test.ts"],
    }),
-@@ -460,10 +460,10 @@
+@@ -464,10 +464,10 @@
    toolInput("background", "background?: boolean = true", [
      "background workflows are headless; use background false when checkpoint must show foreground confirmation",
    ]),
@@ -7285,7 +7285,7 @@ diff -ruN --exclude=node_modules a/src/workflow-capability-contract.ts b/src/wor
    ]),
 diff -ruN --exclude=node_modules a/src/workflow-commands.ts b/src/workflow-commands.ts
 --- a/src/workflow-commands.ts	1985-10-26 03:15:00
-+++ b/src/workflow-commands.ts	2026-08-18 11:06:57
++++ b/src/workflow-commands.ts	2026-08-22 14:34:22
 @@ -13,7 +13,7 @@
    type WorkflowSnapshot,
  } from "./display.js";
@@ -7405,7 +7405,7 @@ diff -ruN --exclude=node_modules a/src/workflow-commands.ts b/src/workflow-comma
          default:
 diff -ruN --exclude=node_modules a/src/workflow-editor.ts b/src/workflow-editor.ts
 --- a/src/workflow-editor.ts	1985-10-26 03:15:00
-+++ b/src/workflow-editor.ts	2026-08-18 11:06:57
++++ b/src/workflow-editor.ts	2026-08-22 14:34:22
 @@ -316,16 +316,19 @@
    registerWorkflowTriggerCommand(pi, state, settingsStore);
    registerWorkflowProgressCommands(pi, settingsStore);
@@ -7475,7 +7475,7 @@ diff -ruN --exclude=node_modules a/src/workflow-editor.ts b/src/workflow-editor.
  
 diff -ruN --exclude=node_modules a/src/workflow-manager.ts b/src/workflow-manager.ts
 --- a/src/workflow-manager.ts	1985-10-26 03:15:00
-+++ b/src/workflow-manager.ts	2026-08-18 11:08:02
++++ b/src/workflow-manager.ts	2026-08-22 14:34:22
 @@ -5,12 +5,13 @@
  import { EventEmitter } from "node:events";
  import type { ModelRegistry, ToolDefinition } from "@earendil-works/pi-coding-agent";
@@ -7848,7 +7848,7 @@ diff -ruN --exclude=node_modules a/src/workflow-manager.ts b/src/workflow-manage
    /**
 diff -ruN --exclude=node_modules a/src/workflow-paths.ts b/src/workflow-paths.ts
 --- a/src/workflow-paths.ts	1985-10-26 03:15:00
-+++ b/src/workflow-paths.ts	2026-08-18 11:06:57
++++ b/src/workflow-paths.ts	2026-08-22 14:34:22
 @@ -6,13 +6,16 @@
   * by a stable cwd-derived namespace.
   */
@@ -7924,7 +7924,7 @@ diff -ruN --exclude=node_modules a/src/workflow-paths.ts b/src/workflow-paths.ts
    const sanitized = value
 diff -ruN --exclude=node_modules a/src/workflow-saved.ts b/src/workflow-saved.ts
 --- a/src/workflow-saved.ts	1985-10-26 03:15:00
-+++ b/src/workflow-saved.ts	2026-08-18 11:06:57
++++ b/src/workflow-saved.ts	2026-08-22 14:34:22
 @@ -13,6 +13,7 @@
    writeJsonAtomicWithBackup,
  } from "./fs-persistence.js";
@@ -8079,7 +8079,7 @@ diff -ruN --exclude=node_modules a/src/workflow-saved.ts b/src/workflow-saved.ts
        return workflows.sort((a, b) => a.name.localeCompare(b.name));
 diff -ruN --exclude=node_modules a/src/workflow-settings.ts b/src/workflow-settings.ts
 --- a/src/workflow-settings.ts	1985-10-26 03:15:00
-+++ b/src/workflow-settings.ts	2026-08-18 11:06:57
++++ b/src/workflow-settings.ts	2026-08-22 14:34:22
 @@ -7,7 +7,7 @@
  
  import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -8175,7 +8175,7 @@ diff -ruN --exclude=node_modules a/src/workflow-settings.ts b/src/workflow-setti
    if (deliveredResultMaxChars !== undefined) settings.deliveredResultMaxChars = deliveredResultMaxChars;
 diff -ruN --exclude=node_modules a/src/workflow-tool.ts b/src/workflow-tool.ts
 --- a/src/workflow-tool.ts	1985-10-26 03:15:00
-+++ b/src/workflow-tool.ts	2026-08-18 11:08:28
++++ b/src/workflow-tool.ts	2026-08-22 14:34:22
 @@ -2,8 +2,13 @@
  import { Text } from "@earendil-works/pi-tui";
  import { Type } from "typebox";
@@ -8234,7 +8234,7 @@ diff -ruN --exclude=node_modules a/src/workflow-tool.ts b/src/workflow-tool.ts
  
 diff -ruN --exclude=node_modules a/src/workflow-ui.ts b/src/workflow-ui.ts
 --- a/src/workflow-ui.ts	1985-10-26 03:15:00
-+++ b/src/workflow-ui.ts	2026-08-18 11:06:57
++++ b/src/workflow-ui.ts	2026-08-22 14:34:22
 @@ -26,7 +26,7 @@
  import type { AgentUsage } from "./agent.js";
  import type { ThemeLike, WorkflowAgentSnapshot, WorkflowSnapshot } from "./display.js";
@@ -8379,7 +8379,7 @@ diff -ruN --exclude=node_modules a/src/workflow-ui.ts b/src/workflow-ui.ts
              }
 diff -ruN --exclude=node_modules a/src/workflow.ts b/src/workflow.ts
 --- a/src/workflow.ts	1985-10-26 03:15:00
-+++ b/src/workflow.ts	2026-08-18 11:06:57
++++ b/src/workflow.ts	2026-08-22 14:34:22
 @@ -1,5 +1,5 @@
  import { AsyncLocalStorage } from "node:async_hooks";
 -import { createHash } from "node:crypto";
@@ -8446,7 +8446,7 @@ diff -ruN --exclude=node_modules a/src/workflow.ts b/src/workflow.ts
  export interface WorkflowMetaPhase {
    title: string;
    detail?: string;
-@@ -177,6 +218,24 @@
+@@ -181,6 +222,24 @@
    agentTimeoutMs?: number | null;
    /** Whether to persist logs to disk. Default: true */
    persistLogs?: boolean;
@@ -8471,7 +8471,7 @@ diff -ruN --exclude=node_modules a/src/workflow.ts b/src/workflow.ts
    /** Run ID for persistence. Auto-generated if not provided. */
    runId?: string;
    /**
-@@ -275,6 +334,13 @@
+@@ -279,6 +338,13 @@
      cacheRead?: number;
      cacheWrite?: number;
    }) => void;
@@ -8485,7 +8485,7 @@ diff -ruN --exclude=node_modules a/src/workflow.ts b/src/workflow.ts
  }
  
  export interface WorkflowRunResult<T = unknown> {
-@@ -377,10 +443,13 @@
+@@ -387,10 +453,13 @@
   *   - Date.now()           -> throws
   *   - Date() / new Date()  -> throws (no-arg); new Date(arg) still works
   * Using the vm realm's own Math/Date/Reflect (not host objects) means this adds
@@ -8503,7 +8503,7 @@ diff -ruN --exclude=node_modules a/src/workflow.ts b/src/workflow.ts
   */
  const DETERMINISM_PRELUDE = [
    '"use strict";',
-@@ -401,6 +470,238 @@
+@@ -411,6 +480,238 @@
    "}",
  ].join("\n");
  
@@ -8742,7 +8742,7 @@ diff -ruN --exclude=node_modules a/src/workflow.ts b/src/workflow.ts
  export async function runWorkflow<T = unknown>(
    script: string,
    options: WorkflowRunOptions = {},
-@@ -409,7 +710,9 @@
+@@ -419,7 +720,9 @@
    const { meta, body } = parseWorkflowScript(script);
    // Per-phase model routing from meta.phases[].model, with meta.model as the default.
    const routingConfig = parseModelRoutingFromMeta(meta.phases, meta.model);
@@ -8753,7 +8753,7 @@ diff -ruN --exclude=node_modules a/src/workflow.ts b/src/workflow.ts
    const agentTimeoutMs = options.agentTimeoutMs !== undefined ? options.agentTimeoutMs : DEFAULT_AGENT_TIMEOUT_MS;
    const runId = options.runId ?? `run-${started.toString(36)}`;
    const baseCwd = options.cwd ?? process.cwd();
-@@ -544,6 +847,11 @@
+@@ -577,6 +880,11 @@
      // with the returned promise) also means an un-awaited call's eventual
      // rejection never becomes a process-crashing unhandled rejection.
      call.catch(() => {}).finally(() => shared.inFlight.delete(call));
@@ -8765,7 +8765,7 @@ diff -ruN --exclude=node_modules a/src/workflow.ts b/src/workflow.ts
      return call;
    };
  
-@@ -675,7 +983,7 @@
+@@ -716,7 +1024,7 @@
  
      return limiter(async () => {
        const timeout = agentOptions.timeoutMs !== undefined ? agentOptions.timeoutMs : agentTimeoutMs;
@@ -8774,7 +8774,7 @@ diff -ruN --exclude=node_modules a/src/workflow.ts b/src/workflow.ts
        const maxAttempts = retryAttempts + 1;
  
        options.onAgentStart?.({ id: deltaKey, label, phase: assignedPhase, prompt, model: displayModel });
-@@ -689,7 +997,46 @@
+@@ -730,7 +1038,46 @@
        const resolvedIsolation = agentOptions.isolation ?? agentDef?.isolation;
        if (resolvedIsolation === "worktree") {
          worktree = await createWorktree(baseCwd, `${runId}-${callIndex}-${label}`);
@@ -8822,7 +8822,7 @@ diff -ruN --exclude=node_modules a/src/workflow.ts b/src/workflow.ts
        }
        const runCwd = worktree?.isolated ? worktree.cwd : undefined;
  
-@@ -832,14 +1179,22 @@
+@@ -886,14 +1233,22 @@
              store.discardDelta(deltaKey);
  
              if (workflowError.recoverable && attempt < maxAttempts) {
@@ -8846,7 +8846,7 @@ diff -ruN --exclude=node_modules a/src/workflow.ts b/src/workflow.ts
                continue;
              }
  
-@@ -1251,17 +1606,87 @@
+@@ -1308,17 +1663,87 @@
    const { globals: projectGlobals, diagnostics: bindingDiagnostics } =
      WORKFLOW_CAPABILITY_CONTRACT.assembleRuntimeBindings(runtimeImplementations);
    for (const diagnostic of bindingDiagnostics) logger.warn(diagnostic.message);
@@ -8942,7 +8942,7 @@ diff -ruN --exclude=node_modules a/src/workflow.ts b/src/workflow.ts
  
      // Persist logs
      const logFile = logger.persist();
-@@ -1307,7 +1732,10 @@
+@@ -1364,7 +1789,10 @@
      // the cost of that sibling's work being thrown away and re-run live when
      // the paused run resumes (it was never journaled, so it isn't cached).
      if (isTopLevelRun) shared.runFatalController.abort();
@@ -8954,7 +8954,7 @@ diff -ruN --exclude=node_modules a/src/workflow.ts b/src/workflow.ts
    } finally {
      // Only the top-level frame drains/disposes (see isTopLevelRun) — a nested
      // workflow()'s in-flight agents are still tracked in this SAME shared set
-@@ -1320,20 +1748,48 @@
+@@ -1377,20 +1805,48 @@
        // (not a single Promise.allSettled) because draining can itself let a
        // still-running call schedule further work that adds to the set.
        //
@@ -9013,7 +9013,7 @@ diff -ruN --exclude=node_modules a/src/workflow.ts b/src/workflow.ts
        }
        store.dispose();
      }
-@@ -1583,6 +2039,14 @@
+@@ -1641,6 +2097,14 @@
   * background with the whole session graph (messages, etc.) retained (#109). The
   * losing promise still settles later; the caller must swallow its rejection.
   */
@@ -9030,7 +9030,7 @@ diff -ruN --exclude=node_modules a/src/workflow.ts b/src/workflow.ts
    ms: number | null,
 diff -ruN --exclude=node_modules a/src/worktree.ts b/src/worktree.ts
 --- a/src/worktree.ts	1985-10-26 03:15:00
-+++ b/src/worktree.ts	2026-08-18 11:06:57
++++ b/src/worktree.ts	2026-08-22 14:34:22
 @@ -6,6 +6,8 @@
   */
  
@@ -9141,7 +9141,7 @@ diff -ruN --exclude=node_modules a/src/worktree.ts b/src/worktree.ts
      await exec("git", ["-C", repoRoot, "worktree", "add", "-b", branch, path, "HEAD"]);
 diff -ruN --exclude=node_modules a/tsconfig.json b/tsconfig.json
 --- a/tsconfig.json	1969-12-31 18:00:00
-+++ b/tsconfig.json	2026-08-18 11:06:57
++++ b/tsconfig.json	2026-08-22 14:34:22
 @@ -0,0 +1,17 @@
 +{
 +  "compilerOptions": {

@@ -252,6 +252,8 @@ export interface AgentRunOptions<TSchemaDef extends TSchema | undefined = undefi
      * omitted.
      */
     modelRegistry?: ModelRegistry;
+    /** Re-enter a named conversation retained by this WorkflowAgent instance. */
+    thread?: string;
 }
 export type AgentRunResult<TSchemaDef extends TSchema | undefined> = TSchemaDef extends TSchema ? Static<TSchemaDef> : string;
 /**
@@ -305,6 +307,13 @@ export declare class WorkflowAgent {
      * run. See onModelFallback below for the (still-loud) degrade path.
      */
     private warnedDefaultTierUnavailable;
+    /**
+     * Named conversations live for this WorkflowAgent instance. Production creates
+     * one instance per workflow invocation; embedders that inject and reuse an
+     * agent are responsible for choosing the longer thread lifetime deliberately.
+     */
+    private readonly threadSessions;
+    private readonly activeThreads;
     constructor(options?: WorkflowAgentOptions);
     /**
      * A resource loader shared by every subagent of this run, built once (#109).
@@ -382,6 +391,8 @@ export declare class WorkflowAgent {
     /** Best-effort write probe: throws if the session directory isn't actually writable. */
     private assertSessionDirWritable;
     run<TSchemaDef extends TSchema | undefined = undefined>(prompt: string, options?: AgentRunOptions<TSchemaDef>): Promise<AgentRunResult<TSchemaDef>>;
+    private runTurn;
+    private restoreThreadLeaf;
     private buildPrompt;
     private lastAssistantText;
     /**

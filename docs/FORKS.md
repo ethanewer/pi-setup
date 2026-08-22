@@ -101,6 +101,22 @@ option-shaped git argument rejection and revision terminator, install/run proven
 untrusted-result fencing, agent defaults and ceiling, and rebuilt `dist/` from the merged
 `src/` tree.
 
+Re-vendored onto 3.7.0 on 2026-08-22. Upstream added named-thread subagent conversations
+(re-enterable within one workflow invocation), with live-execution resume barriers so a
+threaded call is never journaled or replayed, a same-thread sequential-execution guard, and
+a refusal to combine a thread with worktree isolation. Two hunks rejected — both the fork's
+own edits, not upstream's: `README.md` (the trust/untrusted-input block lost its trailing
+context line to a rewording of the in-memory session note) and `package.json` (`"private":
+true` lost its context to the version bump) — resolved by hand onto the 3.7.0 lines. The
+hardening was re-verified against the merged tree: cold-start rearm provenance, the vm-realm
+timeout, the web-fetch private/loopback host gate (fail-closed, `webFetchAllowPrivateNetwork`
+defaults false), project-local workflow trust, the worktree-isolation fallback, the foreign-run
+confirmation, the agent ceiling and `DEFAULT_AGENT_TIMEOUT_MS`/`DEFAULT_AGENT_RETRIES`, and
+`runId` charset validation are all still in place. `dist/` was rebuilt as a clean-room `tsc`
+build of the merged `src/` (47/47 modules mirrored; the fork's `DEFAULT_AGENT_RETRIES`/
+`DEFAULT_AGENT_TIMEOUT_MS`/`defaultAgentRetries` constants present in both) and is byte-identical
+to the patched tree; `bin/pi-setup-vendor --verify` reproduces the fork exactly.
+
 **Default changes.** A run defaults to 100 agents (was 1000).
 `DEFAULT_AGENT_TIMEOUT_MS` is 60 minutes (was unbounded), sized so a legitimately long
 subagent is not silently degraded to `null`. `DEFAULT_AGENT_RETRIES` is 2 with exponential
