@@ -7,8 +7,8 @@ import { isHttpOrHttpsUrl } from "../../input-modes/job.js";
 import { formatSessionArtifactRetentionSummary } from "../../results/artifact-manifest.js";
 import { buildNextToolAction, withOptionalSessionArgs } from "../../results/next-actions.js";
 import { buildVisibleRefFallbackDiagnosticFromSnapshot, getVisibleRefFallbackTarget } from "../../results/selector-recovery.js";
-import { extractRefSnapshotFromData, normalizeComparableUrl } from "../../session-page-state.js";
-import { redactInvocationArgs, redactSensitiveText } from "../../runtime.js";
+import { extractRefSnapshotFromData, isAboutBlankUrl, normalizeComparableUrl } from "../../session-page-state.js";
+import { extractUpstreamCommandTokens, parseWaitCommandTokens, redactInvocationArgs, redactSensitiveText } from "../../runtime.js";
 import { isRecord } from "../../parsing.js";
 import { getManagedSessionStateAccessValidationError, isFileUrl } from "../../managed-session-state-policy.js";
 import { extractBatchResultCommand, extractNavigationSummaryFromData, extractStringResultField, findElectronLaunchRecordForSession, runSessionCommandData, } from "./session-state.js";
@@ -22,8 +22,14 @@ export async function collectNavigationSummary(options) {
     const url = extractStringResultField(await runSessionCommandData({ args: ["get", "url"], cwd: options.cwd, namespace: options.namespace, sessionName: options.sessionName, signal: options.signal }), "url");
     if (!url || !/^[a-z][a-z0-9+.-]*:/i.test(url))
         return undefined;
-    if (isFileUrl(url))
+    if (isFileUrl(url) || isAboutBlankUrl(url))
         return { url };
+    // Reuse the title already observed for this exact URL instead of spending a second probe. Titles can
+    // change without a URL change on SPAs, but this summary is only a "last observed" page label; the URL
+    // stays live-probed on every call.
+    if (options.priorTarget?.title && normalizeComparableUrl(options.priorTarget.url) === normalizeComparableUrl(url)) {
+        return { title: options.priorTarget.title, url };
+    }
     const title = extractStringResultField(await runSessionCommandData({ args: ["get", "title"], cwd: options.cwd, namespace: options.namespace, sessionName: options.sessionName, signal: options.signal }), "title");
     return { title, url };
 }
@@ -390,14 +396,14 @@ function isBroadGetTextSelector(selector) {
     return normalized === "body" || normalized === "html" || normalized === ":root" || normalized === "*" || normalized === "main" || normalized === "div" || normalized === "section" || normalized === "article" || /^\[role=(?:"application"|'application'|application)\]$/i.test(normalized);
 }
 function getElectronTextScopeContext(options) {
-    const record = findElectronLaunchRecordForSession(options.sessionName, options.electronLaunchRecords);
+    const record = findElectronLaunchRecordForSession(options.sessionName, options.electronLaunchRecords, options.namespace);
     if (!record)
         return undefined;
     const url = options.currentTarget?.url ?? options.priorTarget?.url;
     return { launchId: record.launchId, sessionName: record.sessionName ?? options.sessionName, url };
 }
 export function getSourceLookupElectronContext(options) {
-    const record = findElectronLaunchRecordForSession(options.sessionName, options.electronLaunchRecords);
+    const record = findElectronLaunchRecordForSession(options.sessionName, options.electronLaunchRecords, options.namespace);
     if (!record)
         return undefined;
     const url = options.currentTarget?.url ?? options.priorTarget?.url;
@@ -469,9 +475,11 @@ export function formatEvalResultWarningText(warning) {
     return warning ? `Eval result warning: ${warning.reason} ${warning.suggestion}` : undefined;
 }
 export async function getArtifactCleanupGuidance(options) {
-    if (!options.succeeded || !isCloseCommand(options.command) || !options.manifest || options.manifest.entries.length === 0)
+    if (!options.succeeded || !isCloseCommand(options.command) || !options.manifest)
         return undefined;
     const explicitEntries = options.manifest.entries.filter((entry) => entry.storageScope === "explicit-path");
+    if (explicitEntries.length === 0)
+        return undefined;
     const explicitArtifactPaths = [];
     const seenPaths = new Set();
     for (const entry of explicitEntries) {
@@ -490,16 +498,15 @@ export async function getArtifactCleanupGuidance(options) {
         seenPaths.add(displayPath);
         explicitArtifactPaths.push(displayPath);
     }
+    if (explicitArtifactPaths.length === 0)
+        return undefined;
     return { explicitArtifactPaths, note: "Closing the browser session does not delete explicit screenshots, downloads, PDFs, traces, HAR files, or recordings; clean existing paths with host file tools when no longer needed.", owner: "host-file-tools", summary: formatSessionArtifactRetentionSummary(options.manifest) };
 }
 export function formatArtifactCleanupGuidanceText(guidance) {
-    if (!guidance)
+    if (!guidance || guidance.explicitArtifactPaths.length === 0)
         return undefined;
     const explicitCount = guidance.explicitArtifactPaths.length;
-    const explicitSummary = explicitCount === 0
-        ? "No existing explicit artifact paths were found in the recent manifest."
-        : `${explicitCount} explicit artifact${explicitCount === 1 ? "" : "s"} remain${explicitCount === 1 ? "s" : ""}; expand or inspect details.artifactCleanup.explicitArtifactPaths for paths.`;
-    return `Artifact lifecycle: ${explicitSummary} Browser close does not delete explicit screenshots, downloads, PDFs, traces, HAR files, or recordings; use host file tools for cleanup.`;
+    return `Artifact lifecycle: ${explicitCount} explicit artifact${explicitCount === 1 ? "" : "s"} remain${explicitCount === 1 ? "s" : ""}; expand or inspect details.artifactCleanup.explicitArtifactPaths for paths. Browser close does not delete explicit screenshots, downloads, PDFs, traces, HAR files, or recordings; use host file tools for cleanup.`;
 }
 async function collectManagedSessionCommandData(options) {
     try {
@@ -718,24 +725,18 @@ function getLastPositionalToken(args, startIndex = 1) {
     return undefined;
 }
 function getTimeoutStepArtifactPath(args) {
-    const [command] = args;
+    const commandArgs = extractUpstreamCommandTokens(args);
+    const [command] = commandArgs;
     if (command === "screenshot") {
-        const index = getScreenshotPathTokenIndex(args);
-        return index === undefined ? undefined : args[index];
+        const index = getScreenshotPathTokenIndex(commandArgs);
+        return index === undefined ? undefined : commandArgs[index];
     }
     if (command === "pdf")
-        return getLastPositionalToken(args);
+        return getLastPositionalToken(commandArgs);
     if (command === "download")
-        return getLastPositionalToken(args, 2);
-    if (command === "wait") {
-        const inlineDownload = args.find((token) => token.startsWith("--download="));
-        if (inlineDownload)
-            return inlineDownload.slice("--download=".length) || undefined;
-        const downloadIndex = args.indexOf("--download");
-        const downloadPath = downloadIndex >= 0 ? args[downloadIndex + 1] : undefined;
-        if (downloadPath && !downloadPath.startsWith("-"))
-            return downloadPath;
-    }
+        return getLastPositionalToken(commandArgs, 2);
+    if (command === "wait")
+        return parseWaitCommandTokens(commandArgs).downloadPath;
     return undefined;
 }
 async function statTimeoutArtifactPath(absolutePath) {

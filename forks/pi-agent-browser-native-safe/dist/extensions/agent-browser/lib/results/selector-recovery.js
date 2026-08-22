@@ -16,7 +16,17 @@ function isSelectorRecoveryActionName(action) {
 function getFindNameFlagValue(args, startIndex) {
     const nameFlagIndex = args.indexOf("--name", startIndex);
     const name = nameFlagIndex >= 0 ? args[nameFlagIndex + 1] : undefined;
-    return name && !name.startsWith("-") ? name : undefined;
+    return typeof name === "string" && name.length > 0 ? name : undefined;
+}
+function collectFindTrailingValues(args, startIndex) {
+    const values = [];
+    for (let index = startIndex; index < args.length; index += 1) {
+        const token = args[index];
+        if (!token || token.startsWith("-"))
+            break;
+        values.push(token);
+    }
+    return values;
 }
 function getFindVisibleRefFallbackTarget(args, options = {}) {
     const findIndex = args[0] === "--session" ? 2 : 0;
@@ -25,8 +35,21 @@ function getFindVisibleRefFallbackTarget(args, options = {}) {
     const locator = args[findIndex + 1];
     const value = args[findIndex + 2];
     const action = args[findIndex + 3];
-    if (!locator || !value || !isSelectorRecoveryActionName(action) || action === "select")
+    if (!locator || !value || !isSelectorRecoveryActionName(action))
         return undefined;
+    if (action === "select") {
+        const optionValues = collectFindTrailingValues(args, findIndex + 4);
+        if (locator === "role") {
+            if (!/^(?:combobox|listbox)$/i.test(value))
+                return undefined;
+            const targetName = getFindNameFlagValue(args, findIndex + 4);
+            return targetName ? { action, optionValues, roles: [value.toLowerCase()], targetName } : undefined;
+        }
+        if (locator === "label") {
+            return { action, optionValues, roles: ["combobox", "listbox"], targetName: value };
+        }
+        return undefined;
+    }
     const text = action === "fill" ? args[findIndex + 4] : undefined;
     if (action === "fill" && (!text || (!options.allowLeadingDashFillText && text.startsWith("-"))))
         return undefined;
@@ -69,7 +92,13 @@ function getVisibleRefFallbackCandidates(target, snapshotData) {
             return [];
         if (target.action === "fill" && editableEvidence === false && EDITABLE_CONTROL_ROLES.has(role.toLowerCase()))
             return [];
-        const directRefArgs = target.action === "fill" ? undefined : [target.action, `@${ref}`];
+        const directRefArgs = target.action === "fill"
+            ? undefined
+            : target.action === "select" && target.optionValues && target.optionValues.length > 0
+                ? ["select", `@${ref}`, ...target.optionValues]
+                : target.action === "select"
+                    ? undefined
+                    : [target.action, `@${ref}`];
         return [{
                 action: target.action,
                 ...(directRefArgs ? { args: directRefArgs } : {}),
@@ -101,19 +130,33 @@ export function buildVisibleRefFallbackDiagnosticFromSnapshot(options) {
 }
 export function resolveVisibleRefActionFromSnapshot(options) {
     const target = getFindVisibleRefFallbackTarget(options.compiledAction.args, { allowLeadingDashFillText: true });
-    if (!target || target.action === "select")
+    if (!target)
         return undefined;
     const snapshot = extractRefSnapshotFromData(options.snapshotData);
     if (!snapshot)
         return undefined;
-    const candidates = getVisibleRefFallbackCandidates(target, options.snapshotData);
-    if (target.action === "fill") {
-        if (!options.allowFill || candidates.length !== 1 || target.text === undefined)
+    const selectOptionValues = options.compiledAction.values && options.compiledAction.values.length > 0
+        ? options.compiledAction.values
+        : target.optionValues;
+    const effectiveTarget = target.action === "select" && selectOptionValues
+        ? { ...target, optionValues: selectOptionValues }
+        : target;
+    const candidates = getVisibleRefFallbackCandidates(effectiveTarget, options.snapshotData);
+    if (effectiveTarget.action === "fill") {
+        if (!options.allowFill || candidates.length !== 1 || effectiveTarget.text === undefined)
             return undefined;
         const [candidate] = candidates;
         if (!candidate || candidate.editableEvidence === false || !EDITABLE_CONTROL_ROLES.has(candidate.role.toLowerCase()))
             return undefined;
-        return { args: ["fill", candidate.ref, target.text], snapshot };
+        return { args: ["fill", candidate.ref, effectiveTarget.text], snapshot };
+    }
+    if (effectiveTarget.action === "select") {
+        if (candidates.length !== 1 || !selectOptionValues || selectOptionValues.length === 0)
+            return undefined;
+        const [candidate] = candidates;
+        if (!candidate)
+            return undefined;
+        return { args: ["select", candidate.ref, ...selectOptionValues], snapshot };
     }
     const candidate = candidates.find((item) => item.args !== undefined);
     if (!candidate?.args)

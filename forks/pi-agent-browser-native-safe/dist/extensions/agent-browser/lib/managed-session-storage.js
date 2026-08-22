@@ -5,6 +5,7 @@ import { dirname, isAbsolute, join, parse, resolve, win32 } from "node:path";
 import { canonicalizeAgentBrowserNamespace } from "./argv-grammar.js";
 export { isManagedSessionRestoreKey } from "./managed-session-capabilities.js";
 const MANAGED_SESSION_NAME_PREFIX = "piab-r2-";
+const MANAGED_SESSION_FRESH_SUFFIX_PATTERN = /-fresh-[a-f\d]{10}$/i;
 const MANAGED_SESSION_RESTORE_KEY_HASH_LENGTH = 32;
 const PROJECT_GENERATION_MARKER_NAME = "pi-agent-browser-project-generation-v1.json";
 const PROJECT_GENERATION_MARKER_MAX_BYTES = 1_024;
@@ -15,7 +16,7 @@ function isAbsoluteHome(path, platform) {
 function currentUid() {
     return typeof process.getuid === "function" ? process.getuid() : undefined;
 }
-function isTrustedPosixDirectory(path, requireCurrentOwner) {
+function isTrustedPosixDirectory(path, requireCurrentOwner, platform = process.platform) {
     const uid = currentUid();
     if (uid === undefined)
         return false;
@@ -32,11 +33,13 @@ function isTrustedPosixDirectory(path, requireCurrentOwner) {
         }
         if (entry.isSymbolicLink() || !entry.isDirectory())
             return false;
-        if (entry.uid !== 0 && entry.uid !== uid)
+        const androidSystemAncestor = platform === "android" && (cursor === "/data" || cursor === "/data/data") && entry.uid === 1000 && (entry.mode & 0o002) === 0;
+        const androidAppDirectory = platform === "android" && entry.uid === uid && entry.gid === uid && (entry.mode & 0o002) === 0;
+        if (!androidSystemAncestor && entry.uid !== 0 && entry.uid !== uid)
             return false;
         const writableByOthers = (entry.mode & 0o022) !== 0;
         const rootOwnedStickyDirectory = entry.uid === 0 && (entry.mode & 0o1000) !== 0;
-        if (writableByOthers && !rootOwnedStickyDirectory)
+        if (writableByOthers && !rootOwnedStickyDirectory && !androidSystemAncestor && !androidAppDirectory)
             return false;
     }
     try {
@@ -56,7 +59,7 @@ export function resolveManagedSessionRestoreHome(parentEnv, platform = process.p
         return candidate;
     try {
         const canonical = realpathSync(candidate);
-        return isTrustedPosixDirectory(canonical, true) ? canonical : undefined;
+        return isTrustedPosixDirectory(canonical, true, platform) ? canonical : undefined;
     }
     catch {
         return undefined;
@@ -138,12 +141,15 @@ function readProjectGenerationMarker(path, platform) {
         return undefined;
     }
 }
-function getDirectoryFilesystemIdentity(path) {
+function getDirectoryFilesystemIdentity(path, platform) {
     try {
         const entry = statSync(path, { bigint: true });
-        return entry.isDirectory() && entry.dev > 0n && entry.ino > 0n && entry.birthtimeNs > 0n
-            ? `${entry.dev}:${entry.ino}:${entry.birthtimeNs}`
-            : undefined;
+        if (!entry.isDirectory() || entry.dev <= 0n || entry.ino <= 0n)
+            return undefined;
+        // ponytail: Android reports mutable ctime as birthtime; use statx birthtime/inode generation when Node exposes either reliably.
+        return platform === "android"
+            ? `${entry.dev}:${entry.ino}`
+            : entry.birthtimeNs > 0n ? `${entry.dev}:${entry.ino}:${entry.birthtimeNs}` : undefined;
     }
     catch {
         return undefined;
@@ -157,13 +163,13 @@ function resolveManagedSessionRestoreProjectCheckout(cwd, platform) {
     catch {
         return undefined;
     }
-    if (platform !== "win32" && !isTrustedPosixDirectory(canonicalCwd, false))
+    if (platform !== "win32" && !isTrustedPosixDirectory(canonicalCwd, false, platform))
         return undefined;
     const checkout = resolveGitCheckout(canonicalCwd, platform);
     if (!checkout)
         return undefined;
-    if (platform !== "win32" && (!isTrustedPosixDirectory(checkout.worktreeDirectory, true)
-        || !isTrustedPosixDirectory(checkout.gitDirectory, true)))
+    if (platform !== "win32" && (!isTrustedPosixDirectory(checkout.worktreeDirectory, true, platform)
+        || !isTrustedPosixDirectory(checkout.gitDirectory, true, platform)))
         return undefined;
     return { canonicalCwd, ...checkout };
 }
@@ -175,8 +181,8 @@ function resolveProjectGenerationIdentity(cwd, platform = process.platform) {
     if (!checkout)
         return undefined;
     const { canonicalCwd } = checkout;
-    const gitFilesystemIdentity = getDirectoryFilesystemIdentity(checkout.gitDirectory);
-    const worktreeFilesystemIdentity = getDirectoryFilesystemIdentity(checkout.worktreeDirectory);
+    const gitFilesystemIdentity = getDirectoryFilesystemIdentity(checkout.gitDirectory, platform);
+    const worktreeFilesystemIdentity = getDirectoryFilesystemIdentity(checkout.worktreeDirectory, platform);
     if (!gitFilesystemIdentity || !worktreeFilesystemIdentity)
         return undefined;
     const markerPath = join(checkout.gitDirectory, PROJECT_GENERATION_MARKER_NAME);
@@ -192,22 +198,35 @@ function resolveProjectGenerationIdentity(cwd, platform = process.platform) {
     projectGenerationCache.delete(canonicalCwd);
     try {
         if (!marker) {
-            const candidatePath = `${markerPath}.candidate-${process.pid}-${randomUUID()}`;
-            try {
-                writeFileSync(candidatePath, JSON.stringify({ id: randomUUID(), version: 1 }), { encoding: "utf8", flag: "wx", mode: 0o600 });
+            const content = JSON.stringify({ id: randomUUID(), version: 1 });
+            if (platform === "android") {
+                // ponytail: Android denies hard links in app storage; use renameat2(RENAME_NOREPLACE) if Node exposes it.
                 try {
-                    linkSync(candidatePath, markerPath);
+                    writeFileSync(markerPath, content, { encoding: "utf8", flag: "wx", mode: 0o600 });
                 }
                 catch (error) {
                     if (error.code !== "EEXIST")
                         return undefined;
                 }
             }
-            finally {
+            else {
+                const candidatePath = `${markerPath}.candidate-${process.pid}-${randomUUID()}`;
                 try {
-                    unlinkSync(candidatePath);
+                    writeFileSync(candidatePath, content, { encoding: "utf8", flag: "wx", mode: 0o600 });
+                    try {
+                        linkSync(candidatePath, markerPath);
+                    }
+                    catch (error) {
+                        if (error.code !== "EEXIST")
+                            return undefined;
+                    }
                 }
-                catch { }
+                finally {
+                    try {
+                        unlinkSync(candidatePath);
+                    }
+                    catch { }
+                }
             }
             marker = readProjectGenerationMarker(markerPath, platform);
         }
@@ -231,16 +250,23 @@ function resolveProjectGenerationIdentity(cwd, platform = process.platform) {
 export function hasManagedSessionRestoreProjectIdentity(cwd) {
     return resolveProjectGenerationIdentity(cwd) !== undefined;
 }
-/** Stable for one checkout generation; deliberately changes when a path is replaced by another checkout. */
-export function createManagedSessionRestoreKey(cwd) {
+/** Keep fresh rotations from one Pi transcript in one private upstream restore pool. */
+export function getManagedSessionRestoreScope(sessionName) {
+    return sessionName.replace(MANAGED_SESSION_FRESH_SUFFIX_PATTERN, "");
+}
+/** Stable for one Pi transcript and checkout generation; isolated from other concurrent transcripts. */
+export function createManagedSessionRestoreKey(cwd, restoreScope = "", platform = process.platform) {
     let canonicalCwd = resolve(cwd);
     try {
         canonicalCwd = realpathSync(canonicalCwd);
     }
     catch { }
-    const identity = resolveProjectGenerationIdentity(canonicalCwd);
+    const identity = resolveProjectGenerationIdentity(canonicalCwd, platform);
     const material = identity ?? `unavailable:${canonicalCwd}`;
-    const digest = createHash("sha256").update(`restore-v2:${material}`).digest("hex").slice(0, MANAGED_SESSION_RESTORE_KEY_HASH_LENGTH);
+    const digest = createHash("sha256")
+        .update(`restore-v3:${material}:scope:${restoreScope}`)
+        .digest("hex")
+        .slice(0, MANAGED_SESSION_RESTORE_KEY_HASH_LENGTH);
     return `${MANAGED_SESSION_NAME_PREFIX}${digest}`;
 }
 function hasValidEncryptionKey(parentEnv) {

@@ -1,13 +1,13 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import { chmodSync, lstatSync, readFileSync, unlinkSync } from "node:fs";
-import { join } from "node:path";
-import { extractCommandTokens, parseCommandInfo } from "./argv-descriptor.js";
+import { extractUpstreamCommandTokens, parseCommandInfo } from "./argv-descriptor.js";
 import { canonicalizeAgentBrowserNamespace, extractExplicitNamespace, extractExplicitSessionName, extractRequestedRestoreKey, getAgentBrowserSessionIdentityKey, isUpstreamEnvFlagEnabled, scanUpstreamGlobalFlagOccurrences, } from "./argv-grammar.js";
 import { hasLaunchScopedFlagToken, MANAGED_RESTORE_INCOMPATIBLE_BOOLEAN_ENVS, MANAGED_RESTORE_INCOMPATIBLE_ENVS, MANAGED_RESTORE_INCOMPATIBLE_FLAGS, } from "./launch-scoped-flags.js";
-import { createManagedSessionRestoreKey, ensureManagedSessionRestoreStorageIsSecure, getManagedSessionRestoreProtectedStorageEnv, hasManagedSessionRestoreProjectIdentity, resolveManagedSessionRestoreHome, } from "./managed-session-storage.js";
+import { createManagedSessionRestoreKey, ensureManagedSessionRestoreStorageIsSecure, getManagedSessionRestoreScope, getManagedSessionRestoreProtectedStorageEnv, hasManagedSessionRestoreProjectIdentity, resolveManagedSessionRestoreHome, } from "./managed-session-storage.js";
 import { parseUserBatchStdin } from "./orchestration/batch-stdin.js";
+import { getAgentBrowserProcessEnvironment } from "./process-environment.js";
 import { writeSecureTempFile } from "./temp.js";
-export { createManagedSessionRestoreKey, ensureManagedSessionRestoreStorageIsSecure } from "./managed-session-storage.js";
+export { createManagedSessionRestoreKey, ensureManagedSessionRestoreStorageIsSecure, getManagedSessionRestoreScope } from "./managed-session-storage.js";
 export { pruneOwnedManagedSessionRestoreSnapshots } from "./managed-session-snapshots.js";
 const AGENT_BROWSER_CONFIG_ENV = "AGENT_BROWSER_CONFIG";
 const AGENT_BROWSER_RESTORE_ENV = "AGENT_BROWSER_RESTORE";
@@ -61,7 +61,7 @@ export class ManagedSessionRestoreState {
         if (sessionName)
             this.#daemonRestoreKeys.set(getAgentBrowserSessionIdentityKey(sessionName, namespace), restoreKey);
     }
-    replace(identities, options = {}) {
+    replace(identities = [], options = {}) {
         if (!options.preserveDaemonRestoreKeys)
             this.#daemonRestoreKeys.clear();
         this.#disabled.clear();
@@ -72,6 +72,9 @@ export class ManagedSessionRestoreState {
 const ownedManagedSessionStorage = new AsyncLocalStorage();
 export async function withOwnedManagedSessionContext(context, run) {
     return await ownedManagedSessionStorage.run(context, run);
+}
+export function getOwnedManagedSessionRestoreKey() {
+    return ownedManagedSessionStorage.getStore()?.restoreKey;
 }
 export function resolveOwnedManagedSessionContext(options) {
     const namespace = canonicalizeAgentBrowserNamespace(options.namespace);
@@ -96,33 +99,18 @@ function ownedContextMatches(sessionName, namespace) {
 export function isOwnedManagedSessionTarget(args) {
     return ownedContextMatches(extractExplicitSessionName(args), extractExplicitNamespace(args)) !== undefined;
 }
-function pathExistsOrIsUnreadable(path) {
-    try {
-        lstatSync(path);
-        return true;
-    }
-    catch (error) {
-        return error.code !== "ENOENT";
-    }
-}
 function hasExplicitConfigArg(args) {
     return scanUpstreamGlobalFlagOccurrences(args, "--config").length > 0;
 }
 function closesBrowserSession(args) {
     return ["close", "exit", "quit"].includes(parseCommandInfo(args).command ?? "");
 }
-export function agentBrowserConfigIsPresent(cwd, parentEnv = process.env, args = [], platform = process.platform) {
-    if (hasExplicitConfigArg(args) || hasUpstreamEnvValue(parentEnv, AGENT_BROWSER_CONFIG_ENV))
-        return true;
-    const paths = [join(cwd, "agent-browser.json")];
-    const home = resolveManagedSessionRestoreHome(parentEnv, platform);
-    if (home)
-        paths.push(join(home, ".agent-browser", "config.json"));
-    return paths.some(pathExistsOrIsUnreadable);
+export function agentBrowserExplicitConfigIsPresent(parentEnv = getAgentBrowserProcessEnvironment(), args = []) {
+    return hasExplicitConfigArg(args) || hasUpstreamEnvValue(parentEnv, AGENT_BROWSER_CONFIG_ENV);
 }
-/** Any upstream config disables automatic restore; content inspection would add parser and resource-exhaustion gaps. */
-export function agentBrowserConfigBlocksManagedRestore(cwd, parentEnv = process.env, args = [], platform = process.platform) {
-    return !resolveManagedSessionRestoreHome(parentEnv, platform) || agentBrowserConfigIsPresent(cwd, parentEnv, args, platform);
+/** Explicit config overrides disable restore; passive files are ignored because every browser-backed subprocess pins a protected empty config. */
+export function agentBrowserConfigBlocksManagedRestore(_cwd, parentEnv = getAgentBrowserProcessEnvironment(), args = [], platform = process.platform) {
+    return !resolveManagedSessionRestoreHome(parentEnv, platform) || agentBrowserExplicitConfigIsPresent(parentEnv, args);
 }
 function omitWrapperInjectedUserAgent(args, enabled) {
     if (!enabled)
@@ -131,7 +119,7 @@ function omitWrapperInjectedUserAgent(args, enabled) {
     return index < 0 ? args : [...args.slice(0, index), ...args.slice(index + 2)];
 }
 function batchHasManagedSessionRestoreConflict(args, stdin) {
-    const [command, ...commandArgs] = extractCommandTokens(args);
+    const [command, ...commandArgs] = extractUpstreamCommandTokens(args);
     if (command !== "batch")
         return false;
     if (commandArgs.some((token) => token !== "--bail"))
@@ -142,7 +130,7 @@ function batchHasManagedSessionRestoreConflict(args, stdin) {
     return parsed.steps.some((step) => ["connect", "batch"].includes(parseCommandInfo(step).command ?? ""));
 }
 function hasManagedSessionRestoreLaunchConflict(options) {
-    const parentEnv = options.parentEnv ?? process.env;
+    const parentEnv = options.parentEnv ?? getAgentBrowserProcessEnvironment();
     const effectiveEnv = { ...parentEnv, ...options.env };
     const args = omitWrapperInjectedUserAgent(options.args, options.wrapperInjectedUserAgent);
     if (MANAGED_RESTORE_INCOMPATIBLE_ENVS.some((name) => hasUpstreamEnvValue(effectiveEnv, name)))
@@ -156,7 +144,7 @@ function hasManagedSessionRestoreLaunchConflict(options) {
     return hasExplicitConfigArg(args) || hasUpstreamEnvValue({ ...parentEnv, ...options.env }, AGENT_BROWSER_CONFIG_ENV);
 }
 function managedSessionRestoreOptedOut(options) {
-    const effectiveEnv = { ...(options.parentEnv ?? process.env), ...options.env };
+    const effectiveEnv = { ...(options.parentEnv ?? getAgentBrowserProcessEnvironment()), ...options.env };
     return isDisabledEnvFlag(effectiveEnv[MANAGED_SESSION_RESTORE_ENV]);
 }
 function isManagedSessionRestoreIncompatible(options) {
@@ -164,7 +152,7 @@ function isManagedSessionRestoreIncompatible(options) {
         return true;
     if (managedSessionRestoreOptedOut(options))
         return false;
-    const effectiveEnv = { ...(options.parentEnv ?? process.env), ...options.env };
+    const effectiveEnv = { ...(options.parentEnv ?? getAgentBrowserProcessEnvironment()), ...options.env };
     const args = omitWrapperInjectedUserAgent(options.args, options.wrapperInjectedUserAgent);
     if (options.cwd && !hasManagedSessionRestoreProjectIdentity(options.cwd))
         return true;
@@ -173,7 +161,7 @@ function isManagedSessionRestoreIncompatible(options) {
     return !ensureManagedSessionRestoreStorageIsSecure(effectiveEnv, process.platform, extractExplicitNamespace(args));
 }
 function resolveManagedSessionRestorePolicy(options) {
-    const parentEnv = options.parentEnv ?? process.env;
+    const parentEnv = options.parentEnv ?? getAgentBrowserProcessEnvironment();
     const sessionName = extractExplicitSessionName(options.args);
     const namespace = extractExplicitNamespace(options.args);
     const ownedContext = ownedContextMatches(sessionName, namespace);
@@ -204,7 +192,7 @@ export function getOwnedManagedSessionCompatibilityEnv(options) {
     const { owned, ownedContext } = resolveManagedSessionRestorePolicy(options);
     if (!owned || !ownedContext)
         return {};
-    const parentEnv = options.parentEnv ?? process.env;
+    const parentEnv = options.parentEnv ?? getAgentBrowserProcessEnvironment();
     const callEnv = options.env ?? {};
     const explicitRawInterval = Object.hasOwn(callEnv, "AGENT_BROWSER_AUTOSAVE_INTERVAL_MS")
         ? callEnv.AGENT_BROWSER_AUTOSAVE_INTERVAL_MS
@@ -295,7 +283,7 @@ export function getManagedSessionRestoreProtectedEnv(options, restoreEnv) {
         return {};
     if (ownedContext?.protectedStorageEnv)
         return { ...ownedContext.protectedStorageEnv };
-    const effectiveEnv = { ...(options.parentEnv ?? process.env), ...options.env };
+    const effectiveEnv = { ...(options.parentEnv ?? getAgentBrowserProcessEnvironment()), ...options.env };
     return getManagedSessionRestoreProtectedStorageEnv(true, effectiveEnv);
 }
 export function validateManagedSessionRestoreContextForSpawn(options) {
@@ -303,7 +291,7 @@ export function validateManagedSessionRestoreContextForSpawn(options) {
     if (closesBrowserSession(options.args) || ownedContext?.restoreDecision !== "enabled")
         return true;
     const ownedCwd = ownedContext.cwd ?? options.cwd;
-    if (!ownedContext.restoreKey || createManagedSessionRestoreKey(ownedCwd) !== ownedContext.restoreKey || !hasManagedSessionRestoreProjectIdentity(ownedCwd))
+    if (!ownedContext.restoreKey || !ownedContext.restoreScope || createManagedSessionRestoreKey(ownedCwd, ownedContext.restoreScope) !== ownedContext.restoreKey || !hasManagedSessionRestoreProjectIdentity(ownedCwd))
         return false;
     const effectiveEnv = { ...parentEnv, ...options.env };
     if (isDisabledEnvFlag(effectiveEnv[MANAGED_SESSION_RESTORE_ENV]))
@@ -330,7 +318,7 @@ export function getManagedSessionRestoreEnv(options) {
         return {};
     if (restoreState.isDisabled(sessionName, namespace) || !sessionName)
         return {};
-    return { [AGENT_BROWSER_RESTORE_ENV]: createManagedSessionRestoreKey(options.cwd) };
+    return { [AGENT_BROWSER_RESTORE_ENV]: createManagedSessionRestoreKey(options.cwd, getManagedSessionRestoreScope(sessionName)) };
 }
 /** Commit sticky suppression only after an owned-context subprocess has actually started. */
 export function commitManagedSessionRestoreSuppression(options) {
@@ -375,8 +363,9 @@ export function buildOwnedManagedSessionRestoreContext(options) {
     const projectIdentityAvailable = !optedOut && hasManagedSessionRestoreProjectIdentity(ownedCwd);
     const incompatible = !optedOut && isManagedSessionRestoreIncompatible(policyOptions);
     const enabled = !optedOut && !incompatible;
-    const effectiveEnv = { ...(options.parentEnv ?? process.env), ...options.env };
-    const restoreKey = projectIdentityAvailable ? createManagedSessionRestoreKey(ownedCwd) : undefined;
+    const effectiveEnv = { ...(options.parentEnv ?? getAgentBrowserProcessEnvironment()), ...options.env };
+    const restoreScope = getManagedSessionRestoreScope(owned.sessionName);
+    const restoreKey = projectIdentityAvailable ? createManagedSessionRestoreKey(ownedCwd, restoreScope) : undefined;
     return {
         ...owned,
         compatibilityUserAgent: options.compatibilityUserAgent,
@@ -386,6 +375,7 @@ export function buildOwnedManagedSessionRestoreContext(options) {
         protectedStorageEnv: enabled ? getManagedSessionRestoreProtectedStorageEnv(true, effectiveEnv) : undefined,
         restoreDecision: optedOut ? "opted-out" : incompatible ? "incompatible" : "enabled",
         restoreKey,
+        restoreScope,
         restoreSuppressed: optedOut || incompatible,
     };
 }

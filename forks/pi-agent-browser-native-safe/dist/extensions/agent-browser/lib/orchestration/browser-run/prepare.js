@@ -1,6 +1,6 @@
 import { copyFile, mkdir } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
-import { getBooleanFlagValue, isUpstreamEnvFlagEnabled } from "../../argv-grammar.js";
+import { getBooleanFlagValue, isUpstreamEnvFlagEnabled, projectUpstreamGlobalFlags } from "../../argv-grammar.js";
 import { isCloseCommand } from "../../command-taxonomy.js";
 import { cleanupElectronLaunchResources } from "../../electron/cleanup.js";
 import { launchElectronApp } from "../../electron/launch.js";
@@ -19,12 +19,13 @@ import { applyNamespaceToNextActions } from "../../results/next-actions.js";
 import { buildSessionAwareStaleRefNextActions, buildSessionTabRecoveryNextActions } from "../../results/recovery-next-actions.js";
 import { resolveVisibleRefActionFromSnapshot } from "../../results/selector-recovery.js";
 import { extractRefSnapshotFromData } from "../../session-page-state.js";
-import { buildExecutionPlan, createFreshSessionName, extractCommandTokens, getDefaultHeadlessCompatUserAgent, redactInvocationArgs, } from "../../runtime.js";
+import { buildExecutionPlan, canUseHeadlessCompatibilityUserAgent, createFreshSessionName, extractCommandTokens, extractUpstreamCommandTokens, getDefaultHeadlessCompatUserAgent, parseWaitCommandTokens, redactInvocationArgs, } from "../../runtime.js";
 import { buildOwnedManagedSessionRestoreContext, canonicalizeOwnedManagedSessionCloseArgs, resolveExplicitAutosaveInterval, withOwnedManagedSessionContext, } from "../../managed-session-restore.js";
+import { getAgentBrowserProcessEnvironment } from "../../process-environment.js";
 import { getCallerOwnedSessionLivePageVerificationRequirement, getManagedSessionStateAccessValidationError, getManagedSessionTargetAccessValidationError, } from "../../managed-session-state-policy.js";
 import { acquireOwnedManagedSessionDaemonPolicy, getRunningHeadedAutosavePolicyChangeError } from "./managed-session-daemon-policy.js";
 import { applyOpenResultTabCorrection, buildManagedSessionOutcome, buildPinnedBatchPlan, buildSessionDetailFields, buildStaleRefPreflight, getSessionContextKey, extractStringResultField, collectAnySessionTabSelection, collectSessionTabSelection, getGuardedRefUsage, getTraceOwnerGuardMessage, runSessionCommandData, shouldPinSessionTabForCommand, } from "./session-state.js";
-import { parseBatchStdinJsonArray } from "../batch-stdin.js";
+import { getUpstreamEffectiveBatchSteps, parseBatchStdinJsonArray } from "../batch-stdin.js";
 import { buildElectronHostFailureResult, getElectronLaunchFailureCategory, redactRecoveryHint } from "./final-result.js";
 import { prepareClickDispatchProbe } from "./click-dispatch.js";
 import { collectScrollPositionSnapshot, validateQaAttachedPrecondition } from "./diagnostics.js";
@@ -45,6 +46,7 @@ export function normalizeRunInput(input) {
             return { ...base, compiledSemanticAction: input.compiledSemanticAction, redactedCompiledSemanticAction: input.redactedCompiledSemanticAction };
         case "sourceLookup":
             return { ...base, compiledSourceLookup: input.compiledSourceLookup, redactedCompiledSourceLookup: input.redactedCompiledSourceLookup };
+        case "script":
         case "args":
             return base;
     }
@@ -60,12 +62,8 @@ function getArtifactParentPathTokenIndex(commandTokens) {
         return 1;
     if (commandTokens[0] === "state" && commandTokens[1] === "save" && commandTokens.length >= 3)
         return 2;
-    if (commandTokens[0] === "wait") {
-        const downloadIndex = commandTokens.findIndex((token) => token === "--download");
-        const pathIndex = downloadIndex >= 0 ? downloadIndex + 1 : -1;
-        if (pathIndex > 0 && typeof commandTokens[pathIndex] === "string" && !commandTokens[pathIndex].startsWith("-"))
-            return pathIndex;
-    }
+    if (commandTokens[0] === "wait")
+        return parseWaitCommandTokens(commandTokens).downloadPathIndex;
     return undefined;
 }
 async function ensureArtifactParentDirectory(commandTokens, cwd) {
@@ -196,10 +194,14 @@ export function getArtifactPathConfinementError(args, stdin, cwd) {
     return getCommandArtifactPathConfinementError(commandTokens, cwd);
 }
 async function normalizeScreenshotPathInTokens(commandTokens, cwd) {
-    const screenshotPathTokenIndex = getScreenshotPathTokenIndex(commandTokens);
-    if (screenshotPathTokenIndex === undefined) {
+    const scopedCommandTokens = extractCommandTokens(commandTokens);
+    const projection = projectUpstreamGlobalFlags(scopedCommandTokens);
+    const projectedPathTokenIndex = getScreenshotPathTokenIndex(projection.tokens);
+    const scopedPathTokenIndex = projectedPathTokenIndex === undefined ? undefined : projection.indices[projectedPathTokenIndex];
+    if (scopedPathTokenIndex === undefined) {
         return { tokens: commandTokens };
     }
+    const screenshotPathTokenIndex = commandTokens.length - scopedCommandTokens.length + scopedPathTokenIndex;
     const requestedPath = commandTokens[screenshotPathTokenIndex];
     const absolutePath = resolve(cwd, requestedPath);
     await mkdir(dirname(absolutePath), { recursive: true });
@@ -218,8 +220,28 @@ async function normalizeScreenshotPathInTokens(commandTokens, cwd) {
     };
 }
 async function prepareBatchScreenshotPaths(args, stdin, cwd) {
-    const commandTokens = extractCommandTokens(args);
-    if (commandTokens[0] !== "batch" || stdin === undefined) {
+    const commandTokens = extractUpstreamCommandTokens(args);
+    if (commandTokens[0] !== "batch") {
+        return undefined;
+    }
+    const argumentSteps = getUpstreamEffectiveBatchSteps(commandTokens, undefined);
+    if (argumentSteps.length > 0) {
+        // Upstream executes raw argument steps exclusively and ignores stdin, so
+        // prepare parent directories for the rows that will run and skip stdin
+        // preparation (no directories for never-executed rows).
+        for (const step of argumentSteps) {
+            const stepTokens = extractUpstreamCommandTokens(step);
+            await ensureArtifactParentDirectory(stepTokens, cwd);
+            if (stepTokens[0] === "screenshot") {
+                // Reuse the screenshot path resolution for its parent-directory side
+                // effect only: raw strings are never rewritten, so the normalized
+                // tokens and path request are deliberately discarded.
+                await normalizeScreenshotPathInTokens(step, cwd);
+            }
+        }
+        return undefined;
+    }
+    if (stdin === undefined) {
         return undefined;
     }
     const parsed = parseBatchStdinJsonArray(stdin);
@@ -232,8 +254,9 @@ async function prepareBatchScreenshotPaths(args, stdin, cwd) {
         if (!Array.isArray(step) || !step.every((item) => typeof item === "string")) {
             return step;
         }
-        await ensureArtifactParentDirectory(step, cwd);
-        if (step[0] !== "screenshot") {
+        const upstreamStep = extractUpstreamCommandTokens(step);
+        await ensureArtifactParentDirectory(upstreamStep, cwd);
+        if (upstreamStep[0] !== "screenshot") {
             return step;
         }
         const normalized = await normalizeScreenshotPathInTokens(step, cwd);
@@ -257,7 +280,7 @@ export async function prepareAgentBrowserArgs(args, stdin, cwd) {
         return preparedBatch;
     }
     const commandTokens = extractCommandTokens(args);
-    await ensureArtifactParentDirectory(commandTokens, cwd);
+    await ensureArtifactParentDirectory(extractUpstreamCommandTokens(args), cwd);
     const normalized = await normalizeScreenshotPathInTokens(commandTokens, cwd);
     if (!normalized.request) {
         return { args };
@@ -301,7 +324,7 @@ const LIKELY_DIALOG_TRIGGER_PROCESS_TIMEOUT_MS = 8_000;
 const LIKELY_DIALOG_TRIGGER_PROCESS_TIMEOUT_ENV = "PI_AGENT_BROWSER_DIALOG_TRIGGER_PROCESS_TIMEOUT_MS";
 const DIALOG_TRIGGER_TEXT_PATTERN = /\b(?:alert|confirm|dialog|prompt)\b/i;
 function getPositiveIntegerEnv(name) {
-    const value = process.env[name];
+    const value = getAgentBrowserProcessEnvironment()[name];
     if (!value || !/^\d+$/.test(value.trim()))
         return undefined;
     const parsed = Number(value.trim());
@@ -335,9 +358,7 @@ function describeRef(refSnapshot, refId) {
     return ref ? `${ref.role} ${JSON.stringify(ref.name)}` : "not present";
 }
 function getSamePageFreshnessPreflightFailure(options) {
-    if (options.commandTokens[0] === "batch")
-        return undefined;
-    const refIds = getRefIdsFromDirectCommand(options.commandTokens);
+    const { refIds } = options;
     if (refIds.length === 0)
         return undefined;
     const previousUrl = options.previousSnapshot.target?.url;
@@ -363,7 +384,8 @@ function getSamePageFreshnessPreflightFailure(options) {
     };
 }
 async function collectSamePageRefFreshnessPreflight(options) {
-    if (!options.previousSnapshot || !options.sessionName || options.commandTokens[0] === "batch" || getRefIdsFromDirectCommand(options.commandTokens).length === 0)
+    const refIds = [...new Set(getGuardedRefUsage(options.commandTokens, options.stdin))];
+    if (!options.previousSnapshot || !options.sessionName || refIds.length === 0)
         return undefined;
     const previousUrl = options.previousSnapshot.target?.url;
     const currentTargetUrl = options.currentTarget?.url;
@@ -374,7 +396,7 @@ async function collectSamePageRefFreshnessPreflight(options) {
     if (!currentSnapshot)
         return undefined;
     const snapshotWithTarget = { ...currentSnapshot, target: currentSnapshot.target ?? options.currentTarget };
-    const mismatch = getSamePageFreshnessPreflightFailure({ commandTokens: options.commandTokens, currentSnapshot: snapshotWithTarget, previousSnapshot: options.previousSnapshot });
+    const mismatch = getSamePageFreshnessPreflightFailure({ currentSnapshot: snapshotWithTarget, previousSnapshot: options.previousSnapshot, refIds });
     if (!mismatch)
         return undefined;
     return { message: mismatch.message, refIds: mismatch.refIds, snapshot: snapshotWithTarget };
@@ -417,7 +439,14 @@ export function validateStdinCommandContract(options) {
     return `agent_browser stdin is only supported for \`batch\`, \`eval --stdin\`, and \`auth save --password-stdin\`; remove stdin from ${commandLabel} or use one of those command forms.`;
 }
 function canResolveSemanticVisibleRef(compiled) {
-    return compiled !== undefined && compiled.locator === "role" && ["check", "click", "fill"].includes(compiled.action);
+    if (!compiled?.locator)
+        return false;
+    if (compiled.action === "select")
+        return true;
+    return compiled.locator === "role" && ["check", "click", "fill"].includes(compiled.action);
+}
+function requiresResolvedSemanticVisibleRef(compiled) {
+    return compiled?.action === "select" && compiled.locator !== undefined;
 }
 function resolveSemanticActionVisibleRefArgsFromSnapshot(compiled, snapshotData) {
     if (!canResolveSemanticVisibleRef(compiled))
@@ -436,6 +465,7 @@ export async function resolveSemanticActionVisibleRefArgs(options) {
 export async function prepareBrowserRun(options) {
     const { cwd, onUpdate, params, signal, state } = options;
     const { sessionPageState, traceOwners, managedSessionBaseName, ephemeralSessionSeed } = state;
+    const agentBrowserProcessEnv = getAgentBrowserProcessEnvironment();
     let freshSessionOrdinal = state.freshSessionOrdinal;
     const { compiledElectron, compiledJob, compiledNetworkSourceLookup, compiledQaPreset, compiledSemanticAction, compiledSourceLookup, redactedArgs, redactedCompiledElectron, redactedCompiledJob, redactedCompiledNetworkSourceLookup, redactedCompiledQaPreset, redactedCompiledSemanticAction, redactedCompiledSourceLookup, toolArgs, toolStdin, } = normalizeRunInput(options.input);
     let runtimeToolArgs = toolArgs;
@@ -464,6 +494,7 @@ export async function prepareBrowserRun(options) {
     const rawManagedStateAccessError = getManagedSessionStateAccessValidationError({
         args: runtimeToolArgs,
         cwd,
+        parentEnv: agentBrowserProcessEnv,
         stdin: runtimeToolStdin,
         trustedFirstBatchTabSelection: true,
     });
@@ -531,6 +562,7 @@ export async function prepareBrowserRun(options) {
             currentPageUrl: plannedSessionPageState.tabTarget?.url,
             pageUrlUnknown: plannedSessionPageState.tabTargetUnknown === true,
             cwd,
+            parentEnv: agentBrowserProcessEnv,
             stdin: runtimeToolStdin,
         });
         if (!executionPlan.validationError && managedStateAccessError)
@@ -538,18 +570,41 @@ export async function prepareBrowserRun(options) {
         const recordedOwnedSession = ownedSessionKey ? state.ownedManagedSessions.get(ownedSessionKey) : undefined;
         const targetsCurrentManagedSession = state.managedSessionActive
             && ownedSessionKey === getSessionContextKey(state.managedSessionName, state.managedSessionNamespace);
+        const targetsOffCurrentOwnedSession = recordedOwnedSession !== undefined && !targetsCurrentManagedSession;
+        const offCurrentLaunchScopedFlags = targetsOffCurrentOwnedSession
+            ? executionPlan.startupScopedFlags.filter((flag) => flag !== "--namespace")
+            : [];
+        const offCurrentCompatibilityUpgrade = targetsOffCurrentOwnedSession
+            && executionPlan.compatibilityWorkaround !== undefined
+            && recordedOwnedSession.compatibilityWorkaround === undefined;
+        if (targetsOffCurrentOwnedSession && canUseHeadlessCompatibilityUserAgent(preparedArgs.args, agentBrowserProcessEnv)) {
+            const compatibilityWorkaround = executionPlan.compatibilityWorkaround ?? recordedOwnedSession.compatibilityWorkaround;
+            if (compatibilityWorkaround) {
+                const userAgentIndex = executionPlan.effectiveArgs.indexOf("--user-agent");
+                executionPlan = {
+                    ...executionPlan,
+                    compatibilityWorkaround,
+                    effectiveArgs: userAgentIndex < 0
+                        ? executionPlan.effectiveArgs
+                        : [...executionPlan.effectiveArgs.slice(0, userAgentIndex), ...executionPlan.effectiveArgs.slice(userAgentIndex + 2)],
+                };
+            }
+        }
         const retainedHeadedAutosaveDisabled = recordedOwnedSession?.headedManagedAutosaveDisabled === true
             || (targetsCurrentManagedSession && state.managedSessionHeadedAutosaveDisabled === true);
         const retainedHeadedAutosaveInterval = recordedOwnedSession?.headedManagedAutosaveInterval
             ?? (targetsCurrentManagedSession ? state.managedSessionHeadedAutosaveInterval : undefined);
-        const explicitAutosaveInterval = resolveExplicitAutosaveInterval(process.env.AGENT_BROWSER_AUTOSAVE_INTERVAL_MS);
+        const explicitAutosaveInterval = resolveExplicitAutosaveInterval(agentBrowserProcessEnv.AGENT_BROWSER_AUTOSAVE_INTERVAL_MS);
         const autosavePolicyChangeError = getRunningHeadedAutosavePolicyChangeError(retainedHeadedAutosaveInterval, isCloseCommand(executionPlan.commandInfo.command));
         if (!executionPlan.validationError && autosavePolicyChangeError) {
             executionPlan = { ...executionPlan, recoveryHint: undefined, validationError: autosavePolicyChangeError };
         }
-        const headedLaunch = getBooleanFlagValue(executionPlan.effectiveArgs, "--headed") ?? isUpstreamEnvFlagEnabled(process.env.AGENT_BROWSER_HEADED);
+        const headedLaunch = getBooleanFlagValue(executionPlan.effectiveArgs, "--headed") ?? isUpstreamEnvFlagEnabled(agentBrowserProcessEnv.AGENT_BROWSER_HEADED);
         const headedManagedAutosaveDisabled = retainedHeadedAutosaveDisabled || (explicitAutosaveInterval === undefined && headedLaunch);
         const headedManagedAutosaveInterval = retainedHeadedAutosaveInterval ?? (headedLaunch ? explicitAutosaveInterval ?? "0" : undefined);
+        const compatibilityUserAgent = executionPlan.compatibilityWorkaround ? getDefaultHeadlessCompatUserAgent() : undefined;
+        const compatibilityUserAgentApplied = compatibilityUserAgent !== undefined
+            && executionPlan.effectiveArgs.some((token, index) => token === "--user-agent" && executionPlan.effectiveArgs[index + 1] === compatibilityUserAgent);
         const ownedManagedSession = buildOwnedManagedSessionRestoreContext({
             args: executionPlan.effectiveArgs,
             cwd: recordedOwnedSession?.cwd ?? cwd,
@@ -559,14 +614,15 @@ export async function prepareBrowserRun(options) {
             headedManagedAutosaveInterval,
             managedSessionName: executionPlan.managedSessionName,
             namespace: executionPlan.namespace,
+            parentEnv: agentBrowserProcessEnv,
             recordedOwnedSession,
             restoreState: state.managedSessionRestoreState,
             sessionName: executionPlan.sessionName,
             stdin: runtimeToolStdin,
-            compatibilityUserAgent: executionPlan.compatibilityWorkaround ? getDefaultHeadlessCompatUserAgent() : undefined,
-            wrapperInjectedUserAgent: executionPlan.compatibilityWorkaround !== undefined,
+            compatibilityUserAgent: compatibilityUserAgentApplied ? compatibilityUserAgent : undefined,
+            wrapperInjectedUserAgent: compatibilityUserAgentApplied,
         });
-        const managedSessionTargetError = getManagedSessionTargetAccessValidationError(executionPlan.effectiveArgs, ownedManagedSession !== undefined);
+        const managedSessionTargetError = getManagedSessionTargetAccessValidationError(executionPlan.effectiveArgs, ownedManagedSession !== undefined, agentBrowserProcessEnv);
         if (!executionPlan.validationError && managedSessionTargetError)
             executionPlan = { ...executionPlan, recoveryHint: undefined, validationError: managedSessionTargetError };
         if (!executionPlan.validationError && ownedManagedSession) {
@@ -582,6 +638,27 @@ export async function prepareBrowserRun(options) {
                     ...executionPlan,
                     recoveryHint: undefined,
                     validationError: policy.error,
+                };
+            }
+            else if (!closeCommand && policy.daemonStatus === "active" && offCurrentLaunchScopedFlags.length > 0) {
+                executionPlan = {
+                    ...executionPlan,
+                    recoveryHint: undefined,
+                    validationError: `This older wrapper-owned session is already running, so launch-scoped flags ${offCurrentLaunchScopedFlags.join(", ")} would replace or be ignored by upstream agent-browser. Close it first, or remove the explicit --session and retry with sessionMode: \"fresh\".`,
+                };
+            }
+            else if (!closeCommand && policy.daemonStatus === "active" && offCurrentCompatibilityUpgrade) {
+                executionPlan = {
+                    ...executionPlan,
+                    recoveryHint: undefined,
+                    validationError: "This older wrapper-owned session is already running without the user agent required by this site. Close it first, or remove the explicit --session and retry with sessionMode: \"fresh\".",
+                };
+            }
+            else if (!closeCommand && policy.daemonStatus === "inactive" && compatibilityUserAgent && !compatibilityUserAgentApplied) {
+                ownedManagedSession.compatibilityUserAgent = compatibilityUserAgent;
+                executionPlan = {
+                    ...executionPlan,
+                    effectiveArgs: ["--user-agent", compatibilityUserAgent, ...executionPlan.effectiveArgs],
                 };
             }
             else if (closeCommand && managedSessionPolicyLock) {
@@ -643,6 +720,7 @@ export async function prepareBrowserRun(options) {
                     currentPageUrl: liveUrl,
                     cwd,
                     pageUrlUnknown: false,
+                    parentEnv: agentBrowserProcessEnv,
                     stdin: request.stdin,
                 });
                 if (livePageValidationError) {
@@ -653,7 +731,8 @@ export async function prepareBrowserRun(options) {
                 priorSessionTabTarget ??= { url: liveUrl };
                 priorSessionTabTargetUnknown = undefined;
             };
-            const mayResolveSemanticVisibleRef = executionPlan.managedSessionName !== freshSessionName && canResolveSemanticVisibleRef(compiledSemanticAction);
+            const hasPotentialLiveSemanticSession = state.managedSessionActive || priorSessionTabTarget !== undefined || isCallerOwnedExplicitSession() || options.preserveAttachedBrowserSession === true;
+            const mayResolveSemanticVisibleRef = executionPlan.managedSessionName !== freshSessionName && hasPotentialLiveSemanticSession && canResolveSemanticVisibleRef(compiledSemanticAction);
             if (!executionPlan.validationError && mayResolveSemanticVisibleRef && requiresLivePageVerification()) {
                 await verifyLivePage({
                     args: ["snapshot", "-i"],
@@ -669,6 +748,17 @@ export async function prepareBrowserRun(options) {
                     signal,
                 });
             }
+            if (!executionPlan.validationError && requiresResolvedSemanticVisibleRef(compiledSemanticAction) && !semanticActionVisibleRefResolution) {
+                const freshLocatorError = executionPlan.managedSessionName === freshSessionName
+                    ? "semanticAction select with locator cannot resolve a current @ref in sessionMode fresh. Open the page first, then reuse that session, or pass selector plus value/values."
+                    : undefined;
+                executionPlan = {
+                    ...executionPlan,
+                    validationError: freshLocatorError ?? (hasPotentialLiveSemanticSession
+                        ? "semanticAction select with locator could not resolve to exactly one current visible combobox/listbox ref. Run snapshot -i and retry with selector or a more specific role/name."
+                        : "semanticAction select with locator requires an active browser session so the wrapper can resolve a current @ref; open a page first or pass selector plus value/values."),
+                };
+            }
             if (semanticActionVisibleRefResolution) {
                 executionPlan = buildExecutionPlan(semanticActionVisibleRefResolution.args, {
                     freshSessionName,
@@ -679,7 +769,7 @@ export async function prepareBrowserRun(options) {
                     sessionMode,
                 });
             }
-            const commandTokens = semanticActionVisibleRefResolution ? extractCommandTokens(semanticActionVisibleRefResolution.args) : extractCommandTokens(preparedArgs.args);
+            const commandTokens = semanticActionVisibleRefResolution ? extractUpstreamCommandTokens(semanticActionVisibleRefResolution.args) : extractUpstreamCommandTokens(preparedArgs.args);
             const resolvedSemanticActionRefSnapshot = semanticActionVisibleRefResolution?.snapshot
                 ? { ...semanticActionVisibleRefResolution.snapshot, target: semanticActionVisibleRefResolution.snapshot.target ?? priorSessionTabTarget }
                 : undefined;
@@ -834,6 +924,7 @@ export async function prepareBrowserRun(options) {
                 cwd,
                 currentTarget: priorSessionTabTarget,
                 previousSnapshot: resolvedSemanticActionRefSnapshot ? undefined : priorRefSnapshotState,
+                stdin: runtimeToolStdin,
                 namespace: executionPlan.namespace,
                 sessionName: executionPlan.sessionName,
                 signal,
@@ -1059,7 +1150,11 @@ export async function prepareBrowserRun(options) {
                         }
                         if (pinnedBatchPlan) {
                             sessionTabCorrection = plannedSessionTabSelection;
-                            processArgs = ["--json", ...(executionPlan.namespace ? ["--namespace", executionPlan.namespace] : []), "--session", executionPlan.sessionName, "batch"];
+                            // The rewritten batch must keep the caller's fail-fast semantics:
+                            // upstream reads only the exact --bail token, so re-emit it whenever
+                            // the original batch tokens carried it (argv or stdin/job/qa mode).
+                            const pinnedBailArgs = commandTokens.includes("--bail") ? ["--bail"] : [];
+                            processArgs = ["--json", ...(executionPlan.namespace !== undefined ? ["--namespace", executionPlan.namespace] : []), "--session", executionPlan.sessionName, "batch", ...pinnedBailArgs];
                             processStdin = JSON.stringify(pinnedBatchPlan.steps);
                             includePinnedNavigationSummary = pinnedBatchPlan.includeNavigationSummary;
                             pinnedBatchUnwrapMode = pinnedBatchPlan.unwrapMode;
@@ -1128,7 +1223,9 @@ export async function prepareBrowserRun(options) {
                     redactedCompiledJob,
                     redactedCompiledNetworkSourceLookup,
                     redactedCompiledQaPreset,
-                    redactedCompiledSemanticAction,
+                    redactedCompiledSemanticAction: semanticActionVisibleRefResolution && redactedCompiledSemanticAction?.action === "select"
+                        ? { ...redactedCompiledSemanticAction, args: redactInvocationArgs(semanticActionVisibleRefResolution.args) }
+                        : redactedCompiledSemanticAction,
                     redactedCompiledSourceLookup,
                     redactedEffectiveArgs,
                     redactedProcessArgs,

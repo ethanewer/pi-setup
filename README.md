@@ -65,14 +65,14 @@ rather than as a supported claim.
 | Component | Version |
 |---|---:|
 | `@earendil-works/pi-coding-agent` | `0.84.2` |
-| `agent-browser` | `0.33.2` |
+| `agent-browser` | `0.34.0` |
 
 Extension forks and the upstream releases they are based on:
 
 | Fork (Pi local package) | Upstream | Upstream version |
 |---|---|---:|
 | `pi-voice-stt-safe` | `pi-voice-stt` | `0.6.0` |
-| `pi-agent-browser-native-safe` | `pi-agent-browser-native` | `0.3.0` |
+| `pi-agent-browser-native-safe` | `pi-agent-browser-native` | `0.5.0` |
 | `pi-dynamic-workflows-safe` | `@quintinshaw/pi-dynamic-workflows` | `3.7.0` |
 | `pi-process-monitor-safe` | `pi-process-monitor` | rewrite, built on `1.3.0`, `2.0.2` reviewed and declined |
 | `pi-context-handoff` | — | first-party |

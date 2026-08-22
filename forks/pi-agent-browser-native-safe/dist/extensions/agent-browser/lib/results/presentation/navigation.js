@@ -1,16 +1,31 @@
 import { isNavigationObservableCommandName, isPageChangeSummaryCommand } from "../../command-taxonomy.js";
 import { isRecord } from "../../parsing.js";
 import { detectConfirmationRequired } from "../confirmation.js";
-import { redactModelFacingText, stringifyModelFacing } from "./common.js";
+import { omitUpstreamLifecycle, redactModelFacingText, stringifyModelFacing } from "./common.js";
 const NAVIGATION_SUMMARY_FIELD = "navigationSummary";
-function getScalarExtractionResult(data) {
-    const { result } = data;
-    if (typeof result === "string") {
-        return result.trim().length > 0 ? result : undefined;
-    }
-    if (typeof result === "number" || typeof result === "boolean") {
+const GET_RESULT_FIELDS = {
+    attr: "value",
+    count: "count",
+    html: "html",
+    text: "text",
+    title: "title",
+    url: "url",
+    value: "value",
+};
+function getScalarExtractionResult(commandInfo, data) {
+    const fallbackField = commandInfo.command === "get" && commandInfo.subcommand ? GET_RESULT_FIELDS[commandInfo.subcommand] ?? "" : "";
+    const resultField = Object.hasOwn(data, "result") ? "result" : fallbackField.length > 0 && Object.hasOwn(data, fallbackField) ? fallbackField : undefined;
+    if (resultField === undefined)
+        return undefined;
+    const result = data[resultField];
+    if (typeof result === "string")
+        return result.trim().length > 0 ? result : "(empty string)";
+    if (typeof result === "number" || typeof result === "boolean")
         return String(result);
-    }
+    if (result === null || result === undefined)
+        return "null";
+    if (typeof result === "object")
+        return JSON.stringify(result);
     return undefined;
 }
 function getExtractionOrigin(data) {
@@ -32,7 +47,7 @@ function formatGetSummaryLabel(subcommand) {
     return `${subcommand.slice(0, 1).toUpperCase()}${subcommand.slice(1)}`;
 }
 export function formatExtractionSummary(commandInfo, data) {
-    const scalarResult = getScalarExtractionResult(data);
+    const scalarResult = getScalarExtractionResult(commandInfo, data);
     if (!scalarResult) {
         return undefined;
     }
@@ -50,7 +65,7 @@ export function formatExtractionText(commandInfo, data) {
     if (commandInfo.command !== "get" && commandInfo.command !== "eval") {
         return undefined;
     }
-    const scalarResult = getScalarExtractionResult(data);
+    const scalarResult = getScalarExtractionResult(commandInfo, data);
     if (!scalarResult) {
         return undefined;
     }
@@ -132,7 +147,7 @@ function stripNavigationSummary(data) {
     return rest;
 }
 export function formatNavigationActionResult(data) {
-    const actionData = stripNavigationSummary(data);
+    const actionData = omitUpstreamLifecycle(stripNavigationSummary(data));
     const lines = [];
     if (typeof actionData.clicked === "string" || typeof actionData.clicked === "boolean") {
         lines.push(`Clicked: ${String(actionData.clicked)}`);

@@ -5,6 +5,8 @@ function hasUnverifiedFileArtifact(artifacts) {
 export function classifyAgentBrowserSuccessCategory(options) {
     if (options.inspection)
         return "inspection";
+    if ((options.artifacts ?? []).some(isPendingRecordingArtifact))
+        return "artifact-pending";
     if ((options.artifacts ?? []).length > 0)
         return hasUnverifiedFileArtifact(options.artifacts) ? "artifact-unverified" : "artifact-saved";
     if (options.savedFile)
@@ -19,6 +21,9 @@ export function classifyAgentBrowserFailureCategory(options) {
     // missed control named "Confirmation required" still gets selector recovery.
     if (options.confirmationRequired)
         return "confirmation-required";
+    // Canonical upstream prefix first: lastUrl can contain aborted / policy-blocked / about:blank.
+    if (/\btab_gone:/i.test(text))
+        return "tab-gone";
     // Upstream 0.32.4+ locator misses keep detail and may echo getByRole/getByText or Names seen lists.
     // Evaluate before text-derived timeout/confirmation so accessible-name substrings cannot suppress recovery.
     const isUpstreamLocatorMiss = /\bNo element found:\s*(?:getBy[A-Za-z]+|role=|text=|label=|placeholder=|alt=|title=|testid=)/i.test(text) ||
@@ -48,7 +53,7 @@ export function classifyAgentBrowserFailureCategory(options) {
         return "policy-blocked";
     if (/cleanup failed|cleanup.*partial|partial cleanup|remaining resources/i.test(text))
         return "cleanup-failed";
-    if (options.validationError)
+    if (options.validationError || /Agent-browser Unix socket path would be|Agent-browser socket storage .* is unusable/i.test(text))
         return "validation-error";
     if (options.tabDrift || /could not re-select the intended tab|about:blank|selected tab looks wrong|tab drift|tab.*wrong/i.test(text))
         return "tab-drift";

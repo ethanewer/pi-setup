@@ -261,8 +261,8 @@ export function compileAgentBrowserNetworkSourceLookup(input) {
         return { error: "networkSourceLookup.filter must be a non-empty string when provided." };
     if (requestId !== undefined && (typeof requestId !== "string" || requestId.trim().length === 0))
         return { error: "networkSourceLookup.requestId must be a non-empty string when provided." };
-    if (namespace !== undefined && (typeof namespace !== "string" || namespace.trim().length === 0))
-        return { error: "networkSourceLookup.namespace must be a non-empty string when provided." };
+    if (namespace !== undefined && (typeof namespace !== "string" || (namespace !== "" && namespace.trim().length === 0)))
+        return { error: "networkSourceLookup.namespace must be a non-empty string or the empty default namespace when provided." };
     if (session !== undefined && (typeof session !== "string" || session.trim().length === 0))
         return { error: "networkSourceLookup.session must be a non-empty string when provided." };
     if (url !== undefined && (typeof url !== "string" || url.trim().length === 0))

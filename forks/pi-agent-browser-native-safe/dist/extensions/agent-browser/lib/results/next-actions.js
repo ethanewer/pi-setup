@@ -1,15 +1,15 @@
 export function withOptionalNamespaceArgs(namespace, args) {
-    return namespace && args[0] !== "--namespace" ? ["--namespace", namespace, ...args] : args;
+    return namespace !== undefined && args[0] !== "--namespace" ? ["--namespace", namespace, ...args] : args;
 }
 export function withOptionalSessionArgs(sessionName, args) {
-    if (!sessionName || args[0] === "--session")
+    if (!sessionName || args[0] === "--session" || (args[0] === "--namespace" && args[2] === "--session"))
         return args;
-    if (args[0] === "--namespace" && args[1] && args[2] !== "--session")
+    if (args[0] === "--namespace" && args.length >= 2)
         return [args[0], args[1], "--session", sessionName, ...args.slice(2)];
     return ["--session", sessionName, ...args];
 }
 export function applyNamespaceToNextActions(actions, namespace) {
-    if (!namespace || !actions)
+    if (namespace === undefined || !actions)
         return actions;
     return actions.map((action) => {
         const args = action.params?.args;
@@ -17,6 +17,18 @@ export function applyNamespaceToNextActions(actions, namespace) {
             return { ...action, params: { ...action.params, args: withOptionalNamespaceArgs(namespace, args) } };
         const networkSourceLookup = action.params?.networkSourceLookup;
         return networkSourceLookup ? { ...action, params: { ...action.params, networkSourceLookup: { ...networkSourceLookup, namespace } } } : action;
+    });
+}
+export function applySessionToNextActions(actions, sessionName) {
+    if (!sessionName || !actions)
+        return actions;
+    return actions.map((action) => {
+        // Fresh-session actions deliberately target a new session; the planner ignores sessionMode when an
+        // explicit --session is present, so prefixing one here would silently downgrade them to reuse.
+        if (action.params?.sessionMode === "fresh")
+            return action;
+        const args = action.params?.args;
+        return args ? { ...action, params: { ...action.params, args: withOptionalSessionArgs(sessionName, args) } } : action;
     });
 }
 export function buildNextToolAction(options) {
@@ -48,7 +60,9 @@ export function isStandaloneSnapshotNextAction(action) {
     const args = action.params?.args;
     if (!args || action.params?.stdin)
         return false;
-    const commandIndex = args[0] === "--session" ? 2 : 0;
+    let commandIndex = args[0] === "--namespace" ? 2 : 0;
+    if (args[commandIndex] === "--session")
+        commandIndex += 2;
     return args[commandIndex] === "snapshot";
 }
 export function alignPageChangeSummaryNextActionIds(summary, nextActions) {

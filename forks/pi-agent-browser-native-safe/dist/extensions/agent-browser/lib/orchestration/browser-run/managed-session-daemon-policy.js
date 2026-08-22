@@ -3,13 +3,14 @@ import { acquireManagedSessionPolicyLock } from "../../managed-session-policy-lo
 import { pruneOwnedManagedSessionRestoreSnapshots, resolveExplicitAutosaveInterval, } from "../../managed-session-restore.js";
 import { isManagedSessionRestoreKey } from "../../managed-session-storage.js";
 import { isRecord } from "../../parsing.js";
+import { getAgentBrowserProcessEnvironment } from "../../process-environment.js";
 import { runAgentBrowserProcess } from "../../process.js";
 import { getAgentBrowserErrorText, parseAgentBrowserEnvelope } from "../../results/envelope.js";
 import { redactInvocationArgs } from "../../runtime.js";
 const MANAGED_SESSION_DAEMON_INSPECTION_TIMEOUT_MS = 35_000;
 const RUNNING_HEADED_AUTOSAVE_POLICY_CHANGE_ERROR = "AGENT_BROWSER_AUTOSAVE_INTERVAL_MS cannot change a running wrapper-owned headed session's launch-time periodic autosave interval. Close that session first, then retry with sessionMode: \"fresh\" so the new daemon starts with the requested interval.";
 export function getRunningHeadedAutosavePolicyChangeError(recordedInterval, closeCommand = false) {
-    const explicitInterval = resolveExplicitAutosaveInterval(process.env.AGENT_BROWSER_AUTOSAVE_INTERVAL_MS);
+    const explicitInterval = resolveExplicitAutosaveInterval(getAgentBrowserProcessEnvironment().AGENT_BROWSER_AUTOSAVE_INTERVAL_MS);
     return recordedInterval !== undefined && !closeCommand && explicitInterval !== undefined && explicitInterval !== recordedInterval
         ? RUNNING_HEADED_AUTOSAVE_POLICY_CHANGE_ERROR
         : undefined;
@@ -79,7 +80,7 @@ export async function acquireOwnedManagedSessionDaemonPolicy(options) {
         if (options.mode === "close") {
             if (daemon.status === "active")
                 context.restoreState.recordDaemonRestoreKey(context.sessionName, context.namespace, daemon.restoreKey);
-            return { lock };
+            return { daemonStatus: daemon.status, lock };
         }
         const stickyDisabled = context.restoreState.isDisabled(context.sessionName, context.namespace);
         const hasKnownDaemonRestoreKey = context.restoreState.hasDaemonRestoreKey(context.sessionName, context.namespace);
@@ -101,13 +102,14 @@ export async function acquireOwnedManagedSessionDaemonPolicy(options) {
             context.restoreState.recordDaemonRestoreKey(context.sessionName, context.namespace, daemon.restoreKey);
         return !["inactive", "missing-binary"].includes(daemon.status) && !activePolicyMatches
             ? {
+                daemonStatus: daemon.status,
                 error: [
                     "This wrapper-owned session's live daemon does not match the requested managed-restore policy.",
                     "Close that session first, retry with sessionMode: \"fresh\", or use a distinct explicit --session.",
                 ].join(" "),
                 lock,
             }
-            : { lock };
+            : { daemonStatus: daemon.status, lock };
     }
     catch (error) {
         await lock.release();
@@ -118,7 +120,7 @@ export async function closeManagedSession(options) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), options.timeoutMs);
     let stdoutSpillPath;
-    const closeArgs = [...(options.namespace ? ["--namespace", options.namespace] : []), "--session", options.sessionName, "close"];
+    const closeArgs = [...(options.namespace !== undefined ? ["--namespace", options.namespace] : []), "--session", options.sessionName, "close"];
     const policyLock = options.policyLock ?? await acquireManagedSessionPolicyLock({
         namespace: options.namespace,
         sessionName: options.sessionName,

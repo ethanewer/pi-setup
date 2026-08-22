@@ -2,7 +2,7 @@
 set -euo pipefail
 
 PI_VERSION="0.84.2"
-AGENT_BROWSER_VERSION="0.33.2"
+AGENT_BROWSER_VERSION="0.34.0"
 
 # Upstream versions live in vendor.json, which is what bin/pi-setup-doctor and
 # bin/pi-setup-vendor read. They used to be duplicated here as UPSTREAM_* variables that

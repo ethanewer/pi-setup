@@ -96,5 +96,5 @@ function isSessionlessCommand(commandTokens) {
     return false;
 }
 export function needsManagedSession(descriptor) {
-    return !isSessionlessCommand(descriptor.commandTokens);
+    return !isSessionlessCommand(descriptor.upstreamCommandTokens);
 }

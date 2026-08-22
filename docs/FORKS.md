@@ -186,6 +186,59 @@ write-path and Electron confinement, launch-flag policy, and managed-session pro
 The external CLI pin therefore remains 0.33.2; 0.34.0 is a separate re-baseline rather
 than part of this extension update.
 
+Re-vendored onto 0.5.0 on 2026-08-22, and rebaselined the external `agent-browser` CLI pin
+0.33.2 -> 0.34.0 — the coupled job the 0.3.0 entry above deferred. Seven upstream releases
+(0.4.0-0.5.0) landed a top-level one-shot `script` code mode with a permissioned child and a
+durable pre-spawn lease, Android/Termux support, the exact-runtime version gate
+(`upstream-version.js`), managed-restore keys scoped to both checkout generation and Pi
+transcript, profiled/`--args`/`--user-agent` session preservation, `--pin-tab`/`--no-pin-tab`
+sticky tab binding with CDP `targetId` refs and `tab_gone` recovery, and the 0.34.0 capability
+baseline (`scripts/agent-browser-target.mjs` pins `TARGET_AGENT_BROWSER_VERSION = "0.34.0"`,
+`inventorySections` include `--pin-tab`/`--no-pin-tab`/`tab_gone`/`data.targetId`, and the
+`upstreamHead` is `548b159b30eef119ccf6846c8bc807d0eaa3f6f8`).
+
+13 patch hunks rejected across 10 files; every one was the fork's own hardening edit that
+lost its context line to upstream's restructuring, not upstream's work. Resolved by hand:
+the CLI-path-pinning spawn call (`{cwd, env}` + `spawnCommand.error` + `detached` process group)
+and the `child-process-policy`/`upstream-config-policy` imports in `process.js`; the
+`getPrivilegedFlagValidationError` validation-chain entry and the `launch-flag-policy`/
+`argv-grammar` (`getFlagName`, `isBooleanFlagEnabled`) imports in `runtime.js`; the
+allowed-domains `allowLocalAppUrls`/`localAppFileRoots` call in `process-output.js` (upstream
+already adopted the `getAllowedDomainsViolation` params and `getLocalAppFileRootsForLaunch`);
+the `adoptOrphanedElectronLaunches`/`planUpstreamConfigPin`/`getUpstreamProjectConfigIgnoredNotice`
+imports and the `readPackageJson` helper in `index.js`; the `getFlagName` import in
+`artifact-paths.js`; the Electron launch schema hardening descriptions in `params.js`; the
+"two layers" config-pin + privileged-`--config`-flag-gating + env-var-stripping (`NODE_OPTIONS`/
+`LD_PRELOAD`/`DYLD_INSERT_LIBRARIES`/`ELECTRON_RUN_AS_NODE` + workspace-local `PATH`) paragraphs
+in `COMMAND_REFERENCE.md`; the 0.34.0 SUPPORT_MATRIX rebaseline note; and the `"private": true`
+and CLI-path-pinning paragraphs in `package.json`/`README.md`. Upstream already adopted the
+config pin (0.4.1), the exact-runtime gate (0.4.1), the CLI-path resolution (0.5.0), and the
+privileged-flag policy (0.5.0); the fork's patch now layers the sessionless `AGENT_BROWSER_CONFIG`
+pin, the env-var/PATH stripping, and the Electron schema descriptions on top.
+
+The 0.34.0 re-baseline was checked the same way as every prior one: all 56 help surfaces the
+baseline samples were diffed between the two published binaries. 53 are byte-identical and
+the other 3 (root help, core skill full, tab help) are purely additive — nothing was removed
+anywhere. Root help gains `--pin-tab`/`--no-pin-tab` (`AGENT_BROWSER_PIN_TAB`), `tab --help` gains
+CDP `targetId` as a tab ref and `tab_gone` recovery, and the core skill gains a tab-pinning
+section. The command set is unchanged — `tab`, `tab list`, `tab close`, `tab new` already
+existed and are already in `inventorySections` — so the artifact-path guards that key off
+command prefixes are unaffected. `--pin-tab`/`--no-pin-tab` are sticky optional global booleans
+(not launch-scoped), already in `GLOBAL_BOOLEAN_FLAGS_WITH_OPTIONAL_VALUES`, so no new flag
+reaches the argv tokenizer unhandled.
+
+Hardening re-verified against the merged tree: config trust fails closed (project config only
+when Pi reports the project trusted; the `AGENT_BROWSER_CONFIG` pin for sessionless commands
+layers on upstream's empty-config pin for browser-backed calls), `!command` values through
+`execFile` with an argv array, write-path confinement by `realpath` refusing `.git`, Electron
+launches require real framework evidence + `CFBundleExecutable` with no path separators and
+`appArgs` rejects `--*-launcher`/`--*-cmd-prefix`/`--no-sandbox`/`--load-extension`/
+`--disable-web-security`, `--allowed-domains` treats non-`http(s)` URLs as violations (with the
+Electron local-app-roots file-URL exemption), POSIX children in their own process group, the
+CLI path pinned (workspace-local shim refused as `policy-blocked`), the `--config` privileged-
+flag gate, and the `DENIED_CHILD_ENV_VARS` env stripping (`PI_AGENT_BROWSER_FORWARD_ALL_ENV=1`
+overrides). `bin/pi-setup-vendor --verify` reproduces the fork exactly.
+
 **Closed.** `isProjectSafeCredentialValueForProvider` — a stub that returned `true` for any
 non-empty string — is implemented, so a project-scope credential can no longer be a
 `!command` or a plaintext literal; `!command` values run through `execFile` with an argv

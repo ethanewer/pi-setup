@@ -8,6 +8,8 @@ export const AGENT_BROWSER_RECOVERY_NEXT_ACTION_IDS = {
     selectIntendedTabAfterDrift: "select-intended-tab-after-drift",
     snapshotAfterTabRecovery: "snapshot-after-tab-recovery",
     tabDriftListTabs: "list-tabs-for-tab-drift-recovery",
+    tabGoneListTabs: "list-tabs-after-tab-gone",
+    tabGoneNewTab: "open-tab-after-tab-gone",
 };
 export const AGENT_BROWSER_RICH_INPUT_RECOVERY_NEXT_ACTION_IDS = {
     click: "click-current-editable-ref",

@@ -90,6 +90,11 @@ export const GLOBAL_BOOLEAN_FLAGS_WITH_OPTIONAL_VALUES = new Set([
     "--ignore-https-errors",
     "--json",
     "--no-auto-dialog",
+    "--no-pin-tab",
+    "--offline",
+    "--pin-tab",
+    "--quick",
+    "--fix",
     "--quiet",
     "-q",
     "--verbose",
@@ -148,7 +153,7 @@ export function canonicalizeAgentBrowserNamespace(value) {
     }
     return normalized.replace(/[-_]+$/u, "") || undefined;
 }
-function foldAgentBrowserFilesystemIdentity(value, platform) {
+export function foldAgentBrowserFilesystemIdentity(value, platform) {
     if (platform !== "darwin" && platform !== "win32")
         return value;
     // APFS aliases include full Unicode folds such as ß/SS and ς/Σ, not just ASCII case.
@@ -160,7 +165,11 @@ export function getAgentBrowserSessionIdentityKey(sessionName, namespace, platfo
     const canonicalSessionName = foldAgentBrowserFilesystemIdentity(sessionName, platform);
     return identityNamespace ? `${identityNamespace}\0${canonicalSessionName}` : canonicalSessionName;
 }
-/** Mirror upstream 0.33.2 global parsing: full argv, no `--` sentinel, and only global value payloads are skipped. */
+export function isAgentBrowserSessionIdentityKeyInNamespace(identityKey, namespace) {
+    const prefix = getAgentBrowserSessionIdentityKey("", namespace);
+    return prefix ? identityKey.startsWith(prefix) : !identityKey.includes("\0");
+}
+/** Mirror upstream 0.34.0 global parsing: full argv, no `--` sentinel, and only global value payloads are skipped. */
 export function scanUpstreamGlobalFlagOccurrences(args, targetFlag) {
     const occurrences = [];
     for (let index = 0; index < args.length; index += 1) {
@@ -256,6 +265,39 @@ export function optionalGlobalValueFlagConsumesNext(flag, nextToken) {
     if (!OPTIONAL_GLOBAL_VALUE_FLAGS.has(flag) || nextToken === undefined || nextToken.startsWith("-"))
         return false;
     return !isKnownCommandToken(nextToken);
+}
+export function projectUpstreamGlobalFlags(args) {
+    const indices = [];
+    const tokens = [];
+    let seenCommand = false;
+    for (let index = 0; index < args.length; index += 1) {
+        const token = args[index];
+        if (token.startsWith("--restore="))
+            continue;
+        if (token === "--restore") {
+            if (!seenCommand && optionalGlobalValueFlagConsumesNext(token, args[index + 1]))
+                index += 1;
+            continue;
+        }
+        if (PREVALIDATED_VALUE_FLAGS.has(token)) {
+            index += 1;
+            continue;
+        }
+        if (GLOBAL_BOOLEAN_FLAGS_WITH_OPTIONAL_VALUES.has(token)) {
+            if (["true", "false"].includes(args[index + 1] ?? ""))
+                index += 1;
+            continue;
+        }
+        tokens.push(token);
+        indices.push(index);
+        if (isKnownCommandToken(token))
+            seenCommand = true;
+    }
+    return { indices, tokens };
+}
+/** Mirror upstream 0.34.0 clean_args: remove global flags wherever they appear before command parsing. */
+export function stripUpstreamGlobalFlags(args) {
+    return projectUpstreamGlobalFlags(args).tokens;
 }
 export function stripSessionlessShapeGlobalFlags(commandTokens) {
     const stripped = [];

@@ -2,6 +2,133 @@
 
 ## Unreleased
 
+## 0.5.0 - 2026-08-20
+
+### Added
+
+- Added Android 17/arm64 Termux runtime support while keeping the integration thin against `agent-browser` 0.34.0. Wrapper-owned sockets now use the private `/data/data/<package>/piab` sandbox instead of inaccessible `/tmp`, policy-lock coordination follows `os.tmpdir()`, and process identity probes use Termux's `ps` beside Node. The documented setup uses the packaged Linux-musl arm64 binary plus Termux system Chromium, `which`, and ffmpeg; upstream Android npm launcher support remains tracked in [vercel-labs/agent-browser#1587](https://github.com/vercel-labs/agent-browser/issues/1587).
+- Preserved managed-session restore and isolated `script` workflows on Android. App-sandbox ancestry is validated without weakening other POSIX trust rules, checkout identity uses stable device/inode evidence plus the generation UUID when Node reports mutable ctime as birth time, and generation-marker publication uses exclusive creation because Android app storage rejects hard links.
+
+### Changed
+
+- Android wrapper-managed identities use a compact 80-bit digest so ordinary namespaces and fresh rotations remain within upstream's 103-byte Unix socket limit. Desktop session naming is unchanged.
+- Platform-sensitive tests now account for Android's filesystem restrictions, Termux executable layout, and thermally constrained single-process startup timing without loosening desktop budgets.
+
+### Validation
+
+- Passed `npm run verify -- pre-pr` (784 tests, 781 pass, 3 opt-in skips; 130 packed files), `npm run verify -- real-upstream` (2/2), deterministic dogfood, doctor, typecheck, docs, and live command-reference verification. Android live evidence covered managed restore, namespaced fresh sessions, exact-session restart/reuse, isolated `script`, QA, jobs, semantic actions, screenshots, WebM recording, and cleanup with no remaining browser, Chromium, tmux, socket, or test-artifact leaks.
+- The isolated configured-source lifecycle harness was environment-blocked by its missing Zai API key; the equivalent authenticated exact-session restart and reuse path passed manually. The Crabbox macOS/Ubuntu/native-Windows release matrix was not rerun for this Android-only GitHub release. npm was not published.
+
+## 0.4.5 - 2026-08-18
+
+### Fixed
+
+- Cut agent round trips on scraping and recovery paths. A failed non-batch `eval`, `back`, `forward`, `reload`, `connect`, `state load`, or `tab` selection now re-probes the live page URL itself: an observed http(s) page stays verified instead of forcing a manual `get url` before the next read, a file page stays gated, and a failed probe keeps the prior unverified-page behavior. Because a failed transition can still have mutated the document, a successful probe also invalidates the prior page-scoped refs (matching the old unknown-target behavior), and transcript replay preserves the invalidation summary.
+- Navigation-summary probes reuse the title already observed for an unchanged URL and skip `about:blank`, halving probe cost on non-navigating clicks. URLs remain live-probed on every call.
+- `wait --url` timeouts (including compiled `job.assertUrl`) now append `fresh-session-after-url-wait-timeout`: an actionable fresh-session recovery (`open about:blank`, then replace with the target URL and replay as one batch) for silently missed upstream click dispatch, ranked after the inspect action. Fresh-session follow-ups are no longer silently downgraded to reuse the current session by a `--session` prefix.
+
+### Changed
+
+- Compact snapshots promote named action links (row/navigation links such as comment counts, docs sidebar links, and repository-style result links) to first-class high-value controls, so dense-page click targets surface inline instead of only in the spill file.
+
+### Validation
+
+- Passed `npm run verify -- pre-pr` (781 tests, 779 pass, 2 opt-in skips) plus four-seat exact-head review across three waves. Extension-vs-CLI dogfood reruns: HN research flow matched CLI parity (5 calls, 0 failures), Sauce Demo checkout completed with 0 silent no-ops, react.dev navigation unchanged at CLI-parity call count. npm was not published.
+
+## 0.4.4 - 2026-08-18
+
+### Fixed
+
+- Observed the live tab URL after href-less CSS-selector clicks. Upstream never emits `href` for those clicks, so the wrapper skipped the post-command `get url` / `get title` helper and left `sessionTabTarget` on the pre-click page. Login and SPA clicks now report the page the browser is actually on.
+- Stopped dumping the raw upstream envelope, internal `lifecycle` block included, when a page title is empty, when `eval` returns an object, array, `null`, `undefined`, or `''`, or when a command has no dedicated presenter. Structured eval results render as JSON; empty strings and nulls are stated plainly; leftover lifecycle-only results say `<command> completed`.
+
+### Changed
+
+- Documented an upstream `agent-browser` 0.34.0 site-specific click-dispatch miss on Sauce Demo under sustained per-command spacing, and the `batch` mitigation.
+
+### Validation
+
+- Passed `npm run verify -- pre-pr` (777 tests, 775 pass, 2 opt-in skips) on the presentation commits. Live dogfood re-checked the four presentation/session fixes against example.com, IANA, httpbingo, react.dev, Hacker News, and Sauce Demo login; wrapper was never worse than the raw CLI on matched-cwd open/eval/box. Full Crabbox matrix and npm publish were not run.
+
+## 0.4.3 - 2026-08-17
+
+### Fixed
+
+- Preserved profiled and other launch-configured browser sessions across native tool calls. The wrapper no longer sends an empty `--args` launch override on every local subprocess because `agent-browser 0.34.0` treats that value as a new launch configuration and replaces a profiled browser with `about:blank`. The protected empty config, cleared raw-args environment, explicit `--allow-file-access false`, and existing raw-argument validation continue to enforce the local-file boundary. Local-file navigation is limited to wrapper-managed local browsers so caller-owned or attached browsers with unknown file-access launch provenance cannot reach it; the wrapper sends its fixed compatibility user agent only when launching or relaunching a browser, not on active follow-ups. Caller `--args` and `--user-agent` are now launch-scoped and require `sessionMode: "fresh"` once the managed session is active.
+
+## 0.4.2 - 2026-08-13
+
+### Changed
+
+- Rebaselined the command/help inventory and package docs to `agent-browser 0.34.0` / vercel-labs/agent-browser@548b159b30eef119ccf6846c8bc807d0eaa3f6f8. Browser-backed calls now require that exact runtime. `--pin-tab` / `--no-pin-tab` (`AGENT_BROWSER_PIN_TAB`) are sticky optional global booleans, not launch-scoped, so they can enable or disable strict tab binding on an already-live session. Shared `--cdp` / `--auto-connect` sessions that lose their bound tab fail as `failureCategory: "tab-gone"` with `list-tabs-after-tab-gone` and `open-tab-after-tab-gone` next actions. `tab list` presentation includes each tab's CDP `targetId` when upstream reports one, and those ids are accepted as tab refs.
+
+### Validation
+
+- Passed `npm run verify -- pre-pr` (768 tests passed, two opt-in skips; 130 packed files), `npm run verify -- real-upstream` (2/2), deterministic dogfood, `npm run doctor`, and isolated checkout tmux smoke on example.com. Full release composition was not rerun.
+
+## 0.4.1 - 2026-08-10
+
+### Fixed
+
+- The page-scoped stale-ref preflight and the intra-batch ref-invalidation latch now scan the batch steps upstream actually executes via shared `getUpstreamEffectiveBatchSteps` (raw batch argument strings exclusively when any exist, stdin steps only otherwise): raw argument-mode batches such as `batch "click @e1"` are guarded after a recording page swap, raw-argv `record start` steps latch later ref reuse in the same batch, and stdin refs are no longer falsely rejected when upstream would ignore that stdin because raw arguments exist. That same upstream-effective selection now also drives the tab-pinned batch rewrite (`buildPinnedBatchPlan` dispatches raw argument steps instead of resurrecting ignored caller stdin the guard never scanned, closing a fail-open pinned-batch stale-ref path and no longer silently dropping the caller's raw steps), the artifact/recording lifecycle preflight (`getArtifactCommandSteps`), batch screenshot path preparation (no parent directories for upstream-ignored stdin rows), and stale-ref echo args; raw-argument filtering matches upstream exactly (`--bail` token only, so `--bail=true` stays a raw command and keeps stdin ignored). The pinned rewrite also re-emits the caller's exact `--bail` token (argv or stdin/`job`/`qa` mode), so a validated fail-fast batch no longer executes continue-on-error under tab pinning, and parent directories are now prepared for effective raw batch artifact rows (without rewriting raw strings; screenshot absolute-path normalization stays stdin-only). The pre-spawn state-policy validator keeps unioning parseable stdin alongside argv as a deliberate fail-closed content superset with the same exact-`--bail` raw-token filtering, and treats stdin parse failures as fatal only when upstream would actually read stdin. Regressions in [`test/agent-browser.extension-ref-guards.test.ts`](https://github.com/fitchmultz/pi-agent-browser-native/blob/main/test/agent-browser.extension-ref-guards.test.ts).
+
+### Added
+
+- Browser-backed calls now require the exact targeted `agent-browser 0.33.2` runtime before launch, with cached cwd/PATH validation and expected/observed mismatch details. Plain help/version, close recovery, and sessionless local setup/diagnostics remain available.
+- `semanticAction` native select now resolves active-session role/name combobox/listbox and label locators to exactly one current visible ref before invoking upstream `select`.
+
+### Changed
+
+- Authenticated unattended/auto-approved employee flows may complete ordinary requested non-destructive submissions without a blanket stop; purchases, production control, destructive/irreversible actions, and account/security/privacy changes still require explicit authorization.
+- Passive project/user upstream config files are ignored under the wrapper's protected empty config; explicit `--config` and `AGENT_BROWSER_CONFIG` overrides remain incompatible with browser-backed native calls.
+- Flattened the Electron launch schema while retaining runtime exactly-one-target validation, and skipped duplicate platform-smoke dependency installs after a successful platform-build suite.
+
+### Fixed
+
+- Electron `launchId` probes retain the tracked launch namespace, and cleanup replay retires the exact namespaced managed session, attached marker, and allowed-domain policy instead of probing or resurrecting a default-namespace peer.
+- Same-millisecond recording artifacts preserve their emitted lifecycle order through both inner and concurrent outer manifest merges, so a later stop stays terminal and a restarted recording remains pending even with a one-entry recent window; `record start` now warns that upstream switches to a fresh active page whose in-page state does not carry over and invalidates the session's prior page-scoped refs (direct and batch) on every executed attempt — upstream swaps the page before its already-active check, so failed starts count — and `record restart` with a URL operand invalidates the same way while a plain restart keeps refs, so stale `@e…` refs fail as `stale-ref` until a fresh snapshot; upstream ref-resolving reads and captures (`is`, `screenshot`, `highlight`, `scroll`, `frame`, `diff`) now pass the same stale-ref guards as mutations while literal `@e…`-looking operands (`wait --text`, `find text …`, values of value-taking flags such as `--baseline`) stay unguarded, refs after boolean flags (`click --new-tab @e1`, `screenshot --full @e1`) stay guarded, and a timed-out or row-less batch whose planned steps include a recording page swap still records the ref invalidation from upstream's exclusive raw-argument-else-stdin step source; namespace-exclusive close-all queues its drains before yielding so late same-session arrivals cannot deadlock or overlap it.
+- Failed first-call batches that close then relaunch remain tracked for cleanup, and namespace-scoped `close --all` exclusively drains matching session work before retiring every managed, attached, page/ref, route, trace/profiler, and recording owner.
+- Tolerated pre-upgrade transcript rows whose managed restore identity list is absent instead of throwing during branch rehydration (contributed by [@coreyallen](https://github.com/coreyallen) in [#96](https://github.com/fitchmultz/pi-agent-browser-native/pull/96)).
+- Included `scripts/build.mjs` in the published package contract so source installs can run `prepare` successfully (contributed by [@selimerunkut](https://github.com/selimerunkut) in [#100](https://github.com/fitchmultz/pi-agent-browser-native/pull/100)).
+- Scoped managed restore keys to both checkout generation and the full hashed Pi transcript id. Upstream 0.33.2 loads the newest `<key>-*.json` file regardless of browser-session suffix, so the former checkout-wide key let concurrent Pi chats overwrite or inherit each other's cookies/storage. Fresh rotations, reload, restart, and `/resume` of one transcript retain a private restore pool. The new managed name intentionally starts a fresh pool after upgrading; manually close any pre-0.4.1 headed session that remains open because headed daemons are exempt from idle shutdown.
+- URL QA clears diagnostics, snapshots and subtracts only unchanged post-clear page-error residue because upstream clear is unreliable, and adds a bounded 150 ms post-load diagnostic settle so immediate timer-driven console/page errors are observed. A matching error that reappears after a successful clear fails correctly.
+- Artifact verification rejects clearly old or future-dated output paths outside a bounded command window as `status: "stale"`, tolerates coarse filesystem mtimes, and rejects canonical, symlink-, hardlink-, full Unicode-fold-, or macOS/Windows case-aliased duplicate destinations in stdin and argument-mode batches. Missing/stale recordings finalized by `record restart` retire prior pending manifest state; an unbounded transcript-backed canonical namespace/session reservation index, serialized independently of the bounded artifact manifest, blocks concurrent reuse through lexical, existing/dangling symlink, hardlink, and platform-case aliases until any successful direct, replacement, script, Electron, or shutdown close retires the exact identity. Explicit `wait --download <path>` / `wait -d <path>` in any upstream-accepted position, path-bearing `network har stop [path]`, the final effective `diff screenshot -o|--output`, and normalized `outputPath` writes (including script and Electron host results) use the same serialized reservation preflight; unsupported `wait --download=<path>` fails clearly. Artifact/lifecycle parsing mirrors upstream full-argv global cleanup, wait-mode precedence, and screenshot exact-flag, selector-prefix, case-sensitive extension, slash-path, and positional semantics, and Electron cleanup validates output before retiring reservations, so interspersed flags, repeated timeouts, flag-looking screenshot paths, extra positionals, or cleanup ordering cannot bypass a live path; known same-call output/artifact aliases fail before browser activity. Terminal tombstones persist onto the current branch during reload, and ordered nested-batch lifecycle handling retires or reactivates the exact namespace/session, keeps a close terminal when later diagnostics explicitly report that they did not launch a browser, treats every later lifecycle-proven launch—including failed rows and post-close `record stop`—as active, persists bounded failed-step launch evidence for replay, clears wrapper trace/profiler ownership at every successful direct or nested close before later successful rows can rebuild it, clears only terminal attachment state, resets pre-close ref/page/route state before applying later rows and suppresses stale pre-close `about:blank` recovery after reactivation, reconciles abandoned aggregate artifacts/verification/actions without retaining an intermediate close-abandoned duplicate after a later saved stop, and records a true closed managed-session outcome, so neither an older branch nor transcript replay can resurrect pending state. Only the newest pending path remains authoritative per namespace/session. Legacy batch replay retires it only when ordered lifecycle leaves recording closed; a later successful browser reactivation plus recording start keeps the new reservation, and malformed manifest rows are ignored instead of reaching identity/path folding. Recording starts/restarts after a nested close are rejected because upstream can report success without starting one, and a definitive `No recording in progress` stop failure, direct or nested in a batch, retires stale state at that ordered step while allowing a later successful recording row to open a new path. Any intervening same-session failure retains exact `stop-pending-recording` recovery alongside its normal actions. Batched recordings coalesce pending rows into terminal outcomes, and every result that leaves a recording pending includes an exact `stop-pending-recording` action. Observational `wait --download` still accepts a file that completed just before waiting began.
+- Same-page freshness checks cover batched getter refs after rerenders, preventing recycled refs from silently reading different controls.
+- Large fallback scrolls with no viewport/container movement now fail as `upstream-error`, set structured and visible `scrolled: false` / `noMovement: true`, and return exact inspection actions instead of claiming success.
+- Root-run Pi hosts can select a private wrapper socket directory with `PI_AGENT_BROWSER_SOCKET_DIR`; validation now reports the concrete permission/ownership/path-budget cause, trusts sticky root ancestry for uid 0, and fails overlong Unix launch paths before spawn with short-root remediation. Ambient upstream socket overrides remain ignored.
+- Native-Windows command-first adaptation preserves multi-token subcommands while safely omitting wrapper-owned empty namespace/raw-args argv values that PowerShell `.cmd` forwarding drops.
+- Script leases always run fail-closed cleanup because preparation helpers may start the isolated browser before the main subprocess; click-dispatch verification avoids a redundant cleanup eval after its check already removed the probe.
+- Documented macOS copied-profile encrypted-cookie limits and compatible managed-restore behavior without claiming profile selection proves authentication.
+
+### Validation
+
+- Passed `npm run verify -- pre-pr` (761 tests passed, two opt-in skips; 130 packed files), `npm run verify -- real-upstream` (2/2), deterministic real-browser dogfood, packaged Pi smoke, five-sample startup profiling (67.7 ms median, 74.1 ms maximum; below the 250 ms budget), Ubuntu Crabbox `platform-build` plus `browser-dogfood-smoke`, and rebuilt-checkout interactive tmux missions. Full release composition remained environment-blocked by isolated lifecycle model credentials, the macOS SSH probe, and unavailable Parallels `prlctl`; no npm publish is authorized.
+
+## 0.4.0 - 2026-08-07
+
+### Added
+
+- Added top-level one-shot `script` code mode for loops, conditional page branches, and multi-page aggregation. Sandboxed source uses async `browser({ args, stdin?, timeoutMs? })` plus `emit(value)`, while the parent serializes at most 25 calls through the complete ordinary native-tool executor and returns one bounded JSON value.
+- Added a permissioned separate Node child, 64 MiB heap ceiling, disabled VM string/WebAssembly code generation, empty environment, null-prototype task functions, JSON-only bounded IPC, 64 KiB source/output caps, a 120-second default/300-second maximum deadline, cascade abort, and shutdown child reaping.
+- Added unique restore-disabled `piab-script-<uuid>` browser isolation, strict model-invisible persisted cleanup leases before first spawn, finally-close, exact active-branch restart recovery, and cleanup-failure details/actions. Script mode fails closed under Pi `--no-session` and deliberately has no profile/attachment/session-control, host API/import, reusable name, registry, or persistent workflow-state surface. Uncaught source exceptions report `script-error`; compact output confirms successful cleanup and distinguishes successful, failed-envelope, and pre-dispatch-rejected inner calls.
+
+### Changed
+
+- Common browser actions, waits, close/tab-close, getter scalars, and diagnostic-buffer resets now render concise useful fields instead of lifecycle-heavy raw JSON. Failed QA presets show a bounded failure/check summary while retaining the full diagnostic matrix in `details.qaPreset` and `details.batchSteps`.
+- Failure `details.nextActions` are now mirrored into model-visible output with exact redacted payloads. Generic wait/operation timeouts and navigation-shaped upstream errors add bounded snapshot inspection actions, with text assertions retaining their specific recovery id.
+- Raw `batch` stdin shape errors now include a copyable native-tool example. Empty generated semantic role names are treated as omitted. Close cleanup guidance appears only when existing explicit artifacts remain; wrapper-managed spills no longer trigger host cleanup prose.
+
+### Fixed
+
+- Script helpers and cleanup now case-insensitively clear ambient upstream launch/profile/restore/attachment and proxy controls before reapplying wrapper-owned isolation values, so mixed-case Windows environment aliases or shell defaults cannot redirect a supposedly isolated run.
+- Final script data is compact-serialized and post-redaction byte/depth checked before presentation, preventing small deeply nested JSON from expanding into megabytes of prose or throwing during result assembly.
+- Pi branch changes now abort active scripts and await normal isolated-session cleanup before branch restoration. Missing compiled workers and malformed `browser()` / `emit()` calls return actionable structured failures, script call counters no longer overlap pre-dispatch rejections with dispatched failures, and verified-spill rehydration reserves IPC headroom with bounded summary/text plus a complete serialized-envelope guard.
+- Pi call rendering now shows a bounded terminal-safe `script` source preview with visible `↵` line-break markers while collapsed and the full terminal-safe source when expanded; ANSI/OSC payload matching cannot cross JavaScript line terminators, which remain visible newlines, and removed controls are marked visibly so approval does not hide executable lines. Generic browser recovery `nextActions` now preserve the exact originating namespace, including explicit empty namespace overrides, plus the named/managed session. Script-visible next actions strip their wrapper-owned isolated identity and are revalidated before exposure; unsupported suggestions are omitted.
+
+### Validation
+
+- Added focused script schema, sandbox-escape, quota, abort/timeout, child-shutdown/tree-change, ambient-environment isolation, inner-policy, unique-session, durable-lease, cleanup-failure/restart, spill-rehydration/headroom, full-executor, bounded deep-output, malformed bridge-call, missing-worker, no-session, expanded-source-rendering, and session-scoped-recovery tests, plus regression coverage for compact presentation and recovery guidance.
+
 ## 0.3.0 - 2026-08-06
 
 ### Changed

@@ -1,5 +1,5 @@
 import { isRecord } from "../parsing.js";
-import { extractCommandTokens } from "../runtime.js";
+import { extractUpstreamCommandTokens } from "../runtime.js";
 import { buildAgentBrowserNextActions } from "./action-recommendations.js";
 import { buildAgentBrowserResultCategoryDetails } from "./categories.js";
 import { detectConfirmationRequired } from "./confirmation.js";
@@ -33,14 +33,14 @@ function shouldAddAnnotatedScreenshotGuidance(commandInfo, args) {
 }
 export async function buildToolPresentation(options) {
     const { args, artifactManifest, artifactRequest, commandInfo, compiledSemanticAction, cwd, envelope, errorText, namespace, networkRouteDiagnostics, networkRoutes, persistentArtifactStore, sessionName, } = options;
-    const commandInfoWithTokens = commandInfo.commandTokens || !args ? commandInfo : { ...commandInfo, commandTokens: extractCommandTokens(args) };
+    const commandInfoWithTokens = commandInfo.commandTokens || !args ? commandInfo : { ...commandInfo, commandTokens: extractUpstreamCommandTokens(args) };
     const presentationCommandInfo = resolvePresentationCommandInfo(commandInfoWithTokens, compiledSemanticAction);
     if (errorText) {
         return buildErrorPresentation({ args, commandInfo, errorText, sessionName });
     }
     const data = enrichStreamStatusData(commandInfoWithTokens, envelope?.data);
     const presentationData = redactPresentationData(commandInfoWithTokens, data);
-    const artifacts = await extractFileArtifacts({ artifactManifest, artifactRequest, commandInfo: presentationCommandInfo, cwd, data, sessionName });
+    const artifacts = await extractFileArtifacts({ artifactManifest, artifactMaxUpdatedAtMs: options.artifactMaxUpdatedAtMs, artifactMinUpdatedAtMs: options.artifactMinUpdatedAtMs, artifactRequest, commandInfo: presentationCommandInfo, cwd, data, namespace, sessionName });
     const artifactVerification = buildArtifactVerificationSummary(artifacts);
     const artifactSummary = formatArtifactSummary(artifacts);
     const summary = artifactSummary ?? formatPresentationSummary(commandInfoWithTokens, data, compiledSemanticAction);
@@ -49,6 +49,8 @@ export async function buildToolPresentation(options) {
     if (commandInfo.command === "batch" && isAgentBrowserBatchResultArray(data)) {
         presentation = await buildBatchPresentation({
             artifactManifest,
+            artifactMaxUpdatedAtMs: options.artifactMaxUpdatedAtMs,
+            artifactMinUpdatedAtMs: options.artifactMinUpdatedAtMs,
             artifactRequests: options.batchArtifactRequests,
             buildNestedToolPresentation: buildToolPresentation,
             cwd,
@@ -156,6 +158,7 @@ export async function buildToolPresentation(options) {
         failureCategory: presentationWithManifest.failureCategory,
         resultCategory: presentationWithManifest.resultCategory ?? "success",
         savedFilePath: presentationWithManifest.savedFilePath,
+        sessionName,
         successCategory: presentationWithManifest.successCategory,
     });
     const networkNextActions = commandInfoWithTokens.command === "network" && commandInfoWithTokens.subcommand === "requests" && presentationWithManifest.resultCategory === "success"

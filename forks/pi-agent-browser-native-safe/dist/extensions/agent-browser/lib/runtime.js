@@ -1,15 +1,18 @@
 import { createHash, randomUUID } from "node:crypto";
 import { basename } from "node:path";
-import { findCommandStartIndex, parseArgvDescriptor, parseCommandInfo, } from "./argv-descriptor.js";
-import { canonicalizeAgentBrowserNamespace, extractExplicitNamespace, extractExplicitSessionName, getAgentBrowserSessionIdentityKey, getBooleanFlagValue, GLOBAL_VALUE_FLAGS_ALLOWING_DASH_VALUE, isUpstreamEnvFlagEnabled, PREVALIDATED_VALUE_FLAGS, getFlagName, optionalGlobalValueFlagConsumesNext, resolveAgentBrowserNamespace, scanUpstreamGlobalFlagOccurrences, } from "./argv-grammar.js";
-import { PRIVILEGED_ARGV_FLAGS, PRIVILEGED_ARGV_FLAGS_ENV, findCodeExecutionLaunchFlag, isPrivilegedArgvFlagValueAllowed, } from "./launch-flag-policy.js";
+import { extractUpstreamCommandTokens, findCommandStartIndex, parseArgvDescriptor, parseCommandInfo, } from "./argv-descriptor.js";
+import { batchHasSuccessfulCloseAll, getSuccessfulBatchCloseLifecycle } from "./batch-lifecycle.js";
+import { canonicalizeAgentBrowserNamespace, extractExplicitNamespace, extractExplicitSessionName, getAgentBrowserSessionIdentityKey, getBooleanFlagValue, GLOBAL_VALUE_FLAGS_ALLOWING_DASH_VALUE, isAgentBrowserSessionIdentityKeyInNamespace, isUpstreamEnvFlagEnabled, PREVALIDATED_VALUE_FLAGS, getFlagName, isBooleanFlagEnabled, resolveAgentBrowserNamespace, scanUpstreamGlobalFlagOccurrences, } from "./argv-grammar.js";
 import { needsManagedSession } from "./command-policy.js";
 import { isWrapperManagedSessionName, redactManagedSessionRestoreKeys } from "./managed-session-capabilities.js";
-import { isCloseCommand, isOpenNavigationCommand } from "./command-taxonomy.js";
+import { isCloseAllCommand, isCloseCommand, isOpenNavigationCommand } from "./command-taxonomy.js";
 import { hasLaunchScopedFlagToken, LAUNCH_SCOPED_FLAG_DEFINITIONS, LAUNCH_SCOPED_FLAG_LABEL, } from "./launch-scoped-flags.js";
+import { PRIVILEGED_ARGV_FLAGS, PRIVILEGED_ARGV_FLAGS_ENV, findCodeExecutionLaunchFlag, isPrivilegedArgvFlagValueAllowed, } from "./launch-flag-policy.js";
 import { MANAGED_SESSION_NAME_PREFIX, } from "./managed-session-restore.js";
-export { extractCommandTokens, findCommandStartIndex, parseArgvDescriptor, parseCommandInfo } from "./argv-descriptor.js";
+export { extractCommandTokens, extractUpstreamCommandTokens, findCommandStartIndex, parseArgvDescriptor, parseCommandInfo, parseWaitCommandTokens } from "./argv-descriptor.js";
 import { isRecord } from "./parsing.js";
+import { getAgentBrowserProcessEnvironment } from "./process-environment.js";
+import { TARGET_AGENT_BROWSER_VERSION } from "./upstream-version.js";
 const OPENAI_HEADLESS_COMPAT_HOSTS = new Set(["chat.com", "chat.openai.com", "chatgpt.com"]);
 const CLOUDFLARE_HEADLESS_COMPAT_HOST = "dash.cloudflare.com";
 const AGENT_BROWSER_IDLE_TIMEOUT_ENV = "AGENT_BROWSER_IDLE_TIMEOUT_MS";
@@ -29,6 +32,7 @@ const DEFAULT_HEADLESS_COMPAT_USER_AGENT_BY_PLATFORM = {
 };
 const FALLBACK_HEADLESS_COMPAT_USER_AGENT = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36";
 const SHELL_OPERATOR_TOKENS = new Set(["&&", "||", "|", ";", ">", ">>", "<"]);
+const ANDROID_SESSION_NAME_IDENTITY_LENGTH = 20;
 const MAX_PROJECT_SLUG_LENGTH = 24;
 const SESSION_NAME_CWD_HASH_LENGTH = 8;
 const SESSION_NAME_SESSION_ID_LENGTH = 12;
@@ -312,7 +316,7 @@ function parseTimeoutMs(rawValue, minimumValue) {
     }
     return parsedValue;
 }
-export function getImplicitSessionIdleTimeoutMs(env = process.env) {
+export function getImplicitSessionIdleTimeoutMs(env = getAgentBrowserProcessEnvironment()) {
     return parseTimeoutMs(env[IMPLICIT_SESSION_IDLE_TIMEOUT_ENV], 0) ??
         parseTimeoutMs(env[AGENT_BROWSER_IDLE_TIMEOUT_ENV], 0) ??
         DEFAULT_IMPLICIT_SESSION_IDLE_TIMEOUT_MS;
@@ -334,7 +338,7 @@ function getUnsupportedLeadingIdentityAssignment(args) {
     }
     return undefined;
 }
-export function getImplicitSessionCloseTimeoutMs(env = process.env) {
+export function getImplicitSessionCloseTimeoutMs(env = getAgentBrowserProcessEnvironment()) {
     return parseTimeoutMs(env[IMPLICIT_SESSION_CLOSE_TIMEOUT_ENV], 0) ?? DEFAULT_IMPLICIT_SESSION_CLOSE_TIMEOUT_MS;
 }
 export function resolveManagedSessionState(options) {
@@ -382,15 +386,18 @@ function getManagedSessionRestoreRank(options) {
 function getRestorableManagedSessionName(value, fallbackSessionName) {
     return typeof value === "string" && isRestorableManagedSessionName(value, fallbackSessionName) ? value : undefined;
 }
-function getElectronCleanupClosedManagedSessionNames(details, fallbackSessionName) {
+function getElectronCleanupClosedManagedSessions(details, fallbackSessionName) {
     const electron = isRecord(details.electron) ? details.electron : undefined;
     const cleanup = isRecord(electron?.cleanup) ? electron.cleanup : undefined;
     const results = Array.isArray(cleanup?.results) ? cleanup.results : [];
-    const closedSessionNames = new Set();
+    const closedSessions = [];
     for (const result of results) {
         if (!isRecord(result) || !Array.isArray(result.steps))
             continue;
         const record = isRecord(result.record) ? result.record : undefined;
+        const fallbackNamespace = typeof record?.namespace === "string"
+            ? record.namespace
+            : typeof details.namespace === "string" ? details.namespace : undefined;
         for (const step of result.steps) {
             if (!isRecord(step) || step.resource !== "managed-session")
                 continue;
@@ -398,11 +405,12 @@ function getElectronCleanupClosedManagedSessionNames(details, fallbackSessionNam
                 continue;
             const sessionName = getRestorableManagedSessionName(step.sessionName, fallbackSessionName)
                 ?? getRestorableManagedSessionName(record?.sessionName, fallbackSessionName);
+            const namespace = typeof step.namespace === "string" ? step.namespace : fallbackNamespace;
             if (sessionName)
-                closedSessionNames.add(sessionName);
+                closedSessions.push({ namespace, sessionName });
         }
     }
-    return [...closedSessionNames];
+    return closedSessions;
 }
 export function restoreManagedSessionStateFromBranch(branch, fallbackSessionName) {
     const restoreDisabledIdentities = new Map();
@@ -442,16 +450,23 @@ export function restoreManagedSessionStateFromBranch(branch, fallbackSessionName
         if (isPlainTextInspectionArgs(args)) {
             continue;
         }
-        for (const sessionName of getElectronCleanupClosedManagedSessionNames(details, fallbackSessionName)) {
-            applyManagedClose(sessionName);
+        for (const cleanupSession of getElectronCleanupClosedManagedSessions(details, fallbackSessionName)) {
+            applyManagedClose(cleanupSession.sessionName, cleanupSession.namespace);
         }
         const explicitSessionName = extractExplicitSessionName(args);
         const sessionName = typeof details.sessionName === "string" ? details.sessionName : undefined;
         const namespace = canonicalizeAgentBrowserNamespace(typeof details.namespace === "string" ? details.namespace : undefined);
         const sessionMode = details.sessionMode === "fresh" || details.sessionMode === "auto" ? details.sessionMode : undefined;
         const usedImplicitSession = details.usedImplicitSession === true;
+        const commandTokens = extractUpstreamCommandTokens(args);
         const command = typeof details.command === "string" ? details.command : parseCommandInfo(args).command;
-        const commandClosesSession = isCloseCommand(command);
+        const batchCloseLifecycle = getSuccessfulBatchCloseLifecycle(details.batchSteps);
+        const nestedBatchEndsClosed = batchCloseLifecycle?.endsClosed === true;
+        const nestedBatchRemainsActive = batchCloseLifecycle?.endsClosed === false;
+        const closeAllApplied = details.closeAllApplied === true
+            || (message.isError !== true && isCloseAllCommand(commandTokens))
+            || batchHasSuccessfulCloseAll(details.batchSteps);
+        const commandClosesSession = isCloseCommand(command) || nestedBatchEndsClosed;
         const outcome = typeof details.managedSessionOutcome === "object" && details.managedSessionOutcome !== null ? details.managedSessionOutcome : undefined;
         const outcomeStatus = typeof outcome?.status === "string" ? outcome.status : undefined;
         const outcomeCurrentSessionName = typeof outcome?.currentSessionName === "string" ? outcome.currentSessionName : undefined;
@@ -460,6 +475,14 @@ export function restoreManagedSessionStateFromBranch(branch, fallbackSessionName
             ? outcomeAttemptedSessionName ?? getRestorableManagedSessionName(outcomeCurrentSessionName, fallbackSessionName) ?? getRestorableManagedSessionName(sessionName, fallbackSessionName)
             : undefined;
         const restorableDetailSessionName = getRestorableManagedSessionName(sessionName, fallbackSessionName);
+        if (closeAllApplied && restoredState.active) {
+            const restoredKey = getAgentBrowserSessionIdentityKey(restoredState.sessionName, restoredState.namespace);
+            const resultKey = restorableDetailSessionName ? getAgentBrowserSessionIdentityKey(restorableDetailSessionName, namespace) : undefined;
+            const retainsCurrentSession = nestedBatchRemainsActive && resultKey === restoredKey;
+            if (isAgentBrowserSessionIdentityKeyInNamespace(restoredKey, namespace) && !retainsCurrentSession) {
+                applyManagedClose(restoredState.sessionName, restoredState.namespace);
+            }
+        }
         const explicitCloseSessionName = commandClosesSession && explicitSessionName && restorableDetailSessionName === explicitSessionName
             ? restorableDetailSessionName
             : undefined;
@@ -468,13 +491,13 @@ export function restoreManagedSessionStateFromBranch(branch, fallbackSessionName
         if (details.managedSessionRestoreDisabled === true && typeof sessionName === "string") {
             restoreDisabledIdentities.set(getAgentBrowserSessionIdentityKey(sessionName, namespace), { namespace, sessionName });
         }
-        const managedSessionName = !explicitSessionName &&
+        const managedSessionName = outcomeClosedSessionName ?? (!explicitSessionName &&
             restorableDetailSessionName &&
             (usedImplicitSession || sessionMode === "fresh")
             ? restorableDetailSessionName
             : commandClosesSession
-                ? outcomeClosedSessionName ?? explicitCloseSessionName
-                : undefined;
+                ? explicitCloseSessionName
+                : undefined);
         if (!managedSessionName) {
             continue;
         }
@@ -491,9 +514,11 @@ export function restoreManagedSessionStateFromBranch(branch, fallbackSessionName
         const exitCode = typeof details.exitCode === "number" ? details.exitCode : undefined;
         const outcomeActiveAfter = outcome?.activeAfter === true;
         const outcomeRepresentsActiveCurrentSession = outcomeActiveAfter && outcomeCurrentSessionName === managedSessionName && (outcomeStatus === "created" || outcomeStatus === "replaced" || outcomeStatus === "unchanged");
-        const succeeded = outcomeRepresentsActiveCurrentSession ? true : messageIsError === undefined ? exitCode === undefined || exitCode === 0 : !messageIsError;
-        if (commandClosesSession) {
-            if (succeeded) {
+        const succeeded = outcomeRepresentsActiveCurrentSession || nestedBatchRemainsActive
+            ? true
+            : messageIsError === undefined ? exitCode === undefined || exitCode === 0 : !messageIsError;
+        if (commandClosesSession || outcomeClosedSessionName) {
+            if (nestedBatchEndsClosed || outcomeClosedSessionName || succeeded) {
                 restoreDisabledIdentities.delete(getAgentBrowserSessionIdentityKey(managedSessionName, namespace));
                 applyManagedClose(managedSessionName, namespace);
             }
@@ -530,15 +555,24 @@ export function createEphemeralSessionSeed() {
 function createCwdHash(cwd) {
     return createHash("sha256").update(`cwd:${cwd}`).digest("hex").slice(0, SESSION_NAME_CWD_HASH_LENGTH);
 }
-export function createImplicitSessionName(sessionId, cwd, ephemeralSeed) {
+export function createImplicitSessionName(sessionId, cwd, ephemeralSeed, platform = process.platform) {
+    const normalizedSessionId = sessionId?.replaceAll("-", "").toLowerCase();
+    if (platform === "android") {
+        const identity = normalizedSessionId ? `session:${normalizedSessionId}:cwd:${cwd}` : `ephemeral:${cwd}:${ephemeralSeed}`;
+        const digest = createHash("sha256").update(identity).digest("hex").slice(0, ANDROID_SESSION_NAME_IDENTITY_LENGTH);
+        return `${MANAGED_SESSION_NAME_PREFIX}${digest}`;
+    }
     const slug = basename(cwd)
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/^-+|-+$/g, "")
         .slice(0, MAX_PROJECT_SLUG_LENGTH) || "project";
     const cwdHash = createCwdHash(cwd);
-    const stableSessionId = sessionId?.replace(/-/g, "").slice(0, SESSION_NAME_SESSION_ID_LENGTH);
-    if (stableSessionId && stableSessionId.length > 0) {
+    if (normalizedSessionId) {
+        const stableSessionId = createHash("sha256")
+            .update(`session:${normalizedSessionId}`)
+            .digest("hex")
+            .slice(0, SESSION_NAME_SESSION_ID_LENGTH);
         return `${MANAGED_SESSION_NAME_PREFIX}${slug}-${stableSessionId}-${cwdHash}`;
     }
     const digest = createHash("sha256")
@@ -555,7 +589,7 @@ export function createFreshSessionName(baseSessionName, ephemeralSeed, ordinal) 
     return `${baseSessionName}-fresh-${suffix}`;
 }
 function getSingleKeyCommandValidationError(args) {
-    const { commandInfo, commandTokens } = parseArgvDescriptor(args);
+    const { commandInfo, upstreamCommandTokens: commandTokens } = parseArgvDescriptor(args);
     const command = commandInfo.command;
     if (command !== "press" && command !== "key" && command !== "keydown" && command !== "keyup")
         return undefined;
@@ -565,12 +599,18 @@ function getSingleKeyCommandValidationError(args) {
     return `agent-browser ${label} accepts exactly one key argument. Do not pass a selector or ref to ${label}; focus or click the target first, then run ${command} <key> (for example: focus @e1, then press Enter).`;
 }
 function getBareMcpValidationError(args) {
-    const { commandInfo, commandTokens } = parseArgvDescriptor(args);
+    const { commandInfo, upstreamCommandTokens: commandTokens } = parseArgvDescriptor(args);
     if (commandInfo.command !== "mcp")
         return undefined;
     if (commandTokens.includes("--help") || commandTokens.includes("-h"))
         return undefined;
     return "agent-browser mcp starts a stdio MCP server for external MCP clients, not a one-shot native agent_browser tool workflow. Use the native agent_browser tool modes directly, or configure an MCP client to launch `agent-browser mcp`. Use `mcp --help` for help.";
+}
+function getUnsupportedInlineWaitDownloadError(args) {
+    const descriptor = parseArgvDescriptor(args);
+    if (descriptor.commandInfo.command !== "wait" || !descriptor.upstreamCommandTokens.some((token) => token.startsWith("--download=")))
+        return undefined;
+    return `agent-browser ${TARGET_AGENT_BROWSER_VERSION} does not support \`wait --download=<path>\`. Pass the optional path as a separate argument: \`wait --download <path>\` (or \`wait -d <path>\`).`;
 }
 function getArgvFlagValues(args, flag) {
     const values = [];
@@ -629,7 +669,7 @@ export function validateToolArgs(args) {
     if (sessionModeArg) {
         return "Do not pass `--session-mode` in args. Use the top-level agent_browser `sessionMode` field instead, for example { args: [\"--profile\", \"Default\", \"open\", \"https://example.com\"], sessionMode: \"fresh\" }.";
     }
-    return getPrivilegedFlagValidationError(args) ?? getBareMcpValidationError(args) ?? getSingleKeyCommandValidationError(args);
+    return getPrivilegedFlagValidationError(args) ?? getBareMcpValidationError(args) ?? getSingleKeyCommandValidationError(args) ?? getUnsupportedInlineWaitDownloadError(args);
 }
 function getInvalidValueFlagDetails(args) {
     for (let index = 0; index < args.length; index += 1) {
@@ -653,7 +693,7 @@ function getInvalidValueFlagDetails(args) {
             continue;
         }
         const receivedToken = args[index + 1];
-        if (receivedToken === undefined) {
+        if (receivedToken === undefined || (normalizedToken === "--args" && receivedToken.length === 0)) {
             return {
                 flag: normalizedToken,
                 index,
@@ -729,7 +769,7 @@ function parseComparableNavigationUrl(url) {
 export function getDefaultHeadlessCompatUserAgent(platform = process.platform) {
     return DEFAULT_HEADLESS_COMPAT_USER_AGENT_BY_PLATFORM[platform] ?? FALLBACK_HEADLESS_COMPAT_USER_AGENT;
 }
-export function canUseHeadlessCompatibilityUserAgent(args, env = process.env) {
+export function canUseHeadlessCompatibilityUserAgent(args, env = getAgentBrowserProcessEnvironment()) {
     if (hasFlagToken(args, "--user-agent") || hasFlagToken(args, "--args"))
         return false;
     if (hasFlagToken(args, "--cdp") || hasFlagToken(args, "--provider") || hasFlagToken(args, "-p"))
@@ -762,6 +802,14 @@ function getCompatibilityWorkaround(args, commandInfo) {
         reason: "OpenAI web properties currently challenge the default headless Chrome user agent; inject a normal Chrome user agent to preserve the default headless workflow without requiring headed mode or auto-connect.",
     };
 }
+function stripExplicitSessionArgs(args) {
+    const sessionTokenIndexes = new Set();
+    for (const occurrence of scanUpstreamGlobalFlagOccurrences(args, "--session")) {
+        sessionTokenIndexes.add(occurrence.index);
+        sessionTokenIndexes.add(occurrence.index + 1);
+    }
+    return args.filter((_token, index) => !sessionTokenIndexes.has(index));
+}
 function stripExplicitNamespaceArgs(args) {
     const namespaceTokenIndexes = new Set();
     for (const occurrence of scanUpstreamGlobalFlagOccurrences(args, "--namespace")) {
@@ -787,7 +835,7 @@ export function buildExecutionPlan(args, options) {
     const commandInfo = argvDescriptor.commandInfo;
     const commandNeedsManagedSession = !plainTextInspection && needsManagedSession(argvDescriptor);
     const effectiveArgs = plainTextInspection ? [...args] : args.includes("--json") ? [] : ["--json"];
-    let namespace = explicitNamespace;
+    let namespace = explicitNamespacePresent ? explicitNamespace ?? "" : undefined;
     if (plainTextInspection) {
         return {
             commandInfo,
@@ -816,7 +864,7 @@ export function buildExecutionPlan(args, options) {
             plainTextInspection: false,
             startupScopedFlags: [],
             usedImplicitSession: false,
-            validationError: `${unsupportedIdentityAssignment}=... is not supported by agent-browser 0.33.2. Pass ${unsupportedIdentityAssignment} and its value as separate arguments.`,
+            validationError: `${unsupportedIdentityAssignment}=... is not supported by agent-browser ${TARGET_AGENT_BROWSER_VERSION}. Pass ${unsupportedIdentityAssignment} and its value as separate arguments.`,
         };
     }
     for (const flag of ["--session", "--namespace"]) {
@@ -833,7 +881,7 @@ export function buildExecutionPlan(args, options) {
     }
     const explicitSessionName = extractExplicitSessionName(args);
     if (explicitSessionName && !isWrapperManagedSessionName(explicitSessionName)) {
-        namespace = resolveAgentBrowserNamespace(args, process.env.AGENT_BROWSER_NAMESPACE);
+        namespace = resolveAgentBrowserNamespace(args, getAgentBrowserProcessEnvironment().AGENT_BROWSER_NAMESPACE);
     }
     const shouldCreateFreshManagedSession = !explicitSessionName && options.sessionMode === "fresh" && commandInfo.command !== undefined && !isCloseCommand(commandInfo.command);
     let argsToAppend = args;
@@ -862,8 +910,8 @@ export function buildExecutionPlan(args, options) {
             ].join(" ");
         }
         else {
-            namespace = explicitNamespacePresent ? explicitNamespace : managedSessionNamespace;
-            if (namespace)
+            namespace = explicitNamespacePresent ? explicitNamespace ?? "" : managedSessionNamespace;
+            if (namespace !== undefined)
                 effectiveArgs.push("--namespace", namespace);
             effectiveArgs.push("--session", options.managedSessionName);
             if (explicitNamespacePresent)
@@ -874,7 +922,7 @@ export function buildExecutionPlan(args, options) {
         }
     }
     else if (shouldCreateFreshManagedSession && commandNeedsManagedSession) {
-        if (namespace)
+        if (namespace !== undefined)
             effectiveArgs.push("--namespace", namespace);
         effectiveArgs.push("--session", options.freshSessionName);
         if (explicitNamespacePresent)
@@ -882,14 +930,43 @@ export function buildExecutionPlan(args, options) {
         managedSessionName = options.freshSessionName;
         sessionName = options.freshSessionName;
     }
-    if (!compatibilityWorkaround
-        && canUseHeadlessCompatibilityUserAgent(args)
-        && options.managedSessionActive
+    const targetsActiveManagedSession = options.managedSessionActive
         && sessionName
-        && getAgentBrowserSessionIdentityKey(sessionName, namespace) === getAgentBrowserSessionIdentityKey(options.managedSessionName, options.managedSessionNamespace)) {
-        compatibilityWorkaround = options.managedSessionCompatibilityWorkaround;
+        && getAgentBrowserSessionIdentityKey(sessionName, namespace) === getAgentBrowserSessionIdentityKey(options.managedSessionName, options.managedSessionNamespace);
+    if (targetsActiveManagedSession && startupScopedFlags.length > 0 && !isCloseCommand(commandInfo.command) && !validationError) {
+        const recoveryArgs = explicitSessionName ? stripExplicitSessionArgs(args) : args;
+        recoveryHint = {
+            exampleArgs: recoveryArgs,
+            exampleParams: { args: recoveryArgs, sessionMode: "fresh" },
+            reason: `Launch-scoped flags (${LAUNCH_SCOPED_FLAG_LABEL}) need a fresh upstream launch once the extension-managed session is already active.`,
+            recommendedSessionMode: "fresh",
+        };
+        validationError = [
+            `The current extension-managed agent-browser session is already running, so launch-scoped flags ${startupScopedFlags.join(", ")} would replace or be ignored by upstream agent-browser.`,
+            explicitSessionName
+                ? "Remove the explicit `--session` and retry with `sessionMode: \"fresh\"` to force a fresh upstream launch."
+                : "Retry this call with `sessionMode: \"fresh\"` to force a fresh upstream launch.",
+        ].join(" ");
     }
-    if (compatibilityWorkaround) {
+    if (targetsActiveManagedSession && canUseHeadlessCompatibilityUserAgent(args)) {
+        if (requestedCompatibilityWorkaround && !options.managedSessionCompatibilityWorkaround && !validationError) {
+            compatibilityWorkaround = undefined;
+            const recoveryArgs = explicitSessionName ? stripExplicitSessionArgs(args) : args;
+            recoveryHint = {
+                exampleArgs: recoveryArgs,
+                exampleParams: { args: recoveryArgs, sessionMode: "fresh" },
+                reason: "The requested site compatibility user agent is launch-scoped and needs a fresh browser session.",
+                recommendedSessionMode: "fresh",
+            };
+            validationError = explicitSessionName
+                ? "The current extension-managed agent-browser session is already running without the user agent required by this site. Remove the explicit `--session` and retry with `sessionMode: \"fresh\"` so the compatibility user agent is applied at launch."
+                : "The current extension-managed agent-browser session is already running without the user agent required by this site. Retry this call with `sessionMode: \"fresh\"` so the compatibility user agent is applied at launch.";
+        }
+        else {
+            compatibilityWorkaround = requestedCompatibilityWorkaround ?? options.managedSessionCompatibilityWorkaround;
+        }
+    }
+    if (compatibilityWorkaround && !targetsActiveManagedSession) {
         effectiveArgs.push("--user-agent", getDefaultHeadlessCompatUserAgent());
     }
     effectiveArgs.push(...argsToAppend);
