@@ -151,8 +151,10 @@ def score_task(task, run_dir, seed):
         checks["validation_tests_pass"] = t.returncode == 0
     elif task == "t2":
         summary = read_json(os.path.join(work, "output", "summary.json"))
+        # rows may count processed rows (1999) or rows seen (2000); the prompt leaves
+        # that ambiguous, so accept either as long as skipped/total are exact
         checks["summary_correct"] = bool(summary) and (
-            summary.get("rows") == gt["rows"]
+            summary.get("rows") in (gt["rows"], gt["rows"] + gt["skipped"])
             and summary.get("skipped") == gt["skipped"]
             and abs(summary.get("total", 0) - gt["total"]) < 0.05
         )
