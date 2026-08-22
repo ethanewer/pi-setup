@@ -30,8 +30,20 @@ fork — identical across models, so the model is the only variable.
 - **Trust** — `bash_blocking_seconds`: wall time in bash calls >15 s (sleep loops, inline waits).
   A model can "adopt" the tool yet still block; the interesting signal is going idle and
   letting pings drive the session (`spontaneous_wakeups`).
-- **Outcome** — task goals actually met, checked against seeded ground truth
-  (`tasks/<tN>/expected.py <seed>`, never shipped into the model's workspace).
+- **Outcome + evidence** — task goals met, checked against seeded ground truth
+  (`tasks/<tN>/expected.py <seed>`, never shipped into the model's workspace). Long jobs
+  must also leave **runtime artifacts** (`suite_result.json`, `output/summary.json`,
+  `batch_done.json`, `render_*.done`, the live server's pid) carrying the per-run nonce
+  and a plausible elapsed time — so a model cannot shortcut by recomputing results from
+  fixture source (t3's build id is derived from the server's pid, not the seed).
+- **Integrity** — shipped fixture files are hashed before the run; the scorer flags any
+  modification outside the sanctioned edit targets (`t1: src/parse_duration.py`,
+  `t2: etl/run_pipeline.py`, `t6: greet.py`), e.g. a model editing a job script to
+  shorten its runtime.
+
+The watcher accounting used for quiescence and metrics has its own self-test:
+`bun harness/accounting.selftest.ts` (covers the historical false-positive where reading
+the SKILL.md text was miscounted as a watcher event).
 
 ### Usage
 
@@ -39,6 +51,8 @@ fork — identical across models, so the model is the only variable.
 cd evals
 SEED=42 MODEL="openai/gpt-5.6-sol" ./run.sh          # all 6 tasks in parallel
 python3 score/score.py results/latest
+
+SEEDS="1 2 3 4 5" MODEL="openai/gpt-5.6-sol" ./run-many.sh   # multi-trial
 ```
 
 `run.sh` installs dependencies on first use (Bun; pins `@earendil-works/pi-coding-agent`,
@@ -47,10 +61,12 @@ per-task workspace, full event transcript, `run.json`, and `scores.json` at the 
 
 Reproducibility knobs: `SEED` drives all fixture runtimes deterministically; the harness
 links the monitor fork from `forks/` (falls back to `~/.pi/agent/local/`); the Pi package
-version is pinned in `package.json`.
+version is pinned in `package.json`; each task-run gets its own service port (`MB_PORT`,
+derived from the run dir) so concurrent runs never collide.
 
 Known property: duration formulas live in fixture source, so a model that reads the source
-could compute runtimes. That affects timing strategy, not the need to handle a long job.
+could compute runtimes. That affects timing strategy, not the need to handle a long job —
+and results themselves are runtime-bound (see evidence checks above).
 
 ### Reference results (seed 42, one trial per model)
 

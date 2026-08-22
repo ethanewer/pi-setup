@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Nightly batch job: appends progress lines to batch.log until finished."""
+import json
 import os
 import random
 import time
@@ -46,6 +47,15 @@ def main():
                 log.write(f"batch: chunk {chunk}/{total_chunks} processed (queue depth {depth})\n")
             time.sleep(step)
         log.write("BATCH FINISHED rc=0\n")
+    with open(os.path.join(ROOT, "batch_done.json"), "w") as f:
+        json.dump({
+            "elapsed": round(time.time() - start, 1),
+            "errors": len(ERROR_LINES),
+            "warns": len(WARN_LINES),
+            "pid": os.getpid(),
+            "nonce": os.environ.get("MB_NONCE", ""),
+            "seed": SEED,
+        }, f)
     print(f"batch job done after {time.time() - start:.0f}s")
 
 

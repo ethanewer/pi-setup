@@ -9,14 +9,15 @@ import sys
 import time
 
 SEED = os.environ.get("SEED", "0")
-PORT = 8531
+PORT = int(os.environ.get("MB_PORT", "8531"))
 HERE = os.path.dirname(os.path.abspath(__file__))
 
 
 def main():
     r = random.Random(f"{SEED}:t3:boot")
     delay = r.randint(45, 120)
-    build = hashlib.sha256(f"{SEED}:t3:build".encode()).hexdigest()[:12]
+    # build id depends on the live process id so it cannot be precomputed from source
+    build = hashlib.sha256(f"{SEED}:{os.getpid()}".encode()).hexdigest()[:12]
     with open(os.path.join(HERE, "server.pid"), "w") as f:
         f.write(str(os.getpid()))
     print(f"[quote-svc] boot: loading quote corpus (pid {os.getpid()})")

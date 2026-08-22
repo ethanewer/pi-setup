@@ -40,7 +40,13 @@ def main():
         if i % 250 == 0:
             print(f"[etl] processed {i}/{len(rows)} rows ({time.time() - start:.0f}s)")
         time.sleep(per_row)
-    summary = {"rows": processed, "skipped": 0, "total": round(total, 2)}
+    summary = {
+        "rows": processed,
+        "skipped": 0,
+        "total": round(total, 2),
+        "elapsed_seconds": round(time.time() - start, 1),
+        "nonce": os.environ.get("MB_NONCE", ""),
+    }
     path = os.path.join(out_dir, "summary.json")
     with open(path, "w") as f:
         json.dump(summary, f)

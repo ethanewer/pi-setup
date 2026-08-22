@@ -14,3 +14,5 @@ while (( SECONDS < END )); do
   i=$((i + 1))
 done
 echo "TEST SUITE COMPLETE: 47 passed, 0 failed"
+printf '{"final_line": "TEST SUITE COMPLETE: 47 passed, 0 failed", "elapsed": %s, "pid": %s, "nonce": "%s", "seed": "%s"}\n' \
+  "$SECONDS" "$$" "${MB_NONCE:-}" "$SEED" > suite_result.json

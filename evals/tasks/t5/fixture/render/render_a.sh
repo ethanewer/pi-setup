@@ -18,3 +18,5 @@ while (( SECONDS < END )); do
   sleep 3
 done
 echo "RENDER_A COMPLETE checksum=$SUM"
+printf '{"checksum": "%s", "elapsed": %s, "pid": %s, "nonce": "%s", "seed": "%s"}\n' \
+  "$SUM" "$SECONDS" "$$" "${MB_NONCE:-}" "$SEED" > render_a.done

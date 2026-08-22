@@ -8,6 +8,8 @@
  *   MODEL     provider/model, default openrouter/deepseek/deepseek-v4-flash-0731
  */
 import { cpSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync, appendFileSync, existsSync, symlinkSync } from "node:fs";
+import { createHash, randomBytes } from "node:crypto";
+import { createTracker, textOf } from "./accounting.ts";
 import path from "node:path";
 import { createAgentSession, DefaultResourceLoader, SessionManager } from "@earendil-works/pi-coding-agent";
 import { getModel } from "@earendil-works/pi-ai/compat";
@@ -47,9 +49,27 @@ rmSync(runDir, { recursive: true, force: true });
 mkdirSync(workDir, { recursive: true });
 cpSync(path.join(taskDir, "fixture"), workDir, { recursive: true });
 
+// Fixture integrity baseline: sha256 of every shipped fixture file.
+function hashTree(dir: string, base: string, out: Record<string, string>) {
+  for (const name of readdirSync(dir)) {
+    const p = path.join(dir, name);
+    const rel = path.relative(base, p);
+    if (statSync(p).isDirectory()) hashTree(p, base, out);
+    else out[rel] = createHash("sha256").update(readFileSync(p)).digest("hex");
+  }
+}
+const fixtureHashes: Record<string, string> = {};
+hashTree(workDir, workDir, fixtureHashes);
+
 const prompt = readFileSync(path.join(taskDir, "prompt.txt"), "utf8");
 process.env.SEED = SEED;
 process.env.PYTHONUNBUFFERED = "1";
+// Per-run values baked into job artifacts so ground truth depends on actually running.
+const NONCE = randomBytes(6).toString("hex");
+const runHash = createHash("sha256").update(runDir).digest().readUInt32BE(0);
+const MB_PORT = 8500 + (runHash % 1000);
+process.env.MB_NONCE = NONCE;
+process.env.MB_PORT = String(MB_PORT);
 
 const eventsPath = path.join(runDir, "events.jsonl");
 const transcriptPath = path.join(runDir, "transcript.jsonl");
@@ -59,26 +79,18 @@ const log = (msg: string) => {
   appendFileSync(runLog, line + "\n");
 };
 
-// ---- watcher accounting (from session entries) ----
-let watcherStarts = 0;
-let watcherStops = 0; // kills + natural exits + stop-all
-let stopAllSeen = false;
-const activeWatchers = () => (stopAllSeen ? 0 : Math.max(0, watcherStarts - watcherStops));
+// ---- watcher accounting (shared with accounting.selftest.ts) ----
+const tracker = createTracker();
+const activeWatchers = tracker.activeWatchers;
 
 const toolCounts: Record<string, number> = {};
 let assistantTurns = 0;
-let monitorEventPings = 0;
 let lastEventAt = Date.now();
 let lastAssistantText = "";
 const transcript = (obj: any) => appendFileSync(transcriptPath, JSON.stringify(obj) + "\n");
 
-function textOf(content: any): string {
-  if (typeof content === "string") return content;
-  if (Array.isArray(content)) return content.map((b: any) => (typeof b === "string" ? b : b?.text ?? "")).join("\n");
-  return "";
-}
-
 function handleEvent(event: any) {
+  tracker.handle(event);
   switch (event.type) {
     case "tool_execution_start": {
       toolCounts[event.toolName] = (toolCounts[event.toolName] ?? 0) + 1;
@@ -88,9 +100,6 @@ function handleEvent(event: any) {
     case "tool_execution_end": {
       const text = textOf(event.result?.content ?? event.result);
       transcript({ ts: Date.now(), type: "tool_end", toolName: event.toolName, toolCallId: event.toolCallId, isError: event.isError, text: text.slice(0, 8000) });
-      if (event.toolName === "monitor" && !event.isError && /Watcher \S+ (running|polling)/.test(text)) watcherStarts++;
-      if (event.toolName === "monitor_kill" && !event.isError) watcherStops += (text.match(/Stopped watcher/g) ?? []).length || 1;
-      if (event.toolName === "monitor_kill_all" && !event.isError) stopAllSeen = true;
       break;
     }
     case "message_start": {
@@ -98,24 +107,11 @@ function handleEvent(event: any) {
       if (m && m.role !== "assistant" && m.role !== "toolResult") {
         const text = textOf(m.content);
         transcript({ ts: Date.now(), type: "user_message", role: m.role, customType: m.customType, text: text.slice(0, 4000) });
-        // real injected pings start with "[watcher " — avoid matching skill/doc text
-        if (/^\[watcher /m.test(text)) {
-          monitorEventPings++;
-          if (/PROCESS EXITED|SPAWN ERROR|TIMEOUT after/.test(text)) watcherStops++;
-        }
-        if (/monitor-stop-all|Stopped all watchers/.test(text)) stopAllSeen = true;
       }
       break;
     }
     case "queue_update": {
-      // steered monitor pings land here when the agent is mid-stream
       const steering = event.steering ?? [];
-      for (const text of steering) {
-        if (/^\[watcher /m.test(text)) {
-          monitorEventPings++;
-          if (/PROCESS EXITED|SPAWN ERROR|TIMEOUT after/.test(text)) watcherStops++;
-        }
-      }
       if (steering.length) transcript({ ts: Date.now(), type: "steering", texts: steering.map((s: string) => s.slice(0, 2000)) });
       break;
     }
@@ -221,20 +217,21 @@ const run = {
   task: TASK,
   model: MODEL,
   seed: SEED,
+  nonce: NONCE,
+  mbPort: MB_PORT,
   budgetSeconds: BUDGET_S,
   startedAt,
   endedAt,
   durationMs: Date.now() - t0,
   exitReason,
   promptError,
-  watcherStarts,
-  watcherStops,
-  monitorEventPings,
+  ...tracker.stats(),
   assistantTurns,
   toolCounts,
+  fixtureHashes,
   finalText: finalText.slice(0, 4000),
 };
 writeFileSync(path.join(runDir, "run.json"), JSON.stringify(run, null, 2));
-log(`done: ${JSON.stringify({ exitReason, durationMs: run.durationMs, watcherStarts, toolCounts })}`);
+log(`done: ${JSON.stringify({ exitReason, durationMs: run.durationMs, watcherStarts: run.watcherStarts, toolCounts })}`);
 console.log(`[${TASK}] finished (${exitReason}) in ${Math.round(run.durationMs / 1000)}s`);
 process.exit(0);

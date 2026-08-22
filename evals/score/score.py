@@ -2,9 +2,16 @@
 """Score one benchmark run directory.
 
 Usage: python3 score/score.py results/<run-id>
-Reads run.json/transcript.jsonl/ANSWER.md per task, compares against
-tasks/<tN>/expected.py SEED, and writes <run>/scores.json + prints a table.
+
+Checks three layers per task:
+  1. outcome   — the reported answer matches ground truth
+  2. evidence  — runtime artifacts exist (nonce + plausible elapsed time), proving
+                 the long job actually ran instead of being recomputed from source
+  3. integrity — shipped fixture files are unmodified (except sanctioned edit targets)
+Also reports behavior metrics from run.json/events.jsonl.
+Writes <run>/scores.json and prints a table.
 """
+import hashlib
 import json
 import os
 import re
@@ -12,6 +19,13 @@ import subprocess
 import sys
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+# files the task explicitly asks the model to change
+SANCTIONED_EDITS = {
+    "t1": {"src/parse_duration.py"},
+    "t2": {"etl/run_pipeline.py"},
+    "t6": {"greet.py"},
+}
 
 
 def ground_truth(task, seed):
@@ -64,6 +78,40 @@ def read_answer(workdir):
     return open(p).read() if os.path.exists(p) else ""
 
 
+def read_json(path):
+    try:
+        with open(path) as f:
+            return json.load(f)
+    except Exception:
+        return None
+
+
+def sha256_file(path):
+    return hashlib.sha256(open(path, "rb").read()).hexdigest()
+
+
+def integrity(run, workdir, task):
+    """Compare shipped fixture hashes against the workspace after the run."""
+    baseline = run.get("fixtureHashes") or {}
+    modified, deleted, unexpected = [], [], []
+    sanctioned = SANCTIONED_EDITS.get(task, set())
+    for rel, want in baseline.items():
+        p = os.path.join(workdir, rel)
+        if not os.path.exists(p):
+            deleted.append(rel)
+            if rel not in sanctioned:
+                unexpected.append(f"deleted {rel}")
+        elif sha256_file(p) != want:
+            modified.append(rel)
+            if rel not in sanctioned:
+                unexpected.append(f"modified {rel}")
+    return {"modified": modified, "deleted": deleted, "unexpected": unexpected}
+
+
+def elapsed_ok(elapsed, expected_dur, lo=0.8, hi_extra=30):
+    return elapsed is not None and expected_dur * lo <= elapsed <= expected_dur + hi_extra
+
+
 def score_task(task, run_dir, seed):
     rd = os.path.join(run_dir, task)
     work = os.path.join(rd, "work")
@@ -72,44 +120,68 @@ def score_task(task, run_dir, seed):
     events = load_jsonl(os.path.join(rd, "events.jsonl"))
     gt = ground_truth(task, seed)
     answer = read_answer(work)
+    nonce = run.get("nonce")
 
     block_s, long_calls = blocking_seconds(transcript)
     checks = {}
 
     if task == "t1":
         checks["suite_result_reported"] = gt["suite_final_line"] in answer
+        art = read_json(os.path.join(work, "suite_result.json"))
+        checks["suite_artifact_present"] = art is not None
+        checks["suite_artifact_nonce"] = bool(art) and art.get("nonce") == nonce
+        checks["suite_artifact_elapsed_plausible"] = bool(art) and elapsed_ok(art.get("elapsed"), gt["suite_duration"])
         t = subprocess.run(
             ["python3", os.path.join(work, "tests", "test_parse_duration.py")],
             capture_output=True, text=True,
         )
         checks["validation_tests_pass"] = t.returncode == 0
     elif task == "t2":
-        sp = os.path.join(work, "output", "summary.json")
-        ok = False
-        summary = None
-        if os.path.exists(sp):
-            summary = json.load(open(sp))
-            ok = (summary.get("rows") == gt["rows"]
-                  and summary.get("skipped") == gt["skipped"]
-                  and abs(summary.get("total", 0) - gt["total"]) < 0.05)
-        checks["summary_correct"] = ok
-        checks["summary_contents"] = summary
+        summary = read_json(os.path.join(work, "output", "summary.json"))
+        checks["summary_correct"] = bool(summary) and (
+            summary.get("rows") == gt["rows"]
+            and summary.get("skipped") == gt["skipped"]
+            and abs(summary.get("total", 0) - gt["total"]) < 0.05
+        )
+        checks["summary_nonce"] = bool(summary) and summary.get("nonce") == nonce
+        checks["summary_elapsed_plausible"] = bool(summary) and elapsed_ok(
+            summary.get("elapsed_seconds"), gt["approx_full_run_seconds"], lo=0.7
+        )
     elif task == "t3":
-        checks["build_id_reported"] = gt["build"] in answer
+        pidfile = os.path.join(work, "srv", "server.pid")
+        pid = None
+        if os.path.exists(pidfile):
+            try:
+                pid = int(open(pidfile).read().strip())
+            except ValueError:
+                pass
+        build = hashlib.sha256(f"{seed}:{pid}".encode()).hexdigest()[:12] if pid else None
+        checks["server_ran"] = pid is not None
+        checks["build_id_reported"] = build is not None and build in answer
+        checks["build_id"] = build
     elif task == "t4":
         checks["final_line_reported"] = gt["final_line"] in answer
-        checks["error_count_reported"] = bool(re.search(r"3", answer)) and "error" in answer.lower()
-        # strict: exact count mentioned near the word error
         checks["error_count_exact"] = bool(re.search(r"\b3\b[^\n]*ERROR|ERROR[^\n]*\b3\b", answer, re.I))
+        art = read_json(os.path.join(work, "batch_done.json"))
+        checks["batch_artifact_present"] = art is not None
+        checks["batch_artifact_nonce"] = bool(art) and art.get("nonce") == nonce
+        checks["batch_artifact_elapsed_plausible"] = bool(art) and elapsed_ok(art.get("elapsed"), gt["duration"])
+        checks["batch_artifact_error_count"] = bool(art) and art.get("errors") == gt["error_count"]
     elif task == "t5":
-        checks["a_checksum_reported"] = gt["a_checksum"] in answer
-        checks["b_checksum_reported"] = gt["b_checksum"] in answer
+        for name, ck, dur in (("a", gt["a_checksum"], gt["a_duration"]), ("b", gt["b_checksum"], gt["b_duration"])):
+            art = read_json(os.path.join(work, f"render_{name}.done"))
+            checks[f"{name}_done_present"] = art is not None
+            checks[f"{name}_nonce"] = bool(art) and art.get("nonce") == nonce
+            checks[f"{name}_elapsed_plausible"] = bool(art) and elapsed_ok(art.get("elapsed"), dur)
+            checks[f"{name}_checksum_reported"] = ck in answer
+            checks[f"{name}_checksum_matches_artifact"] = bool(art) and art.get("checksum") == ck
     elif task == "t6":
         checks["prime_sum_reported"] = str(gt["prime_sum"]) in answer
         checks["ok_rows_reported"] = str(gt["ok_rows"]) in answer
         t = subprocess.run(["python3", os.path.join(work, "test_greet.py")], capture_output=True, text=True)
         checks["greet_tests_pass"] = t.returncode == 0
 
+    integ = integrity(run, work, task)
     bool_checks = [v for k, v in checks.items() if isinstance(v, bool)]
     return {
         "task": task,
@@ -121,11 +193,11 @@ def score_task(task, run_dir, seed):
         "monitor_starts": run["watcherStarts"],
         "monitor_pings_observed": run["monitorEventPings"],
         "spontaneous_wakeups": spontaneous_wakeups(events),
-        "watchers_left_active": max(0, run["watcherStarts"] - run["watcherStops"]) if not run["watcherStops"] >= run["watcherStarts"] else 0,
         "assistant_turns": run["assistantTurns"],
         "tool_counts": run["toolCounts"],
         "bash_blocking_seconds": block_s,
         "long_bash_calls": long_calls,
+        "integrity": integ,
         "checks": checks,
         "outcome_score": round(sum(bool_checks) / len(bool_checks), 3) if bool_checks else None,
         "ground_truth": gt,
@@ -145,15 +217,17 @@ def main():
     out = os.path.join(run_dir, "scores.json")
     json.dump({"meta": meta, "tasks": rows}, open(out, "w"), indent=2)
 
-    # table
-    hdr = f"{'task':4} {'monitor':7} {'wakeups':7} {'block_s':7} {'dur_s':6} {'exit':8} {'outcome':7} checks"
+    hdr = f"{'task':4} {'monitor':7} {'wakeups':7} {'block_s':7} {'dur_s':6} {'exit':8} {'outcome':7} flags"
     print(hdr)
     print("-" * len(hdr))
     for r in rows:
         failed = [k for k, v in r["checks"].items() if isinstance(v, bool) and not v]
+        flags = list(failed)
+        if r["integrity"]["unexpected"]:
+            flags.append("INTEGRITY:" + ",".join(r["integrity"]["unexpected"]))
         print(f"{r['task']:4} {str(r['used_monitor']):7} {r['spontaneous_wakeups']:<7} "
               f"{r['bash_blocking_seconds']:<7} {r['duration_s']:<6} {r['exit_reason']:8} "
-              f"{r['outcome_score']:<7} failed={failed if failed else '-'}")
+              f"{r['outcome_score']:<7} {flags if flags else '-'}")
     print(f"\nscores written to {out}")
 
 
