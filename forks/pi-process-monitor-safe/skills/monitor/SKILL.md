@@ -31,6 +31,10 @@ keep chatting / doing other work instead of blocking:
 - **Dev servers / builds** — ping on "listening", crash, or first error
 - **CI / long tests / migrations**
 - **Log tails** — watch a file for appended milestone/error lines
+- **Fix-and-rerun loops** — watch every run, including ones you expect to fail;
+  the crash/traceback lines become pings
+- **Work while waiting** — start the watcher, then do the task's other work; the
+  ping brings you back when the job finishes
 
 If it's under ~10s, just run it inline (bash). If it might run
 minutes-to-hours, use `monitor`.
