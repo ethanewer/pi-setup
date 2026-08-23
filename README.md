@@ -76,7 +76,6 @@ Extension forks and the upstream releases they are based on:
 | `pi-dynamic-workflows-safe` | `@quintinshaw/pi-dynamic-workflows` | `3.7.0` |
 | `pi-process-monitor-safe` | `pi-process-monitor` | rewrite, built on `1.3.0`, `2.0.2` reviewed and declined |
 | `pi-context-handoff` | — | first-party |
-| `pi-codex-compaction` | — | first-party |
 | `pi-btw-side` | — | first-party |
 | `pi-setup-maintenance` | — | first-party, skills only |
 
@@ -417,13 +416,14 @@ the doctor, and update the version table above.
 
 Update `PI_VERSION` in `install.sh`, test on macOS and Linux, and rerun the installer.
 The wrappers locate the installed Pi package dynamically, so they need no changes.
-`pi-context-handoff` uses only Pi's public API (`compact`, and the
-`session_before_compact` hook), so a Pi upgrade should not disturb it. If Pi ever changes
-that hook's contract the extension degrades to native compaction rather than failing.
-`pi-codex-compaction` is public API too, with one exception it checks at runtime: it builds
-Pi's `compactionSummary` message by hand, because `createCompactionSummaryMessage` is not
-exported from the package root, and verifies once per session that `convertToLlm` still
-renders it — falling back to a plain user message if a Pi release ever stops.
+`pi-context-handoff` uses only Pi's public API (`compact`, the
+`session_before_compact` hook, and the `context` hook for its merged-in mid-run fold), so a
+Pi upgrade should not disturb it. If Pi ever changes those hooks' contracts the extension
+degrades to native compaction / an unfolded request rather than failing. One shape it checks
+at runtime: it builds Pi's `compactionSummary` message by hand, because
+`createCompactionSummaryMessage` is not exported from the package root, and verifies once
+per session that `convertToLlm` still renders it — falling back to a plain user message if a
+Pi release ever stops.
 
 ## Evals
 

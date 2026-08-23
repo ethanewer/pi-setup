@@ -67,7 +67,8 @@ interface AssistantLike {
 	usage?: { output?: number } | null;
 }
 
-interface EntryLike {
+/** Shape of the session entries this reads. Only the field that matters is declared. */
+export interface EntryLike {
 	message?: AssistantLike | null;
 }
 

@@ -1,37 +1,39 @@
 /**
  * pi-context-handoff
  *
- * Makes Pi's compaction summary a usable handoff brief for a long autonomous run,
- * and does nothing else.
+ * Makes Pi's compaction summary a usable handoff brief for a long autonomous run, folds
+ * context mid-run the way Codex does so a single run can never overshoot the window, and
+ * resumes a run Pi abandoned at a compaction boundary. It must not be able to stop a run:
+ * it never calls ctx.abort(), never returns { cancel: true }, and every failure path in
+ * both halves degrades to stock Pi behavior.
  *
- * Design constraint, which is the whole reason this package exists: it must not be
- * able to stop a run. Pi compacts between agent runs and continues (agent-session's
- * _checkCompaction returns true and the loop in _runAgentPrompt carries on), and its
- * native summarization is retried. So this hooks session_before_compact, calls Pi's own
- * compact() with focus instructions plus a retry policy, and returns the result.
+ * This package is one set of machinery under one config. Its concerns stay separate:
  *
- * An earlier version of this comment said Pi "compacts mid-turn". It does not, and the
- * distinction matters: _checkCompaction is only reached from _handlePostAgentRun, after
- * `await this.agent.prompt(...)` has returned (agent-session.js:744-750). Everything
- * inside one agentic run — every LLM call and tool result in it — accumulates with no
- * threshold check, so context can pass the model's window mid-run and stay there until
- * the run ends. Nothing here can change that, and nothing here should try: the only
- * extension-facing trigger, ctx.compact(), begins with _disconnectFromAgent() and
- * abort(), so calling it from a turn_end hook would kill the run it was meant to protect.
- * See docs/LONG_RUNS.md.
+ *   - Handoff (this file, session_before_compact): Pi only decides *when* to compact; this
+ *     shapes *what the summary says*, calling Pi's own compact() with handoff-focus
+ *     instructions and a retry policy, falling back to native compaction on any failure.
+ *   - Fold (fold-hook.ts + fold.ts, the context hook): Pi's threshold check runs only
+ *     between runs, so one long run could overshoot the window and die. The fold shapes the
+ *     request mid-flight, Codex-style, without rewriting history. Every failure path sends
+ *     the original messages — byte-for-byte the behaviour of not installing this package.
+ *   - Resume (resume.ts, session_compact / agent_end / agent_settled): when Pi ends a run
+ *     on a truncated reply or provider error — a case Pi's overflow test misses — this
+ *     queues a resume message so agent.continue() keeps the run going. Never resumes
+ *     stop/aborted; gives up after 3 consecutive unfinished resumes. It can never stop a
+ *     run.
  *
- * It never calls ctx.abort() and never returns { cancel: true }. Every failure path
- * returns undefined, which means "Pi, do your own compaction" — the exact behaviour of
- * not having this package installed.
- *
- * The one thing it does send is a resume nudge, and only in a situation where the run is
- * otherwise already over. See resume.ts.
+ * The two compaction halves share one config file: handoff keys sit at the top level (as
+ * before), and fold settings live under the optional "fold" object.
  */
 
 import { compact, type ExtensionAPI, type ExtensionContext } from "@earendil-works/pi-coding-agent";
 
-import { carryFileLists } from "./carry-files.js";
+import { carryFileLists, type CompactionEntryLike } from "./carry-files.js";
+import { type ExtensionConfig, loadExtensionConfig } from "./config.js";
+import { registerFold } from "./fold-hook.js";
+import { buildHandoffFocus } from "./instructions.js";
 import {
+	type EntryLike,
 	FORCE_RESUME_ENV,
 	GAVE_UP_TEXT,
 	isUnfinishedStop,
@@ -40,57 +42,11 @@ import {
 	RESUME_TEXT,
 	ResumeGuard,
 } from "./resume.js";
-import { type HandoffConfig, loadHandoffConfig } from "./config.js";
-import { buildHandoffFocus } from "./instructions.js";
-
-/** Emitted at most once per session per distinct message, so a repeating fault cannot spam. */
-function createOnceNotifier() {
-	const seen = new Set<string>();
-	return (ctx: ExtensionContext, message: string, variant: "warning" | "info") => {
-		if (seen.has(message)) return;
-		seen.add(message);
-		if (!ctx.hasUI) return;
-		try {
-			ctx.ui.notify(message, variant);
-		} catch {
-			// A UI that refuses a notification must not affect compaction.
-		}
-	};
-}
-
-/**
- * Pi passes its own callbacks to compact() so the TUI can show a retry indicator. Calling
- * compact() ourselves means supplying them, or a compaction that is quietly retrying a
- * failed provider call is indistinguishable from one that has hung.
- */
-function retryCallbacks(ctx: ExtensionContext) {
-	const say = (message: string | undefined) => {
-		if (!ctx.hasUI) return;
-		try {
-			ctx.ui.setStatus("context-handoff", message);
-		} catch {
-			// Status is decoration; never let it affect the compaction.
-		}
-	};
-	return {
-		onRetryScheduled: (attempt: number, maxAttempts: number, delayMs: number) =>
-			say(`handoff brief: retry ${attempt}/${maxAttempts} in ${Math.round(delayMs / 1000)}s`),
-		onRetryAttemptStart: () => say("handoff brief: retrying"),
-		onRetryFinished: () => say(undefined),
-	};
-}
-
-function describe(error: unknown): string {
-	if (error instanceof Error && typeof error.message === "string") return error.message;
-	try {
-		return String(error);
-	} catch {
-		return "unknown error";
-	}
-}
+import { createOnceNotifier, describe, retryCallbacks } from "./util.js";
 
 export default function contextHandoffExtension(pi: ExtensionAPI) {
 	const notifyOnce = createOnceNotifier();
+	let config: ExtensionConfig | null = null;
 	let configWarned = false;
 	const resumeGuard = new ResumeGuard();
 	// Set by session_before_compact, read by session_compact: only the former is handed the
@@ -100,20 +56,32 @@ export default function contextHandoffExtension(pi: ExtensionAPI) {
 	// carries no payload.
 	let lastRunStopReason: string | undefined;
 
-	pi.on("session_before_compact", async (event, ctx) => {
-		lastCompactionFollowedTruncation = lastAssistantWasTruncated(event.branchEntries);
-		let config: HandoffConfig;
-		try {
-			const loaded = loadHandoffConfig();
-			config = loaded.config;
-			if (loaded.warning && !configWarned) {
-				configWarned = true;
-				notifyOnce(ctx, loaded.warning, "warning");
-			}
-		} catch {
-			// loadHandoffConfig is written not to throw; if it somehow does, defer to Pi.
-			return undefined;
+	/**
+	 * Single cache shared with the fold half: one config file, loaded once, warning once.
+	 * Never throws — a broken config degrades to defaults, never to a disturbed request.
+	 */
+	const getConfig = (ctx: ExtensionContext): ExtensionConfig => {
+		if (config) return config;
+		const loaded = loadExtensionConfig();
+		config = loaded.config;
+		if (loaded.warnings.length > 0 && !configWarned) {
+			configWarned = true;
+			notifyOnce(ctx, loaded.warnings.join("\n"), "warning");
 		}
+		return config;
+	};
+
+	// The mid-run fold half. Registered first so its session_compact fold-invalidation runs
+	// ahead of the resume logic below — mirroring the order the two standalone packages
+	// subscribed in.
+	registerFold(pi, getConfig);
+
+	pi.on("session_before_compact", async (event, ctx) => {
+		// Pi's SessionEntry union is wider than the structural shapes these two readers
+		// declare; the fields they use are exactly the ones present at runtime.
+		const branchEntries = event.branchEntries as unknown as EntryLike[];
+		lastCompactionFollowedTruncation = lastAssistantWasTruncated(branchEntries);
+		const config = getConfig(ctx).handoff;
 
 		if (!config.enabled) return undefined;
 
@@ -137,7 +105,9 @@ export default function contextHandoffExtension(pi: ExtensionAPI) {
 				event.preparation,
 				model,
 				auth.apiKey,
-				auth.headers,
+				// Pi's own exported types disagree here (ProviderHeaders vs Record<string, string>);
+				// the runtime value is one headers object passed through unchanged.
+				auth.headers as Record<string, string> | undefined,
 				focus,
 				event.signal,
 				ctx.thinkingLevel,
@@ -149,7 +119,7 @@ export default function contextHandoffExtension(pi: ExtensionAPI) {
 				config.retry,
 				// Pi drives its retry indicator through these. Without them a compaction that
 				// was retrying looked identical to one that had hung.
-				retryCallbacks(ctx),
+				retryCallbacks(ctx, "context-handoff", "handoff brief"),
 			);
 
 			// A summary Pi cannot use is worse than none: returning a malformed
@@ -163,7 +133,7 @@ export default function contextHandoffExtension(pi: ExtensionAPI) {
 			// Pi refuses to read details from a hook-produced compaction, so it will never
 			// carry this entry's file lists into the next one. Merge them here or the
 			// accumulated read/modified lists restart empty at every boundary.
-			return { compaction: carryFileLists(compaction, event.branchEntries) };
+			return { compaction: carryFileLists(compaction, branchEntries as unknown as CompactionEntryLike[]) };
 		} catch (error) {
 			// Includes the abort case. Pi's own compaction path handles an aborted
 			// signal, so handing back undefined stays correct there too.

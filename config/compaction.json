@@ -24,7 +24,7 @@
     "help because it aborts the agent. Only ending the run lets Pi compact.",
     "",
     "An earlier version of this note said no extension could bound within-run growth. That is",
-    "no longer true, and the distinction matters for this number. pi-codex-compaction shrinks",
+    "no longer true, and the distinction matters for this number. the fold half of pi-context-handoff shrinks",
     "the REQUEST from the context hook (before each LLM call), so a long run stays inside the",
     "window without Pi compacting. It does not shrink HISTORY - only Pi's own compaction, which",
     "this reserve governs, does that. So 68000 stays as it is: it is sized for the case where",

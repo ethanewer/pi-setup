@@ -29,7 +29,6 @@ const FORKS_MINUS_WORKFLOWS = [
 	"local/pi-voice-stt-safe",
 	"local/pi-agent-browser-native-safe",
 	"local/pi-context-handoff",
-	"local/pi-codex-compaction",
 	"local/pi-btw-side",
 	"local/pi-process-monitor-safe",
 	"local/pi-setup-maintenance",
@@ -39,7 +38,6 @@ const ALL_FORKS = [
 	"local/pi-agent-browser-native-safe",
 	"local/pi-dynamic-workflows-safe",
 	"local/pi-context-handoff",
-	"local/pi-codex-compaction",
 	"local/pi-btw-side",
 	"local/pi-process-monitor-safe",
 	"local/pi-setup-maintenance",
@@ -125,7 +123,7 @@ test("the model scope lands on all three profiles", () => {
 	expect(JSON.parse(readFileSync(pPath, "utf8")).enabledModels).toEqual(SCOPE);
 });
 
-test("pi loads every fork except workflows; piwf loads all eight", () => {
+test("pi loads every fork except workflows; piwf loads all forks", () => {
 	runWriter();
 	const main = JSON.parse(readFileSync(mainPath, "utf8"));
 	expect(main.packages).toEqual(["npm:user-pkg", ...FORKS_MINUS_WORKFLOWS]);
