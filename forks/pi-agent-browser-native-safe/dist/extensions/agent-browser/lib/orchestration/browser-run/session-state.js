@@ -1,4 +1,5 @@
 import { rm } from "node:fs/promises";
+import { getAgentBrowserSessionIdentityKey, VALUE_FLAGS } from "../../argv-grammar.js";
 import { runAgentBrowserProcess } from "../../process.js";
 import { buildAgentBrowserNextActions } from "../../results/action-recommendations.js";
 import { parseAgentBrowserEnvelope } from "../../results/envelope.js";
@@ -7,7 +8,7 @@ import { getSessionPageStateKey, isAboutBlankUrl, normalizeComparableUrl, normal
 import { isCloseCommand, isElectronPostCommandHealthCommand, isNavigationObservableCommandName, isRefGuardedCommand, isRefInvalidatingBatchCommand, isSessionTabPinningExcludedCommand, isSessionTabPostCommandCorrectionExcludedCommand, } from "../../command-taxonomy.js";
 import { chooseOpenResultTabCorrection } from "../../runtime.js";
 import { isRecord } from "../../parsing.js";
-import { parseUserBatchStdin } from "../batch-stdin.js";
+import { getUpstreamEffectiveBatchSteps, parseUserBatchStdin } from "../batch-stdin.js";
 export const NAVIGATION_SUMMARY_EVAL = `({ title: document.title, url: location.href })`;
 export function applyBrowserRunStatePatch(state, patch) {
     if (!patch)
@@ -38,7 +39,7 @@ export function applyBrowserRunStatePatch(state, patch) {
 export const getSessionContextKey = getSessionPageStateKey;
 export function buildSessionDetailFields(sessionName, usedImplicitSession, namespace, managedSessionRestoreDisabled = false) {
     return {
-        ...(namespace ? { namespace } : {}),
+        ...(namespace !== undefined ? { namespace } : {}),
         ...(sessionName
             ? {
                 sessionName,
@@ -213,10 +214,15 @@ export function getTraceOwnerGuardMessage(options) {
         : `Wrapper believes tracing for session ${options.sessionName} is owned by ${activeOwner}; run ${activeOwner} stop instead of ${owner} stop.`;
 }
 export function updateTraceOwnerState(options) {
-    const owner = getTraceOwner(options.command);
-    if (!owner || !options.sessionName || !options.succeeded) {
+    if (!options.sessionName || !options.succeeded)
+        return;
+    if (isCloseCommand(options.command)) {
+        options.traceOwners.delete(options.sessionName);
         return;
     }
+    const owner = getTraceOwner(options.command);
+    if (!owner)
+        return;
     if (options.subcommand === "start") {
         options.traceOwners.set(options.sessionName, owner);
     }
@@ -248,8 +254,6 @@ export function extractNavigationSummaryFromData(data) {
 export function shouldCaptureNavigationSummary(command, data) {
     if (command === "eval")
         return true;
-    if (isRecord(data) && typeof data.clicked === "string" && !data.clicked.startsWith("@") && !data.clicked.startsWith("ref=") && typeof data.href !== "string")
-        return false;
     return (isNavigationObservableCommandName(command) &&
         (!isRecord(data) || (typeof data.title !== "string" && typeof data.url !== "string")));
 }
@@ -269,29 +273,42 @@ function extractBatchResultCommand(item) {
     return Array.isArray(item.command) ? item.command.filter((token) => typeof token === "string") : [];
 }
 export function getStaleRefArgs(commandTokens, stdin) {
-    if (commandTokens[0] !== "batch" || stdin === undefined) {
+    if (commandTokens[0] !== "batch") {
         return commandTokens;
     }
-    const parsed = parseUserBatchStdin(stdin);
-    if (parsed.error || parsed.steps === undefined) {
-        return commandTokens;
-    }
-    return parsed.steps.flatMap((step) => step);
+    const steps = getUpstreamEffectiveBatchSteps(commandTokens, stdin);
+    return steps.length > 0 ? steps.flatMap((step) => step) : commandTokens;
+}
+// Selector-carrying flags whose values remain page-scoped refs; values of other value-taking flags
+// (--text, --baseline, --name, and similar) are literal text or paths that may merely look like refs,
+// per upstream parsing. Boolean flags such as --new-tab or --full do not consume the following token,
+// so a ref after them is a genuine positional selector and must stay guarded.
+const SELECTOR_FLAG_TOKENS = new Set(["--selector", "-s"]);
+const SHORT_VALUE_FLAG_TOKENS = new Set(["-b", "-o", "-t"]);
+function isNonSelectorValueFlagToken(token) {
+    if (token === undefined || SELECTOR_FLAG_TOKENS.has(token))
+        return false;
+    return VALUE_FLAGS.has(token) || SHORT_VALUE_FLAG_TOKENS.has(token);
 }
 function collectRefsFromTokens(tokens) {
-    return tokens.filter((token) => /^@e\d+\b/.test(token)).map((token) => token.slice(1));
+    const refs = [];
+    for (const [index, token] of tokens.entries()) {
+        if (!/^@e\d+\b/.test(token))
+            continue;
+        if (isNonSelectorValueFlagToken(index > 0 ? tokens[index - 1] : undefined))
+            continue;
+        refs.push(token.slice(1));
+    }
+    return refs;
 }
 export function getGuardedRefUsage(commandTokens, stdin, options = {}) {
     const collectFromStep = (step) => isRefGuardedCommand(step[0]) ? collectRefsFromTokens(step) : [];
-    if (commandTokens[0] !== "batch" || stdin === undefined) {
+    if (commandTokens[0] !== "batch") {
         return collectFromStep(commandTokens);
     }
-    const parsed = parseUserBatchStdin(stdin);
-    if (parsed.error || parsed.steps === undefined) {
-        return collectFromStep(commandTokens);
-    }
+    const steps = getUpstreamEffectiveBatchSteps(commandTokens, stdin);
     const refsBeforeInBatchSnapshot = [];
-    for (const step of parsed.steps) {
+    for (const step of steps) {
         if (!options.includeRefsAfterBatchSnapshot && (step[0] ?? "") === "snapshot")
             break;
         refsBeforeInBatchSnapshot.push(...collectFromStep(step));
@@ -318,13 +335,10 @@ function isSafeSameSnapshotFormBatchStep(step, refSnapshot) {
     return false;
 }
 function getBatchRefInvalidationMessage(commandTokens, stdin, refSnapshot) {
-    if (commandTokens[0] !== "batch" || stdin === undefined)
-        return undefined;
-    const parsed = parseUserBatchStdin(stdin);
-    if (parsed.error || parsed.steps === undefined)
+    if (commandTokens[0] !== "batch")
         return undefined;
     let priorStepInvalidatesRefs = false;
-    for (const step of parsed.steps) {
+    for (const step of getUpstreamEffectiveBatchSteps(commandTokens, stdin)) {
         if ((step[0] ?? "") === "snapshot") {
             priorStepInvalidatesRefs = false;
         }
@@ -332,7 +346,7 @@ function getBatchRefInvalidationMessage(commandTokens, stdin, refSnapshot) {
         if (refIds.length > 0 && isRefGuardedCommand(step[0]) && priorStepInvalidatesRefs) {
             return `Batch step ${step[0]} uses page-scoped ref ${refIds.map((refId) => `@${refId}`).join(", ")} after an earlier batch step can navigate or mutate the page. Split the batch, run snapshot -i after the page-changing step, then retry with current refs.`;
         }
-        if (isRefInvalidatingBatchCommand(step[0]) && !isSafeSameSnapshotFormBatchStep(step, refSnapshot)) {
+        if (isRefInvalidatingBatchCommand(step) && !isSafeSameSnapshotFormBatchStep(step, refSnapshot)) {
             priorStepInvalidatesRefs = true;
         }
     }
@@ -355,7 +369,9 @@ export function buildStaleRefPreflight(options) {
         return undefined;
     if (options.refSnapshotInvalidation) {
         return {
-            message: `Ref ${usedRefIds.map((refId) => `@${refId}`).join(", ")} cannot be used because the latest snapshot for this session reported No active page. Run snapshot -i successfully before using page-scoped refs.`,
+            message: options.refSnapshotInvalidation.reason === "page-transition"
+                ? `Ref ${usedRefIds.map((refId) => `@${refId}`).join(", ")} cannot be used yet. ${options.refSnapshotInvalidation.summary}`
+                : `Ref ${usedRefIds.map((refId) => `@${refId}`).join(", ")} cannot be used because the latest snapshot for this session reported No active page. Run snapshot -i successfully before using page-scoped refs.`,
             refIds: usedRefIds,
             snapshotInvalidation: options.refSnapshotInvalidation,
         };
@@ -401,11 +417,22 @@ export function shouldPinSessionTabForCommand(options) {
 }
 export function buildPinnedBatchPlan(options) {
     if (options.command === "batch") {
+        const tabSelectionStep = ["tab", options.selectedTab];
+        // Upstream executes raw argument steps exclusively when any exist, so the
+        // pinned rewrite must dispatch those same steps rather than resurrecting
+        // caller stdin the guard never scanned.
+        const argumentSteps = getUpstreamEffectiveBatchSteps(options.commandTokens, undefined);
+        if (argumentSteps.length > 0) {
+            return {
+                includeNavigationSummary: false,
+                steps: [tabSelectionStep, ...argumentSteps],
+                unwrapMode: "user-batch",
+            };
+        }
         const parsed = parseUserBatchStdin(options.stdin);
         if (parsed.error) {
             return { error: parsed.error };
         }
-        const tabSelectionStep = ["tab", options.selectedTab];
         return {
             includeNavigationSummary: false,
             steps: [tabSelectionStep, ...(parsed.steps ?? [])],
@@ -613,10 +640,11 @@ export function electronTargetLabel(target) {
 export function getActiveElectronRecords(records) {
     return [...records.values()].filter((record) => record.cleanupState === "active" || record.cleanupState === "dead" || record.cleanupState === "partial" || record.cleanupState === "failed");
 }
-export function findElectronLaunchRecordForSession(sessionName, records) {
+export function findElectronLaunchRecordForSession(sessionName, records, namespace) {
     if (!sessionName)
         return undefined;
-    return getActiveElectronRecords(records).find((record) => record.sessionName === sessionName);
+    const sessionKey = getAgentBrowserSessionIdentityKey(sessionName, namespace);
+    return getActiveElectronRecords(records).find((record) => record.sessionName && getAgentBrowserSessionIdentityKey(record.sessionName, record.namespace) === sessionKey);
 }
 function buildElectronReattachNextAction(record, liveTarget) {
     const endpoint = liveTarget?.webSocketDebuggerUrl ?? record.webSocketDebuggerUrl ?? String(record.port);

@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { chmodSync, lstatSync, mkdirSync, readFileSync, readdirSync, realpathSync, renameSync, rmdirSync, unlinkSync, writeFileSync } from "node:fs";
 import { basename, dirname, isAbsolute, join } from "node:path";
-import { createManagedSessionRestoreKey, directoryContainsSymlink, ensureManagedSessionRestoreStorageIsSecure, ensureOwnerOnlyDirectory, getManagedRestoreSessionsDirectory, hasManagedSessionRestoreProjectIdentity, isManagedSessionRestoreKey, resolveManagedSessionRestoreCheckoutRoot, resolveManagedSessionRestoreHome, } from "./managed-session-storage.js";
+import { createManagedSessionRestoreKey, directoryContainsSymlink, ensureManagedSessionRestoreStorageIsSecure, hasManagedSessionRestoreProjectIdentity, ensureOwnerOnlyDirectory, getManagedRestoreSessionsDirectory, isManagedSessionRestoreKey, resolveManagedSessionRestoreCheckoutRoot, resolveManagedSessionRestoreHome, } from "./managed-session-storage.js";
 const OWNED_RESTORE_SNAPSHOT_FAMILIES_TO_KEEP = 2;
 const OWNED_RESTORE_SNAPSHOT_MAX_RECORDS = 256;
 const OWNED_RESTORE_SNAPSHOT_RECORD_MAX_BYTES = 16 * 1_024;
@@ -344,9 +344,7 @@ export function pruneOwnedManagedSessionRestoreSnapshots(options) {
         if (!changed)
             break;
     }
-    const protectedRestoreKey = hasManagedSessionRestoreProjectIdentity(options.cwd)
-        ? createManagedSessionRestoreKey(options.cwd)
-        : restoreKey;
+    const protectedRestoreKey = restoreKey;
     if (!lineage)
         return removed;
     removed += pruneExpiredOtherRestoreKeys({

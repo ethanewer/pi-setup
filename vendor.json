@@ -10,17 +10,17 @@
     },
     "pi-agent-browser-native-safe": {
       "upstream": "pi-agent-browser-native",
-      "version": "0.3.0",
+      "version": "0.5.0",
       "live": "dist/extensions/agent-browser/index.js",
       "liveTree": "dist",
-      "patch": "patches/pi-agent-browser-native@0.3.0.patch"
+      "patch": "patches/pi-agent-browser-native@0.5.0.patch"
     },
     "pi-dynamic-workflows-safe": {
       "upstream": "@quintinshaw/pi-dynamic-workflows",
-      "version": "3.6.0",
+      "version": "3.7.0",
       "live": "extensions/workflow/index.ts",
       "liveTree": "src",
-      "patch": "patches/@quintinshaw+pi-dynamic-workflows@3.6.0.patch",
+      "patch": "patches/@quintinshaw+pi-dynamic-workflows@3.7.0.patch",
       "note": "extensions/workflow/index.ts imports ../../src/*.js, so src/ is the tree Pi loads. dist/ is a compiled mirror reachable only through the package exports field; rebuild it with npm run build."
     },
     "pi-process-monitor-safe": {
@@ -54,15 +54,7 @@
       "live": "extensions/context-handoff/index.ts",
       "liveTree": "extensions/context-handoff",
       "patch": null,
-      "note": "First-party extension, not a fork: replaces pi-continue. Steers Pi's own compaction and cannot abort a turn. No upstream to track and nothing to re-vendor."
-    },
-    "pi-codex-compaction": {
-      "upstream": null,
-      "version": "1.0.0",
-      "live": "extensions/codex-compaction/index.ts",
-      "liveTree": "extensions/codex-compaction",
-      "patch": null,
-      "note": "First-party. Ports Codex's mid-turn compaction (codex-rs/core/src/session/turn.rs:493) onto Pi's `context` hook, which is the only extension-facing point inside an agent run: Pi checks its own threshold only in _handlePostAgentRun and before a new prompt, and ctx.compact() aborts the agent. Trigger is 90% of the context window, derived and clamped the way Codex derives it (protocol/src/openai_models.rs:310); a configured value can only lower it. Unlike Codex it does not rewrite session history - the hook shapes one request - so every failure path sends the original messages and behaves as if uninstalled. Depends on one shape Pi does not export from its package root, the compactionSummary message built by createCompactionSummaryMessage; index.ts verifies once per session that convertToLlm still renders it and falls back to a plain user message if not."
+      "note": "First-party extension, not a fork: replaces pi-continue. Steers Pi's own compaction, cannot abort a turn, and includes a mid-run fold of the request. No upstream to track and nothing to re-vendor."
     }
   }
 }

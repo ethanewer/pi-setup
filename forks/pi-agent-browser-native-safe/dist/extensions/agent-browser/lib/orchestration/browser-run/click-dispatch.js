@@ -245,6 +245,7 @@ export async function collectClickDispatchDiagnostic(options) {
     const result = getEvalResultRecord(data);
     if (!result)
         return undefined;
+    options.probe.cleaned = true;
     const status = typeof result.status === "string" ? result.status : undefined;
     if (status !== "no-native-event-observed")
         return undefined;
@@ -264,7 +265,7 @@ export async function collectClickDispatchDiagnostic(options) {
     };
 }
 export async function cleanupClickDispatchProbe(options) {
-    if (!options.probe || !options.sessionName)
+    if (!options.probe || options.probe.cleaned || !options.sessionName)
         return;
     await runSessionCommandData({
         args: ["eval", "--stdin"],

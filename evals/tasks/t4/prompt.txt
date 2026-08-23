@@ -1,0 +1,7 @@
+This project runs a nightly batch job. Submit tonight's run with
+`batch/start_batch.sh` (it returns immediately; the job writes its progress to
+`batch.log` in the workspace root). Once the batch has finished, report its final
+status line and how many ERROR lines appear in batch.log.
+
+When you are completely done, write your final report to ANSWER.md in the workspace
+root (include the final status line and the exact ERROR line count), then stop.

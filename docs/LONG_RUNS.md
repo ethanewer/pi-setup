@@ -52,7 +52,7 @@ never injects a resume prompt, and every failure path returns `undefined` — wh
 ### 3: too many monitors, no way to close them
 
 Already solved by `pi-process-monitor-safe`: a 16-watcher cap enforced in `launch()`,
-plus `monitor_kill` and `monitor_kill_all`. Heartbeats are off by default, aggregated into
+plus `monitor_kill` (pass `id: "*"` to stop every watcher). Heartbeats are off by default, aggregated into
 one message by a single 30s scheduler, and capped at 8 KB / 64 lines, so watchers cannot
 flood the context either.
 
@@ -160,7 +160,7 @@ at both ends, and the low end is the one that actually bit.
 > actually receives (`agent-loop.js:181`). That is the same position in the loop where Codex
 > makes its own mid-turn compaction decision, and it is reachable from an extension.
 >
-> [`pi-codex-compaction`](../forks/pi-codex-compaction/README.md) uses it. See
+> the fold half of [`pi-context-handoff`](../forks/pi-context-handoff/README.md) uses it. See
 > [Folding context inside a run](#folding-context-inside-a-run) below for what that does and
 > does not change. Two things stay true regardless: within-run *history* still grows, because
 > that fold shapes one request and never rewrites the session; and a run that never yields
@@ -288,26 +288,26 @@ between runs. Codex does not have that gap: `codex-rs/core/src/session/turn.rs:4
 after every sampling request, compacts inline, and `continue`s the loop, so compaction is a
 step in the loop rather than a verdict on whether the loop survives.
 
-[`pi-codex-compaction`](../forks/pi-codex-compaction/README.md) puts that decision at the
+The fold half of [`pi-context-handoff`](../forks/pi-context-handoff/README.md) puts that decision at the
 same point in Pi's loop, using the `context` hook. Above 90% of the context window — Codex's
 own trigger, `(context_window * 9) / 10`, and configurable only downward — the old part of the
 history is replaced, *for that request only*, with a summary of it, the user's instructions
 from it verbatim, and the recent tail untouched.
 
 **What it changes.** A single long run stops walking off the end of the window. Verified with
-the `PI_CODEX_COMPACTION_FORCE_TRIGGER_TOKENS` seam, since a 245000-token conversation cannot
+the `PI_CONTEXT_HANDOFF_FORCE_TRIGGER_TOKENS` seam, since a 245000-token conversation cannot
 be produced on demand: across four tool calls in one run the provider's own usage records went
 6352 → 8186 → 10822 → **9442** → **9470** tokens, falling at the first fold and then staying
 flat while two more tool results arrived. Both folds discarded the original user message and
 both rescued it verbatim, and the run still answered the literal string it had been asked for.
-The audit trail is in the session: one `codex-compaction-fold` custom entry per fold, which
+The audit trail is in the session: one `context-handoff-fold` custom entry per fold, which
 Pi persists and never shows the model.
 
 **What it does not change.** Four things, all of them load-bearing:
 
 1. **History still grows.** The `context` hook shapes one request; it does not rewrite the
    session. The transcript, and Pi's own footer percentage, keep counting everything. Only
-   what is *sent* shrinks. `/codex-compaction` shows the real figure.
+   what is *sent* shrinks. `/context-handoff` shows the real figure.
 2. **It is not a replacement for Pi's compaction.** Pi's between-runs compaction is the one
    that genuinely shrinks history, and `reserveTokens` still governs it. When it fires, the
    fold's fingerprints stop matching and the fold is discarded in favour of it.

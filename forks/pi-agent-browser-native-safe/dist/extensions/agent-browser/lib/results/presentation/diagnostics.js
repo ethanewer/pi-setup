@@ -61,7 +61,9 @@ export function getTabSummary(data) {
                     ? String(tab.index)
                     : String(index);
         const labelText = label && label !== tabSelector ? ` label=${redactModelFacingText(label)}` : "";
-        return `${marker} [${tabSelector}]${labelText} ${title} — ${url}`;
+        const targetId = typeof tab.targetId === "string" && tab.targetId.trim().length > 0 ? tab.targetId.trim() : undefined;
+        const targetText = targetId && targetId !== tabSelector ? ` target=${redactModelFacingText(targetId)}` : "";
+        return `${marker} [${tabSelector}]${labelText}${targetText} ${title} — ${url}`;
     });
     return lines.join("\n");
 }
@@ -348,6 +350,8 @@ function formatNetworkRequestLine(item, index) {
 }
 function formatNetworkRequestsText(data, commandInfo) {
     const requests = getArrayField(data, "requests");
+    if (isClearDiagnosticCommand(commandInfo) && data.cleared === true && !requests)
+        return "Network request buffer cleared.";
     if (!requests)
         return undefined;
     if (isClearDiagnosticCommand(commandInfo)) {
@@ -593,6 +597,8 @@ export function buildStreamNextActions(commandInfo, data, sessionName) {
 }
 function formatConsoleText(data, commandInfo) {
     const messages = getArrayField(data, "messages");
+    if (isClearDiagnosticCommand(commandInfo) && data.cleared === true && !messages)
+        return "Console buffer cleared.";
     if (!messages)
         return undefined;
     if (isClearDiagnosticCommand(commandInfo)) {

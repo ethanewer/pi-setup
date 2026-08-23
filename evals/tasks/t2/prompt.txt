@@ -1,0 +1,8 @@
+The ETL pipeline in `etl/` processes a generated order dataset and is supposed to
+write `output/summary.json`. Run it (`python3 etl/run_pipeline.py`) and make sure it
+completes on the full dataset and produces the summary. If it fails, fix the pipeline
+so it completes: malformed amount values must be skipped and counted in the summary's
+`skipped` field (do not treat them as zero). Report the final summary contents.
+
+When you are completely done, write your final report to ANSWER.md in the workspace
+root (include the final summary.json contents), then stop.

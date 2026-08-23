@@ -80,18 +80,17 @@ rather than as a supported claim.
 | Component | Version |
 |---|---:|
 | `@earendil-works/pi-coding-agent` | `0.84.2` |
-| `agent-browser` | `0.33.2` |
+| `agent-browser` | `0.34.0` |
 
 Extension forks and the upstream releases they are based on:
 
 | Fork (Pi local package) | Upstream | Upstream version |
 |---|---|---:|
 | `pi-voice-stt-safe` | `pi-voice-stt` | `0.6.0` |
-| `pi-agent-browser-native-safe` | `pi-agent-browser-native` | `0.3.0` |
-| `pi-dynamic-workflows-safe` | `@quintinshaw/pi-dynamic-workflows` | `3.6.0` |
+| `pi-agent-browser-native-safe` | `pi-agent-browser-native` | `0.5.0` |
+| `pi-dynamic-workflows-safe` | `@quintinshaw/pi-dynamic-workflows` | `3.7.0` |
 | `pi-process-monitor-safe` | `pi-process-monitor` | rewrite, built on `1.3.0`, `2.0.2` reviewed and declined |
 | `pi-context-handoff` | — | first-party |
-| `pi-codex-compaction` | — | first-party |
 | `pi-btw-side` | — | first-party |
 | `pi-setup-maintenance` | — | first-party, skills only |
 
@@ -210,12 +209,15 @@ All three entrypoints (`pi`, `piwf`, and `p`) restrict Ctrl+P model cycling (the
 settings (`~/.pi/agent`, `~/.pi/agent-wf`, and `~/.pi/agent-p`):
 
 ```text
-openrouter/z-ai/glm-5.3
-openai/gpt-5.6-luna
-openai/gpt-5.6-sol
-openai/gpt-5.6-terra
 openrouter/deepseek/deepseek-v4-flash-0731
 openrouter/deepseek/deepseek-v4-pro-0813
+openrouter/z-ai/glm-5.2
+openrouter/z-ai/glm-5.3
+openrouter/moonshotai/kimi-k3
+openrouter/qwen/qwen3.8-max
+openai/gpt-5.6-sol
+openai/gpt-5.6-terra
+openai/gpt-5.6-luna
 ```
 
 The patterns are canonical `provider/id`, so each matches exactly one model. Two
@@ -224,7 +226,7 @@ consequences of how Pi applies the list are worth knowing:
 - It is a managed default: `install.sh` rewrites `enabledModels` on every install, so a
   scope changed through `/scoped-models` reverts at the next reinstall.
 - When a profile's saved default model is **not** in the scope, Pi starts new sessions on
-  the first scoped model (`openrouter/z-ai/glm-5.3`) instead of the saved default. All
+  the first scoped model (`openrouter/deepseek/deepseek-v4-flash-0731`) instead of the saved default. All
   three profiles' current defaults are inside the scope, so this only bites if the
   default is later changed to something outside it.
 
@@ -429,13 +431,34 @@ the doctor, and update the version table above.
 
 Update `pi` in `lib/versions.json`, test on macOS, Linux, and Windows, and rerun the installer.
 The wrappers locate the installed Pi package dynamically, so they need no changes.
-`pi-context-handoff` uses only Pi's public API (`compact`, and the
-`session_before_compact` hook), so a Pi upgrade should not disturb it. If Pi ever changes
-that hook's contract the extension degrades to native compaction rather than failing.
-`pi-codex-compaction` is public API too, with one exception it checks at runtime: it builds
-Pi's `compactionSummary` message by hand, because `createCompactionSummaryMessage` is not
-exported from the package root, and verifies once per session that `convertToLlm` still
-renders it — falling back to a plain user message if a Pi release ever stops.
+`pi-context-handoff` uses only Pi's public API (`compact`, the
+`session_before_compact` hook, and the `context` hook for its merged-in mid-run fold), so a
+Pi upgrade should not disturb it. If Pi ever changes those hooks' contracts the extension
+degrades to native compaction / an unfolded request rather than failing. One shape it checks
+at runtime: it builds Pi's `compactionSummary` message by hand, because
+`createCompactionSummaryMessage` is not exported from the package root, and verifies once
+per session that `convertToLlm` still renders it — falling back to a plain user message if a
+Pi release ever stops.
+
+## Evals
+
+`evals/` holds behavioral evals for this setup's extensions. The first one is
+**monitor-bench**: scripted tasks with long, seeded, unknown-duration commands (test
+suites, crashing pipelines, slow-boot servers, detached batch jobs) plus
+a fast control task. The prompts never mention background watching; the eval measures
+whether a model spontaneously reaches for the monitor extension, whether it trusts the
+pings enough to stop blocking, and whether it still completes the goals.
+
+```bash
+cd evals
+SEED=42 MODEL="openai/gpt-5.6-sol" ./run.sh   # all tasks in parallel
+python3 score/score.py results/latest
+```
+
+See [`evals/README.md`](evals/README.md) for task design, metrics, and reference results
+(four models x three seeds: adoption 10–12/12 long-job tasks, genuine ping-waiting
+8–11/12; the eval also drove a simplification of the monitor extension's model surface
+from 4 tools/10 params/3 guidelines to 3/6/1, which improved trust for every model).
 
 ## Performance
 

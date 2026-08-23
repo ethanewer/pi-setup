@@ -23,6 +23,7 @@
  *   file, so nothing can be restored (or leak) across restarts.
  */
 
+import path from "node:path";
 import {
   type ChildHandle,
   type Clock,
@@ -608,6 +609,9 @@ export function createMonitorRuntime(deps: RuntimeDeps): MonitorRuntime {
 
     const mode: MonitorMode = logFile ? "file" : opts.intervalSeconds ? "poll" : "spawn";
     const cwd = opts.cwd ?? deps.defaultCwd();
+    // Resolve relative logFile against the watcher cwd (session cwd), matching how
+    // the model saw paths; otherwise it silently tails the extension process cwd.
+    const watchFile = logFile && !path.isAbsolute(logFile) ? path.join(cwd, logFile) : logFile;
     const coalesceMs = Math.max(0, opts.coalesceSeconds ?? DEFAULT_COALESCE_SECONDS) * 1000;
     const maxLines = opts.maxLines ?? DEFAULT_MAX_LINES;
     const matcher = compileMatchers(opts.notifyOn);
@@ -648,7 +652,9 @@ export function createMonitorRuntime(deps: RuntimeDeps): MonitorRuntime {
       const push = (line: string): void => coalescer.push(line);
 
       if (opts.heartbeatMinutes && opts.heartbeatMinutes > 0) {
-        const intervalMs = Math.max(1, opts.heartbeatMinutes) * 60_000;
+        // Floor at 0.5 min: the scheduler ticks every 30s, so anything finer
+        // could not be honored anyway.
+        const intervalMs = Math.max(0.5, opts.heartbeatMinutes) * 60_000;
         w.heartbeat = { intervalMs, nextAt: clock.now() + intervalMs };
         ensureHeartbeatScheduler();
       }
@@ -664,7 +670,7 @@ export function createMonitorRuntime(deps: RuntimeDeps): MonitorRuntime {
 
       if (mode === "spawn") startSpawn(w, command!, cwd, matcher, push);
       else if (mode === "poll") startPoll(w, command!, cwd, opts.intervalSeconds!, matcher, push);
-      else startFile(w, logFile!, matcher, push);
+      else startFile(w, watchFile!, matcher, push);
     } catch (error) {
       stopWatcher(w);
       throw error;

@@ -1,18 +1,9 @@
 import { getCompiledSemanticActionCommandIndex, isCompiledSemanticActionFindCommand, } from "../../input-modes/semantic-action.js";
 import { isRecord } from "../../parsing.js";
 import { formatNavigationSummary, getNavigationSummary, isNavigationObservableCommand, } from "./navigation.js";
-import { redactModelFacingText } from "./common.js";
+import { getPageSummary, redactModelFacingText } from "./common.js";
 const SEMANTIC_NAVIGATION_PROBE_ACTIONS = new Set(["check", "click"]);
 const SEMANTIC_PRESENTATION_ACTIONS = new Set(["check", "click", "fill", "select"]);
-function getPageSummary(data) {
-    const title = typeof data.title === "string" ? data.title : undefined;
-    const url = typeof data.url === "string" ? data.url : undefined;
-    if (!title && !url)
-        return undefined;
-    if (title && url)
-        return `${title}\n${url}`;
-    return title ?? url;
-}
 function formatSemanticActionTarget(compiled) {
     if (compiled.action === "select") {
         const selector = compiled.selector ?? "selector";

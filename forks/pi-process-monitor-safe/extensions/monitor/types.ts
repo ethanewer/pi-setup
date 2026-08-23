@@ -203,7 +203,7 @@ export class MonitorLimitError extends Error {
   constructor(max: number) {
     super(
       `${max} active monitors; use monitor_status, then monitor_kill ` +
-        `(or monitor_kill_all) before starting another.`,
+        `(id "*" stops all) before starting another.`,
     );
     this.name = "MonitorLimitError";
   }

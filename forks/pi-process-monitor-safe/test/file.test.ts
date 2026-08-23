@@ -3,6 +3,19 @@ import assert from "node:assert/strict";
 import { makeHarness } from "./helpers.ts";
 import { MESSAGE_TYPE_EVENT } from "../extensions/monitor/types.ts";
 
+test("relative logFile resolves against the watcher cwd", () => {
+  const h = makeHarness();
+  h.files.set("/work/batch.log", "start\n"); // pre-existing content is skipped
+  h.runtime.launch({ logFile: "batch.log", cwd: "/work", coalesceSeconds: 0 });
+
+  h.files.append("/work/batch.log", "BATCH FINISHED rc=0\n");
+  h.files.notify("/work/batch.log");
+  h.clock.advance(150);
+  const events = h.pi.sentOfType(MESSAGE_TYPE_EVENT);
+  assert.equal(events.length, 1);
+  assert.match(events[0]!.message.content, /BATCH FINISHED/);
+});
+
 test("file mode pushes matching appended lines after the debounce window", () => {
   const h = makeHarness();
   h.files.set("/log/train", "old line with error\n"); // pre-existing content is skipped

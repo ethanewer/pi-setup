@@ -189,23 +189,30 @@ export class FakeFiles implements FileAdapter {
   private contents = new Map<string, string>();
   private watchers = new Map<string, Set<() => void>>();
 
+  // Tests use POSIX paths, but runtime.ts joins with node:path, which produces
+  // backslashes on Windows. Normalize keys so the harness behaves the same on both.
+  private key(p: string): string {
+    return p.replace(/\\/g, "/");
+  }
+
   statSize(path: string): number | null {
-    const content = this.contents.get(path);
+    const content = this.contents.get(this.key(path));
     return content === undefined ? null : Buffer.byteLength(content, "utf8");
   }
 
   readSlice(path: string, start: number, end: number): string {
-    const content = this.contents.get(path);
+    const content = this.contents.get(this.key(path));
     if (content === undefined) throw new Error(`ENOENT: ${path}`);
     return Buffer.from(content, "utf8").subarray(start, end).toString("utf8");
   }
 
   watch(path: string, onChange: () => void): (() => void) | null {
     if (!this.watchSupported) return null;
-    let set = this.watchers.get(path);
+    const key = this.key(path);
+    let set = this.watchers.get(key);
     if (!set) {
       set = new Set();
-      this.watchers.set(path, set);
+      this.watchers.set(key, set);
     }
     set.add(onChange);
     return () => set.delete(onChange);
@@ -213,17 +220,18 @@ export class FakeFiles implements FileAdapter {
 
   // ---- test controls
   set(path: string, content: string): void {
-    this.contents.set(path, content);
+    this.contents.set(this.key(path), content);
   }
   append(path: string, content: string): void {
-    this.contents.set(path, (this.contents.get(path) ?? "") + content);
-    this.notify(path);
+    const key = this.key(path);
+    this.contents.set(key, (this.contents.get(key) ?? "") + content);
+    this.notify(key);
   }
   notify(path: string): void {
-    for (const cb of this.watchers.get(path) ?? []) cb();
+    for (const cb of this.watchers.get(this.key(path)) ?? []) cb();
   }
   watcherCount(path: string): number {
-    return this.watchers.get(path)?.size ?? 0;
+    return this.watchers.get(this.key(path))?.size ?? 0;
   }
 }
 

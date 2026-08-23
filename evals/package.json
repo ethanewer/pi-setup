@@ -1,0 +1,12 @@
+{
+  "name": "monitor-bench",
+  "type": "module",
+  "private": true,
+  "description": "Benchmark: do models spontaneously use non-blocking watchers for long unknown-duration jobs?",
+  "scripts": {
+    "bench": "bash run.sh"
+  },
+  "dependencies": {
+    "@earendil-works/pi-coding-agent": "0.84.2"
+  }
+}

@@ -195,7 +195,7 @@ export async function prepareFinalResultRecoveryState(options) {
         }
     }
     const richInputRecoveryDiagnostic = buildRichInputRecoveryDiagnostic(visibleRefFallbackDiagnostic);
-    const noActivePageSnapshotFailure = categoryDetails.resultCategory === "failure" && (isNoActivePageSnapshotFailure(options.executionPlan.commandInfo.command, options.errorText ?? options.presentation.summary) || options.batchRefSnapshotState?.invalidation !== undefined);
+    const noActivePageSnapshotFailure = categoryDetails.resultCategory === "failure" && (isNoActivePageSnapshotFailure(options.executionPlan.commandInfo.command, options.errorText ?? options.presentation.summary) || options.batchRefSnapshotState?.invalidation?.reason === "no-active-page");
     const executionSessionKey = getSessionContextKey(options.executionPlan.sessionName, options.executionPlan.namespace);
     if (noActivePageSnapshotFailure && executionSessionKey) {
         const refUpdate = options.sessionPageState.applyRefSnapshotInvalidation({ invalidation: buildNoActivePageRefSnapshotInvalidation(), sessionName: executionSessionKey, update: options.sessionPageStateUpdate });
@@ -329,6 +329,18 @@ function buildResultNextActions(options) {
         append(buildAgentBrowserNextActions({ electron: { launchId: options.electronLaunchRecord.launchId, sessionName: options.electronLaunchRecord.sessionName, status: options.electronLaunchRecord.cleanupState }, failureCategory: options.categoryDetails.failureCategory, resultCategory: options.categoryDetails.resultCategory, successCategory: options.categoryDetails.successCategory }));
     return nextActions.length > 0 ? nextActions : undefined;
 }
+function formatFailureNextActionsText(options, nextActions) {
+    if (options.categoryDetails.resultCategory !== "failure" || !nextActions || nextActions.length === 0)
+        return undefined;
+    const lines = nextActions.slice(0, 6).map((action) => {
+        const params = action.params
+            ? { ...action.params, ...(action.params.stdin === undefined ? {} : { stdin: "[omitted; use details.nextActions]" }) }
+            : undefined;
+        const payload = action.artifactPath ? { artifactPath: action.artifactPath } : params;
+        return `- ${action.id}${payload ? ` ${JSON.stringify(payload)}` : ""}: ${action.reason}`;
+    });
+    return ["Next actions:", ...lines, "Use the exact redacted payloads in details.nextActions when available."].join("\n");
+}
 function buildAgentBrowserResultDetails(options, nextActions) {
     const publicVisibleRefFallbackDiagnostic = options.visibleRefFallbackDiagnostic ? sanitizeVisibleRefFallbackDiagnostic(options.visibleRefFallbackDiagnostic) : undefined;
     const rawPageChangeSummary = (options.scrollNoopDiagnostic || options.comboboxFocusDiagnostic) && options.presentation.pageChangeSummary ? { ...options.presentation.pageChangeSummary, nextActionIds: nextActions?.map((action) => action.id) } : options.presentation.pageChangeSummary;
@@ -357,6 +369,7 @@ function buildAgentBrowserResultDetails(options, nextActions) {
         navigationSummary: options.navigationSummary,
         electron: options.electronLaunchRecord ? { action: "launch", cleanup: options.electronFailedConnectCleanup, handoff: options.electronHandoff, identifiers: buildElectronIdentifiers(options.electronLaunchRecord), launch: options.electronLaunchRecord, profileIsolation: options.electronProfileIsolationDetails, status: options.succeeded ? "succeeded" : "failed", targets: options.electronLaunch?.targets, version: options.electronLaunch?.version } : undefined,
         ...options.categoryDetails,
+        agentBrowserStarted: options.processResult.agentBrowserStarted,
         aboutBlankSessionMismatch: options.aboutBlankSessionMismatch,
         electronPostCommandHealth: options.electronPostCommandHealth,
         electronRefFreshness: options.electronRefFreshnessDiagnostic,
@@ -434,7 +447,8 @@ export function buildFinalAgentBrowserToolResult(options) {
     const artifactCleanupText = formatArtifactCleanupGuidanceText(options.artifactCleanup);
     const timeoutPartialProgressText = options.timeoutPartialProgress ? formatTimeoutPartialProgressText(options.timeoutPartialProgress) : undefined;
     const managedSessionOutcomeText = formatManagedSessionOutcomeText(options.managedSessionOutcome);
-    const rawAppendedDiagnosticText = [visibleRefFallbackText, richInputRecoveryText, semanticActionCandidateText, clickDispatchText, overlayBlockerText, fillVerificationText, electronRefFreshnessText, selectorTextVisibilityText, electronBroadGetTextScopeText, scrollNoopDiagnosticText, comboboxFocusDiagnosticText, recordingDependencyWarningText, evalStdinHintText, evalResultWarningText, artifactCleanupText, timeoutPartialProgressText, managedSessionOutcomeText].filter((item) => item !== undefined).join("\n\n");
+    const failureNextActionsText = formatFailureNextActionsText(options, nextActions);
+    const rawAppendedDiagnosticText = [visibleRefFallbackText, richInputRecoveryText, semanticActionCandidateText, clickDispatchText, overlayBlockerText, fillVerificationText, electronRefFreshnessText, selectorTextVisibilityText, electronBroadGetTextScopeText, scrollNoopDiagnosticText, comboboxFocusDiagnosticText, recordingDependencyWarningText, evalStdinHintText, evalResultWarningText, artifactCleanupText, timeoutPartialProgressText, managedSessionOutcomeText, failureNextActionsText].filter((item) => item !== undefined).join("\n\n");
     const appendedDiagnosticText = redactSensitiveText(redactExactSensitiveText(rawAppendedDiagnosticText, options.exactSensitiveValues));
     const shouldAppendDiagnosticText = appendedDiagnosticText.length > 0 && (!options.userRequestedJson || options.plainTextInspection);
     let content = shouldAppendDiagnosticText && options.redactedContent[0]?.type === "text" ? [{ ...options.redactedContent[0], text: `${options.redactedContent[0].text}\n\n${appendedDiagnosticText}` }, ...options.redactedContent.slice(1)] : options.redactedContent;
@@ -462,5 +476,5 @@ export async function buildMissingBinaryFailureResult(options) {
         missingBinaryElectronRecord = missingBinaryElectronCleanup.record;
     }
     const textParts = [errorText, managedSessionOutcomeText, missingBinaryElectronCleanup ? `Electron cleanup after failed attach: ${missingBinaryElectronCleanup.summary}` : undefined].filter((part) => part !== undefined && part.length > 0);
-    return { content: [{ type: "text", text: textParts.join("\n\n") }], details: { args: options.redactedArgs, compatibilityWorkaround: options.compatibilityWorkaround, effectiveArgs: options.redactedProcessArgs, electron: missingBinaryElectronRecord ? { action: "launch", cleanup: missingBinaryElectronCleanup, launch: missingBinaryElectronRecord, status: "failed", targets: options.electronLaunch?.targets, version: options.electronLaunch?.version } : undefined, managedSessionOutcome, namespace: options.executionPlan.namespace, nextActions: managedSessionRecoveryNextActions.length > 0 ? managedSessionRecoveryNextActions : undefined, sessionMode: options.sessionMode, sessionTabCorrection: options.sessionTabCorrection, ...buildAgentBrowserResultCategoryDetails({ args: options.redactedProcessArgs, command: options.executionPlan.commandInfo.command, errorText, failureCategory: "missing-binary", spawnError, succeeded: false }), spawnError }, isError: true };
+    return { content: [{ type: "text", text: textParts.join("\n\n") }], details: { agentBrowserStarted: options.processResult.agentBrowserStarted, args: options.redactedArgs, compatibilityWorkaround: options.compatibilityWorkaround, effectiveArgs: options.redactedProcessArgs, electron: missingBinaryElectronRecord ? { action: "launch", cleanup: missingBinaryElectronCleanup, launch: missingBinaryElectronRecord, status: "failed", targets: options.electronLaunch?.targets, version: options.electronLaunch?.version } : undefined, managedSessionOutcome, namespace: options.executionPlan.namespace, nextActions: managedSessionRecoveryNextActions.length > 0 ? managedSessionRecoveryNextActions : undefined, sessionMode: options.sessionMode, sessionTabCorrection: options.sessionTabCorrection, ...buildAgentBrowserResultCategoryDetails({ args: options.redactedProcessArgs, command: options.executionPlan.commandInfo.command, errorText, failureCategory: "missing-binary", spawnError, succeeded: false }), spawnError }, isError: true };
 }

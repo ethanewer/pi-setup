@@ -101,6 +101,22 @@ option-shaped git argument rejection and revision terminator, install/run proven
 untrusted-result fencing, agent defaults and ceiling, and rebuilt `dist/` from the merged
 `src/` tree.
 
+Re-vendored onto 3.7.0 on 2026-08-22. Upstream added named-thread subagent conversations
+(re-enterable within one workflow invocation), with live-execution resume barriers so a
+threaded call is never journaled or replayed, a same-thread sequential-execution guard, and
+a refusal to combine a thread with worktree isolation. Two hunks rejected — both the fork's
+own edits, not upstream's: `README.md` (the trust/untrusted-input block lost its trailing
+context line to a rewording of the in-memory session note) and `package.json` (`"private":
+true` lost its context to the version bump) — resolved by hand onto the 3.7.0 lines. The
+hardening was re-verified against the merged tree: cold-start rearm provenance, the vm-realm
+timeout, the web-fetch private/loopback host gate (fail-closed, `webFetchAllowPrivateNetwork`
+defaults false), project-local workflow trust, the worktree-isolation fallback, the foreign-run
+confirmation, the agent ceiling and `DEFAULT_AGENT_TIMEOUT_MS`/`DEFAULT_AGENT_RETRIES`, and
+`runId` charset validation are all still in place. `dist/` was rebuilt as a clean-room `tsc`
+build of the merged `src/` (47/47 modules mirrored; the fork's `DEFAULT_AGENT_RETRIES`/
+`DEFAULT_AGENT_TIMEOUT_MS`/`defaultAgentRetries` constants present in both) and is byte-identical
+to the patched tree; `bin/pi-setup-vendor --verify` reproduces the fork exactly.
+
 **Default changes.** A run defaults to 100 agents (was 1000).
 `DEFAULT_AGENT_TIMEOUT_MS` is 60 minutes (was unbounded), sized so a legitimately long
 subagent is not silently degraded to `null`. `DEFAULT_AGENT_RETRIES` is 2 with exponential
@@ -170,6 +186,59 @@ write-path and Electron confinement, launch-flag policy, and managed-session pro
 The external CLI pin therefore remains 0.33.2; 0.34.0 is a separate re-baseline rather
 than part of this extension update.
 
+Re-vendored onto 0.5.0 on 2026-08-22, and rebaselined the external `agent-browser` CLI pin
+0.33.2 -> 0.34.0 — the coupled job the 0.3.0 entry above deferred. Seven upstream releases
+(0.4.0-0.5.0) landed a top-level one-shot `script` code mode with a permissioned child and a
+durable pre-spawn lease, Android/Termux support, the exact-runtime version gate
+(`upstream-version.js`), managed-restore keys scoped to both checkout generation and Pi
+transcript, profiled/`--args`/`--user-agent` session preservation, `--pin-tab`/`--no-pin-tab`
+sticky tab binding with CDP `targetId` refs and `tab_gone` recovery, and the 0.34.0 capability
+baseline (`scripts/agent-browser-target.mjs` pins `TARGET_AGENT_BROWSER_VERSION = "0.34.0"`,
+`inventorySections` include `--pin-tab`/`--no-pin-tab`/`tab_gone`/`data.targetId`, and the
+`upstreamHead` is `548b159b30eef119ccf6846c8bc807d0eaa3f6f8`).
+
+13 patch hunks rejected across 10 files; every one was the fork's own hardening edit that
+lost its context line to upstream's restructuring, not upstream's work. Resolved by hand:
+the CLI-path-pinning spawn call (`{cwd, env}` + `spawnCommand.error` + `detached` process group)
+and the `child-process-policy`/`upstream-config-policy` imports in `process.js`; the
+`getPrivilegedFlagValidationError` validation-chain entry and the `launch-flag-policy`/
+`argv-grammar` (`getFlagName`, `isBooleanFlagEnabled`) imports in `runtime.js`; the
+allowed-domains `allowLocalAppUrls`/`localAppFileRoots` call in `process-output.js` (upstream
+already adopted the `getAllowedDomainsViolation` params and `getLocalAppFileRootsForLaunch`);
+the `adoptOrphanedElectronLaunches`/`planUpstreamConfigPin`/`getUpstreamProjectConfigIgnoredNotice`
+imports and the `readPackageJson` helper in `index.js`; the `getFlagName` import in
+`artifact-paths.js`; the Electron launch schema hardening descriptions in `params.js`; the
+"two layers" config-pin + privileged-`--config`-flag-gating + env-var-stripping (`NODE_OPTIONS`/
+`LD_PRELOAD`/`DYLD_INSERT_LIBRARIES`/`ELECTRON_RUN_AS_NODE` + workspace-local `PATH`) paragraphs
+in `COMMAND_REFERENCE.md`; the 0.34.0 SUPPORT_MATRIX rebaseline note; and the `"private": true`
+and CLI-path-pinning paragraphs in `package.json`/`README.md`. Upstream already adopted the
+config pin (0.4.1), the exact-runtime gate (0.4.1), the CLI-path resolution (0.5.0), and the
+privileged-flag policy (0.5.0); the fork's patch now layers the sessionless `AGENT_BROWSER_CONFIG`
+pin, the env-var/PATH stripping, and the Electron schema descriptions on top.
+
+The 0.34.0 re-baseline was checked the same way as every prior one: all 56 help surfaces the
+baseline samples were diffed between the two published binaries. 53 are byte-identical and
+the other 3 (root help, core skill full, tab help) are purely additive — nothing was removed
+anywhere. Root help gains `--pin-tab`/`--no-pin-tab` (`AGENT_BROWSER_PIN_TAB`), `tab --help` gains
+CDP `targetId` as a tab ref and `tab_gone` recovery, and the core skill gains a tab-pinning
+section. The command set is unchanged — `tab`, `tab list`, `tab close`, `tab new` already
+existed and are already in `inventorySections` — so the artifact-path guards that key off
+command prefixes are unaffected. `--pin-tab`/`--no-pin-tab` are sticky optional global booleans
+(not launch-scoped), already in `GLOBAL_BOOLEAN_FLAGS_WITH_OPTIONAL_VALUES`, so no new flag
+reaches the argv tokenizer unhandled.
+
+Hardening re-verified against the merged tree: config trust fails closed (project config only
+when Pi reports the project trusted; the `AGENT_BROWSER_CONFIG` pin for sessionless commands
+layers on upstream's empty-config pin for browser-backed calls), `!command` values through
+`execFile` with an argv array, write-path confinement by `realpath` refusing `.git`, Electron
+launches require real framework evidence + `CFBundleExecutable` with no path separators and
+`appArgs` rejects `--*-launcher`/`--*-cmd-prefix`/`--no-sandbox`/`--load-extension`/
+`--disable-web-security`, `--allowed-domains` treats non-`http(s)` URLs as violations (with the
+Electron local-app-roots file-URL exemption), POSIX children in their own process group, the
+CLI path pinned (workspace-local shim refused as `policy-blocked`), the `--config` privileged-
+flag gate, and the `DENIED_CHILD_ENV_VARS` env stripping (`PI_AGENT_BROWSER_FORWARD_ALL_ENV=1`
+overrides). `bin/pi-setup-vendor --verify` reproduces the fork exactly.
+
 **Closed.** `isProjectSafeCredentialValueForProvider` — a stub that returned `true` for any
 non-empty string — is implemented, so a project-scope credential can no longer be a
 `!command` or a plaintext literal; `!command` values run through `execFile` with an argv
@@ -233,75 +302,6 @@ Every failure path returns `undefined`, which is exactly the behaviour of not ha
 installed, so the worst case is a less useful summary. It uses only Pi's public API, which
 also removes the deep private-module imports that made the previous extension fragile
 across Pi releases.
-
-## pi-codex-compaction
-
-First-party, not a fork. Ports Codex's mid-turn compaction into Pi.
-
-Pi checks its compaction threshold only outside an agent run — `_handlePostAgentRun` after
-`agent.prompt()` returns, and again before a new prompt — so everything inside one long run
-accumulates unchecked. Codex has no such gap: `codex-rs/core/src/session/turn.rs:493` checks
-after every sampling request and compacts inline, then `continue`s the loop.
-
-The intervention point is the `context` hook, which is "fired before each LLM call, can
-modify messages" and whose returned array is what the provider receives
-(`agent-loop.js:181`). Earlier revisions of `docs/LONG_RUNS.md` concluded no extension could
-close this gap; that survey covered the compaction API and the turn hooks and never asked
-what shapes the request, which is where the answer was.
-
-Above 90% of the window — Codex's own `(context_window * 9) / 10`, clamped so config can
-only lower it — the old prefix is replaced for that request with a summary, the user's
-instructions from it verbatim (Codex's `COMPACT_USER_MESSAGE_MAX_TOKENS`, 20000 tokens), and
-the recent tail untouched.
-
-Three deliberate divergences from Codex, all recorded because each one is a judgement call:
-
-- **Not persistent.** Codex calls `replace_compacted_history`; a `context` handler shapes one
-  request. So the session keeps everything, the fold is recomputed every call, and every
-  failure path returns the original messages — the behaviour of not installing it. Codex ends
-  the turn when compaction fails (`turn.rs:504`). Nothing here can make a run worse than it
-  already was, at the cost of no guarantee that a fold happens.
-- **Summary first, not last.** Codex appends it last because its model is trained to see it
-  there after a mid-turn compaction. Pi's native compaction puts the summary first and the
-  tail after, so that is the shape a Pi-configured model already knows.
-- **Pinned instructions are framed, not replayed bare.** Codex re-injects real user messages
-  and relies on training to make them unambiguous. Here they go in one message that says they
-  are a record and not a new request; without that a replayed instruction reads as something
-  to answer again.
-
-An adversarial pass against Codex on 2026-08-05 changed four things. Trimming a too-large
-summarization prefix now happens only for errors that are actually about size, mirroring Codex's
-branch on a typed `ContextWindowExceeded`; previously a rate limit would have spent the whole
-trim budget on a fault shrinking cannot fix. A smaller selected model now summarizes with the
-*previous*, wider one, which is Codex's `maybe_run_previous_model_inline_compact` and matters
-because history accumulated under the old window may not be readable by the new model at all.
-Codex's warning that repeated compaction costs accuracy is emitted, once rather than every time.
-And the tail is now surrendered in stages when the tail is what does not fit, which is a step
-toward Codex keeping no tail at all.
-
-That last change introduced a bug and verification caught it. Sacrificing the tail whenever the
-normal fold found nothing conflated two unrelated causes: "the tail is too big to send" and
-"the conversation is smaller than the tail budget, so there is nothing to fold". Under a low
-trigger the second fired on every call, folding all but one message each time and leaving the
-model to rediscover its task from the summary — one run stopped making progress for over six
-minutes. Pressure is now gated on the estimated size of what a full-budget fold would keep, and
-a separate guard stands down after two folds that fail to get under the trigger. Codex needs
-neither: its compaction reduces to roughly 20k, so far below any trigger that its own comment
-says an infinite loop is not a concern. Both guards are the price of keeping a recent tail.
-
-Two mechanisms exist because verification found them necessary rather than by design. The
-fold's own summary message is built by hand, since `createCompactionSummaryMessage` is not
-exported from the package root, so `index.ts` checks once per session that `convertToLlm`
-still renders it and falls back to a plain user message otherwise — an unrendered summary
-would mean history folded away and nothing put in its place. And token measurement ignores
-usage records from before a fold took effect: the assistant message that triggered a fold
-carries the *pre-fold* request's usage, and trusting it made the very next call believe the
-folded request was still oversized. That was caught first as a wrong number in the audit
-entry during verification.
-
-Each fold appends a `codex-compaction-fold` custom entry, which Pi persists and never puts in
-LLM context — otherwise a mid-run behaviour change would leave no trace in the session, which
-is the exact failure this repository keeps having to diagnose after the fact.
 
 ## pi-btw-side
 

@@ -1,6 +1,6 @@
 import { isOpenNavigationCommand, isPageMutationCommand } from "../command-taxonomy.js";
 import { isPendingRecordingArtifact } from "./artifact-manifest.js";
-import { buildNextToolAction } from "./next-actions.js";
+import { applySessionToNextActions, buildNextToolAction } from "./next-actions.js";
 import { AGENT_BROWSER_RECOVERY_NEXT_ACTION_IDS, buildRecoveryNextActions, } from "./recovery-actions.js";
 function buildArtifactAction(path) {
     return {
@@ -120,9 +120,8 @@ export function buildAgentBrowserNextActions(options) {
             actions.push(buildArtifactAction(options.savedFilePath));
         }
         for (const artifact of artifacts) {
-            if (isPendingRecordingArtifact(artifact)) {
+            if (isPendingRecordingArtifact(artifact))
                 continue;
-            }
             if (artifact.exists === false) {
                 if (artifact.kind === "download") {
                     actions.push(buildNextToolAction({
@@ -146,7 +145,7 @@ export function buildAgentBrowserNextActions(options) {
         switch (options.failureCategory) {
             case "artifact-missing":
                 for (const artifact of options.artifacts ?? []) {
-                    if (isPendingRecordingArtifact(artifact) || artifact.exists !== false)
+                    if (isPendingRecordingArtifact(artifact) || (artifact.exists !== false && artifact.status !== "stale"))
                         continue;
                     if (artifact.kind === "download") {
                         actions.push(buildNextToolAction({
@@ -196,6 +195,56 @@ export function buildAgentBrowserNextActions(options) {
                     }));
                 }
                 break;
+            case "timeout":
+                {
+                    const textAssertion = options.command === "wait" && options.args?.includes("--text") === true;
+                    const urlAssertion = options.command === "wait" && options.args?.includes("--url") === true;
+                    actions.push(buildNextToolAction({
+                        args: ["snapshot", "-i"],
+                        id: textAssertion ? "inspect-after-text-assertion-failure" : "inspect-after-timeout",
+                        reason: textAssertion
+                            ? "Inspect the current page after the text assertion failed before concluding the expected text is absent."
+                            : options.command === "wait"
+                                ? "Inspect the current page after the wait condition timed out before retrying with a different selector or timeout."
+                                : "Inspect the current page after the timed-out browser operation.",
+                        safety: textAssertion
+                            ? "Read-only snapshot; use current refs or visible text from this page before retrying the assertion."
+                            : "Read-only snapshot; do not assume the timed-out interaction completed.",
+                    }));
+                    if (urlAssertion) {
+                        actions.push(buildNextToolAction({
+                            args: ["open", "about:blank"],
+                            id: "fresh-session-after-url-wait-timeout",
+                            reason: "If a preceding click or form submit reported success but the page never navigated, upstream click dispatch may have silently missed (observed with agent-browser 0.34 after many spaced commands); replace about:blank with the target URL and replay the flow as one batch in a fresh session instead of retrying the wait.",
+                            safety: "Abandons the current browser session; capture page evidence with the inspect action first, and only abandon when the wait target is not simply wrong or slow.",
+                            sessionMode: "fresh",
+                        }));
+                    }
+                }
+                break;
+            case "upstream-error":
+                if (isOpenNavigationCommand(options.command)) {
+                    actions.push(buildNextToolAction({
+                        args: ["get", "url"],
+                        id: "inspect-page-after-navigation-error",
+                        reason: "Check which page, if any, remains active after the navigation or network error.",
+                        safety: "Read-only URL inspection; verify connectivity and the target URL before retrying navigation.",
+                    }));
+                }
+                break;
+            case "tab-gone":
+                actions.push(buildNextToolAction({
+                    args: ["tab", "list"],
+                    id: AGENT_BROWSER_RECOVERY_NEXT_ACTION_IDS.tabGoneListTabs,
+                    reason: "The pinned bound tab is gone; inspect remaining tabs before acting on a neighbor.",
+                    safety: "Read-only. Prefer a listed tab id, label, or CDP targetId, or open a new tab to rebind.",
+                }), buildNextToolAction({
+                    args: ["tab", "new"],
+                    id: AGENT_BROWSER_RECOVERY_NEXT_ACTION_IDS.tabGoneNewTab,
+                    reason: "Bind a fresh tab after tab_gone instead of continuing on another session's page.",
+                    safety: "Opens a new tab in this session and rebinds the pin; pass a URL if you know the intended page.",
+                }));
+                break;
             case "tab-drift":
                 if (options.recovery?.kind === "about-blank" || options.recovery?.kind === "tab-drift") {
                     break;
@@ -209,5 +258,13 @@ export function buildAgentBrowserNextActions(options) {
                 break;
         }
     }
-    return actions.length > 0 ? actions : undefined;
+    if ((options.artifacts ?? []).some(isPendingRecordingArtifact)) {
+        actions.push(buildNextToolAction({
+            args: ["record", "stop"],
+            id: "stop-pending-recording",
+            reason: "Stop the active recording so the requested video can be finalized and verified on disk.",
+            safety: "The file remains pending until record stop succeeds; verify details.artifactVerification afterward.",
+        }));
+    }
+    return applySessionToNextActions(actions.length > 0 ? actions : undefined, options.sessionName);
 }

@@ -28,7 +28,6 @@ describe("lean p wrapper contract", () => {
     expect(sh.extensions).toEqual([
       "$MAIN_DIR/local/pi-voice-stt-safe/extensions/voice-stt/index.js",
       "$MAIN_DIR/local/pi-context-handoff/extensions/context-handoff/index.js",
-      "$MAIN_DIR/local/pi-codex-compaction/extensions/codex-compaction/index.js",
       "$MAIN_DIR/local/pi-btw-side/extensions/btw/index.js",
       "$MAIN_DIR/extensions/mlx/index.js",
       "$MAIN_DIR/p/remove-pi-documentation.js",
@@ -40,7 +39,6 @@ describe("lean p wrapper contract", () => {
     for (const name of [
       "pi-voice-stt-safe",
       "pi-context-handoff",
-      "pi-codex-compaction",
       "pi-btw-side",
       "remove-pi-documentation.js",
       "mlx",

@@ -1,5 +1,6 @@
 /**
- * pi-codex-compaction
+ * The mid-run fold half of pi-context-handoff, originally ported from Codex's mid-turn
+ * compaction. fold.ts holds every decision and is pure; this file is the plumbing.
  *
  * Compacts context the way Codex does: inside the run, before every LLM call, instead of
  * only between runs.
@@ -26,15 +27,14 @@
  * It does not rewrite session history. Codex calls `replace_compacted_history`; a `context`
  * handler only shapes one request. So the fold is recomputed and re-applied on every call,
  * the session file keeps everything, and every failure path returns the original messages —
- * which is byte-for-byte the behaviour of not installing this package. Codex, by contrast,
+ * which is byte-for-byte the behaviour of not installing this extension. Codex, by contrast,
  * ends the turn when its compaction fails (turn.rs:504). Trading Codex's persistence for
  * that fallback is the central design decision here.
  *
- * It also does not replace Pi's own compaction or pi-context-handoff, and is not in tension
- * with them. Pi's between-runs compaction is the one that truly shrinks history and is
- * still wanted; this only keeps a *single* long run inside the window until that can happen.
- *
- * Reading order: fold.ts holds every decision and is pure; this file is the plumbing.
+ * It also does not replace Pi's own compaction or the handoff briefs in this package, and is
+ * not in tension with them. Pi's between-runs compaction is the one that truly shrinks
+ * history and is still wanted; this only keeps a *single* long run inside the window until
+ * that can happen.
  */
 
 import {
@@ -46,7 +46,7 @@ import {
 	type ExtensionContext,
 } from "@earendil-works/pi-coding-agent";
 
-import { type CodexCompactionConfig, loadCodexCompactionConfig } from "./config.js";
+import { type ExtensionConfig, type FoldConfig } from "./config.js";
 import {
 	applyFold,
 	type FoldState,
@@ -65,16 +65,17 @@ import {
 	trustUsageFrom,
 } from "./fold.js";
 import { buildFoldFocus } from "./instructions.js";
+import { createOnceNotifier, describe, statusSetter } from "./util.js";
 
 /**
  * Test seam. A 245,000-token conversation cannot be produced on demand, so this overrides
  * the trigger with an absolute token count and is the only way to exercise a real fold end
  * to end. Mirrors PI_STT_FAKE_* in the voice fork and PI_CONTEXT_HANDOFF_FORCE_RESUME.
  */
-export const FORCE_TRIGGER_ENV = "PI_CODEX_COMPACTION_FORCE_TRIGGER_TOKENS";
+export const FORCE_TRIGGER_ENV = "PI_CONTEXT_HANDOFF_FORCE_TRIGGER_TOKENS";
 
 /** Custom session entry recording each fold. Persisted, never shown to the model. */
-export const FOLD_ENTRY_TYPE = "codex-compaction-fold";
+export const FOLD_ENTRY_TYPE = "context-handoff-fold";
 
 /** Pi does not export its `Model` type from the package root; take it from the context. */
 type PiModel = NonNullable<ExtensionContext["model"]>;
@@ -92,30 +93,6 @@ function forcedTrigger(): number | null {
 	return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 }
 
-/** Emitted at most once per distinct message, so a repeating fault cannot spam a long run. */
-function createOnceNotifier() {
-	const seen = new Set<string>();
-	return (ctx: ExtensionContext, message: string, variant: "warning" | "info") => {
-		if (seen.has(message)) return;
-		seen.add(message);
-		if (!ctx.hasUI) return;
-		try {
-			ctx.ui.notify(message, variant);
-		} catch {
-			// A UI that refuses a notification must not affect the request.
-		}
-	};
-}
-
-function describe(error: unknown): string {
-	if (error instanceof Error && typeof error.message === "string") return error.message;
-	try {
-		return String(error);
-	} catch {
-		return "unknown error";
-	}
-}
-
 /**
  * Confirm Pi still renders a `compactionSummary` message into the request.
  *
@@ -129,16 +106,28 @@ function summaryMessageSurvivesConversion(fold: FoldState): boolean {
 	try {
 		const converted = convertToLlm([applyFold([{ role: "user", content: "probe" }], fold)[0]] as never);
 		if (!Array.isArray(converted) || converted.length === 0) return false;
-		const text = JSON.stringify(converted);
-		return text.includes(fold.summary.slice(0, 24));
+		// Compare raw strings, not JSON.stringify: stringify escapes newlines, so a summary
+		// whose first 24 chars contain one ("## Goal\n...") never substring-matched and the
+		// plain fallback engaged on every real fold.
+		const needle = fold.summary.slice(0, 24);
+		const contains = (value: unknown): boolean => {
+			if (typeof value === "string") return value.includes(needle);
+			if (Array.isArray(value)) return value.some(contains);
+			if (value && typeof value === "object") return Object.values(value as Record<string, unknown>).some(contains);
+			return false;
+		};
+		return contains(converted);
 	} catch {
 		return false;
 	}
 }
 
-export default function codexCompactionExtension(pi: ExtensionAPI) {
+/**
+ * Register the fold's hooks and commands. Configuration flows through `getConfig`, shared
+ * with the handoff half so a single config load serves both.
+ */
+export function registerFold(pi: ExtensionAPI, getConfig: (ctx: ExtensionContext) => ExtensionConfig) {
 	const notifyOnce = createOnceNotifier();
-	let config: CodexCompactionConfig | null = null;
 	let fold: FoldState | null = null;
 	let summarizing = false;
 	let consecutiveFailures = 0;
@@ -157,21 +146,10 @@ export default function codexCompactionExtension(pi: ExtensionAPI) {
 	 */
 	let previousModel: PiModel | undefined;
 
-	const settings = (ctx: ExtensionContext): CodexCompactionConfig => {
-		if (config) return config;
-		const loaded = loadCodexCompactionConfig();
-		config = loaded.config;
-		if (loaded.warning) notifyOnce(ctx, loaded.warning, "warning");
-		return config;
-	};
+	const settings = (ctx: ExtensionContext): FoldConfig => getConfig(ctx).fold;
 
 	const status = (ctx: ExtensionContext, message: string | undefined) => {
-		if (!ctx.hasUI) return;
-		try {
-			ctx.ui.setStatus("codex-compaction", message);
-		} catch {
-			// Status is decoration; never let it affect the request.
-		}
+		statusSetter(ctx, "context-handoff")(message);
 	};
 
 	/**
@@ -181,7 +159,7 @@ export default function codexCompactionExtension(pi: ExtensionAPI) {
 	 */
 	const summarize = async (
 		ctx: ExtensionContext,
-		cfg: CodexCompactionConfig,
+		cfg: FoldConfig,
 		prefix: MessageLike[],
 		previousSummary: string | undefined,
 		pinned: boolean,
@@ -206,7 +184,7 @@ export default function codexCompactionExtension(pi: ExtensionAPI) {
 				model = previousModel;
 				notifyOnce(
 					ctx,
-					`pi-codex-compaction: folding with ${previousModel.id}, the wider window this history was written under.`,
+					`pi-context-handoff: folding with ${previousModel.id}, the wider window this history was written under.`,
 					"info",
 				);
 			}
@@ -216,7 +194,7 @@ export default function codexCompactionExtension(pi: ExtensionAPI) {
 
 		const auth = await ctx.modelRegistry.getApiKeyAndHeaders(model);
 		if (!auth.ok) {
-			notifyOnce(ctx, "pi-codex-compaction: no usable credential; leaving the request unfolded.", "warning");
+			notifyOnce(ctx, "pi-context-handoff: no usable credential; leaving the request unfolded.", "warning");
 			return null;
 		}
 		const focus = buildFoldFocus({ pinned, extra: cfg.focus });
@@ -229,7 +207,9 @@ export default function codexCompactionExtension(pi: ExtensionAPI) {
 					model,
 					cfg.summaryReserveTokens,
 					auth.apiKey,
-					auth.headers,
+					// Pi's own exported types disagree here (ProviderHeaders vs Record<string, string>);
+					// the runtime value is one headers object passed through unchanged.
+					auth.headers as Record<string, string> | undefined,
 					ctx.signal,
 					focus,
 					previousSummary,
@@ -258,13 +238,13 @@ export default function codexCompactionExtension(pi: ExtensionAPI) {
 				// policy passed to generateSummary, so shrinking the prefix would just spend the
 				// remaining budget on a fault that is not about size.
 				if (!looksLikeSizeError(error)) {
-					notifyOnce(ctx, `pi-codex-compaction: could not fold (${describe(error)}).`, "warning");
+					notifyOnce(ctx, `pi-context-handoff: could not fold (${describe(error)}).`, "warning");
 					return null;
 				}
 				if (attempt >= cfg.maxTrimAttempts || current.length <= 1) {
 					notifyOnce(
 						ctx,
-						`pi-codex-compaction: prefix still too large after ${attempt} trim(s) (${describe(error)}).`,
+						`pi-context-handoff: prefix still too large after ${attempt} trim(s) (${describe(error)}).`,
 						"warning",
 					);
 					return null;
@@ -331,7 +311,7 @@ export default function codexCompactionExtension(pi: ExtensionAPI) {
 		if (foldsSinceUnderTrigger >= cfg.maxFoldsWithoutProgress) {
 			notifyOnce(
 				ctx,
-				`pi-codex-compaction: ${foldsSinceUnderTrigger} folds did not get under the trigger; standing down and leaving it to Pi.`,
+				`pi-context-handoff: ${foldsSinceUnderTrigger} folds did not get under the trigger; standing down and leaving it to Pi.`,
 				"warning",
 			);
 			return fold ? { messages: applied as never } : undefined;
@@ -351,7 +331,7 @@ export default function codexCompactionExtension(pi: ExtensionAPI) {
 			// rather than pretend.
 			notifyOnce(
 				ctx,
-				`pi-codex-compaction: over ${forced ?? triggerTokens(contextWindow, cfg.triggerPercent)} tokens but nothing further can be folded; leaving it to Pi.`,
+				`pi-context-handoff: over ${forced ?? triggerTokens(contextWindow, cfg.triggerPercent)} tokens but nothing further can be folded; leaving it to Pi.`,
 				"warning",
 			);
 			return fold ? { messages: applied as never } : undefined;
@@ -361,7 +341,7 @@ export default function codexCompactionExtension(pi: ExtensionAPI) {
 			// up is a real loss even though it beats an oversized request.
 			notifyOnce(
 				ctx,
-				`pi-codex-compaction: recent context did not fit on its own; folded with a reduced tail (${plan.rung}).`,
+				`pi-context-handoff: recent context did not fit on its own; folded with a reduced tail (${plan.rung}).`,
 				"warning",
 			);
 		}
@@ -382,7 +362,7 @@ export default function codexCompactionExtension(pi: ExtensionAPI) {
 					abandoned = true;
 					notifyOnce(
 						ctx,
-						`pi-codex-compaction: ${consecutiveFailures} folds failed in a row; disabled for this session.`,
+						`pi-context-handoff: ${consecutiveFailures} folds failed in a row; disabled for this session.`,
 						"warning",
 					);
 				}
@@ -410,7 +390,7 @@ export default function codexCompactionExtension(pi: ExtensionAPI) {
 			if (usePlainSummary) {
 				notifyOnce(
 					ctx,
-					"pi-codex-compaction: Pi no longer renders compactionSummary messages; using a plain user message instead.",
+					"pi-context-handoff: Pi no longer renders compactionSummary messages; using a plain user message instead.",
 					"warning",
 				);
 			}
@@ -458,7 +438,7 @@ export default function codexCompactionExtension(pi: ExtensionAPI) {
 			if (ctx.hasUI) {
 				try {
 					ctx.ui.notify(
-						`codex-compaction: folded ${plan.cutIndex} messages mid-run, ~${Math.round(measurement.tokens / 1000)}k tokens → ~${Math.round(after.tokens / 1000)}k estimated${plan.pinned.length > 0 ? `, ${plan.pinned.length} instruction(s) kept verbatim` : ""}.`,
+						`context-handoff: folded ${plan.cutIndex} messages mid-run, ~${Math.round(measurement.tokens / 1000)}k tokens → ~${Math.round(after.tokens / 1000)}k estimated${plan.pinned.length > 0 ? `, ${plan.pinned.length} instruction(s) kept verbatim` : ""}.`,
 						"info",
 					);
 				} catch {
@@ -472,7 +452,7 @@ export default function codexCompactionExtension(pi: ExtensionAPI) {
 			// change on the third telling.
 			notifyOnce(
 				ctx,
-				"pi-codex-compaction: long threads and repeated compaction make the model less accurate. Start a new session when the current task allows it.",
+				"pi-context-handoff: long threads and repeated compaction make the model less accurate. Start a new session when the current case allows it.",
 				"warning",
 			);
 		}
@@ -493,46 +473,59 @@ export default function codexCompactionExtension(pi: ExtensionAPI) {
 	// session's history, but if a runtime is ever reused across a session replacement the next
 	// request is measured honestly rather than against a fold about to be discarded.
 	pi.on("session_start", () => {
+		// Reset everything, not just the fold: if a runtime is ever reused across a session
+		// replacement, a disabled fold or a stood-down progress guard from the old session
+		// must not silently carry into the new one.
 		fold = null;
 		previousModel = undefined;
+		abandoned = false;
+		consecutiveFailures = 0;
+		foldsSinceUnderTrigger = 0;
+		folds = 0;
+		lastRung = null;
+		lastTokens = null;
+		summaryShapeChecked = false;
+		usePlainSummary = false;
 	});
 
 	pi.on("model_select", (event) => {
 		previousModel = event.previousModel;
 	});
 
-	pi.registerCommand("codex-compaction", {
-		description: "Show mid-run context folding state (Codex-style compaction)",
-		handler: async (_args, ctx) => {
-			const cfg = settings(ctx);
-			const window = ctx.model?.contextWindow ?? 0;
-			const trigger = forcedTrigger() ?? triggerTokens(window, cfg.triggerPercent);
-			const stoodDown = foldsSinceUnderTrigger >= cfg.maxFoldsWithoutProgress;
-			const lines = [
-				`enabled: ${cfg.enabled && !abandoned}${abandoned ? " (stood down after repeated failures)" : ""}`,
-				`trigger: ${trigger} tokens of ${window}${forcedTrigger() !== null ? " (forced via env)" : ` (${Math.round(cfg.triggerPercent * 100)}%)`}`,
-				`last measured: ${lastTokens ?? "unknown"} tokens`,
-				`folds this session: ${folds}${lastRung !== null && lastRung !== 1 ? ` (last one gave up part of the recent tail: ${lastRung})` : ""}`,
-				fold
-					? `active fold: ${fold.cutIndex} messages folded, ${fold.pinned.length} instruction(s) pinned, ${syntheticCount(fold)} synthetic message(s)`
-					: "active fold: none",
-			];
-			// Only worth showing when it is not the boring answer, but worth showing loudly then:
-			// a stood-down fold is otherwise indistinguishable from one that never needed to run.
-			if (foldsSinceUnderTrigger > 0) {
-				lines.push(
-					`folds since under the trigger: ${foldsSinceUnderTrigger} of ${cfg.maxFoldsWithoutProgress}${stoodDown ? " - stood down, leaving it to Pi" : ""}`,
-				);
+	const showStatus = async (_args: string, ctx: ExtensionContext) => {
+		const cfg = settings(ctx);
+		const window = ctx.model?.contextWindow ?? 0;
+		const trigger = forcedTrigger() ?? triggerTokens(window, cfg.triggerPercent);
+		const stoodDown = foldsSinceUnderTrigger >= cfg.maxFoldsWithoutProgress;
+		const lines = [
+			`enabled: ${cfg.enabled && !abandoned}${abandoned ? " (stood down after repeated failures)" : ""}`,
+			`trigger: ${trigger} tokens of ${window}${forcedTrigger() !== null ? " (forced via env)" : ` (${Math.round(cfg.triggerPercent * 100)}%)`}`,
+			`last measured: ${lastTokens ?? "unknown"} tokens`,
+			`folds this session: ${folds}${lastRung !== null && lastRung !== 1 ? ` (last one gave up part of the recent tail: ${lastRung})` : ""}`,
+			fold
+				? `active fold: ${fold.cutIndex} messages folded, ${fold.pinned.length} instruction(s) pinned, ${syntheticCount(fold)} synthetic message(s)`
+				: "active fold: none",
+		];
+		// Only worth showing when it is not the boring answer, but worth showing loudly then:
+		// a stood-down fold is otherwise indistinguishable from one that never needed to run.
+		if (foldsSinceUnderTrigger > 0) {
+			lines.push(
+				`folds since under the trigger: ${foldsSinceUnderTrigger} of ${cfg.maxFoldsWithoutProgress}${stoodDown ? " - stood down, leaving it to Pi" : ""}`,
+			);
+		}
+		if (ctx.hasUI) {
+			try {
+				ctx.ui.notify(lines.join("\n"), "info");
+				return;
+			} catch {
+				// Fall through to stdout below.
 			}
-			if (ctx.hasUI) {
-				try {
-					ctx.ui.notify(lines.join("\n"), "info");
-					return;
-				} catch {
-					// Fall through to stdout below.
-				}
-			}
-			console.log(lines.join("\n"));
-		},
+		}
+		console.log(lines.join("\n"));
+	};
+
+	pi.registerCommand("context-handoff", {
+		description: "Show mid-run fold state (Codex-style compaction)",
+		handler: showStatus,
 	});
 }

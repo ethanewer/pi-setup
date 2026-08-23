@@ -9,12 +9,15 @@ const vendor = JSON.parse(readFileSync(join(REPO, "vendor.json"), "utf8"));
 const ALL_FORKS = Object.keys(vendor.forks).map((name) => `local/${name}`);
 const FORKS_MINUS_WORKFLOWS = ALL_FORKS.filter((name) => name !== "local/pi-dynamic-workflows-safe");
 const SCOPE = [
-	"openrouter/z-ai/glm-5.3",
-	"openai/gpt-5.6-luna",
-	"openai/gpt-5.6-sol",
-	"openai/gpt-5.6-terra",
 	"openrouter/deepseek/deepseek-v4-flash-0731",
 	"openrouter/deepseek/deepseek-v4-pro-0813",
+	"openrouter/z-ai/glm-5.2",
+	"openrouter/z-ai/glm-5.3",
+	"openrouter/moonshotai/kimi-k3",
+	"openrouter/qwen/qwen3.8-max",
+	"openai/gpt-5.6-sol",
+	"openai/gpt-5.6-terra",
+	"openai/gpt-5.6-luna",
 ];
 
 const dir = mkdtempSync(join(tmpdir(), "pi-config-writer-"));
@@ -90,7 +93,7 @@ test("the model scope lands on all three profiles", () => {
 	expect(JSON.parse(readFileSync(pPath, "utf8")).enabledModels).toEqual(SCOPE);
 });
 
-test("pi loads every fork except workflows; piwf loads all eight", () => {
+test("pi loads every fork except workflows; piwf loads all forks", () => {
 	runWriter();
 	const main = JSON.parse(readFileSync(mainPath, "utf8"));
 	expect(main.packages).toEqual(["npm:user-pkg", ...FORKS_MINUS_WORKFLOWS]);

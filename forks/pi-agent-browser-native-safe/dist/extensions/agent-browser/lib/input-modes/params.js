@@ -1,34 +1,24 @@
 import { JsonSchema } from "../json-schema.js";
 import { StringEnum as localStringEnum } from "../string-enum-schema.js";
+import { AGENT_BROWSER_SCRIPT_CODE_MAX_BYTES } from "./script.js";
 import { ELECTRON_DISCOVERY_DEFAULT_MAX_RESULTS, ELECTRON_DISCOVERY_MAX_RESULTS, } from "../electron/discovery.js";
 import { AGENT_BROWSER_ELECTRON_HANDOFFS, AGENT_BROWSER_ELECTRON_TARGET_TYPES, AGENT_BROWSER_JOB_STEP_ACTIONS, AGENT_BROWSER_JOB_TYPE_DELAYED_TEXT_MAX_CHARACTERS, AGENT_BROWSER_QA_LOAD_STATES, AGENT_BROWSER_SEMANTIC_ACTIONS, AGENT_BROWSER_SEMANTIC_LOCATORS, DEFAULT_SESSION_MODE, SOURCE_LOOKUP_MAX_WORKSPACE_FILES, } from "./types.js";
 // Keep descriptions terse: Pi sends this schema every turn; workflows belong in prompt guidance and docs.
-// ponytail: the four electron.launch variants differ only in their single target field
-// (appPath/appName/bundleId/executablePath); the action literal and shared launch fields
-// are identical, so this helper keeps the schema variants in sync.
-function electronLaunchVariant(Type, StringEnum, targetField) {
-    return Type.Object({
-        action: StringEnum(["launch"]),
-        ...targetField,
-        appArgs: Type.Optional(Type.Array(Type.String({ description: "Argument passed to the Electron application.", minLength: 1 }), { description: "Optional Electron app argv. Wrapper-owned lifecycle/debug flags, launcher/command-prefix switches, and sandbox/web-security switches are rejected; other dashed switches must be known-safe Chromium/Electron switches." })),
-        handoff: Type.Optional(StringEnum(AGENT_BROWSER_ELECTRON_HANDOFFS, { description: "Post-launch handoff depth. Defaults to snapshot." })),
-        targetType: Type.Optional(StringEnum(AGENT_BROWSER_ELECTRON_TARGET_TYPES, { description: "Preferred CDP target type. Defaults to page." })),
-        timeoutMs: Type.Optional(Type.Integer({ description: "Bounded launch timeout in milliseconds.", minimum: 1 })),
-        allow: Type.Optional(Type.Array(Type.String({ description: "App identifier allowed by the caller for electron.launch.", minLength: 1 }), { description: "Optional caller-owned allow list for electron.launch policy checks." })),
-        deny: Type.Optional(Type.Array(Type.String({ description: "App identifier denied by the caller for electron.launch.", minLength: 1 }), { description: "Optional caller-owned deny list for electron.launch policy checks; deny wins over allow." })),
-    }, { additionalProperties: false });
-}
 export function createAgentBrowserParamsSchema(Type = JsonSchema, StringEnum = localStringEnum) {
     return Type.Object({
+        script: Type.Optional(Type.String({
+            description: "One-shot JavaScript orchestration with async browser({ args, stdin?, timeoutMs? }) and emit(value); isolated session and no host access.",
+            maxLength: AGENT_BROWSER_SCRIPT_CODE_MAX_BYTES,
+        })),
         args: Type.Optional(Type.Array(Type.String(), {
             description: "Raw agent-browser argv only: no binary, shell operators, or --json. Start with open → snapshot -i → act on current @refs; re-snapshot after page changes.",
             minItems: 1,
         })),
         semanticAction: Type.Optional(Type.Object({
             action: StringEnum(AGENT_BROWSER_SEMANTIC_ACTIONS),
-            locator: Type.Optional(StringEnum(AGENT_BROWSER_SEMANTIC_LOCATORS, { description: "Locator for check/click/fill." })),
-            value: Type.Optional(Type.String({ description: "Locator value, or one select option." })),
-            values: Type.Optional(Type.Array(Type.String(), { description: "Select options.", minItems: 1 })),
+            locator: Type.Optional(StringEnum(AGENT_BROWSER_SEMANTIC_LOCATORS, { description: "Locator for check/click/fill; select supports role or label." })),
+            value: Type.Optional(Type.String({ description: "Locator value or one select option; for select by label, this is the label text." })),
+            values: Type.Optional(Type.Array(Type.String(), { description: "Select options; required for select by label.", minItems: 1 })),
             selector: Type.Optional(Type.String({ description: "Direct selector or @ref." })),
             text: Type.Optional(Type.String({ description: "Fill text." })),
             role: Type.Optional(Type.String({ description: "Role locator; alternative to value." })),
@@ -79,10 +69,19 @@ export function createAgentBrowserParamsSchema(Type = JsonSchema, StringEnum = l
                 query: Type.Optional(Type.String({ description: "Case-insensitive app filter.", minLength: 1 })),
                 maxResults: Type.Optional(Type.Integer({ description: `Result cap; default ${ELECTRON_DISCOVERY_DEFAULT_MAX_RESULTS}, values over ${ELECTRON_DISCOVERY_MAX_RESULTS} are clamped.`, minimum: 1 })),
             }, { additionalProperties: false }),
-            electronLaunchVariant(Type, StringEnum, { appPath: Type.String({ description: "macOS .app path.", minLength: 1 }) }),
-            electronLaunchVariant(Type, StringEnum, { appName: Type.String({ description: "Name from electron.list.", minLength: 1 }) }),
-            electronLaunchVariant(Type, StringEnum, { bundleId: Type.String({ description: "Bundle id from electron.list.", minLength: 1 }) }),
-            electronLaunchVariant(Type, StringEnum, { executablePath: Type.String({ description: "Executable path.", minLength: 1 }) }),
+            Type.Object({
+                action: StringEnum(["launch"]),
+                appPath: Type.Optional(Type.String({ description: "macOS .app path.", minLength: 1 })),
+                appName: Type.Optional(Type.String({ description: "Name from electron.list.", minLength: 1 })),
+                bundleId: Type.Optional(Type.String({ description: "Bundle id from electron.list.", minLength: 1 })),
+                executablePath: Type.Optional(Type.String({ description: "Executable path.", minLength: 1 })),
+                appArgs: Type.Optional(Type.Array(Type.String({ description: "Argument passed to the Electron application.", minLength: 1 }), { description: "Optional Electron app argv. Wrapper-owned lifecycle/debug flags, launcher/command-prefix switches, and sandbox/web-security switches are rejected; other dashed switches must be known-safe Chromium/Electron switches." })),
+                handoff: Type.Optional(StringEnum(AGENT_BROWSER_ELECTRON_HANDOFFS, { description: "Post-launch handoff depth. Defaults to snapshot." })),
+                targetType: Type.Optional(StringEnum(AGENT_BROWSER_ELECTRON_TARGET_TYPES, { description: "Preferred CDP target type. Defaults to page." })),
+                timeoutMs: Type.Optional(Type.Integer({ description: "Bounded launch timeout in milliseconds.", minimum: 1 })),
+                allow: Type.Optional(Type.Array(Type.String({ description: "App identifier allowed by the caller for electron.launch.", minLength: 1 }), { description: "Optional caller-owned allow list for electron.launch policy checks." })),
+                deny: Type.Optional(Type.Array(Type.String({ description: "App identifier denied by the caller for electron.launch.", minLength: 1 }), { description: "Optional caller-owned deny list for electron.launch policy checks; deny wins over allow." })),
+            }, { additionalProperties: false }),
             Type.Object({
                 action: StringEnum(["status", "cleanup"]),
                 launchId: Type.String({ description: "Tracked launch id.", minLength: 1 }),
@@ -131,7 +130,7 @@ export function createAgentBrowserParamsSchema(Type = JsonSchema, StringEnum = l
         })),
     }, {
         additionalProperties: false,
-        description: "Choose one input mode: args, semanticAction, job, qa, sourceLookup, networkSourceLookup, or electron.",
+        description: "Choose one input mode: script, args, semanticAction, job, qa, sourceLookup, networkSourceLookup, or electron.",
     });
 }
 export const AGENT_BROWSER_PARAMS = createAgentBrowserParamsSchema();

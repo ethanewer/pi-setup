@@ -1,5 +1,27 @@
 # Changelog
 
+## 1.1.0 (unreleased, monitor-optim branch)
+
+Model-surface simplification (backend behavior unchanged; validated with the
+monitor-bench evals across four models x three seeds: trust 32/48 -> 38/48).
+
+### Changed
+- `monitor_kill_all` merged into `monitor_kill`: `id: "*"` intentionally stops
+  all active watchers and returns the consolidated list.
+- `monitor` tool schema trimmed to six parameters (`command`,
+  `intervalSeconds`, `logFile`, `notifyOn`, `label`, `cwd`); the removed
+  knobs keep their defaults internally, and `--timeout N` remains on the
+  `/monitor` command.
+- `promptGuidelines` reduced from three to one; tool and skill descriptions
+  shortened. SKILL.md adds an explicit end-your-turn rule plus a relative
+  `logFile` path fix (resolved against the watcher cwd).
+- `heartbeatMinutes` restored to the schema (single parameter, fractional
+  minutes allowed): periodic check-ins on quiet jobs were otherwise
+  unreachable after the trim.
+- Watcher-start result text softened from "end your turn now" to "do any other
+  work you have now; otherwise end your turn" so multitasking stays natural
+  while the anti-blocking rule is preserved.
+
 ## 1.0.0 (2026-07-28)
 
 Initial release of the safety-hardened local fork of `pi-process-monitor@1.2.0`

@@ -20,6 +20,7 @@ async function runAgentBrowserToolInContext(options) {
     const ownedManagedSession = prepared.ownedManagedSessionContext;
     return await withOwnedManagedSessionContext(ownedManagedSession, async () => {
         try {
+            const artifactRunStartedAtMs = Date.now();
             const processResult = await runAgentBrowserProcess({
                 args: prepared.processArgs,
                 cwd: options.cwd,
@@ -51,7 +52,7 @@ async function runAgentBrowserToolInContext(options) {
             });
             if (missingBinaryResult)
                 return missingBinaryResult;
-            const output = await processBrowserOutput({ ...options, prepared, processResult });
+            const output = await processBrowserOutput({ ...options, artifactRunStartedAtMs, prepared, processResult });
             applyBrowserRunStatePatch(options.state, output.statePatch);
             return output.result;
         }

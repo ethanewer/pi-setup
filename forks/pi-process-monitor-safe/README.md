@@ -9,7 +9,7 @@ This fork **replaces** the upstream package. Do **not** load it alongside `npm:p
 | Area | Upstream 1.2.0 | This fork |
 |------|----------------|-----------|
 | Watcher limit | unbounded | hard cap of **16 active watchers**, enforced synchronously in the shared `launch()` path (tools and commands both) |
-| Kill-all | — | new `monitor_kill_all` tool and `/monitor-kill-all` command |
+| Kill-all | — | `monitor_kill` with `id: "*"` plus the `/monitor-kill-all` command |
 | Persistence / restore | poll & file watchers persisted via `appendEntry` and re-launched on `session_start` | **never persisted, never restored**; legacy `monitor-watcher` entries in old sessions are ignored |
 | Session shutdown | best-effort `w.stop()`, killed spawn still emitted a "killed" exit turn | all watchers stopped atomically; one consolidated, reason-aware (`quit`/`reload`/`new`/`resume`/`fork`) custom message persisted synchronously; **never wakes the model** |
 | Fork | resumed watchers duplicated into forks | forks get one no-turn context note that source-session monitors were not carried over |
@@ -47,17 +47,16 @@ Add the package path to your pi settings (`~/.pi/agent/settings.json`), and make
   "command": "ssh h100 'tail -n3 /root/train.log; echo ALIVE=$(pgrep -fc axolotl)'",
   "intervalSeconds": 30,
   "label": "h100-qlora",
-  "heartbeatMinutes": 10,
   "notifyOn": ["adapter.*saved", "error|oom|killed|traceback", "ALIVE=0"]
 }
 ```
 
-Params: `command`, `intervalSeconds` (min 2), `logFile`, `notifyOn` (case-insensitive regexes), `heartbeatMinutes`, `label`, `coalesceSeconds` (default 2), `maxLines` (default 20), `cwd`, `timeoutSeconds`.
+Params: `command`, `intervalSeconds`, `logFile`, `notifyOn` (case-insensitive regexes), `heartbeatMinutes` (fractional ok), `label`, `cwd`. Remaining tuning knobs (coalescing window, max lines) keep their defaults internally; `--timeout N` is available on the `/monitor` command.
 
 Starting a 17th watcher fails with an **error** tool result:
 
 ```
-16 active monitors; use monitor_status, then monitor_kill (or monitor_kill_all) before starting another.
+16 active monitors; use monitor_status, then monitor_kill (id "*" stops all) before starting another.
 ```
 
 A command that fails to spawn synchronously also fails the `monitor` call itself (error tool result, slot released) — a watcher that never started is never reported as running. Asynchronous spawn errors emit one `SPAWN ERROR` event and release the watcher.
@@ -65,11 +64,8 @@ A command that fails to spawn synchronously also fails the `monitor` call itself
 ### `monitor_status` — list active watchers
 Only *active* watchers appear; stopped and exited watchers free their slot immediately.
 
-### `monitor_kill` — stop one watcher
-Signals the child's process group with SIGTERM, escalating to SIGKILL after 3s. The slot is freed immediately; the killed process does **not** produce an exit turn.
-
-### `monitor_kill_all` — stop everything
-Stops every active watcher atomically and returns the consolidated list in the tool result (no duplicate context message).
+### `monitor_kill` — stop one watcher, or all
+Signals the child's process group with SIGTERM, escalating to SIGKILL after 3s. The slot is freed immediately; the killed process does **not** produce an exit turn. Pass `id: "*"` to stop every active watcher atomically — the consolidated list comes back in the tool result (no duplicate context message).
 
 ## Slash commands
 
@@ -98,7 +94,7 @@ Poll ticks never overlap: while a poll's child is still running (slow SSH, hung 
 
 ## Heartbeats
 
-Off unless `heartbeatMinutes` is set. One extension-level scheduler ticks every 30s; every watcher due on a tick is folded into **one** `monitor-heartbeat` message (`details: { watcherIds }`) that triggers a single model turn, then each watcher's due time advances by its own interval. A real matched/exit event during a watcher's preceding interval substitutes for that heartbeat. Heartbeats never count as real events in `monitor_status`.
+Set `heartbeatMinutes` (fractional allowed) to get an on-schedule status ping even when nothing matches. One extension-level scheduler ticks every 30s; every watcher due on a tick is folded into **one** `monitor-heartbeat` message (`details: { watcherIds }`) that triggers a single model turn, then each watcher's due time advances by its own interval. A real matched/exit event during a watcher's preceding interval substitutes for that heartbeat. Heartbeats never count as real events in `monitor_status`.
 
 ## Session lifecycle (breaking change vs upstream)
 
