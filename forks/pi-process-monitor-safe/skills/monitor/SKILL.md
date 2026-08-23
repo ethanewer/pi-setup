@@ -15,11 +15,11 @@ session unblocked.
 
 ## The rule after starting one
 
-`monitor` returns in milliseconds. When it does, say one line of status and **end
-your turn** — the matching ping starts your next turn automatically. Never follow a
-`monitor` call with `sleep`, wait loops, or repeated `tail`/`curl` checks; that
-re-blocks exactly what the watcher exists to prevent. If you have other work, do it
-now; otherwise stop and wait for the ping.
+`monitor` returns in milliseconds. When it does, say one line of status, then **do
+your other work — or, if you have none, end your turn**: the matching ping starts
+your next turn automatically. Never follow a `monitor` call with `sleep`, wait
+loops, or repeated `tail`/`curl` checks; that re-blocks exactly what the watcher
+exists to prevent.
 
 ## When to use this
 

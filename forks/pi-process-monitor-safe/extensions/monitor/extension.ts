@@ -249,7 +249,7 @@ export function registerMonitorExtension(
       return {
         content: text(
           `Watcher ${watcher.id} running (mode=${watcher.mode}). Will ping when: ${watcher.watchingFor}. ` +
-          `End your turn now; the ping will wake you. Do not sleep, poll, or re-check the job.`,
+          `The ping will wake you — no sleeping, polling, or re-checking the job. Do any other work you have now; otherwise end your turn.`,
         ),
         details: { watcher },
       };

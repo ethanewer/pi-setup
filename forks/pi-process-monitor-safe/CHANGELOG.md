@@ -18,6 +18,9 @@ monitor-bench evals across four models x three seeds: trust 32/48 -> 38/48).
 - `heartbeatMinutes` restored to the schema (single parameter, fractional
   minutes allowed): periodic check-ins on quiet jobs were otherwise
   unreachable after the trim.
+- Watcher-start result text softened from "end your turn now" to "do any other
+  work you have now; otherwise end your turn" so multitasking stays natural
+  while the anti-blocking rule is preserved.
 
 ## 1.0.0 (2026-07-28)
 
