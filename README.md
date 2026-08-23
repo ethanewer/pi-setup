@@ -531,6 +531,13 @@ dataset and uploads the compressed result to
 - **Every API key is replaced with a deterministic, format-valid fake** — the same
   real key always maps to the same fake, so traces stay valid while no real secret
   leaves the machine.
+- **Smoke/probe sessions and empty traces are dropped** — installer smoke-test
+  prompts (`tests/smoke.sh`, tool listings, codeword ACKs, SMOKE-BASH-OK) and
+  trivial probes ("test", "hi", "echo hi", img.png checks) are filtered; trivial
+  prompts only drop when the whole trace is small, so a substantial session that
+  merely opens with "test" is kept. The same filter runs over the merged remote
+  rows at upload time, so already-uploaded smoke rows are removed too.
+  `--keep-smoke` disables this.
 
 Benchmark rollouts (TerminalBench, tau-bench, …) are also dropped; a dev session
 that merely *mentions* a benchmark is kept. Run `bin/convert-pi-traces --dry-run`

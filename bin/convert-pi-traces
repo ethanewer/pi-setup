@@ -277,6 +277,127 @@ def detect_benchmark_rollout(events: list[dict], cwd: str) -> str | None:
     return None
 
 # --------------------------------------------------------------------------- #
+# Smoke / probe session detection
+# --------------------------------------------------------------------------- #
+#
+# A large share of local sessions are installer smoke tests and throwaway
+# probes ("test", "echo hi", tool listings, codeword ACKs). They pollute the
+# dataset, so rows matching these signatures are dropped:
+#
+#   * empty content — a converted trace with almost no text at all.
+#   * unambiguous harness/probe prompts — matched anywhere in the first user
+#     message regardless of trace size (SMOKE-BASH-OK, tool listings, the
+#     tests/smoke.sh prompts, codeword probes, system-prompt extraction).
+#   * trivial probe prompts ("test", "hi", "echo hi", img.png checks) —
+#     dropped only when the whole trace is small, so a real session that
+#     happens to open with "test" and runs substantial work is kept.
+
+MIN_TRACE_CHARS = 100          # below this total text volume a row is "empty"
+SMOKE_TRIVIAL_MAX_CHARS = 20000  # trivial-prompt rows above this are kept
+
+# Unambiguous smoke/probe signatures, matched against the lowercased first
+# user message. Includes every prompt in tests/smoke.sh.
+SMOKE_SUBSTRINGS = [
+    "smoke-bash-ok",
+    "codeword is",
+    "union test:",
+    "list the name of every tool",
+    "list the names of every tool",
+    "list all your tools",
+    "list your tools",
+    "output your system prompt",
+    "tell me about your harness",
+    "where would you edit to improve your harness",
+    "/btw what constant does alpha.ts export",
+    "use agent_browser to open https://example.com",
+    "gamma-delta",
+]
+
+# Like SMOKE_SUBSTRINGS, but only applied to small traces, so a substantial
+# real session that happens to contain the phrase survives.
+SMOKE_SUBSTRINGS_GATED = [
+    "run these in bash, one at a time",
+    "do these steps exactly",
+    "then reply done",
+]
+
+# Trivial probe prompts, dropped only when the trace is small. Compared after
+# normalizing the first user message (lowercase, strip non-alphanumerics).
+SMOKE_TRIVIAL_PROMPTS = {
+    "test", "hi", "hello", "echo hi", "echo hello",
+    "what is img png", "what is in img png",
+    "what is the image file in this directory",
+    "reply with exactly ok",
+    "what is 2 2 reply with just the number",
+    "explain in 2 sentences why ai coding assistants are useful",
+}
+
+
+def _normalize_prompt(s: str) -> str:
+    return re.sub(r"[^a-z0-9]+", " ", s.lower()).strip()
+
+
+def _row_first_user_text(row: dict) -> str:
+    for m in row.get("messages") or []:
+        if m.get("role") == "user":
+            c = m.get("content")
+            if isinstance(c, list) and c and isinstance(c[0], dict):
+                return str(c[0].get("text") or "")
+            if isinstance(c, str):
+                return c
+            return ""
+    return ""
+
+
+def _row_total_chars(row: dict) -> int:
+    n = 0
+    for m in row.get("messages") or []:
+        role = m.get("role")
+        if role == "user":
+            c = m.get("content")
+            if isinstance(c, list):
+                n += sum(len(str(b.get("text") or "")) for b in c if isinstance(b, dict))
+            elif isinstance(c, str):
+                n += len(c)
+        elif role == "assistant":
+            n += len(m.get("content") or "") + len(m.get("reasoning_content") or "")
+            n += sum(len(json.dumps(tc.get("function", {}).get("arguments") or {}))
+                     for tc in (m.get("tool_calls") or []))
+        elif role == "tool":
+            n += len(m.get("content") or "")
+    return n
+
+
+def smoke_drop_reason(row: dict) -> str | None:
+    """Return a drop reason for smoke/empty rows, else None. Never applies to
+    monitor-bench eval rows (their admission policy is separate)."""
+    if row.get("source") == "local/pi-monitor-bench":
+        return None
+    tchars = _row_total_chars(row)
+    if tchars < MIN_TRACE_CHARS:
+        return "empty_content"
+    # A trace whose assistant never produced any text or tool call (dead / 
+    # degenerate model output) has nothing to learn from.
+    asst_output = 0
+    for m in row.get("messages") or []:
+        if m.get("role") == "assistant":
+            asst_output += len(m.get("content") or "")
+            asst_output += len(m.get("tool_calls") or [])
+    if asst_output == 0:
+        return "empty_content"
+    first = _row_first_user_text(row)
+    fl = first.lower()
+    if any(sig in fl for sig in SMOKE_SUBSTRINGS):
+        return "smoke_prompt"
+    if tchars < SMOKE_TRIVIAL_MAX_CHARS:
+        if any(sig in fl for sig in SMOKE_SUBSTRINGS_GATED):
+            return "smoke_prompt"
+        if _normalize_prompt(first) in SMOKE_TRIVIAL_PROMPTS:
+            return "smoke_probe"
+    return None
+
+
+# --------------------------------------------------------------------------- #
 # monitor-bench eval traces
 # --------------------------------------------------------------------------- #
 #
@@ -1039,6 +1160,7 @@ class ConvStats:
     skipped_model_filter: int = 0
     skipped_empty: int = 0
     skipped_parse: int = 0
+    skipped_smoke: Counter = field(default_factory=Counter)
     tools_used: set[str] = field(default_factory=set)
 
 
@@ -1566,6 +1688,8 @@ def main(argv: list[str] | None = None) -> int:
                     help="Skip monitor-bench eval trace ingestion.")
     ap.add_argument("--eval-cap", type=int, default=EVAL_PER_TASK_CAP,
                     help=f"Max monitor-bench traces per task (default {EVAL_PER_TASK_CAP}).")
+    ap.add_argument("--keep-smoke", action="store_true",
+                    help="Keep smoke/probe sessions and empty traces (default: drop them).")
     args = ap.parse_args(argv)
 
     if zstd is None:
@@ -1633,6 +1757,12 @@ def main(argv: list[str] | None = None) -> int:
                 # Re-derive description from redacted messages so a key split by
                 # the 500-char truncation can't leak as a partial real key.
                 row["description"] = _first_user_text(row["messages"])
+            if not args.keep_smoke:
+                drop = smoke_drop_reason(row)
+                if drop:
+                    stats.skipped_smoke[drop] += 1
+                    seen_keys.discard(row["trace_key"])
+                    continue
             stats.converted += 1
             stats.tools_used |= set(_tools_from_row(row))
             rows.append(row)
@@ -1681,6 +1811,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"  skipped benchmark (other): {stats.skipped_benchmark}")
         print(f"  skipped model filter (anthropic/faux/qwen3-0.6b): {stats.skipped_model_filter}")
         print(f"  skipped empty:   {stats.skipped_empty}")
+        print(f"  skipped smoke/probe: {dict(stats.skipped_smoke)} "
+              f"(total {sum(stats.skipped_smoke.values())})")
         print(f"  skipped parse:   {stats.skipped_parse}")
         print(f"  tools seen:      {sorted(stats.tools_used)}")
         if not args.no_redact and REDACTOR.counts:
@@ -1721,24 +1853,39 @@ def main(argv: list[str] | None = None) -> int:
                     print(f"\n[upload] union: remote={len(remote_rows)} rows "
                           f"({len(remote_shards)} shard{'s' if len(remote_shards) != 1 else ''}), "
                           f"local={len(rows)} rows, new={len(new_keys)}")
-                    if remote_shards and not new_keys:
-                        print("[upload] no new traces; remote already up to date — nothing to upload.")
+                    # merged set: remote first, local overwrites (freshest)
+                    merged: dict[str, dict] = {}
+                    for r in remote_rows:
+                        k = r.get("trace_key")
+                        if k:
+                            merged[k] = r
+                    for r in rows:
+                        k = r.get("trace_key")
+                        if k:
+                            merged[k] = r
+                    if not args.no_eval:
+                        n_cap = cap_union_eval_rows(merged, args.eval_cap)
+                        if n_cap:
+                            print(f"[upload] dropped {n_cap} merged eval row(s) "
+                                  f"to enforce the {args.eval_cap}/task cap")
+                    if not args.keep_smoke:
+                        n_smoke = 0
+                        for k in [k for k, r in merged.items() if smoke_drop_reason(r)]:
+                            del merged[k]
+                            n_smoke += 1
+                        if n_smoke:
+                            print(f"[upload] dropped {n_smoke} merged smoke/empty row(s)")
+                    # An upload is needed when the merge/filter changed the key set,
+                    # or when a local row refreshed the content of a remote key.
+                    remote_by_key = {r.get("trace_key"): r for r in remote_rows if r.get("trace_key")}
+                    changed_keys = {
+                        k for k in local_keys & remote_keys
+                        if k in merged and json.dumps(merged[k], sort_keys=True)
+                        != json.dumps(remote_by_key.get(k), sort_keys=True)
+                    }
+                    if remote_shards and set(merged.keys()) == remote_keys and not changed_keys:
+                        print("[upload] no changes after merge/filter; remote already up to date — nothing to upload.")
                     else:
-                        # merged set: remote first, local overwrites (freshest)
-                        merged: dict[str, dict] = {}
-                        for r in remote_rows:
-                            k = r.get("trace_key")
-                            if k:
-                                merged[k] = r
-                        for r in rows:
-                            k = r.get("trace_key")
-                            if k:
-                                merged[k] = r
-                        if not args.no_eval:
-                            n_cap = cap_union_eval_rows(merged, args.eval_cap)
-                            if n_cap:
-                                print(f"[upload] dropped {n_cap} merged eval row(s) "
-                                      f"to enforce the {args.eval_cap}/task cap")
                         if remote_rows:
                             uts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
                             u_jsonl = out_dir / f"pi-traces-union-{uts}.jsonl"
