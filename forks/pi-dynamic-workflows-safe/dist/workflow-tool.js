@@ -10,7 +10,7 @@ import { WorkflowManager } from "./workflow-manager.js";
 import { createWorkflowStorage } from "./workflow-saved.js";
 import { loadWorkflowSettings } from "./workflow-settings.js";
 /** The single always-on gate that authorizes workflow use without forcing it. */
-export const WORKFLOW_GATE_GUIDELINE = "The `workflow` tool runs multi-agent orchestration — it fans decomposable work out across subagents, and fits tasks shaped like: repo-wide inspection, independent parallel research/checks, multi-perspective review, or fan-out/fan-in synthesis. ONLY call it when the user explicitly opts in — via the workflow trigger word, `/workflows run`, or their own words (e.g. 'run a workflow', 'fan this out', '并行审一遍'). For any other task — even one that would clearly benefit — do not call it; you may briefly offer it (with a rough cost) as an option instead.";
+export const WORKFLOW_GATE_GUIDELINE = "The `workflow` tool fans decomposable work out across subagents. It fits repo-wide inspection, independent parallel research or checks, multi-perspective review, or fan-out/fan-in synthesis. Call it only when the user explicitly opts in, via the workflow trigger word, `/workflows run`, or their own words like 'run a workflow', 'fan this out', or '并行审一遍'. For any other task, do not call it, even one that would clearly benefit. You may briefly offer it as an option with a rough cost.";
 const workflowToolSchema = Type.Object({
     script: Type.Optional(Type.String({
         description: [
@@ -28,7 +28,7 @@ const workflowToolSchema = Type.Object({
     })),
     name: Type.Optional(Type.String({
         description: "Run a saved or built-in workflow by name instead of `script`; its args go in `args`. " +
-            `Built-ins: ${BUILTIN_WORKFLOW_NAMES.join(", ")} — see the workflow-patterns skill for each one's args. ` +
+            `Built-ins: ${BUILTIN_WORKFLOW_NAMES.join(", ")}. See the workflow-patterns skill for each one's args. ` +
             "A same-named saved workflow wins. Not combinable with resumeFromRunId.",
     })),
     args: Type.Optional(
@@ -50,7 +50,7 @@ const workflowToolSchema = Type.Object({
         description: "Optional JSON value exposed to the workflow script as global `args`.",
     })),
     background: Type.Optional(Type.Boolean({
-        description: "Run the workflow in the background. Default: true — the tool returns immediately with a run ID, the turn ends so the user isn't blocked, and the result is delivered back into the conversation when it finishes. Set to false only when you need the result inline in this same turn (the call will block until the workflow completes).",
+        description: "Run the workflow in the background. Default: true. The tool returns immediately with a run ID, the turn ends so the user isn't blocked, and the result is delivered back into the conversation when it finishes. Set to false only when you need the result inline in this same turn. When false, the call blocks until the workflow completes.",
     })),
     maxAgents: Type.Optional(Type.Number({
         description: `Maximum number of agents allowed in this run. Default: ${DEFAULT_MAX_AGENTS_PER_RUN}, clamped to a hard ceiling of ` +
@@ -120,7 +120,7 @@ export function createWorkflowTool(options = {}) {
             let script;
             if (params.name) {
                 if (params.resumeFromRunId) {
-                    throw new Error("workflow: `name` cannot be combined with `resumeFromRunId` — resume with an edited `script` instead.");
+                    throw new Error("workflow: `name` cannot be combined with `resumeFromRunId`. Resume with an edited `script` instead.");
                 }
                 const resolved = resolveWorkflowInvocation(params.name, params.args, { storage, cwd });
                 if (!resolved) {
@@ -306,7 +306,7 @@ export function backgroundStartedText(name, runId) {
         `Workflow "${name}" started in the background.`,
         `Run ID: ${runId}`,
         "It keeps running on its own. When it finishes, the result is delivered back",
-        "here and the conversation continues automatically — the user does not need to",
+        "here and the conversation continues automatically. The user does not need to",
         "do anything. Tell the user they can simply wait here for it to finish (it will",
         "resume the conversation by itself), or keep chatting / working on other things",
         "in the meantime; either way the result will come back to this conversation.",
@@ -323,7 +323,7 @@ export function backgroundStartedText(name, runId) {
 export function reviseHint(runId) {
     if (!runId)
         return "";
-    return `To revise without re-running everything: re-call workflow with resumeFromRunId="${runId}" and an edited script — unchanged agent() calls replay from cache, only edited/new ones re-run.`;
+    return `To revise without re-running everything, re-call workflow with resumeFromRunId="${runId}" and an edited script. Unchanged agent() calls replay from cache; only edited or new ones re-run.`;
 }
 /**
  * The tool result returned when the model resumes a run with an edited script.
@@ -333,7 +333,7 @@ export function resumedText(name, runId) {
     return [
         `Workflow "${name}" resumed from run ${runId} with your edited script.`,
         "Unchanged agent() calls replay from that run's journal (cache); the first",
-        "edited or newly inserted agent() call — and everything after it — re-runs live.",
+        "edited or newly inserted agent() call, and everything after it, re-runs live.",
         "It runs in the background; the result is delivered back here when it finishes,",
         "and the conversation continues automatically. The user can wait or keep working.",
         `Track or cancel it with /workflows status ${runId} or /workflows stop ${runId}.`,

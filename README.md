@@ -93,6 +93,7 @@ Extension forks and the upstream releases they are based on:
 | `pi-context-handoff` | — | first-party |
 | `pi-btw-side` | — | first-party |
 | `pi-setup-maintenance` | — | first-party, skills only |
+| `unslop` | — | first-party, skills only |
 
 `vendor.json` is the machine-readable version of this table and is what the tooling
 reads.
