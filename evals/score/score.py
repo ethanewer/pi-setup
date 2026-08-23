@@ -226,7 +226,12 @@ def score_task(task, run_dir, seed):
             art = read_json(os.path.join(work, "train_done.json"))
             checks["train_artifact_present"] = art is not None
             checks["train_artifact_nonce"] = bool(art) and art.get("nonce") == nonce
-            checks["train_elapsed_plausible"] = bool(art) and elapsed_ok(art.get("elapsed"), gt["duration"], lo=0.7)
+            # the loop exits at the next checkpoint boundary: ceil(duration/70)*70
+            import math
+            exp_elapsed = math.ceil(gt["duration"] / gt["checkpoint_interval"]) * gt["checkpoint_interval"]
+            checks["train_elapsed_plausible"] = bool(art) and (
+                art.get("elapsed") is not None and exp_elapsed - 10 <= art["elapsed"] <= exp_elapsed + 30
+            )
             final_name = f"checkpoint-{nonce}-{gt['final_step']}.ckpt"
             checks["final_checkpoint_reported"] = final_name in answer
             checks["artifact_matches_expected"] = bool(art) and art.get("final_checkpoint") == final_name
