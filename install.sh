@@ -11,9 +11,6 @@ AGENT_BROWSER_VERSION="0.34.0"
 # Extensions are installed as Pi "local" packages from forks/ in this repository,
 # never from npm. Pi never rewrites local packages, so the security fixes in these
 # forks cannot be silently reverted by a later `bun install` or package update.
-# pi-codex-compaction is no longer installed separately: its mid-run fold lives inside
-# pi-context-handoff now, and loading both would chain two context handlers on one
-# request (the standalone would re-fold an already-folded list, summarizing a summary).
 FORKS="pi-voice-stt-safe pi-agent-browser-native-safe pi-dynamic-workflows-safe pi-context-handoff pi-btw-side pi-process-monitor-safe pi-setup-maintenance"
 
 REPO_URL="${PI_SETUP_REPO_URL:-https://github.com/ethanewer/pi-setup.git}"
@@ -380,9 +377,6 @@ const managed = new Set([
   "pi-agent-browser-native-safe",
   "pi-dynamic-workflows-safe",
   "pi-context-handoff",
-  // pi-codex-compaction stays in the drop list so an existing install of the standalone
-  // package is removed on upgrade rather than left chain-folding alongside the merged one.
-  "pi-codex-compaction",
   "pi-btw-side",
   "pi-process-monitor-safe",
   "pi-setup-maintenance",

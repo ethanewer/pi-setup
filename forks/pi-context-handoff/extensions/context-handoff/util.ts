@@ -1,6 +1,6 @@
 /**
  * Helpers shared by the handoff and fold halves of this package. These existed in both
- * predecessor packages (pi-context-handoff and pi-codex-compaction) as near-identical
+ * halves (handoff and fold) as near-identical
  * copies; the merge is what finally gives them a single home.
  */
 

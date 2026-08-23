@@ -5,9 +5,7 @@
  *     Reads the top-level keys of pi-context-handoff.json, exactly as the standalone
  *     pi-context-handoff package always has.
  *   - `fold`: the mid-run Codex-style fold. Reads the optional `fold` object in
- *     pi-context-handoff.json, falling back to a legacy pi-codex-compaction.json if one
- *     exists, so a config written for the standalone pi-codex-compaction package keeps
- *     working after the merge.
+ *     pi-context-handoff.json only.
  *
  * Never throws. Both consumers are on critical paths (before every LLM call; during a
  * compaction), so a malformed config must degrade to defaults rather than disturb a
@@ -88,10 +86,7 @@ export function handoffConfigPath(): string {
 	return join(resolveAgentDir(), "extensions", "pi-context-handoff.json");
 }
 
-/** Config home of the pre-merge standalone package; still honored for the fold section. */
-export function legacyFoldConfigPath(): string {
-	return join(resolveAgentDir(), "extensions", "pi-codex-compaction.json");
-}
+
 
 function parseRetry(raw: unknown, fallback: RetryPolicy): RetryPolicy {
 	const r = typeof raw === "object" && raw !== null ? (raw as Record<string, unknown>) : {};
@@ -126,19 +121,12 @@ function asTriggerPercent(value: unknown, fallback: number): number {
 	return Math.min(value, DEFAULT_FOLD_SETTINGS.triggerPercent);
 }
 
-function parseFold(
-	raw: Record<string, unknown>,
-	fallbackEnabled: boolean,
-	// Legacy pi-codex-compaction.json had its own top-level "enabled", and a leftover
-	// {"enabled": true} there must not re-enable the fold against a top-level
-	// {"enabled": false} — only the unified file's fold.enabled may do that.
-	ignoreEnabled = false,
-): FoldConfig {
+function parseFold(raw: Record<string, unknown>, fallbackEnabled: boolean): FoldConfig {
 	const d = DEFAULT_FOLD_CONFIG;
 	return {
 		// The fallback chains top-level enabled, so a pre-merge {"enabled": false}
 		// config still turns the whole package off; fold.enabled can re-enable it.
-		enabled: ignoreEnabled ? fallbackEnabled : asBoolean(raw.enabled, fallbackEnabled),
+		enabled: asBoolean(raw.enabled, fallbackEnabled),
 		focus: typeof raw.focus === "string" ? raw.focus.trim() : d.focus,
 		triggerPercent: asTriggerPercent(raw.triggerPercent, d.triggerPercent),
 		keepRecentTokens: asCount(raw.keepRecentTokens, d.keepRecentTokens, 2_000, 200_000),
@@ -157,9 +145,9 @@ function parseFold(
 /**
  * Load the merged configuration. Handoff keys come from the top level of
  * pi-context-handoff.json (unchanged from the standalone package). Fold settings come from
- * its `fold` object when present, else from a legacy pi-codex-compaction.json, else
- * defaults. Warnings are collected rather than emitted so each caller can surface them
- * through its own once-per-session notifier.
+ * its optional `fold` object; any other value means defaults. Warnings are collected
+ * rather than emitted so each caller can surface them through its own once-per-session
+ * notifier.
  */
 export function loadExtensionConfig(): { config: ExtensionConfig; warnings: string[] } {
 	const warnings: string[] = [];
@@ -177,12 +165,7 @@ export function loadExtensionConfig(): { config: ExtensionConfig; warnings: stri
 	} else if (typeof mainRaw.fold === "object" && mainRaw.fold !== null) {
 		fold = parseFold(mainRaw.fold as Record<string, unknown>, handoff.enabled);
 	} else {
-		const legacy = readJsonFile(legacyFoldConfigPath());
-		if (legacy.warning) warnings.push(legacy.warning);
-		fold =
-			typeof legacy.value === "object" && legacy.value !== null
-				? parseFold(legacy.value as Record<string, unknown>, handoff.enabled, true)
-				: { ...DEFAULT_FOLD_CONFIG, enabled: handoff.enabled, retry: { ...DEFAULT_FOLD_CONFIG.retry } };
+		fold = { ...DEFAULT_FOLD_CONFIG, enabled: handoff.enabled, retry: { ...DEFAULT_FOLD_CONFIG.retry } };
 	}
 
 	return { config: { handoff, fold }, warnings };

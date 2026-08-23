@@ -1,7 +1,6 @@
 /**
- * The mid-run fold half of pi-context-handoff, ported from the standalone
- * pi-codex-compaction package when the two merged. Behaviour is unchanged; only the
- * plumbing moved. fold.ts holds every decision and is pure; this file is the plumbing.
+ * The mid-run fold half of pi-context-handoff, originally ported from Codex's mid-turn
+ * compaction. fold.ts holds every decision and is pure; this file is the plumbing.
  *
  * Compacts context the way Codex does: inside the run, before every LLM call, instead of
  * only between runs.
@@ -73,10 +72,10 @@ import { createOnceNotifier, describe, statusSetter } from "./util.js";
  * the trigger with an absolute token count and is the only way to exercise a real fold end
  * to end. Mirrors PI_STT_FAKE_* in the voice fork and PI_CONTEXT_HANDOFF_FORCE_RESUME.
  */
-export const FORCE_TRIGGER_ENV = "PI_CODEX_COMPACTION_FORCE_TRIGGER_TOKENS";
+export const FORCE_TRIGGER_ENV = "PI_CONTEXT_HANDOFF_FORCE_TRIGGER_TOKENS";
 
 /** Custom session entry recording each fold. Persisted, never shown to the model. */
-export const FOLD_ENTRY_TYPE = "codex-compaction-fold";
+export const FOLD_ENTRY_TYPE = "context-handoff-fold";
 
 /** Pi does not export its `Model` type from the package root; take it from the context. */
 type PiModel = NonNullable<ExtensionContext["model"]>;
@@ -150,7 +149,7 @@ export function registerFold(pi: ExtensionAPI, getConfig: (ctx: ExtensionContext
 	const settings = (ctx: ExtensionContext): FoldConfig => getConfig(ctx).fold;
 
 	const status = (ctx: ExtensionContext, message: string | undefined) => {
-		statusSetter(ctx, "codex-compaction")(message);
+		statusSetter(ctx, "context-handoff")(message);
 	};
 
 	/**
@@ -185,7 +184,7 @@ export function registerFold(pi: ExtensionAPI, getConfig: (ctx: ExtensionContext
 				model = previousModel;
 				notifyOnce(
 					ctx,
-					`pi-codex-compaction: folding with ${previousModel.id}, the wider window this history was written under.`,
+					`pi-context-handoff: folding with ${previousModel.id}, the wider window this history was written under.`,
 					"info",
 				);
 			}
@@ -195,7 +194,7 @@ export function registerFold(pi: ExtensionAPI, getConfig: (ctx: ExtensionContext
 
 		const auth = await ctx.modelRegistry.getApiKeyAndHeaders(model);
 		if (!auth.ok) {
-			notifyOnce(ctx, "pi-codex-compaction: no usable credential; leaving the request unfolded.", "warning");
+			notifyOnce(ctx, "pi-context-handoff: no usable credential; leaving the request unfolded.", "warning");
 			return null;
 		}
 		const focus = buildFoldFocus({ pinned, extra: cfg.focus });
@@ -239,13 +238,13 @@ export function registerFold(pi: ExtensionAPI, getConfig: (ctx: ExtensionContext
 				// policy passed to generateSummary, so shrinking the prefix would just spend the
 				// remaining budget on a fault that is not about size.
 				if (!looksLikeSizeError(error)) {
-					notifyOnce(ctx, `pi-codex-compaction: could not fold (${describe(error)}).`, "warning");
+					notifyOnce(ctx, `pi-context-handoff: could not fold (${describe(error)}).`, "warning");
 					return null;
 				}
 				if (attempt >= cfg.maxTrimAttempts || current.length <= 1) {
 					notifyOnce(
 						ctx,
-						`pi-codex-compaction: prefix still too large after ${attempt} trim(s) (${describe(error)}).`,
+						`pi-context-handoff: prefix still too large after ${attempt} trim(s) (${describe(error)}).`,
 						"warning",
 					);
 					return null;
@@ -312,7 +311,7 @@ export function registerFold(pi: ExtensionAPI, getConfig: (ctx: ExtensionContext
 		if (foldsSinceUnderTrigger >= cfg.maxFoldsWithoutProgress) {
 			notifyOnce(
 				ctx,
-				`pi-codex-compaction: ${foldsSinceUnderTrigger} folds did not get under the trigger; standing down and leaving it to Pi.`,
+				`pi-context-handoff: ${foldsSinceUnderTrigger} folds did not get under the trigger; standing down and leaving it to Pi.`,
 				"warning",
 			);
 			return fold ? { messages: applied as never } : undefined;
@@ -332,7 +331,7 @@ export function registerFold(pi: ExtensionAPI, getConfig: (ctx: ExtensionContext
 			// rather than pretend.
 			notifyOnce(
 				ctx,
-				`pi-codex-compaction: over ${forced ?? triggerTokens(contextWindow, cfg.triggerPercent)} tokens but nothing further can be folded; leaving it to Pi.`,
+				`pi-context-handoff: over ${forced ?? triggerTokens(contextWindow, cfg.triggerPercent)} tokens but nothing further can be folded; leaving it to Pi.`,
 				"warning",
 			);
 			return fold ? { messages: applied as never } : undefined;
@@ -342,7 +341,7 @@ export function registerFold(pi: ExtensionAPI, getConfig: (ctx: ExtensionContext
 			// up is a real loss even though it beats an oversized request.
 			notifyOnce(
 				ctx,
-				`pi-codex-compaction: recent context did not fit on its own; folded with a reduced tail (${plan.rung}).`,
+				`pi-context-handoff: recent context did not fit on its own; folded with a reduced tail (${plan.rung}).`,
 				"warning",
 			);
 		}
@@ -363,7 +362,7 @@ export function registerFold(pi: ExtensionAPI, getConfig: (ctx: ExtensionContext
 					abandoned = true;
 					notifyOnce(
 						ctx,
-						`pi-codex-compaction: ${consecutiveFailures} folds failed in a row; disabled for this session.`,
+						`pi-context-handoff: ${consecutiveFailures} folds failed in a row; disabled for this session.`,
 						"warning",
 					);
 				}
@@ -391,7 +390,7 @@ export function registerFold(pi: ExtensionAPI, getConfig: (ctx: ExtensionContext
 			if (usePlainSummary) {
 				notifyOnce(
 					ctx,
-					"pi-codex-compaction: Pi no longer renders compactionSummary messages; using a plain user message instead.",
+					"pi-context-handoff: Pi no longer renders compactionSummary messages; using a plain user message instead.",
 					"warning",
 				);
 			}
@@ -439,7 +438,7 @@ export function registerFold(pi: ExtensionAPI, getConfig: (ctx: ExtensionContext
 			if (ctx.hasUI) {
 				try {
 					ctx.ui.notify(
-						`codex-compaction: folded ${plan.cutIndex} messages mid-run, ~${Math.round(measurement.tokens / 1000)}k tokens → ~${Math.round(after.tokens / 1000)}k estimated${plan.pinned.length > 0 ? `, ${plan.pinned.length} instruction(s) kept verbatim` : ""}.`,
+						`context-handoff: folded ${plan.cutIndex} messages mid-run, ~${Math.round(measurement.tokens / 1000)}k tokens → ~${Math.round(after.tokens / 1000)}k estimated${plan.pinned.length > 0 ? `, ${plan.pinned.length} instruction(s) kept verbatim` : ""}.`,
 						"info",
 					);
 				} catch {
@@ -453,7 +452,7 @@ export function registerFold(pi: ExtensionAPI, getConfig: (ctx: ExtensionContext
 			// change on the third telling.
 			notifyOnce(
 				ctx,
-				"pi-codex-compaction: long threads and repeated compaction make the model less accurate. Start a new session when the current task allows it.",
+				"pi-context-handoff: long threads and repeated compaction make the model less accurate. Start a new session when the current case allows it.",
 				"warning",
 			);
 		}
@@ -525,13 +524,8 @@ export function registerFold(pi: ExtensionAPI, getConfig: (ctx: ExtensionContext
 		console.log(lines.join("\n"));
 	};
 
-	pi.registerCommand("codex-compaction", {
-		description: "Show mid-run context folding state (Codex-style compaction)",
-		handler: showStatus,
-	});
-	// Alias under the merged package's own name; identical output.
 	pi.registerCommand("context-handoff", {
-		description: "Show handoff/fold compaction state (alias of /codex-compaction)",
+		description: "Show mid-run fold state (Codex-style compaction)",
 		handler: showStatus,
 	});
 }

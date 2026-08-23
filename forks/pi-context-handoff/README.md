@@ -7,8 +7,6 @@ Makes compaction survivable for long autonomous runs, from three angles:
    approaches), via Pi's own `compact()`.
 2. **Mid-run fold** — the Codex-style fold that shapes the request inside a run before
    every LLM call, closing the gap where Pi's threshold check only runs between runs.
-   Ported from the former `pi-codex-compaction` package, merged here when the two
-   companion packages were unified into one.
 3. **Resume** — resumes a run Pi ended on a truncated reply (`stopReason "length"`) or
    `error`, a case Pi's own overflow test misses. Never resumes `stop`/`aborted`; gives up
    after three consecutive unfinished resumes.
@@ -101,9 +99,7 @@ One file, read relative to `PI_CODING_AGENT_DIR`:
 ```
 
 Top-level keys configure the handoff half; the optional `fold` object configures the
-mid-run fold. A legacy `~/.pi/agent/extensions/pi-codex-compaction.json` from the
-pre-merge standalone package is still honored for fold settings when `fold` is absent.
-
+mid-run fold. 
 Any `customInstructions` Pi was already going to use (a `/compact` argument, or another
 extension's contribution) are preserved and appended, not overridden.
 
@@ -121,10 +117,10 @@ produces a summarization request that can stall.
 
 ## Verification
 
-`PI_CODEX_COMPACTION_FORCE_TRIGGER_TOKENS=<n>` forces the fold trigger to an absolute
+`PI_CONTEXT_HANDOFF_FORCE_TRIGGER_TOKENS=<n>` forces the fold trigger to an absolute
 token count (the only way to exercise a real fold end to end), and
-`PI_CONTEXT_HANDOFF_FORCE_RESUME=1` forces the resume backstop once. `/codex-compaction`
-(and its alias `/context-handoff`) shows live fold state.
+`PI_CONTEXT_HANDOFF_FORCE_RESUME=1` forces the resume backstop once. `/context-handoff`
+shows live fold state.
 
 To typecheck the extension (Pi loads the `.ts` source; this is optional):
 

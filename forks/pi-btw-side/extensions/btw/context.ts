@@ -90,7 +90,7 @@ function toolCallIds(message: AssistantMessage): string[] {
  * Note there are two different estimators in play, and the distinction is the reason this
  * one mirrors pi-ai rather than Pi. `pi-coding-agent` exports its own `estimateTokens`,
  * which is a `switch` over every role and handles all of the above safely — that is the
- * one `pi-codex-compaction` injects, and it is unaffected by any of this. But the
+ * one pi-context-handoff's fold injects, and it is unaffected by any of this. But the
  * function that decides the output budget is pi-ai's, so pi-ai's is the behaviour worth
  * predicting here. Importing either would also cost `bun test tests/` its independence
  * from an installed Pi, which the suite is deliberately built to run without.
@@ -165,7 +165,7 @@ const ZERO_USAGE = {
  *
  * The inherited figures are wrong for the fork in both directions, which is why they are
  * cleared rather than adjusted: they describe a request built from the parent's system
- * prompt and tools, and under pi-codex-compaction they describe the *folded* request,
+ * prompt and tools, and under pi-context-handoff's fold they describe the *folded* request,
  * which is smaller than the history actually being inherited.
  *
  * Zeroing makes Pi fall back to summing the messages it is really about to send. It also

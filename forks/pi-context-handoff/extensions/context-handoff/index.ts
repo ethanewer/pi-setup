@@ -7,9 +7,7 @@
  * it never calls ctx.abort(), never returns { cancel: true }, and every failure path in
  * both halves degrades to stock Pi behavior.
  *
- * This package absorbs what used to be two companion packages — pi-context-handoff
- * (handoff briefs + resume) and pi-codex-compaction (mid-run fold) — because they were
- * always meant to be one set of machinery under one config. Their concerns stay separate:
+ * This package is one set of machinery under one config. Its concerns stay separate:
  *
  *   - Handoff (this file, session_before_compact): Pi only decides *when* to compact; this
  *     shapes *what the summary says*, calling Pi's own compact() with handoff-focus
@@ -25,8 +23,7 @@
  *     run.
  *
  * The two compaction halves share one config file: handoff keys sit at the top level (as
- * the standalone package always used), and fold settings live under the optional "fold"
- * object, with a legacy pi-codex-compaction.json still honored if one exists.
+ * before), and fold settings live under the optional "fold" object.
  */
 
 import { compact, type ExtensionAPI, type ExtensionContext } from "@earendil-works/pi-coding-agent";

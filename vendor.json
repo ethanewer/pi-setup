@@ -54,7 +54,7 @@
       "live": "extensions/context-handoff/index.ts",
       "liveTree": "extensions/context-handoff",
       "patch": null,
-      "note": "First-party extension, not a fork: replaces pi-continue. Steers Pi's own compaction, cannot abort a turn, and includes the mid-run fold merged in from the retired pi-codex-compaction package (kept on disk under forks/ for history only; loading both would chain two context handlers on one request). No upstream to track and nothing to re-vendor."
+      "note": "First-party extension, not a fork: replaces pi-continue. Steers Pi's own compaction, cannot abort a turn, and includes a mid-run fold of the request. No upstream to track and nothing to re-vendor."
     }
   }
 }

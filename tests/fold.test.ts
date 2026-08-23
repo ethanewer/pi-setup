@@ -580,35 +580,18 @@ describe("config", () => {
 	});
 
 	test("top-level enabled: false disables the fold too", () => {
-		// Pre-merge this key turned the whole extension off; the fold must honor it
-		// whether the fold config comes from the unified file, a legacy file, or defaults.
+		// The package-wide kill switch: both halves go off, whatever fold config exists.
 		withAgentDir({ "pi-context-handoff.json": { enabled: false } }, () => {
 			const loaded = loadExtensionConfig();
 			expect(loaded.config.handoff.enabled).toBe(false);
 			expect(loaded.config.fold.enabled).toBe(false);
 		});
 		withAgentDir(
-			{
-				"pi-context-handoff.json": { enabled: false },
-				"pi-codex-compaction.json": { triggerPercent: 0.8 },
-			},
+			{ "pi-context-handoff.json": { enabled: false, fold: { triggerPercent: 0.8 } } },
 			() => {
 				const loaded = loadExtensionConfig();
 				expect(loaded.config.fold.enabled).toBe(false);
 				expect(loaded.config.fold.triggerPercent).toBe(0.8);
-			},
-		);
-		// A leftover legacy {"enabled": true} must not re-enable the fold against the
-		// top-level kill switch; only the unified file's fold.enabled may.
-		withAgentDir(
-			{
-				"pi-context-handoff.json": { enabled: false },
-				"pi-codex-compaction.json": { enabled: true },
-			},
-			() => {
-				const loaded = loadExtensionConfig();
-				expect(loaded.config.handoff.enabled).toBe(false);
-				expect(loaded.config.fold.enabled).toBe(false);
 			},
 		);
 		// An explicit fold.enabled can still turn just the fold back on.
@@ -630,27 +613,19 @@ describe("config", () => {
 		});
 	});
 
-	test("a legacy pi-codex-compaction.json still configures the fold", () => {
+	test("the fold object configures the fold half", () => {
 		withAgentDir(
 			{
-				"pi-context-handoff.json": { focus: "handoff note" },
-				"pi-codex-compaction.json": { keepRecentTokens: 5000, notify: false },
+				"pi-context-handoff.json": {
+					focus: "handoff note",
+					fold: { keepRecentTokens: 5000, notify: false },
+				},
 			},
 			() => {
 				const loaded = loadExtensionConfig();
 				expect(loaded.config.handoff.focus).toBe("handoff note");
 				expect(loaded.config.fold.keepRecentTokens).toBe(5000);
 				expect(loaded.config.fold.notify).toBe(false);
-			},
-		);
-		// ...but a unified fold object wins over the legacy file.
-		withAgentDir(
-			{
-				"pi-context-handoff.json": { fold: { keepRecentTokens: 9000 } },
-				"pi-codex-compaction.json": { keepRecentTokens: 5000 },
-			},
-			() => {
-				expect(loadExtensionConfig().config.fold.keepRecentTokens).toBe(9000);
 			},
 		);
 	});

@@ -75,15 +75,15 @@ came from reading the code, with no suite to check them against.
 
 ## Packages added since that pass
 
-`pi-context-handoff` and `pi-codex-compaction` post-date the 2026-07-30 pass, so neither has
-been through it. Both carry unit tests for their decision logic
+`pi-context-handoff` post-dates the 2026-07-30 pass, so it has not been through it. Its
+halves carry unit tests for their decision logic
 ([`tests/resume.test.ts`](../tests/resume.test.ts),
-[`tests/codex-compaction.test.ts`](../tests/codex-compaction.test.ts)) and both were verified
-end to end against a live provider, which is more than the audited packages had at the time —
-but tests written by the author of the code are not an adversarial read, which is the whole
-point of the pass. Include them in the next one, and give `pi-codex-compaction` the harder
-look of the two: it rewrites what the model sees on every call, so a defect there is a defect
-in every request rather than in one feature.
+[`tests/fold.test.ts`](../tests/fold.test.ts)) and were verified end to end against a live
+provider, which is more than the audited packages had at the time — but tests written by
+the author of the code are not an adversarial read, which is the whole point of the pass.
+Include it in the next one, and give the fold half the harder look: it rewrites what the
+model sees on every call, so a defect there is a defect in every request rather than in
+one feature.
 
 ## Repeating it
 
