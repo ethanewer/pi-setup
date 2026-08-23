@@ -45,14 +45,14 @@ test("/monitor-kill-all is idempotent and reports empty state without a model-co
   assert.equal(h.pi.sentOfType(MESSAGE_TYPE_STOP_ALL).length, 1);
 });
 
-test("monitor_kill_all returns the consolidated list in the tool result without a duplicate custom message", async () => {
+test("monitor_kill id=\"*\" returns the consolidated list in the tool result without a duplicate custom message", async () => {
   const h = makeHarness();
   const a = h.runtime.launch({ command: "job-a" });
   const b = h.runtime.launch({ command: "job-b" });
 
   const result = await h.pi
-    .tool("monitor_kill_all")
-    .execute("t1", {}, undefined, undefined, makeCtx().ctx);
+    .tool("monitor_kill")
+    .execute("t1", { id: "*" }, undefined, undefined, makeCtx().ctx);
   assert.equal(h.runtime.activeCount(), 0);
   assert.match(result.content[0]!.text, /Stopped 2 background monitor\(s\)/);
   assert.ok(result.content[0]!.text.includes(a.id));
@@ -65,11 +65,11 @@ test("monitor_kill_all returns the consolidated list in the tool result without 
   assert.equal(h.pi.sentOfType(MESSAGE_TYPE_STOP_ALL).length, 0);
 });
 
-test("monitor_kill_all with no active watchers reports that fact plainly", async () => {
+test("monitor_kill id=\"*\" with no active watchers reports that fact plainly", async () => {
   const h = makeHarness();
   const result = await h.pi
-    .tool("monitor_kill_all")
-    .execute("t1", {}, undefined, undefined, makeCtx().ctx);
+    .tool("monitor_kill")
+    .execute("t1", { id: "*" }, undefined, undefined, makeCtx().ctx);
   assert.equal(result.content[0]!.text, "No active monitors.");
   assert.deepEqual(result.details.watchers, []);
   assert.equal(h.pi.sent.length, 0);

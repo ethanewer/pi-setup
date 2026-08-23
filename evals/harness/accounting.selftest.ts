@@ -84,14 +84,19 @@ t.handle({ type: "queue_update", steering: ["[watcher q1] matched: TRAINING COMP
 check("steered ping counted", t.stats().monitorEventPings, 2);
 check("non-death steer keeps watcher", t.activeWatchers(), 1);
 
-// 8. kill_all zeroes everything
+// 8. kill-all (id "*") zeroes everything
+t.handle({
+  type: "tool_execution_start",
+  toolName: "monitor_kill",
+  args: { id: "*" },
+});
 t.handle({
   type: "tool_execution_end",
-  toolName: "monitor_kill_all",
+  toolName: "monitor_kill",
   isError: false,
-  result: { content: [{ type: "text", text: "Stopped 3 watchers." }] },
+  result: { content: [{ type: "text", text: "Stopped 3 background monitor(s)." }] },
 });
-check("kill_all zeroes", t.activeWatchers(), 0);
+check("kill-all zeroes", t.activeWatchers(), 0);
 
 if (failures) {
   console.log(`\n${failures} FAILURES`);

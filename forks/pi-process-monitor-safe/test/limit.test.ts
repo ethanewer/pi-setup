@@ -4,7 +4,7 @@ import { makeCtx, makeHarness, launchViaTool } from "./helpers.ts";
 import { MAX_ACTIVE_WATCHERS, MonitorLimitError } from "../extensions/monitor/types.ts";
 
 const LIMIT_MESSAGE =
-  "16 active monitors; use monitor_status, then monitor_kill (or monitor_kill_all) before starting another.";
+  "16 active monitors; use monitor_status, then monitor_kill (id \"*\" stops all) before starting another.";
 
 test("the 16th monitor starts and the 17th is refused via the tool with an actionable error", async () => {
   const h = makeHarness();

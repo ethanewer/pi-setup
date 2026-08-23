@@ -4,7 +4,7 @@
  * the injected-adapter runtime.
  *
  * Registers:
- *   tools:    monitor, monitor_status, monitor_kill, monitor_kill_all
+ *   tools:    monitor, monitor_status, monitor_kill (id "*" = all)
  *   commands: /monitor, /monitors, /monitor-kill, /monitor-kill-all
  *
  * Context semantics (see PLAN.md):
@@ -205,15 +205,11 @@ export function registerMonitorExtension(
   // ---- TOOL: monitor -------------------------------------------------------
   const monitorParams = Type.Object({
     command: Type.Optional(Type.String({ description: "Shell command. Spawned once & tailed (spawn); if intervalSeconds is also set, re-run every N s (poll, e.g. ssh h100 'tail -n5 log; pgrep -fc train')." })),
-    intervalSeconds: Type.Optional(Type.Number({ description: "Poll interval in seconds. If set, `command` is re-run on this cadence (poll mode). Min 2." })),
-    logFile: Type.Optional(Type.String({ description: "Path to a log file to tail for appended lines (file mode). Watch + 5s backstop poll." })),
+    intervalSeconds: Type.Optional(Type.Number({ description: "Poll interval in seconds. If set, `command` is re-run on this cadence (poll mode)." })),
+    logFile: Type.Optional(Type.String({ description: "Path to a log file to tail for appended lines (file mode)." })),
     notifyOn: Type.Optional(Type.Array(Type.String(), { description: "Case-insensitive regexes. A line matching ANY is pushed. Defaults to milestones+failures (saved, complete, done, error, fail, oom, killed, traceback, …)." })),
-    heartbeatMinutes: Type.Optional(Type.Number({ description: "Include this watcher in an aggregated heartbeat status every N minutes even when silent. Default: off." })),
     label: Type.Optional(Type.String({ description: "Human label for the watcher." })),
-    coalesceSeconds: Type.Optional(Type.Number({ description: "Merge rapid matching lines into one message over this window. Default 2." })),
-    maxLines: Type.Optional(Type.Number({ description: "Cap lines per pushed message. Default 20." })),
     cwd: Type.Optional(Type.String({ description: "Working directory for spawn/poll. Default current." })),
-    timeoutSeconds: Type.Optional(Type.Number({ description: "Auto-kill the watcher after N seconds. Fires a TIMEOUT ping and stops the watcher. Default: no timeout." })),
   });
   type MonitorParams = Static<typeof monitorParams>;
 
@@ -222,17 +218,13 @@ export function registerMonitorExtension(
     label: "Monitor",
     description:
       "Start a NON-BLOCKING background watcher over a process, a polling command (e.g. SSH), or a log file. " +
-      "Returns immediately with a watcher id. The session is pinged (you are notified; agent wakes if idle) " +
-      "when a line matches notifyOn, when the process exits/fails, and on optional aggregated heartbeats. " +
-      `At most ${MAX_ACTIVE_WATCHERS} watchers can be active; stop finished ones with monitor_kill or monitor_kill_all. ` +
-      "Watchers are never persisted across session shutdown/reload. Pick ONE source: " +
-      "`command` (spawn once), `command`+`intervalSeconds` (poll, ideal for SSH/remote), or `logFile` (tail).",
+      "Returns immediately with a watcher id. The session is pinged (and woken if idle) when a line matches notifyOn " +
+      "or the process exits/fails. Pick ONE source: `command` (spawn once; add `intervalSeconds` to poll on a cadence) " +
+      "or `logFile` (tail appended lines). Stop watchers with monitor_kill (id \"*\" stops all).",
     promptSnippet:
       "Watch a background process/SSH/log and ping the session on milestones or failure",
     promptGuidelines: [
-      "Use monitor instead of blocking bash when a job may run minutes-to-hours (training, dev server, CI, remote SSH). It returns at once with a watcher id and pings the session on matching lines or process exit — never block the session waiting.",
-      "For remote jobs (e.g. an H100 training run), use monitor with `command` set to the ssh check + `intervalSeconds` (e.g. ssh box 'tail -n5 log; pgrep -fc train'), and `notifyOn` for the milestones you care about (adapter saved, step N, oom, killed).",
-      `monitor allows at most ${MAX_ACTIVE_WATCHERS} active watchers. When the limit is hit, run monitor_status and stop stale watchers with monitor_kill or monitor_kill_all before starting new ones.`,
+      "If a job may run longer than ~30 seconds (builds, tests, training, dev servers, migrations, remote SSH), run it under monitor instead of blocking bash: it returns at once and pings the session on milestones or failure. After starting a watcher, end your turn or do other work — never sleep or poll while one is running.",
     ],
     parameters: monitorParams,
     async execute(
@@ -290,35 +282,27 @@ export function registerMonitorExtension(
     name: "monitor_kill",
     label: "Monitor kill",
     description:
-      "Stop a background watcher by id. For spawn/poll children, signals the process group with SIGTERM, then SIGKILL after 3s.",
-    parameters: Type.Object({ id: Type.String({ description: "Watcher id from monitor." }) }),
+      "Stop a background watcher by id; use id \"*\" to stop ALL active watchers. " +
+      "For spawn/poll children, signals the process group with SIGTERM, then SIGKILL after 3s.",
+    parameters: Type.Object({ id: Type.String({ description: "Watcher id from monitor, or \"*\" for all." }) }),
     async execute(
       _id,
       params,
-    ): Promise<{ content: TextBlock[]; details: { watcher: WatcherMeta | undefined } }> {
+    ): Promise<{ content: TextBlock[]; details: { watcher?: WatcherMeta; watchers?: WatcherMeta[] } }> {
+      if (params.id === "*") {
+        const stopped = runtime.stopAll();
+        if (!stopped.length) {
+          return { content: text("No active monitors."), details: { watchers: [] } };
+        }
+        // The consolidated list lives in this tool result (already model
+        // context); no duplicate custom message is appended.
+        return { content: text(buildStopAllSummary(stopped)), details: { watchers: stopped } };
+      }
       const watcher = runtime.stop(params.id);
       if (!watcher) {
         return { content: text(`No watcher ${params.id}.`), details: { watcher: undefined } };
       }
       return { content: text(`Stopped ${watcher.id}.`), details: { watcher } };
-    },
-  });
-
-  // ---- TOOL: monitor_kill_all ---------------------------------------------------
-  pi.registerTool({
-    name: "monitor_kill_all",
-    label: "Monitor kill all",
-    description:
-      "Stop ALL active background watchers atomically. Returns the consolidated list of stopped watchers.",
-    parameters: Type.Object({}),
-    async execute(): Promise<{ content: TextBlock[]; details: { watchers: WatcherMeta[] } }> {
-      const stopped = runtime.stopAll();
-      if (!stopped.length) {
-        return { content: text("No active monitors."), details: { watchers: [] } };
-      }
-      // The consolidated list lives in this tool result (already model
-      // context); no duplicate custom message is appended.
-      return { content: text(buildStopAllSummary(stopped)), details: { watchers: stopped } };
     },
   });
 

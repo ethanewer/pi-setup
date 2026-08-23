@@ -7,7 +7,7 @@
  * Counting rules:
  *  - a successful `monitor` tool result ("Watcher <id> running|polling") starts one watcher
  *  - a successful `monitor_kill` stops as many as its result reports
- *  - `monitor_kill_all` zeroes the count
+ *  - `monitor_kill` with id "*" (or legacy `monitor_kill_all`) zeroes the count
  *  - an injected ping whose text starts with "[watcher " counts as a ping;
  *    death markers (PROCESS EXITED / SPAWN ERROR / TIMEOUT after) also stop one watcher
  *  - text merely *containing* "[watcher " (e.g. the SKILL.md docs read back as a
@@ -43,6 +43,11 @@ export function createTracker() {
 
   function handle(event: any) {
     switch (event?.type) {
+      case "tool_execution_start": {
+        // kill-all is intentionally invoked as monitor_kill with id "*"
+        if (event.toolName === "monitor_kill" && event.args?.id === "*") stopAllSeen = true;
+        break;
+      }
       case "tool_execution_end": {
         const text = textOf(event.result?.content ?? event.result);
         if (event.toolName === "monitor" && !event.isError && /Watcher \S+ (running|polling)/.test(text)) {
@@ -50,7 +55,7 @@ export function createTracker() {
         } else if (event.toolName === "monitor_kill" && !event.isError) {
           watcherStops += (text.match(/Stopped watcher/g) ?? []).length || 1;
         } else if (event.toolName === "monitor_kill_all" && !event.isError) {
-          stopAllSeen = true;
+          stopAllSeen = true; // legacy transcripts (pre-merge)
         }
         break;
       }

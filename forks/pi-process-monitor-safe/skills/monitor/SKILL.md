@@ -1,6 +1,6 @@
 ---
 name: monitor
-description: Non-blocking background watcher for pi (safe fork). Start a long-running process (training, dev server, CI), poll a remote SSH command, or tail a log file, and get pinged in-session the moment a milestone hits, a failure occurs, or the process dies — without blocking the session. Use when a job may run minutes-to-hours and you need to keep working while it runs.
+description: Non-blocking watcher for long jobs (builds, tests, training, dev servers, remote SSH, log tails). Pings the session on milestones/failures so you keep working instead of blocking.
 user-invokable: true
 tested_date: 2026-07-28
 tested_with: pi-process-monitor-safe 1.0.0, @earendil-works/pi-coding-agent (peer)
@@ -60,9 +60,9 @@ death/exit signal for poll mode, e.g. an `ALIVE=0` sentinel.
 ## Limits (important)
 
 At most **16 watchers** can be active at once. The 17th `monitor` call fails
-with an error telling you to run `monitor_status`, then `monitor_kill` (or
-`monitor_kill_all`) before starting another. Stopped and exited watchers free
-their slot immediately, so clean up watchers you no longer need.
+with an error telling you to run `monitor_status`, then `monitor_kill` (use
+`id: "*"` to stop everything). Stopped and exited watchers free their slot
+immediately, so clean up watchers you no longer need.
 
 ## Recipes
 
@@ -106,9 +106,9 @@ watcher's heartbeat, and heartbeats never count as real events in status.
   last ping). Stopped/exited watchers are removed immediately.
 - `monitor_kill {id}` / `/monitor-kill <id>` — stop one (`/monitor-kill <TAB>`
   autocompletes live ids; the child's process group gets SIGTERM, then
-  SIGKILL after 3s). Killed processes do not produce an exit ping.
-- `monitor_kill_all` / `/monitor-kill-all` — stop everything atomically and
-  report the consolidated list.
+  SIGKILL after 3s); pass `id: "*"` to stop ALL watchers atomically
+  (`/monitor-kill-all` does the same for humans). Killed processes do not
+  produce an exit ping.
 - **No restart-resume (differs from upstream):** watchers are never persisted
   and never restored. Session shutdown, `/reload`, `/new`, `/resume`, and
   `/fork` stop all watchers and record one context summary naming the reason.
