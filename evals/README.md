@@ -91,10 +91,11 @@ On the pre-simplification surface (4 tools, 10 params, 3 guidelines) the same be
 measured trust 10/8/8/6 with average blocking 27/28/33/79 s — the simplification
 improved every model, glm most of all.
 
-With the heartbeat-native tasks t6/t7 added (and `heartbeatMinutes` restored): trust
-15–18/18 per model with no degradation on t1–t5, and heartbeats configured at the
-requested ~1-minute cadence in 14/24 heartbeat-task runs (the rest mostly used
-poll-based check-ins, which also satisfies the periodic-checkin requirement).
+With the heartbeat-native tasks t6/t7 added (and `heartbeatMinutes` restored), and
+after t7 was hardened so its output is invisible to default watchers: trust 14–15/18
+per model with no degradation on t1–t4, heartbeats configured in 17/24
+heartbeat-task runs at the requested ~1-minute cadence, and t6/t7 trusted in 21/24.
+Average blocking time across the final run: 5–23 s per model.
 
 (History: an earlier two-parallel-render-jobs task occupied the t5 slot but was removed
 as contrived; the control task was renamed t6 → t5 to close the gap.)
