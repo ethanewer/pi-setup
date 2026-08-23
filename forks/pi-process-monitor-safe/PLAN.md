@@ -2,8 +2,10 @@
 
 > **Status note (1.1.0):** this plan documents the original hardening pass and is
 > historical. Two details below have since changed: the `monitor_kill_all` tool is
-> now `monitor_kill` with `id: "*"`, and `heartbeatMinutes`/`timeoutSeconds` are no
-> longer tool parameters (timeout stays available as `/monitor --timeout N`).
+> now `monitor_kill` with `id: "*"`, and `timeoutSeconds` is no longer a tool
+> parameter (timeout stays available as `/monitor --timeout N`). `heartbeatMinutes`
+> was trimmed too, then restored to the schema (fractional minutes allowed) because
+> periodic check-ins on quiet jobs need it.
 
 ## Goal
 

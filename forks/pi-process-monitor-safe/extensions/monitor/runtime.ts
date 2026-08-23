@@ -652,7 +652,9 @@ export function createMonitorRuntime(deps: RuntimeDeps): MonitorRuntime {
       const push = (line: string): void => coalescer.push(line);
 
       if (opts.heartbeatMinutes && opts.heartbeatMinutes > 0) {
-        const intervalMs = Math.max(1, opts.heartbeatMinutes) * 60_000;
+        // Floor at 0.5 min: the scheduler ticks every 30s, so anything finer
+        // could not be honored anyway.
+        const intervalMs = Math.max(0.5, opts.heartbeatMinutes) * 60_000;
         w.heartbeat = { intervalMs, nextAt: clock.now() + intervalMs };
         ensureHeartbeatScheduler();
       }

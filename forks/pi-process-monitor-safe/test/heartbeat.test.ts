@@ -14,6 +14,16 @@ test("heartbeats are off unless requested", () => {
   assert.equal(h.pi.sentOfType(MESSAGE_TYPE_HEARTBEAT).length, 0);
 });
 
+test("fractional heartbeatMinutes fires on the sub-minute schedule", () => {
+  const h = makeHarness();
+  h.runtime.launch({ command: "job", heartbeatMinutes: 0.5 });
+  h.clock.advance(29_000);
+  assert.equal(h.pi.sentOfType(MESSAGE_TYPE_HEARTBEAT).length, 0, "not due yet");
+  h.clock.advance(2_000);
+  const beats = h.pi.sentOfType(MESSAGE_TYPE_HEARTBEAT);
+  assert.equal(beats.length, 1, "due at 30s");
+});
+
 test("all due watchers aggregate into one turn-triggering heartbeat message", () => {
   const h = makeHarness();
   const a = h.runtime.launch({ command: "a", heartbeatMinutes: 1 });

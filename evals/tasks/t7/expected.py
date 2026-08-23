@@ -13,5 +13,5 @@ print(json.dumps({
     "duration": total,
     "checkpoint_interval": 70,
     "final_step": steps,
-    "completion_marker": "TRAINING COMPLETE",
+    "completion_marker": "RUN OVER",
 }))
