@@ -23,7 +23,6 @@ def main():
     step = 0
     loss = r.uniform(2.5, 4.0)
     last_weights = None
-    print("[train] starting run", flush=True)
     while True:
         time.sleep(STEP_TIME)
         step += 100

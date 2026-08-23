@@ -25,11 +25,11 @@ fork — identical across models, so the model is the only variable.
 | t4 | Detached batch job writing `batch.log` for 90–180 s | tail the log, react to the final line |
 | t5 | Control: three <5-second chores | should NOT use a monitor |
 | t6 | 150–210 s export job that prints ONLY a progress bar; check on it ~every minute | heartbeats: periodic check-ins when nothing can match |
-| t7 | Quiet training run, checkpoint output ~every 70 s; check on it ~every minute | heartbeats: on-schedule check-ins between sparse lines |
+| t7 | Quiet training run, weights-write output ~every 70 s; check on it ~every minute | heartbeats: on-schedule check-ins between sparse lines |
 
 ### Metrics
 
-- **Adoption** — `monitor` used on t1–t4 (want yes), t5 (want no).
+- **Adoption** — `monitor` used on t1–t4 and t6–t7 (want yes), t5 (want no).
 - **Trust** — `bash_blocking_seconds`: wall time in bash calls >15 s (sleep loops, inline waits).
   A model can "adopt" the tool yet still block; the interesting signal is going idle and
   letting pings drive the session (`spontaneous_wakeups`).
