@@ -441,8 +441,9 @@ python3 score/score.py results/latest
 ```
 
 See [`evals/README.md`](evals/README.md) for task design, metrics, and reference results
-(gpt-5.6-sol idles on pings in 3/4 long-job tasks; deepseek-v4-flash-0731 adopts the tool
-but keeps sleep-blocking in 3/4).
+(four models x three seeds: adoption 10–12/12 long-job tasks, genuine ping-waiting
+8–11/12; the eval also drove a simplification of the monitor extension's model surface
+from 4 tools/10 params/3 guidelines to 3/6/1, which improved trust for every model).
 
 ## Performance
 

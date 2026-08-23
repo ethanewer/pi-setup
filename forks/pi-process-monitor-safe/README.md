@@ -47,17 +47,16 @@ Add the package path to your pi settings (`~/.pi/agent/settings.json`), and make
   "command": "ssh h100 'tail -n3 /root/train.log; echo ALIVE=$(pgrep -fc axolotl)'",
   "intervalSeconds": 30,
   "label": "h100-qlora",
-  "heartbeatMinutes": 10,
   "notifyOn": ["adapter.*saved", "error|oom|killed|traceback", "ALIVE=0"]
 }
 ```
 
-Params: `command`, `intervalSeconds` (min 2), `logFile`, `notifyOn` (case-insensitive regexes), `heartbeatMinutes`, `label`, `coalesceSeconds` (default 2), `maxLines` (default 20), `cwd`, `timeoutSeconds`.
+Params: `command`, `intervalSeconds`, `logFile`, `notifyOn` (case-insensitive regexes), `label`, `cwd`. Tuning knobs (coalescing window, max lines, timeout) are intentionally not tool parameters; `--timeout N` is available on the `/monitor` command.
 
 Starting a 17th watcher fails with an **error** tool result:
 
 ```
-16 active monitors; use monitor_status, then monitor_kill (or monitor_kill_all) before starting another.
+16 active monitors; use monitor_status, then monitor_kill (id "*" stops all) before starting another.
 ```
 
 A command that fails to spawn synchronously also fails the `monitor` call itself (error tool result, slot released) — a watcher that never started is never reported as running. Asynchronous spawn errors emit one `SPAWN ERROR` event and release the watcher.
@@ -65,11 +64,8 @@ A command that fails to spawn synchronously also fails the `monitor` call itself
 ### `monitor_status` — list active watchers
 Only *active* watchers appear; stopped and exited watchers free their slot immediately.
 
-### `monitor_kill` — stop one watcher
-Signals the child's process group with SIGTERM, escalating to SIGKILL after 3s. The slot is freed immediately; the killed process does **not** produce an exit turn.
-
-### `monitor_kill_all` — stop everything
-Stops every active watcher atomically and returns the consolidated list in the tool result (no duplicate context message).
+### `monitor_kill` — stop one watcher, or all
+Signals the child's process group with SIGTERM, escalating to SIGKILL after 3s. The slot is freed immediately; the killed process does **not** produce an exit turn. Pass `id: "*"` to stop every active watcher atomically — the consolidated list comes back in the tool result (no duplicate context message).
 
 ## Slash commands
 
@@ -98,7 +94,7 @@ Poll ticks never overlap: while a poll's child is still running (slow SSH, hung 
 
 ## Heartbeats
 
-Off unless `heartbeatMinutes` is set. One extension-level scheduler ticks every 30s; every watcher due on a tick is folded into **one** `monitor-heartbeat` message (`details: { watcherIds }`) that triggers a single model turn, then each watcher's due time advances by its own interval. A real matched/exit event during a watcher's preceding interval substitutes for that heartbeat. Heartbeats never count as real events in `monitor_status`.
+The runtime can fold due watchers into one `monitor-heartbeat` message (`details: { watcherIds }`) that triggers a single model turn; a real matched/exit event during a watcher's preceding interval substitutes for that heartbeat, and heartbeats never count as real events in `monitor_status`. The current tool/command surface does not enable heartbeats — the machinery is internal plumbing.
 
 ## Session lifecycle (breaking change vs upstream)
 

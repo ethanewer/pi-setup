@@ -48,15 +48,18 @@ the SKILL.md text was miscounted as a watcher event).
 
 ```bash
 cd evals
-SEED=42 MODEL="openai/gpt-5.6-sol" ./run.sh          # all 6 tasks in parallel
+SEED=42 MODEL="openai/gpt-5.6-sol" ./run.sh          # one model, all tasks in parallel
 python3 score/score.py results/latest
 
-SEEDS="1 2 3 4 5" MODEL="openai/gpt-5.6-sol" ./run-many.sh   # multi-trial
+./run-multi.sh                                        # 4 models x 3 seeds x all tasks, fully parallel
+python3 score/aggregate.py results/latest-multi       # per-model adoption/trust/blocking summary
 ```
 
 `run.sh` installs dependencies on first use (Bun; pins `@earendil-works/pi-coding-agent`,
 see `package.json`). Results land in `results/<timestamp>_<model>_seed<N>/` (gitignored):
 per-task workspace, full event transcript, `run.json`, and `scores.json` at the top.
+Runs whose model output is empty or degenerate (rare API glitches) are flagged
+`INVALID RUN` by the scorer and excluded from scores.
 
 Reproducibility knobs: `SEED` drives all fixture runtimes deterministically; the harness
 links the monitor fork from `forks/` (falls back to `~/.pi/agent/local/`); the Pi package
@@ -67,18 +70,21 @@ Known property: duration formulas live in fixture source, so a model that reads 
 could compute runtimes. That affects timing strategy, not the need to handle a long job —
 and results themselves are runtime-bound (see evidence checks above).
 
-### Reference results (seed 42, one trial per model)
+### Reference results (simplified extension surface: 3 tools, 6 params, 1 guideline)
 
-| task | gpt-5.6-sol (monitor · wakeups · block s) | deepseek-v4-flash-0731 (monitor · wakeups · block s) |
-|------|------|------|
-| t1 | yes · 1 · 0 | no · 0 · 112 |
-| t2 | no · 0 · 162 | no · 0 · 103 |
-| t3 | yes · 2 · 0 | yes (decorative) · 0 · 105 |
-| t4 | yes · 3 · 0 | yes · 0 · 150 |
-| t5 | correctly none | correctly none |
+Three seeds x four models, trust = monitor used AND zero sleep-blocking (of 12 long-job tasks;
+one degenerate-output run excluded, hence deepseek's /11):
 
-Both models completed every goal; the gap is in trust — gpt-5.6-sol idled and waited for
-pings (3/4 long-job tasks), while deepseek set watchers then slept in bash anyway (1/4).
+| model | adoption | trust | avg block (s) | outcome |
+|-------|:---:|:---:|:---:|:---:|
+| openai/gpt-5.6-luna | 12/12 | 9/12 | 12 | 0.95 |
+| openrouter/deepseek/deepseek-v4-flash-0731 | 10/11 | 9/11 | 6 | 0.96 |
+| openrouter/qwen/qwen3.8-max | 10/12 | 9/12 | 36 | 1.00 |
+| openrouter/z-ai/glm-5.2 | 12/12 | 11/12 | 11 | 0.98 |
+
+On the pre-simplification surface (4 tools, 10 params, 3 guidelines) the same benchmark
+measured trust 10/8/8/6 with average blocking 27/28/33/79 s — the simplification
+improved every model, glm most of all.
 
 (History: an earlier two-parallel-render-jobs task occupied the t5 slot but was removed
 as contrived; the control task was renamed t6 → t5 to close the gap.)

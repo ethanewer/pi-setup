@@ -129,6 +129,10 @@ def score_task(task, run_dir, seed):
               f"likely an older task version — skipping", file=sys.stderr)
         return None
     run = json.load(open(os.path.join(rd, "run.json")))
+    # degenerate model output (chat-template artifacts) counts as an invalid run
+    _stripped = re.sub(r"<[^>]*>", "", run.get("finalText") or "")
+    junk = not re.search(r"[A-Za-z0-9]", _stripped)
+    invalid = run["assistantTurns"] == 0 or (junk and run["watcherStarts"] == 0 and not run["toolCounts"])
     transcript = load_jsonl(os.path.join(rd, "transcript.jsonl"))
     events = load_jsonl(os.path.join(rd, "events.jsonl"))
     gt = ground_truth(task, seed)
@@ -189,6 +193,9 @@ def score_task(task, run_dir, seed):
         checks["greet_tests_pass"] = t.returncode == 0
 
     integ = integrity(run, work, task)
+    if invalid:
+        print(f"!! {task} seed={seed}: INVALID RUN (degenerate/empty model output) — excluded", file=sys.stderr)
+        return None
     bool_checks = [v for k, v in checks.items() if isinstance(v, bool)]
     return {
         "task": task,

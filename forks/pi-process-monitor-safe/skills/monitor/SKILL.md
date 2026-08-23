@@ -69,12 +69,12 @@ immediately, so clean up watchers you no longer need.
 ### ML training on a remote H100 (the canonical case)
 ```json
 { "command": "ssh h100 'tail -n3 /root/train.log; echo ALIVE=$(pgrep -fc axolotl)'",
-  "intervalSeconds": 30, "label": "h100-qlora", "heartbeatMinutes": 10,
+  "intervalSeconds": 30, "label": "h100-qlora",
   "notifyOn": ["adapter.*saved", "step (6[0-9]|[1-9][0-9][0-9]) ", "error|oom|killed|traceback", "ALIVE=0"] }
 ```
 Returns at once (`Watcher <id> running`). You keep working. The session is
 pinged when the adapter saves, when step 60+ lands, on OOM, or when the
-process dies. Heartbeat status every 10 min even if silent.
+process dies.
 
 ### Local dev server (spawn)
 ```json
@@ -89,16 +89,15 @@ process dies. Heartbeat status every 10 min even if silent.
 
 ## Timeout
 
-Pass `timeoutSeconds` to auto-kill a watcher after N seconds. Fires a
-`TIMEOUT after Ns` ping and stops the watcher cleanly. Works in all three
-modes. Also available as `--timeout N` in the `/monitor` command.
+Auto-kill a watcher after N seconds — available through the `/monitor`
+command (`--timeout N`), not as a tool parameter. Fires a `TIMEOUT after Ns`
+ping and stops the watcher cleanly.
 
 ## Heartbeats
 
-Off unless `heartbeatMinutes` is set. Due heartbeats from all watchers are
-aggregated into a single `monitor-heartbeat` message that wakes the session
-once. A real event during the preceding interval substitutes for that
-watcher's heartbeat, and heartbeats never count as real events in status.
+The runtime can aggregate silent-watcher status into a single
+`monitor-heartbeat` ping, but the current tool/command surface does not
+enable them — treat this as internal plumbing.
 
 ## Lifecycle
 
