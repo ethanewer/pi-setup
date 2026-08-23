@@ -38,6 +38,17 @@ text-*, davinci/curie/babbage/ada, openai/*). The effective model is the last
 `model_change` event (falling back to the last assistant turn); a trace whose
 every assistant turn is OpenAI is also dropped.
 
+Monitor-bench eval traces
+-------------------------
+In addition to pi session files, the tool ingests monitor-bench eval runs
+(evals/results in ~/pi-setup* checkouts; headless runs leave only
+transcript.jsonl, no session files). Policy: only runs that PERFECTLY pass
+(every scorer check, clean fixture integrity, correct monitor adoption, zero
+bash blocking) are converted; at most 5 traces per task (task == prompt);
+when more qualify, version diversity across the monitor extension is
+preferred and the shortest traces win. Same model invariants and redaction
+apply. --no-eval disables this; --eval-cap changes the per-task cap.
+
 Upload
 ------
 If HF_TOKEN (or HUGGING_FACE_HUB_TOKEN) is set and the token has `write` access,
@@ -51,6 +62,8 @@ Usage
   python3 convert_pi_traces.py --no-upload     # convert, write local files, no upload
   python3 convert_pi_traces.py --scan-home     # also walk all of ~ (slower)
   python3 convert_pi_traces.py --max-files 20  # cap discovered traces (debug)
+  python3 convert_pi_traces.py --no-eval       # skip monitor-bench eval traces
+  python3 convert_pi_traces.py --eval-cap 3    # at most 3 eval traces per task
 """
 
 from __future__ import annotations
@@ -61,6 +74,7 @@ import json
 import os
 import re
 import string
+import subprocess
 import sys
 import tarfile
 import tempfile
@@ -261,6 +275,437 @@ def detect_benchmark_rollout(events: list[dict], cwd: str) -> str | None:
         return "terminalbench"
 
     return None
+
+# --------------------------------------------------------------------------- #
+# monitor-bench eval traces
+# --------------------------------------------------------------------------- #
+#
+# The monitor-bench eval (evals/ in this repo and its sibling checkouts
+# pi-setup-monitor-initial / pi-setup-monitor-optim) runs headless Pi sessions
+# with SessionManager.inMemory, so no pi session files exist; the only record
+# is each task's transcript.jsonl. Those transcripts can be converted into the
+# dataset row format too, but they are plentiful (7 fixed prompts x models x
+# seeds x extension versions), so a strict policy applies:
+#
+#   * PERFECT runs only: every scorer boolean check passes (outcome_score 1.0),
+#     no unexpected fixture modifications (integrity), correct adoption
+#     (monitor used on the long-job tasks t1-t4/t6/t7, NOT used on the control
+#     t5), and zero bash blocking (bash_blocking_seconds == 0, i.e. the model
+#     trusted the watcher instead of sleep-looping).
+#   * At most EVAL_PER_TASK_CAP traces per task (task == prompt).
+#   * When more candidates than the cap exist, prefer traces produced under
+#     different monitor-extension versions, and pick the shortest traces
+#     (fewest transcript bytes) within that constraint.
+#   * The global model invariants still apply: OpenAI/Anthropic-model traces
+#     are dropped, and redaction runs over eval rows like any other row.
+
+EVAL_PER_TASK_CAP = 5
+MONITOR_BENCH_LONG_TASKS = {"t1", "t2", "t3", "t4", "t6", "t7"}
+
+# Fork-commit -> human-readable extension-surface era (see git log --
+# forks/pi-process-monitor-safe: initial 4-tool/10-param surface, the iter
+# tweaks, the 3-tool/6-param simplification, restored heartbeats, unslop).
+MONITOR_VERSION_ERAS = {
+    "0356b3b": "initial-4x10", "018d81a": "initial-4x10",
+    "1e4907b": "initial-4x10", "6b077fe": "initial-4x10",
+    "f3d0ca0": "iter-4x10", "2428d59": "iter-4x10", "dac53ad": "iter-4x10",
+    "3f10ffb": "simplified-3x6", "3bdb67b": "simplified-3x6",
+    "f2263f4": "simplified-3x6", "9b55521": "simplified-3x6",
+    "188a20f": "simplified-heartbeat", "4b0fae6": "simplified-heartbeat",
+    "b9cd9d9": "simplified-heartbeat-unslop", "bbefbf7": "simplified-heartbeat-unslop",
+}
+
+
+@dataclass
+class EvalStats:
+    checkouts: int = 0
+    runs: int = 0
+    scored_tasks: int = 0
+    dropped_model: int = 0
+    dropped_imperfect: int = 0
+    selected: int = 0
+    fail_reasons: Counter = field(default_factory=Counter)
+
+
+def discover_monitor_bench_runs() -> list[tuple[Path, Path]]:
+    """Find (checkout, run_dir) pairs for every monitor-bench run on this
+    machine: any ~/pi-setup* checkout with evals/results/*/meta.json (runs are
+    one or two levels deep). Symlinked aliases (latest, latest-multi) are
+    skipped via realpath dedupe."""
+    out: list[tuple[Path, Path]] = []
+    seen: set[Path] = set()
+    for co in sorted(HOME.glob("pi-setup*")):
+        results = co / "evals" / "results"
+        if not co.is_dir() or not results.is_dir():
+            continue
+        for meta in sorted(results.rglob("meta.json")):
+            run = meta.parent.resolve()
+            if run in seen or not (run / "meta.json").is_file():
+                continue
+            seen.add(run)
+            out.append((co, run))
+    return out
+
+
+def monitor_fork_history(checkout: Path) -> list[tuple[int, str]]:
+    """Ascending (commit_time, short_hash) list of commits that touched the
+    monitor fork in this checkout."""
+    try:
+        r = subprocess.run(
+            ["git", "-C", str(checkout), "log", "--format=%h %ct", "--",
+             "forks/pi-process-monitor-safe"],
+            capture_output=True, text=True, timeout=30,
+        )
+        hist = [(int(ct), h) for line in r.stdout.splitlines() if line.strip()
+                for h, ct in [line.split()]]
+        return sorted(hist)
+    except Exception:
+        return []
+
+
+def monitor_version_at(hist: list[tuple[int, str]], epoch: float) -> str | None:
+    v = None
+    for ct, h in hist:
+        if ct <= epoch:
+            v = h
+        else:
+            break
+    return v
+
+
+def score_monitor_bench_run(checkout: Path, run_dir: Path) -> list[dict] | None:
+    """Re-score a run with its own checkout's score.py (matches that run's task
+    versions) and return the per-task score rows, or None on failure."""
+    score_py = checkout / "evals" / "score" / "score.py"
+    if not score_py.is_file():
+        return None
+    try:
+        r = subprocess.run(
+            [sys.executable, str(score_py), str(run_dir)],
+            capture_output=True, text=True, timeout=600,
+        )
+        if r.returncode != 0:
+            print(f"  [warn] score.py failed for {run_dir}: {r.stderr.strip()[:200]}", file=sys.stderr)
+            return None
+        scores = json.loads((run_dir / "scores.json").read_text())
+        return scores.get("tasks") or []
+    except Exception as e:
+        print(f"  [warn] could not score {run_dir}: {e}", file=sys.stderr)
+        return None
+
+
+def eval_task_is_perfect(t: dict) -> tuple[bool, list[str]]:
+    """A monitor-bench task-run is perfect when every scorer check passes, the
+    fixture integrity baseline has no unexpected modifications, adoption is
+    correct for the task, and the model never sleep-blocked."""
+    fails: list[str] = []
+    checks = {k: v for k, v in (t.get("checks") or {}).items() if isinstance(v, bool)}
+    if not checks:
+        fails.append("no_checks")
+    fails += [k for k, v in checks.items() if not v]
+    if (t.get("integrity") or {}).get("unexpected"):
+        fails.append("integrity")
+    want_monitor = t.get("task") in MONITOR_BENCH_LONG_TASKS
+    if bool(t.get("used_monitor")) != want_monitor:
+        fails.append("adoption")
+    if (t.get("bash_blocking_seconds") or 0) != 0:
+        fails.append("trust_blocking")
+    return (not fails, fails)
+
+
+def transcript_to_messages(path: Path) -> list[dict] | None:
+    """Rebuild OpenAI-chat-format messages from a monitor-bench transcript.jsonl.
+
+    Transcript events per assistant turn: tool_start* (call ids + args),
+    tool_end* (results by id), then turn_end (assistant text). user_message
+    events cover the task prompt and extension pings (watcher/heartbeat custom
+    messages); steering events are mid-run user injections.
+    """
+    messages: list[dict] = []
+    pending_calls: list[dict] = []
+    pending_results: list[tuple[str, str]] = []
+
+    def flush_assistant(text: str) -> None:
+        nonlocal pending_calls, pending_results
+        msg: dict = {
+            "role": "assistant",
+            "content": text or None,
+            "reasoning_content": "",
+            "reasoning_status": "native_empty",
+        }
+        if pending_calls:
+            msg["tool_calls"] = pending_calls
+        messages.append(msg)
+        for cid, txt in pending_results:
+            messages.append({"role": "tool", "content": txt, "tool_call_id": cid})
+        pending_calls, pending_results = [], []
+
+    try:
+        with open(path, "r", encoding="utf-8", errors="replace") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    e = json.loads(line)
+                except Exception:
+                    continue
+                et = e.get("type")
+                if et == "user_message":
+                    if pending_calls or pending_results:
+                        flush_assistant("")
+                    messages.append({"role": "user", "content": [
+                        {"type": "text", "text": str(e.get("text") or "")}]})
+                elif et == "steering":
+                    if pending_calls or pending_results:
+                        flush_assistant("")
+                    for s in e.get("texts") or []:
+                        messages.append({"role": "user", "content": [
+                            {"type": "text", "text": str(s)}]})
+                elif et == "tool_start":
+                    pending_calls.append({
+                        "id": str(e.get("toolCallId") or ""),
+                        "type": "function",
+                        "function": {
+                            "name": str(e.get("toolName") or ""),
+                            "arguments": e.get("args") if isinstance(e.get("args"), (dict, list)) else {},
+                        },
+                    })
+                elif et == "tool_end":
+                    pending_results.append(
+                        (str(e.get("toolCallId") or ""), str(e.get("text") or "")))
+                elif et == "turn_end":
+                    flush_assistant(str(e.get("text") or ""))
+    except OSError as e:
+        print(f"  [warn] could not read transcript {path}: {e}", file=sys.stderr)
+        return None
+    if pending_calls or pending_results:
+        flush_assistant("")
+    return messages
+
+
+def select_eval_traces(cands: list[dict], cap: int) -> list[dict]:
+    """Pick at most `cap` candidates per task: maximize monitor-extension
+    version diversity, shortest trace first within that constraint. With one
+    version present this degrades to the 5 shortest."""
+    chosen: list[dict] = []
+    for task in sorted({c["task"] for c in cands}):
+        pool = sorted(
+            (c for c in cands if c["task"] == task),
+            key=lambda c: (c["trace_bytes"], c["trace_key"]),
+        )
+        if len(pool) <= cap:
+            chosen.extend(pool)
+            continue
+        picked: list[dict] = []
+        counts: Counter = Counter()
+        remaining = list(pool)
+        while len(picked) < cap and remaining:
+            remaining.sort(key=lambda c: (counts[c["monitor_version"]],
+                                          c["trace_bytes"], c["trace_key"]))
+            c = remaining.pop(0)
+            picked.append(c)
+            counts[c["monitor_version"]] += 1
+        chosen.extend(picked)
+    return chosen
+
+
+def convert_monitor_bench_traces(
+    seen_keys: set[str],
+    cap: int,
+    stats: EvalStats,
+) -> list[dict]:
+    """Discover, score, filter, select and convert monitor-bench eval traces.
+    Returns redaction-ready rows (redaction applied by the caller like any
+    other row)."""
+    runs = discover_monitor_bench_runs()
+    checkouts = {co for co, _ in runs}
+    stats.checkouts = len(checkouts)
+    stats.runs = len(runs)
+    if not runs:
+        return []
+
+    histories = {co: monitor_fork_history(co) for co in checkouts}
+    candidates: list[dict] = []
+    for co, run_dir in runs:
+        meta = json.loads((run_dir / "meta.json").read_text())
+        model = str(meta.get("model") or "")
+        provider = model.split("/")[0].lower() if model else ""
+        try:
+            started_epoch = datetime.fromisoformat(
+                str(meta.get("startedAt") or "").replace("Z", "+00:00")).timestamp()
+        except Exception:
+            started_epoch = 0.0
+        ver = monitor_version_at(histories.get(co, []), started_epoch)
+        era = MONITOR_VERSION_ERAS.get(ver or "", "unknown")
+        tasks = score_monitor_bench_run(co, run_dir)
+        if tasks is None:
+            continue
+        rel_run = run_dir.relative_to(co.resolve()) if run_dir.is_relative_to(co.resolve()) else run_dir
+        for t in tasks:
+            stats.scored_tasks += 1
+            task = t.get("task") or ""
+            if provider in ("openai", "anthropic") or is_openai_model(provider, model.split("/", 1)[-1] if model else None):
+                stats.dropped_model += 1
+                continue
+            perfect, fails = eval_task_is_perfect(t)
+            if not perfect:
+                stats.dropped_imperfect += 1
+                for f_ in fails:
+                    stats.fail_reasons[f_] += 1
+                continue
+            tr_path = run_dir / task / "transcript.jsonl"
+            if not tr_path.is_file():
+                continue
+            trace_key = f"monitor-bench:{co.name}:{rel_run}:{task}"
+            if trace_key in seen_keys:
+                continue
+            candidates.append({
+                "task": task,
+                "trace_key": trace_key,
+                "trace_bytes": tr_path.stat().st_size,
+                "transcript": tr_path,
+                "checkout": co,
+                "run_dir": run_dir,
+                "rel_run": str(rel_run),
+                "model": model,
+                "provider": provider,
+                "seed": str(t.get("seed") or meta.get("seed") or ""),
+                "monitor_version": ver or "unknown",
+                "monitor_version_era": era,
+                "started_at": str(meta.get("startedAt") or ""),
+                "score_row": t,
+            })
+
+    selected = select_eval_traces(candidates, cap)
+    stats.selected = len(selected)
+
+    rows: list[dict] = []
+    for c in selected:
+        messages = transcript_to_messages(c["transcript"])
+        if not messages:
+            continue
+        t = c["score_row"]
+        provider, _, model_id = c["model"].partition("/")
+        date = c["started_at"][:10]
+        lang, domain = _detect_language(
+            [tc for m in messages for tc in (m.get("tool_calls") or [])]
+        )
+        assistant_turns = sum(1 for m in messages if m["role"] == "assistant")
+        description = ""
+        for m in messages:
+            if m["role"] == "user":
+                cc = m["content"]
+                if isinstance(cc, list) and cc and isinstance(cc[0], dict):
+                    description = (cc[0].get("text") or "")[:500]
+                break
+        run_id = f"{c['checkout'].name}:{c['rel_run']}"
+        row = {
+            "agent": "pi",
+            "api_completion_tokens": 0,
+            "api_exchange_count": assistant_turns,
+            "api_prompt_tokens": 0,
+            "api_provider": "auto",
+            "api_reasoning_complete": True,
+            "api_row_id": c["trace_key"],
+            "api_session_id": "",
+            "api_session_key": "",
+            "api_total_tokens": 0,
+            "api_usage_complete": False,
+            "command_complexity": "",
+            "completion_tokens": 0,
+            "container_def": "",
+            "date": date,
+            "description": description,
+            "domain": domain,
+            "exception_message": None,
+            "exception_type": None,
+            "harness": "pi",
+            "harness_completion_tokens": 0,
+            "harness_prompt_tokens": 0,
+            "language": lang,
+            "messages": messages,
+            "model": model_id,
+            "model_provider": provider,
+            "outcome": {
+                "completion_tokens": 0,
+                "exception_message": None,
+                "exception_type": None,
+                "harness": "pi",
+                "passed": True,
+                "prompt_tokens": 0,
+                "result_path": str(c["transcript"]),
+                "reward": 1.0,
+                "task_name": f"monitor-bench/{c['task']}",
+                "trial_name": f"{c['model']}_seed{c['seed']}",
+            },
+            "parent_row_id": None,
+            "passed": True,
+            "primitive_skills": json.dumps([lang]) if lang else "[]",
+            "prompt_tokens": 0,
+            "provider_metadata": {"api_base": ""},
+            "reasoning_complete": True,
+            "result_path": str(c["transcript"]),
+            "reward": 1.0,
+            "root_row_id": c["trace_key"],
+            "run_id": run_id,
+            "scenario": "monitor-bench",
+            "segment_index": 0,
+            "segment_reason": "root",
+            "skill_type": domain,
+            "source": "local/pi-monitor-bench",
+            "source_archive": "",
+            "source_metadata": {
+                "cwd": str(c["run_dir"] / c["task"] / "work"),
+                "host": os.uname().nodename if hasattr(os, "uname") else "",
+                "eval": "monitor-bench",
+                "eval_task": c["task"],
+                "eval_seed": c["seed"],
+                "eval_run": str(c["rel_run"]),
+                "eval_checkout": str(c["checkout"]),
+                "eval_exit_reason": t.get("exit_reason"),
+                "eval_duration_s": t.get("duration_s"),
+                "eval_assistant_turns": t.get("assistant_turns"),
+                "monitor_extension_commit": c["monitor_version"],
+                "monitor_extension_era": c["monitor_version_era"],
+                "trace_bytes": c["trace_bytes"],
+                "pi_session_file": str(c["transcript"]),
+            },
+            "source_path": str(c["transcript"]),
+            "task": f"monitor-bench/{c['task']}",
+            "task_complexity": "",
+            "task_id": f"monitor-bench-{c['task']}",
+            "test_final_state": "",
+            "test_initial_state": "",
+            "token_accounting": "transcript_no_usage",
+            "tools": [],
+            "total_tokens": 0,
+            "trace_key": c["trace_key"],
+            "trial_name": f"{c['model']}_seed{c['seed']}",
+            "truth": "",
+        }
+        rows.append(row)
+    return rows
+
+
+def cap_union_eval_rows(merged: dict[str, dict], cap: int) -> int:
+    """Enforce the per-task eval cap on the merged (remote+local) row set,
+    keeping the shortest traces per task. Returns number of rows dropped."""
+    by_task: dict[str, list[str]] = {}
+    for k, r in merged.items():
+        if (r.get("source") or "") == "local/pi-monitor-bench":
+            by_task.setdefault(r.get("task") or "", []).append(k)
+    dropped = 0
+    for task, keys in by_task.items():
+        if len(keys) <= cap:
+            continue
+        keys.sort(key=lambda k: (
+            ((merged[k].get("source_metadata") or {}).get("trace_bytes") or 0), k))
+        for k in keys[cap:]:
+            del merged[k]
+            dropped += 1
+    return dropped
+
 
 # Map of file extension -> (language, domain) matching the reference dataset.
 EXT_LANG = {
@@ -1117,6 +1562,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--zstd-level", type=int, default=ZSTD_LEVEL, help="zstd compression level.")
     ap.add_argument("--no-redact", action="store_true",
                     help="Disable secret redaction (default: redact API keys in all text).")
+    ap.add_argument("--no-eval", action="store_true",
+                    help="Skip monitor-bench eval trace ingestion.")
+    ap.add_argument("--eval-cap", type=int, default=EVAL_PER_TASK_CAP,
+                    help=f"Max monitor-bench traces per task (default {EVAL_PER_TASK_CAP}).")
     args = ap.parse_args(argv)
 
     if zstd is None:
@@ -1187,6 +1636,32 @@ def main(argv: list[str] | None = None) -> int:
             stats.converted += 1
             stats.tools_used |= set(_tools_from_row(row))
             rows.append(row)
+
+        # ---- monitor-bench eval traces ------------------------------------- #
+        eval_stats = EvalStats()
+        if not args.no_eval:
+            print("\n== monitor-bench eval traces ==")
+            eval_rows = convert_monitor_bench_traces(seen_keys, args.eval_cap, eval_stats)
+            for row in eval_rows:
+                seen_keys.add(row["trace_key"])
+                if not args.no_redact:
+                    row = REDACTOR.redact_row(row)
+                    row["description"] = _first_user_text(row["messages"])
+                stats.converted += 1
+                stats.tools_used |= set(_tools_from_row(row))
+                rows.append(row)
+            print(f"  checkouts: {eval_stats.checkouts}  runs: {eval_stats.runs}  "
+                  f"scored task-runs: {eval_stats.scored_tasks}")
+            print(f"  dropped by model invariant (openai/anthropic): {eval_stats.dropped_model}")
+            print(f"  dropped imperfect: {eval_stats.dropped_imperfect} "
+                  f"reasons={dict(eval_stats.fail_reasons)}")
+            print(f"  selected (cap {args.eval_cap}/task, version-diverse, shortest): {eval_stats.selected}")
+            sel_by_task: Counter = Counter(r["task"] for r in rows
+                                           if r["source"] == "local/pi-monitor-bench")
+            for task in sorted(sel_by_task):
+                vers = sorted({(r["source_metadata"] or {}).get("monitor_extension_commit", "?")
+                               for r in rows if r["task"] == task})
+                print(f"    {task}: {sel_by_task[task]} trace(s), versions: {vers}")
 
         # ---- write local output ------------------------------------------- #
         ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
@@ -1259,6 +1734,11 @@ def main(argv: list[str] | None = None) -> int:
                             k = r.get("trace_key")
                             if k:
                                 merged[k] = r
+                        if not args.no_eval:
+                            n_cap = cap_union_eval_rows(merged, args.eval_cap)
+                            if n_cap:
+                                print(f"[upload] dropped {n_cap} merged eval row(s) "
+                                      f"to enforce the {args.eval_cap}/task cap")
                         if remote_rows:
                             uts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
                             u_jsonl = out_dir / f"pi-traces-union-{uts}.jsonl"

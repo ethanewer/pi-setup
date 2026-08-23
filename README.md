@@ -538,6 +538,25 @@ to preview, and inspect `~/pi-trace-cache-tool/out/*.jsonl` before sharing. It i
 standalone Python tool (`pip install zstandard huggingface_hub`), not part of the
 install.
 
+The tool also ingests **monitor-bench eval traces** from every `~/pi-setup*`
+checkout's `evals/results/`. The harness runs `SessionManager.inMemory`, so the
+only record of an eval run is its `transcript.jsonl`; the tool re-scores each
+run with its own checkout's `score.py` and converts the transcript into the
+same row format. Because the seven task prompts repeat across models, seeds,
+and extension versions, only a strict subset is uploaded:
+
+- **Perfect runs only** — every scorer check passes, fixture integrity is
+  clean, monitor adoption is correct for the task (used on t1–t4/t6–t7, not on
+  the t5 control), and `bash_blocking_seconds` is zero.
+- **At most 5 traces per task**; when more qualify, the selection prefers
+  traces produced under different monitor-extension versions (attributed by
+  the last `forks/pi-process-monitor-safe` commit before the run started) and
+  picks the shortest traces within that constraint.
+- Rows carry `passed: true`, `reward: 1.0`, `scenario: "monitor-bench"`, and
+  the eval provenance (run, seed, extension commit/era) in `source_metadata`.
+
+`--no-eval` skips this ingestion; `--eval-cap N` changes the per-task cap.
+
 ## Security
 
 The installed Pi extensions execute with the user's full permissions. The forks in this
