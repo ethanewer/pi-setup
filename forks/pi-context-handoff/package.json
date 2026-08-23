@@ -2,7 +2,7 @@
   "name": "pi-context-handoff",
   "version": "1.0.0",
   "private": true,
-  "description": "Steers Pi's own compaction toward a handoff brief that keeps a long autonomous run going, and resumes a run Pi abandoned at a compaction boundary. Never aborts a turn, and falls back to native compaction on any failure.",
+  "description": "Steers Pi's own compaction into a handoff brief, folds context mid-run the way Codex does so a single run cannot overshoot the window, and resumes runs Pi abandoned. Never aborts a turn; every failure path degrades to stock Pi behavior.",
   "type": "module",
   "license": "MIT",
   "keywords": [
@@ -27,5 +27,9 @@
   },
   "engines": {
     "node": ">=22.18"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "typescript": "5.9"
   }
 }

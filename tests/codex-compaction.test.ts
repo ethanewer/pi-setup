@@ -1,5 +1,27 @@
 import { describe, expect, test } from "bun:test";
 
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
+/** Run `fn` with PI_CODING_AGENT_DIR pointed at a temp dir seeded with the given config files. */
+function withAgentDir(files: Record<string, unknown>, fn: () => void): void {
+	const dir = mkdtempSync(join(tmpdir(), "fold-config-test-"));
+	const previous = process.env.PI_CODING_AGENT_DIR;
+	mkdirSync(join(dir, "extensions"), { recursive: true });
+	for (const [name, value] of Object.entries(files)) {
+		writeFileSync(join(dir, "extensions", name), JSON.stringify(value));
+	}
+	process.env.PI_CODING_AGENT_DIR = dir;
+	try {
+		fn();
+	} finally {
+		if (previous === undefined) delete process.env.PI_CODING_AGENT_DIR;
+		else process.env.PI_CODING_AGENT_DIR = previous;
+		rmSync(dir, { recursive: true, force: true });
+	}
+}
+
 import {
 	applyFold,
 	collectPinned,
@@ -25,12 +47,12 @@ import {
 	syntheticCount,
 	triggerTokens,
 	trustUsageFrom,
-} from "../forks/pi-codex-compaction/extensions/codex-compaction/fold";
+} from "../forks/pi-context-handoff/extensions/context-handoff/fold";
 import {
-	DEFAULT_CODEX_COMPACTION_CONFIG,
-	loadCodexCompactionConfig,
-} from "../forks/pi-codex-compaction/extensions/codex-compaction/config";
-import { buildFoldFocus } from "../forks/pi-codex-compaction/extensions/codex-compaction/instructions";
+	DEFAULT_FOLD_CONFIG,
+	loadExtensionConfig,
+} from "../forks/pi-context-handoff/extensions/context-handoff/config";
+import { buildFoldFocus } from "../forks/pi-context-handoff/extensions/context-handoff/instructions";
 
 /**
  * Same shape as Pi's own estimateTokens (chars/4), which is what index.ts injects. Written
@@ -538,23 +560,99 @@ describe("config", () => {
 	test("defaults mirror Codex's own numbers", () => {
 		// 90% trigger (openai_models.rs:310) and a 20k verbatim user-message budget
 		// (COMPACT_USER_MESSAGE_MAX_TOKENS).
-		expect(DEFAULT_CODEX_COMPACTION_CONFIG.triggerPercent).toBe(0.9);
-		expect(DEFAULT_CODEX_COMPACTION_CONFIG.pinUserTokens).toBe(20_000);
-		expect(DEFAULT_CODEX_COMPACTION_CONFIG.keepRecentTokens).toBe(20_000);
-		expect(DEFAULT_CODEX_COMPACTION_CONFIG.enabled).toBe(true);
+		expect(DEFAULT_FOLD_CONFIG.triggerPercent).toBe(0.9);
+		expect(DEFAULT_FOLD_CONFIG.pinUserTokens).toBe(20_000);
+		expect(DEFAULT_FOLD_CONFIG.keepRecentTokens).toBe(20_000);
+		expect(DEFAULT_FOLD_CONFIG.enabled).toBe(true);
 	});
 
 	test("a missing config file is not an error", () => {
 		const previous = process.env.PI_CODING_AGENT_DIR;
 		process.env.PI_CODING_AGENT_DIR = "/nonexistent-pi-dir-for-tests";
 		try {
-			const loaded = loadCodexCompactionConfig();
-			expect(loaded.warning).toBeUndefined();
-			expect(loaded.config).toEqual(DEFAULT_CODEX_COMPACTION_CONFIG);
+			const loaded = loadExtensionConfig();
+			expect(loaded.warnings).toEqual([]);
+			expect(loaded.config.fold).toEqual(DEFAULT_FOLD_CONFIG);
 		} finally {
 			if (previous === undefined) delete process.env.PI_CODING_AGENT_DIR;
 			else process.env.PI_CODING_AGENT_DIR = previous;
 		}
+	});
+
+	test("top-level enabled: false disables the fold too", () => {
+		// Pre-merge this key turned the whole extension off; the fold must honor it
+		// whether the fold config comes from the unified file, a legacy file, or defaults.
+		withAgentDir({ "pi-context-handoff.json": { enabled: false } }, () => {
+			const loaded = loadExtensionConfig();
+			expect(loaded.config.handoff.enabled).toBe(false);
+			expect(loaded.config.fold.enabled).toBe(false);
+		});
+		withAgentDir(
+			{
+				"pi-context-handoff.json": { enabled: false },
+				"pi-codex-compaction.json": { triggerPercent: 0.8 },
+			},
+			() => {
+				const loaded = loadExtensionConfig();
+				expect(loaded.config.fold.enabled).toBe(false);
+				expect(loaded.config.fold.triggerPercent).toBe(0.8);
+			},
+		);
+		// A leftover legacy {"enabled": true} must not re-enable the fold against the
+		// top-level kill switch; only the unified file's fold.enabled may.
+		withAgentDir(
+			{
+				"pi-context-handoff.json": { enabled: false },
+				"pi-codex-compaction.json": { enabled: true },
+			},
+			() => {
+				const loaded = loadExtensionConfig();
+				expect(loaded.config.handoff.enabled).toBe(false);
+				expect(loaded.config.fold.enabled).toBe(false);
+			},
+		);
+		// An explicit fold.enabled can still turn just the fold back on.
+		withAgentDir(
+			{ "pi-context-handoff.json": { enabled: false, fold: { enabled: true } } },
+			() => {
+				const loaded = loadExtensionConfig();
+				expect(loaded.config.handoff.enabled).toBe(false);
+				expect(loaded.config.fold.enabled).toBe(true);
+			},
+		);
+	});
+
+	test("fold: false is a kill switch for the fold alone", () => {
+		withAgentDir({ "pi-context-handoff.json": { enabled: true, fold: false } }, () => {
+			const loaded = loadExtensionConfig();
+			expect(loaded.config.handoff.enabled).toBe(true);
+			expect(loaded.config.fold.enabled).toBe(false);
+		});
+	});
+
+	test("a legacy pi-codex-compaction.json still configures the fold", () => {
+		withAgentDir(
+			{
+				"pi-context-handoff.json": { focus: "handoff note" },
+				"pi-codex-compaction.json": { keepRecentTokens: 5000, notify: false },
+			},
+			() => {
+				const loaded = loadExtensionConfig();
+				expect(loaded.config.handoff.focus).toBe("handoff note");
+				expect(loaded.config.fold.keepRecentTokens).toBe(5000);
+				expect(loaded.config.fold.notify).toBe(false);
+			},
+		);
+		// ...but a unified fold object wins over the legacy file.
+		withAgentDir(
+			{
+				"pi-context-handoff.json": { fold: { keepRecentTokens: 9000 } },
+				"pi-codex-compaction.json": { keepRecentTokens: 5000 },
+			},
+			() => {
+				expect(loadExtensionConfig().config.fold.keepRecentTokens).toBe(9000);
+			},
+		);
 	});
 });
 

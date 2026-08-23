@@ -14,7 +14,7 @@
  */
 
 /** Shape of the compaction entries this reads. Only the fields that matter are declared. */
-type CompactionEntryLike = {
+export type CompactionEntryLike = {
 	type?: string;
 	details?: unknown;
 };

@@ -160,7 +160,7 @@ at both ends, and the low end is the one that actually bit.
 > actually receives (`agent-loop.js:181`). That is the same position in the loop where Codex
 > makes its own mid-turn compaction decision, and it is reachable from an extension.
 >
-> [`pi-codex-compaction`](../forks/pi-codex-compaction/README.md) uses it. See
+> [`pi-codex-compaction`](../forks/pi-codex-compaction/README.md) (now merged into `pi-context-handoff` as its fold half) uses it. See
 > [Folding context inside a run](#folding-context-inside-a-run) below for what that does and
 > does not change. Two things stay true regardless: within-run *history* still grows, because
 > that fold shapes one request and never rewrites the session; and a run that never yields
@@ -288,7 +288,7 @@ between runs. Codex does not have that gap: `codex-rs/core/src/session/turn.rs:4
 after every sampling request, compacts inline, and `continue`s the loop, so compaction is a
 step in the loop rather than a verdict on whether the loop survives.
 
-[`pi-codex-compaction`](../forks/pi-codex-compaction/README.md) puts that decision at the
+[`pi-codex-compaction`](../forks/pi-codex-compaction/README.md) (now the fold half of `pi-context-handoff`) puts that decision at the
 same point in Pi's loop, using the `context` hook. Above 90% of the context window — Codex's
 own trigger, `(context_window * 9) / 10`, and configurable only downward — the old part of the
 history is replaced, *for that request only*, with a summary of it, the user's instructions

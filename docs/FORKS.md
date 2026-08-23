@@ -303,7 +303,9 @@ installed, so the worst case is a less useful summary. It uses only Pi's public 
 also removes the deep private-module imports that made the previous extension fragile
 across Pi releases.
 
-## pi-codex-compaction
+## pi-codex-compaction (retired — merged into pi-context-handoff)
+
+Not installed anymore; the fold now lives in `forks/pi-context-handoff/extensions/context-handoff/fold.ts` + `fold-hook.ts`. Do not load both packages: two `context` handlers on one request chain-fold. This section is kept for history.
 
 First-party, not a fork. Ports Codex's mid-turn compaction into Pi.
 
