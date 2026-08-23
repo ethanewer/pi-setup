@@ -1,6 +1,8 @@
 # Evals
 
-Behavioral evals for this setup's extensions. Currently one eval:
+Behavioral evals for this setup's extensions. See [`WORKFLOW.md`](WORKFLOW.md) for the
+full story of how this benchmark was built and used to optimize and simplify the
+monitor extension. Currently one eval:
 
 ## monitor-bench — does a model spontaneously use the monitor extension?
 
