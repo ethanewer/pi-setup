@@ -282,8 +282,7 @@ export function registerMonitorExtension(
     name: "monitor_kill",
     label: "Monitor kill",
     description:
-      "Stop a background watcher by id; use id \"*\" to stop ALL active watchers. " +
-      "For spawn/poll children, signals the process group with SIGTERM, then SIGKILL after 3s.",
+      "Stop a background watcher by id; use id \"*\" to stop ALL active watchers.",
     parameters: Type.Object({ id: Type.String({ description: "Watcher id from monitor, or \"*\" for all." }) }),
     async execute(
       _id,
