@@ -204,13 +204,13 @@ export function registerMonitorExtension(
 
   // ---- TOOL: monitor -------------------------------------------------------
   const monitorParams = Type.Object({
-    command: Type.Optional(Type.String({ description: "Shell command. Spawned once & tailed (spawn); if intervalSeconds is also set, re-run every N s (poll, e.g. ssh h100 'tail -n5 log; pgrep -fc train')." })),
-    intervalSeconds: Type.Optional(Type.Number({ description: "Poll interval in seconds. If set, `command` is re-run on this cadence (poll mode)." })),
-    logFile: Type.Optional(Type.String({ description: "Path to a log file to tail for appended lines (file mode)." })),
-    notifyOn: Type.Optional(Type.Array(Type.String(), { description: "Case-insensitive regexes. A line matching ANY is pushed. Defaults to milestones+failures (saved, complete, done, error, fail, oom, killed, traceback, …)." })),
-    heartbeatMinutes: Type.Optional(Type.Number({ description: "Heartbeat every N minutes (fractional ok, e.g. 0.5 = 30s): pings on schedule even when nothing matches — for periodic check-ins on quiet jobs. Default: off." })),
-    label: Type.Optional(Type.String({ description: "Human label for the watcher." })),
-    cwd: Type.Optional(Type.String({ description: "Working directory for spawn/poll. Default current." })),
+    command: Type.Optional(Type.String({ description: "Shell command. Spawned once and tailed. If intervalSeconds is also set, it re-runs every N seconds instead (poll mode, e.g. ssh h100 'tail -n5 log; pgrep -fc train')." })),
+    intervalSeconds: Type.Optional(Type.Number({ description: "Poll interval in seconds. When set, `command` re-runs on this cadence instead of running once (poll mode)." })),
+    logFile: Type.Optional(Type.String({ description: "Log file to tail for appended lines (file mode)." })),
+    notifyOn: Type.Optional(Type.Array(Type.String(), { description: "Case-insensitive regexes. A line matching any of them gets pushed. Defaults to milestones and failures (saved, complete, done, error, fail, oom, killed, traceback, …)." })),
+    heartbeatMinutes: Type.Optional(Type.Number({ description: "Heartbeat every N minutes, fractional allowed (0.5 means 30s). Pings on schedule even when nothing matches, for periodic check-ins on quiet jobs. Off by default." })),
+    label: Type.Optional(Type.String({ description: "Label for the watcher." })),
+    cwd: Type.Optional(Type.String({ description: "Working directory for spawn/poll. Defaults to the current directory." })),
   });
   type MonitorParams = Static<typeof monitorParams>;
 
@@ -218,14 +218,15 @@ export function registerMonitorExtension(
     name: "monitor",
     label: "Monitor",
     description:
-      "Start a NON-BLOCKING background watcher over a process, a polling command (e.g. SSH), or a log file. " +
-      "Returns immediately with a watcher id. The session is pinged (and woken if idle) when a line matches notifyOn " +
-      "or the process exits/fails. Pick ONE source: `command` (spawn once; add `intervalSeconds` to poll on a cadence) " +
-      "or `logFile` (tail appended lines). Stop watchers with monitor_kill (id \"*\" stops all).",
+      "Start a background watcher over a process, a polling command (e.g. SSH), or a log file. " +
+      "Returns immediately. The session gets pinged, and woken if idle, when a line matches notifyOn " +
+      "or when the process exits or fails. Give it exactly one source: `command` (spawn once; add " +
+      "`intervalSeconds` to poll on an interval) or `logFile` (tail appended lines). Stop watchers " +
+      "with monitor_kill (id \"*\" stops all).",
     promptSnippet:
       "Watch a background process/SSH/log and ping the session on milestones or failure",
     promptGuidelines: [
-      "If a job may run longer than ~30 seconds (builds, tests, training, dev servers, migrations, remote SSH), run it under monitor instead of blocking bash: it returns at once and pings the session on milestones or failure. After starting a watcher, end your turn or do other work — never sleep or poll while one is running.",
+      "If a job may run longer than ~30 seconds (builds, tests, training, dev servers, migrations, remote SSH), run it under monitor instead of blocking bash. It returns at once and pings the session on milestones or failure. After starting a watcher, do other work if you have it, otherwise end your turn. Never sleep or poll while one is running.",
     ],
     parameters: monitorParams,
     async execute(
@@ -249,7 +250,7 @@ export function registerMonitorExtension(
       return {
         content: text(
           `Watcher ${watcher.id} running (mode=${watcher.mode}). Will ping when: ${watcher.watchingFor}. ` +
-          `The ping will wake you — no sleeping, polling, or re-checking the job. Do any other work you have now; otherwise end your turn.`,
+          `The ping wakes you, so don't sleep, poll, or re-check the job. Do other work if you have it. Otherwise end your turn.`,
         ),
         details: { watcher },
       };
@@ -260,7 +261,7 @@ export function registerMonitorExtension(
   pi.registerTool({
     name: "monitor_status",
     label: "Monitor status",
-    description: "List active background watchers with last-event time and event count.",
+    description: "List active watchers with last-event time and event count.",
     parameters: Type.Object({}),
     async execute(): Promise<{ content: TextBlock[]; details: { watchers: WatcherMeta[] } }> {
       const list = runtime.list();
@@ -280,7 +281,7 @@ export function registerMonitorExtension(
     name: "monitor_kill",
     label: "Monitor kill",
     description:
-      "Stop a background watcher by id; use id \"*\" to stop ALL active watchers.",
+      "Stop a watcher by id. Use id \"*\" to stop all active watchers.",
     parameters: Type.Object({ id: Type.String({ description: "Watcher id from monitor, or \"*\" for all." }) }),
     async execute(
       _id,
@@ -385,7 +386,7 @@ export function registerMonitorExtension(
       }
       notify(
         ctx,
-        `watcher ${watcher.id} running (${watcher.mode}) — will ping when: ${watcher.watchingFor}`,
+        `watcher ${watcher.id} running (${watcher.mode}). Will ping when: ${watcher.watchingFor}`,
         "info",
       );
     },
@@ -438,7 +439,7 @@ export function registerMonitorExtension(
   });
 
   pi.registerCommand("monitor-kill-all", {
-    description: "Stop ALL active background watchers",
+    description: "Stop all active background watchers",
     handler: async (_args, ctx) => {
       const stopped = runtime.stopAll();
       if (!stopped.length) {
