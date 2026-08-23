@@ -63,8 +63,9 @@ Runs whose model output is empty or degenerate (rare API glitches) are flagged
 
 Reproducibility knobs: `SEED` drives all fixture runtimes deterministically; the harness
 links the monitor fork from `forks/` (falls back to `~/.pi/agent/local/`); the Pi package
-version is pinned in `package.json`; each task-run gets its own service port (`MB_PORT`,
-derived from the run dir) so concurrent runs never collide.
+version is pinned in `package.json`; the t3 service grabs an ephemeral free port at
+session start (bind-to-0), so concurrent runs don't collide (a tiny TOCTOU window
+remains between allocation and the fixture's rebind).
 
 Known property: duration formulas live in fixture source, so a model that reads the source
 could compute runtimes. That affects timing strategy, not the need to handle a long job —

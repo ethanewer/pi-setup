@@ -241,12 +241,8 @@ export function registerMonitorExtension(
         intervalSeconds: params.intervalSeconds,
         logFile: params.logFile,
         notifyOn: params.notifyOn,
-        heartbeatMinutes: params.heartbeatMinutes,
         label: params.label,
-        coalesceSeconds: params.coalesceSeconds,
-        maxLines: params.maxLines,
         cwd: params.cwd ?? ctx.cwd,
-        timeoutSeconds: params.timeoutSeconds,
       });
       return {
         content: text(

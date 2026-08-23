@@ -9,7 +9,7 @@ This fork **replaces** the upstream package. Do **not** load it alongside `npm:p
 | Area | Upstream 1.2.0 | This fork |
 |------|----------------|-----------|
 | Watcher limit | unbounded | hard cap of **16 active watchers**, enforced synchronously in the shared `launch()` path (tools and commands both) |
-| Kill-all | — | new `monitor_kill_all` tool and `/monitor-kill-all` command |
+| Kill-all | — | `monitor_kill` with `id: "*"` plus the `/monitor-kill-all` command |
 | Persistence / restore | poll & file watchers persisted via `appendEntry` and re-launched on `session_start` | **never persisted, never restored**; legacy `monitor-watcher` entries in old sessions are ignored |
 | Session shutdown | best-effort `w.stop()`, killed spawn still emitted a "killed" exit turn | all watchers stopped atomically; one consolidated, reason-aware (`quit`/`reload`/`new`/`resume`/`fork`) custom message persisted synchronously; **never wakes the model** |
 | Fork | resumed watchers duplicated into forks | forks get one no-turn context note that source-session monitors were not carried over |

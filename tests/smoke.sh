@@ -52,7 +52,7 @@ else
 fi
 # Every extension's tools must be registered in pi. A fork that failed to load is
 # silently absent from this list rather than raising an error at startup.
-run "tools registered" "monitor_kill_all" \
+run "tools registered" "monitor_kill" \
   "List the names of every tool you have available, comma separated, nothing else."
 run "built-in bash" "SMOKE-BASH-OK" \
   "Run the bash command 'echo SMOKE-BASH-OK' and reply with nothing else."

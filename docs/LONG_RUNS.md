@@ -52,7 +52,7 @@ never injects a resume prompt, and every failure path returns `undefined` — wh
 ### 3: too many monitors, no way to close them
 
 Already solved by `pi-process-monitor-safe`: a 16-watcher cap enforced in `launch()`,
-plus `monitor_kill` and `monitor_kill_all`. Heartbeats are off by default, aggregated into
+plus `monitor_kill` (pass `id: "*"` to stop every watcher). Heartbeats are off by default, aggregated into
 one message by a single 30s scheduler, and capped at 8 KB / 64 lines, so watchers cannot
 flood the context either.
 
