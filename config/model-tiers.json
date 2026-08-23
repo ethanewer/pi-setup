@@ -1,0 +1,21 @@
+{
+  "_comment": [
+    "Subagent model routing for pi-dynamic-workflows (the `piwf` profile).",
+    "Read by ~/.pi/agent/local/pi-dynamic-workflows-safe from ~/.pi/workflows/model-tiers.json:",
+    "every agent() call in a workflow resolves its model through one of these tiers,",
+    "so this file is what makes subagents run on a different model than the main one.",
+    "",
+    "install.sh seeds this file only when it is absent (see the 'left alone' rule below),",
+    "so edits made via /workflows-models survive a reinstall. To reset, delete the file",
+    "and re-run the installer.",
+    "",
+    "Model specs are canonical provider/id (unambiguous; the bare form would resolve via",
+    "defaultProvider). Pin all three tiers to the same model to force every subagent onto it",
+    "regardless of the orchestrator's main model. /workflows-models edits interactively."
+  ],
+  "tiers": {
+    "small": "openrouter/deepseek/deepseek-v4-flash-0731",
+    "medium": "openrouter/deepseek/deepseek-v4-flash-0731",
+    "big": "openrouter/deepseek/deepseek-v4-flash-0731"
+  }
+}

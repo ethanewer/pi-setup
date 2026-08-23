@@ -57,6 +57,8 @@ const pNpmPkgPath = join(dir, "agent-p", "npm", "package.json");
 const wfNpmPkgPath = join(dir, "agent-wf", "npm", "package.json");
 const keybinds = ["agent", "agent-p", "agent-wf"].map((d) => join(dir, d, "keybindings.json"));
 const modelsStorePath = join(dir, "agent", "models-store.json");
+const modelTiersSrcPath = join(REPO, "config/model-tiers.json");
+const modelTiersDestPath = join(dir, "workflows", "model-tiers.json");
 
 for (const d of ["agent", "agent/npm", "agent-p/npm", "agent-wf/npm"]) {
 	mkdirSync(join(dir, d), { recursive: true });
@@ -114,6 +116,8 @@ function runWriter() {
 		keybinds[2],
 		join(REPO, "config/compaction.json"),
 		modelsStorePath,
+		modelTiersSrcPath,
+		modelTiersDestPath,
 	]);
 	expect(result.exitCode).toBe(0);
 }
@@ -171,4 +175,27 @@ test("npm-installed fork copies are pruned from all three manifests", () => {
 	expect(lean.dependencies).toEqual({});
 	const wf = JSON.parse(readFileSync(wfNpmPkgPath, "utf8"));
 	expect(wf.dependencies).toEqual({ "left-alone-wf": "3.0.0" });
+});
+
+test("model-tiers.json is seeded when absent", () => {
+	runWriter();
+	const tiers = JSON.parse(readFileSync(modelTiersDestPath, "utf8"));
+	expect(tiers.tiers).toEqual({
+		small: "openrouter/deepseek/deepseek-v4-flash-0731",
+		medium: "openrouter/deepseek/deepseek-v4-flash-0731",
+		big: "openrouter/deepseek/deepseek-v4-flash-0731",
+	});
+});
+
+test("an existing model-tiers.json is left alone on reinstall", () => {
+	mkdirSync(join(dir, "workflows"), { recursive: true });
+	const userCustom = {
+		_comment: "keep mine",
+		tiers: { small: "openai/gpt-5.6-sol", medium: "openai/gpt-5.6-sol", big: "openai/gpt-5.6-sol" },
+	};
+	writeFileSync(modelTiersDestPath, JSON.stringify(userCustom));
+	runWriter();
+	const after = JSON.parse(readFileSync(modelTiersDestPath, "utf8"));
+	expect(after.tiers).toEqual(userCustom.tiers);
+	expect(after._comment).toBe("keep mine");
 });

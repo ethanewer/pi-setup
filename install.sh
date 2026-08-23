@@ -47,6 +47,9 @@ export PATH="$HOME/.local/bin:$BUN_INSTALL/bin:$PATH"
 MAIN_DIR="${PI_CODING_AGENT_DIR:-$HOME/.pi/agent}"
 P_DIR="$HOME/.pi/agent-p"
 WF_DIR="$HOME/.pi/agent-wf"
+# pi-dynamic-workflows (piwf) reads its subagent model routing from here. Seeded by the
+# config writer below only when absent, so /workflows-models edits survive a reinstall.
+MODEL_TIERS_DEST="$HOME/.pi/workflows/model-tiers.json"
 LOCAL_BIN="$HOME/.local/bin"
 NPM_DIR="$MAIN_DIR/npm"
 LOCAL_PKG_DIR="$MAIN_DIR/local"
@@ -291,8 +294,9 @@ done
 log "Writing Pi configuration"
 CONFIG_SCRIPT="$(mktemp)"
 cat > "$CONFIG_SCRIPT" <<'JS'
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
-const [mainPath, pPath, wfPath, sttPath, npmPkgPath, pNpmPkgPath, wfNpmPkgPath, piVersion, keybindingsSrcPath, mainKeybindsPath, pKeybindsPath, wfKeybindsPath, compactionSrcPath, modelsStorePath] = process.argv.slice(2);
+import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import * as path from "node:path";
+const [mainPath, pPath, wfPath, sttPath, npmPkgPath, pNpmPkgPath, wfNpmPkgPath, piVersion, keybindingsSrcPath, mainKeybindsPath, pKeybindsPath, wfKeybindsPath, compactionSrcPath, modelsStorePath, modelTiersSrcPath, modelTiersDestPath] = process.argv.slice(2);
 const read = (path) => existsSync(path) ? JSON.parse(readFileSync(path, "utf8")) : {};
 const writeJson = (path, value) => writeFileSync(path, JSON.stringify(value, null, 2) + "\n");
 
@@ -485,6 +489,19 @@ for (const path of [npmPkgPath, pNpmPkgPath, wfNpmPkgPath]) {
   writeJson(path, pkg);
 }
 if (removed) console.log("    pruned npm-installed extension copies");
+// Subagent model routing for pi-dynamic-workflows (the `piwf` profile). The file lives
+// at ~/.pi/workflows/model-tiers.json, outside any agent dir, and is read once per
+// workflow run. Seeded only when absent: like defaultProvider/defaultModel, tier routing
+// is a deliberate choice the user may re-point via /workflows-models, so a reinstall must
+// not clobber it. A missing file would otherwise make every untagged agent fall back to
+// the session's main model, which is exactly the single-vs-subagent split this seeds.
+if (modelTiersDestPath && !existsSync(modelTiersDestPath)) {
+  const destDir = path.dirname(modelTiersDestPath);
+  if (!existsSync(destDir)) mkdirSync(destDir, { recursive: true });
+  const tiers = read(modelTiersSrcPath);
+  writeFileSync(modelTiersDestPath, JSON.stringify({ tiers: tiers.tiers }, null, 2) + "\n");
+  chmodSync(modelTiersDestPath, 0o600);
+}
 JS
 "$BUN_BIN" "$CONFIG_SCRIPT" \
   "$MAIN_DIR/settings.json" \
@@ -500,7 +517,9 @@ JS
   "$P_DIR/keybindings.json" \
   "$WF_DIR/keybindings.json" \
   "$SRC_DIR/config/compaction.json" \
-  "$MAIN_DIR/models-store.json"
+  "$MAIN_DIR/models-store.json" \
+  "$SRC_DIR/config/model-tiers.json" \
+  "$MODEL_TIERS_DEST"
 rm -f "$CONFIG_SCRIPT"
 
 # stt.json holds provider and capture configuration that the voice fork re-reads on
