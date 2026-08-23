@@ -1,6 +1,6 @@
 diff -ruN --exclude=node_modules a/README.md b/README.md
 --- a/README.md	1985-10-26 03:15:00
-+++ b/README.md	2026-08-22 14:35:10
++++ b/README.md	2026-08-22 14:47:17
 @@ -75,10 +75,10 @@
  
  ## Why use it
@@ -102,7 +102,7 @@ diff -ruN --exclude=node_modules a/README.md b/README.md
  
 diff -ruN --exclude=node_modules a/dist/agent-registry.d.ts b/dist/agent-registry.d.ts
 --- a/dist/agent-registry.d.ts	1985-10-26 03:15:00
-+++ b/dist/agent-registry.d.ts	2026-08-22 14:38:17
++++ b/dist/agent-registry.d.ts	2026-08-23 00:07:15
 @@ -12,7 +12,8 @@
   * a deprecated fallback (with a one-time warning) so users who followed this repo's
   * earlier docs are not silently broken; the new location wins on a name collision.
@@ -137,7 +137,7 @@ diff -ruN --exclude=node_modules a/dist/agent-registry.d.ts b/dist/agent-registr
  export declare function resolveAgentType(name: string | undefined, registry: AgentRegistry): AgentDefinition | undefined;
 diff -ruN --exclude=node_modules a/dist/agent-registry.js b/dist/agent-registry.js
 --- a/dist/agent-registry.js	1985-10-26 03:15:00
-+++ b/dist/agent-registry.js	2026-08-22 14:38:17
++++ b/dist/agent-registry.js	2026-08-23 00:07:15
 @@ -12,7 +12,8 @@
   * a deprecated fallback (with a one-time warning) so users who followed this repo's
   * earlier docs are not silently broken; the new location wins on a name collision.
@@ -213,7 +213,7 @@ diff -ruN --exclude=node_modules a/dist/agent-registry.js b/dist/agent-registry.
          for (const def of readDefsFromDir(userDir, "user")) {
 diff -ruN --exclude=node_modules a/dist/builtin-commands.js b/dist/builtin-commands.js
 --- a/dist/builtin-commands.js	1985-10-26 03:15:00
-+++ b/dist/builtin-commands.js	2026-08-22 14:38:17
++++ b/dist/builtin-commands.js	2026-08-23 00:07:15
 @@ -12,7 +12,7 @@
  import { spawn } from "node:child_process";
  import { findBuiltinWorkflow } from "./builtin-workflows.js";
@@ -318,7 +318,7 @@ diff -ruN --exclude=node_modules a/dist/builtin-commands.js b/dist/builtin-comma
                  if (!scope || checks.length === 0) {
 diff -ruN --exclude=node_modules a/dist/builtin-workflows.js b/dist/builtin-workflows.js
 --- a/dist/builtin-workflows.js	1985-10-26 03:15:00
-+++ b/dist/builtin-workflows.js	2026-08-22 14:38:17
++++ b/dist/builtin-workflows.js	2026-08-23 00:07:15
 @@ -16,6 +16,7 @@
  import { generateCodeReviewWorkflow } from "./code-review.js";
  import { generateCodebaseAuditWorkflow, generateDeepResearchWorkflow } from "./deep-research.js";
@@ -352,7 +352,7 @@ diff -ruN --exclude=node_modules a/dist/builtin-workflows.js b/dist/builtin-work
          },
 diff -ruN --exclude=node_modules a/dist/config.d.ts b/dist/config.d.ts
 --- a/dist/config.d.ts	1985-10-26 03:15:00
-+++ b/dist/config.d.ts	2026-08-22 14:38:17
++++ b/dist/config.d.ts	2026-08-23 00:07:15
 @@ -1,14 +1,70 @@
  /**
   * Configuration constants for pi-dynamic-workflows.
@@ -429,7 +429,7 @@ diff -ruN --exclude=node_modules a/dist/config.d.ts b/dist/config.d.ts
  /** Legacy project-relative directory for persisted workflow run state. New writes use workflowProjectPaths(). */
 diff -ruN --exclude=node_modules a/dist/config.js b/dist/config.js
 --- a/dist/config.js	1985-10-26 03:15:00
-+++ b/dist/config.js	2026-08-22 14:38:17
++++ b/dist/config.js	2026-08-23 00:07:15
 @@ -1,14 +1,70 @@
  /**
   * Configuration constants for pi-dynamic-workflows.
@@ -506,7 +506,7 @@ diff -ruN --exclude=node_modules a/dist/config.js b/dist/config.js
  /** Legacy project-relative directory for persisted workflow run state. New writes use workflowProjectPaths(). */
 diff -ruN --exclude=node_modules a/dist/errors.d.ts b/dist/errors.d.ts
 --- a/dist/errors.d.ts	1985-10-26 03:15:00
-+++ b/dist/errors.d.ts	2026-08-22 14:38:17
++++ b/dist/errors.d.ts	2026-08-23 00:07:15
 @@ -61,6 +61,14 @@
      /** Unknown error. */
      UNKNOWN = "UNKNOWN"
@@ -548,7 +548,7 @@ diff -ruN --exclude=node_modules a/dist/errors.d.ts b/dist/errors.d.ts
   */
 diff -ruN --exclude=node_modules a/dist/errors.js b/dist/errors.js
 --- a/dist/errors.js	1985-10-26 03:15:00
-+++ b/dist/errors.js	2026-08-22 14:38:17
++++ b/dist/errors.js	2026-08-23 00:07:15
 @@ -37,6 +37,14 @@
      /** Unknown error. */
      WorkflowErrorCode["UNKNOWN"] = "UNKNOWN";
@@ -643,7 +643,7 @@ diff -ruN --exclude=node_modules a/dist/errors.js b/dist/errors.js
  }
 diff -ruN --exclude=node_modules a/dist/fs-persistence.d.ts b/dist/fs-persistence.d.ts
 --- a/dist/fs-persistence.d.ts	1985-10-26 03:15:00
-+++ b/dist/fs-persistence.d.ts	2026-08-22 14:38:17
++++ b/dist/fs-persistence.d.ts	2026-08-23 00:07:15
 @@ -13,8 +13,12 @@
   *  3. A missing or unreadable directory degrades to "no files" rather than
   *     throwing — a listing must never crash because one storage location is
@@ -677,7 +677,7 @@ diff -ruN --exclude=node_modules a/dist/fs-persistence.d.ts b/dist/fs-persistenc
   * Atomically write JSON to `path`: tmp-write + rename (atomic on the same
 diff -ruN --exclude=node_modules a/dist/fs-persistence.js b/dist/fs-persistence.js
 --- a/dist/fs-persistence.js	1985-10-26 03:15:00
-+++ b/dist/fs-persistence.js	2026-08-22 14:38:17
++++ b/dist/fs-persistence.js	2026-08-23 00:07:15
 @@ -13,8 +13,12 @@
   *  3. A missing or unreadable directory degrades to "no files" rather than
   *     throwing — a listing must never crash because one storage location is
@@ -730,7 +730,7 @@ diff -ruN --exclude=node_modules a/dist/fs-persistence.js b/dist/fs-persistence.
          // Backup is best-effort; the primary write already succeeded.
 diff -ruN --exclude=node_modules a/dist/index.d.ts b/dist/index.d.ts
 --- a/dist/index.d.ts	1985-10-26 03:15:00
-+++ b/dist/index.d.ts	2026-08-22 14:38:17
++++ b/dist/index.d.ts	2026-08-23 00:07:15
 @@ -14,7 +14,7 @@
  export type { WorkflowAgentSnapshot, WorkflowAgentStatus, WorkflowDisplay, WorkflowDisplayOptions, WorkflowSnapshot, } from "./display.js";
  export { createToolUpdateWorkflowDisplay, createWidgetWorkflowDisplay, createWorkflowSnapshot, preview, recomputeWorkflowSnapshot, renderWorkflowLines, renderWorkflowText, } from "./display.js";
@@ -784,7 +784,7 @@ diff -ruN --exclude=node_modules a/dist/index.d.ts b/dist/index.d.ts
 +export { createWorktree, removeWorktree, worktreeId } from "./worktree.js";
 diff -ruN --exclude=node_modules a/dist/index.js b/dist/index.js
 --- a/dist/index.js	1985-10-26 03:15:00
-+++ b/dist/index.js	2026-08-22 14:38:17
++++ b/dist/index.js	2026-08-23 00:07:15
 @@ -8,28 +8,28 @@
  export { generateCodebaseAuditWorkflow, generateDeepResearchWorkflow } from "./deep-research.js";
  export { createToolUpdateWorkflowDisplay, createWidgetWorkflowDisplay, createWorkflowSnapshot, preview, recomputeWorkflowSnapshot, renderWorkflowLines, renderWorkflowText, } from "./display.js";
@@ -823,7 +823,7 @@ diff -ruN --exclude=node_modules a/dist/index.js b/dist/index.js
 +export { createWorktree, removeWorktree, worktreeId } from "./worktree.js";
 diff -ruN --exclude=node_modules a/dist/logger.js b/dist/logger.js
 --- a/dist/logger.js	1985-10-26 03:15:00
-+++ b/dist/logger.js	2026-08-22 14:38:17
++++ b/dist/logger.js	2026-08-23 00:07:15
 @@ -3,12 +3,30 @@
   */
  import { appendFileSync, mkdirSync, writeFileSync } from "node:fs";
@@ -888,7 +888,7 @@ diff -ruN --exclude=node_modules a/dist/logger.js b/dist/logger.js
          catch {
 diff -ruN --exclude=node_modules a/dist/run-persistence.d.ts b/dist/run-persistence.d.ts
 --- a/dist/run-persistence.d.ts	1985-10-26 03:15:00
-+++ b/dist/run-persistence.d.ts	2026-08-22 14:38:17
++++ b/dist/run-persistence.d.ts	2026-08-23 00:07:15
 @@ -96,7 +96,7 @@
      toolset?: string;
      /**
@@ -1023,7 +1023,7 @@ diff -ruN --exclude=node_modules a/dist/run-persistence.d.ts b/dist/run-persiste
   * Generate a unique run ID.
 diff -ruN --exclude=node_modules a/dist/run-persistence.js b/dist/run-persistence.js
 --- a/dist/run-persistence.js	1985-10-26 03:15:00
-+++ b/dist/run-persistence.js	2026-08-22 14:38:17
++++ b/dist/run-persistence.js	2026-08-23 00:07:15
 @@ -1,8 +1,9 @@
  /**
   * Workflow run state persistence for pause/resume support.
@@ -1644,7 +1644,7 @@ diff -ruN --exclude=node_modules a/dist/run-persistence.js b/dist/run-persistenc
                  if (existing?.token === lease.token)
 diff -ruN --exclude=node_modules a/dist/saved-commands.d.ts b/dist/saved-commands.d.ts
 --- a/dist/saved-commands.d.ts	1985-10-26 03:15:00
-+++ b/dist/saved-commands.d.ts	2026-08-22 14:38:17
++++ b/dist/saved-commands.d.ts	2026-08-23 00:07:15
 @@ -2,10 +2,21 @@
   * Saved workflows as `/<name>` slash commands. Each saved workflow becomes a
   * command that runs its script, passing parsed arguments through as `args`.
@@ -1687,7 +1687,7 @@ diff -ruN --exclude=node_modules a/dist/saved-commands.d.ts b/dist/saved-command
   * /workflows TUI, background execution, task panel). Idempotent: names already
 diff -ruN --exclude=node_modules a/dist/saved-commands.js b/dist/saved-commands.js
 --- a/dist/saved-commands.js	1985-10-26 03:15:00
-+++ b/dist/saved-commands.js	2026-08-22 14:38:17
++++ b/dist/saved-commands.js	2026-08-23 00:07:15
 @@ -4,6 +4,7 @@
   */
  import { createCodingTools } from "@earendil-works/pi-coding-agent";
@@ -1737,7 +1737,7 @@ diff -ruN --exclude=node_modules a/dist/saved-commands.js b/dist/saved-commands.
                  if (liveManager) {
 diff -ruN --exclude=node_modules a/dist/task-panel.d.ts b/dist/task-panel.d.ts
 --- a/dist/task-panel.d.ts	1985-10-26 03:15:00
-+++ b/dist/task-panel.d.ts	2026-08-22 14:38:17
++++ b/dist/task-panel.d.ts	2026-08-23 00:07:15
 @@ -19,6 +19,7 @@
       */
      loadSettings?: () => WorkflowSettings;
@@ -1759,7 +1759,7 @@ diff -ruN --exclude=node_modules a/dist/task-panel.d.ts b/dist/task-panel.d.ts
  export {};
 diff -ruN --exclude=node_modules a/dist/task-panel.js b/dist/task-panel.js
 --- a/dist/task-panel.js	1985-10-26 03:15:00
-+++ b/dist/task-panel.js	2026-08-22 14:38:17
++++ b/dist/task-panel.js	2026-08-23 00:07:15
 @@ -76,6 +76,27 @@
          return line;
      return truncateToWidth(line, maxWidth);
@@ -1880,7 +1880,7 @@ diff -ruN --exclude=node_modules a/dist/task-panel.js b/dist/task-panel.js
          return comp;
 diff -ruN --exclude=node_modules a/dist/usage-limit-scheduler.d.ts b/dist/usage-limit-scheduler.d.ts
 --- a/dist/usage-limit-scheduler.d.ts	1985-10-26 03:15:00
-+++ b/dist/usage-limit-scheduler.d.ts	2026-08-22 14:38:17
++++ b/dist/usage-limit-scheduler.d.ts	2026-08-23 00:07:15
 @@ -15,7 +15,7 @@
   * (in-memory, best-effort persisted) — it does not rely on manager.stop(), which
   * only operates on in-memory runs.
@@ -1946,7 +1946,7 @@ diff -ruN --exclude=node_modules a/dist/usage-limit-scheduler.d.ts b/dist/usage-
      /**
 diff -ruN --exclude=node_modules a/dist/usage-limit-scheduler.js b/dist/usage-limit-scheduler.js
 --- a/dist/usage-limit-scheduler.js	1985-10-26 03:15:00
-+++ b/dist/usage-limit-scheduler.js	2026-08-22 14:38:17
++++ b/dist/usage-limit-scheduler.js	2026-08-23 00:07:15
 @@ -15,10 +15,13 @@
   * (in-memory, best-effort persisted) — it does not rely on manager.stop(), which
   * only operates on in-memory runs.
@@ -2064,7 +2064,7 @@ diff -ruN --exclude=node_modules a/dist/usage-limit-scheduler.js b/dist/usage-li
      safeLoad(runId) {
 diff -ruN --exclude=node_modules a/dist/web-tools.d.ts b/dist/web-tools.d.ts
 --- a/dist/web-tools.d.ts	1985-10-26 03:15:00
-+++ b/dist/web-tools.d.ts	2026-08-22 14:38:17
++++ b/dist/web-tools.d.ts	2026-08-23 00:07:15
 @@ -3,18 +3,63 @@
   * process (which has network access), not in a subagent sandbox, so they perform
   * genuine HTTP requests via Node's fetch.
@@ -2135,7 +2135,7 @@ diff -ruN --exclude=node_modules a/dist/web-tools.d.ts b/dist/web-tools.d.ts
 +export declare function createWebTools(policy?: WebFetchPolicy): ToolDefinition[];
 diff -ruN --exclude=node_modules a/dist/web-tools.js b/dist/web-tools.js
 --- a/dist/web-tools.js	1985-10-26 03:15:00
-+++ b/dist/web-tools.js	2026-08-22 14:38:17
++++ b/dist/web-tools.js	2026-08-23 00:07:15
 @@ -3,18 +3,236 @@
   * process (which has network access), not in a subagent sandbox, so they perform
   * genuine HTTP requests via Node's fetch.
@@ -2433,7 +2433,7 @@ diff -ruN --exclude=node_modules a/dist/web-tools.js b/dist/web-tools.js
  }
 diff -ruN --exclude=node_modules a/dist/workflow-capability-contract.js b/dist/workflow-capability-contract.js
 --- a/dist/workflow-capability-contract.js	1985-10-26 03:15:00
-+++ b/dist/workflow-capability-contract.js	2026-08-22 14:38:17
++++ b/dist/workflow-capability-contract.js	2026-08-23 00:07:15
 @@ -136,7 +136,7 @@
              "selector priority is explicit model > agentType model > tier > phase model > metadata model > implicit medium > session default",
              "an explicit model, agentType model, tier, or phase model that resolves to an unavailable model throws MODEL_NOT_FOUND naming the source (e.g. the tier and what it resolved to) instead of falling back",
@@ -2459,7 +2459,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-capability-contract.js b/dist/w
      ]),
 diff -ruN --exclude=node_modules a/dist/workflow-commands.js b/dist/workflow-commands.js
 --- a/dist/workflow-commands.js	1985-10-26 03:15:00
-+++ b/dist/workflow-commands.js	2026-08-22 14:38:17
++++ b/dist/workflow-commands.js	2026-08-23 00:07:15
 @@ -4,6 +4,7 @@
   */
  import { fmtFull, fmtTokenSegment, recomputeWorkflowSnapshot, renderWorkflowText, tokenFigures, } from "./display.js";
@@ -2570,7 +2570,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-commands.js b/dist/workflow-com
                  default:
 diff -ruN --exclude=node_modules a/dist/workflow-editor.js b/dist/workflow-editor.js
 --- a/dist/workflow-editor.js	1985-10-26 03:15:00
-+++ b/dist/workflow-editor.js	2026-08-22 14:38:17
++++ b/dist/workflow-editor.js	2026-08-23 00:07:15
 @@ -236,15 +236,18 @@
      };
      registerWorkflowTriggerCommand(pi, state, settingsStore);
@@ -2641,7 +2641,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-editor.js b/dist/workflow-edito
      return state;
 diff -ruN --exclude=node_modules a/dist/workflow-manager.d.ts b/dist/workflow-manager.d.ts
 --- a/dist/workflow-manager.d.ts	1985-10-26 03:15:00
-+++ b/dist/workflow-manager.d.ts	2026-08-22 14:38:17
++++ b/dist/workflow-manager.d.ts	2026-08-23 00:07:15
 @@ -51,6 +51,13 @@
       */
      autoResume?: boolean;
@@ -2769,7 +2769,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-manager.d.ts b/dist/workflow-ma
       *
 diff -ruN --exclude=node_modules a/dist/workflow-manager.js b/dist/workflow-manager.js
 --- a/dist/workflow-manager.js	1985-10-26 03:15:00
-+++ b/dist/workflow-manager.js	2026-08-22 14:38:17
++++ b/dist/workflow-manager.js	2026-08-23 00:07:15
 @@ -2,11 +2,12 @@
   * Workflow manager for background execution, pause/resume, and run management.
   */
@@ -3056,7 +3056,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-manager.js b/dist/workflow-mana
       * Stop a running workflow.
 diff -ruN --exclude=node_modules a/dist/workflow-paths.d.ts b/dist/workflow-paths.d.ts
 --- a/dist/workflow-paths.d.ts	1985-10-26 03:15:00
-+++ b/dist/workflow-paths.d.ts	2026-08-22 14:38:17
++++ b/dist/workflow-paths.d.ts	2026-08-23 00:07:15
 @@ -7,6 +7,7 @@
   */
  export declare const WORKFLOW_HOME_RELATIVE_DIR = ".pi/workflows";
@@ -3083,7 +3083,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-paths.d.ts b/dist/workflow-path
  export declare function workflowProjectPaths(cwd: string): WorkflowProjectPaths;
 diff -ruN --exclude=node_modules a/dist/workflow-paths.js b/dist/workflow-paths.js
 --- a/dist/workflow-paths.js	1985-10-26 03:15:00
-+++ b/dist/workflow-paths.js	2026-08-22 14:38:17
++++ b/dist/workflow-paths.js	2026-08-23 00:07:15
 @@ -5,12 +5,15 @@
   * scattered `.pi/workflows` directories. Project-scoped state is still isolated
   * by a stable cwd-derived namespace.
@@ -3158,7 +3158,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-paths.js b/dist/workflow-paths.
          .toLowerCase()
 diff -ruN --exclude=node_modules a/dist/workflow-saved.d.ts b/dist/workflow-saved.d.ts
 --- a/dist/workflow-saved.d.ts	1985-10-26 03:15:00
-+++ b/dist/workflow-saved.d.ts	2026-08-22 14:38:17
++++ b/dist/workflow-saved.d.ts	2026-08-23 00:07:15
 @@ -22,6 +22,25 @@
      path: string;
      /** When it was saved. */
@@ -3201,7 +3201,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-saved.d.ts b/dist/workflow-save
 +export declare function createWorkflowStorage(cwd: string, fsOverride?: Partial<PersistenceFsLayer>, options?: WorkflowStorageOptions): WorkflowStorage;
 diff -ruN --exclude=node_modules a/dist/workflow-saved.js b/dist/workflow-saved.js
 --- a/dist/workflow-saved.js	1985-10-26 03:15:00
-+++ b/dist/workflow-saved.js	2026-08-22 14:38:17
++++ b/dist/workflow-saved.js	2026-08-23 00:07:15
 @@ -4,6 +4,7 @@
  import { join } from "node:path";
  import { ensureDir as ensureDirFs, listJsonFilesSafe, readJsonWithBackupRecovery, resolvePersistenceFs, unlinkIfExistsSafe, writeJsonAtomicWithBackup, } from "./fs-persistence.js";
@@ -3314,7 +3314,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-saved.js b/dist/workflow-saved.
          },
 diff -ruN --exclude=node_modules a/dist/workflow-settings.d.ts b/dist/workflow-settings.d.ts
 --- a/dist/workflow-settings.d.ts	1985-10-26 03:15:00
-+++ b/dist/workflow-settings.d.ts	2026-08-22 14:38:17
++++ b/dist/workflow-settings.d.ts	2026-08-23 00:07:15
 @@ -17,6 +17,12 @@
      defaultTokenBudget?: number | null;
      /** Default max concurrent agents per run. Clamped to the runtime maximum. */
@@ -3372,7 +3372,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-settings.d.ts b/dist/workflow-s
      load(): WorkflowSettings;
 diff -ruN --exclude=node_modules a/dist/workflow-settings.js b/dist/workflow-settings.js
 --- a/dist/workflow-settings.js	1985-10-26 03:15:00
-+++ b/dist/workflow-settings.js	2026-08-22 14:38:17
++++ b/dist/workflow-settings.js	2026-08-23 00:07:15
 @@ -6,7 +6,7 @@
   */
  import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -3413,9 +3413,21 @@ diff -ruN --exclude=node_modules a/dist/workflow-settings.js b/dist/workflow-set
      }
      const deliveredResultMaxChars = normalizeInteger(raw.deliveredResultMaxChars, 1, 1_000_000);
      if (deliveredResultMaxChars !== undefined)
+diff -ruN --exclude=node_modules a/dist/workflow-tool.d.ts b/dist/workflow-tool.d.ts
+--- a/dist/workflow-tool.d.ts	1985-10-26 03:15:00
++++ b/dist/workflow-tool.d.ts	2026-08-23 00:07:15
+@@ -3,7 +3,7 @@
+ import { WorkflowManager } from "./workflow-manager.js";
+ import { type WorkflowStorage } from "./workflow-saved.js";
+ /** The single always-on gate that authorizes workflow use without forcing it. */
+-export declare const WORKFLOW_GATE_GUIDELINE = "The `workflow` tool runs multi-agent orchestration \u2014 it fans decomposable work out across subagents, and fits tasks shaped like: repo-wide inspection, independent parallel research/checks, multi-perspective review, or fan-out/fan-in synthesis. ONLY call it when the user explicitly opts in \u2014 via the workflow trigger word, `/workflows run`, or their own words (e.g. 'run a workflow', 'fan this out', '\u5E76\u884C\u5BA1\u4E00\u904D'). For any other task \u2014 even one that would clearly benefit \u2014 do not call it; you may briefly offer it (with a rough cost) as an option instead.";
++export declare const WORKFLOW_GATE_GUIDELINE = "The `workflow` tool fans decomposable work out across subagents. It fits repo-wide inspection, independent parallel research or checks, multi-perspective review, or fan-out/fan-in synthesis. Call it only when the user explicitly opts in, via the workflow trigger word, `/workflows run`, or their own words like 'run a workflow', 'fan this out', or '\u5E76\u884C\u5BA1\u4E00\u904D'. For any other task, do not call it, even one that would clearly benefit. You may briefly offer it as an option with a rough cost.";
+ declare const workflowToolSchema: Type.TObject<{
+     script: Type.TOptional<Type.TString>;
+     name: Type.TOptional<Type.TString>;
 diff -ruN --exclude=node_modules a/dist/workflow-tool.js b/dist/workflow-tool.js
 --- a/dist/workflow-tool.js	1985-10-26 03:15:00
-+++ b/dist/workflow-tool.js	2026-08-22 14:38:17
++++ b/dist/workflow-tool.js	2026-08-23 00:07:15
 @@ -2,7 +2,7 @@
  import { Text } from "@earendil-works/pi-tui";
  import { Type } from "typebox";
@@ -3425,8 +3437,30 @@ diff -ruN --exclude=node_modules a/dist/workflow-tool.js b/dist/workflow-tool.js
  import { createToolUpdateWorkflowDisplay, createWorkflowSnapshot, fmtCost, fmtFull, fmtTokenSegment, recomputeWorkflowSnapshot, renderWorkflowText, tokenFigures, } from "./display.js";
  import { WorkflowError, WorkflowErrorCode } from "./errors.js";
  import { parseWorkflowScript } from "./workflow.js";
-@@ -53,16 +53,18 @@
-         description: "Run the workflow in the background. Default: true — the tool returns immediately with a run ID, the turn ends so the user isn't blocked, and the result is delivered back into the conversation when it finishes. Set to false only when you need the result inline in this same turn (the call will block until the workflow completes).",
+@@ -10,7 +10,7 @@
+ import { createWorkflowStorage } from "./workflow-saved.js";
+ import { loadWorkflowSettings } from "./workflow-settings.js";
+ /** The single always-on gate that authorizes workflow use without forcing it. */
+-export const WORKFLOW_GATE_GUIDELINE = "The `workflow` tool runs multi-agent orchestration — it fans decomposable work out across subagents, and fits tasks shaped like: repo-wide inspection, independent parallel research/checks, multi-perspective review, or fan-out/fan-in synthesis. ONLY call it when the user explicitly opts in — via the workflow trigger word, `/workflows run`, or their own words (e.g. 'run a workflow', 'fan this out', '并行审一遍'). For any other task — even one that would clearly benefit — do not call it; you may briefly offer it (with a rough cost) as an option instead.";
++export const WORKFLOW_GATE_GUIDELINE = "The `workflow` tool fans decomposable work out across subagents. It fits repo-wide inspection, independent parallel research or checks, multi-perspective review, or fan-out/fan-in synthesis. Call it only when the user explicitly opts in, via the workflow trigger word, `/workflows run`, or their own words like 'run a workflow', 'fan this out', or '并行审一遍'. For any other task, do not call it, even one that would clearly benefit. You may briefly offer it as an option with a rough cost.";
+ const workflowToolSchema = Type.Object({
+     script: Type.Optional(Type.String({
+         description: [
+@@ -28,7 +28,7 @@
+     })),
+     name: Type.Optional(Type.String({
+         description: "Run a saved or built-in workflow by name instead of `script`; its args go in `args`. " +
+-            `Built-ins: ${BUILTIN_WORKFLOW_NAMES.join(", ")} — see the workflow-patterns skill for each one's args. ` +
++            `Built-ins: ${BUILTIN_WORKFLOW_NAMES.join(", ")}. See the workflow-patterns skill for each one's args. ` +
+             "A same-named saved workflow wins. Not combinable with resumeFromRunId.",
+     })),
+     args: Type.Optional(
+@@ -50,19 +50,21 @@
+         description: "Optional JSON value exposed to the workflow script as global `args`.",
+     })),
+     background: Type.Optional(Type.Boolean({
+-        description: "Run the workflow in the background. Default: true — the tool returns immediately with a run ID, the turn ends so the user isn't blocked, and the result is delivered back into the conversation when it finishes. Set to false only when you need the result inline in this same turn (the call will block until the workflow completes).",
++        description: "Run the workflow in the background. Default: true. The tool returns immediately with a run ID, the turn ends so the user isn't blocked, and the result is delivered back into the conversation when it finishes. Set to false only when you need the result inline in this same turn. When false, the call blocks until the workflow completes.",
      })),
      maxAgents: Type.Optional(Type.Number({
 -        description: "Maximum number of agents allowed in this run. Default: 1000; this is a safety ceiling, not a target. Set a lower limit for dynamic or exploratory fan-out, and reserve large fan-outs for explicit user intent.",
@@ -3447,6 +3481,15 @@ diff -ruN --exclude=node_modules a/dist/workflow-tool.js b/dist/workflow-tool.js
      })),
      tokenBudget: Type.Optional(Type.Number({
          description: "Optional user-requested soft spend gate, not a planning target. Do not set `tokenBudget` unless the user explicitly supplies a cap or asks you to choose one; never infer or invent one from task size. If omitted, the configured `defaultTokenBudget` applies; without one, the run is unlimited. Reaching the gate blocks later `agent()` calls; concurrent in-flight work can overshoot.",
+@@ -118,7 +120,7 @@
+             let script;
+             if (params.name) {
+                 if (params.resumeFromRunId) {
+-                    throw new Error("workflow: `name` cannot be combined with `resumeFromRunId` — resume with an edited `script` instead.");
++                    throw new Error("workflow: `name` cannot be combined with `resumeFromRunId`. Resume with an edited `script` instead.");
+                 }
+                 const resolved = resolveWorkflowInvocation(params.name, params.args, { storage, cwd });
+                 if (!resolved) {
 @@ -286,9 +288,11 @@
      return {
          agentTimeoutMs: options.defaultAgentTimeoutMs !== undefined
@@ -3461,9 +3504,36 @@ diff -ruN --exclude=node_modules a/dist/workflow-tool.js b/dist/workflow-tool.js
      };
  }
  /**
+@@ -302,7 +306,7 @@
+         `Workflow "${name}" started in the background.`,
+         `Run ID: ${runId}`,
+         "It keeps running on its own. When it finishes, the result is delivered back",
+-        "here and the conversation continues automatically — the user does not need to",
++        "here and the conversation continues automatically. The user does not need to",
+         "do anything. Tell the user they can simply wait here for it to finish (it will",
+         "resume the conversation by itself), or keep chatting / working on other things",
+         "in the meantime; either way the result will come back to this conversation.",
+@@ -319,7 +323,7 @@
+ export function reviseHint(runId) {
+     if (!runId)
+         return "";
+-    return `To revise without re-running everything: re-call workflow with resumeFromRunId="${runId}" and an edited script — unchanged agent() calls replay from cache, only edited/new ones re-run.`;
++    return `To revise without re-running everything, re-call workflow with resumeFromRunId="${runId}" and an edited script. Unchanged agent() calls replay from cache; only edited or new ones re-run.`;
+ }
+ /**
+  * The tool result returned when the model resumes a run with an edited script.
+@@ -329,7 +333,7 @@
+     return [
+         `Workflow "${name}" resumed from run ${runId} with your edited script.`,
+         "Unchanged agent() calls replay from that run's journal (cache); the first",
+-        "edited or newly inserted agent() call — and everything after it — re-runs live.",
++        "edited or newly inserted agent() call, and everything after it, re-runs live.",
+         "It runs in the background; the result is delivered back here when it finishes,",
+         "and the conversation continues automatically. The user can wait or keep working.",
+         `Track or cancel it with /workflows status ${runId} or /workflows stop ${runId}.`,
 diff -ruN --exclude=node_modules a/dist/workflow-ui.js b/dist/workflow-ui.js
 --- a/dist/workflow-ui.js	1985-10-26 03:15:00
-+++ b/dist/workflow-ui.js	2026-08-22 14:38:17
++++ b/dist/workflow-ui.js	2026-08-23 00:07:15
 @@ -15,6 +15,7 @@
  import { getLanguageFromPath, getMarkdownTheme, renderDiff, } from "@earendil-works/pi-coding-agent";
  import { Markdown, parseKey, truncateToWidth, visibleWidth, wrapTextWithAnsi } from "@earendil-works/pi-tui";
@@ -3586,7 +3656,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-ui.js b/dist/workflow-ui.js
                      }
 diff -ruN --exclude=node_modules a/dist/workflow.d.ts b/dist/workflow.d.ts
 --- a/dist/workflow.d.ts	1985-10-26 03:15:00
-+++ b/dist/workflow.d.ts	2026-08-22 14:38:17
++++ b/dist/workflow.d.ts	2026-08-23 00:07:15
 @@ -158,6 +158,24 @@
      agentTimeoutMs?: number | null;
      /** Whether to persist logs to disk. Default: true */
@@ -3628,7 +3698,7 @@ diff -ruN --exclude=node_modules a/dist/workflow.d.ts b/dist/workflow.d.ts
      meta: WorkflowMeta;
 diff -ruN --exclude=node_modules a/dist/workflow.js b/dist/workflow.js
 --- a/dist/workflow.js	1985-10-26 03:15:00
-+++ b/dist/workflow.js	2026-08-22 14:38:17
++++ b/dist/workflow.js	2026-08-23 00:07:15
 @@ -1,11 +1,11 @@
  import { AsyncLocalStorage } from "node:async_hooks";
 -import { createHash } from "node:crypto";
@@ -4176,7 +4246,7 @@ diff -ruN --exclude=node_modules a/dist/workflow.js b/dist/workflow.js
          return promise;
 diff -ruN --exclude=node_modules a/dist/worktree.d.ts b/dist/worktree.d.ts
 --- a/dist/worktree.d.ts	1985-10-26 03:15:00
-+++ b/dist/worktree.d.ts	2026-08-22 14:38:17
++++ b/dist/worktree.d.ts	2026-08-23 00:07:15
 @@ -14,11 +14,29 @@
      repoRoot?: string;
      /** Why isolation was skipped, when isolated === false. */
@@ -4212,7 +4282,7 @@ diff -ruN --exclude=node_modules a/dist/worktree.d.ts b/dist/worktree.d.ts
  /** Remove a worktree and its branch. Best-effort; safe to call on a no-op Worktree. */
 diff -ruN --exclude=node_modules a/dist/worktree.js b/dist/worktree.js
 --- a/dist/worktree.js	1985-10-26 03:15:00
-+++ b/dist/worktree.js	2026-08-22 14:38:17
++++ b/dist/worktree.js	2026-08-23 00:07:15
 @@ -5,32 +5,82 @@
   * the caller to inspect. Falls back to a logged no-op when isolation isn't possible.
   */
@@ -5102,7 +5172,7 @@ diff -ruN --exclude=node_modules a/extensions/workflow.ts b/extensions/workflow.
 -}
 diff -ruN --exclude=node_modules a/package.json b/package.json
 --- a/package.json	1985-10-26 03:15:00
-+++ b/package.json	2026-08-22 14:35:17
++++ b/package.json	2026-08-22 14:47:17
 @@ -1,6 +1,7 @@
  {
    "name": "@quintinshaw/pi-dynamic-workflows",
@@ -5122,7 +5192,7 @@ diff -ruN --exclude=node_modules a/package.json b/package.json
        "skills/workflow-authoring",
 diff -ruN --exclude=node_modules a/skills/workflow-authoring/references/capabilities.md b/skills/workflow-authoring/references/capabilities.md
 --- a/skills/workflow-authoring/references/capabilities.md	1985-10-26 03:15:00
-+++ b/skills/workflow-authoring/references/capabilities.md	2026-08-22 14:34:22
++++ b/skills/workflow-authoring/references/capabilities.md	2026-08-22 14:47:17
 @@ -32,10 +32,10 @@
  | name | workflow-tool-input | `name?: string` | — |
  | args | workflow-tool-input | `args?: unknown` | — |
@@ -5139,7 +5209,7 @@ diff -ruN --exclude=node_modules a/skills/workflow-authoring/references/capabili
  <!-- END GENERATED SUPPORTED WORKFLOW CAPABILITIES -->
 diff -ruN --exclude=node_modules a/skills/workflow-authoring/references/capability-details.md b/skills/workflow-authoring/references/capability-details.md
 --- a/skills/workflow-authoring/references/capability-details.md	1985-10-26 03:15:00
-+++ b/skills/workflow-authoring/references/capability-details.md	2026-08-22 14:34:22
++++ b/skills/workflow-authoring/references/capability-details.md	2026-08-22 14:47:17
 @@ -33,7 +33,7 @@
  - Constraint: selector priority is explicit model > agentType model > tier > phase model > metadata model > implicit medium > session default
  - Constraint: an explicit model, agentType model, tier, or phase model that resolves to an unavailable model throws MODEL_NOT_FOUND naming the source (e.g. the tier and what it resolved to) instead of falling back
@@ -5192,7 +5262,7 @@ diff -ruN --exclude=node_modules a/skills/workflow-authoring/references/lifecycl
  
 diff -ruN --exclude=node_modules a/skills/workflow-authoring/references/runtime.md b/skills/workflow-authoring/references/runtime.md
 --- a/skills/workflow-authoring/references/runtime.md	1985-10-26 03:15:00
-+++ b/skills/workflow-authoring/references/runtime.md	2026-08-22 14:34:22
++++ b/skills/workflow-authoring/references/runtime.md	2026-08-22 14:47:17
 @@ -24,6 +24,6 @@
  
  ## Routing and support
@@ -5201,6 +5271,65 @@ diff -ruN --exclude=node_modules a/skills/workflow-authoring/references/runtime.
 +Selector priority is explicit `model` > `agentType` model > `tier` > phase model > metadata model > implicit `medium` > session default. An unavailable EXPLICIT selector (`model`, `agentType` model, `tier`, or phase model) throws instead of falling back — catch it if the script needs to degrade gracefully. Only the implicit default `medium` tier an untagged agent falls into degrades to the session default when unavailable, with a one-time warning logged into the run. Use exact `model`, nonstandard `tier`, or `agentType` only when context supplies its name and purpose. Worktree isolation must succeed when requested: an agent that cannot get a worktree fails rather than running in the shared tree. See [registry ownership](registry-ownership.md).
  
  Generated entries marked `supported` are authoring API. `console` and whole-script Markdown fences are compatibility-only. VM realm facilities are internal. Active model routes and agent types are dynamic. Use `log()` in new scripts.
+diff -ruN --exclude=node_modules a/skills/workflow-patterns/SKILL.md b/skills/workflow-patterns/SKILL.md
+--- a/skills/workflow-patterns/SKILL.md	1985-10-26 03:15:00
++++ b/skills/workflow-patterns/SKILL.md	2026-08-22 23:51:31
+@@ -1,6 +1,6 @@
+ ---
+ name: workflow-patterns
+-description: Argument shapes for the 5 built-in workflow patterns — deep-research, adversarial-review, code-review, multi-perspective, codebase-audit — runnable via the `workflow` tool's `name` input, without slash-command syntax. Use for requests like "research X", "fact-check/adversarially review this", "review this diff/PR", "analyze from multiple perspectives", or "audit the codebase for Y". Not for authoring a new workflow script — see workflow-authoring.
++description: Argument shapes for the 5 built-in workflow patterns: deep-research, adversarial-review, code-review, multi-perspective, and codebase-audit. Each is runnable via the `workflow` tool's `name` input without slash-command syntax. Use for requests like "research X", "fact-check/adversarially review this", "review this diff/PR", "analyze from multiple perspectives", or "audit the codebase for Y". Not for authoring a new workflow script; see workflow-authoring.
+ metadata:
+   version: "3.7.0"
+ ---
+@@ -13,14 +13,14 @@
+ the `workflow` tool directly: call it with `name` set to the pattern name
+ below and `args` matching its shape, instead of writing an equivalent script
+ from scratch. Prefer this over authoring a new script whenever the request
+-fits one of these shapes — the curated version is already reviewed and tested.
++fits one of these shapes. The curated version is already reviewed and tested.
+ 
+ A project or user saved workflow of the same name always takes precedence
+-over a built-in of that name — on the slash command, too.
++over a built-in of that name, on the slash command too.
+ 
+ These 5 names are reachable only at the `workflow` tool's top-level `name`
+-input, not via the in-script `await workflow(savedName, childArgs)` helper —
+-that helper resolves saved workflows only. Calling `workflow('deep-research')`
++input, not via the in-script `await workflow(savedName, childArgs)` helper.
++That helper resolves saved workflows only. Calling `workflow('deep-research')`
+ from inside a script fails as an unknown saved workflow; use the top-level
+ `name` input instead.
+ 
+@@ -28,10 +28,10 @@
+ 
+ | `name` | When to reach for it | `args` |
+ | --- | --- | --- |
+-| `deep-research` | Research a question across the web with cross-checked sources | `{ question: string, angles?: number, minSupport?: number }` — `angles` (default 4) is the number of distinct search queries; `minSupport` (default 2) is the minimum distinct sources required for a claim to survive cross-checking |
++| `deep-research` | Research a question across the web with cross-checked sources | `{ question: string, angles?: number, minSupport?: number }`. `angles` (default 4) is the number of distinct search queries. `minSupport` (default 2) is the minimum distinct sources required for a claim to survive cross-checking |
+ | `adversarial-review` | Investigate a task/claim, then cross-check each finding with skeptical reviewers | `{ task: string, reviewers?: number, threshold?: number }` |
+-| `code-review` | Multi-angle review of a diff (correctness, reuse, simplification, efficiency, altitude) | `{ diff: string, diffSource?: string }` — get `diff` yourself first (e.g. `git diff`, `gh pr diff <n>`); this path does not fetch it for you |
+-| `multi-perspective` | Analyze a topic from several independent perspectives in parallel, then synthesize | `{ topic: string, perspectives?: string[] }` — omit or give fewer than 2 to use the default set (technical, product, security, user experience, maintainability) |
++| `code-review` | Multi-angle review of a diff (correctness, reuse, simplification, efficiency, altitude) | `{ diff: string, diffSource?: string }`. Get `diff` yourself first, e.g. `git diff` or `gh pr diff <n>`. This path does not fetch it for you |
++| `multi-perspective` | Analyze a topic from several independent perspectives in parallel, then synthesize | `{ topic: string, perspectives?: string[] }`. Omit or give fewer than 2 to use the default set: technical, product, security, user experience, maintainability |
+ | `codebase-audit` | Run parallel checks against a codebase scope, then cross-validate and report | `{ scope: string, checks: string[] }` |
+ 
+ ## Example
+@@ -40,7 +40,7 @@
+ { "name": "deep-research", "args": { "question": "What are the tradeoffs of X vs Y?" } }
+ ```
+ 
+-This is a `workflow` tool call, not a script — omit `script` entirely. The run
++This is a `workflow` tool call, not a script. Omit `script` entirely. The run
+ starts in the background exactly like the slash-command form; `background`,
+ `maxAgents`, `concurrency`, `agentRetries`, `agentTimeoutMs`, and `tokenBudget`
+ all still apply.
+@@ -48,4 +48,4 @@
+ ## Writing a new workflow instead
+ 
+ If the request doesn't fit one of these 5 shapes, author a script with
+-`script` as usual — see the workflow-authoring skill.
++`script` as usual. See the workflow-authoring skill.
 diff -ruN --exclude=node_modules a/src/agent-registry.ts b/src/agent-registry.ts
 --- a/src/agent-registry.ts	1985-10-26 03:15:00
 +++ b/src/agent-registry.ts	2026-08-22 14:34:22
@@ -7259,7 +7388,7 @@ diff -ruN --exclude=node_modules a/src/web-tools.ts b/src/web-tools.ts
  }
 diff -ruN --exclude=node_modules a/src/workflow-capability-contract.ts b/src/workflow-capability-contract.ts
 --- a/src/workflow-capability-contract.ts	1985-10-26 03:15:00
-+++ b/src/workflow-capability-contract.ts	2026-08-22 14:34:22
++++ b/src/workflow-capability-contract.ts	2026-08-22 14:47:17
 @@ -315,7 +315,7 @@
        "selector priority is explicit model > agentType model > tier > phase model > metadata model > implicit medium > session default",
        "an explicit model, agentType model, tier, or phase model that resolves to an unavailable model throws MODEL_NOT_FOUND naming the source (e.g. the tier and what it resolved to) instead of falling back",
@@ -8175,7 +8304,7 @@ diff -ruN --exclude=node_modules a/src/workflow-settings.ts b/src/workflow-setti
    if (deliveredResultMaxChars !== undefined) settings.deliveredResultMaxChars = deliveredResultMaxChars;
 diff -ruN --exclude=node_modules a/src/workflow-tool.ts b/src/workflow-tool.ts
 --- a/src/workflow-tool.ts	1985-10-26 03:15:00
-+++ b/src/workflow-tool.ts	2026-08-22 14:34:22
++++ b/src/workflow-tool.ts	2026-08-23 00:07:08
 @@ -2,8 +2,13 @@
  import { Text } from "@earendil-works/pi-tui";
  import { Type } from "typebox";
@@ -8191,7 +8320,32 @@ diff -ruN --exclude=node_modules a/src/workflow-tool.ts b/src/workflow-tool.ts
    createToolUpdateWorkflowDisplay,
    createWorkflowSnapshot,
    fmtCost,
-@@ -77,7 +82,9 @@
+@@ -22,7 +27,7 @@
+ 
+ /** The single always-on gate that authorizes workflow use without forcing it. */
+ export const WORKFLOW_GATE_GUIDELINE =
+-  "The `workflow` tool runs multi-agent orchestration — it fans decomposable work out across subagents, and fits tasks shaped like: repo-wide inspection, independent parallel research/checks, multi-perspective review, or fan-out/fan-in synthesis. ONLY call it when the user explicitly opts in — via the workflow trigger word, `/workflows run`, or their own words (e.g. 'run a workflow', 'fan this out', '并行审一遍'). For any other task — even one that would clearly benefit — do not call it; you may briefly offer it (with a rough cost) as an option instead.";
++  "The `workflow` tool fans decomposable work out across subagents. It fits repo-wide inspection, independent parallel research or checks, multi-perspective review, or fan-out/fan-in synthesis. Call it only when the user explicitly opts in, via the workflow trigger word, `/workflows run`, or their own words like 'run a workflow', 'fan this out', or '并行审一遍'. For any other task, do not call it, even one that would clearly benefit. You may briefly offer it as an option with a rough cost.";
+ 
+ const workflowToolSchema = Type.Object({
+   script: Type.Optional(
+@@ -45,7 +50,7 @@
+     Type.String({
+       description:
+         "Run a saved or built-in workflow by name instead of `script`; its args go in `args`. " +
+-        `Built-ins: ${BUILTIN_WORKFLOW_NAMES.join(", ")} — see the workflow-patterns skill for each one's args. ` +
++        `Built-ins: ${BUILTIN_WORKFLOW_NAMES.join(", ")}. See the workflow-patterns skill for each one's args. ` +
+         "A same-named saved workflow wins. Not combinable with resumeFromRunId.",
+     }),
+   ),
+@@ -71,13 +76,15 @@
+   background: Type.Optional(
+     Type.Boolean({
+       description:
+-        "Run the workflow in the background. Default: true — the tool returns immediately with a run ID, the turn ends so the user isn't blocked, and the result is delivered back into the conversation when it finishes. Set to false only when you need the result inline in this same turn (the call will block until the workflow completes).",
++        "Run the workflow in the background. Default: true. The tool returns immediately with a run ID, the turn ends so the user isn't blocked, and the result is delivered back into the conversation when it finishes. Set to false only when you need the result inline in this same turn. When false, the call blocks until the workflow completes.",
+     }),
+   ),
    maxAgents: Type.Optional(
      Type.Number({
        description:
@@ -8218,6 +8372,15 @@ diff -ruN --exclude=node_modules a/src/workflow-tool.ts b/src/workflow-tool.ts
      }),
    ),
    tokenBudget: Type.Optional(
+@@ -201,7 +208,7 @@
+       if (params.name) {
+         if (params.resumeFromRunId) {
+           throw new Error(
+-            "workflow: `name` cannot be combined with `resumeFromRunId` — resume with an edited `script` instead.",
++            "workflow: `name` cannot be combined with `resumeFromRunId`. Resume with an edited `script` instead.",
+           );
+         }
+         const resolved = resolveWorkflowInvocation(params.name, params.args, { storage, cwd });
 @@ -389,9 +396,11 @@
      agentTimeoutMs:
        options.defaultAgentTimeoutMs !== undefined
@@ -8232,6 +8395,33 @@ diff -ruN --exclude=node_modules a/src/workflow-tool.ts b/src/workflow-tool.ts
    };
  }
  
+@@ -406,7 +415,7 @@
+     `Workflow "${name}" started in the background.`,
+     `Run ID: ${runId}`,
+     "It keeps running on its own. When it finishes, the result is delivered back",
+-    "here and the conversation continues automatically — the user does not need to",
++    "here and the conversation continues automatically. The user does not need to",
+     "do anything. Tell the user they can simply wait here for it to finish (it will",
+     "resume the conversation by itself), or keep chatting / working on other things",
+     "in the meantime; either way the result will come back to this conversation.",
+@@ -423,7 +432,7 @@
+  */
+ export function reviseHint(runId: string | undefined): string {
+   if (!runId) return "";
+-  return `To revise without re-running everything: re-call workflow with resumeFromRunId="${runId}" and an edited script — unchanged agent() calls replay from cache, only edited/new ones re-run.`;
++  return `To revise without re-running everything, re-call workflow with resumeFromRunId="${runId}" and an edited script. Unchanged agent() calls replay from cache; only edited or new ones re-run.`;
+ }
+ 
+ /**
+@@ -434,7 +443,7 @@
+   return [
+     `Workflow "${name}" resumed from run ${runId} with your edited script.`,
+     "Unchanged agent() calls replay from that run's journal (cache); the first",
+-    "edited or newly inserted agent() call — and everything after it — re-runs live.",
++    "edited or newly inserted agent() call, and everything after it, re-runs live.",
+     "It runs in the background; the result is delivered back here when it finishes,",
+     "and the conversation continues automatically. The user can wait or keep working.",
+     `Track or cancel it with /workflows status ${runId} or /workflows stop ${runId}.`,
 diff -ruN --exclude=node_modules a/src/workflow-ui.ts b/src/workflow-ui.ts
 --- a/src/workflow-ui.ts	1985-10-26 03:15:00
 +++ b/src/workflow-ui.ts	2026-08-22 14:34:22
@@ -8379,7 +8569,7 @@ diff -ruN --exclude=node_modules a/src/workflow-ui.ts b/src/workflow-ui.ts
              }
 diff -ruN --exclude=node_modules a/src/workflow.ts b/src/workflow.ts
 --- a/src/workflow.ts	1985-10-26 03:15:00
-+++ b/src/workflow.ts	2026-08-22 14:34:22
++++ b/src/workflow.ts	2026-08-22 14:47:17
 @@ -1,5 +1,5 @@
  import { AsyncLocalStorage } from "node:async_hooks";
 -import { createHash } from "node:crypto";
