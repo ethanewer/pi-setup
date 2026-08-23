@@ -32,6 +32,7 @@ const FORKS_MINUS_WORKFLOWS = [
 	"local/pi-btw-side",
 	"local/pi-process-monitor-safe",
 	"local/pi-setup-maintenance",
+	"local/unslop",
 ];
 const ALL_FORKS = [
 	"local/pi-voice-stt-safe",
@@ -41,6 +42,7 @@ const ALL_FORKS = [
 	"local/pi-btw-side",
 	"local/pi-process-monitor-safe",
 	"local/pi-setup-maintenance",
+	"local/unslop",
 ];
 
 const dir = mkdtempSync(join(tmpdir(), "pi-config-writer-"));

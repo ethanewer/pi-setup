@@ -23,7 +23,7 @@ wrappers in `~/.local/bin`, and prunes stale npm copies of the extensions.
    exit 0.
 5. Report only what you ran. Every line in a summary must correspond to a command whose
    output you saw in this session. If a check was skipped, say so; if it failed, say so.
-   See [Reporting](#reporting) — this rule exists because it was broken.
+   See [Reporting](#reporting). This rule exists because it was broken.
 
 ## Reporting
 
@@ -46,7 +46,7 @@ const implementation = await agent(`...`)
 if (!implementation) throw new Error("implement stage produced no output; not publishing")
 ```
 
-Never let a publish stage — commit, push, install — run behind an unchecked stage. This is
+Never let a publish stage run behind an unchecked stage. A publish stage means commit, push, or install. This is
 not hypothetical: run `configure-p-light-extensions-ms89ct6n-61zuep` lost its implement
 stage after 31 minutes and ~1.16M tokens, the reviewer was handed `IMPLEMENTATION: null`,
 and it committed and pushed anyway while reporting an unqualified list of passing checks.
@@ -58,7 +58,7 @@ The change happened to be correct. Nothing in the process established that.
 cd ~/pi-setup && bin/pi-setup-doctor
 ```
 
-Every section, in the order it prints. Only "Upstream releases" is advisory — every other
+Every section, in the order it prints. Only "Upstream releases" is advisory. Every other
 section can emit a PROBLEM and fail the exit code.
 
 | Section | What a finding means |
@@ -68,9 +68,9 @@ section can emit a PROBLEM and fail the exit code.
 | Configuration hygiene | `stt.json` is not mode 600, or `trust.json` trusts a directory that every repository sits under. |
 | Compiled mirrors | `pi-dynamic-workflows-safe`'s `dist/` no longer matches its `src/`. Both are reachable through the package exports, so a stale `dist` exports code nobody audited. Run `npm run build` in that fork. |
 | Keybindings and the p profile | An agent directory is missing a binding from `config/keybindings.json`, or the `p` profile is gone. Re-run `./install.sh`. See `docs/KEYBINDINGS.md`. |
-| Retired and unknown local packages | A package on disk that `vendor.json` does not know about — dead code that can still be loaded if it is re-added to settings. |
-| Pi and agent-browser | Installed version differs from the pin in `install.sh` — something bypassed the installer. |
-| Compaction settings | `reserveTokens` outside the band in `config/compaction.json`, or compaction disabled. Too small is the common one: Pi only checks the threshold *after an agent run finishes*, so a reserve that covers one reply but not one whole run lets context overshoot the window. Too large stalls the summarization call. Note the reserve is slack, not a bound — a long enough run passes any threshold, and no setting or extension prevents that. See [`LONG_RUNS.md`](../../../../docs/LONG_RUNS.md). |
+| Retired and unknown local packages | A package on disk that `vendor.json` does not know about. It is dead code that can still be loaded if it is re-added to settings. |
+| Pi and agent-browser | Installed version differs from the pin in `install.sh`. Something bypassed the installer. |
+| Compaction settings | `reserveTokens` outside the band in `config/compaction.json`, or compaction disabled. Too small is the common one: Pi only checks the threshold *after an agent run finishes*, so a reserve that covers one reply but not one whole run lets context overshoot the window. Too large stalls the summarization call. Note the reserve is slack, not a bound. A long enough run passes any threshold, and no setting or extension prevents that. See [`LONG_RUNS.md`](../../../../docs/LONG_RUNS.md). |
 | Upstream releases | npm has a newer release than this repository pins. A note, not a problem: upgrading is a deliberate act. |
 
 `vendor.json` is the machine-readable record of which upstream release each fork is
@@ -93,8 +93,8 @@ not touch anything that needs a decision, and says so rather than pretending. Th
 | PROBLEM | What to do |
 |---|---|
 | `trust.json trusts <path>` | Remove that key and re-approve individual repositories. Trust inherits down the tree, so a home-wide entry trusts every repository you ever clone. |
-| `compaction.reserveTokens is …` / `compaction is disabled` | For a reserve below the floor, `--fix` reinstalls and applies `config/compaction.json`. For a hand-set value that is too large, or `enabled: false`, edit `~/.pi/agent/settings.json` — deleting the key lets the installer reapply the policy. See [`LONG_RUNS.md`](../../../../docs/LONG_RUNS.md). |
-| `<name> is installed at … but is not in vendor.json` | A retired package. Confirm it is not wanted, then `rm -rf` that directory — `--fix` will not delete for you. |
+| `compaction.reserveTokens is …` / `compaction is disabled` | For a reserve below the floor, `--fix` reinstalls and applies `config/compaction.json`. For a hand-set value that is too large, or `enabled: false`, edit `~/.pi/agent/settings.json`. Deleting the key lets the installer reapply the policy. See [`LONG_RUNS.md`](../../../../docs/LONG_RUNS.md). |
+| `<name> is installed at … but is not in vendor.json` | A retired package. Confirm it is not wanted, then `rm -rf` that directory. `--fix` will not delete for you. |
 | `stt.json is not valid JSON` / `no usable keybind` | Fix the file by hand; `install.sh` only rewrites the keys it manages, so a syntax error survives a reinstall. |
 | A fork does not reproduce from its patch (`bin/pi-setup-vendor --verify --all`) | Someone edited `forks/` without regenerating. Run `bin/pi-setup-vendor --regenerate-patch <fork>` and review the diff. |
 
@@ -109,7 +109,7 @@ cd ~/pi-setup
 npm view @earendil-works/pi-coding-agent version          # what is available
 ```
 
-Before bumping, read the changelog for that release — https://pi.dev/changelog, or after
+Before bumping, read the changelog for that release at https://pi.dev/changelog, or after
 installing, `~/.bun/install/global/node_modules/@earendil-works/pi-coding-agent/CHANGELOG.md`.
 Look specifically at **Breaking Changes** and anything touching the extension API, the
 SDK (`createAgentSession`, `ResourceLoader`, `SessionManager`, `ExtensionAPI`),
@@ -124,15 +124,15 @@ Then:
 
 1. Set `PI_VERSION` in `install.sh`.
 2. Update the version table in `README.md`.
-3. `./install.sh` — use `PI_SETUP_SKIP_BROWSER_INSTALL=1 ./install.sh` to skip the Chrome
+3. `./install.sh`. Use `PI_SETUP_SKIP_BROWSER_INSTALL=1 ./install.sh` to skip the Chrome
    check while iterating.
 4. [Verify](#verify), then commit.
 
 ## 4. Move a fork onto a newer upstream release
 
 Four forks track an upstream. Three can be re-vendored mechanically because they have a
-patch file — `pi-voice-stt-safe`, `pi-agent-browser-native-safe`,
-`pi-dynamic-workflows-safe` — and `pi-process-monitor-safe` tracks
+patch file: `pi-voice-stt-safe`, `pi-agent-browser-native-safe`, and
+`pi-dynamic-workflows-safe`. `pi-process-monitor-safe` tracks
 `pi-process-monitor` by hand, with no patch, so upstream changes are ported deliberately
 and the decision recorded in its `vendor.json` note.
 
@@ -150,12 +150,12 @@ by hand.
 
 After any re-vendor, treat the hardening as unverified until you have re-checked it:
 
-1. `git diff -- forks/<fork>` — read all of it.
+1. `git diff -- forks/<fork>`. Read all of it.
 2. Re-read the fork's section in `docs/FORKS.md` and confirm each fix still exists in the
    merged tree. Upstream refactors move code; a fix can survive `patch` and still be
    bypassed by a new code path that reaches the same sink.
 3. Read the upstream changelog between the two versions for new entry points.
-4. `bin/pi-setup-vendor --verify <fork>` — the patch must reproduce `forks/<fork>` byte
+4. `bin/pi-setup-vendor --verify <fork>`. The patch must reproduce `forks/<fork>` byte
    for byte.
 5. Update the table in `README.md`. `vendor.json` is the machine-readable record and
    `bin/pi-setup-vendor` already updated it.
@@ -174,8 +174,8 @@ manually and record what you decided in its `vendor.json` note.
 ### Declining a release
 
 A hand-maintained fork may legitimately refuse an upstream release. `pi-process-monitor`
-2.0.0 is built on crash-safe persistence — logical UUIDs, cross-process leases, restart
-quarantine, recovery tools — and this fork persists nothing by design, so adopting it would
+2.0.0 is built on crash-safe persistence: logical UUIDs, cross-process leases, restart
+quarantine, recovery tools. This fork persists nothing by design, so adopting it would
 reverse the fork's central decision rather than upgrade it.
 
 When that happens, do not leave the drift note firing forever; a note that never clears
@@ -186,7 +186,7 @@ teaches the reader to skip notes. Instead:
    child silenced a watcher permanently.
 2. Set `reviewedAgainst` to that version in `vendor.json`, keeping `version` as what the
    fork is actually built on. The two fields are different claims and must not be conflated.
-3. Write the reasoning into the `note` — what was ported, what was declined, and why for
+3. Write the reasoning into the `note`: what was ported, what was declined, and why for
    each. The next reader should not have to redo the analysis.
 
 The doctor then reports `reviewed and declined` instead of drift, and starts reporting
@@ -194,7 +194,7 @@ again at the next release, because `reviewedAgainst` will no longer equal latest
 
 ## 5. Change a first-party package
 
-`pi-context-handoff`, `pi-btw-side`, and `pi-setup-maintenance` have no upstream. Edit
+`pi-context-handoff`, `pi-btw-side`, `pi-setup-maintenance`, and `unslop` have no upstream. Edit
 them directly, bump `version` in both `package.json` and `vendor.json` if the change is
 worth marking, then `./install.sh`.
 
@@ -203,7 +203,7 @@ worth marking, then `./install.sh`.
 it. Edit it there, never in the agent directory. `docs/KEYBINDINGS.md` records why each id
 is remapped and how to measure a key with `bin/pi-setup-keyprobe`.
 
-Typecheck before installing — Pi runs TypeScript without checking it, so a type error
+Typecheck before installing. Pi runs TypeScript without checking it, so a type error
 becomes a runtime failure inside a session:
 
 ```bash
@@ -229,9 +229,9 @@ artefacts of the invocation rather than defects in the code.
 ## 6. agent-browser is pinned to the fork's baseline, on purpose
 
 `AGENT_BROWSER_VERSION` in `install.sh` is not "whatever npm has latest". The
-`pi-agent-browser-native-safe` wrapper is validated against one specific CLI release —
+`pi-agent-browser-native-safe` wrapper is validated against one specific CLI release.
 `docs/SUPPORT_MATRIX.md` in that fork names it as the capability baseline. Raising it is
-a re-baseline job. Note that the fork vendors only `dist/`, `scripts/` and `docs/` — the
+a re-baseline job. Note that the fork vendors only `dist/`, `scripts/` and `docs/`. The
 `npm run verify` gates its own SUPPORT_MATRIX.md describes live in upstream's repository,
 not here, so re-running them means working from an upstream checkout at the target
 version. What can be done in this repository is re-reading
@@ -264,8 +264,8 @@ After changing `install.sh` or `bin/pi-setup-doctor`, also run:
 tests/linux-install.sh           # needs Docker; push first, it tests the published install.sh
 ```
 
-Everything else here runs on macOS, so Linux-only breakage — GNU vs BSD `stat`, a
-missing `unzip`, assuming `node` exists — is invisible without it. That class of bug has
+Everything else here runs on macOS, so Linux-only breakage is invisible without it. That means GNU vs BSD `stat`, a
+missing `unzip`, or assuming `node` exists. That class of bug has
 shipped before.
 
 `tests/smoke.sh --quick` skips the browser and workflow runs while iterating. The voice
@@ -280,7 +280,7 @@ Then start `pi` and `piwf` once interactively and confirm each startup listing i
 ```text
 pi   (must omit workflow and the workflow skills/commands)
      [Skills]
-       monitor, update-pi-setup
+       monitor, unslop, update-pi-setup
      [Prompts]
        /watch
      [Extensions]
@@ -288,7 +288,7 @@ pi   (must omit workflow and the workflow skills/commands)
 
 piwf (must include workflow)
      [Skills]
-       monitor, update-pi-setup, workflow-authoring, workflow-patterns
+       monitor, unslop, update-pi-setup, workflow-authoring, workflow-patterns
      [Prompts]
        /watch
      [Extensions]
@@ -302,8 +302,8 @@ an error, so check the names rather than assuming success.
 
 The doctor checks that the installation is intact; it says nothing about whether the code
 is correct. For that, [`docs/AUDIT-EXTENSIONS.md`](../../../../docs/AUDIT-EXTENSIONS.md)
-records how the 2026-07-30 audit was run — one agent per package hunting bugs and UX
-defects, each finding then handed to a second agent instructed to refute it — what it
+records how the 2026-07-30 audit was run. One agent per package hunted bugs and UX
+defects, and each finding went to a second agent instructed to refute it. The same file records what it
 found, and which findings were deliberately not fixed. Repeat it the same way after a
 large change, and update that file with what the next pass finds.
 

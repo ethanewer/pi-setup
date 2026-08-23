@@ -59,7 +59,7 @@ The result is optimized for agent work:
 
 - shell strings are easy for agents to quote wrong
 - large page snapshots can waste model context
-- screenshots and downloads need artifact metadata, not just text paths
+- screenshots and downloads need artifact metadata, not bare text paths
 - implicit browser sessions need predictable reuse and cleanup
 - profile/debug launches need a clear way to start fresh after public browsing
 - secrets and auth material must not be echoed into model-visible output

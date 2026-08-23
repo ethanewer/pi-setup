@@ -3,7 +3,7 @@ import { Type } from "typebox";
 import { WorkflowManager } from "./workflow-manager.js";
 import { type WorkflowStorage } from "./workflow-saved.js";
 /** The single always-on gate that authorizes workflow use without forcing it. */
-export declare const WORKFLOW_GATE_GUIDELINE = "The `workflow` tool runs multi-agent orchestration \u2014 it fans decomposable work out across subagents, and fits tasks shaped like: repo-wide inspection, independent parallel research/checks, multi-perspective review, or fan-out/fan-in synthesis. ONLY call it when the user explicitly opts in \u2014 via the workflow trigger word, `/workflows run`, or their own words (e.g. 'run a workflow', 'fan this out', '\u5E76\u884C\u5BA1\u4E00\u904D'). For any other task \u2014 even one that would clearly benefit \u2014 do not call it; you may briefly offer it (with a rough cost) as an option instead.";
+export declare const WORKFLOW_GATE_GUIDELINE = "The `workflow` tool fans decomposable work out across subagents. It fits repo-wide inspection, independent parallel research or checks, multi-perspective review, or fan-out/fan-in synthesis. Call it only when the user explicitly opts in, via the workflow trigger word, `/workflows run`, or their own words like 'run a workflow', 'fan this out', or '\u5E76\u884C\u5BA1\u4E00\u904D'. For any other task, do not call it, even one that would clearly benefit. You may briefly offer it as an option with a rough cost.";
 declare const workflowToolSchema: Type.TObject<{
     script: Type.TOptional<Type.TString>;
     name: Type.TOptional<Type.TString>;

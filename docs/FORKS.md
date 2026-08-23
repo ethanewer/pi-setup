@@ -468,6 +468,15 @@ the next install, and shows up later as drift. The skill puts the pinned path wh
 agent will find it. `bin/pi-setup-doctor` now reports that drift directly, comparing the
 installed Pi and `agent-browser` against the versions `install.sh` pins.
 
+## unslop
+
+First-party, skills only: no extensions, no tools, nothing loaded into a running
+session beyond the skill description. It carries `unslop`, adapted from
+cursor/plugins with the "Adding soul" section removed and the process reduced to
+three steps. The skill tells the model to cut AI tells from any writing and to
+always apply, so every model-facing string in this repository is something the
+skill itself would flag if it regresses.
+
 ## Startup labels
 
 Pi labels an extension by the directory holding its index file, falling back to the bare
@@ -481,7 +490,7 @@ entrypoints — `pi` deliberately excludes the workflow fork, `piwf` loads it:
 ```text
 pi   (full, without dynamic workflows)
      [Skills]
-       monitor, update-pi-setup
+       monitor, unslop, update-pi-setup
      [Prompts]
        /watch
      [Extensions]
@@ -489,7 +498,7 @@ pi   (full, without dynamic workflows)
 
 piwf (full, with dynamic workflows — the historical `pi`)
      [Skills]
-       monitor, update-pi-setup, workflow-authoring, workflow-patterns
+       monitor, unslop, update-pi-setup, workflow-authoring, workflow-patterns
      [Prompts]
        /watch
      [Extensions]

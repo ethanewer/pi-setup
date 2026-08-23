@@ -11,7 +11,7 @@ AGENT_BROWSER_VERSION="0.34.0"
 # Extensions are installed as Pi "local" packages from forks/ in this repository,
 # never from npm. Pi never rewrites local packages, so the security fixes in these
 # forks cannot be silently reverted by a later `bun install` or package update.
-FORKS="pi-voice-stt-safe pi-agent-browser-native-safe pi-dynamic-workflows-safe pi-context-handoff pi-btw-side pi-process-monitor-safe pi-setup-maintenance"
+FORKS="pi-voice-stt-safe pi-agent-browser-native-safe pi-dynamic-workflows-safe pi-context-handoff pi-btw-side pi-process-monitor-safe pi-setup-maintenance unslop"
 
 REPO_URL="${PI_SETUP_REPO_URL:-https://github.com/ethanewer/pi-setup.git}"
 REPO_REF="${PI_SETUP_REF:-main}"
@@ -366,6 +366,7 @@ const wanted = [
   "local/pi-btw-side",
   "local/pi-process-monitor-safe",
   "local/pi-setup-maintenance",
+  "local/unslop",
 ];
 const managed = new Set([
   "pi-voice-stt",
@@ -380,6 +381,7 @@ const managed = new Set([
   "pi-btw-side",
   "pi-process-monitor-safe",
   "pi-setup-maintenance",
+  "unslop",
   // Unrelated npm packages that also register /btw through a TUI overlay. Listed so an
   // existing install of one is dropped rather than left racing pi-btw-side for the name.
   "pi-btw",
