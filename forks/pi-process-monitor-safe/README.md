@@ -51,7 +51,7 @@ Add the package path to your pi settings (`~/.pi/agent/settings.json`), and make
 }
 ```
 
-Params: `command`, `intervalSeconds`, `logFile`, `notifyOn` (case-insensitive regexes), `label`, `cwd`. Tuning knobs (coalescing window, max lines, timeout) are intentionally not tool parameters; `--timeout N` is available on the `/monitor` command.
+Params: `command`, `intervalSeconds`, `logFile`, `notifyOn` (case-insensitive regexes), `heartbeatMinutes` (fractional ok), `label`, `cwd`. Remaining tuning knobs (coalescing window, max lines) keep their defaults internally; `--timeout N` is available on the `/monitor` command.
 
 Starting a 17th watcher fails with an **error** tool result:
 
@@ -94,7 +94,7 @@ Poll ticks never overlap: while a poll's child is still running (slow SSH, hung 
 
 ## Heartbeats
 
-The runtime can fold due watchers into one `monitor-heartbeat` message (`details: { watcherIds }`) that triggers a single model turn; a real matched/exit event during a watcher's preceding interval substitutes for that heartbeat, and heartbeats never count as real events in `monitor_status`. The current tool/command surface does not enable heartbeats — the machinery is internal plumbing.
+Set `heartbeatMinutes` (fractional allowed) to get an on-schedule status ping even when nothing matches. One extension-level scheduler ticks every 30s; every watcher due on a tick is folded into **one** `monitor-heartbeat` message (`details: { watcherIds }`) that triggers a single model turn, then each watcher's due time advances by its own interval. A real matched/exit event during a watcher's preceding interval substitutes for that heartbeat. Heartbeats never count as real events in `monitor_status`.
 
 ## Session lifecycle (breaking change vs upstream)
 

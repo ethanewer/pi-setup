@@ -29,7 +29,7 @@ for model in "${MODELS[@]}"; do
     jq -n --arg model "$model" --arg seed "$seed" \
       --arg pi "$(jq -r .version node_modules/@earendil-works/pi-coding-agent/package.json)" \
       '{model:$model, seed:$seed, piVersion:$pi, startedAt:(now|todate)}' > "$RUN_DIR/meta.json"
-    for t in t1 t2 t3 t4 t5; do
+    for t in t1 t2 t3 t4 t5 t6 t7; do
       TASK=$t RUN_DIR="$RUN_DIR" SEED="$seed" MODEL="$model" bun harness/run-task.ts \
         > "$RUN_DIR/$t.console.log" 2>&1 &
       pids+=($!)

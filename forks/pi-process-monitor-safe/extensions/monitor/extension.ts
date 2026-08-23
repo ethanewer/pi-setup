@@ -208,6 +208,7 @@ export function registerMonitorExtension(
     intervalSeconds: Type.Optional(Type.Number({ description: "Poll interval in seconds. If set, `command` is re-run on this cadence (poll mode)." })),
     logFile: Type.Optional(Type.String({ description: "Path to a log file to tail for appended lines (file mode)." })),
     notifyOn: Type.Optional(Type.Array(Type.String(), { description: "Case-insensitive regexes. A line matching ANY is pushed. Defaults to milestones+failures (saved, complete, done, error, fail, oom, killed, traceback, …)." })),
+    heartbeatMinutes: Type.Optional(Type.Number({ description: "Heartbeat every N minutes (fractional ok, e.g. 0.5 = 30s): pings on schedule even when nothing matches — for periodic check-ins on quiet jobs. Default: off." })),
     label: Type.Optional(Type.String({ description: "Human label for the watcher." })),
     cwd: Type.Optional(Type.String({ description: "Working directory for spawn/poll. Default current." })),
   });
@@ -241,6 +242,7 @@ export function registerMonitorExtension(
         intervalSeconds: params.intervalSeconds,
         logFile: params.logFile,
         notifyOn: params.notifyOn,
+        heartbeatMinutes: params.heartbeatMinutes,
         label: params.label,
         cwd: params.cwd ?? ctx.cwd,
       });

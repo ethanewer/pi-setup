@@ -35,6 +35,8 @@ keep chatting / doing other work instead of blocking:
   the crash/traceback lines become pings
 - **Work while waiting** — start the watcher, then do the task's other work; the
   ping brings you back when the job finishes
+- **Periodic check-ins on quiet jobs** — `heartbeatMinutes` pings on schedule even
+  when nothing matches (progress-bar output, silent training runs)
 
 If it's under ~10s, just run it inline (bash). If it might run
 minutes-to-hours, use `monitor`.
@@ -95,9 +97,12 @@ ping and stops the watcher cleanly.
 
 ## Heartbeats
 
-The runtime can aggregate silent-watcher status into a single
-`monitor-heartbeat` ping, but the current tool/command surface does not
-enable them — treat this as internal plumbing.
+Set `heartbeatMinutes` on a watcher (fractional allowed: `0.5` = 30 s) to get a
+status ping on schedule even when nothing matches — the right tool for periodic
+check-ins on quiet jobs. Due heartbeats from all watchers are aggregated into a
+single `monitor-heartbeat` ping that wakes the session once; a real event during
+the preceding interval substitutes for that heartbeat. On a heartbeat ping, reply
+with a brief status and end your turn.
 
 ## Lifecycle
 

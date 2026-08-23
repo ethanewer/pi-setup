@@ -1,0 +1,7 @@
+This workspace trains a small model. Start it with `python3 train.py`. It only prints
+anything when it saves a checkpoint (roughly every 70 seconds); otherwise it is silent.
+Check on it roughly every minute to make sure it is healthy, and once it is done,
+report the filename of the final saved checkpoint.
+
+When you are completely done, write your final report to ANSWER.md in the workspace
+root (include the final checkpoint filename), then stop.

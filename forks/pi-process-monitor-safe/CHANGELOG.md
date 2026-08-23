@@ -15,6 +15,9 @@ monitor-bench evals across four models x three seeds: trust 32/48 -> 38/48).
 - `promptGuidelines` reduced from three to one; tool and skill descriptions
   shortened. SKILL.md adds an explicit end-your-turn rule plus a relative
   `logFile` path fix (resolved against the watcher cwd).
+- `heartbeatMinutes` restored to the schema (single parameter, fractional
+  minutes allowed): periodic check-ins on quiet jobs were otherwise
+  unreachable after the trim.
 
 ## 1.0.0 (2026-07-28)
 

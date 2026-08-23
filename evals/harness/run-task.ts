@@ -2,7 +2,7 @@
  * monitor-bench harness: runs one task headlessly through the pi SDK.
  *
  * env:
- *   TASK      t1..t5
+ *   TASK      t1..t7
  *   RUN_DIR   results/<run-id> directory
  *   SEED      rng seed for fixture durations
  *   MODEL     provider/model, default openrouter/deepseek/deepseek-v4-flash-0731
@@ -39,7 +39,7 @@ try {
 } catch {
   if (!existsSync(pkgLink)) throw new Error(`failed to link ${pkgSrc} -> ${pkgLink}`);
 }
-const BUDGETS: Record<string, number> = { t1: 720, t2: 720, t3: 600, t4: 720, t5: 300 };
+const BUDGETS: Record<string, number> = { t1: 720, t2: 720, t3: 600, t4: 720, t5: 300, t6: 480, t7: 540 };
 const BUDGET_S = Number(process.env.BUDGET_S ?? BUDGETS[TASK] ?? 600);
 const QUIESCE_MS = 25_000;
 

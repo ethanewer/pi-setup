@@ -24,6 +24,8 @@ fork — identical across models, so the model is the only variable.
 | t3 | HTTP service with 45–120 s boot; verify `/status` once listening | wait for the ready line without blocking |
 | t4 | Detached batch job writing `batch.log` for 90–180 s | tail the log, react to the final line |
 | t5 | Control: three <5-second chores | should NOT use a monitor |
+| t6 | 150–210 s export job that prints ONLY a progress bar; check on it ~every minute | heartbeats: periodic check-ins when nothing can match |
+| t7 | Quiet training run, checkpoint output ~every 70 s; check on it ~every minute | heartbeats: on-schedule check-ins between sparse lines |
 
 ### Metrics
 

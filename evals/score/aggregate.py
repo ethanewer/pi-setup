@@ -9,7 +9,7 @@ import os
 import sys
 from collections import defaultdict
 
-LONG_TASKS = ["t1", "t2", "t3", "t4"]
+LONG_TASKS = ["t1", "t2", "t3", "t4", "t6", "t7"]
 
 
 def main():
@@ -23,7 +23,7 @@ def main():
         model = data["meta"]["model"]
         models[model].extend(data["tasks"])
 
-    hdr = (f"{'model':45} {'seeds':5} {'adopt':6} {'trust':6} {'adopt+':6} "
+    hdr = (f"{'model':45} {'seeds':5} {'adopt':6} {'trust':6} {'hb':5} {'adopt+':6} "
            f"{'avgblk':6} {'wake':4} {'outcm':6}")
     print(hdr)
     print("-" * len(hdr))
@@ -34,6 +34,8 @@ def main():
         seeds = len({r["seed"] for r in rows})
         adopted = [r for r in long_rows if r["used_monitor"]]
         trusted = [r for r in long_rows if r["used_monitor"] and r["bash_blocking_seconds"] == 0]
+        hb_rows = [r for r in rows if r["task"] in ("t6", "t7")]
+        hb_ok = sum(1 for r in hb_rows if r["checks"].get("heartbeats_configured"))
         # adoption without the tool is only "good" on control tasks
         avg_block = sum(r["bash_blocking_seconds"] for r in long_rows) / max(n, 1)
         wakeups = sum(r["spontaneous_wakeups"] for r in long_rows)
@@ -42,6 +44,7 @@ def main():
         outcome = sum(outcomes) / len(outcomes) if outcomes else 0
         print(f"{model:45} {seeds:<5} "
               f"{len(adopted)}/{n:<4} {len(trusted)}/{n:<4} "
+              f"{f'{hb_ok}/{len(hb_rows)}':<5} "
               f"{f'{len(adopted)}/{n} -fp{ctrl_fp}':<6} "
               f"{avg_block:<6.0f} {wakeups:<4} {outcome:<6.3f}")
         # per-task detail

@@ -34,6 +34,8 @@ TASK_MARKERS = {
     "t3": "srv/server.py",
     "t4": "batch/start_batch.sh",
     "t5": "test_greet.py",
+    "t6": "export_model.sh",
+    "t7": "train.py",
 }
 
 
@@ -117,6 +119,23 @@ def integrity(run, workdir, task):
     return {"modified": modified, "deleted": deleted, "unexpected": unexpected}
 
 
+def heartbeat_usage(transcript):
+    """(heartbeat pings, watcher pings, heartbeats configured on any monitor call)"""
+    hb = wp = 0
+    configured = False
+    for e in transcript:
+        if e.get("type") == "user_message":
+            if e.get("customType") == "monitor-heartbeat":
+                hb += 1
+            elif (e.get("text") or "").startswith("[watcher "):
+                wp += 1
+        elif e.get("type") == "tool_start" and e.get("toolName") == "monitor":
+            v = (e.get("args") or {}).get("heartbeatMinutes")
+            if isinstance(v, (int, float)) and v > 0:
+                configured = True
+    return hb, wp, configured
+
+
 def elapsed_ok(elapsed, expected_dur, lo=0.8, hi_extra=30):
     return elapsed is not None and expected_dur * lo <= elapsed <= expected_dur + hi_extra
 
@@ -191,6 +210,26 @@ def score_task(task, run_dir, seed):
         checks["ok_rows_reported"] = str(gt["ok_rows"]) in answer
         t = subprocess.run(["python3", os.path.join(work, "test_greet.py")], capture_output=True, text=True)
         checks["greet_tests_pass"] = t.returncode == 0
+    elif task in ("t6", "t7"):
+        hb, wp, hb_configured = heartbeat_usage(transcript)
+        # periodic check-ins: heartbeats are the natural mechanism; a dense poll
+        # watcher is accepted as a fallback signal
+        checks["periodic_checkins"] = hb >= 2 or wp >= 3
+        checks["heartbeats_configured"] = hb_configured
+        if task == "t6":
+            art = read_json(os.path.join(work, "export_done.json"))
+            checks["export_artifact_present"] = art is not None
+            checks["export_artifact_nonce"] = bool(art) and art.get("nonce") == nonce
+            checks["export_elapsed_plausible"] = bool(art) and elapsed_ok(art.get("elapsed"), gt["duration"])
+            checks["completion_line_reported"] = gt["completion_marker"] in answer
+        else:
+            art = read_json(os.path.join(work, "train_done.json"))
+            checks["train_artifact_present"] = art is not None
+            checks["train_artifact_nonce"] = bool(art) and art.get("nonce") == nonce
+            checks["train_elapsed_plausible"] = bool(art) and elapsed_ok(art.get("elapsed"), gt["duration"], lo=0.7)
+            final_name = f"checkpoint-{nonce}-{gt['final_step']}.ckpt"
+            checks["final_checkpoint_reported"] = final_name in answer
+            checks["artifact_matches_expected"] = bool(art) and art.get("final_checkpoint") == final_name
 
     integ = integrity(run, work, task)
     if invalid:
@@ -223,7 +262,7 @@ def main():
     meta = json.load(open(os.path.join(run_dir, "meta.json")))
     seed = meta["seed"]
     rows = []
-    for task in ["t1", "t2", "t3", "t4", "t5"]:
+    for task in ["t1", "t2", "t3", "t4", "t5", "t6", "t7"]:
         if not os.path.exists(os.path.join(run_dir, task, "run.json")):
             print(f"!! {task}: missing run.json", file=sys.stderr)
             continue
