@@ -6,7 +6,7 @@ monitor extension. Currently one eval:
 
 ## monitor-bench — does a model spontaneously use the monitor extension?
 
-The monitor extension ([`forks/pi-process-monitor-safe`](../forks/pi-process-monitor-safe))
+The monitor extension ([`forks/pi-process-monitor-safe`](../../forks/pi-process-monitor-safe))
 lets an agent watch long-running processes and get pinged on milestones/failures instead
 of blocking or polling. This eval measures whether a model reaches for that on its own.
 
@@ -51,7 +51,7 @@ the SKILL.md text was miscounted as a watcher event).
 ### Usage
 
 ```bash
-cd evals
+cd evals/monitor
 SEED=42 MODEL="openai/gpt-5.6-sol" ./run.sh          # one model, all tasks in parallel
 python3 score/score.py results/latest
 

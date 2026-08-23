@@ -428,20 +428,20 @@ Pi release ever stops.
 
 ## Evals
 
-`evals/` holds behavioral evals for this setup's extensions. The first one is
-**monitor-bench**: scripted tasks with long, seeded, unknown-duration commands (test
+`evals/` holds behavioral evals for this setup's extensions. The first is
+**monitor-bench** (under `evals/monitor/`): scripted tasks with long, seeded, unknown-duration commands (test
 suites, crashing pipelines, slow-boot servers, detached batch jobs) plus
 a fast control task. The prompts never mention background watching; the eval measures
 whether a model spontaneously reaches for the monitor extension, whether it trusts the
 pings enough to stop blocking, and whether it still completes the goals.
 
 ```bash
-cd evals
+cd evals/monitor
 SEED=42 MODEL="openai/gpt-5.6-sol" ./run.sh   # all tasks in parallel
 python3 score/score.py results/latest
 ```
 
-See [`evals/README.md`](evals/README.md) for task design, metrics, and reference results
+See [`evals/monitor/README.md`](evals/monitor/README.md) for task design, metrics, and reference results
 (four models x three seeds: adoption 10–12/12 long-job tasks, genuine ping-waiting
 8–11/12; the eval also drove a simplification of the monitor extension's model surface
 from 4 tools/10 params/3 guidelines to 3/6/1, which improved trust for every model).
@@ -546,7 +546,7 @@ standalone Python tool (`pip install zstandard huggingface_hub`), not part of th
 install.
 
 The tool also ingests **monitor-bench eval traces** from every `~/pi-setup*`
-checkout's `evals/results/`. The harness runs `SessionManager.inMemory`, so the
+checkout's `evals/monitor/results/`. The harness runs `SessionManager.inMemory`, so the
 only record of an eval run is its `transcript.jsonl`; the tool re-scores each
 run with its own checkout's `score.py` and converts the transcript into the
 same row format. Because the seven task prompts repeat across models, seeds,

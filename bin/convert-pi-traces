@@ -41,7 +41,8 @@ every assistant turn is OpenAI is also dropped.
 Monitor-bench eval traces
 -------------------------
 In addition to pi session files, the tool ingests monitor-bench eval runs
-(evals/results in ~/pi-setup* checkouts; headless runs leave only
+(evals/monitor/results in ~/pi-setup* checkouts, with a fallback to the older
+evals/results layout; headless runs leave only
 transcript.jsonl, no session files). Policy: only runs that PERFECTLY pass
 (every scorer check, clean fixture integrity, correct monitor adoption, zero
 bash blocking) are converted; at most 5 traces per task (task == prompt);
@@ -401,8 +402,9 @@ def smoke_drop_reason(row: dict) -> str | None:
 # monitor-bench eval traces
 # --------------------------------------------------------------------------- #
 #
-# The monitor-bench eval (evals/ in this repo and its sibling checkouts
-# pi-setup-monitor-initial / pi-setup-monitor-optim) runs headless Pi sessions
+# The monitor-bench eval (evals/monitor/ in this repo and its sibling checkouts
+# pi-setup-monitor-initial / pi-setup-monitor-optim; older checkouts keep the
+# flat evals/ layout) runs headless Pi sessions
 # with SessionManager.inMemory, so no pi session files exist; the only record
 # is each task's transcript.jsonl. Those transcripts can be converted into the
 # dataset row format too, but they are plentiful (7 fixed prompts x models x
@@ -450,21 +452,24 @@ class EvalStats:
 
 def discover_monitor_bench_runs() -> list[tuple[Path, Path]]:
     """Find (checkout, run_dir) pairs for every monitor-bench run on this
-    machine: any ~/pi-setup* checkout with evals/results/*/meta.json (runs are
-    one or two levels deep). Symlinked aliases (latest, latest-multi) are
-    skipped via realpath dedupe."""
+    machine: any ~/pi-setup* checkout with evals/monitor/results/*/meta.json
+    (or the older evals/results/*/meta.json) — runs are one or two levels deep.
+    Symlinked aliases (latest, latest-multi) are skipped via realpath dedupe."""
     out: list[tuple[Path, Path]] = []
     seen: set[Path] = set()
     for co in sorted(HOME.glob("pi-setup*")):
-        results = co / "evals" / "results"
-        if not co.is_dir() or not results.is_dir():
+        if not co.is_dir():
             continue
-        for meta in sorted(results.rglob("meta.json")):
-            run = meta.parent.resolve()
-            if run in seen or not (run / "meta.json").is_file():
+        for rel in ("evals", "monitor", "results"), ("evals", "results"):
+            results = co.joinpath(*rel)
+            if not results.is_dir():
                 continue
-            seen.add(run)
-            out.append((co, run))
+            for meta in sorted(results.rglob("meta.json")):
+                run = meta.parent.resolve()
+                if run in seen or not (run / "meta.json").is_file():
+                    continue
+                seen.add(run)
+                out.append((co, run))
     return out
 
 
@@ -497,7 +502,9 @@ def monitor_version_at(hist: list[tuple[int, str]], epoch: float) -> str | None:
 def score_monitor_bench_run(checkout: Path, run_dir: Path) -> list[dict] | None:
     """Re-score a run with its own checkout's score.py (matches that run's task
     versions) and return the per-task score rows, or None on failure."""
-    score_py = checkout / "evals" / "score" / "score.py"
+    score_py = checkout / "evals" / "monitor" / "score" / "score.py"
+    if not score_py.is_file():
+        score_py = checkout / "evals" / "score" / "score.py"
     if not score_py.is_file():
         return None
     try:

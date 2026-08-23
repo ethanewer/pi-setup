@@ -210,7 +210,7 @@ follow-through of the simplification, all fixed:
 ## Reproducing
 
 ```bash
-cd evals
+cd evals/monitor
 ./run-multi.sh                                   # 4 models x 3 seeds, all parallel
 for d in results/latest-multi/*/; do python3 score/score.py "$d"; done
 python3 score/aggregate.py results/latest-multi

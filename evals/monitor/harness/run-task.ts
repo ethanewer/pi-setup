@@ -16,7 +16,10 @@ import { createAgentSession, DefaultResourceLoader, SessionManager } from "@eare
 import { getModel } from "@earendil-works/pi-ai/compat";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
-const EVALS_ROOT = path.resolve(ROOT, "..");
+// repo root (pi-setup): parent of the evals/ dir that holds this monitor/ eval.
+// monitor/ is nested one level deeper than the old evals-root layout, so this is
+// two levels above this eval's ROOT, not one.
+const EVALS_ROOT = path.resolve(ROOT, "..", "..");
 const TASK = process.env.TASK ?? "t1";
 const RUN_DIR = path.resolve(process.env.RUN_DIR ?? path.join(ROOT, "results", "dev"));
 const SEED = process.env.SEED ?? "0";
