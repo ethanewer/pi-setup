@@ -17,7 +17,7 @@ lines = open("src/ccomp.c").read().split("\n")
 lines = [l for l in lines if "orphan" not in l and "unused sentinel" not in l]
 src = "\n".join(lines)
 src = src.replace("fread(buf, 1, (size_t)sz, in);",
-                  "(void)fread(buf, 1, (size_t)sz, in);")
+                  "if (fread(buf, 1, (size_t)sz, in) != (size_t)sz) { fclose(in); return 1; }")
 open("src/ccomp.c", "w").write(src)
 PY
 

@@ -1,0 +1,12 @@
+WARNING: git-filter-branch has a glut of gotchas generating mangled history
+	 rewrites.  Hit Ctrl-C before proceeding to abort, then use an
+	 alternative filtering tool such as 'git filter-repo'
+	 (https://github.com/newren/git-filter-repo/) instead.  See the
+	 filter-branch manual page for more details; to squelch this warning,
+	 set FILTER_BRANCH_SQUELCH_WARNING=1.
+Proceeding with filter-branch...
+
+Rewrite d6574130b8496ecc216e69c1a5f8d930127f4e67 (1/3) (0 seconds passed, remaining 0 predicted)    Rewrite c7d60a928232ccb517abdc8532615f6f30237bdf (2/3) (0 seconds passed, remaining 0 predicted)    rm 'secret.txt'
+Rewrite e2a15984e169aad68a737bf22f271f9c2bc8486f (3/3) (0 seconds passed, remaining 0 predicted)    rm 'secret.txt'
+
+Ref 'refs/heads/main' was rewritten

@@ -83,7 +83,7 @@ def valuate():
     SCORE["v"] = round(v, 2)
 
 try:
-    validate()
+    valuate()
 except Exception:
     pass
 print(f"{SCORE['v']:.2f}", end="")

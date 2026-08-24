@@ -9,7 +9,7 @@ with open('/app/ea.txt') as f:
         line = line.strip()
         if not line or line.startswith('#'):
             continue
-        m = re.match(r'^EA(\d+)\s+base=(-?\d+)\s+index=(-?\d+)\s+scale=(-?\d+)\s+disp=(-?\d+)$', line)
+        m = re.match(r'^[Ee][Aa](\d+)\s+base=(-?\d+)\s+index=(-?\d+)\s+scale=(-?\d+)\s+disp=(-?\d+)$', line)
         assert m, line
         n, base, idx, scale, disp = (int(m.group(i)) for i in range(1, 6))
         expected['ea%d' % n] = base + idx * scale + disp

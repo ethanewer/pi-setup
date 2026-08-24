@@ -21,7 +21,7 @@ ENV PIP_CERT=/etc/ssl/certs/ca-certificates.crt \
     CURL_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
     GIT_SSL_CAINFO=/etc/ssl/certs/ca-certificates.crt \
     SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
-RUN python3 -m pip install --no-cache-dir "pystan==3.10.0" "pandas" "numpy"
+RUN python3 -m pip install --no-cache-dir --break-system-packages "pystan==3.10.0" "pandas" "numpy"
 
 WORKDIR /app
 COPY files/ /app/

