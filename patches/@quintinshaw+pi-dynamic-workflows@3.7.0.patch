@@ -5273,12 +5273,12 @@ diff -ruN --exclude=node_modules a/skills/workflow-authoring/references/runtime.
  Generated entries marked `supported` are authoring API. `console` and whole-script Markdown fences are compatibility-only. VM realm facilities are internal. Active model routes and agent types are dynamic. Use `log()` in new scripts.
 diff -ruN --exclude=node_modules a/skills/workflow-patterns/SKILL.md b/skills/workflow-patterns/SKILL.md
 --- a/skills/workflow-patterns/SKILL.md	1985-10-26 03:15:00
-+++ b/skills/workflow-patterns/SKILL.md	2026-08-22 23:51:31
++++ b/skills/workflow-patterns/SKILL.md	2026-08-23 15:43:59
 @@ -1,6 +1,6 @@
  ---
  name: workflow-patterns
 -description: Argument shapes for the 5 built-in workflow patterns — deep-research, adversarial-review, code-review, multi-perspective, codebase-audit — runnable via the `workflow` tool's `name` input, without slash-command syntax. Use for requests like "research X", "fact-check/adversarially review this", "review this diff/PR", "analyze from multiple perspectives", or "audit the codebase for Y". Not for authoring a new workflow script — see workflow-authoring.
-+description: Argument shapes for the 5 built-in workflow patterns: deep-research, adversarial-review, code-review, multi-perspective, and codebase-audit. Each is runnable via the `workflow` tool's `name` input without slash-command syntax. Use for requests like "research X", "fact-check/adversarially review this", "review this diff/PR", "analyze from multiple perspectives", or "audit the codebase for Y". Not for authoring a new workflow script; see workflow-authoring.
++description: "Argument shapes for the 5 built-in workflow patterns: deep-research, adversarial-review, code-review, multi-perspective, and codebase-audit. Each is runnable via the `workflow` tool's `name` input without slash-command syntax. Use for requests like \"research X\", \"fact-check/adversarially review this\", \"review this diff/PR\", \"analyze from multiple perspectives\", or \"audit the codebase for Y\". Not for authoring a new workflow script; see workflow-authoring."
  metadata:
    version: "3.7.0"
  ---

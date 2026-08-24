@@ -64,7 +64,7 @@ rather than as a supported claim.
 
 | Component | Version |
 |---|---:|
-| `@earendil-works/pi-coding-agent` | `0.84.2` |
+| `@earendil-works/pi-coding-agent` | `0.84.3` |
 | `agent-browser` | `0.34.0` |
 
 Extension forks and the upstream releases they are based on:
