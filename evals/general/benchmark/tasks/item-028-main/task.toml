@@ -1,0 +1,18 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "medium"
+category = "debugging"
+tags = ["item-028", "ocaml-runtime", "c", "garbage-collector", "run-length-encoding", "bootstrap-compiler-debugging", "build-guidance"]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 1500.0
+
+[environment]
+build_timeout_sec = 900.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096

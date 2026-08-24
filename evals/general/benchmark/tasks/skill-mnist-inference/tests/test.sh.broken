@@ -1,0 +1,27 @@
+#!/bin/bash
+
+mkdir -p /logs/verifier
+reward=0
+if [ -f /app/prediction.txt ]; then
+  if python3 - <<'EOF'
+import numpy as np
+
+x = np.load('/app/data/x.npy')
+d = np.load('/app/data/model.npz')
+W1, b1, W2, b2 = d['W1'], d['b1'], d['W2'], d['b2']
+
+z1 = x @ W1 + b1
+h = 1.0 / (1.0 + np.exp(-z1))
+logits = h @ W2 + b2
+expected = int(np.argmax(logits, axis=1)[0])
+
+with open('/app/prediction.txt') as f:
+    got = int(f.read().strip())
+
+assert 0 <= got <= 9
+assert got == expected, (got, expected)
+EOF
+  then
+    reward=1
+  fi
+echo "$reward" > /logs/verifier/reward.txt

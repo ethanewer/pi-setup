@@ -1,0 +1,22 @@
+#!/bin/bash
+mkdir -p /logs/verifier
+reward=0
+if [ -f /app/moves.json ]; then
+  if python3 - <<'EOF'
+import json,sys,chess
+pos=json.load(open('/app/positions.json'))
+got=json.load(open('/app/moves.json'))
+for it in pos:
+    b=chess.Board(it['fen'])
+    exp=sorted(m.uci() for m in b.legal_moves)
+    g=got.get(it['id'])
+    if g != exp:
+        print("expected",exp)
+        print("got     ",g)
+        sys.exit("mismatch for %s"%it['id'])
+sys.exit(0)
+EOF
+  then
+    reward=1
+  fi
+echo "$reward" > /logs/verifier/reward.txt

@@ -1,0 +1,33 @@
+#!/bin/bash
+
+reward=0
+if [ -f /app/payload.txt ]; then
+  if python3 - <<'EOF'
+import re
+
+payload = open("/app/payload.txt").read().strip()
+assert payload, "empty payload"
+
+def sanitize(s):
+    # removes full <script>...</script> blocks and bare script tags
+    s = re.sub(r"<\s*script\b[^>]*>.*?</\s*script\s*>", "", s, flags=re.I | re.S)
+    s = re.sub(r"<\s*/?\s*script\b[^>]*>", "", s, flags=re.I)
+    return s
+
+cleaned = sanitize(payload)
+lower = cleaned.lower()
+
+# must still contain an executable alert() call
+assert "alert" in lower and "(" in cleaned, cleaned
+# must carry an event-handler attribute for execution
+assert ("onerror" in lower or "onload" in lower or "onmouseover" in lower
+        or "onclick" in lower or "onfocus" in lower), cleaned
+# and must not simply be cloned via a literal <script> tag
+assert "<script" not in payload.lower(), "relies on <script>"
+# payload must actually be an HTML tag with an attribute (syntax shape)
+assert "<" in payload and ">" in payload, payload
+EOF
+  then
+    reward=1
+  fi
+echo "$reward" > /logs/verifier/reward.txt

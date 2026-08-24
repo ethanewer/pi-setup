@@ -1,0 +1,17 @@
+timestamp,sensor_id,value,unit,status
+2024-01-01T00:00:00,sensor_001,23.4,temperature,ok
+2024-01-01T00:01:00,sensor_001,23.5,temperature,ok
+2024-01-01T00:02:00,sensor_001,23.6,temperature,ok
+2024-01-01T00:03:00,sensor_002,45.2,humidity,warning
+2024-01-01T00:04:00,sensor_002,45.3,humidity,ok
+2024-01-01T00:05:00,sensor_003,101.3,pressure,error
+2024-01-01T00:06:00,sensor_003,101.2,pressure,ok
+2024-01-01T00:07:00,sensor_001,23.7,temperature,ok
+2024-01-01T00:08:00,sensor_002,45.4,humidity,warning
+2024-01-01T00:09:00,sensor_003,101.4,pressure,ok
+2024-01-01T00:10:00,sensor_001,invalid,temperature,error
+2024-01-01T00:11:00,sensor_002,45.5,humidity,ok
+2024-01-01T00:12:00,sensor_003,,pressure,error
+2024-01-01T00:13:00,sensor_001,23.8,temperature,ok
+2024-01-01T00:14:00,sensor_002,45.6,humidity,ok
+2024-01-01T00:15:00,sensor_003,101.5,pressure,ok

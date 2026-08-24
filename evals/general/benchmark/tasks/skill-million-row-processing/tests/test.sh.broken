@@ -1,0 +1,53 @@
+#!/bin/bash
+mkdir -p /logs/verifier
+reward=0
+if [ -f /app/results.txt ]; then
+  if python3 - <<'EOF'
+import sys
+agg = {}
+with open('/app/data/measurements.txt') as f:
+    for line in f:
+        line = line.rstrip('\n')
+        if not line:
+            continue
+        st, temp = line.split(';')
+        t = float(temp)
+        if st not in agg:
+            agg[st] = [t, t, t, 1]
+        else:
+            a = agg[st]
+            if t < a[0]: a[0] = t
+            if t > a[1]: a[1] = t
+            a[2] += t
+            a[3] += 1
+exp = {st: agg[st] for st in agg}
+got = {}
+for line in open('/app/results.txt'):
+    line = line.rstrip('\n')
+    if not line:
+        continue
+    parts = line.split(';')
+    if len(parts) != 4:
+        sys.exit("bad format")
+    st, mn, mx, mean = parts
+    got[st] = (float(mn), float(mx), float(mean))
+
+if set(got.keys()) != set(exp.keys()) or len(got) != 40:
+    sys.exit("station set mismatch")
+
+# lines must be sorted alphabetically
+names = [line.split(';')[0] for line in open('/app/results.txt') if line.strip()]
+if names != sorted(names):
+    sys.exit("not sorted")
+
+for st, (mn, mx, s, c) in exp.items():
+    emin, emax, emean = mn, mx, round(s/c, 1)
+    gmin, gmax, gmean = got[st]
+    if abs(gmin-float(emin)) > 0.05 or abs(gmax-float(emax)) > 0.05 or abs(gmean-float(emean)) > 0.05:
+        sys.exit("mismatch %s" % st)
+sys.exit(0)
+EOF
+  then
+    reward=1
+  fi
+echo "$reward" > /logs/verifier/reward.txt

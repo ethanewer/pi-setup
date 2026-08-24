@@ -1,0 +1,95 @@
+#!/bin/bash
+mkdir -p /logs/verifier
+
+reward=0
+
+if [ ! -f /app/sanitize.py ]; then
+  echo 0 > /logs/verifier/reward.txt
+  exit 0
+fi
+
+battery_ok=1
+if ! python3 - <<'EOF'
+import sys
+
+sys.path.insert(0, "/app")
+import sanitize
+
+SAFE = [
+    ("<p>Hello <b>world</b> 123</p>", ["Hello", "world", "<p>", "<b>"]),
+    ("<i>it</i> &amp; text", ["<i>it</i>", "&amp;"]),
+    ("<em>E1</em><strong>S</strong>", ["<em>E1</em>", "<strong>S</strong>"]),
+    ("<ul> <li>x</li> <li>y</li> </ul>", ["<ul>", "<li>x</li>", "<li>y</li>", "</ul>"]),
+    ('<a href="https://example.com/p">link</a>', ['<a href="https://example.com/p">', "link</a>"]),
+    ("<h1>Head</h1> tail", ["<h1>", "tail"]),
+]
+
+FORMAT_EXACT = [
+    "<p>Hello <b>world</b></p>",
+    "<em>E1</em><strong>S</strong>",
+    '<a href="https://example.com/p">link</a>',
+    "<ul><li>x</li></ul>",
+]
+
+DANGEROUS = [
+    ("<script>alert(1)</script>", ["<script"], []),
+    ("<SCRIPT src=http://evil/x.js></SCRIPT>", ["<script", "src="], []),
+    ("<img src=x onerror=alert(1)>", ["onerror="], []),
+    ('<img src="javascript:alert(1)">', ["javascript:"], []),
+    ('<iframe srcdoc="<script>alert(1)</script>"></iframe>', ["iframe", "srcdoc"], []),
+    ('<a href="javascript:alert(1)">click</a>', ["javascript:"], ["click"]),
+    ("<BODY onload=alert(1)>t</BODY>", ["onload="], ["t"]),
+    ("<style>body{color:red}</style>", ["style"], []),
+    ('<a href="jav&#x61;script:alert(1)">x</a>', ["javascript:"], ["x"]),
+    ("<svg onload=alert(1)></svg>", ["svg", "onload="], []),
+    ("<svg><script>alert(1)</script></svg>", ["svg", "<script"], []),
+    ("<img/src=x onerror=alert(1)>", ["onerror="], []),
+    ('<a onmouseover="alert(1)" href="/rel">ok</a>', ["onmouseover=", "alert"], ['href="/rel"', "ok"]),
+    ("<a href=jav&#x0a;ascript:alert(1)>e</a>", ["javascript:"], ["e"]),
+    ('<iframe src="data:text/html;base64,PHNjcmlwdA=="></iframe>', ["iframe", "data:"], []),
+    ("<details open ontoggle=alert(1)>d</details>", ["ontoggle="], ["d"]),
+]
+
+def fail(msg):
+    print(msg)
+    sys.exit(1)
+
+for inp, want in SAFE:
+    out = sanitize.sanitize_html(inp)
+    if not all(tok in out for tok in want):
+        fail("safe fail: %r -> %r" % (inp, out))
+
+for inp in FORMAT_EXACT:
+    out = sanitize.sanitize_html(inp)
+    if out != inp:
+        fail("format fail: %r -> %r" % (inp, out))
+
+for inp, banned, req in DANGEROUS:
+    out = sanitize.sanitize_html(inp)
+    low = out.lower()
+    if any(tok.lower() in low for tok in banned):
+        fail("danger fail: %r -> %r" % (inp, out))
+    if req and not all(tok in out for tok in req):
+        fail("required-text fail: %r -> %r" % (inp, out))
+
+sys.exit(0)
+EOF
+then
+  reward=1
+fi
+then
+  battery_ok=0
+fi
+
+py_ok=0
+if [ -f /app/tests/test_sanitizer.py ] && [ -s /app/tests/test_sanitizer.py ]; then
+  if (cd /app && python3 -m pytest tests -q > /tmp/pytest.log 2>&1); then
+    py_ok=1
+  fi
+fi
+
+if [ "$battery_ok" = "1" ] && [ "$py_ok" = "1" ]; then
+  reward=1
+fi
+
+echo "$reward" > /logs/verifier/reward.txt

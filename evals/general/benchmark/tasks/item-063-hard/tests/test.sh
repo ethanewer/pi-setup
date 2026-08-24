@@ -1,0 +1,52 @@
+#!/bin/bash
+mkdir -p /logs/verifier
+reward=0
+if [ -f /app/fit.json ]; then
+  if python3 - <<'PYEOF'
+import json
+import numpy as np
+import scipy.optimize as so
+
+data = np.genfromtxt('/app/raman.csv', delimiter=',', names=True)
+x = data['wavenumber_cm1'].astype(float)
+y = data['intensity'].astype(float)
+
+def lor(x, A, c, g):
+    return A * g * g / ((x - c) ** 2 + g * g)
+def model(x, A0, c0, g0, A1, c1, g1, A2, c2, g2):
+    return lor(x, A0, c0, g0) + lor(x, A1, c1, g1) + lor(x, A2, c2, g2)
+
+lo = [0, 500, 1, 0, 520, 1, 0, 650, 1]
+hi = [300, 600, 60, 300, 600, 60, 300, 800, 60]
+p0 = [80, 540, 18, 60, 585, 12, 60, 720, 10]
+popt, _ = so.curve_fit(model, x, y, p0=p0, bounds=(lo, hi), maxfev=50000)
+
+ref = sorted([
+    (float(popt[1]), float(popt[0]), float(popt[2])),
+    (float(popt[4]), float(popt[3]), float(popt[5])),
+    (float(popt[7]), float(popt[6]), float(popt[8])),
+])
+ref_rms = float(np.sqrt(np.mean((y - model(x, *popt)) ** 2)))
+
+got = json.load(open('/app/fit.json'))
+peaks = got.get('peaks', [])
+if len(peaks) != 3:
+    raise SystemExit('expect 3 peaks')
+g = sorted((p['center'], p['height'], p['width']) for p in peaks)
+for (gc, gh, gw), (rc, rh, rw) in zip(g, ref):
+    if abs(gc - rc) > 0.5:
+        raise SystemExit('center mismatch')
+    if abs(gh - rh) / rh > 0.02:
+        raise SystemExit('height mismatch')
+    if abs(gw - rw) / rw > 0.02:
+        raise SystemExit('width mismatch')
+grms = got.get('residual_rms')
+if grms is None or abs(grms - ref_rms) / ref_rms > 0.10:
+    raise SystemExit('rms mismatch')
+print("PASS"); raise SystemExit(0)
+PYEOF
+  then
+    reward=1
+  fi
+fi
+echo "$reward" > /logs/verifier/reward.txt

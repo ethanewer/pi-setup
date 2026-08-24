@@ -1,0 +1,8 @@
+// Caffe-style CPU solver configuration (mini-cafe).
+base_lr: 0.05
+max_iter: 100
+batch_size: 32
+seed: 1234
+net: "/app/model/net.prototxt"
+data_dir: "/app/data"
+log: "/app/run/train.log"

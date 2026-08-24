@@ -1,0 +1,16 @@
+skill-integer-square-root	skill-probe: isqrt via Python; solve/verify dry-run reward=1
+skill-interactive-bash	skill-probe: bash while-read stdin sum; solve/verify dry-run reward=1
+skill-ipv4-validation	skill-probe: strict IPv4 filter with ipaddress; solve/verify dry-run reward=1
+skill-javascript-node-js	skill-probe: Node.js file read+product; solve/verify dry-run reward=1
+skill-javascript-xss	skill-probe: analyze reflected XSS + fix answer.json; solve/verify dry-run reward=1
+skill-john-the-ripper-hash-extraction	skill-probe: extract apr1 hash token + format id; solve/verify dry-run reward=1
+skill-json	skill-probe: nested JSON parse -> port; solve/verify dry-run reward=1
+skill-json-weight-conversion	skill-probe: normalize g/oz/lb weights to kg; solve/verify dry-run reward=1
+skill-keystroke-accounting	skill-probe: tally keystroke events from keylog JSON; solve/verify dry-run reward=1
+skill-kinematic-event-detection	skill-probe: first direction reversal from motion CSV; solve/verify dry-run reward=1
+skill-known-plaintext-pairs	skill-probe: derive Caesar key, decrypt ciphertext; solve/verify dry-run reward=1
+skill-latency-throughput-accounting	skill-probe: throughput + avg latency from transfers JSON; solve/verify dry-run reward=1
+skill-latex	skill-probe: .tex source with display equation using \frac; solve/verify dry-run reward=1
+skill-layer-coordinate-interpretation	skill-probe: assign depths to layers min<=d<max; solve/verify dry-run reward=1
+skill-legacy-c-c	skill-probe: fix printf format bug, gcc compile+run; solve/verify dry-run reward=1
+skill-lexer-parser-compatibility	skill-probe: longest-match tokenization to names; solve/verify dry-run reward=1

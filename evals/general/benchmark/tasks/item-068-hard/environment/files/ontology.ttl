@@ -1,0 +1,9 @@
+@prefix ex: <http://example.org/> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+ex:alice a foaf:Person ; foaf:name "Alice" ; ex:age 32 ; ex:knows ex:carol .
+ex:bob   a foaf:Person ; foaf:name "Bob"   ; ex:age 27 ; ex:knows ex:dave .
+ex:carol a foaf:Person ; foaf:name "Carol" ; ex:age 40 ; ex:knows ex:bob .
+ex:dave  a foaf:Person ; foaf:name "Dave"  ; ex:age 25 ; ex:knows ex:alice .
+ex:eve   a foaf:Person ; foaf:name "Eve"   ; ex:age 29 ; ex:knows ex:alice .

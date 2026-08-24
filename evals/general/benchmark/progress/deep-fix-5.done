@@ -1,0 +1,11 @@
+skill-diff-merge: fixed (git merge-file arg order was current,base,other; updated instruction.md example too) reward=1 verified
+skill-hex-strings-tools: fixed (test.sh never set reward=1 from python checker exit) reward=1 verified
+skill-computer-vision: fixed (solve.sh analyze.py NameError: `l` vs `ln` in list comprehension) reward=1 verified
+skill-redcode: fixed (solve.sh only ran /app/parse.py; now writes parse.py then runs it) reward=1 verified
+skill-pypiserver: fixed (pypiserver 2.4.1 CLI: `run` subcommand, -P is password-file, dir positional; updated solve + instruction) reward=1 verified
+skill-ocr-image-reading: fixed (Dockerfile pip install pillow failed PEP 668; use apt python3-pil) reward=1 verified
+item-056-hard: fixed (Dockerfile missing libc6-dev -> no stdlib.h; plus fast_port.c used wb.len bytes as element count) reward=1 verified
+item-054-main: fixed (environment/files/render_ref.c missing; added it and mkdir -p /app/pov before gcc) reward=1 verified
+item-059-hard: fixed (pypiserver script not on PATH + run subcommand; import probes polluted by cwd=/app/source shadowing venv installs) reward=1 verified
+item-014-hard: fixed (sshd relative path -> flaky re-exec, use /usr/sbin/sshd + readiness poll; bare repo HEAD pointed at nonexistent master -> symbolic-ref to main) reward=1 verified x3
+item-011-main: fixed (COBOL: >>SOURCE FORMAT FREE at col1 + FILE STATUS var undefined + missing ORGANIZATION LINE SEQUENTIAL caused newline-as-data garbage; aligned output contract to 45-char lines GnuCOBOL actually writes) reward=1 verified

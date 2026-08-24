@@ -1,0 +1,34 @@
+{
+  "base_params": {
+    "b": 0.1,
+    "L": 1.0,
+    "F": 0.5,
+    "omega_d": 2.0,
+    "T": 20.0,
+    "dt": 0.01,
+    "theta_0": 0.2,
+    "omega_0": 0.0
+  },
+  "sensitivity": [
+    {
+      "name": "b",
+      "range": 0.05,
+      "description": "Damping coefficient sensitivity"
+    },
+    {
+      "name": "L",
+      "range": 0.3,
+      "description": "Pendulum length sensitivity"
+    },
+    {
+      "name": "F",
+      "range": 0.2,
+      "description": "Driving force amplitude sensitivity"
+    },
+    {
+      "name": "omega_d",
+      "range": 0.5,
+      "description": "Driving frequency sensitivity"
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+#!/bin/bash
+mkdir -p /logs/verifier
+reward=0
+if [ -f /app/rewritten.txt ]; then
+  if python3 - <<'PY'
+import re, sys
+src=open('/app/dates.txt').read()
+pat=r'(?P<y>\d{4})-(?P<m>\d{2})-(?P<d>\d{2})'
+expected=re.sub(pat, lambda m:'%s/%s/%s'%(m.group('m'),m.group('d'),m.group('y')), src)
+got=open('/app/rewritten.txt').read()
+if got==expected and re.search(r'\d{4}-\d{2}-\d{2}', got) is None:
+    print("PASS"); sys.exit(0)
+print("FAIL\nGOT:\n%r\nEXP:\n%r"%(got,expected)); sys.exit(1)
+PY
+  then
+    reward=1
+  fi
+  then reward=1; fi
+fi
+echo "$reward" > /logs/verifier/reward.txt

@@ -1,0 +1,29 @@
+#!/bin/bash
+mkdir -p /logs/verifier
+reward=0
+if [ -f /app/results.txt ]; then
+  if python3 - <<'PYEOF'
+from rdflib import Graph
+
+g = Graph()
+g.parse('/app/data.ttl', format='turtle')
+q = '''
+PREFIX ex: <http://example.org/>
+PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+SELECT ?name WHERE {
+  ?p a foaf:Person ;
+     foaf:name ?name ;
+     ex:age ?age .
+  FILTER(?age >= 30)
+}
+ORDER BY ?name
+'''
+exp = sorted(str(r[0]) for r in g.query(q))
+got = [ln for ln in open('/app/results.txt').read().splitlines() if ln.strip() != '']
+assert got == exp, (got, exp)
+PYEOF
+  then
+    reward=1
+  fi
+fi
+echo "$reward" > /logs/verifier/reward.txt

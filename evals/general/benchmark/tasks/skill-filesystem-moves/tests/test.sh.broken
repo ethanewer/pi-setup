@@ -1,0 +1,37 @@
+#!/bin/bash
+reward=0
+if [ -f /app/manifest.json ]; then
+  if python3 - <<'PYEOF'
+import os, json
+# loose dir must be empty (no files, no subdirs)
+remaining = []
+for base, dirs, files in os.walk('/app/loose'):
+    for f in files:
+        remaining.append(os.path.join(base, f))
+    for d in dirs:
+        remaining.append(os.path.join(base, d) + '/')
+assert remaining == [], 'loose not empty: %r' % (remaining,)
+
+# build expected manifest by walking /app/organized
+expected = {}
+for root, dirs, files in os.walk('/app/organized'):
+    ext = os.path.basename(root)
+    if ext == 'organized':
+        continue
+    for fn in files:
+        e2 = os.path.splitext(fn)[1].lstrip('.')
+        assert ext == e2, (ext, fn)
+        expected.setdefault(ext, []).append(fn)
+for k in expected:
+    expected[k].sort()
+    assert len(expected[k]) == len(set(expected[k]))
+
+got = json.load(open('/app/manifest.json'))
+assert got == expected, (got, expected)
+PYEOF
+  then
+    reward=1
+  fi
+  then reward=1; else reward=0; fi
+else reward=0; fi
+echo "$reward" > /logs/verifier/reward.txt

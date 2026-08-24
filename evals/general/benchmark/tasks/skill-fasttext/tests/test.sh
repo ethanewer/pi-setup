@@ -1,0 +1,42 @@
+#!/bin/bash
+mkdir -p /logs/verifier
+reward=0
+if [ -f /app/similar.json ]; then
+  if python3 - <<'PYEOF'
+import json, math
+words = []
+vectors = {}
+with open('/app/model.vec') as f:
+    vocab_size, dim = map(int, f.readline().split())
+    for line in f:
+        parts = line.split()
+        if parts:
+            words.append(parts[0])
+            vectors[parts[0]] = [float(x) for x in parts[1:]]
+def dot(a,b): return sum(x*y for x,y in zip(a,b))
+def norm(a): return math.sqrt(dot(a,a))
+def cos(a,b):
+    n = norm(a)*norm(b)
+    return dot(a,b)/n if n else 0.0
+q = vectors['queen']
+best_word, best_score = None, -2.0
+for w in words:
+    if w == 'queen':
+        continue
+    s = cos(q, vectors[w])
+    if s > best_score + 1e-9:
+        best_score, best_word = s, w
+expected = {
+    'vocab_size': vocab_size,
+    'dim': dim,
+    'queen_vector': [round(x, 4) for x in q],
+    'nearest': best_word,
+}
+got = json.load(open('/app/similar.json'))
+assert got == expected, (got, expected)
+PYEOF
+  then
+    reward=1
+  fi
+fi
+echo "$reward" > /logs/verifier/reward.txt

@@ -1,0 +1,10 @@
+CXX=@CXX@
+CXXFLAGS=-O2
+
+all: render
+
+render: render.cpp
+	$(CXX) $(CXXFLAGS) -o render render.cpp
+
+clean:
+	rm -f render out.ppm

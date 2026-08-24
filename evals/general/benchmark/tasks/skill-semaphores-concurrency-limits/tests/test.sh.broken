@@ -1,0 +1,24 @@
+#!/bin/bash
+# Verifier for skill-semaphore-concurrency-limits.
+mkdir -p /logs/verifier
+reward=0
+
+if [ -f /app/limited.py ]; then
+  python3 /app/limited.py > /dev/null 2>&1
+fi
+
+if [ -f /app/result.json ]; then
+  if python3 - <<'PY'
+import json
+r = json.load(open("/app/result.json"))
+L, T = 4, 30
+assert r["total"] == T, r
+assert r["limit"] == L, r
+assert r["completed"] == T, r
+assert 1 <= r["peak"] <= L, r
+assert r["peak"] == L, r
+PY && reward=1
+fi
+
+echo "$reward" > /logs/verifier/reward.txt
+echo "reward=$reward"

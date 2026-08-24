@@ -1,0 +1,24 @@
+#!/bin/bash
+reward=0
+mkdir -p /logs/verifier
+if [ -f /app/packages.json ]; then
+  if python3 - <<'PYEOF'
+import json
+recs=[]; cur={}
+with open('/app/debian-sources.list') as f:
+    for line in f:
+        line=line.rstrip('\n')
+        if not line.strip():
+            if cur: recs.append(cur); cur={}
+            continue
+        k,_,v=line.partition(':'); cur[k.strip()]=v.strip()
+    if cur: recs.append(cur)
+recs.sort(key=lambda r:(int(r['Priority']), r['Name']))
+expected=[{"name":r['Name'],"version":r['Version']} for r in recs]
+got=json.load(open('/app/packages.json'))
+assert got==expected, (got, expected)
+PYEOF
+  then
+    reward=1
+  fi
+echo "$reward" > /logs/verifier/reward.txt

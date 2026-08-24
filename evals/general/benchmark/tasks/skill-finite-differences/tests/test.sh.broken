@@ -1,0 +1,22 @@
+#!/bin/bash
+mkdir -p /logs/verifier
+
+reward=0
+if [ -f /app/diffs.json ]; then
+  if python3 - <<'EOF'
+import json, math
+with open('/app/xs.json') as f: xs = json.load(f)
+with open('/app/diffs.json') as f: dp = json.load(f)
+
+def f(x): return x**3 - 2*x + 1
+h = 0.01
+expected = [round((f(x+h)-f(x-h))/(2*h), 3) for x in xs[1:-1]]
+
+assert len(dp) == len(expected), (dp, expected)
+for a, b in zip(dp, expected):
+    assert abs(a - b) < 1e-6, (a, b)
+EOF
+  then
+    reward=1
+  fi
+echo "$reward" > /logs/verifier/reward.txt

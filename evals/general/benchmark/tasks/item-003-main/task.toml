@@ -1,0 +1,18 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "medium"
+category = "security"
+tags = ["item-003", "python", "html-parsing", "javascript-xss", "browser-behavior", "pytest", "xss-defenses", "dom-sanitization", "regex-escaping", "xss-payload-crafting"]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 1200.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 1024
+storage_mb = 2048

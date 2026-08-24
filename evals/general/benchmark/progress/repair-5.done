@@ -1,0 +1,9 @@
+item-024-hard	repaired: added task.toml, Dockerfile, instruction.md, solution/solve.sh(+solve.py), tests/test.sh around existing cullet.c oracle; oracle-simulated key recovery verified (functional equivalence + challenge decrypt)
+item-037-hard	repaired: authored full eigendecomposition task (6x6 complex non-symmetric matrix.json); solver + verifier residual/norm/sorted-eigenvalue checks validated locally
+item-056-hard	repaired: authored C-extension (Python C API + buffer protocol) portfolio risk/return + setuptools + benchmark task; prices.csv provided; static validation
+item-063-hard	repaired: authored Lorentzian 3-peak Raman fit task (raman.csv), scipy curve_fit solver/verifier with tolerance; fit convergence validated locally
+item-069-hard	repaired: authored SQLite page-format/binary-truncation recovery task (ledger.db truncated to 1002 intact rows); leaf decoder validated locally vs sqlite truth
+skill-scipy-pandas	repaired: completed missing task.toml (instruction/Dockerfile/files/solve/test already present and validated)
+skill-setuptools	repaired: authored trivial setuptools packaging probe (package + setup.py + pip install + output check)
+skill-terminal-escape-sequences	repaired: completed missing instruction.md/solution/solve.sh/tests/test.sh (ANSI SGR stripping task)
+skill-timezone-date-ranges	repaired: authored timezone/date-range analysis task (zoneinfo + tzdata, deterministic events.json, verifier recompute)

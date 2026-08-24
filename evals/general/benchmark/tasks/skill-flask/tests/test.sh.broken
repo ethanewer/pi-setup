@@ -1,0 +1,27 @@
+#!/bin/bash
+mkdir -p /logs/verifier
+
+reward=0
+if [ -f /app/app.py ]; then
+  if python3 - <<'EOF'
+import json, sys
+sys.path.insert(0, '/app')
+from app import app
+
+client = app.test_client()
+r1 = client.get("/")
+d1 = json.loads(r1.data)
+assert d1 == {"status": "ok"}, d1
+
+r2 = client.get("/api/greet?name=Alice")
+d2 = json.loads(r2.data)
+assert d2 == {"message": "Hello, Alice!"}, d2
+
+r3 = client.get("/api/greet")
+d3 = json.loads(r3.data)
+assert d3 == {"message": "Hello, world!"}, d3
+EOF
+  then
+    reward=1
+  fi
+echo "$reward" > /logs/verifier/reward.txt

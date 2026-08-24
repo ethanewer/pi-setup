@@ -1,0 +1,35 @@
+#!/bin/bash
+mkdir -p /logs/verifier
+
+reward=0
+if [ -f /app/gp_predictions.json ]; then
+  if python3 - <<'EOF'
+import json
+import numpy as np
+
+xt = np.array(json.load(open('/app/xtrain.json')))
+yt = np.array(json.load(open('/app/ytrain.json')))
+xs = np.array(json.load(open('/app/xtest.json')))
+l=1.5; sigma2=0.1
+
+def kern(a,b):
+    d = a - b
+    return np.exp(-(d**2)/(2*l*l))
+
+Kxx = kern(xt[:,None], xt[None,:])
+Kinv = np.linalg.inv(Kxx + sigma2*np.eye(len(xt)))
+mean=[]
+for t in xs:
+    k = kern(t, xt)
+    mean.append(float(k @ Kinv @ yt))
+
+expected = [round(v,4) for v in mean]
+out = json.load(open('/app/gp_predictions.json'))
+assert len(out)==len(expected), (out, expected)
+for a,b in zip(out, expected):
+    assert abs(a-b)<1e-4, (a,b)
+EOF
+  then
+    reward=1
+  fi
+echo "$reward" > /logs/verifier/reward.txt

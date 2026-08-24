@@ -1,0 +1,66 @@
+@prefix : <http://example.org/books#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+:book1 rdf:type :Book ;
+       :hasTitle "Foundation" ;
+       :hasAuthor :author1 ;
+       :hasGenre "Science Fiction" ;
+       :publishedIn 1951 ;
+       :publishedBy "Gnome Press" .
+
+:book2 rdf:type :Book ;
+       :hasTitle "The Hobbit" ;
+       :hasAuthor :author2 ;
+       :hasGenre "Fantasy" ;
+       :publishedIn 1937 ;
+       :publishedBy "George Allen & Unwin" .
+
+:book3 rdf:type :Book ;
+       :hasTitle "Dune" ;
+       :hasAuthor :author3 ;
+       :hasGenre "Science Fiction" ;
+       :publishedIn 1965 ;
+       :publishedBy "Chilton Books" .
+
+:book4 rdf:type :Book ;
+       :hasTitle "1984" ;
+       :hasAuthor :author4 ;
+       :hasGenre "Dystopian" ;
+       :publishedIn 1949 ;
+       :publishedBy "Secker & Warburg" .
+
+:book5 rdf:type :Book ;
+       :hasTitle "Neuromancer" ;
+       :hasAuthor :author5 ;
+       :hasGenre "Science Fiction" ;
+       :publishedIn 1984 ;
+       :publishedBy "Ace Books" .
+
+:book6 rdf:type :Book ;
+       :hasTitle "Pride and Prejudice" ;
+       :hasAuthor :author6 ;
+       :hasGenre "Romance" ;
+       :publishedIn 1813 .
+
+:book7 rdf:type :Book ;
+       :hasTitle "The Martian" ;
+       :hasAuthor :author7 ;
+       :hasGenre "Science Fiction" ;
+       :publishedIn 2011 ;
+       :publishedBy "Crown Publishing Group" .
+
+:book8 rdf:type :Book ;
+       :hasTitle "Starship Troopers" ;
+       :hasAuthor :author3 ;
+       :hasGenre "Science Fiction" ;
+       :publishedIn 1959 ;
+       :publishedBy "G. P. Putnam's Sons" .
+
+:author1 :hasName "Isaac Asimov" .
+:author2 :hasName "J.R.R. Tolkien" .
+:author3 :hasName "Frank Herbert" .
+:author4 :hasName "George Orwell" .
+:author5 :hasName "William Gibson" .
+:author6 :hasName "Jane Austen" .
+:author7 :hasName "Andy Weir" .

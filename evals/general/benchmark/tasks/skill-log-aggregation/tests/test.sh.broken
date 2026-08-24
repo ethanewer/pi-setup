@@ -1,0 +1,25 @@
+#!/bin/bash
+mkdir -p /logs/verifier
+reward=0
+if [ -f /app/summary.json ]; then
+  if python3 - <<'EOF'
+import json, sys
+from collections import Counter
+c=Counter()
+import glob
+for p in sorted(glob.glob('/app/logs/*.log')):
+    for line in open(p):
+        line=line.strip()
+        if line:
+            c[line.split()[1]]+=1
+exp={k:c.get(k,0) for k in ["INFO","WARN","ERROR"]}
+got=json.load(open('/app/summary.json'))
+for k,v in exp.items():
+    if int(got.get(k,-1)) != v:
+        sys.exit("bad %s" % k)
+sys.exit(0)
+EOF
+  then
+    reward=1
+  fi
+echo "$reward" > /logs/verifier/reward.txt

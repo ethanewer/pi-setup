@@ -1,0 +1,18 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "hard"
+category = "programming"
+tags = ["item-006", "legacy-c-cpp", "autoconf-configure", "make", "pov-ray-2-2", "ppm-image-comparison", "debug-legacy-compiler-errors", "preserve-immutable-inputs", "validate-with-rendered-artifact"]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 1800.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096

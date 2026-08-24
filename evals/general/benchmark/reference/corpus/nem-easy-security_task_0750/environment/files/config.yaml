@@ -1,0 +1,31 @@
+# Web Application Configuration
+# TODO: Review for security issues
+
+database:
+  host: "localhost"
+  username: "admin"
+  password: "admin123"  # Should be changed
+  port: 5432
+  ssl_mode: "disable"  # Should be enabled for production
+
+security:
+  session_timeout: 86400  # 24 hours - too long
+  cookie_secure: false  # Should be true for HTTPS
+  cookie_httponly: false  # Should be true to prevent XSS
+  x_frame_options: ""  # Should be set to DENY or SAMEORIGIN
+  cors_origin: "*"  # Too permissive
+  allowed_methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+
+api:
+  rate_limit: 10000  # Too high
+  debug_mode: true  # Should be false in production
+  expose_errors: true  # Should be false
+
+logging:
+  level: "DEBUG"  # Should be INFO or higher in production
+  include_sensitive: true  # Should be false
+
+authentication:
+  jwt_secret: "mysecretkey"  # Should be strong and stored securely
+  token_expiry_days: 365  # Too long
+  password_min_length: 6  # Should be at least 8

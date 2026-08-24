@@ -1,0 +1,29 @@
+#!/bin/bash
+reward=0
+if [ -f /app/cipher.bin ] && [ -f /app/cipher.json ]; then
+  if python3 - <<'PYEOF'
+import json
+def rot(x): return ((x << 2) | (x >> 6)) & 0xFF
+def F(R, K): return [rot((R[i] + K[i]) & 0xFF) for i in range(4)]
+def xor(a, b): return [a[i] ^ b[i] for i in range(4)]
+KEYS = [[0x12, 0x23, 0x45, 0x67], [0x89, 0xAB, 0xCD, 0xEF],
+        [0xFE, 0xDC, 0xBA, 0x98], [0x76, 0x54, 0x32, 0x10]]
+def encrypt(block):
+    L = list(block[0:4]); R = list(block[4:8])
+    for i in range(4):
+        L, R = R, xor(L, F(R, KEYS[i]))
+    return bytes(L + R)
+plain = open('/app/plaintext.bin', 'rb').read()
+exp_cipher = encrypt(plain)
+got_bin = open('/app/cipher.bin', 'rb').read()
+assert got_bin == exp_cipher, (got_bin.hex(), exp_cipher.hex())
+got_json = json.load(open('/app/cipher.json'))
+assert got_json['plaintext'] == plain.hex()
+assert got_json['ciphertext'] == exp_cipher.hex()
+PYEOF
+  then
+    reward=1
+  fi
+  then reward=1; else reward=0; fi
+else reward=0; fi
+echo "$reward" > /logs/verifier/reward.txt

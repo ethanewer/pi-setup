@@ -1,0 +1,75 @@
+@prefix ex: <http://example.org/books#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+ex:book1 rdf:type ex:Book ;
+         ex:title "A Dance with Dragons" ;
+         ex:publicationYear 2011 ;
+         ex:genre "Fantasy" ;
+         ex:writtenBy ex:author1 .
+
+ex:book2 rdf:type ex:Book ;
+         ex:title "Leviathan Wakes" ;
+         ex:publicationYear 2011 ;
+         ex:genre "Science Fiction" ;
+         ex:writtenBy ex:author2 ;
+         ex:wonAward "Hugo Award" .
+
+ex:book3 rdf:type ex:Book ;
+         ex:title "Ancillary Justice" ;
+         ex:publicationYear 2013 ;
+         ex:genre "Science Fiction" ;
+         ex:writtenBy ex:author3 ;
+         ex:wonAward "Hugo Award" .
+
+ex:book4 rdf:type ex:Book ;
+         ex:title "The Martian" ;
+         ex:publicationYear 2014 ;
+         ex:genre "Science Fiction" ;
+         ex:writtenBy ex:author4 .
+
+ex:book5 rdf:type ex:Book ;
+         ex:title "The Three-Body Problem" ;
+         ex:publicationYear 2014 ;
+         ex:genre "Science Fiction" ;
+         ex:writtenBy ex:author5 ;
+         ex:wonAward "Hugo Award" .
+
+ex:book6 rdf:type ex:Book ;
+         ex:title "Ready Player One" ;
+         ex:publicationYear 2011 ;
+         ex:genre "Science Fiction" ;
+         ex:writtenBy ex:author6 .
+
+ex:book7 rdf:type ex:Book ;
+         ex:title "A Game of Thrones" ;
+         ex:publicationYear 1996 ;
+         ex:genre "Fantasy" ;
+         ex:writtenBy ex:author1 .
+
+ex:book8 rdf:type ex:Book ;
+         ex:title "The Name of the Wind" ;
+         ex:publicationYear 2007 ;
+         ex:genre "Fantasy" ;
+         ex:writtenBy ex:author7 .
+
+ex:author1 rdf:type ex:Author ;
+           ex:name "George R.R. Martin" .
+
+ex:author2 rdf:type ex:Author ;
+           ex:name "James S.A. Corey" .
+
+ex:author3 rdf:type ex:Author ;
+           ex:name "Ann Leckie" .
+
+ex:author4 rdf:type ex:Author ;
+           ex:name "Andy Weir" .
+
+ex:author5 rdf:type ex:Author ;
+           ex:name "Liu Cixin" .
+
+ex:author6 rdf:type ex:Author ;
+           ex:name "Ernest Cline" .
+
+ex:author7 rdf:type ex:Author ;
+           ex:name "Patrick Rothfuss" .

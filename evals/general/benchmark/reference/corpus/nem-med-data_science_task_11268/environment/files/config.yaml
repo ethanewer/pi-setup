@@ -1,0 +1,14 @@
+analysis:
+  confidence_level: 0.95
+  missing_values: "forward_fill"
+  outlier_threshold: 3.0
+  min_sample_size: 10
+
+output:
+  report_format: "json"
+  visualization_format: "png"
+  decimal_places: 2
+
+validation:
+  require_statistical_significance: true
+  min_effect_size: 0.05

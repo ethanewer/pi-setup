@@ -1,0 +1,19 @@
+#!/bin/bash
+reward=0
+mkdir -p /logs/verifier
+if [ -f /app/image_info.txt ]; then
+  if python3 - <<'PYEOF'
+from PIL import Image
+img = Image.open('/app/img_info.png')
+w, h = img.size
+r, g, b = img.getpixel((3, 3))
+expected = f"{w}\n{h}\n{img.mode}\n{r},{g},{b}"
+got = open('/app/image_info.txt').read().rstrip('\n')
+assert got == expected, (got, expected)
+PYEOF
+  then
+    reward=1
+  fi
+  then reward=1; fi
+fi
+echo "$reward" > /logs/verifier/reward.txt

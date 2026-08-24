@@ -1,0 +1,170 @@
+{
+ "job": "deepseek-flash-run-1",
+ "n_trials": 524,
+ "passed": 457,
+ "zero": 32,
+ "partial": 13,
+ "missing": [],
+ "anomalies": [
+  {
+   "task": "skill-cython",
+   "kind": "exception",
+   "info": "EnvironmentStartTimeoutError"
+  },
+  {
+   "task": "item-023-main",
+   "kind": "exception",
+   "info": "EnvironmentStartTimeoutError"
+  },
+  {
+   "task": "skill-parquet",
+   "kind": "exception",
+   "info": "EnvironmentStartTimeoutError"
+  },
+  {
+   "task": "item-009-main",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-075-hard",
+   "kind": "exception",
+   "info": "RuntimeError"
+  },
+  {
+   "task": "skill-pandas-pyarrow",
+   "kind": "exception",
+   "info": "EnvironmentStartTimeoutError"
+  },
+  {
+   "task": "item-004-main",
+   "kind": "exception",
+   "info": "EnvironmentStartTimeoutError"
+  },
+  {
+   "task": "skill-numpy-c-api",
+   "kind": "exception",
+   "info": "EnvironmentStartTimeoutError"
+  },
+  {
+   "task": "item-043-main",
+   "kind": "exception",
+   "info": "RuntimeError"
+  },
+  {
+   "task": "item-060-hard",
+   "kind": "exception",
+   "info": "EnvironmentStartTimeoutError"
+  },
+  {
+   "task": "skill-hugging-face-datasets",
+   "kind": "exception",
+   "info": "EnvironmentStartTimeoutError"
+  },
+  {
+   "task": "item-048-hard",
+   "kind": "exception",
+   "info": "EnvironmentStartTimeoutError"
+  },
+  {
+   "task": "skill-rstan-2-32-7",
+   "kind": "exception",
+   "info": "RuntimeError"
+  },
+  {
+   "task": "skill-pipeline-parallelism",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-032-hard",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-034-main",
+   "kind": "exception",
+   "info": "NonZeroAgentExitCodeError"
+  },
+  {
+   "task": "skill-scipy-pandas",
+   "kind": "exception",
+   "info": "EnvironmentStartTimeoutError"
+  },
+  {
+   "task": "item-071-main",
+   "kind": "exception",
+   "info": "EnvironmentStartTimeoutError"
+  },
+  {
+   "task": "item-072-hard",
+   "kind": "exception",
+   "info": "EnvironmentStartTimeoutError"
+  },
+  {
+   "task": "item-060-main",
+   "kind": "exception",
+   "info": "EnvironmentStartTimeoutError"
+  },
+  {
+   "task": "skill-c-extension",
+   "kind": "exception",
+   "info": "EnvironmentStartTimeoutError"
+  },
+  {
+   "task": "skill-chosen-plaintext-attacks",
+   "kind": "exception",
+   "info": "EnvironmentStartTimeoutError"
+  },
+  {
+   "task": "item-055-main",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "skill-sentence-transformers",
+   "kind": "exception",
+   "info": "EnvironmentStartTimeoutError"
+  },
+  {
+   "task": "skill-c-c-extension-build",
+   "kind": "exception",
+   "info": "EnvironmentStartTimeoutError"
+  },
+  {
+   "task": "item-005-hard",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-005-main",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-001-main",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-034-hard",
+   "kind": "exception",
+   "info": "NetworkConnectionError"
+  },
+  {
+   "task": "skill-telnet",
+   "kind": "exception",
+   "info": "NonZeroAgentExitCodeError"
+  },
+  {
+   "task": "item-043-hard",
+   "kind": "exception",
+   "info": "RuntimeError"
+  }
+ ],
+ "trivial_zero_count": 18,
+ "cost_usd": 0.0,
+ "n_input_tokens": 0,
+ "n_output_tokens": 0,
+ "mean_reward": 1.0755
+}

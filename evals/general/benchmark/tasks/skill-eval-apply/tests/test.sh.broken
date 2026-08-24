@@ -1,0 +1,84 @@
+#!/bin/bash
+reward=0
+if [ -f /app/result.json ]; then
+  if python3 - <<'PYEOF'
+import json
+src = open('/app/prog.lisp').read()
+
+def tok(s):
+    return s.replace('(', ' ( ').replace(')', ' ) ').split()
+
+def parse(tokens):
+    t = tokens.pop(0)
+    if t == '(':
+        l = []
+        while tokens[0] != ')':
+            l.append(parse(tokens))
+        tokens.pop(0)
+        return l
+    return int(t) if t.lstrip('-').isdigit() else t
+
+BUILTINS = {
+    'add': lambda a: a[0] + a[1],
+    'sub': lambda a: a[0] - a[1],
+    'mul': lambda a: a[0] * a[1],
+    'div': lambda a: (abs(a[0]) // abs(a[1])) * (1 if (a[0] >= 0) == (a[1] >= 0) else -1),
+}
+
+class Env(dict):
+    def __init__(self):
+        super().__init__()
+        self.update(BUILTINS)
+
+def evaluate(e, env):
+    if isinstance(e, int):
+        return e
+    if isinstance(e, str):
+        return env[e]
+    head, *rest = e
+    if head == 'if':
+        return evaluate(rest[1], env) if evaluate(rest[0], env) else evaluate(rest[2], env)
+    if head == 'lambda':
+        params, body = rest
+        def proc(args):
+            child = Env(); child.update(env)
+            for p, v in zip(params, args):
+                child[p] = v
+            return evaluate(body, child)
+        return proc
+    if head == 'define':
+        target, body = rest
+        if isinstance(target, list):
+            fname, params = target[0], target[1:]
+            def proc(args):
+                child = Env(); child.update(env)
+                for p, v in zip(params, args):
+                    child[p] = v
+                return evaluate(body, child)
+            env[fname] = proc
+        else:
+            env[target] = evaluate(body, env)
+        return None
+    fn = evaluate(head, env)
+    args = [evaluate(a, env) for a in rest]
+    return fn(args)
+
+ts = tok(src)
+forms = []
+while ts:
+    forms.append(parse(ts))
+env = Env()
+res = None
+for form in forms:
+    r = evaluate(form, env)
+    if r is not None:
+        res = r
+got = json.load(open('/app/result.json'))
+assert got == {'value': res}, (got, res)
+PYEOF
+  then
+    reward=1
+  fi
+  then reward=1; else reward=0; fi
+else reward=0; fi
+echo "$reward" > /logs/verifier/reward.txt

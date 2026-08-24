@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+mkdir -p /logs/verifier
+
+reward=0
+if [ -f /app/browser_answers.json ]; then
+  if python3 - <<'PY_END'
+import json, sys
+try:
+    d = json.load(open('/app/browser_answers.json'))
+except Exception:
+    sys.exit(1)
+expected = {
+    "q1":"true","q2":"true","q3":"DOMContentLoaded","q4":"true",
+    "q5":"true","q6":"true","q7":"false","q8":"false",
+}
+ok = (set(d.keys()) == set(expected.keys())) and all(str(d.get(k, '')).lower() == v.lower() for k, v in expected.items())
+sys.exit(0 if ok else 1)
+PY_END && reward=1
+fi
+fi
+echo "$reward" > /logs/verifier/reward.txt

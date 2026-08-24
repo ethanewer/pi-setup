@@ -1,0 +1,37 @@
+#!/bin/bash
+mkdir -p /logs/verifier
+APP="${TASK_APP:-/app}"
+reward=0
+if [ -f "$APP/eigenvalue.txt" ] && [ -f "$APP/matrix.txt" ]; then
+  if /usr/bin/env python3 - "$APP" <<'PY'
+import math, sys
+app = sys.argv[1]
+def load_matrix(path):
+    A = []
+    for line in open(path):
+        line = line.strip()
+        if line:
+            A.append([float(x) for x in line.split()])
+    return A
+def dominant(A):
+    n = len(A)
+    v = [1.0] * n
+    for _ in range(3000):
+        nv = [sum(A[i][j]*v[j] for j in range(n)) for i in range(n)]
+        norm = math.sqrt(sum(x*x for x in nv))
+        if norm == 0.0:
+            return 0.0
+        v = [x/norm for x in nv]
+    Av = [sum(A[i][j]*v[j] for j in range(n)) for i in range(n)]
+    return sum(Av[i]*v[i] for i in range(n)) / sum(v[i]*v[i] for i in range(n))
+try:
+    M = load_matrix(app + '/matrix.txt')
+    lam = dominant(M)
+    lam_g = float(open(app + '/eigenvalue.txt').read().strip())
+except Exception:
+    sys.exit(1)
+sys.exit(0 if abs(lam_g - lam) < 0.005 else 1)
+PY && reward=1
+fi
+fi
+printf '%s' "$reward" > /logs/verifier/reward.txt

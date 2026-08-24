@@ -1,0 +1,32 @@
+#!/bin/bash
+mkdir -p /logs/verifier
+
+reward=0
+if [ -f /app/decimal.txt ]; then
+  python3 - <<'PYEOF'
+import re, math
+
+def parse(dms):
+    m = re.match(r"^(?P<d>[-+]?\d+(?:\.\d+)?)°\s*(?P<min>\d+(?:\.\d+)?)['′]?\s*(?P<sec>\d+(?:\.\d+)?)?[\"″]?\s*(?P<hemi>[NSEW])$", dms.strip())
+    assert m, dms
+    d = float(m.group('d'))
+    mi = float(m.group('min'))
+    sec = float(m.group('sec')) if m.group('sec') else 0.0
+    hemi = m.group('hemi')
+    value = d + mi/60.0 + sec/3600.0
+    if hemi in ('S','W'):
+        value = -value
+    return round(value, 6)
+
+expected = []
+for line in open('/app/coords.txt'):
+    line = line.strip()
+    if line:
+        expected.append(parse(line))
+
+got = [float(x) for x in open('/app/decimal.txt').read().split()]
+assert len(got) == len(expected), (len(got), len(expected))
+for g, e in zip(got, expected):
+    assert abs(g - e) < 1e-9, (g, e)
+PYEOF
+echo "$reward" > /logs/verifier/reward.txt

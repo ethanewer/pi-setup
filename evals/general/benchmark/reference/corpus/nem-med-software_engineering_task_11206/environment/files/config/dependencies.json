@@ -1,0 +1,22 @@
+{
+  "platforms": {
+    "linux": {
+      "compiler": "g++",
+      "std": "c++17",
+      "lib_dirs": ["/usr/local/lib"],
+      "include_dirs": ["/usr/local/include"]
+    },
+    "macos": {
+      "compiler": "clang++",
+      "std": "c++17",
+      "lib_dirs": ["/opt/homebrew/lib"],
+      "include_dirs": ["/opt/homebrew/include"]
+    }
+  },
+  "external_libs": {
+    "gpu": {
+      "linux": ["-lOpenCL"],
+      "macos": ["-framework OpenCL"]
+    }
+  }
+}

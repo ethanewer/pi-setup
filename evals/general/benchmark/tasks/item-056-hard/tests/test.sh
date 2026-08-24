@@ -1,0 +1,45 @@
+#!/bin/bash
+mkdir -p /logs/verifier
+reward=0
+
+SO=$(find /app -name "fastport*.so" 2>/dev/null | head -1)
+if [ -n "$SO" ] && [ -f /app/result.json ] && [ -f /app/weights.json ] && [ -f /app/benchmark.json ]; then
+  if python3 - <<'PYEOF'
+import json, sys
+import numpy as np
+
+raw = np.genfromtxt('/app/prices.csv', delimiter=',', names=True)
+P = np.column_stack([raw[c] for c in raw.dtype.names])
+R = P[1:] / P[:-1] - 1.0
+mu = R.mean(axis=0)
+cov = np.cov(R, rowvar=False)
+n = P.shape[1]
+w = np.full(n, 1.0 / n)
+ret_ref = float(w @ mu)
+var_ref = float(w @ (cov @ w))
+
+wgot = json.load(open('/app/weights.json'))
+if len(wgot) != n:
+    sys.exit('weights length')
+if any(abs(a - b) > 1e-12 for a, b in zip(wgot, w.tolist())):
+    raise Exception('weights not equal')
+
+got = json.load(open('/app/result.json'))
+rg = got.get('expected_return'); vg = got.get('portfolio_variance')
+if rg is None or vg is None:
+    raise Exception('missing fields')
+if abs(rg - ret_ref) > 1e-9:
+    raise Exception('return mismatch')
+if abs(vg - var_ref) > max(1e-9, abs(var_ref) * 1e-7):
+    raise Exception('variance mismatch')
+
+bm = json.load(open('/app/benchmark.json'))
+if not (bm.get('speedup', 0) > 0 and bm.get('calls', 0) > 0):
+    raise Exception('bad benchmark')
+sys.exit(0)
+PYEOF
+  then
+    reward=1
+  fi
+fi
+echo "$reward" > /logs/verifier/reward.txt

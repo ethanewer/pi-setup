@@ -1,0 +1,19 @@
+#!/bin/bash
+mkdir -p /logs/verifier
+reward=0
+if python3 - <<'PYEOF'
+import os, re, json
+files = [f for f in os.listdir('/app/logs') if f.endswith('.log')]
+def key(fn):
+    m = re.search(r'(\d{4})-(\d{2})-(\d{2})', fn)
+    if not m:
+        return (9999, 0, 0, fn)
+    return (int(m.group(1)), int(m.group(2)), int(m.group(3)), fn)
+expected = sorted(files, key=key)
+got = json.load(open('/app/order.json'))
+assert got == expected, (got, expected)
+PYEOF
+then
+  reward=1
+fi
+echo "$reward" > /logs/verifier/reward.txt

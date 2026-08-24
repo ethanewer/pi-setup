@@ -1,0 +1,43 @@
+#!/bin/bash
+# Verifier for skill-node-js-qemu-like-vm.
+# Reward 1 iff /app/output.txt matches the output an independent (python) VM
+# produces by executing /app/program.bin, and output.txt is a superset of a
+# required value (e.g. the fib sequence) is not required -- exact match is.
+
+mkdir -p /logs/verifier
+reward=0
+
+if [ -f /app/output.txt ] && [ -f /app/program.bin ]; then
+  if python3 - <<'PYEOF'
+import struct
+
+data = open('/app/program.bin', 'rb').read()
+assert len(data) % 12 == 0, 'program.bin is not a whole number of instructions'
+reg = [0] * 8
+out = []
+for i in range(len(data) // 12):
+    op, ra, rb = struct.unpack_from('<III', data, i * 12)
+    if op == 1:
+        reg[ra] = rb
+    elif op == 2:
+        reg[ra] = (reg[ra] + reg[rb]) & 0xFFFFFFFF
+    elif op == 3:
+        reg[ra] = (reg[ra] - reg[rb]) & 0xFFFFFFFF
+    elif op == 4:
+        out.append(str(reg[ra]))
+    elif op == 5:
+        reg[ra] = reg[rb]
+    else:
+        raise SystemExit('unknown opcode %d' % op)
+
+expected = '\n'.join(out) + '\n'
+got = open('/app/output.txt', 'r').read()
+got = got.replace('\r\n', '\n')
+assert got == expected, (got, expected)
+PYEOF
+  then
+    reward=1
+  fi
+
+echo "$reward" > /logs/verifier/reward.txt
+exit 0

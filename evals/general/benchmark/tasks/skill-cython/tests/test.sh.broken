@@ -1,0 +1,15 @@
+#!/bin/bash
+reward=0
+mkdir -p /logs/verifier
+# A compiled fastmath extension must exist somewhere under /app.
+found=$(find /app -name 'fastmath*.so' 2>/dev/null | head -1)
+if [ -n "$found" ] && [ -f /app/result.txt ]; then
+  if python3 - <<'PYEOF'
+got = open('/app/result.txt').read().strip()
+expected = str(100 * 101 * 201 // 6)  # sum of squares 1..100 = 338350
+assert got == expected, (got, expected)
+PYEOF
+  then
+    reward=1
+  fi
+echo "$reward" > /logs/verifier/reward.txt

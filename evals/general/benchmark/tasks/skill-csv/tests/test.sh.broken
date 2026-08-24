@@ -1,0 +1,27 @@
+#!/bin/bash
+mkdir -p /logs/verifier
+
+reward=0
+if [ -f /app/report.csv ]; then
+  python3 - <<'PYEOF'
+import csv
+
+codes = {'sales': '01', 'engineering': '02', 'support': '03'}
+
+with open('/app/report.csv', newline='') as f:
+    rows = list(csv.reader(f))
+
+assert rows[0] == ['id', 'name', 'dept', 'dept_code'], rows[0]
+
+with open('/app/people.csv', newline='') as f:
+    src = list(csv.reader(f))
+expected = [['id','name','dept','dept_code']]
+for row in src[1:]:
+    expected.append(row + [codes.get(row[2], '00')])
+
+# compare data rows
+assert len(rows) == len(expected), (len(rows), len(expected))
+for got_row, exp_row in zip(rows, expected):
+    assert got_row == exp_row, (got_row, exp_row)
+PYEOF
+echo "$reward" > /logs/verifier/reward.txt

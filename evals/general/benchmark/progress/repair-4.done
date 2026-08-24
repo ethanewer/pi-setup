@@ -1,0 +1,10 @@
+item-021-main	completed: circular plasmid primer design task (biopython optional), primers.json fluid-splice deliverable; solve.sh oracle verified locally (assembled len 254, primers valid); test.sh recompute flags all true
+item-036-main	repaired: fixed solve.sh bug (python3 /tmp/transform.py -> /app/transform.py); Vim-based million-row date-transform task, out.csv + macro_recipe.txt oracle validated statically
+item-055-main	repaired: authored missing solution/solve.sh + tests/test.sh; solve.sh writes python3/C/C++ polyglot main.c (verified locally: python3/gcc/g++ all agree on fib table), matching main.rs, run_checks.py harness producing status.txt=PASS; test.sh recompiles+reruns all four engines
+item-061-main	completed: hex-to-decimal probe task (solve.py + answer.txt); present and validated statically
+item-068-main	completed: largest-file probe task (filedir a..d, c.txt largest); present and validated statically
+skill-rust	completed: trivial Rust loop-trace probe (sum i*i = 55); present and validated statically
+skill-serial-console	completed: UART log probe (num_frames/max_byte/last_byte); present and recompute verifier validated statically
+skill-special-forms	completed: Lisp define/if recursion probe (f(5)=120); present and validated statically
+skill-text-processing	completed: word/line counter probe (summary.json); present and validated statically
+skill-torch-serialization	created: authored full trivial single-skill torch-serialization probe (skill/state-dict load in Dockerfile + task.toml + instruction.md + Dockerfile + solution/solve.sh + tests/test.sh); verifier recomputes shape/dtype/mean from model.pt

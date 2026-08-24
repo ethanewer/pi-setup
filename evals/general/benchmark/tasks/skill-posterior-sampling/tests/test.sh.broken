@@ -1,0 +1,22 @@
+#!/bin/bash
+mkdir -p /logs/verifier
+APP="${TASK_APP:-/app}"
+reward=0
+if [ -f "$APP/posterior.txt" ]; then
+  if /usr/bin/env python3 - "$APP/posterior.txt" <<'PY'
+import sys
+path = sys.argv[1]
+try:
+    lines = open(path).read().strip().splitlines()
+    p1 = lines[0].split()
+    pa, pb = int(p1[0]), int(p1[1])
+    mean = float(lines[1].strip())
+except Exception:
+    sys.exit(1)
+mean_exp = round(12/31, 4)
+ok = (pa == 12 and pb == 19) and abs(mean - mean_exp) < 0.0006
+sys.exit(0 if ok else 1)
+PY && reward=1
+fi
+fi
+printf '%s' "$reward" > /logs/verifier/reward.txt

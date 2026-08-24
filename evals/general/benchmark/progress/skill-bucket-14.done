@@ -1,0 +1,16 @@
+skill-node-js-qemu-like-vm	Finds a 12-byte little-endian fib bytecode and executes it with a QEMU-style register VM written in Node.js; verifier recomputes expected output with an independent Python VM.
+skill-numpy	Loads two 3x3 int matrices with numpy, computes A@B and A+B, writes integer results; verifier recomputes with NumPy.
+skill-numpy-arrays	Uses numpy boolean masking, np.where fancy indexing and aggregation over a fixed 50-int file; JSON stats compared by verifier.
+skill-numpy-c-api	Builds a native C extension module using the NumPy C API (PyArray_SimpleNew/import_array) via setuptools, calls it to square an int64 vector; verifier checks result + compiled .so.
+skill-numpy-scipy-optimization	curve_fit exponential decay on deterministic CSV; fits params a,b; verifier refits and compares within tolerance.
+skill-ocaml-runtime	Writes an OCaml program reading 5 ints and printing their sum, compiles with ocamlopt and runs; verifier checks answer + compiled binary; partial credit.
+skill-ocaml-coq-toolchain	Drives coqc to compile a nat lemma (reflexivity) and ocamlopt to emit 42; verifier recompiles Coq source and checks both outputs; partial credit.
+skill-ocr	Runs tesseract over a generated 64px-bold PNG and writes the recognized token; verifier normalizes to HARBOR42.
+skill-ocr-image-reading	OCRs an ID-badge style image and extracts the 4-digit ID field after 'ID'; verifier checks digits 0183.
+skill-ocr-transcription	Transcribes a two-line all-caps sentence from an image; verifier compares letters-only normalized text.
+skill-ontology-traversal	Traverses a JSON taxonomy as a DAG to collect sorted ancestor names of wolf; verifier recomputes independently.
+skill-open-english-wordnet-schema	Queries an OEWN-schema JSON subset, disambiguates dog's canine sense and walks the hypernym chain (excluding root); verifier replicates.
+skill-opencv	Counts red pixels of a generated PNG with OpenCV inRange/countNonZero; verifier recomputes with cv2.
+skill-opencv-pillow	Counts green pixels of a PNG via Pillow+NumPy masking; verifier recomputes independently.
+skill-openssl	Generates a self-signed X.509 cert (CN=internal.host) with openssl and writes the lowercase SHA-256 fingerprint to fingerprint.txt; verifier recomputes the fingerprint from the cert and checks the CN.
+skill-optimization	Minimizes a convex quadratic objective from /app/objective.py via scipy.optimize; verifier re-evaluates at reported x and checks the global minimum.

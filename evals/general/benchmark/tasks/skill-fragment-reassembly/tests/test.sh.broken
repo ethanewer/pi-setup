@@ -1,0 +1,36 @@
+#!/bin/bash
+mkdir -p /logs/verifier
+
+reward=0
+if [ -f /app/original.txt ]; then
+  if python3 - <<'EOF'
+with open('/app/fragments.txt') as f:
+    frags = [line.rstrip('\n') for line in f if line.strip()]
+
+current = frags[0]
+frags = frags[1:]
+while frags:
+    best_overlap = -1
+    best_idx = -1
+    for i, fr in enumerate(frags):
+        m = min(len(current), len(fr))
+        ov = 0
+        for k in range(m, 0, -1):
+            if current[-k:] == fr[:k]:
+                ov = k
+                break
+        if ov > best_overlap:
+            best_overlap = ov
+            best_idx = i
+    current = current + frags[best_idx][best_overlap:]
+    frags.pop(best_idx)
+
+with open('/app/original.txt') as f:
+    got = f.read()
+got = got.rstrip('\n')
+assert got == current, (got, current)
+EOF
+  then
+    reward=1
+  fi
+echo "$reward" > /logs/verifier/reward.txt

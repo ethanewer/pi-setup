@@ -1,0 +1,35 @@
+#!/bin/bash
+
+mkdir -p /logs/verifier
+
+reward=0
+if [ -f /app/elf_report.json ]; then
+  if python3 - <<'EOF'
+import json, struct
+with open('/app/binary.elf','rb') as f:
+    data = f.read()
+with open('/app/elf_report.json') as f:
+    r = json.load(f)
+
+# Recompute expected values from the same file.
+assert data[:4] == b'\x7fELF'
+elf_class = data[4]
+encoding = data[5]
+e_machine = struct.unpack_from('<H', data, 18)[0]
+e_entry = struct.unpack_from('<I', data, 24)[0]
+ehsize = struct.unpack_from('<H', data, 40)[0]
+
+expected = {
+    "is_mips": e_machine == 8,
+    "machine": e_machine,
+    "class": elf_class,
+    "endian": "little" if encoding == 1 else "big",
+    "entry": e_entry,
+    "ehsize": ehsize,
+}
+assert r == expected, (r, expected)
+EOF
+  then
+    reward=1
+  fi
+echo "$reward" > /logs/verifier/reward.txt

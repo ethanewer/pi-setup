@@ -1,0 +1,49 @@
+@prefix ex: <http://example.org/> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dc: <http://purl.org/dc/elements/1.1/> .
+
+ex:author1 rdf:type ex:Author ;
+           dc:name "Jane Smith" .
+
+ex:author2 rdf:type ex:Author ;
+           dc:name "John Doe" .
+
+ex:author3 rdf:type ex:Author ;
+           dc:name "Alice Johnson" .
+
+ex:book1 rdf:type ex:Book ;
+         dc:title "The Art of Programming" ;
+         dc:creator ex:author1 ;
+         ex:publicationYear 2020 ;
+         ex:language "en" .
+
+ex:book2 rdf:type ex:Book ;
+         dc:title "Data Structures Explained" ;
+         dc:creator ex:author1 ;
+         ex:publicationYear 2022 ;
+         ex:language "en" .
+
+ex:book3 rdf:type ex:Book ;
+         dc:title "Advanced Algorithms" ;
+         dc:creator ex:author2 ;
+         ex:publicationYear 2021 ;
+         ex:language "en" .
+
+ex:book4 rdf:type ex:Book ;
+         dc:title "Introduction to Python" ;
+         dc:creator ex:author1 ;
+         ex:publicationYear 2019 ;
+         ex:language "es" .
+
+ex:book5 rdf:type ex:Book ;
+         dc:title "Machine Learning Basics" ;
+         dc:creator ex:author3 ;
+         ex:publicationYear 2023 ;
+         ex:language "en" .
+
+ex:book6 rdf:type ex:Book ;
+         dc:title "Web Development Guide" ;
+         dc:creator ex:author2 ;
+         ex:publicationYear 2020 ;
+         ex:language "fr" .

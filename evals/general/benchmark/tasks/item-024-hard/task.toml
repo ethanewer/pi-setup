@@ -1,0 +1,18 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "hard"
+category = "security"
+tags = ["feal-like-round-functions", "differential-cryptanalysis", "chosen-plaintext-attacks", "known-plaintext-pairs", "linear-cryptanalysis", "xor-uint32-arithmetic", "bitwise-arithmetic", "c", "python", "item-024"]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 1800.0
+
+[environment]
+build_timeout_sec = 900.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096

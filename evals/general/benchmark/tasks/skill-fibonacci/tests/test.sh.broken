@@ -1,0 +1,19 @@
+#!/bin/bash
+reward=0
+if [ -f /app/fib.json ]; then
+  if python3 - <<'PYEOF'
+import json
+n = int(open('/app/n.txt').read().strip())
+a, b = 0, 1
+for _ in range(n):
+    a, b = b, a + b
+exp = {'n': n, 'value': a}
+got = json.load(open('/app/fib.json'))
+assert got == exp, (got, exp)
+PYEOF
+  then
+    reward=1
+  fi
+  then reward=1; else reward=0; fi
+else reward=0; fi
+echo "$reward" > /logs/verifier/reward.txt

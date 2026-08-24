@@ -1,0 +1,29 @@
+{
+  "nodes": [
+    {"id": "organism",    "name": "organism"},
+    {"id": "animal",      "name": "animal"},
+    {"id": "plant",       "name": "plant"},
+    {"id": "vertebrate",  "name": "vertebrate"},
+    {"id": "mammal",      "name": "mammal"},
+    {"id": "carnivora",   "name": "carnivora"},
+    {"id": "canidae",     "name": "canidae"},
+    {"id": "felidae",     "name": "felidae"},
+    {"id": "canis",       "name": "canis"},
+    {"id": "wolf",        "name": "gray wolf"},
+    {"id": "dog",         "name": "domestic dog"},
+    {"id": "tree",        "name": "tree"}
+  ],
+  "edges": [
+    {"child": "wolf",     "parent": "canis"},
+    {"child": "dog",      "parent": "canis"},
+    {"child": "canis",    "parent": "canidae"},
+    {"child": "canidae",  "parent": "carnivora"},
+    {"child": "felidae",  "parent": "carnivora"},
+    {"child": "carnivora","parent": "mammal"},
+    {"child": "mammal",   "parent": "vertebrate"},
+    {"child": "vertebrate","parent": "animal"},
+    {"child": "animal",   "parent": "organism"},
+    {"child": "plant",    "parent": "organism"},
+    {"child": "tree",     "parent": "plant"}
+  ]
+}

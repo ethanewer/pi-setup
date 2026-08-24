@@ -1,0 +1,66 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Sensor Data Schema",
+  "type": "object",
+  "required": ["metadata", "sensors", "aggregations", "errors"],
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "required": ["processed_count", "success_count", "error_count", "processing_time"],
+      "properties": {
+        "processed_count": {"type": "integer", "minimum": 0},
+        "success_count": {"type": "integer", "minimum": 0},
+        "error_count": {"type": "integer", "minimum": 0},
+        "processing_time": {"type": "number", "minimum": 0}
+      }
+    },
+    "sensors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["sensor_id", "unit", "readings"],
+        "properties": {
+          "sensor_id": {"type": "string", "pattern": "^sensor_\\d{3}$"},
+          "unit": {"type": "string", "enum": ["temperature", "humidity", "pressure", "fahrenheit"]},
+          "readings": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["timestamp", "value"],
+              "properties": {
+                "timestamp": {"type": "string", "format": "date-time"},
+                "value": {"type": "number"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "aggregations": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["mean", "min", "max", "count"],
+        "properties": {
+          "mean": {"type": "number"},
+          "min": {"type": "number"},
+          "max": {"type": "number"},
+          "std": {"type": "number"},
+          "count": {"type": "integer"}
+        }
+      }
+    },
+    "errors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["line", "error", "message"],
+        "properties": {
+          "line": {"type": "integer", "minimum": 1},
+          "error": {"type": "string"},
+          "message": {"type": "string"}
+        }
+      }
+    }
+  }
+}

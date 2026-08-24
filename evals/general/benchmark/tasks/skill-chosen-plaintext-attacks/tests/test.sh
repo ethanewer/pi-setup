@@ -1,0 +1,17 @@
+#!/bin/bash
+mkdir -p /logs/verifier
+reward=0
+if [ -f /app/flag.txt ]; then
+  if python3 - <<'EOF'
+import sys
+expected = b'cpa-oracle-chosen-plaintext-ok'
+got = open('/app/flag.txt', 'rb').read().strip()
+if got != expected:
+    sys.exit("flag mismatch")
+sys.exit(0)
+EOF
+  then
+    reward=1
+  fi
+fi
+echo "$reward" > /logs/verifier/reward.txt

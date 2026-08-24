@@ -1,0 +1,24 @@
+#!/bin/bash
+# Verifier for skill-rstan-2-32-7.
+set -uo pipefail
+mkdir -p /logs/verifier
+reward=0
+
+if [ -f /app/fit.r ]; then
+  Rscript /app/fit.r > /tmp/skillrstan.out 2>&1
+fi
+
+if [ -f /app/result.csv ]; then
+  if python3 - <<'PY'
+lines = [l.strip() for l in open("/app/result.csv") if l.strip()]
+# second line holds the mu value
+try:
+    val = float(lines[1])
+    assert abs(val - 10.0) <= 0.3, val
+except Exception:
+    raise SystemExit(1)
+PY && reward=1
+fi
+
+echo "$reward" > /logs/verifier/reward.txt
+echo "reward=$reward"

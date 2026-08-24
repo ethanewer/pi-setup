@@ -1,0 +1,19 @@
+#!/bin/bash
+mkdir -p /logs/verifier
+reward=0
+if [ -f /app/wires.json ]; then
+  if python3 - <<'EOF'
+import json, sys
+wires=json.load(open('/app/wires.json'))
+if int(wires.get("A"))!=1 or int(wires.get("B"))!=0: sys.exit("inputs")
+if int(wires.get("C")) != (0 and 0): sys.exit("C")
+if not (int(wires.get("D"))==1): sys.exit("D")
+if not (int(wires.get("E"))==1): sys.exit("E")
+C=int(wires.get("C")); D=int(wires.get("D"))
+if int(wires.get("F")) != (C ^ D): sys.exit("F")
+sys.exit(0)
+EOF
+  then
+    reward=1
+  fi
+echo "$reward" > /logs/verifier/reward.txt

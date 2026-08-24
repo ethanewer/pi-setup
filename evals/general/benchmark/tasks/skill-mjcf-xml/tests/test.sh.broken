@@ -1,0 +1,41 @@
+#!/bin/bash
+
+mkdir -p /logs/verifier
+reward=0
+if [ -f /app/report.txt ] && [ -f /app/model/pendulum.xml ]; then
+  if python3 - <<'EOF'
+import xml.etree.ElementTree as ET
+
+tree = ET.parse('/app/model/pendulum.xml')
+root = tree.getroot()
+
+assert root.tag == 'mujoco'
+joint_found = False
+geom_ok = False
+for body in root.iter('body'):
+    if body.get('name') == 'slider':
+        has_joint = False
+        has_geom = False
+        for child in body:
+            if child.tag == 'joint' and child.get('name') == 'j0':
+                has_joint = True
+                if child.get('type') != 'slide':
+                    raise AssertionError('joint type not slide: %r' % child.get('type'))
+            if child.tag == 'geom':
+                has_geom = True
+                gt = child.get('type')
+                if gt not in ('box', 'sphere', 'capsule'):
+                    raise AssertionError('unexpected geom type %r' % gt)
+        joint_found = joint_found or has_joint
+        geom_ok = has_geom
+assert joint_found, 'j0 joint not found under slider'
+assert geom_ok, 'no valid geom under slider'
+
+with open('/app/report.txt') as f:
+    content = f.read().strip()
+assert content == 'joint type slide', repr(content)
+EOF
+  then
+    reward=1
+  fi
+echo "$reward" > /logs/verifier/reward.txt

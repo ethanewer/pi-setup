@@ -1,0 +1,19 @@
+#!/bin/bash
+reward=0
+mkdir -p /logs/verifier
+if [ -f /app/normalization.txt ]; then
+  if python3 - <<'PYEOF'
+import numpy as np
+from PIL import Image
+a = np.asarray(Image.open('/app/img_norm.png').convert('L'), dtype=float)
+n = a / 255.0
+expected = format(float(n.mean()), '.4f')
+got = open('/app/normalization.txt').read().strip()
+assert got == expected, (got, expected)
+PYEOF
+  then
+    reward=1
+  fi
+  then reward=1; fi
+fi
+echo "$reward" > /logs/verifier/reward.txt

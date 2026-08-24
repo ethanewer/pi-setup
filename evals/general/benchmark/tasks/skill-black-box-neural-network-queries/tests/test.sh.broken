@@ -1,0 +1,23 @@
+#!/bin/bash
+reward=0
+if [ -f /app/classifications.txt ]; then
+  if python3 - <<'PYEOF'
+import sys
+sys.path.insert(0, '/app')
+from nn import predict
+points = []
+for ln in open('/app/test_points.txt'):
+    ln = ln.strip()
+    if ln:
+        x, y = ln.split()
+        points.append((int(x), int(y)))
+exp = [1 if predict(x, y) else 0 for (x, y) in points]
+got = [int(x) for x in open('/app/classifications.txt').read().split()]
+assert got == exp, (got, exp)
+PYEOF
+  then
+    reward=1
+  fi
+  then reward=1; fi
+else reward=0; fi
+echo "$reward" > /logs/verifier/reward.txt

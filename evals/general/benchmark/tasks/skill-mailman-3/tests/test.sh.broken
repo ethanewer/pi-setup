@@ -1,0 +1,18 @@
+#!/bin/bash
+mkdir -p /logs/verifier
+reward=0
+if [ -f /app/answer.json ]; then
+  if python3 - <<'EOF'
+import json, sys
+exp_route="A,C,B,D"
+exp_cost=13
+got=json.load(open('/app/answer.json'))
+r="".join(ch for ch in str(got.get("route","")).upper() if ch.isalpha())
+if r != exp_route: sys.exit("bad route")
+if int(got.get("total_distance",-1)) != exp_cost: sys.exit("bad cost")
+sys.exit(0)
+EOF
+  then
+    reward=1
+  fi
+echo "$reward" > /logs/verifier/reward.txt

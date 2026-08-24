@@ -1,0 +1,34 @@
+#!/bin/bash
+mkdir -p /logs/verifier
+reward=0
+if [ -f /app/traced.pt ] && [ -f /app/out.txt ]; then
+  if python3 - <<'PY'
+import torch, importlib.util
+
+x = torch.tensor([1.5, -2.0])
+
+# Cheap sanity: loading the file must give a ScriptModule (static graph).
+loaded = torch.jit.load('/app/traced.pt')
+assert isinstance(loaded, torch.jit.ScriptModule), type(loaded)
+
+# Reference model with the fixed weights.
+spec = importlib.util.spec_from_file_location('m', '/app/model.py')
+m = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(m)
+ref = m.Net()
+ref.load_state_dict(torch.load('/app/policy.pt', weights_only=False))
+ref.eval()
+expected = ref(x)
+
+# The traced static graph must compute the same thing as the reference model.
+traced_out = loaded(x)
+assert torch.allclose(traced_out, expected, atol=1e-5), (traced_out, expected)
+
+lines = [ln.strip() for ln in open('/app/out.txt') if ln.strip()]
+assert len(lines) == 2, lines
+got = torch.tensor([float(lines[0]), float(lines[1])])
+assert torch.allclose(got, expected, atol=1e-5), (got, expected)
+PY && reward=1
+fi
+fi
+echo "$reward" > /logs/verifier/reward.txt

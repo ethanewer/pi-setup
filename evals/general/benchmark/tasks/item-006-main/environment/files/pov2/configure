@@ -1,0 +1,13 @@
+#!/bin/sh
+# Legacy configure script (POV-Ray-2.2-era, hand-rolled autoconf stand-in).
+# Detects the C++ compiler and emits Makefile from Makefile.in.
+CXX=g++
+: ${CXX:=g++}
+if command -v g++ >/dev/null 2>&1; then
+    CXX=g++
+elif command -v c++ >/dev/null 2>&1; then
+    CXX=c++
+fi
+sed -e "s/@CXX@/$CXX/" Makefile.in > Makefile
+echo "configure: using CXX=$CXX"
+echo "configure: done"

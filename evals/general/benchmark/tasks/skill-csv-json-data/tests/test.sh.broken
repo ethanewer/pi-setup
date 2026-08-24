@@ -1,0 +1,21 @@
+#!/bin/bash
+reward=0
+mkdir -p /logs/verifier
+if [ -f /app/output.json ]; then
+  if python3 - <<'PYEOF'
+import csv, json
+
+rows = []
+with open('/app/data.csv', newline='') as f:
+    for d in csv.DictReader(f):
+        rows.append({"id": d['id'], "name": d['name'],
+                     "role": d['role'], "years": int(d['years'])})
+expected = json.dumps(rows, sort_keys=True)
+got = open('/app/output.json').read()
+got_norm = json.dumps(json.loads(got), sort_keys=True)
+assert got_norm == expected, ('mismatch', got_norm, expected)
+PYEOF
+  then
+    reward=1
+  fi
+echo "$reward" > /logs/verifier/reward.txt

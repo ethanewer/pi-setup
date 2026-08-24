@@ -1,0 +1,131 @@
+#!/bin/bash
+# Verifier for item-070-hard. All checks re-run here from a neutral directory.
+mkdir -p /logs/verifier
+
+reward=0
+
+cd /tmp
+PATH_OK=0
+BEHAVIOR_OK=0
+DOT_OK=0
+IMPORT_OK=0
+LIB_OK=0
+GCOV_OK=0
+RECORDED_OK=0
+REGEN_OK=0
+SHA_OK=0
+
+# --- PATH + basic behavior probes
+if command -v sqlite3 >/dev/null 2>&1; then
+  PATH_OK=1
+  v=$(sqlite3 :memory: "select sqlite_version();" 2>/dev/null)
+  j=$(sqlite3 :memory: "select json_extract('{\"a\":7}','\$.a');" 2>/dev/null)
+  f=$(sqlite3 :memory: "CREATE VIRTUAL TABLE t USING fts5(c); INSERT INTO t VALUES ('one'),('two'); SELECT count(*) FROM t WHERE t MATCH 'one OR two';" 2>/dev/null)
+  m=$(sqlite3 :memory: "select round(sin(0.0),4), round(cos(0.0),4);" 2>/dev/null)
+  if [ "$v" = "3.46.1" ] && [ "$j" = "7" ] && [ "$f" = "2" ] && [ "$m" = "0.0|1.0" ]; then
+    BEHAVIOR_OK=1
+  fi
+fi
+
+# --- dot-command + CSV-import probes
+if [ "$PATH_OK" = "1" ]; then
+  rm -f /tmp/vh.db
+  sqlite3 /tmp/vh.db < /app/data/corpus-hard.sql >/dev/null 2>&1 || true
+  TABLES=$(sqlite3 /tmp/vh.db ".tables" 2>/dev/null)
+  SCHEMA=$(sqlite3 /tmp/vh.db ".schema users" 2>/dev/null)
+  if echo "$TABLES" | grep -q users && echo "$TABLES" | grep -q docs \
+     && echo "$SCHEMA" | grep -q "CREATE TABLE users"; then
+    DOT_OK=1
+  fi
+  sqlite3 /tmp/vh.db "CREATE TABLE IF NOT EXISTS imported(id INTEGER, name TEXT, score REAL);" >/dev/null 2>&1
+  if sqlite3 /tmp/vh.db ".import --csv /app/data/import.csv imported" >/dev/null 2>&1; then
+    cnt=$(sqlite3 /tmp/vh.db "SELECT count(*) FROM imported;" 2>/dev/null)
+    [ "$cnt" = "3" ] && IMPORT_OK=1
+  fi
+fi
+
+# static library installed
+[ -f /usr/local/lib/libsqlite3.a ] && LIB_OK=1
+
+# --- coverage: re-run gcov and parse %
+pct=""
+BUILD=/app/src/sqlite-autoconf-3460100
+if [ -d "$BUILD" ] && [ -f "$BUILD/sqlite3-sqlite3.gcda" ] && command -v gcov >/dev/null 2>&1; then
+  if (cd "$BUILD" && gcov -n -o sqlite3-sqlite3.o sqlite3.c > /tmp/gcov_verify.txt 2>&1); then
+    LINE=$(grep -oE "Lines executed:[0-9.]+% of [0-9]+" /tmp/gcov_verify.txt | head -1)
+    if [ -n "$LINE" ]; then
+      pct=$(echo "$LINE" | sed -E 's/Lines executed:([0-9.]+)% of ([0-9]+)/\1/')
+      if python3 - "$pct" <<'PY'
+import sys
+sys.exit(0 if float(sys.argv[1]) >= 20.0 else 1)
+PY
+      then
+        reward=1
+      fi
+      then GCOV_OK=1; fi
+    fi
+  fi
+fi
+
+# --- regeneration proof + artifact contract
+if [ -f "$BUILD/configure" ] && [ -f "$BUILD/configure.ac" ] && [ "$BUILD/configure" -nt "$BUILD/configure.ac" ]; then
+  REGEN_OK=1
+fi
+
+if [ -f /app/artifacts/report.json ] && [ "$GCOV_OK" = "1" ]; then
+  if python3 - "$pct" <<'PY'
+import json, re, sys, hashlib
+pct = float(sys.argv[1])
+rep = json.load(open("/app/artifacts/report.json"))
+assert rep.get("sqlite_version") == "3.46.1", "version"
+assert rep.get("build_dir") == "/app/src/sqlite-autoconf-3460100", "build dir"
+assert rep.get("regeneration") == "autoreconf -fi", "regen marker"
+assert rep.get("configure_command") == "./configure --prefix=/usr/local --disable-shared --enable-static", "configure"
+cflags = rep.get("cflags", "")
+assert "--coverage" in cflags and "SQLITE_ENABLE_FTS5" in cflags, "cflags"
+beh = rep.get("behavior_checks", {})
+assert all(beh.get(k) is True for k in
+           ("version_matches","json_ok","fts5_ok","math_ok","dot_commands_ok","import_csv_ok")), "behavior"
+assert rep.get("path_install_ok") is True, "path"
+
+agent_pct = float(rep["gcov_lines_executed_pct"])
+agent_tot = int(rep["gcov_total_lines"])
+summ = open("/app/artifacts/coverage-summary.txt").read()
+mm = re.search(r"Lines executed:([0-9.]+)% of ([0-9]+)", summ)
+assert mm, "summary missing"
+assert abs(float(mm.group(1)) - agent_pct) < 0.05, "summary pct mismatch"
+assert int(mm.group(2)) == agent_tot, "summary total mismatch"
+
+# vendor tarball sha
+h = hashlib.sha256(open("/app/src/sqlite-autoconf-3460100-nocfg.tar.gz","rb").read()).hexdigest()
+assert rep.get("vendor_tarball_sha256") == h, "vendor sha"
+
+# sqlite3.c sha (vendored exactness)
+h3 = hashlib.sha256(open("/app/src/sqlite-autoconf-3460100/sqlite3.c","rb").read()).hexdigest()
+assert rep.get("sqlite3_c_sha256") == h3, "sqlite3.c sha"
+assert h3 == "6c35bc5f7f85eac9c49928bacbb02bb694b547aabf69197e058cca245ad80e83", "canonical sqlite3.c"
+
+assert abs(pct - agent_pct) <= 3.0, ("coverage drift", pct, agent_pct)
+print("ok")
+PY
+  then
+    reward=1
+  fi
+  then RECORDED_OK=1; fi
+fi
+
+# --- vendor tarball sha independent (belt & braces)
+if [ -f /app/src/sqlite-autoconf-3460100-nocfg.tar.gz ]; then
+  if [ "$(shasum -a 256 /app/src/sqlite-autoconf-3460100-nocfg.tar.gz | awk '{print $1}')" = \
+       "d1fc5e3d1e0f78273d319eacb4cc2ffde428904c3445cff1fbe127becc1bfc54" ]; then
+    SHA_OK=1
+  fi
+fi
+
+if [ "$PATH_OK" = "1" ] && [ "$BEHAVIOR_OK" = "1" ] && [ "$DOT_OK" = "1" ] \
+   && [ "$IMPORT_OK" = "1" ] && [ "$LIB_OK" = "1" ] && [ "$GCOV_OK" = "1" ] \
+   && [ "$RECORDED_OK" = "1" ] && [ "$REGEN_OK" = "1" ] && [ "$SHA_OK" = "1" ]; then
+  reward=1
+fi
+
+echo "$reward" > /logs/verifier/reward.txt

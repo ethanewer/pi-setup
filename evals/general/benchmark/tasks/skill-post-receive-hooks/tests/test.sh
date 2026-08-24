@@ -1,0 +1,33 @@
+#!/bin/bash
+mkdir -p /logs/verifier
+APP="${TASK_APP:-/app}"
+reward=0
+
+bare_ok=0
+if [ -d "$APP/repo.git" ]; then
+  rv=$(git --git-dir="$APP/repo.git" rev-parse --is-bare-repository 2>/dev/null | tr -d ' \n')
+  if [ "$rv" = "true" ]; then
+    bare_ok=1
+  fi
+fi
+
+if [ "$bare_ok" = "1" ] && [ -f "$APP/repo.git/hooks/post-receive" ] && [ -x "$APP/repo.git/hooks/post-receive" ]; then
+  rm -f "$APP/hook.log"
+  rm -rf /tmp/pushsrc
+  mkdir -p /tmp/pushsrc
+  git init -q /tmp/pushsrc
+  git -C /tmp/pushsrc config user.email "agent@example.com"
+  git -C /tmp/pushsrc config user.name "agent"
+  echo "test content" > /tmp/pushsrc/f
+  git -C /tmp/pushsrc add f
+  git -C /tmp/pushsrc commit -q -m "test commit"
+  git -C /tmp/pushsrc remote add origin "$APP/repo.git" 2>/dev/null || git -C /tmp/pushsrc remote set-url origin "$APP/repo.git"
+  git -C /tmp/pushsrc push -q origin HEAD 2> /dev/null
+  sleep 0.6
+  if [ -f "$APP/hook.log" ]; then
+    if grep -q 'push_received' "$APP/hook.log" && grep -qE 'refs/heads/[A-Za-z0-9_.-]+' "$APP/hook.log"; then
+      reward=1
+    fi
+  fi
+fi
+printf '%s' "$reward" > /logs/verifier/reward.txt

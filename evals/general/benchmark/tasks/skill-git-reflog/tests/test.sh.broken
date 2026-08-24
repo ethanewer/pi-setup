@@ -1,0 +1,30 @@
+#!/bin/bash
+mkdir -p /logs/verifier
+reward=0
+if [ -f /app/recovered.txt ]; then
+  if python3 - <<'PYEOF'
+import subprocess, sys
+repo = "/app/repo"
+def run(args):
+    return subprocess.run(args, capture_output=True, text=True, cwd=repo)
+ids = set()
+for line in run(["git","reflog","--all"]).stdout.splitlines():
+    if line.split():
+        ids.add(line.split()[0])
+expected = None
+for i in sorted(ids):
+    if run(["git","cat-file","-e",i+"^{commit}"]).returncode != 0:
+        continue
+    v = run(["git","show",i+":secret.txt"])
+    if v.returncode == 0 and v.stdout.strip():
+        expected = v.stdout.rstrip("\n")
+        break
+if not expected:
+    sys.exit(1)
+got = open("/app/recovered.txt").read().rstrip("\n")
+sys.exit(0 if got == expected else 1)
+PYEOF
+  then
+    reward=1
+  fi
+echo "$reward" > /logs/verifier/reward.txt

@@ -1,0 +1,17 @@
+#!/bin/bash
+mkdir -p /logs/verifier
+reward=0
+if [ -f /app/result.txt ]; then
+  if python3 - <<'PYEOF'
+import re
+content = open('/app/result.txt').read().strip()
+m = re.search(r'mu_mean=\s*(-?[0-9]+(\.[0-9]+)?)', content)
+assert m, content
+mu = float(m.group(1))
+assert abs(mu - 10.0) <= 0.3, mu
+PYEOF
+then
+    reward=1
+  fi
+fi
+echo "$reward" > /logs/verifier/reward.txt

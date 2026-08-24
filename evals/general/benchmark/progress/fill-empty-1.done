@@ -1,0 +1,5 @@
+skill-rsa-2048	created: openssl RSA-2048 OAEP encrypt message.txt with public.pem; verifier decrypts with private key and compares plaintext
+skill-smtp	created: python email.message build raw RFC5322 message to /app/message.eml; verifier parses headers + body
+skill-text-processing	created: python word/line counter from /app/input.txt -> summary.json; verifier recomputes
+item-038-main	created: FIFO single-CPU queue schedule simulation (python) -> schedule.json; verifier recomputes expected schedule + metrics
+item-061-hard	created: long-lived TCP line-echo serial-console server + client; verifier starts server, runs client, checks "PING"

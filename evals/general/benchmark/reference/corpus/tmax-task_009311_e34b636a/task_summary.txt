@@ -1,0 +1,95 @@
+Task: task_009311_e34b636a
+Domain: data_science
+Skill Type: Data Processing
+Primitive Skills: Model training and evaluation, Model architecture reconstruction and inference, Hypothesis testing and confidence intervals
+Task Complexity: short task (a few shell commands focused on the core task)
+Command Complexity: bash-only (shell built-ins, coreutils, and standard CLI tools)
+Scenario: machine learning engineer preparing training data
+
+============================================================
+DESCRIPTION
+============================================================
+
+You are acting as a machine learning engineer preparing a training dataset. We have a raw dataset `/home/user/raw_data.csv` containing four columns: `id,f1,f2,f3` (all floats except `id` which is an integer).
+
+We previously trained a simple linear regression model to predict a quality score $y$ from these features. The model weights are:
+- Intercept (bias): 2.0
+- w1 (for f1): 0.5
+- w2 (for f2): -1.2
+- w3 (for f3): 0.8
+
+Your task is to write a C program `/home/user/filter_data.c` that performs the following steps:
+1. Reconstructs this model architecture (calculates $y = bias + w_1f_1 + w_2f_2 + w_3f_3$).
+2. Reads the CSV file (skipping the header row) and computes the predicted score $y$ for each row.
+3. Filters the dataset: keeps only the rows where $y > 0.0$.
+4. Writes the kept rows to `/home/user/filtered_data.csv` with the format `id,f1,f2,f3,y` (include a header `id,f1,f2,f3,y` and format floats to 4 decimal places).
+5. Calculates the 95% Confidence Interval for the mean of the predicted scores ($y$) of the *filtered* rows. Use the large-sample approximation ($Z = 1.96$).
+   - $Mean = \sum y / N$
+   - $Variance = \sum (y - Mean)^2 / (N - 1)$
+   - $Standard Error = \sqrt{Variance} / \sqrt{N}$
+   - $Lower = Mean - 1.96 \times Standard Error$
+   - $Upper = Mean + 1.96 \times Standard Error$
+6. Writes these statistics to `/home/user/stats.txt` in exactly this format (floats to 4 decimal places):
+```
+Mean: <mean>
+CI_Lower: <lower>
+CI_Upper: <upper>
+```
+
+Compile your code using `gcc /home/user/filter_data.c -o /home/user/filter_data -lm` and execute it to generate the required output files.
+
+============================================================
+GROUND TRUTH
+============================================================
+
+Setup script to create the environment and dataset:
+```bash
+cat << 'EOF' > /tmp/setup.py
+import csv
+import random
+
+random.seed(42)
+with open("/home/user/raw_data.csv", "w", newline="") as f:
+    writer = csv.writer(f)
+    writer.writerow(["id", "f1", "f2", "f3"])
+    for i in range(1, 1001):
+        f1 = random.uniform(0, 10)
+        f2 = random.uniform(0, 10)
+        f3 = random.uniform(0, 10)
+        writer.writerow([i, f"{f1:.4f}", f"{f2:.4f}", f"{f3:.4f}"])
+EOF
+python3 /tmp/setup.py
+```
+
+Expected values validation script:
+```python
+import pandas as pd
+import numpy as np
+import math
+
+df = pd.read_csv("/home/user/raw_data.csv")
+df['y'] = 2.0 + 0.5 * df['f1'] - 1.2 * df['f2'] + 0.8 * df['f3']
+filtered = df[df['y'] > 0.0].copy()
+
+n = len(filtered)
+mean_y = filtered['y'].mean()
+var_y = filtered['y'].var(ddof=1)
+se_y = math.sqrt(var_y) / math.sqrt(n)
+
+lower = mean_y - 1.96 * se_y
+upper = mean_y + 1.96 * se_y
+
+print(f"Mean: {mean_y:.4f}")
+print(f"CI_Lower: {lower:.4f}")
+print(f"CI_Upper: {upper:.4f}")
+```
+
+Verification involves checking if `/home/user/stats.txt` contains the correct values derived from the exact generated data, and checking that `/home/user/filtered_data.csv` matches the expected filtered output (with 4 decimal precision).
+
+Expected `stats.txt` contents (based on the Python seed above):
+```
+Mean: 2.3736
+CI_Lower: 2.2274
+CI_Upper: 2.5197
+```
+*(Exact values depend on Python's float formatting but standard deviation calculation using N-1 must match).*

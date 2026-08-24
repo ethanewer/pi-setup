@@ -1,0 +1,14 @@
+#!/bin/bash
+mkdir -p /logs/verifier
+reward=0
+if [ -f /app/pty_out.txt ]; then
+  if python3 - <<'PYEOF'
+expected = b'line one\nline two\nline three\n'
+raw = open('/app/pty_out.txt', 'rb').read()
+normalized = raw.replace(b'\r\n', b'\n')
+assert normalized == expected, (normalized, expected)
+PYEOF
+  then
+    reward=1
+  fi
+echo "$reward" > /logs/verifier/reward.txt

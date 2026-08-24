@@ -1,0 +1,25 @@
+#!/bin/bash
+mkdir -p /logs/verifier
+reward=0
+if [ -f /app/proof.txt ]; then
+  if python3 - <<'PYEOF'
+import sys
+
+# The package must be importable (i.e. agent really installed it)
+try:
+    import pipysample
+except Exception:
+    sys.exit('pipysample not importable')
+
+expected = pipysample.greet('world') + ';' + str(pipysample.VALUE + 1)
+got = open('/app/proof.txt').read().strip()
+assert got == expected, (got, expected)
+
+# Also check the metadata version to ensure it was installed, not copied
+from importlib.metadata import version
+assert version('pipysample') == '1.0.0', version('pipysample')
+PYEOF
+  then
+    reward=1
+  fi
+echo "$reward" > /logs/verifier/reward.txt

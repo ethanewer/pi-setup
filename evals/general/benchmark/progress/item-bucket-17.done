@@ -1,0 +1,6 @@
+item-058-main	Coq arithmetic: complete proofs for plus_n_O/plus_n_Sm/add_comm via Peano induction; verifier compiles with coqc, forbids Require/Admitted/Axiom, checks 3 decls in order.
+item-058-hard	Coq arithmetic: 5-lemma sequence (plus_n_O/plus_n_Sm/comm/plus_assoc/final_goal); final via induction with careful single-occurrence rewrite; verifier enforces exact decl set and no cheating tokens.
+item-059-main	pypiserver: build demo wheel, verify METADATA in isolation, serve over PEP503 index, install from clean venv via pip --index-url; rewards 1 if reachable at verify else 0.5 when artifacts correct.
+item-059-hard	pypiserver/versioning: build+serve 1.0.0 and 1.0.1, pinned clean-env installs, negative-version rejection; rewards 1 if server reachable, 0.5 partial.
+item-060-main	PyTorch: infer MiniTransformer config from state_dict shapes, freeze to head-only, fine-tune, save finetuned.pt+report; verifier compares frozen-vs-base equality + head changed.
+item-060-hard	PyTorch deep: infer 3-layer config, freeze last block+head only, fine-tune; verifier checks every non-allowed param bit-identical, all allowed changed, report exact counts.

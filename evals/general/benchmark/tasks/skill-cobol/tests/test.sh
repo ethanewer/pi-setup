@@ -1,0 +1,16 @@
+#!/bin/bash
+mkdir -p /logs/verifier
+reward=0
+if [ -f /app/answer.txt ]; then
+  if python3 - <<'EOF'
+import sys
+got = open('/app/answer.txt').read().strip()
+if got != "10":
+    sys.exit("expected 10, got %r" % got)
+sys.exit(0)
+EOF
+  then
+    reward=1
+  fi
+fi
+echo "$reward" > /logs/verifier/reward.txt

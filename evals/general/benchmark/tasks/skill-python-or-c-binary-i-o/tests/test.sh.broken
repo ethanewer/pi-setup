@@ -1,0 +1,17 @@
+#!/bin/bash
+mkdir -p /logs/verifier
+reward=0
+if [ -f /app/sum.txt ] && [ -f /app/numbers.bin ]; then
+  if python3 - <<'PY'
+import struct
+data=open('/app/numbers.bin','rb').read()
+vals=struct.unpack('<%di' % (len(data)//4), data)
+expected=str(sum(vals))
+got=open('/app/sum.txt').read().strip()
+if got==expected:
+    print("PASS"); exit(0)
+print("FAIL got=%r expected=%r"%(got,expected)); exit(1)
+PY && reward=1
+fi
+fi
+echo "$reward" > /logs/verifier/reward.txt

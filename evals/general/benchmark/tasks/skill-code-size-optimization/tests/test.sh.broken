@@ -1,0 +1,19 @@
+#!/bin/bash
+mkdir -p /logs/verifier
+reward=0
+if [ -f /app/one.py ]; then
+  if python3 - <<'EOF'
+import subprocess,sys,os
+size=len(open('/app/one.py','rb').read().rstrip())
+if size>75: sys.exit("too big: %d bytes"%size)
+n=open('/app/numbers.txt').read().strip()
+exp=sum(int(c) for c in n)
+r=subprocess.run(["python3","/app/one.py"],cwd="/app",capture_output=True,text=True)
+if r.returncode!=0: sys.exit("script failed: "+r.stderr)
+if r.stdout.strip()!=str(exp): sys.exit("output %r != %r"%(r.stdout.strip(),exp))
+sys.exit(0)
+EOF
+  then
+    reward=1
+  fi
+echo "$reward" > /logs/verifier/reward.txt

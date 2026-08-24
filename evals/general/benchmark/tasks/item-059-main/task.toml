@@ -1,0 +1,18 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "medium"
+category = "system_administration"
+tags = ["item-059", "python-packaging", "build-wheel-metadata", "pep-503-package-index", "pypiserver", "pip-index-url", "http", "validate-packaging-separately-from-serving", "test-install-from-clean-environment", "check-service-reachability-and-versions"]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 1800.0
+
+[environment]
+build_timeout_sec = 900.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096

@@ -1,0 +1,22 @@
+#!/bin/bash
+mkdir -p /logs/verifier
+reward=0
+if [ -f /app/answer.tex ]; then
+  if python3 - <<'EOF'
+import re, sys
+s = open('/app/answer.tex').read()
+norm = re.sub(r'\s+', '', s)
+checks = ['\\documentclass', '\\begin{document}', '\\end{document}',
+          'g(x)=\\frac{x}{2}+1', '\\[', '\\]']
+for c in checks:
+    if c not in norm:
+        sys.exit('missing ' + c)
+sys.exit(0)
+EOF
+  then
+    reward=1
+  fi
+  then reward=1
+  fi
+fi
+echo "$reward" > /logs/verifier/reward.txt

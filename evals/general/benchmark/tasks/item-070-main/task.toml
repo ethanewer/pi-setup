@@ -1,0 +1,18 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "medium"
+category = "programming"
+tags = ["item-070", "sqlite-source-build", "c", "autoconf-make", "gcov-instrumentation", "path-installation", "vendored-source", "compiler-flags", "behavior-and-coverage-verification"]
+
+[verifier]
+timeout_sec = 600.0
+
+[agent]
+timeout_sec = 1800.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 2
+memory_mb = 2048
+storage_mb = 4096

@@ -1,0 +1,14 @@
+#!/bin/sh
+# minimal autotools-style configure: emits defs.h in the cwd
+feature="none"
+opt="0"
+for arg in "$@"; do
+  case "$arg" in
+    --with-feature=*) feature=${arg#*=} ;;
+    --enable-opt=*)   opt=${arg#*=} ;;
+  esac
+done
+{
+  echo "#define WITH_FEATURE ${feature}"
+  echo "#define ENABLE_OPT  ${opt}"
+} > defs.h

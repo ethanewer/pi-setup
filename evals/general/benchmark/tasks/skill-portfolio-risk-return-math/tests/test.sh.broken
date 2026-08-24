@@ -1,0 +1,27 @@
+#!/bin/bash
+mkdir -p /logs/verifier
+APP="${TASK_APP:-/app}"
+reward=0
+if [ -f "$APP/result.txt" ]; then
+  if /usr/bin/env python3 - "$APP" <<'PY'
+import sys, csv
+app = sys.argv[1]
+rows = {}
+for r in csv.DictReader(open(app + '/assets.csv')):
+    rows[r['asset']] = (float(r['expected_return']), float(r['stddev']))
+ra, sa = rows['A']
+rb, sb = rows['B']
+rho, wa, wb = 0.30, 0.60, 0.40
+er = wa*ra + wb*rb
+vr = wa*wa*sa*sa + wb*wb*sb*sb + 2*wa*wb*rho*sa*sb
+try:
+    lines = open(app + '/result.txt').read().strip().split()
+    g = [float(x) for x in lines[:2]]
+except Exception:
+    sys.exit(1)
+ok = len(g) >= 2 and abs(g[0]-er) < 0.0006 and abs(g[1]-vr) < 0.0006
+sys.exit(0 if ok else 1)
+PY && reward=1
+fi
+fi
+printf '%s' "$reward" > /logs/verifier/reward.txt

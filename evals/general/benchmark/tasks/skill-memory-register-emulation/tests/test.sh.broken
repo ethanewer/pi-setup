@@ -1,0 +1,16 @@
+#!/bin/bash
+mkdir -p /logs/verifier
+reward=0
+if [ -f /app/reg.json ]; then
+  if python3 - <<'EOF'
+import json, sys
+exp={"R0":3,"R1":12,"R2":12,"R3":7}
+got=json.load(open('/app/reg.json'))
+for k,v in exp.items():
+    if int(got.get(k,-1)) != v: sys.exit("bad %s" % k)
+sys.exit(0)
+EOF
+  then
+    reward=1
+  fi
+echo "$reward" > /logs/verifier/reward.txt

@@ -1,0 +1,18 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "hard"
+category = "data_science"
+tags = ["item-060", "pytorch", "state-dict-shape-inference", "transformer-architecture", "fine-tuning", "torch-serialization", "infer-architecture-from-evidence", "freeze-exactly-the-requested-parameters", "check-training-and-evaluation-behavior"]
+
+[verifier]
+timeout_sec = 600.0
+
+[agent]
+timeout_sec = 2400.0
+
+[environment]
+build_timeout_sec = 1800.0
+cpus = 2
+memory_mb = 4096
+storage_mb = 8192

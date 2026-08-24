@@ -1,0 +1,1 @@
+from ._core import _dotprod, _linspace, _double_scalar

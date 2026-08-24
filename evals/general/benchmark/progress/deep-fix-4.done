@@ -1,0 +1,11 @@
+skill-custom-decompressor fixed: heredoc terminator EOF->PYEOF in solve.sh
+skill-hierarchical-bayesian-modeling fixed: test.sh never set reward from checker result; wrapped in if/python
+skill-gcov-instrumentation fixed: gcc -fprofile-arcs did not emit .gcno (need -ftest-coverage -fprofile-arcs + exe basename==source); reworked Makefile+instruction+test to capture gcov's printed file summary
+skill-regex-escaping fixed: solve.sh invoked /app/esc.py without creating it; now writes esc.py then runs
+skill-rdf-turtle fixed: solve.sh invoked /app/turtle.py without creating it; now writes turtle.py then runs
+skill-pipeline-parallelism fixed: multiprocessing spawn from stdin crashed on <stdin>; switched context to fork
+item-053-hard fixed: Dockerfile attempted to apt install nonexistent 'hexdump' package; removed it
+skill-c-c-extension-build fixed: heredoc-in-docker RUN broke parser; copied C/C++ sources via files/native + COPY; extern C around libcalc.h include fixed C++ mangling
+item-052-main fixed: source tex lacked trailing newline so solve.sh while-read dropped \end{document}; added trailing newline to env files and tests/original.tex; also fixed grep -c '|| echo 0' bugs in test.sh
+item-027-main fixed: Dockerfile never ran git init (config outside repo -> exit 128); added git init -q -b main
+item-005-main fixed: source tarball shipped stale pmars.o that linker rejected; solve.sh now runs make clean then make -B all

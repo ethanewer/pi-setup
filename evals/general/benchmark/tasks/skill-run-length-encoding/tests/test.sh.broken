@@ -1,0 +1,30 @@
+#!/bin/bash
+mkdir -p /logs/verifier
+reward=0
+if [ -f /app/encoded.txt ]; then
+  if python3 - <<'PY'
+import sys
+
+s = open('/app/input.txt').read().strip()
+# independent run-length encoding
+out = []
+i = 0
+while i < len(s):
+    j = i
+    while j < len(s) and s[j] == s[i]:
+        j += 1
+    out.append(s[i] + str(j - i))
+    i = j
+expected = ''.join(out)
+got = open('/app/encoded.txt').read().strip()
+if got == expected:
+    sys.exit(0)
+print("FAIL got=%r expected=%r" % (got, expected))
+sys.exit(1)
+PY
+  then
+    reward=1
+  fi
+  then reward=1; fi
+fi
+echo "$reward" > /logs/verifier/reward.txt

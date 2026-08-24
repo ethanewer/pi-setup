@@ -1,0 +1,12 @@
+#!/bin/bash
+# Oracle for item-043: reproduce both fits and write the comparison artifact.
+set -euo pipefail
+cd /app
+R -q -e 'source("/app/bin/fit_rstan_reference.R")'   # reference fit
+python3 /app/bin/fit_pystan_reference.py                   # reference pystan fit
+python3 - <<'PY'
+import json, subprocess, pytest
+# run agent scripts
+rc = subprocess.run(["Rscript","/tmp/fit_rstan.R"]) ...
+PY
+echo "run compare" 

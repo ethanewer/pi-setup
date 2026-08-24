@@ -1,0 +1,21 @@
+#!/bin/bash
+reward=0
+mkdir -p /logs/verifier
+if [ -f /app/cosine_similarity.txt ]; then
+  if python3 - <<'PYEOF'
+import numpy as np
+from PIL import Image
+def vec(path):
+    return np.asarray(Image.open(path).convert('L'), dtype=float).flatten()
+a = vec('/app/img_a.png')
+b = vec('/app/img_b.png')
+expected = format(float(np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))), '.4f')
+got = open('/app/cosine_similarity.txt').read().strip()
+assert got == expected, (got, expected)
+PYEOF
+  then
+    reward=1
+  fi
+  then reward=1; fi
+fi
+echo "$reward" > /logs/verifier/reward.txt

@@ -1,0 +1,26 @@
+#!/bin/bash
+mkdir -p /logs/verifier
+reward=0
+if [ -f /app/out.txt ]; then
+  if python3 - <<'PY'
+import sys
+rows = []
+for line in open('/app/names.txt'):
+    line = line.strip()
+    if not line:
+        continue
+    name, val = line.split('=')
+    if int(val) % 2 == 0:
+        rows.append((name, int(val)))
+rows.sort(key=lambda t: t[0])
+expected = ''.join('%s:%d\n' % (n, v) for n, v in rows)
+got = open('/app/out.txt', 'r').read()
+if got == expected:
+    print("PASS"); sys.exit(0)
+print("FAIL\n---expected---\n%r\n---got---\n%r" % (expected, got)); sys.exit(1)
+PY
+  then
+    reward=1
+  fi
+fi
+echo "$reward" > /logs/verifier/reward.txt

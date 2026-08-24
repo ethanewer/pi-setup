@@ -1,0 +1,16 @@
+#!/bin/bash
+reward=0
+mkdir -p /logs/verifier
+if [ -f /app/filtered.json ]; then
+  if python3 - <<'PYEOF'
+import json
+with open('/app/dataset.json') as f:
+    data = json.load(f)
+expected = [r for r in data if r['in_stock'] is True and r['price'] <= 50.0 and r['category'] != 'food']
+got = json.load(open('/app/filtered.json'))
+assert json.dumps(got, sort_keys=True) == json.dumps(expected, sort_keys=True), (got, expected)
+PYEOF
+  then
+    reward=1
+  fi
+echo "$reward" > /logs/verifier/reward.txt

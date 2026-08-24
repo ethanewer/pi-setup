@@ -1,0 +1,21 @@
+{
+    "name": "task_004625_097e8ea5",
+    "domain": "file_operations",
+    "skill_type": "Archives",
+    "primitive_skills": [
+        "Domain-specific format parsing (GCode, ELF, WAL)",
+        "File locking and concurrent access",
+        "Multi-line log record parsing"
+    ],
+    "task_complexity": "intricate task (multi-stage workflow combining (a) environment setup or package configuration, (b) primary implementation across multiple files or languages, (c) iterative refinement against a quantitative or adversarial verifier, and (d) a final integration step. Expect 30-60 commands.)",
+    "command_complexity": "bash and code (shell commands and writing/running scripts in Python, Perl, Ruby, etc.)",
+    "scenario": "technical writer organizing documentation",
+    "language": "Python",
+    "anchor": null,
+    "verifier_kind": "adversarial_corpus",
+    "fixture_kind": "video",
+    "corpus_kind": "rl_v2",
+    "base_image": "intricate",
+    "description": "You are assisting a technical writer in preparing a documentation package for open-source release. The documentation consists of various debug logs that contain interleaved snippets of GCode, ELF binary headers, and SQLite WAL (Write-Ahead Log) excerpts.\n\nOur company policy requires that no proprietary information is leaked in these logs. You need to create a Python script at `/home/user/sanitizer.py` that acts as a classifier/detector for these logs.\n\n**Requirements for `/home/user/sanitizer.py`:**\n1. **Invocation:** The script must take exactly one argument: the absolute path to a log file.\n   `python3 /home/user/sanitizer.py <filepath>`\n2. **Classification:** It must parse the multi-line log records and **reject** (exit with code 1) the file if it contains ANY of the following proprietary markers:\n   - Proprietary GCode: Any `M` command in the range `M8000` to `M8999` inclusive.\n   - Forbidden ELF sections: An ELF section dump that mentions our proprietary section name. You must discover this specific section name by analyzing the video artifact located at `/app/tutorial.mp4`. The name is clearly visible in a terminal window shown around the 2-second mark of the video. (Hint: you can use `ffmpeg` and `tesseract` to extract and read it).\n   - Proprietary WAL entries: Any WAL excerpt containing the exact string `\"PROPRIETARY_TX\"`.\n   If the file contains none of these, it must be considered **clean** and the script must exit with code 0.\n3. **Audit Logging & Concurrency:** Regardless of the outcome, the script must append exactly one line to `/home/user/audit.log` in the following format:\n   `[<ISO8601_TIMESTAMP>] <filepath> <REJECTED|CLEAN>`\n   Our CI pipeline will test your script by running it against hundreds of files **concurrently**. To prevent multi-line log records from being interleaved or corrupted, you MUST implement strict file locking (`fcntl.flock`) when appending to `/home/user/audit.log`.\n\nThere are sample files provided for you to test against if you wish to create them, but the final evaluation will run your script against a hidden adversarial corpus consisting of an `evil/` directory (which must all be rejected) and a `clean/` directory (which must all be accepted). Ensure your parsing is robust.",
+    "truth": "Verifier kind: adversarial_corpus\nFixture kind: video\n\nVideo Fixture:\nLocation: `/app/tutorial.mp4`\nContent: A 5-second video demonstrating a terminal output. At 00:00:02 (frame 60 at 30fps), the terminal displays: \"WARNING: Do not leak the ELF section: .hw_crypto_keys\".\nThe forbidden ELF section the agent must extract is `.hw_crypto_keys`.\n\nAdversarial Corpus Setup:\nThe verifier will load two corpora:\n- Evil Corpus: `/app/corpus/evil/`\n- Clean Corpus: `/app/corpus/clean/`\n\nExpected Entry Point: `python3 /home/user/sanitizer.py <filepath>`\n\nPass Criterion:\n1. 100% of files in `/app/corpus/evil/` must result in exit code 1.\n2. 100% of files in `/app/corpus/clean/` must result in exit code 0.\n3. The `/home/user/audit.log` must contain exactly `count(evil) + count(clean)` lines, each matching the regex `^\\[\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d+\\] /app/corpus/(evil|clean)/[^ ]+ (REJECTED|CLEAN)$`.\n4. There must be no interleaved text or corrupted lines in `/home/user/audit.log`, verifying correct `fcntl.flock` usage during concurrent execution."
+}

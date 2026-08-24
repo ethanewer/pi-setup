@@ -1,0 +1,1 @@
+skill-text-classification	authored full trivial probe task (data_processing,text-classification): learns pos/neg keyword set from /app/training.txt, classifies each /app/test.txt line -> /app/predictions.json. Expected ["pos","neg","pos","neg","pos"]. solver heredoc & verifier independent recompute both yield same result (reward=1); bash -n exit 0 on test.sh & solve.sh.

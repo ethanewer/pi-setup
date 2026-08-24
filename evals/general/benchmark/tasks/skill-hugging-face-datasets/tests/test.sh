@@ -1,0 +1,17 @@
+#!/bin/bash
+reward=0
+mkdir -p /logs/verifier
+if [ -f /app/count.txt ]; then
+  if python3 - <<'PYEOF'
+from datasets import load_dataset
+ds = load_dataset('json', data_files='/app/data.jsonl')['train']
+good = ds.filter(lambda ex: ex['quality'] == 'good')
+expected = str(len(good))
+got = open('/app/count.txt').read().strip()
+assert got == expected, (got, expected)
+PYEOF
+  then
+    reward=1
+  fi
+fi
+echo "$reward" > /logs/verifier/reward.txt

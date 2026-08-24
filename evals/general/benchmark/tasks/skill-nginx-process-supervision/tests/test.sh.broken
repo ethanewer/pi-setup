@@ -1,0 +1,29 @@
+#!/bin/bash
+
+mkdir -p /logs/verifier
+reward=0
+
+if [ -f /app/nginx.conf ] && [ -f /app/supervision.txt ]; then
+  if python3 - <<'EOF'
+import re, subprocess
+
+cfg = open('/app/nginx.conf').read()
+m = re.search(r'worker_processes\s+(\d+)', cfg)
+assert m, 'worker_processes missing'
+n = int(m.group(1))
+assert 1 <= n <= 16
+
+args = subprocess.run(['ps', '-axo', 'args='], capture_output=True, text=True).stdout.splitlines()
+master = sum('nginx: master process' in a for a in args)
+workers = sum('nginx: worker process' in a for a in args)
+
+rep = open('/app/supervision.txt').read().strip()
+assert rep == f'running_workers={n}', (rep, n)
+assert master >= 1, 'no nginx master process running'
+assert workers == n, (workers, n)
+EOF
+  then
+    reward=1
+  fi
+
+echo "$reward" > /logs/verifier/reward.txt

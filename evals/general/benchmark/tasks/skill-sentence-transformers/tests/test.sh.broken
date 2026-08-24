@@ -1,0 +1,21 @@
+#!/bin/bash
+mkdir -p /logs/verifier
+reward=0
+if [ -f /app/similarity.json ]; then
+  if python3 - <<'PY'
+import json
+from sentence_transformers import SentenceTransformer
+
+model = SentenceTransformer('/app/model_cache')
+lines = open('/app/sentences.txt', encoding='utf-8').read().splitlines()
+va, vb = model.encode(lines[:2], normalize_embeddings=True, batch_size=16)
+exp = round(float((va * vb).sum()), 4)
+got = json.load(open('/app/similarity.json', encoding='utf-8'))['cosine_similarity']
+assert abs(got - exp) <= 0.0001, (got, exp)
+PY
+  then
+    reward=1
+  fi
+  then reward=1; fi
+fi
+echo "$reward" > /logs/verifier/reward.txt

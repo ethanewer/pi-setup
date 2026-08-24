@@ -1,0 +1,33 @@
+#!/bin/bash
+mkdir -p /logs/verifier
+reward=0
+
+if [ -f /app/sanitize.py ]; then
+  if python3 - <<'PY'
+import sys, importlib.util
+spec = importlib.util.spec_from_file_location('agent_san', '/app/sanitize.py')
+mod = importlib.util.module_from_spec(spec)
+sys.modules['agent_san'] = mod
+spec.loader.exec_module(mod)
+sanitize = mod.sanitize
+
+payloads = [
+    '<script>alert(1)</script>',
+    '<img src=x onerror=alert(1)>',
+    '<a href="javascript:alert(1)">x</a>',
+    '<div onclick=evil()>hi</div>',
+    '<script src="javascript:evil.js"></script>',
+]
+dangers = ['<script', 'onclick=', 'onerror=', 'javascript:']
+for p in payloads:
+    out = (sanitize(p) or '')
+    low = out.lower()
+    for d in dangers:
+        assert d not in low, (p, d, out)
+# benign text must survive
+assert 'hi' in ''.join(sanitize(p) for p in payloads)
+PY && reward=1
+fi
+
+fi
+echo "$reward" > /logs/verifier/reward.txt

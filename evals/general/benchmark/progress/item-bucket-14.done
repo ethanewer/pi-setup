@@ -1,0 +1,6 @@
+item-048-hard	Sentence Transformer (bge-small-zh-v1.5) offline snapshot; pinned-SHA Chinese retrieval pipeline, deterministic ranking + line preservation; model load + ranks verified locally
+item-049-main	JSON/CSV/Parquet reconciliation with source precedence + id/nulls normalization; expected 17 rows, schema verified by recomputation
+item-049-hard	Config-driven source precedence + sentinel/case/phone normalization; expected 30 distinct rows verified
+item-050-main	Nginx rate limiting (zone=1m/1rps burst=5 nodelay, 429); validate-before-reload + live normal/throttled/log checks
+item-050-hard	Broken nginx conf (sendfile+bad limits) -> fix syntax + per-route api/auth limits; live dual-endpoint throttle verification
+item-051-main	OpenSSL RSA-2048 self-signed cert CFR with SANs + SHA-256, PEM outputs, key<->cert pubkey match; commands validated locally
