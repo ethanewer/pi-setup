@@ -13,7 +13,8 @@ JOBS = ROOT / "jobs-oracle2"
 all_tasks = [l.strip() for l in open(ROOT / "specs/all_tasks.txt") if l.strip()]
 
 def tier(jobname):
-    if jobname.startswith("o2-fix-"): return 2
+    m = re.match(r"o2-fix(\d*)-", jobname)
+    if m: return 2 + int(m.group(1) or "1")
     if jobname.startswith("o2-re-chunk-"): return 1
     return 0
 

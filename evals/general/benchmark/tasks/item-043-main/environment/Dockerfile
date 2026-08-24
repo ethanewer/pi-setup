@@ -4,7 +4,7 @@ FROM bench-base:ubuntu-24.04
 # need to compile Stan models at runtime.
 RUN apt-get update && apt-get install -y --no-install-recommends \
         r-base r-base-dev python3 python3-pip python3-dev \
-        g++ libc6-dev gcc make \
+        g++ libc6-dev gcc make cmake \
     && rm -rf /var/lib/apt/lists/*
 
 # RStan 2.32.7 from CRAN (compiled at build time so agents/verifier only pay
