@@ -1,7 +1,7 @@
 #!/bin/bash
 mkdir -p /logs/verifier
 reward=0
-if [ -f /app/answer.txt ]; then
+if [ -f /app/result.txt ]; then
   if python3 - <<'PYEOF'
 from collections import defaultdict
 inv = defaultdict(set)
@@ -14,7 +14,7 @@ for line in open('/app/documents.txt'):
         inv[word].add(docid)
 query = ['the', 'quick']
 expected = ','.join(sorted(set.intersection(*(inv[q] for q in query))))
-got = open('/app/answer.txt').read().strip()
+got = open('/app/result.txt').read().strip()
 assert got == expected, (got, expected)
 PYEOF
   then

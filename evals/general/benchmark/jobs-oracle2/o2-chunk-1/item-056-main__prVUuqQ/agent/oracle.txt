@@ -1,0 +1,16 @@
+running build_ext
+building 'native' extension
+gcc -fno-strict-overflow -Wsign-compare -DNDEBUG -g -O3 -Wall -fPIC -I/usr/local/include/python3.12 -c native.c -o build/temp.linux-x86_64-cpython-312/native.o
+gcc -shared build/temp.linux-x86_64-cpython-312/native.o -L/usr/local/lib -o build/lib.linux-x86_64-cpython-312/native.cpython-312-x86_64-linux-gnu.so
+copying build/lib.linux-x86_64-cpython-312/native.cpython-312-x86_64-linux-gnu.so -> 
+{
+  "ref_ret": 1.9613040129999995,
+  "ref_var": 2.1130546156457615,
+  "fast_ret": 1.9613040129999995,
+  "fast_var": 2.113054615645761,
+  "match": true,
+  "ref_sec": 2.725315000589035e-06,
+  "fast_sec": 2.1999999262334313e-06,
+  "speedup": 1.2387795872588885
+}
+benchmark done

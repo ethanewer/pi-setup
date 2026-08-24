@@ -23,6 +23,7 @@ import os
 import socket
 import struct
 import threading
+import time
 
 GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 LISTEN_HOST = os.environ.get("WS_LISTEN_HOST", "127.0.0.1")
@@ -165,7 +166,7 @@ def handle(conn, target_addr):
         s = Session(conn, target_addr)
         t = threading.Thread(target=s.target_to_client, daemon=True)
         t.start()
-        s.client_to_tcp()
+        s.client_to_target()
         t.join(timeout=2)
     except OSError:
         pass
@@ -182,6 +183,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--host", default=LISTEN_HOST)
     ap.add_argument("--port", type=int, default=LISTEN_PORT)
+    ap.add_argument("--path", default=WS_PATH)
     ap.add_argument("--target", default=os.environ.get("WS_TARGET", "127.0.0.1:5901"))
     a = ap.parse_args()
     host, port = a.host, a.port

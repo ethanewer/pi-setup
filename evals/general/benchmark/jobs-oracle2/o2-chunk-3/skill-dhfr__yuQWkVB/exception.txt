@@ -1,0 +1,80 @@
+Traceback (most recent call last):
+  File "/home/eewer/.local/share/uv/tools/harbor/lib/python3.13/site-packages/harbor/trial/trial.py", line 406, in run
+    await self._prepare()
+  File "/home/eewer/.local/share/uv/tools/harbor/lib/python3.13/site-packages/harbor/trial/trial.py", line 444, in _prepare
+    await self._setup_agent_environment()
+  File "/home/eewer/.local/share/uv/tools/harbor/lib/python3.13/site-packages/harbor/trial/trial.py", line 1423, in _setup_agent_environment
+    await self._start_agent_environment()
+  File "/home/eewer/.local/share/uv/tools/harbor/lib/python3.13/site-packages/harbor/trial/trial.py", line 1429, in _start_agent_environment
+    await asyncio.wait_for(
+    ...<4 lines>...
+    )
+  File "/home/eewer/.local/share/uv/python/cpython-3.13.12-linux-x86_64-gnu/lib/python3.13/asyncio/tasks.py", line 507, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "/home/eewer/.local/share/uv/tools/harbor/lib/python3.13/site-packages/harbor/environments/docker/docker.py", line 913, in start
+    await self._run_docker_compose_command(["up", "--detach", "--wait"])
+  File "/home/eewer/.local/share/uv/tools/harbor/lib/python3.13/site-packages/harbor/environments/docker/docker.py", line 656, in _run_docker_compose_command
+    raise RuntimeError(
+    ...<5 lines>...
+    )
+RuntimeError: Docker compose command failed for environment skill-dhfr. Command: docker compose --project-name skill-dhfr__yuqwkvb__env --project-directory /home/eewer/pi-setup/evals/general/benchmark/tasks/skill-dhfr/environment -f /tmp/tmph0kgoc7m/skill-dhfr__yuQWkVB__env-docker-compose-resources.json -f /home/eewer/.local/share/uv/tools/harbor/lib/python3.13/site-packages/harbor/environments/docker/docker-compose-build.yaml -f /tmp/tmpq4el10cr/docker-compose-environment.json -f /tmp/tmptgo5sma5/docker-compose-mounts.json up --detach --wait. Return code: 1. Stdout:  Image skill-dhfr__yuqwkvb__env-main Building 
+#1 [internal] load local bake definitions
+#1 reading from stdin 624B done
+#1 DONE 0.0s
+
+#2 [internal] load build definition from Dockerfile
+#2 transferring dockerfile:
+#2 transferring dockerfile: 124B done
+#2 DONE 0.4s
+
+#3 [internal] load metadata for docker.io/library/bench-base:python-3.12
+#3 DONE 0.3s
+
+#4 [internal] load .dockerignore
+#4 DONE 0.0s
+
+#4 [internal] load .dockerignore
+#4 transferring context:
+#4 transferring context: 2B done
+#4 DONE 0.5s
+
+#5 [1/3] FROM docker.io/library/bench-base:python-3.12@sha256:197f39b659afdeb01c32293c30b4ee62e56f1f7a5c4ba7fea164e71f73e4894d
+#5 resolve docker.io/library/bench-base:python-3.12@sha256:197f39b659afdeb01c32293c30b4ee62e56f1f7a5c4ba7fea164e71f73e4894d 0.5s done
+#5 DONE 0.5s
+
+#6 [2/3] WORKDIR /app
+#6 CACHED
+
+#7 [internal] load build context
+#7 DONE 0.0s
+
+#7 [internal] load build context
+#7 transferring context: 81B done
+#7 DONE 0.2s
+
+#8 [3/3] COPY files/candidate.smi /app/candidate.smi
+#8 CACHED
+
+#9 exporting to image
+#9 exporting layers
+#9 exporting layers done
+#9 exporting manifest sha256:2bcff1be85ce93bf444485aa3afc2ab977ece45eaca95e8f914c8071e28f8004 0.1s done
+#9 exporting config sha256:16136a35efb2bc3031f0c4418487dbbd231f5718061776d7f0082bf09bc85676
+#9 exporting config sha256:16136a35efb2bc3031f0c4418487dbbd231f5718061776d7f0082bf09bc85676 0.2s done
+#9 exporting attestation manifest sha256:b1435df9c9f820a8fad979050397795d42c8d70d37ff3c84d3b98a215f34757f
+#9 exporting attestation manifest sha256:b1435df9c9f820a8fad979050397795d42c8d70d37ff3c84d3b98a215f34757f 0.7s done
+#9 exporting manifest list sha256:25aee9a9f04e640c329d256568f5d64c40d8c636756cd118d381a47c65e16983
+#9 exporting manifest list sha256:25aee9a9f04e640c329d256568f5d64c40d8c636756cd118d381a47c65e16983 0.2s done
+#9 naming to docker.io/library/skill-dhfr__yuqwkvb__env-main:latest
+#9 naming to docker.io/library/skill-dhfr__yuqwkvb__env-main:latest 0.1s done
+#9 unpacking to docker.io/library/skill-dhfr__yuqwkvb__env-main:latest 0.0s done
+#9 DONE 1.8s
+
+#10 resolving provenance for metadata file
+#10 DONE 0.1s
+ Image skill-dhfr__yuqwkvb__env-main Built 
+ Network skill-dhfr__yuqwkvb__env_default Creating 
+ Network skill-dhfr__yuqwkvb__env_default Error Error response from daemon: all predefined address pools have been fully subnetted
+failed to create network skill-dhfr__yuqwkvb__env_default: Error response from daemon: all predefined address pools have been fully subnetted
+. Stderr: None. 

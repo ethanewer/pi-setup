@@ -1,0 +1,21 @@
+up.py rc=1
+{
+  "ok": false,
+  "ready": {
+    "vnc": true,
+    "bridge": true,
+    "nginx": true
+  },
+  "ports": {
+    "vnc": 5901,
+    "bridge": 8080,
+    "nginxFrontend": 8081,
+    "wsPath": "/ws"
+  },
+  "keys_expected": [
+    97,
+    65293
+  ],
+  "keys_seen": [],
+  "web_page": "Windows for Workgroups 3.11"
+}

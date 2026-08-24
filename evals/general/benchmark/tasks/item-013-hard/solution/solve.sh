@@ -10,11 +10,15 @@ fi
 
 cd /app/cc-src
 
-# 2) Clear the planted benign defect (a single unused-variable line).
+# 2) Clear the planted benign defects (the unused-variable line the README
+#    names, plus the unchecked fread return that -Werror=unused-result flags).
 python3 - <<'PY'
 lines = open("src/ccomp.c").read().split("\n")
 lines = [l for l in lines if "orphan" not in l and "unused sentinel" not in l]
-open("src/ccomp.c", "w").write("\n".join(lines))
+src = "\n".join(lines)
+src = src.replace("fread(buf, 1, (size_t)sz, in);",
+                  "(void)fread(buf, 1, (size_t)sz, in);")
+open("src/ccomp.c", "w").write(src)
 PY
 
 # 3) Staged build in the documented order. configure regenerates the

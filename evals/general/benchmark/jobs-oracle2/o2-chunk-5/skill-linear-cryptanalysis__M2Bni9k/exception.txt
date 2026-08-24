@@ -1,0 +1,68 @@
+Traceback (most recent call last):
+  File "/home/eewer/.local/share/uv/tools/harbor/lib/python3.13/site-packages/harbor/trial/trial.py", line 406, in run
+    await self._prepare()
+  File "/home/eewer/.local/share/uv/tools/harbor/lib/python3.13/site-packages/harbor/trial/trial.py", line 444, in _prepare
+    await self._setup_agent_environment()
+  File "/home/eewer/.local/share/uv/tools/harbor/lib/python3.13/site-packages/harbor/trial/trial.py", line 1423, in _setup_agent_environment
+    await self._start_agent_environment()
+  File "/home/eewer/.local/share/uv/tools/harbor/lib/python3.13/site-packages/harbor/trial/trial.py", line 1429, in _start_agent_environment
+    await asyncio.wait_for(
+    ...<4 lines>...
+    )
+  File "/home/eewer/.local/share/uv/python/cpython-3.13.12-linux-x86_64-gnu/lib/python3.13/asyncio/tasks.py", line 507, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "/home/eewer/.local/share/uv/tools/harbor/lib/python3.13/site-packages/harbor/environments/docker/docker.py", line 913, in start
+    await self._run_docker_compose_command(["up", "--detach", "--wait"])
+  File "/home/eewer/.local/share/uv/tools/harbor/lib/python3.13/site-packages/harbor/environments/docker/docker.py", line 656, in _run_docker_compose_command
+    raise RuntimeError(
+    ...<5 lines>...
+    )
+RuntimeError: Docker compose command failed for environment skill-linear-cryptanalysis. Command: docker compose --project-name skill-linear-cryptanalysis__m2bni9k__env --project-directory /home/eewer/pi-setup/evals/general/benchmark/tasks/skill-linear-cryptanalysis/environment -f /tmp/tmpc6yr4yus/skill-linear-cryptanalysis__M2Bni9k__env-docker-compose-resources.json -f /home/eewer/.local/share/uv/tools/harbor/lib/python3.13/site-packages/harbor/environments/docker/docker-compose-build.yaml -f /tmp/tmpc2wuz1uk/docker-compose-environment.json -f /tmp/tmp7ahzazh8/docker-compose-mounts.json up --detach --wait. Return code: 1. Stdout:  Image skill-linear-cryptanalysis__m2bni9k__env-main Building 
+#1 [internal] load local bake definitions
+#1 reading from stdin 688B done
+#1 DONE 0.0s
+
+#2 [internal] load build definition from Dockerfile
+#2 transferring dockerfile:
+#2 transferring dockerfile: 78B done
+#2 DONE 0.2s
+
+#3 [internal] load metadata for docker.io/library/bench-base:python-3.12
+#3 DONE 0.4s
+
+#4 [internal] load .dockerignore
+#4 transferring context:
+#4 transferring context: 2B done
+#4 DONE 0.5s
+
+#5 [1/2] FROM docker.io/library/bench-base:python-3.12@sha256:197f39b659afdeb01c32293c30b4ee62e56f1f7a5c4ba7fea164e71f73e4894d
+#5 resolve docker.io/library/bench-base:python-3.12@sha256:197f39b659afdeb01c32293c30b4ee62e56f1f7a5c4ba7fea164e71f73e4894d 0.3s done
+#5 DONE 0.4s
+
+#6 [2/2] WORKDIR /app
+#6 CACHED
+
+#7 exporting to image
+#7 exporting layers done
+#7 exporting manifest sha256:5f32524f668bcff9ad6b393b9c98cd2a01f63a05ff882573018907a6edb60378
+#7 exporting manifest sha256:5f32524f668bcff9ad6b393b9c98cd2a01f63a05ff882573018907a6edb60378 0.1s done
+#7 exporting config sha256:de62b473a73e7a34f776c4b1278a568c64336d27f341eb6261bb23141211a4ce
+#7 exporting config sha256:de62b473a73e7a34f776c4b1278a568c64336d27f341eb6261bb23141211a4ce 0.1s done
+#7 exporting attestation manifest sha256:2a11f8370116bb126ac6b628bae97af35dd44daf252e1ae2ef29ae1face2c5af
+#7 exporting attestation manifest sha256:2a11f8370116bb126ac6b628bae97af35dd44daf252e1ae2ef29ae1face2c5af 1.3s done
+#7 exporting manifest list sha256:69c532b1e4dcd02a9c7a8905b37b2e1c1403f4bf857d4903acc4350398de185a
+#7 exporting manifest list sha256:69c532b1e4dcd02a9c7a8905b37b2e1c1403f4bf857d4903acc4350398de185a 0.4s done
+#7 naming to docker.io/library/skill-linear-cryptanalysis__m2bni9k__env-main:latest
+#7 naming to docker.io/library/skill-linear-cryptanalysis__m2bni9k__env-main:latest 0.1s done
+#7 unpacking to docker.io/library/skill-linear-cryptanalysis__m2bni9k__env-main:latest
+#7 unpacking to docker.io/library/skill-linear-cryptanalysis__m2bni9k__env-main:latest 0.1s done
+#7 DONE 3.1s
+
+#8 resolving provenance for metadata file
+#8 DONE 0.0s
+ Image skill-linear-cryptanalysis__m2bni9k__env-main Built 
+ Network skill-linear-cryptanalysis__m2bni9k__env_default Creating 
+ Network skill-linear-cryptanalysis__m2bni9k__env_default Error Error response from daemon: all predefined address pools have been fully subnetted
+failed to create network skill-linear-cryptanalysis__m2bni9k__env_default: Error response from daemon: all predefined address pools have been fully subnetted
+. Stderr: None. 

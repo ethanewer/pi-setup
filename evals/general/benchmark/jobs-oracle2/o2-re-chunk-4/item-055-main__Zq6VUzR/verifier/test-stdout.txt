@@ -1,0 +1,41 @@
+/app/polyglot/main.c:22:3: warning: missing terminating " character
+   22 | """
+      |   ^
+/app/polyglot/main.c:52:3: warning: missing terminating " character
+   52 | """
+      |   ^
+/app/polyglot/main.c:22:3: warning: missing terminating " character
+   22 | """
+      |   ^
+/app/polyglot/main.c:52:3: warning: missing terminating " character
+   52 | """
+      |   ^
+error[E0369]: cannot subtract `char` from `char`
+  --> /app/polyglot/main.rs:25:26
+   |
+25 |         v = v * 10 + ((c - '0') as u64);
+   |                        - ^ --- char
+   |                        |
+   |                        char
+
+error[E0308]: mismatched types
+  --> /app/polyglot/main.rs:31:29
+   |
+31 |     let args: Vec<String> = std::env::args().collect::<String>();
+   |               -----------   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected `Vec<String>`, found `String`
+   |               |
+   |               expected due to this
+   |
+   = note: expected struct `Vec<String>`
+              found struct `String`
+
+error[E0599]: no method named `to_str` found for struct `String` in the current scope
+  --> /app/polyglot/main.rs:36:27
+   |
+36 |     let s: &str = args[1].to_str();
+   |                           ^^^^^^ help: there is a method with a similar name: `as_str`
+
+error: aborting due to 3 previous errors
+
+Some errors have detailed explanations: E0308, E0369, E0599.
+For more information about an error, try `rustc --explain E0308`.

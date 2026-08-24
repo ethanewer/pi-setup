@@ -30,7 +30,7 @@ for p in ["A", "B", "C"]:
     Em = read_spectrum(f"pair_{p}_donor_emission.csv")
     Ab = read_spectrum(f"pair_{p}_acceptor_absorption.csv")
     overlap[p] = float(np.sum((Em / Em.max()) * (Ab / Ab.max())) * 5.0)
-best_pair = max(J, key=J.get)
+best_pair = max(overlap, key=overlap.get)
 
 # 2. protein cross-check
 dh = json.load(open(os.path.join(BASE, "dhfr_protein.json")))

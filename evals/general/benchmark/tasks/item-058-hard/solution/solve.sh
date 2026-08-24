@@ -36,9 +36,10 @@ Qed.
 
 Theorem final_goal : forall x y z : nat, (x + y) + z = (y + z) + x.
 Proof.
-  induction x as [| x' IH].
-  - intros y z. simpl. reflexivity.
-  - intros y z. simpl. rewrite IH. reflexivity.
+  intros x y z.
+  rewrite plus_assoc.
+  rewrite (comm (y + z) x).
+  reflexivity.
 Qed.
 EOF
 

@@ -1,0 +1,85 @@
+{
+    "id": "19cd08ea-34c3-426c-b73a-ca96108a7c5c",
+    "started_at": "2026-08-24T17:13:52.835929",
+    "updated_at": "2026-08-24T17:18:13.071381",
+    "finished_at": "2026-08-24T17:18:13.071381",
+    "n_total_trials": 44,
+    "stats": {
+        "n_completed_trials": 44,
+        "n_errored_trials": 26,
+        "n_running_trials": 0,
+        "n_pending_trials": 0,
+        "n_cancelled_trials": 0,
+        "n_retries": 0,
+        "evals": {
+            "oracle__tasks": {
+                "n_trials": 18,
+                "n_errors": 26,
+                "metrics": [
+                    {
+                        "mean": 0.4090909090909091
+                    }
+                ],
+                "pass_at_k": {},
+                "reward_stats": {
+                    "reward": {
+                        "1.0": [
+                            "skill-x-509__GhvBokR",
+                            "skill-xss-payload-crafting__Hsutaoi",
+                            "skill-ssh-dropbear__mvqfpzS",
+                            "skill-tensorflow-checkpoint-form__ApgFoJG",
+                            "skill-state-tolerances__fWpJVAJ",
+                            "skill-websockify-novnc__DDtXBwi",
+                            "skill-xss-defenses__vngohXc",
+                            "skill-warrior-benchmarking__5eCkmPi",
+                            "skill-tls__mbXGtzr",
+                            "skill-ssh__idA3EX3",
+                            "skill-torch-serialization__PbtSZ8X",
+                            "skill-vnc__JSXMHhz",
+                            "skill-undefined-behavior__F4NcC7S",
+                            "skill-static-graph-inference__TfcL3UH",
+                            "skill-vimscript-macros__JyHQaDh",
+                            "skill-text-file-output__NJp2Cer",
+                            "skill-transformer-architecture__qiQ7JaJ",
+                            "skill-torch-distributed__Pnj6d93"
+                        ]
+                    }
+                },
+                "exception_stats": {
+                    "RuntimeError": [
+                        "skill-vim__SMvzjVK",
+                        "skill-sqlite-source-build__NRqHUXf",
+                        "skill-tls-inspection__YMTHpDp",
+                        "skill-stdin-stdout__X2tEKMf",
+                        "skill-timezone-date-ranges__nTm6utZ",
+                        "skill-telnet__sxJ4YRG",
+                        "skill-terminal-escape-sequences__3JKn7gZ",
+                        "skill-text-classification__5Q84naR",
+                        "skill-sqlite-wal-format__sjC2Zpe",
+                        "skill-tex-log-diagnostics__fvXsXC7",
+                        "skill-yelp-reviews__hhnaDXr",
+                        "skill-tokenizers__rTGhtCX",
+                        "skill-statistical-testing__b2BKAz9",
+                        "skill-syscalls__WUjoXvq",
+                        "skill-xor-file-byte-recovery__jszCQ2P",
+                        "skill-zork-command-syntax__S8vdRCB",
+                        "skill-state-dict-shape-inference__YYS3hkN",
+                        "skill-systemd-processes__FUxacYC",
+                        "skill-windows-3-11__njqcnxP",
+                        "skill-tensor-partitioning__VhARdqg",
+                        "skill-stan__vXuJWKJ",
+                        "skill-static-binary-analysis__mkwUPKd",
+                        "skill-web-research__hagRVLF",
+                        "skill-text-extraction__BnXuBLX",
+                        "skill-xor-uint32-arithmetic__QzrQFeU",
+                        "skill-text-processing__oSaaMri"
+                    ]
+                }
+            }
+        },
+        "n_input_tokens": null,
+        "n_cache_tokens": null,
+        "n_output_tokens": null,
+        "cost_usd": null
+    }
+}

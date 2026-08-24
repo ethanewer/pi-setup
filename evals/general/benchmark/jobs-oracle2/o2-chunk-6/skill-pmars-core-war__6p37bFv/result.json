@@ -1,0 +1,99 @@
+{
+    "id": "e04d0048-f023-49b7-a60b-2cd9ec148adf",
+    "task_name": "skill-pmars-core-war",
+    "trial_name": "skill-pmars-core-war__6p37bFv",
+    "trial_uri": "file:///home/eewer/pi-setup/evals/general/benchmark/jobs-oracle2/o2-chunk-6/skill-pmars-core-war__6p37bFv",
+    "task_id": {
+        "path": "tasks/skill-pmars-core-war"
+    },
+    "source": "tasks",
+    "task_checksum": "8fbb3b11f378c40954c3979a156f653affd2ba7b5730d675e667a400190fbc6e",
+    "config": {
+        "task": {
+            "path": "tasks/skill-pmars-core-war",
+            "git_url": null,
+            "git_commit_id": null,
+            "name": null,
+            "ref": null,
+            "overwrite": false,
+            "download_dir": null,
+            "source": "tasks"
+        },
+        "trial_name": "skill-pmars-core-war__6p37bFv",
+        "trials_dir": "jobs-oracle2/o2-chunk-6",
+        "install_only": false,
+        "timeout_multiplier": 1.0,
+        "agent_timeout_multiplier": null,
+        "verifier_timeout_multiplier": null,
+        "agent_setup_timeout_multiplier": null,
+        "environment_build_timeout_multiplier": null,
+        "agent": {
+            "name": "oracle",
+            "import_path": null,
+            "model_name": null,
+            "n_concurrent": null,
+            "concurrency_group": null,
+            "skills": [],
+            "override_timeout_sec": null,
+            "override_setup_timeout_sec": null,
+            "max_timeout_sec": null,
+            "resume_trajectory": false,
+            "load_trajectory": null,
+            "extra_allowed_hosts": [],
+            "kwargs": {},
+            "mcp_servers": []
+        },
+        "user_agent": null,
+        "environment": {
+            "type": "docker",
+            "import_path": null,
+            "force_build": false,
+            "delete": true,
+            "cpu_enforcement_policy": "auto",
+            "memory_enforcement_policy": "auto",
+            "override_cpus": null,
+            "override_memory_mb": null,
+            "override_storage_mb": null,
+            "override_gpus": null,
+            "override_tpu": null,
+            "mounts": null,
+            "extra_docker_compose": [],
+            "kwargs": {},
+            "extra_allowed_hosts": []
+        },
+        "verifier": {
+            "override_timeout_sec": null,
+            "max_timeout_sec": null,
+            "disable": false
+        },
+        "artifacts": [],
+        "extra_instruction_paths": [],
+        "extra_instructions": [],
+        "job_id": "c85c46a4-6488-44fe-9dad-6397f63b8fc2",
+        "source_trial": null
+    },
+    "agent_info": {
+        "name": "oracle",
+        "version": "1.0.0",
+        "model_info": null
+    },
+    "agent_result": null,
+    "verifier_result": null,
+    "verifier_environment_mode": "shared",
+    "exception_info": {
+        "exception_type": "RuntimeError",
+        "exception_message": "Docker compose command failed for environment skill-pmars-core-war. Command: docker compose --project-name skill-pmars-core-war__6p37bfv__env --project-directory /home/eewer/pi-setup/evals/general/benchmark/tasks/skill-pmars-core-war/environment -f /tmp/tmpcqb2ts5e/skill-pmars-core-war__6p37bFv__env-docker-compose-resources.json -f /home/eewer/.local/share/uv/tools/harbor/lib/python3.13/site-packages/harbor/environments/docker/docker-compose-build.yaml -f /tmp/tmpz6t38acv/docker-compose-environment.json -f /tmp/tmpbgbhnkdw/docker-compose-mounts.json up --detach --wait. Return code: 1. Stdout:  Image skill-pmars-core-war__6p37bfv__env-main Building \n#1 [internal] load local bake definitions\n#1 reading from stdin 664B done\n#1 DONE 0.0s\n\n#2 [internal] load build definition from Dockerfile\n#2 transferring dockerfile:\n#2 transferring dockerfile: 158B done\n#2 DONE 1.2s\n\n#3 [internal] load metadata for docker.io/library/bench-base:ubuntu-24.04\n#3 DONE 0.4s\n\n#4 [internal] load .dockerignore\n#4 DONE 0.0s\n\n#4 [internal] load .dockerignore\n#4 transferring context: 2B done\n#4 DONE 0.2s\n\n#5 [2/4] WORKDIR /app\n#5 CACHED\n\n#6 [1/4] FROM docker.io/library/bench-base:ubuntu-24.04@sha256:0805f337ab1885c6dea94e88588e8b07533a420ea7fef53c410cc292cd42bc91\n#6 resolve docker.io/library/bench-base:ubuntu-24.04@sha256:0805f337ab1885c6dea94e88588e8b07533a420ea7fef53c410cc292cd42bc91 0.3s done\n#6 CACHED\n\n#7 exporting to image\n#7 exporting layers done\n#7 exporting manifest sha256:c0f346ed76c3536ccb4b6cc4a817e12262e13ad89a2358ca3c1e1555e332cabb\n#7 exporting manifest sha256:c0f346ed76c3536ccb4b6cc4a817e12262e13ad89a2358ca3c1e1555e332cabb 0.3s done\n#7 exporting config sha256:bae6ae40828863163381c8d1936ea981defe330a8c3946d3742475fda29bc592\n#7 exporting config sha256:bae6ae40828863163381c8d1936ea981defe330a8c3946d3742475fda29bc592 0.4s done\n#7 exporting attestation manifest sha256:261c89d1445cdd6ee495dc86fd01e6042949702dcc92e3e2c26032bfecd97964\n#7 exporting attestation manifest sha256:261c89d1445cdd6ee495dc86fd01e6042949702dcc92e3e2c26032bfecd97964 1.0s done\n#7 exporting manifest list sha256:db5dfe637a019aa00b4e89c81f9bede425f52e65e264f0d6d680f27b7be72a76\n#7 exporting manifest list sha256:db5dfe637a019aa00b4e89c81f9bede425f52e65e264f0d6d680f27b7be72a76 0.5s done\n#7 naming to docker.io/library/skill-pmars-core-war__6p37bfv__env-main:latest\n#7 naming to docker.io/library/skill-pmars-core-war__6p37bfv__env-main:latest 0.1s done\n#7 unpacking to docker.io/library/skill-pmars-core-war__6p37bfv__env-main:latest\n#7 unpacking to docker.io/library/skill-pmars-core-war__6p37bfv__env-main:latest 0.3s done\n#7 DONE 3.3s\n\n#8 resolving provenance for metadata file\n#8 DONE 0.0s\n Image skill-pmars-core-war__6p37bfv__env-main Built \n Network skill-pmars-core-war__6p37bfv__env_default Creating \n Network skill-pmars-core-war__6p37bfv__env_default Error Error response from daemon: all predefined address pools have been fully subnetted\nfailed to create network skill-pmars-core-war__6p37bfv__env_default: Error response from daemon: all predefined address pools have been fully subnetted\n. Stderr: None. ",
+        "exception_traceback": "Traceback (most recent call last):\n  File \"/home/eewer/.local/share/uv/tools/harbor/lib/python3.13/site-packages/harbor/trial/trial.py\", line 406, in run\n    await self._prepare()\n  File \"/home/eewer/.local/share/uv/tools/harbor/lib/python3.13/site-packages/harbor/trial/trial.py\", line 444, in _prepare\n    await self._setup_agent_environment()\n  File \"/home/eewer/.local/share/uv/tools/harbor/lib/python3.13/site-packages/harbor/trial/trial.py\", line 1423, in _setup_agent_environment\n    await self._start_agent_environment()\n  File \"/home/eewer/.local/share/uv/tools/harbor/lib/python3.13/site-packages/harbor/trial/trial.py\", line 1429, in _start_agent_environment\n    await asyncio.wait_for(\n    ...<4 lines>...\n    )\n  File \"/home/eewer/.local/share/uv/python/cpython-3.13.12-linux-x86_64-gnu/lib/python3.13/asyncio/tasks.py\", line 507, in wait_for\n    return await fut\n           ^^^^^^^^^\n  File \"/home/eewer/.local/share/uv/tools/harbor/lib/python3.13/site-packages/harbor/environments/docker/docker.py\", line 913, in start\n    await self._run_docker_compose_command([\"up\", \"--detach\", \"--wait\"])\n  File \"/home/eewer/.local/share/uv/tools/harbor/lib/python3.13/site-packages/harbor/environments/docker/docker.py\", line 656, in _run_docker_compose_command\n    raise RuntimeError(\n    ...<5 lines>...\n    )\nRuntimeError: Docker compose command failed for environment skill-pmars-core-war. Command: docker compose --project-name skill-pmars-core-war__6p37bfv__env --project-directory /home/eewer/pi-setup/evals/general/benchmark/tasks/skill-pmars-core-war/environment -f /tmp/tmpcqb2ts5e/skill-pmars-core-war__6p37bFv__env-docker-compose-resources.json -f /home/eewer/.local/share/uv/tools/harbor/lib/python3.13/site-packages/harbor/environments/docker/docker-compose-build.yaml -f /tmp/tmpz6t38acv/docker-compose-environment.json -f /tmp/tmpbgbhnkdw/docker-compose-mounts.json up --detach --wait. Return code: 1. Stdout:  Image skill-pmars-core-war__6p37bfv__env-main Building \n#1 [internal] load local bake definitions\n#1 reading from stdin 664B done\n#1 DONE 0.0s\n\n#2 [internal] load build definition from Dockerfile\n#2 transferring dockerfile:\n#2 transferring dockerfile: 158B done\n#2 DONE 1.2s\n\n#3 [internal] load metadata for docker.io/library/bench-base:ubuntu-24.04\n#3 DONE 0.4s\n\n#4 [internal] load .dockerignore\n#4 DONE 0.0s\n\n#4 [internal] load .dockerignore\n#4 transferring context: 2B done\n#4 DONE 0.2s\n\n#5 [2/4] WORKDIR /app\n#5 CACHED\n\n#6 [1/4] FROM docker.io/library/bench-base:ubuntu-24.04@sha256:0805f337ab1885c6dea94e88588e8b07533a420ea7fef53c410cc292cd42bc91\n#6 resolve docker.io/library/bench-base:ubuntu-24.04@sha256:0805f337ab1885c6dea94e88588e8b07533a420ea7fef53c410cc292cd42bc91 0.3s done\n#6 CACHED\n\n#7 exporting to image\n#7 exporting layers done\n#7 exporting manifest sha256:c0f346ed76c3536ccb4b6cc4a817e12262e13ad89a2358ca3c1e1555e332cabb\n#7 exporting manifest sha256:c0f346ed76c3536ccb4b6cc4a817e12262e13ad89a2358ca3c1e1555e332cabb 0.3s done\n#7 exporting config sha256:bae6ae40828863163381c8d1936ea981defe330a8c3946d3742475fda29bc592\n#7 exporting config sha256:bae6ae40828863163381c8d1936ea981defe330a8c3946d3742475fda29bc592 0.4s done\n#7 exporting attestation manifest sha256:261c89d1445cdd6ee495dc86fd01e6042949702dcc92e3e2c26032bfecd97964\n#7 exporting attestation manifest sha256:261c89d1445cdd6ee495dc86fd01e6042949702dcc92e3e2c26032bfecd97964 1.0s done\n#7 exporting manifest list sha256:db5dfe637a019aa00b4e89c81f9bede425f52e65e264f0d6d680f27b7be72a76\n#7 exporting manifest list sha256:db5dfe637a019aa00b4e89c81f9bede425f52e65e264f0d6d680f27b7be72a76 0.5s done\n#7 naming to docker.io/library/skill-pmars-core-war__6p37bfv__env-main:latest\n#7 naming to docker.io/library/skill-pmars-core-war__6p37bfv__env-main:latest 0.1s done\n#7 unpacking to docker.io/library/skill-pmars-core-war__6p37bfv__env-main:latest\n#7 unpacking to docker.io/library/skill-pmars-core-war__6p37bfv__env-main:latest 0.3s done\n#7 DONE 3.3s\n\n#8 resolving provenance for metadata file\n#8 DONE 0.0s\n Image skill-pmars-core-war__6p37bfv__env-main Built \n Network skill-pmars-core-war__6p37bfv__env_default Creating \n Network skill-pmars-core-war__6p37bfv__env_default Error Error response from daemon: all predefined address pools have been fully subnetted\nfailed to create network skill-pmars-core-war__6p37bfv__env_default: Error response from daemon: all predefined address pools have been fully subnetted\n. Stderr: None. \n",
+        "occurred_at": "2026-08-24T22:07:32.845226Z"
+    },
+    "started_at": "2026-08-24T22:07:02.428011Z",
+    "finished_at": "2026-08-24T22:07:37.240296Z",
+    "environment_setup": {
+        "started_at": "2026-08-24T22:07:02.428930Z",
+        "finished_at": "2026-08-24T22:07:32.844303Z"
+    },
+    "agent_setup": null,
+    "agent_execution": null,
+    "verifier": null,
+    "step_results": null
+}

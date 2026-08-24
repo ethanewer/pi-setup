@@ -1,0 +1,7 @@
+rm -f runtime rcode.dat out.dat
+gcc -std=c99 -O2 -Wall runtime.c -o runtime
+ocaml spec.ml
+./runtime
+CHECKSUM=5409 USED=552
+VERIFY OK len=552
+SOLVED

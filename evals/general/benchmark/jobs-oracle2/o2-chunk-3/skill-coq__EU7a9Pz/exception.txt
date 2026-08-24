@@ -1,0 +1,70 @@
+Traceback (most recent call last):
+  File "/home/eewer/.local/share/uv/tools/harbor/lib/python3.13/site-packages/harbor/trial/trial.py", line 406, in run
+    await self._prepare()
+  File "/home/eewer/.local/share/uv/tools/harbor/lib/python3.13/site-packages/harbor/trial/trial.py", line 444, in _prepare
+    await self._setup_agent_environment()
+  File "/home/eewer/.local/share/uv/tools/harbor/lib/python3.13/site-packages/harbor/trial/trial.py", line 1423, in _setup_agent_environment
+    await self._start_agent_environment()
+  File "/home/eewer/.local/share/uv/tools/harbor/lib/python3.13/site-packages/harbor/trial/trial.py", line 1429, in _start_agent_environment
+    await asyncio.wait_for(
+    ...<4 lines>...
+    )
+  File "/home/eewer/.local/share/uv/python/cpython-3.13.12-linux-x86_64-gnu/lib/python3.13/asyncio/tasks.py", line 507, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "/home/eewer/.local/share/uv/tools/harbor/lib/python3.13/site-packages/harbor/environments/docker/docker.py", line 913, in start
+    await self._run_docker_compose_command(["up", "--detach", "--wait"])
+  File "/home/eewer/.local/share/uv/tools/harbor/lib/python3.13/site-packages/harbor/environments/docker/docker.py", line 656, in _run_docker_compose_command
+    raise RuntimeError(
+    ...<5 lines>...
+    )
+RuntimeError: Docker compose command failed for environment skill-coq. Command: docker compose --project-name skill-coq__eu7a9pz__env --project-directory /home/eewer/pi-setup/evals/general/benchmark/tasks/skill-coq/environment -f /tmp/tmpif6wfbem/skill-coq__EU7a9Pz__env-docker-compose-resources.json -f /home/eewer/.local/share/uv/tools/harbor/lib/python3.13/site-packages/harbor/environments/docker/docker-compose-build.yaml -f /tmp/tmpjb048_ud/docker-compose-environment.json -f /tmp/tmpoqjdju6x/docker-compose-mounts.json up --detach --wait. Return code: 1. Stdout:  Image skill-coq__eu7a9pz__env-main Building 
+#1 [internal] load local bake definitions
+#1 reading from stdin 620B done
+#1 DONE 0.0s
+
+#2 [internal] load build definition from Dockerfile
+#2 transferring dockerfile:
+#2 transferring dockerfile: 78B done
+#2 DONE 0.3s
+
+#3 [internal] load metadata for docker.io/library/bench-base:python-3.12
+#3 DONE 0.9s
+
+#4 [internal] load .dockerignore
+#4 DONE 0.0s
+
+#4 [internal] load .dockerignore
+#4 transferring context: 2B done
+#4 DONE 0.3s
+
+#5 [1/3] FROM docker.io/library/bench-base:python-3.12@sha256:197f39b659afdeb01c32293c30b4ee62e56f1f7a5c4ba7fea164e71f73e4894d
+#5 resolve docker.io/library/bench-base:python-3.12@sha256:197f39b659afdeb01c32293c30b4ee62e56f1f7a5c4ba7fea164e71f73e4894d 0.5s done
+#5 DONE 0.5s
+
+#6 [2/3] WORKDIR /app
+#6 CACHED
+
+#7 exporting to image
+#7 exporting layers done
+#7 exporting manifest sha256:0ab3e41548cb81e75e326c75bf8bd246b6a4b21b187a244fb3dc3af67143743c
+#7 exporting manifest sha256:0ab3e41548cb81e75e326c75bf8bd246b6a4b21b187a244fb3dc3af67143743c 0.3s done
+#7 exporting config sha256:d223045bd35a284d3395fe96edb02197b75dc20719cb0266a7fa55a5aa6bdfe7
+#7 exporting config sha256:d223045bd35a284d3395fe96edb02197b75dc20719cb0266a7fa55a5aa6bdfe7 0.3s done
+#7 exporting attestation manifest sha256:19d703e8575d3d9ae3ec84518bc0ec34da2abc61d461f38a4dda36295f33b86d
+#7 exporting attestation manifest sha256:19d703e8575d3d9ae3ec84518bc0ec34da2abc61d461f38a4dda36295f33b86d 1.6s done
+#7 exporting manifest list sha256:5bb264e561992fc3d762b4ea524ec3d096970d248207aee016c86b7ac3fa23ac
+#7 exporting manifest list sha256:5bb264e561992fc3d762b4ea524ec3d096970d248207aee016c86b7ac3fa23ac 1.3s done
+#7 naming to docker.io/library/skill-coq__eu7a9pz__env-main:latest
+#7 naming to docker.io/library/skill-coq__eu7a9pz__env-main:latest 0.1s done
+#7 unpacking to docker.io/library/skill-coq__eu7a9pz__env-main:latest
+#7 unpacking to docker.io/library/skill-coq__eu7a9pz__env-main:latest 0.4s done
+#7 DONE 4.8s
+
+#8 resolving provenance for metadata file
+#8 DONE 1.9s
+ Image skill-coq__eu7a9pz__env-main Built 
+ Network skill-coq__eu7a9pz__env_default Creating 
+ Network skill-coq__eu7a9pz__env_default Error Error response from daemon: all predefined address pools have been fully subnetted
+failed to create network skill-coq__eu7a9pz__env_default: Error response from daemon: all predefined address pools have been fully subnetted
+. Stderr: None. 

@@ -1,0 +1,6 @@
+running build_ext
+building 'quickcalc' extension
+gcc -fno-strict-overflow -Wsign-compare -DNDEBUG -g -O3 -Wall -fPIC -I/usr/local/include/python3.12 -c libcalc.c -o build/temp.linux-x86_64-cpython-312/libcalc.o
+g++ -fno-strict-overflow -Wsign-compare -DNDEBUG -g -O3 -Wall -fPIC -I/usr/local/include/python3.12 -c quickwrap.cpp -o build/temp.linux-x86_64-cpython-312/quickwrap.o
+g++ -fno-strict-overflow -Wsign-compare -DNDEBUG -g -O3 -Wall -shared build/temp.linux-x86_64-cpython-312/libcalc.o build/temp.linux-x86_64-cpython-312/quickwrap.o -L/usr/local/lib -o build/lib.linux-x86_64-cpython-312/quickcalc.cpython-312-x86_64-linux-gnu.so
+copying build/lib.linux-x86_64-cpython-312/quickcalc.cpython-312-x86_64-linux-gnu.so -> 

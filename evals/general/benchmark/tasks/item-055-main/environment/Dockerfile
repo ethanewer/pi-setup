@@ -14,4 +14,4 @@ RUN if ! command -v rustc >/dev/null 2>&1; then \
       ln -sf "$HOME/.cargo/bin/rustdoc" /usr/local/bin/rustdoc; \
     fi
 
-COPY files/ /app/polyglot/
+COPY files/polyglot/ /app/polyglot/

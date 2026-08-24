@@ -1,0 +1,44 @@
+=== all refs ===
+8f4f7d2bb15b3209a47245588aee6e8bd6495c93 commit	refs/heads/legacy/2023
+009cf1293e12f686befddcba7f4f5ae3fdb015bf commit	refs/heads/main
+a95ae0a5246f62b4905d0c73f31dbfcb51359786 commit	refs/heads/staging
+146e913e656a1d9ce3782f53e3f37b52d7f4e875 tag	refs/tags/v1.0
+=== commit messages (may contain credentials) ===
+8f4f7d2bb15b3209a47245588aee6e8bd6495c93 legacy: migration notes (github_pat_EXAMPLE_EXAMPLE_EXAMPLE)
+009cf1293e12f686befddcba7f4f5ae3fdb015bf refactor: settings module
+a95ae0a5246f62b4905d0c73f31dbfcb51359786 feat: inventory page (ghp_EXAMPLEEXAMPLEEXAMPLEEXAMPLE)
+6d7912af779f9f5bcb60e7ff297a6cca953605ee feat: deploy automation (key AKIAEXAMPLEKEY000001)
+cc4729f33e93070fcdcc1624b940cf43a9ad9a22 chore: base scaffold
+=== credential hits in history ===
+    legacy: migration notes (github_pat_EXAMPLE_EXAMPLE_EXAMPLE)
++fine_grained = "github_pat_EXAMPLE_EXAMPLE_EXAMPLE"
+    feat: inventory page (ghp_EXAMPLEEXAMPLEEXAMPLEEXAMPLE)
++<!-- CI access: AKIAEXAMPLEKEY000001 / ghp_EXAMPLEEXAMPLEEXAMPLEEXAMPLE -->
+    feat: deploy automation (key AKIAEXAMPLEKEY000001)
++AWS_ACCESS_KEY_ID = "AKIAEXAMPLEKEY000001"
++GITHUB_TOKEN = "ghp_EXAMPLEEXAMPLEEXAMPLEEXAMPLE"
+recovery copy saved (outside the repository)
+WARNING: git-filter-branch has a glut of gotchas generating mangled history
+	 rewrites.  Hit Ctrl-C before proceeding to abort, then use an
+	 alternative filtering tool such as 'git filter-repo'
+	 (https://github.com/newren/git-filter-repo/) instead.  See the
+	 filter-branch manual page for more details; to squelch this warning,
+	 set FILTER_BRANCH_SQUELCH_WARNING=1.
+Proceeding with filter-branch...
+
+Rewrite cc4729f33e93070fcdcc1624b940cf43a9ad9a22 (1/5) (0 seconds passed, remaining 0 predicted)    Rewrite 6d7912af779f9f5bcb60e7ff297a6cca953605ee (2/5) (0 seconds passed, remaining 0 predicted)    Rewrite a95ae0a5246f62b4905d0c73f31dbfcb51359786 (3/5) (0 seconds passed, remaining 0 predicted)    Rewrite 009cf1293e12f686befddcba7f4f5ae3fdb015bf (4/5) (0 seconds passed, remaining 0 predicted)    Rewrite 8f4f7d2bb15b3209a47245588aee6e8bd6495c93 (5/5) (0 seconds passed, remaining 0 predicted)    
+Ref 'refs/heads/legacy/2023' was rewritten
+Ref 'refs/heads/main' was rewritten
+Ref 'refs/heads/staging' was rewritten
+Ref 'refs/tags/v1.0' was rewritten
+v1.0 -> v1.0 (6d7912af779f9f5bcb60e7ff297a6cca953605ee -> 18aba1371c1e270e63819fe7214d2adf2fc48843)
+=== scan all objects for credentials ===
+objects clean
+=== scan working files ===
+worktree clean
+=== refs after rewrite ===
+60ae7eb4e5f4ce9fa4b4ba5491fb0a4b003aa4f0 commit	refs/heads/legacy/2023
+50aaef7987c6342f41494e27691226382b65dce2 commit	refs/heads/main
+9cc08689037de7a88c8da8bd4d6ab39155bea60e commit	refs/heads/staging
+cb493c768c8d783650b45bed306c1e6e1b3d7b8a tag	refs/tags/v1.0
+DONE

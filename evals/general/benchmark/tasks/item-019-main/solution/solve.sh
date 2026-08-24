@@ -31,6 +31,7 @@ assert key is not None, "could not infer XOR key"
 # 3. Repair a copy: XOR key over bytes [32, end); header stays intact.
 for i in range(32, len(data)):
     data[i] ^= key
+open(wal_copy, 'wb').write(data)
 
 # 4. Open the DB next to the repaired WAL -> replay/checkpoint.
 conn = sqlite3.connect(os.path.join(out, 'orders.db'))

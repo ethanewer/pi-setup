@@ -13,6 +13,6 @@ for line in open('/app/documents.txt'):
         inv[word].add(docid)
 query = ['the', 'quick']
 result = sorted(set.intersection(*(inv[q] for q in query)))
-open('/app/answer.txt', 'w').write(','.join(result))
+open('/app/result.txt', 'w').write(','.join(result))
 PYEOF
 python3 /app/index.py

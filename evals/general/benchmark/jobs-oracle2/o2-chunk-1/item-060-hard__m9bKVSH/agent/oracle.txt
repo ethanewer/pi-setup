@@ -1,0 +1,21 @@
+/usr/local/lib/python3.12/site-packages/torch/_subclasses/functional_tensor.py:368: UserWarning: Failed to initialize NumPy: No module named 'numpy' (Triggered internally at /__w/pytorch/pytorch/torch/csrc/utils/tensor_numpy.cpp:84.)
+  cpu = _conversion_method_template(device=torch.device("cpu"))
+{
+  "config": {
+    "vocab_size": 48,
+    "max_len": 20,
+    "d_model": 16,
+    "n_heads": 4,
+    "n_layers": 3,
+    "num_classes": 4
+  },
+  "trainable_prefixes": [
+    "blocks.2.",
+    "head."
+  ],
+  "trainable_params": 3352,
+  "frozen_params": 7688,
+  "val_accuracy": 0.296875,
+  "steps": 400
+}
+pipeline done

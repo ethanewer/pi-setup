@@ -1,0 +1,37 @@
+{
+  "scope": "normalize; dedup-by-title(keep lowest id); lang==en; id asc; newline-joined",
+  "pins": {
+    "qwen": "Qwen/Qwen2.5-0.5B -pinned-snapshot",
+    "deepseek": "deepseek-ai/DeepSeek-V3 -pinned-snapshot"
+  },
+  "kept_rows": 20,
+  "kept_by_category": {
+    "scientific": 9,
+    "tech": 6,
+    "world": 5
+  },
+  "counts": {
+    "scientific": {
+      "qwen2_5": 291,
+      "deepseek": 280,
+      "fewest": "deepseek"
+    },
+    "tech": {
+      "qwen2_5": 231,
+      "deepseek": 233,
+      "fewest": "qwen2_5"
+    },
+    "world": {
+      "qwen2_5": 92,
+      "deepseek": 88,
+      "fewest": "deepseek"
+    },
+    "total": {
+      "qwen2_5": 615,
+      "deepseek": 602,
+      "fewest": "deepseek"
+    }
+  },
+  "total_corpus_chars": 1595,
+  "reproducible": true
+}

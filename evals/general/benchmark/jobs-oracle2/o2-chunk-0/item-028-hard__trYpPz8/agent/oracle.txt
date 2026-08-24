@@ -1,0 +1,37 @@
+rm -f runtime rcode.dat out.dat
+gcc -std=c99 -O2 -Wall runtime.c -o runtime
+ocaml spec.ml
+./runtime
+CHECKSUM=5409 USED=552
+VERIFY OK len=552
+FFF                                                                      [100%]
+=================================== FAILURES ===================================
+_____________________________ test_roundtrip_bytes _____________________________
+
+    def test_roundtrip_bytes():
+>       _round_and_run()
+        ^^^^^^^^^^^^^^
+E       NameError: name '_round_and_run' is not defined
+
+tests/test_roundtrip.py:45: NameError
+________________________________ test_checksum _________________________________
+
+    def test_checksum():
+>       _round_and_run()
+        ^^^^^^^^^^^^^^
+E       NameError: name '_round_and_run' is not defined
+
+tests/test_roundtrip.py:52: NameError
+___________________________ test_print_is_consistent ___________________________
+
+    def test_print_is_consistent():
+>       out = _round_and_run()
+              ^^^^^^^^^^^^^^
+E       NameError: name '_round_and_run' is not defined
+
+tests/test_roundtrip.py:59: NameError
+=========================== short test summary info ============================
+FAILED tests/test_roundtrip.py::test_roundtrip_bytes - NameError: name '_roun...
+FAILED tests/test_roundtrip.py::test_checksum - NameError: name '_round_and_r...
+FAILED tests/test_roundtrip.py::test_print_is_consistent - NameError: name '_...
+3 failed in 0.08s

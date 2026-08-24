@@ -1,0 +1,70 @@
+Traceback (most recent call last):
+  File "/home/eewer/.local/share/uv/tools/harbor/lib/python3.13/site-packages/harbor/trial/trial.py", line 406, in run
+    await self._prepare()
+  File "/home/eewer/.local/share/uv/tools/harbor/lib/python3.13/site-packages/harbor/trial/trial.py", line 444, in _prepare
+    await self._setup_agent_environment()
+  File "/home/eewer/.local/share/uv/tools/harbor/lib/python3.13/site-packages/harbor/trial/trial.py", line 1423, in _setup_agent_environment
+    await self._start_agent_environment()
+  File "/home/eewer/.local/share/uv/tools/harbor/lib/python3.13/site-packages/harbor/trial/trial.py", line 1429, in _start_agent_environment
+    await asyncio.wait_for(
+    ...<4 lines>...
+    )
+  File "/home/eewer/.local/share/uv/python/cpython-3.13.12-linux-x86_64-gnu/lib/python3.13/asyncio/tasks.py", line 507, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "/home/eewer/.local/share/uv/tools/harbor/lib/python3.13/site-packages/harbor/environments/docker/docker.py", line 913, in start
+    await self._run_docker_compose_command(["up", "--detach", "--wait"])
+  File "/home/eewer/.local/share/uv/tools/harbor/lib/python3.13/site-packages/harbor/environments/docker/docker.py", line 656, in _run_docker_compose_command
+    raise RuntimeError(
+    ...<5 lines>...
+    )
+RuntimeError: Docker compose command failed for environment skill-fixed-format-records. Command: docker compose --project-name skill-fixed-format-records__ycbjn25__env --project-directory /home/eewer/pi-setup/evals/general/benchmark/tasks/skill-fixed-format-records/environment -f /tmp/tmpxyqdzgw7/skill-fixed-format-records__YcbJN25__env-docker-compose-resources.json -f /home/eewer/.local/share/uv/tools/harbor/lib/python3.13/site-packages/harbor/environments/docker/docker-compose-build.yaml -f /tmp/tmpan2fynv5/docker-compose-environment.json -f /tmp/tmpw_2gelr_/docker-compose-mounts.json up --detach --wait. Return code: 1. Stdout:  Image skill-fixed-format-records__ycbjn25__env-main Building 
+#1 [internal] load local bake definitions
+#1 reading from stdin 688B done
+#1 DONE 0.0s
+
+#2 [internal] load build definition from Dockerfile
+#2 transferring dockerfile:
+#2 transferring dockerfile: 302B done
+#2 DONE 1.4s
+
+#3 [internal] load metadata for docker.io/library/bench-base:python-3.12
+#3 DONE 0.7s
+
+#4 [internal] load .dockerignore
+#4 transferring context: 2B done
+#4 DONE 0.1s
+
+#5 [1/4] FROM docker.io/library/bench-base:python-3.12@sha256:197f39b659afdeb01c32293c30b4ee62e56f1f7a5c4ba7fea164e71f73e4894d
+#5 resolve docker.io/library/bench-base:python-3.12@sha256:197f39b659afdeb01c32293c30b4ee62e56f1f7a5c4ba7fea164e71f73e4894d 0.2s done
+#5 DONE 0.2s
+
+#6 [2/4] WORKDIR /app
+#6 CACHED
+
+#7 [3/3] RUN python3 - <<'PY'
+#7 CACHED
+
+#8 exporting to image
+#8 exporting layers done
+#8 exporting manifest sha256:9ab480e0a7f942241fcc079ee13f17295779bb0f3ff34066512458f45684f835
+#8 exporting manifest sha256:9ab480e0a7f942241fcc079ee13f17295779bb0f3ff34066512458f45684f835 0.7s done
+#8 exporting config sha256:e9ca217c50bc4535d9ee75cdd30c958d06ec00fb98f6d0875f3c13acbf2ce855
+#8 exporting config sha256:e9ca217c50bc4535d9ee75cdd30c958d06ec00fb98f6d0875f3c13acbf2ce855 0.4s done
+#8 exporting attestation manifest sha256:56ec3cf0e2fb537ecc3fc74407dbdfc631a8d94d2066fda8e614a9a2a87399df
+#8 exporting attestation manifest sha256:56ec3cf0e2fb537ecc3fc74407dbdfc631a8d94d2066fda8e614a9a2a87399df 2.6s done
+#8 exporting manifest list sha256:94e25ea1f803ee3c6aca6ba41d008b434b186101e699d00a01cddc233aae6e3d
+#8 exporting manifest list sha256:94e25ea1f803ee3c6aca6ba41d008b434b186101e699d00a01cddc233aae6e3d 1.0s done
+#8 naming to docker.io/library/skill-fixed-format-records__ycbjn25__env-main:latest
+#8 naming to docker.io/library/skill-fixed-format-records__ycbjn25__env-main:latest 0.3s done
+#8 unpacking to docker.io/library/skill-fixed-format-records__ycbjn25__env-main:latest
+#8 unpacking to docker.io/library/skill-fixed-format-records__ycbjn25__env-main:latest 0.2s done
+#8 DONE 7.0s
+
+#9 resolving provenance for metadata file
+#9 DONE 1.5s
+ Image skill-fixed-format-records__ycbjn25__env-main Built 
+ Network skill-fixed-format-records__ycbjn25__env_default Creating 
+ Network skill-fixed-format-records__ycbjn25__env_default Error Error response from daemon: all predefined address pools have been fully subnetted
+failed to create network skill-fixed-format-records__ycbjn25__env_default: Error response from daemon: all predefined address pools have been fully subnetted
+. Stderr: None. 

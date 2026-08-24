@@ -5,18 +5,18 @@ reward=0
 if python3 - <<'PY'
 import sys
 sbox = [int(v, 16) for v in open('/app/sbox.txt').read().split()]
-counts = [0] * 16
+counts = [0] * 256
 for x in range(16):
     d = sbox[x] ^ sbox[x ^ 1]
     counts[d] += 1
-best_idx = min(i for i in range(16) if counts[i] == max(counts))
+best_val = max(counts)
 
 lines = [l.strip() for l in open('/app/differential.txt').read().splitlines() if l.strip()]
-assert len(lines) == 17, lines
-for i in range(16):
+assert len(lines) == 257, lines
+for i in range(256):
     idx, cnt = lines[i].split()
     assert int(idx) == i and int(cnt) == counts[i], (i, lines[i], counts[i])
-assert lines[16] == f"best {max(counts)}", lines[16]
+assert lines[256] == f"best {best_val}", lines[256]
 PY
 then
   reward=1

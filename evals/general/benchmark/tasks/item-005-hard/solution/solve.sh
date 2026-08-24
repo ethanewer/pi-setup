@@ -4,6 +4,8 @@ set -euo pipefail
 
 # 1. Build pMARS (no-display SERVER variant) and install at /app/pmars.
 cd /app/pmars-src/src
+# The source snapshot ships stale Mach-O object files; remove them first.
+rm -f ./*.o
 make -f Makefile all >/tmp/pmars_build.log 2>&1 || { cat /tmp/pmars_build.log; exit 1; }
 cp pmars /app/pmars
 chmod +x /app/pmars

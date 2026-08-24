@@ -59,7 +59,7 @@ def text_bytes():
     so, _, _, _ = secs[shstr]
     for name, addr, o, size in secs:
         end = data.index(b"\x00", so + name)
-        nm = data[so + name:end].decode()
+        nm = data[so + name:end].decode('utf-8', 'replace')
         if nm == ".text":
             return data[o:o + size], addr
     raise SystemExit(".text not found")

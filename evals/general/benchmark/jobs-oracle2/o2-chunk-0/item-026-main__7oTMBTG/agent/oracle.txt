@@ -1,0 +1,4 @@
+127.0.0.1 - - [24/Aug/2026 21:45:43] "GET /login?user=alice&role=admin HTTP/1.1" 200 8
+127.0.0.1 - - [24/Aug/2026 21:45:43] "GET /login?user=mallory%0D%0ASet-Cookie%3A%20session%3Dhijacked HTTP/1.1" 200 8
+REGRESSION OK
+SOLVED

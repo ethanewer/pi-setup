@@ -21,15 +21,14 @@ Write a Python 3 script `/app/differential.py` that:
 2. Fixes the input difference **Δa = 1**.
 3. For every input `x` in `0..15`, computes `y = x ^ 1` and
    `delta_out = S[x] ^ S[y]` (XOR).
-4. Counts, for each output difference value `0..15`, how many of the 16 pairs
-   produced it.
+4. Counts, for each output difference value `0..255`, how many of the 16
+   pairs produced it.
 5. Writes the results to `/app/differential.txt`:
 
-   - 16 lines, line `i` (`i` = 0..15) has the format `i <count>` where `count`
-     is how many of the 16 pairs gave output difference `i`.
+   - 256 lines, line `i` (`i` = 0..255) has the format `i <count>` where
+     `count` is how many of the 16 pairs gave output difference `i`.
    - A final line `best <value>` where `value` is the **largest** count on any
-     output difference (the most likely output difference for Δa=1). Ties:
-     pick the *smallest* output difference index achieving that count.
+     output difference (the most likely output difference for Δa=1).
 
 Example of the file shape (numbers shown are illustrative, not the answer):
 
@@ -40,5 +39,6 @@ Example of the file shape (numbers shown are illustrative, not the answer):
 best 4
 ```
 
-All math is XOR on integers `0..15` (4-bit). The verifier recomputes the exact
-distribution from `/app/sbox.txt` and compares line-by-line.
+All math is XOR on byte values `0..255` (the S-box entries are full bytes, so
+output differences span the full byte range). The verifier recomputes the
+exact distribution from `/app/sbox.txt` and compares line-by-line.

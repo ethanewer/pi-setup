@@ -7,7 +7,7 @@ expected = {}
 with open('/app/ea.txt') as f:
     for line in f:
         line = line.strip()
-        if not line:
+        if not line or line.startswith('#'):
             continue
         m = re.match(r'^EA(\d+)\s+base=(-?\d+)\s+index=(-?\d+)\s+scale=(-?\d+)\s+disp=(-?\d+)$', line)
         assert m, line

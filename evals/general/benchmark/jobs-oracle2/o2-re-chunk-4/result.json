@@ -1,0 +1,93 @@
+{
+    "id": "e7cb32e0-1308-424a-8ca3-6b1d3ad7a844",
+    "started_at": "2026-08-24T18:20:31.061182",
+    "updated_at": "2026-08-24T18:23:42.025388",
+    "finished_at": "2026-08-24T18:23:42.025388",
+    "n_total_trials": 50,
+    "stats": {
+        "n_completed_trials": 50,
+        "n_errored_trials": 3,
+        "n_running_trials": 0,
+        "n_pending_trials": 0,
+        "n_cancelled_trials": 0,
+        "n_retries": 0,
+        "evals": {
+            "oracle__tasks": {
+                "n_trials": 47,
+                "n_errors": 3,
+                "metrics": [
+                    {
+                        "mean": 0.78
+                    }
+                ],
+                "pass_at_k": {},
+                "reward_stats": {
+                    "reward": {
+                        "1.0": [
+                            "item-005-hard__cMZu53v",
+                            "skill-vim__ujZcA6L",
+                            "skill-run-length-encoding__kL3tX99",
+                            "skill-sqlite-source-build__26qmCTE",
+                            "skill-tls-inspection__4CsDRxu",
+                            "skill-stdin-stdout__ohChLcS",
+                            "skill-timezone-date-ranges__sE3bN8q",
+                            "skill-telnet__LvMzaBW",
+                            "skill-terminal-escape-sequences__L9RxLef",
+                            "skill-text-classification__w5odXtZ",
+                            "skill-sqlite-wal-format__FRNzXSR",
+                            "skill-sparql__6gFtnRa",
+                            "skill-scene-parameter-inference__Y9PWBBb",
+                            "skill-tensorflow-checkpoint-form__G6PegsQ",
+                            "skill-yelp-reviews__MNbmP6W",
+                            "skill-san-extensions__T7Hgfov",
+                            "skill-tokenizers__UpRtFLW",
+                            "skill-security-regression-tests__PRWNQey",
+                            "skill-statistical-testing__uNyPgLR",
+                            "skill-syscalls__BfPKVSS",
+                            "skill-sql-query-plans__XMGrAx8",
+                            "skill-xor-file-byte-recovery__DGk4Jx6",
+                            "skill-zork-command-syntax__ZohyGKe",
+                            "skill-state-dict-shape-inference__Ut4XSjV",
+                            "skill-systemd-processes__yf4KZPS",
+                            "skill-dangling-commits__nCzu5rE",
+                            "skill-windows-3-11__zdryRtm",
+                            "skill-tensor-partitioning__KdHUZgQ",
+                            "skill-stan__fbTiAov",
+                            "item-019-main__6CBH4PM",
+                            "skill-static-binary-analysis__JaGMyZb",
+                            "skill-web-research__Ey3cVFG",
+                            "skill-text-extraction__ock3cTu",
+                            "item-004-main__4yXUcHF",
+                            "skill-scipy-pandas__RXwbP5y",
+                            "skill-xor-uint32-arithmetic__bQK4u6F",
+                            "skill-text-processing__HNpSE52",
+                            "item-013-main__kz7GL2v",
+                            "skill-setuptools__UWmbyck"
+                        ],
+                        "0.0": [
+                            "skill-async-process-i-o__YF22sz6",
+                            "item-075-hard__C3fDVAP",
+                            "item-055-main__Zq6VUzR",
+                            "item-034-main__GHnMu8T",
+                            "skill-assembly-like-addressing__GHwwaSu",
+                            "item-013-hard__i7yBhHG",
+                            "item-058-hard__G5qeMbd",
+                            "item-057-main__dU8oWRw"
+                        ]
+                    }
+                },
+                "exception_stats": {
+                    "RuntimeError": [
+                        "skill-tex-log-diagnostics__Y23KPaM",
+                        "skill-serial-console__XabzCMU",
+                        "skill-semaphores-concurrency-lim__JJ8Sem9"
+                    ]
+                }
+            }
+        },
+        "n_input_tokens": null,
+        "n_cache_tokens": null,
+        "n_output_tokens": null,
+        "cost_usd": null
+    }
+}

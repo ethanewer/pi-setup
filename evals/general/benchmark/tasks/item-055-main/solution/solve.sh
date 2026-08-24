@@ -69,7 +69,7 @@ fn fib(n: u64) -> u64 {
     let mut a: u64 = 0;
     let mut b: u64 = 1;
     for _ in 0..n {
-        let t: u64 = a + b;
+        let t: u64 = a.wrapping_add(b);
         a = b;
         b = t;
     }
@@ -88,18 +88,18 @@ fn parse_num(s: &str) -> Option<u64> {
     if !is_digits(s) { return None; }
     let mut v: u64 = 0;
     for c in s.chars() {
-        v = v * 10 + ((c - '0') as u64);
+        v = v * 10 + ((c as u64) - ('0' as u64));
     }
     return Some(v);
 }
 
 fn main() {
-    let args: Vec<String> = std::env::args().collect::<String>();
+    let args: Vec<String> = std::env::args().collect();
     if args.len() != 2 {
         eprintln!("error: expected exactly one argument N (0..93)");
         std::process::exit(1);
     }
-    let s: &str = args[1].to_str();
+    let s: &str = args[1].as_str();
     if let Some(n) = parse_num(s) {
         if n > 93 {
             eprintln!("error: N must be a non-negative integer in 0..93");

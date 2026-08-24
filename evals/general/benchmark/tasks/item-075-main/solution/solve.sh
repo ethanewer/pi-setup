@@ -122,6 +122,9 @@ def main():
     if got != EXPECT:
         raise SystemExit("oracle could not produce the flag")
     print("flag content OK:", got)
+    # Deliverable: persist the winning payload for the verifier.
+    with open("/app/payload.bin", "wb") as f:
+        f.write(b"A" * off + chain)
 
 
 if __name__ == "__main__":

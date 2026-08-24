@@ -30,6 +30,8 @@ def load():
         print("ERROR: workers must be an int in [1,16]")
         return
     print("STARTED")
+
+load()
 '''
 open('/app/server_app.py', 'w').write(code)
 PYEOF

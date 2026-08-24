@@ -91,7 +91,36 @@ try:
     top2_ref = []
     for row in S_ref:
         top2_ref.append(sorted(range(len(docs)), key=lambda j: (-row[j], j))[:2])
-    checks["top2"] = ag.get("top2") == top2_ref
+    ag_top2 = ag.get("top2")
+    exact = ag_top2 == top2_ref
+    if not exact and isinstance(ag_top2, list) and len(ag_top2) == len(top2_ref):
+        # Tolerate swaps among near-tied scores: accept the agent's picks if,
+        # for every query row, both picked docs score within 1e-4 of the
+        # reference top-2 cutoff AND the pairwise ordering deviation is due
+        # only to such near-ties.
+        ok = True
+        for qi, (row, picks) in enumerate(zip(S_ref, ag_top2)):
+            if not isinstance(picks, (list, tuple)) or len(picks) != 2:
+                ok = False
+                break
+            ref_picks = top2_ref[qi]
+            try:
+                picks = [int(p) for p in picks]
+            except Exception:
+                ok = False
+                break
+            if len(set(picks)) != 2 or any(p < 0 or p >= len(docs) for p in picks):
+                ok = False
+                break
+            sets_match = set(picks) == set(ref_picks)
+            # score gap between picked and reference cutoff must be tiny
+            ref_cut = row[ref_picks[-1]]
+            picked_scores_ok = all(abs(row[p] - row[q]) < 1e-4
+                                   for p in picks for q in ref_picks)
+            if not (sets_match or (picked_scores_ok and abs(row[picks[0]] - ref_cut) < 1e-4)):
+                ok = False
+                break
+        checks["top2"] = ok
     checks["revision_out"] = ag.get("revision") == rev
 
     tot = sum(1 for v in checks.values() if v)

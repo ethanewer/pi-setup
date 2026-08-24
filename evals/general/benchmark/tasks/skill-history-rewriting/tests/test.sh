@@ -2,7 +2,7 @@
 mkdir -p /logs/verifier
 reward=0
 if [ -d /app/repo/.git ]; then
-  python3 - <<'PYEOF'
+  if python3 - <<'PYEOF'
 import subprocess, sys, os
 repo = "/app/repo"
 def run(args):
@@ -22,5 +22,8 @@ if not (head_file("readme.md") == "main cfg\n"
     ok = False
 sys.exit(0 if ok else 1)
 PYEOF
+  then
+    reward=1
+  fi
 fi
 echo "$reward" > /logs/verifier/reward.txt

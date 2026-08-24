@@ -1,0 +1,91 @@
+{
+    "id": "0586a688-2fc6-4aeb-a9a8-aeef1c2ec463",
+    "started_at": "2026-08-24T16:54:15.739975",
+    "updated_at": "2026-08-24T21:56:09.914098Z",
+    "finished_at": null,
+    "n_total_trials": 59,
+    "stats": {
+        "n_completed_trials": 46,
+        "n_errored_trials": 23,
+        "n_running_trials": 2,
+        "n_pending_trials": 11,
+        "n_cancelled_trials": 22,
+        "n_retries": 0,
+        "evals": {
+            "oracle__tasks": {
+                "n_trials": 23,
+                "n_errors": 23,
+                "metrics": [
+                    {
+                        "mean": 0.43478260869565216
+                    }
+                ],
+                "pass_at_k": {},
+                "reward_stats": {
+                    "reward": {
+                        "0.0": [
+                            "skill-async-process-i-o__b6TtmBc",
+                            "skill-assembly-like-addressing__84LX7Qe",
+                            "item-075-hard__DxKM9Y9"
+                        ],
+                        "1.0": [
+                            "skill-adaptive-rejection-samplin__sPDBYCM",
+                            "skill-buffer-overflow__6q5o5ZY",
+                            "skill-branch-specific-deployment__rz5MAKE",
+                            "skill-branch-reset-merge__DEmi4fw",
+                            "skill-binary-parsing__w3nyE6u",
+                            "skill-bge-small-zh-v1-5__HDgbNsi",
+                            "skill-bitwise-arithmetic__cfTNgp2",
+                            "skill-bit-byte-streams__92hvUva",
+                            "skill-autoconf-make__nqghfxH",
+                            "item-069-main__Bk6gxbi",
+                            "skill-afab-scheduling__FX5ZGWo",
+                            "item-076-hard__yuSeKiV",
+                            "item-068-hard__PyaQtSU",
+                            "item-069-hard__eSnpcna",
+                            "skill-aws-github-token-patterns__34cqWXy",
+                            "skill-build-wheel-metadata__QioBwoV",
+                            "item-067-hard__eC86vUP",
+                            "item-074-hard__pwocZry",
+                            "skill-benchmarking__xG5kYNB",
+                            "item-071-main__SN59myB"
+                        ]
+                    }
+                },
+                "exception_stats": {
+                    "RuntimeError": [
+                        "skill-access-log-formats__bf3iK9Z"
+                    ],
+                    "CancelledError": [
+                        "skill-autograd__3Xcz4o2",
+                        "skill-7z__q7mkTtm",
+                        "skill-bootstrap-compiler-debuggi__LxhH2nM",
+                        "item-073-hard__QAPNTRs",
+                        "item-071-hard__d6RvqFA",
+                        "skill-archive-formats__ZXb4Amk",
+                        "skill-biopython__dNGZwm8",
+                        "skill-black-box-neural-network-q__iQkPfzj",
+                        "item-073-main__ZsgWxYa",
+                        "skill-binary-analysis__qLp9RPZ",
+                        "skill-branch-ref-management__MyS97Pe",
+                        "item-076-main__9cKHSEX",
+                        "skill-black-box-input-output-tes__UngxKqE",
+                        "skill-browser-behavior__pkssNCG",
+                        "skill-3d-printer-toolpaths__uQSPahU",
+                        "skill-binary-truncation-recovery__WGsaLQa",
+                        "item-068-main__JfDeHQE",
+                        "item-070-hard__m5tgx7A",
+                        "skill-bayesian-network-structure__9hkLyxk",
+                        "skill-c__u97jTKq",
+                        "item-072-main__ShuqJLE",
+                        "skill-bare-repositories__EHzrXfw"
+                    ]
+                }
+            }
+        },
+        "n_input_tokens": null,
+        "n_cache_tokens": null,
+        "n_output_tokens": null,
+        "cost_usd": null
+    }
+}

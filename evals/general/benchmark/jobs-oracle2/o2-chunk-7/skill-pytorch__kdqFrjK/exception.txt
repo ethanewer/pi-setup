@@ -1,0 +1,81 @@
+Traceback (most recent call last):
+  File "/home/eewer/.local/share/uv/tools/harbor/lib/python3.13/site-packages/harbor/trial/trial.py", line 406, in run
+    await self._prepare()
+  File "/home/eewer/.local/share/uv/tools/harbor/lib/python3.13/site-packages/harbor/trial/trial.py", line 444, in _prepare
+    await self._setup_agent_environment()
+  File "/home/eewer/.local/share/uv/tools/harbor/lib/python3.13/site-packages/harbor/trial/trial.py", line 1423, in _setup_agent_environment
+    await self._start_agent_environment()
+  File "/home/eewer/.local/share/uv/tools/harbor/lib/python3.13/site-packages/harbor/trial/trial.py", line 1429, in _start_agent_environment
+    await asyncio.wait_for(
+    ...<4 lines>...
+    )
+  File "/home/eewer/.local/share/uv/python/cpython-3.13.12-linux-x86_64-gnu/lib/python3.13/asyncio/tasks.py", line 507, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "/home/eewer/.local/share/uv/tools/harbor/lib/python3.13/site-packages/harbor/environments/docker/docker.py", line 913, in start
+    await self._run_docker_compose_command(["up", "--detach", "--wait"])
+  File "/home/eewer/.local/share/uv/tools/harbor/lib/python3.13/site-packages/harbor/environments/docker/docker.py", line 656, in _run_docker_compose_command
+    raise RuntimeError(
+    ...<5 lines>...
+    )
+RuntimeError: Docker compose command failed for environment skill-pytorch. Command: docker compose --project-name skill-pytorch__kdqfrjk__env --project-directory /home/eewer/pi-setup/evals/general/benchmark/tasks/skill-pytorch/environment -f /tmp/tmpcuxw8d6m/skill-pytorch__kdqFrjK__env-docker-compose-resources.json -f /home/eewer/.local/share/uv/tools/harbor/lib/python3.13/site-packages/harbor/environments/docker/docker-compose-build.yaml -f /tmp/tmpp858p8ee/docker-compose-environment.json -f /tmp/tmpx1pp4huv/docker-compose-mounts.json up --detach --wait. Return code: 1. Stdout:  Image skill-pytorch__kdqfrjk__env-main Building 
+#1 [internal] load local bake definitions
+#1 reading from stdin 636B done
+#1 DONE 0.0s
+
+#2 [internal] load build definition from Dockerfile
+#2 transferring dockerfile:
+#2 transferring dockerfile: 205B done
+#2 DONE 4.4s
+
+#3 [internal] load metadata for docker.io/library/bench-base:python-3.12
+#3 DONE 0.3s
+
+#4 [internal] load .dockerignore
+#4 transferring context:
+#4 transferring context: 2B done
+#4 DONE 0.5s
+
+#5 [2/3] WORKDIR /app
+#5 CACHED
+
+#6 [1/3] FROM docker.io/library/bench-base:python-3.12@sha256:197f39b659afdeb01c32293c30b4ee62e56f1f7a5c4ba7fea164e71f73e4894d
+#6 resolve docker.io/library/bench-base:python-3.12@sha256:197f39b659afdeb01c32293c30b4ee62e56f1f7a5c4ba7fea164e71f73e4894d 0.1s done
+#6 CACHED
+
+#7 [internal] load build context
+#7 DONE 0.0s
+
+#7 [internal] load build context
+#7 transferring context: 1.64kB done
+#7 DONE 0.3s
+
+#8 [3/4] RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
+#8 CACHED
+
+#9 [4/4] COPY files/values.pt /app/values.pt
+#9 CACHED
+
+#10 exporting to image
+#10 exporting layers done
+#10 exporting manifest sha256:4beb33698c760816fb218213e1b7051596eb362d0e945f9f7d9869f9d9b653be
+#10 exporting manifest sha256:4beb33698c760816fb218213e1b7051596eb362d0e945f9f7d9869f9d9b653be 0.2s done
+#10 exporting config sha256:2ec548889a59c80b9d7e6489efaf9cdd4cbd697537a9d5439adf8f9b78aa47b2
+#10 exporting config sha256:2ec548889a59c80b9d7e6489efaf9cdd4cbd697537a9d5439adf8f9b78aa47b2 0.1s done
+#10 exporting attestation manifest sha256:56b5f74b7c1cb50d2e13bf4e91f72af242a8dcea662b3fd3e360329f7ae72e67
+#10 exporting attestation manifest sha256:56b5f74b7c1cb50d2e13bf4e91f72af242a8dcea662b3fd3e360329f7ae72e67 0.5s done
+#10 exporting manifest list sha256:360d50827d7e6fe670a7cd88ff28d104541b38950fcf7676161e6f750042cd64
+#10 exporting manifest list sha256:360d50827d7e6fe670a7cd88ff28d104541b38950fcf7676161e6f750042cd64 0.6s done
+#10 naming to docker.io/library/skill-pytorch__kdqfrjk__env-main:latest
+#10 naming to docker.io/library/skill-pytorch__kdqfrjk__env-main:latest 0.2s done
+#10 unpacking to docker.io/library/skill-pytorch__kdqfrjk__env-main:latest
+#10 unpacking to docker.io/library/skill-pytorch__kdqfrjk__env-main:latest 0.5s done
+#10 DONE 2.9s
+
+#11 resolving provenance for metadata file
+#11 DONE 0.9s
+ Image skill-pytorch__kdqfrjk__env-main Built 
+ Network skill-pytorch__kdqfrjk__env_default Creating 
+ Network skill-pytorch__kdqfrjk__env_default Error Error response from daemon: all predefined address pools have been fully subnetted
+failed to create network skill-pytorch__kdqfrjk__env_default: Error response from daemon: all predefined address pools have been fully subnetted
+. Stderr: None. 

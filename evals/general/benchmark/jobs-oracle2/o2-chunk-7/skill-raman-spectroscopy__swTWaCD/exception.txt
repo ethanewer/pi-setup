@@ -1,0 +1,81 @@
+Traceback (most recent call last):
+  File "/home/eewer/.local/share/uv/tools/harbor/lib/python3.13/site-packages/harbor/trial/trial.py", line 406, in run
+    await self._prepare()
+  File "/home/eewer/.local/share/uv/tools/harbor/lib/python3.13/site-packages/harbor/trial/trial.py", line 444, in _prepare
+    await self._setup_agent_environment()
+  File "/home/eewer/.local/share/uv/tools/harbor/lib/python3.13/site-packages/harbor/trial/trial.py", line 1423, in _setup_agent_environment
+    await self._start_agent_environment()
+  File "/home/eewer/.local/share/uv/tools/harbor/lib/python3.13/site-packages/harbor/trial/trial.py", line 1429, in _start_agent_environment
+    await asyncio.wait_for(
+    ...<4 lines>...
+    )
+  File "/home/eewer/.local/share/uv/python/cpython-3.13.12-linux-x86_64-gnu/lib/python3.13/asyncio/tasks.py", line 507, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "/home/eewer/.local/share/uv/tools/harbor/lib/python3.13/site-packages/harbor/environments/docker/docker.py", line 913, in start
+    await self._run_docker_compose_command(["up", "--detach", "--wait"])
+  File "/home/eewer/.local/share/uv/tools/harbor/lib/python3.13/site-packages/harbor/environments/docker/docker.py", line 656, in _run_docker_compose_command
+    raise RuntimeError(
+    ...<5 lines>...
+    )
+RuntimeError: Docker compose command failed for environment skill-raman-spectroscopy. Command: docker compose --project-name skill-raman-spectroscopy__swtwacd__env --project-directory /home/eewer/pi-setup/evals/general/benchmark/tasks/skill-raman-spectroscopy/environment -f /tmp/tmpba1_a3y_/skill-raman-spectroscopy__swTWaCD__env-docker-compose-resources.json -f /home/eewer/.local/share/uv/tools/harbor/lib/python3.13/site-packages/harbor/environments/docker/docker-compose-build.yaml -f /tmp/tmpbr52ft7e/docker-compose-environment.json -f /tmp/tmp1x2bk0r5/docker-compose-mounts.json up --detach --wait. Return code: 1. Stdout:  Image skill-raman-spectroscopy__swtwacd__env-main Building 
+#1 [internal] load local bake definitions
+#1 reading from stdin 680B done
+#1 DONE 0.0s
+
+#2 [internal] load build definition from Dockerfile
+#2 DONE 0.0s
+
+#2 [internal] load build definition from Dockerfile
+#2 transferring dockerfile:
+#2 transferring dockerfile: 98B done
+#2 DONE 0.5s
+
+#3 [internal] load metadata for docker.io/library/bench-base:python-3.12
+#3 DONE 0.1s
+
+#4 [internal] load .dockerignore
+#4 DONE 0.0s
+
+#4 [internal] load .dockerignore
+#4 transferring context:
+#4 transferring context: 2B done
+#4 DONE 0.5s
+
+#5 [2/3] WORKDIR /app
+#5 CACHED
+
+#6 [1/3] FROM docker.io/library/bench-base:python-3.12@sha256:197f39b659afdeb01c32293c30b4ee62e56f1f7a5c4ba7fea164e71f73e4894d
+#6 resolve docker.io/library/bench-base:python-3.12@sha256:197f39b659afdeb01c32293c30b4ee62e56f1f7a5c4ba7fea164e71f73e4894d 0.1s done
+#6 CACHED
+
+#7 [internal] load build context
+#7 transferring context: 217B done
+#7 DONE 1.2s
+
+#8 [3/3] COPY files/ /app/
+#8 CACHED
+
+#9 exporting to image
+#9 exporting layers done
+#9 exporting manifest sha256:cbb94b2c8fd3e20ef302492ecd7971cbdd03952e534e9b9dfa96cfc4358ee591
+#9 exporting manifest sha256:cbb94b2c8fd3e20ef302492ecd7971cbdd03952e534e9b9dfa96cfc4358ee591 0.1s done
+#9 exporting config sha256:4fdfaddf1f6e96d77e8aad9bad5345288503a3b47ff0b0c26caa409c9f5a3127
+#9 exporting config sha256:4fdfaddf1f6e96d77e8aad9bad5345288503a3b47ff0b0c26caa409c9f5a3127 0.2s done
+#9 exporting attestation manifest sha256:e6740b3d416d4194d577c885d883d0dbc0a603564061b0a796dc2b6ce98f94d9
+#9 exporting attestation manifest sha256:e6740b3d416d4194d577c885d883d0dbc0a603564061b0a796dc2b6ce98f94d9 0.7s done
+#9 exporting manifest list sha256:1e60d26a28cbbf11dd8d2dbc0b080651b0ba62ae1bd044c600e1052d4cf5a68a
+#9 exporting manifest list sha256:1e60d26a28cbbf11dd8d2dbc0b080651b0ba62ae1bd044c600e1052d4cf5a68a 0.3s done
+#9 naming to docker.io/library/skill-raman-spectroscopy__swtwacd__env-main:latest
+#9 naming to docker.io/library/skill-raman-spectroscopy__swtwacd__env-main:latest 0.2s done
+#9 unpacking to docker.io/library/skill-raman-spectroscopy__swtwacd__env-main:latest
+#9 unpacking to docker.io/library/skill-raman-spectroscopy__swtwacd__env-main:latest 0.1s done
+#9 DONE 2.3s
+
+#10 resolving provenance for metadata file
+#10 DONE 0.2s
+ Image skill-raman-spectroscopy__swtwacd__env-main Built 
+ Network skill-raman-spectroscopy__swtwacd__env_default Creating 
+ Network skill-raman-spectroscopy__swtwacd__env_default Error Error response from daemon: all predefined address pools have been fully subnetted
+failed to create network skill-raman-spectroscopy__swtwacd__env_default: Error response from daemon: all predefined address pools have been fully subnetted
+. Stderr: None. 

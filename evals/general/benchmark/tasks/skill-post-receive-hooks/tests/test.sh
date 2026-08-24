@@ -22,12 +22,16 @@ if [ "$bare_ok" = "1" ] && [ -f "$APP/repo.git/hooks/post-receive" ] && [ -x "$A
   git -C /tmp/pushsrc add f
   git -C /tmp/pushsrc commit -q -m "test commit"
   git -C /tmp/pushsrc remote add origin "$APP/repo.git" 2>/dev/null || git -C /tmp/pushsrc remote set-url origin "$APP/repo.git"
-  git -C /tmp/pushsrc push -q origin HEAD 2> /dev/null
-  sleep 0.6
+  push_out=$(git -C /tmp/pushsrc push origin HEAD 2>&1)
+  push_rc=$?
+  echo "push rc=$push_rc out=$push_out"
+  sleep 1
+  echo "hook.log:"; cat "$APP/hook.log" 2>/dev/null || echo "(missing)"
   if [ -f "$APP/hook.log" ]; then
     if grep -q 'push_received' "$APP/hook.log" && grep -qE 'refs/heads/[A-Za-z0-9_.-]+' "$APP/hook.log"; then
       reward=1
     fi
   fi
 fi
+echo "bare_ok=$bare_ok hook_exists=$(test -f "$APP/repo.git/hooks/post-receive" && echo 1 || echo 0)"
 printf '%s' "$reward" > /logs/verifier/reward.txt

@@ -50,3 +50,7 @@ def main():
     reward = checks / 3.0
     with open('/logs/verifier/reward.txt', 'w') as f:
         f.write(str(reward))
+
+
+if __name__ == "__main__":
+    main()

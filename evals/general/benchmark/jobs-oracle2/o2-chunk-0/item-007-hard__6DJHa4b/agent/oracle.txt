@@ -1,0 +1,6 @@
+g++ -std=c++17 -O2 -I src -c src/tiny_proto.cpp -o tiny_proto.o
+g++ -std=c++17 -O2 -I src -c src/tiny_blas.cpp -o tiny_blas.o
+g++ -std=c++17 -O2 -I src -c src/imgproc.cpp -o imgproc.o
+g++ -std=c++17 -O2 -I src src/main.cpp tiny_proto.o tiny_blas.o imgproc.o -o train
+iter 500/500
+report written

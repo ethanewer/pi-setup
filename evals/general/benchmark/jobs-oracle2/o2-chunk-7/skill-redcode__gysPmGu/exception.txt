@@ -1,0 +1,75 @@
+Traceback (most recent call last):
+  File "/home/eewer/.local/share/uv/tools/harbor/lib/python3.13/site-packages/harbor/trial/trial.py", line 406, in run
+    await self._prepare()
+  File "/home/eewer/.local/share/uv/tools/harbor/lib/python3.13/site-packages/harbor/trial/trial.py", line 444, in _prepare
+    await self._setup_agent_environment()
+  File "/home/eewer/.local/share/uv/tools/harbor/lib/python3.13/site-packages/harbor/trial/trial.py", line 1423, in _setup_agent_environment
+    await self._start_agent_environment()
+  File "/home/eewer/.local/share/uv/tools/harbor/lib/python3.13/site-packages/harbor/trial/trial.py", line 1429, in _start_agent_environment
+    await asyncio.wait_for(
+    ...<4 lines>...
+    )
+  File "/home/eewer/.local/share/uv/python/cpython-3.13.12-linux-x86_64-gnu/lib/python3.13/asyncio/tasks.py", line 507, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "/home/eewer/.local/share/uv/tools/harbor/lib/python3.13/site-packages/harbor/environments/docker/docker.py", line 913, in start
+    await self._run_docker_compose_command(["up", "--detach", "--wait"])
+  File "/home/eewer/.local/share/uv/tools/harbor/lib/python3.13/site-packages/harbor/environments/docker/docker.py", line 656, in _run_docker_compose_command
+    raise RuntimeError(
+    ...<5 lines>...
+    )
+RuntimeError: Docker compose command failed for environment skill-redcode. Command: docker compose --project-name skill-redcode__gyspmgu__env --project-directory /home/eewer/pi-setup/evals/general/benchmark/tasks/skill-redcode/environment -f /tmp/tmphec2em1h/skill-redcode__gysPmGu__env-docker-compose-resources.json -f /home/eewer/.local/share/uv/tools/harbor/lib/python3.13/site-packages/harbor/environments/docker/docker-compose-build.yaml -f /tmp/tmpxb4j9ne1/docker-compose-environment.json -f /tmp/tmp_z7vghji/docker-compose-mounts.json up --detach --wait. Return code: 1. Stdout:  Image skill-redcode__gyspmgu__env-main Building 
+#1 [internal] load local bake definitions
+#1 reading from stdin 636B done
+#1 DONE 0.0s
+
+#2 [internal] load build definition from Dockerfile
+#2 transferring dockerfile:
+#2 transferring dockerfile: 97B done
+#2 DONE 3.8s
+
+#3 [internal] load metadata for docker.io/library/bench-base:python-3.12
+#3 DONE 0.2s
+
+#4 [internal] load .dockerignore
+#4 transferring context:
+#4 transferring context: 2B done
+#4 DONE 0.6s
+
+#5 [2/3] WORKDIR /app
+#5 CACHED
+
+#6 [1/3] FROM docker.io/library/bench-base:python-3.12@sha256:197f39b659afdeb01c32293c30b4ee62e56f1f7a5c4ba7fea164e71f73e4894d
+#6 resolve docker.io/library/bench-base:python-3.12@sha256:197f39b659afdeb01c32293c30b4ee62e56f1f7a5c4ba7fea164e71f73e4894d 0.1s done
+#6 CACHED
+
+#7 [internal] load build context
+#7 transferring context: 125B done
+#7 DONE 0.3s
+
+#8 [3/3] COPY files/ /app/
+#8 CACHED
+
+#9 exporting to image
+#9 exporting layers done
+#9 exporting manifest sha256:1866143bfd2d19408e167025f3d4cafe587d53957a9dfb8c312c94c9c512a963
+#9 exporting manifest sha256:1866143bfd2d19408e167025f3d4cafe587d53957a9dfb8c312c94c9c512a963 0.2s done
+#9 exporting config sha256:91655b814b1088258df40d379b40e75ab04f420528a3bbaa8d34987a4867cd22
+#9 exporting config sha256:91655b814b1088258df40d379b40e75ab04f420528a3bbaa8d34987a4867cd22 0.1s done
+#9 exporting attestation manifest sha256:bb66841869b388c56252d81c31b9512639df789b1d8ab5dde5eb0cc38d6c9bed
+#9 exporting attestation manifest sha256:bb66841869b388c56252d81c31b9512639df789b1d8ab5dde5eb0cc38d6c9bed 1.6s done
+#9 exporting manifest list sha256:731b4fad1914b5a8c6581ab9117b6eaf3a8a0b1cb94030233a6a00fd19bd4730
+#9 exporting manifest list sha256:731b4fad1914b5a8c6581ab9117b6eaf3a8a0b1cb94030233a6a00fd19bd4730 0.9s done
+#9 naming to docker.io/library/skill-redcode__gyspmgu__env-main:latest
+#9 naming to docker.io/library/skill-redcode__gyspmgu__env-main:latest 0.1s done
+#9 unpacking to docker.io/library/skill-redcode__gyspmgu__env-main:latest
+#9 unpacking to docker.io/library/skill-redcode__gyspmgu__env-main:latest 0.2s done
+#9 DONE 4.3s
+
+#10 resolving provenance for metadata file
+#10 DONE 0.2s
+ Image skill-redcode__gyspmgu__env-main Built 
+ Network skill-redcode__gyspmgu__env_default Creating 
+ Network skill-redcode__gyspmgu__env_default Error Error response from daemon: all predefined address pools have been fully subnetted
+failed to create network skill-redcode__gyspmgu__env_default: Error response from daemon: all predefined address pools have been fully subnetted
+. Stderr: None. 

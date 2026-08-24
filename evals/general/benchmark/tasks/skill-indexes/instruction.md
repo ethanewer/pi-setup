@@ -17,7 +17,7 @@ The file `/app/documents.txt` is:
 105|the brown fox
 ```
 
-Only documents 101 and 103 contain both `the` and `quick`, so the expected `/app/answer.txt` is:
+Only documents 101 and 103 contain both `the` and `quick`, so the expected `/app/result.txt` is:
 ```
 101,103
 ```
