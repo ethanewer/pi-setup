@@ -533,7 +533,7 @@ must never be committed here.
 [`eewer/glm-5.2-multi-harness-agent`](https://huggingface.co/datasets/eewer/glm-5.2-multi-harness-agent)
 dataset and uploads the compressed result to
 [`eewer/pi-trace-cache`](https://huggingface.co/datasets/eewer/pi-trace-cache) when
-`HF_TOKEN` has write access. It enforces three invariants by default:
+`HF_TOKEN` has write access. It enforces these invariants by default:
 
 - **OpenAI and Anthropic models are dropped** (by provider and model id).
 - **Fake test/mock models are dropped** — pi's `faux` provider and the Qwen3 0.6B
@@ -541,6 +541,15 @@ dataset and uploads the compressed result to
 - **Every API key is replaced with a deterministic, format-valid fake** — the same
   real key always maps to the same fake, so traces stay valid while no real secret
   leaves the machine.
+- **The `pi-ai 0.84.3` newline-reasoning regression is quarantined** — at the
+  first severe token-fragment reasoning block, the export keeps only the clean
+  prefix before that assistant turn. The affected response and its suffix are
+  excluded because later turns were conditioned on malformed replay context. A
+  trace with no earlier clean assistant response is dropped. The detector does
+  not join or delete newlines, raw sessions remain untouched, and
+  `manifests/newline-reasoning-v1.jsonl` records every truncation or exclusion.
+  The filter also runs over merged remote rows, removing already-uploaded bad
+  suffixes. `--keep-newline-reasoning` is restricted to local forensic exports.
 - **Smoke/probe sessions and empty traces are dropped** — installer smoke-test
   prompts (`tests/smoke.sh`, tool listings, codeword ACKs, SMOKE-BASH-OK) and
   trivial probes ("test", "hi", "echo hi", img.png checks) are filtered; trivial

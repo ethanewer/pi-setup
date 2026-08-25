@@ -216,3 +216,9 @@ The setup now keeps Pi on the latest published release, `0.84.3`, and applies a 
 `bin/verify-pi-ai-reasoning-fix` runs a local OpenAI-compatible test server. It verifies the installed package's outgoing replay payload and the reasoning signature created from new streamed deltas. `install.sh` runs this check after applying the patch, and `bin/pi-setup-doctor` checks that the installed code still contains both paths.
 
 Global packages were changed only through `install.sh` after the investigation. The installed `pi-coding-agent` and `pi-ai` versions are now both `0.84.3`.
+
+## SFT data status
+
+`bin/convert-pi-traces` now applies the same conservative severe-split detector during every export and again after merging existing Hugging Face rows. It truncates an affected conversation immediately before the first malformed assistant turn, discards that turn and its suffix, and excludes the row if no earlier clean assistant response exists. It does not rewrite raw traces or attempt to join newlines. Truncated rows invalidate stale token and exception accounting and carry deterministic policy metadata.
+
+The current `eewer/pi-trace-cache` shard has 101 rows. Eight rows were reduced to clean prefixes, the uploaded manifest at `manifests/newline-reasoning-v1.jsonl` records those decisions, and validation found no remaining severe split-reasoning blocks.

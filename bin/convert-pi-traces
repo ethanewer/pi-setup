@@ -38,6 +38,15 @@ text-*, davinci/curie/babbage/ada, openai/*). The effective model is the last
 `model_change` event (falling back to the last assistant turn); a trace whose
 every assistant turn is OpenAI is also dropped.
 
+A conservative detector quarantines the `pi-ai 0.84.3` newline-reasoning
+regression. At the first severe token-fragment split in an assistant reasoning
+block, the exported conversation is cut before that assistant turn. Its clean
+prefix remains usable; the affected response and contaminated suffix do not.
+If no clean assistant turn precedes the defect, the row is excluded. Raw session
+files are never rewritten. A deterministic exclusion manifest records every
+cut or exclusion, and the same policy is re-applied to existing remote rows
+before a union shard replaces them.
+
 Monitor-bench eval traces
 -------------------------
 In addition to pi session files, the tool ingests monitor-bench eval runs
@@ -53,8 +62,9 @@ apply. --no-eval disables this; --eval-cap changes the per-task cap.
 Upload
 ------
 If HF_TOKEN (or HUGGING_FACE_HUB_TOKEN) is set and the token has `write` access,
-the compressed `.jsonl.zst` shard(s) are uploaded to `eewer/pi-trace-cache`
-(repo_type=dataset). `*.zst` is already LFS-tracked there. `--no-upload` skips.
+the compressed `.jsonl.zst` shard(s), dataset card, and current sanitization
+manifest are uploaded to `eewer/pi-trace-cache` (repo_type=dataset). `*.zst` is
+already LFS-tracked there. `--no-upload` skips.
 
 Usage
 -----
@@ -65,6 +75,7 @@ Usage
   python3 convert_pi_traces.py --max-files 20  # cap discovered traces (debug)
   python3 convert_pi_traces.py --no-eval       # skip monitor-bench eval traces
   python3 convert_pi_traces.py --eval-cap 3    # at most 3 eval traces per task
+  python3 convert_pi_traces.py --keep-newline-reasoning  # unsafe forensic export only
 """
 
 from __future__ import annotations
@@ -110,6 +121,36 @@ UPLOAD_REPO = "eewer/pi-trace-cache"
 DEFAULT_OUT = HOME / "pi-trace-cache-tool" / "out"
 
 ZSTD_LEVEL = 19  # high ratio; the reference dataset ships .jsonl.zst
+
+NEWLINE_REASONING_POLICY = "pi-ai-0.84.3-newline-reasoning-v1"
+NEWLINE_REASONING_MANIFEST_REPO_PATH = "manifests/newline-reasoning-v1.jsonl"
+DATASET_CARD_REPO_PATH = "README.md"
+DATASET_CARD = """---
+pretty_name: Pi Trace Cache
+---
+
+# Pi Trace Cache
+
+Private, redacted Pi coding-agent traces used as source material for dataset
+construction. Raw session files remain outside this repository; uploaded files
+are derived exports.
+
+## Newline-reasoning quarantine
+
+Rows are screened for the `pi-ai 0.84.3` fragmented-reasoning regression. At
+the first severe token-fragment split, the exported conversation is truncated
+before the affected assistant turn. The affected turn and every later turn are
+excluded because they were conditioned on malformed replay context. A row with
+no clean assistant turn before the defect is omitted entirely.
+
+The pipeline does not delete or join newline characters. Some newlines are
+valid prose, Markdown, or code, and the malformed newlines were model output
+triggered by a bad replay structure rather than display-only corruption.
+
+`manifests/newline-reasoning-v1.jsonl` records each truncated or excluded trace,
+the first affected message index, and detector metrics. The original local
+trace archive is immutable and is not uploaded by this pipeline.
+"""
 
 # Directories to never descend into while walking for traces.
 SKIP_DIRS = {
@@ -396,6 +437,142 @@ def smoke_drop_reason(row: dict) -> str | None:
         if _normalize_prompt(first) in SMOKE_TRIVIAL_PROMPTS:
             return "smoke_probe"
     return None
+
+
+# --------------------------------------------------------------------------- #
+# Newline-reasoning quarantine
+# --------------------------------------------------------------------------- #
+
+
+def newline_reasoning_metrics(text: str) -> dict[str, int | float | bool]:
+    """Measure severe token-fragment splitting without treating ordinary
+    paragraphs, lists, headings, or code layout as corruption."""
+    lines = text.split("\n")
+    suspicious = 0
+    for before, after in zip(lines, lines[1:]):
+        left = before.strip()
+        right = after.strip()
+        if not left or not right:
+            continue
+        if re.match(r"^(?:[-*#>`]|\d+[.)]\s)", right):
+            continue
+        if left.endswith((".", ":", ";", "?", "!", "`", "{", "}", "[", "]")):
+            continue
+        if re.match(r"^(?:[-*#>`]|\d+[.)]\s)", left):
+            continue
+        if len(left) <= 15 or len(right) <= 15:
+            suspicious += 1
+    newlines = text.count("\n")
+    ratio = newlines / max(len(text), 1)
+    severe = newlines >= 3 and ratio >= 0.04 and suspicious >= 2
+    return {
+        "characters": len(text),
+        "newlines": newlines,
+        "newline_character_ratio": round(ratio, 6),
+        "suspicious_boundaries": suspicious,
+        "severe": severe,
+    }
+
+
+def _newline_reasoning_record(row: dict, marker: dict) -> dict:
+    return {
+        "policy": NEWLINE_REASONING_POLICY,
+        "trace_key": str(row.get("trace_key") or ""),
+        "source_path": str(row.get("source_path") or ""),
+        **marker,
+    }
+
+
+def sanitize_newline_reasoning(row: dict) -> tuple[dict | None, dict | None]:
+    """Return a clean-prefix row and deterministic manifest record.
+
+    The detector runs on exported assistant reasoning, so it also sanitizes old
+    remote rows whose raw JSONL is unavailable on this machine. Existing marker
+    metadata is preserved and re-emitted into the current manifest.
+    """
+    source_metadata = row.get("source_metadata") or {}
+    existing: dict | None = None
+    if isinstance(source_metadata, dict):
+        candidate = source_metadata.get("newline_reasoning_sanitization")
+        if isinstance(candidate, dict) and candidate.get("policy") == NEWLINE_REASONING_POLICY:
+            existing = candidate
+
+    messages = row.get("messages") or []
+    if not isinstance(messages, list):
+        return row, None
+
+    assistant_ordinal = 0
+    hit_index: int | None = None
+    hit_ordinal: int | None = None
+    hit_metrics: dict[str, int | float | bool] | None = None
+    for index, message in enumerate(messages):
+        if not isinstance(message, dict) or message.get("role") != "assistant":
+            continue
+        assistant_ordinal += 1
+        reasoning = message.get("reasoning_content") or ""
+        metrics = newline_reasoning_metrics(str(reasoning))
+        if metrics["severe"]:
+            hit_index = index
+            hit_ordinal = assistant_ordinal
+            hit_metrics = metrics
+            break
+
+    if hit_index is None or hit_ordinal is None or hit_metrics is None:
+        return row, _newline_reasoning_record(row, existing) if existing else None
+
+    prefix = messages[:hit_index]
+    retained_assistants = sum(
+        1 for message in prefix
+        if isinstance(message, dict) and message.get("role") == "assistant"
+    )
+    action = "truncate_before_first_affected_assistant" if retained_assistants else "exclude_trace"
+    marker = {
+        "policy": NEWLINE_REASONING_POLICY,
+        "action": action,
+        "reason": "severe_token_fragment_reasoning",
+        "first_affected_message_index": hit_index,
+        "first_affected_assistant_ordinal": hit_ordinal,
+        "original_message_count": len(messages),
+        "retained_message_count": len(prefix) if retained_assistants else 0,
+        "dropped_message_count": len(messages) - (len(prefix) if retained_assistants else 0),
+        "metrics": hit_metrics,
+    }
+    record = _newline_reasoning_record(row, marker)
+    if not retained_assistants:
+        return None, record
+
+    clean = dict(row)
+    clean["messages"] = prefix
+    clean["api_exchange_count"] = retained_assistants
+    for key in (
+        "api_completion_tokens", "api_prompt_tokens", "api_total_tokens",
+        "completion_tokens", "prompt_tokens", "total_tokens",
+    ):
+        clean[key] = 0
+    clean["api_usage_complete"] = False
+    clean["token_accounting"] = "unavailable_after_newline_reasoning_truncation"
+    clean["exception_message"] = None
+    clean["exception_type"] = None
+    clean["segment_reason"] = "newline_reasoning_clean_prefix"
+    clean["reasoning_complete"] = any(
+        isinstance(message, dict)
+        and message.get("role") == "assistant"
+        and bool(message.get("reasoning_content"))
+        for message in prefix
+    )
+    clean["api_reasoning_complete"] = clean["reasoning_complete"]
+    outcome = dict(clean.get("outcome") or {})
+    outcome.update({
+        "completion_tokens": 0,
+        "prompt_tokens": 0,
+        "exception_message": None,
+        "exception_type": None,
+    })
+    clean["outcome"] = outcome
+    clean_source_metadata = dict(source_metadata) if isinstance(source_metadata, dict) else {}
+    clean_source_metadata["newline_reasoning_sanitization"] = marker
+    clean["source_metadata"] = clean_source_metadata
+    return clean, record
 
 
 # --------------------------------------------------------------------------- #
@@ -1168,6 +1345,8 @@ class ConvStats:
     skipped_empty: int = 0
     skipped_parse: int = 0
     skipped_smoke: Counter = field(default_factory=Counter)
+    newline_reasoning_truncated: int = 0
+    newline_reasoning_excluded: int = 0
     tools_used: set[str] = field(default_factory=set)
 
 
@@ -1590,6 +1769,21 @@ def upload_to_hub(files: list[Path], repo: str, token: str, dry_run: bool) -> No
         print(f"  [upload] done: https://huggingface.co/datasets/{repo}/blob/main/{path_in_repo}")
 
 
+def upload_repo_file(file: Path, path_in_repo: str, repo: str, token: str) -> None:
+    """Upload one stable metadata path such as the dataset card or manifest."""
+    from huggingface_hub import HfApi  # type: ignore
+
+    print(f"  [upload] {file} -> {repo}:{path_in_repo} ...", flush=True)
+    HfApi(token=token).upload_file(
+        path_or_fileobj=str(file),
+        path_in_repo=path_in_repo,
+        repo_id=repo,
+        repo_type="dataset",
+        token=token,
+    )
+    print(f"  [upload] done: https://huggingface.co/datasets/{repo}/blob/main/{path_in_repo}")
+
+
 def load_rows_from_zst(path: Path) -> list[dict]:
     """Decompress a .jsonl.zst shard and return its rows."""
     rows: list[dict] = []
@@ -1697,10 +1891,15 @@ def main(argv: list[str] | None = None) -> int:
                     help=f"Max monitor-bench traces per task (default {EVAL_PER_TASK_CAP}).")
     ap.add_argument("--keep-smoke", action="store_true",
                     help="Keep smoke/probe sessions and empty traces (default: drop them).")
+    ap.add_argument("--keep-newline-reasoning", action="store_true",
+                    help="Keep known-bad newline-reasoning turns. Unsafe; for local forensic exports only.")
     args = ap.parse_args(argv)
 
     if zstd is None:
         print("ERROR: zstandard is required. `pip install zstandard`", file=sys.stderr)
+        return 2
+    if args.keep_newline_reasoning and not (args.no_upload or args.dry_run):
+        print("ERROR: --keep-newline-reasoning is restricted to --no-upload/--dry-run forensic exports.", file=sys.stderr)
         return 2
 
     out_dir = Path(args.out).expanduser()
@@ -1733,6 +1932,7 @@ def main(argv: list[str] | None = None) -> int:
         stats = ConvStats(discovered=len(all_sources))
         rows: list[dict] = []
         seen_keys: set[str] = set()
+        sanitization_records: dict[str, dict] = {}
         for path, archive in all_sources:
             stats.discovered = len(all_sources)
             events = parse_session_file(path)
@@ -1759,6 +1959,17 @@ def main(argv: list[str] | None = None) -> int:
                 # same session id already converted (e.g. live + archive overlap)
                 continue
             seen_keys.add(row["trace_key"])
+            if not args.keep_newline_reasoning:
+                row, sanitization = sanitize_newline_reasoning(row)
+                if sanitization:
+                    sanitization_records[sanitization["trace_key"]] = sanitization
+                    if sanitization["action"] == "exclude_trace":
+                        stats.newline_reasoning_excluded += 1
+                    else:
+                        stats.newline_reasoning_truncated += 1
+                if row is None:
+                    seen_keys.discard(sanitization["trace_key"] if sanitization else "")
+                    continue
             if not args.no_redact:
                 row = REDACTOR.redact_row(row)
                 # Re-derive description from redacted messages so a key split by
@@ -1781,6 +1992,17 @@ def main(argv: list[str] | None = None) -> int:
             eval_rows = convert_monitor_bench_traces(seen_keys, args.eval_cap, eval_stats)
             for row in eval_rows:
                 seen_keys.add(row["trace_key"])
+                if not args.keep_newline_reasoning:
+                    row, sanitization = sanitize_newline_reasoning(row)
+                    if sanitization:
+                        sanitization_records[sanitization["trace_key"]] = sanitization
+                        if sanitization["action"] == "exclude_trace":
+                            stats.newline_reasoning_excluded += 1
+                        else:
+                            stats.newline_reasoning_truncated += 1
+                    if row is None:
+                        seen_keys.discard(sanitization["trace_key"] if sanitization else "")
+                        continue
                 if not args.no_redact:
                     row = REDACTOR.redact_row(row)
                     row["description"] = _first_user_text(row["messages"])
@@ -1804,7 +2026,14 @@ def main(argv: list[str] | None = None) -> int:
         ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
         jsonl_path = out_dir / f"pi-traces-{ts}.jsonl"
         zst_path = out_dir / f"pi-traces-{ts}.jsonl.zst"
+        manifest_path = out_dir / f"pi-trace-sanitization-{ts}.jsonl"
+        dataset_card_path = out_dir / "pi-trace-cache-README.md"
         n = write_jsonl(rows, jsonl_path)
+        write_jsonl(
+            [sanitization_records[key] for key in sorted(sanitization_records)],
+            manifest_path,
+        )
+        dataset_card_path.write_text(DATASET_CARD, encoding="utf-8")
         compress_zst(jsonl_path, zst_path, level=args.zstd_level)
 
         raw_bytes = jsonl_path.stat().st_size
@@ -1820,6 +2049,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"  skipped empty:   {stats.skipped_empty}")
         print(f"  skipped smoke/probe: {dict(stats.skipped_smoke)} "
               f"(total {sum(stats.skipped_smoke.values())})")
+        print(f"  newline reasoning: truncated={stats.newline_reasoning_truncated} "
+              f"excluded={stats.newline_reasoning_excluded}")
         print(f"  skipped parse:   {stats.skipped_parse}")
         print(f"  tools seen:      {sorted(stats.tools_used)}")
         if not args.no_redact and REDACTOR.counts:
@@ -1828,6 +2059,7 @@ def main(argv: list[str] | None = None) -> int:
                   f"{len(REDACTOR._cache)} unique keys)")
         print(f"  local jsonl:     {jsonl_path}  ({n} rows, {raw_bytes:,} B)")
         print(f"  local zst:       {zst_path}      ({zst_bytes:,} B, {zst_bytes*100/max(raw_bytes,1):.1f}% of raw)")
+        print(f"  sanitization:    {manifest_path} ({len(sanitization_records)} record(s))")
 
         # ---- upload ------------------------------------------------------- #
         do_upload = (not args.no_upload) and (not args.dry_run)
@@ -1882,16 +2114,38 @@ def main(argv: list[str] | None = None) -> int:
                             n_smoke += 1
                         if n_smoke:
                             print(f"[upload] dropped {n_smoke} merged smoke/empty row(s)")
-                    # An upload is needed when the merge/filter changed the key set,
-                    # or when a local row refreshed the content of a remote key.
+                    if not args.keep_newline_reasoning:
+                        merged_truncated = 0
+                        merged_excluded = 0
+                        for key in list(merged):
+                            clean_row, sanitization = sanitize_newline_reasoning(merged[key])
+                            if sanitization:
+                                sanitization_records[sanitization["trace_key"]] = sanitization
+                                if sanitization["action"] == "exclude_trace":
+                                    merged_excluded += 1
+                                else:
+                                    merged_truncated += 1
+                            if clean_row is None:
+                                del merged[key]
+                            else:
+                                merged[key] = clean_row
+                        print(f"[upload] newline-reasoning policy: truncated={merged_truncated} "
+                              f"excluded={merged_excluded}")
+                    write_jsonl(
+                        [sanitization_records[key] for key in sorted(sanitization_records)],
+                        manifest_path,
+                    )
+                    # An upload is needed when any merged row changed or a key was
+                    # added/removed. This includes sanitation of remote-only rows.
                     remote_by_key = {r.get("trace_key"): r for r in remote_rows if r.get("trace_key")}
                     changed_keys = {
-                        k for k in local_keys & remote_keys
-                        if k in merged and json.dumps(merged[k], sort_keys=True)
+                        k for k in set(merged) & remote_keys
+                        if json.dumps(merged[k], sort_keys=True)
                         != json.dumps(remote_by_key.get(k), sort_keys=True)
                     }
-                    if remote_shards and set(merged.keys()) == remote_keys and not changed_keys:
-                        print("[upload] no changes after merge/filter; remote already up to date — nothing to upload.")
+                    data_changed = set(merged.keys()) != remote_keys or bool(changed_keys) or not remote_shards
+                    if not data_changed:
+                        print("[upload] no data changes after merge/filter; remote shard is already current.")
                     else:
                         if remote_rows:
                             uts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
@@ -1904,8 +2158,25 @@ def main(argv: list[str] | None = None) -> int:
                         else:
                             upload_zst = zst_path
                         upload_to_hub([upload_zst], args.repo, token, dry_run=False)
+                        upload_repo_file(
+                            manifest_path,
+                            NEWLINE_REASONING_MANIFEST_REPO_PATH,
+                            args.repo,
+                            token,
+                        )
+                        upload_repo_file(dataset_card_path, DATASET_CARD_REPO_PATH, args.repo, token)
                         if remote_shards:
                             delete_remote_shards(args.repo, token, remote_shards)
+                    if not data_changed:
+                        # Metadata is stable-path state and may be absent even when
+                        # the data shard itself is already current.
+                        upload_repo_file(
+                            manifest_path,
+                            NEWLINE_REASONING_MANIFEST_REPO_PATH,
+                            args.repo,
+                            token,
+                        )
+                        upload_repo_file(dataset_card_path, DATASET_CARD_REPO_PATH, args.repo, token)
         elif args.dry_run:
             print("\n[dry-run] not uploading.")
         else:
