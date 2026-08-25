@@ -51,8 +51,8 @@ _model_src = (open("/app/model.stan").read()
               .replace("int<lower=1, upper=G> g[N];",
                        "array[N] int<lower=1, upper=G> g;"))
 sm = stan.build(_model_src, data=data)
-fit = sm.sample(chains=4, iter=2500, warmup=1250, seed=42, show_progress=False,
-                pars=["rho", "alpha", "sigma", "b0", "tau", "b_g", "y_rep"])
+fit = sm.sample(num_chains=4, num_samples=1250, num_warmup=1250,
+                save_warmup=False)
 
 df = fit.to_frame()
 cols = list(df.columns)
