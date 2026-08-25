@@ -45,7 +45,8 @@ import pandas as pd
 import stan
 
 d = pd.read_csv("/app/data.csv")
-data = dict(N=len(d), G=int(d.g.max()), g=d.g.values, x=d.x.values, y=d.y.values)
+data = dict(N=len(d), G=int(d.g.max()), g=[int(v) for v in d.g.values],
+            x=list(d.x.values), y=list(d.y.values))
 # PyStan 3.10 ships a newer Stan that requires the array[] syntax; the
 # shipped /app/model.stan uses the legacy `int g[N]` form for RStan 2.32.
 # Translate to the modern syntax for the PyStan build only.
