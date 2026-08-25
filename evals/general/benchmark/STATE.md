@@ -49,6 +49,8 @@ python3 - <<'PY'
 from huggingface_hub import hf_hub_download
 for name in ["benchmark-jobs.tar.gz",              # run-1 + misc harbor jobs
              "benchmark-jobs-run2-run3.tar.gz",     # run-2 + run-3 (FINAL) jobs
+             "benchmark-traces-full.tar.gz",        # EVERYTHING: jobs/ (run-1/2/3 + all
+                                                    #   debugging runs) + jobs-oracle2/ (oracle sweep 2)
              "benchmark-reference-corpus.tar.gz",   # reference/corpus seeds
              "benchmark-specs-progress.tar.gz"]:    # specs/ + progress/
     p = hf_hub_download("eewer/general-agent-bench-results",
@@ -58,6 +60,7 @@ PY
 
 tar xzf benchmark-jobs.tar.gz            # -> jobs/
 tar xzf benchmark-jobs-run2-run3.tar.gz  # -> jobs/ (run-2 + run-3)
+tar xzf benchmark-traces-full.tar.gz     # -> jobs/ + jobs-oracle2/ (all traces)
 tar xzf benchmark-reference-corpus.tar.gz  # -> corpus/ (move under reference/)
 tar xzf benchmark-specs-progress.tar.gz    # -> specs/ progress/
 ```
