@@ -19,6 +19,8 @@ if [ "$r_ran" = "1" ] && [ "$p_ran" = "1" ]; then
     reward=1
   else
     reward=0.6   # both fit, but diagnostics/agreement not met
+    echo "evaluate_043 failed:" >&2
+    cat /tmp/cross.json >&2
   fi
 elif [ "$r_ran" = "1" ] || [ "$p_ran" = "1" ]; then
   reward=0.3
