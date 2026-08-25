@@ -46,7 +46,13 @@ import stan
 
 d = pd.read_csv("/app/data.csv")
 data = dict(N=len(d), G=int(d.g.max()), g=d.g.values, x=d.x.values, y=d.y.values)
-sm = stan.build(open("/app/model.stan").read(), data=data)
+# PyStan 3.10 ships a newer Stan that requires the array[] syntax; the
+# shipped /app/model.stan uses the legacy `int g[N]` form for RStan 2.32.
+# Translate to the modern syntax for the PyStan build only.
+_model_src = (open("/app/model.stan").read()
+              .replace("int<lower=1, upper=G> g[N];",
+                       "array[N] int<lower=1, upper=G> g;"))
+sm = stan.build(_model_src, data=data)
 fit = sm.sample(chains=2, iter=1500, warmup=750, seed=42, show_progress=False,
                 pars=["rho", "alpha", "sigma", "b0", "tau", "b_g", "y_rep"])
 
