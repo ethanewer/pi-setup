@@ -91,7 +91,8 @@ concatenation and also normalizes adjacent text/summary entries when replaying h
 sessions, so already-affected transcripts no longer send token-fragmented reasoning back
 to the model. The patch is version-guarded and `bin/pi-setup-doctor` reports if a package
 update removes it. Remove this temporary core patch once a published Pi release contains
-both behaviors.
+both behaviors. [`docs/incidents/PI-AI-0.84.3-REASONING-DETAILS.md`](docs/incidents/PI-AI-0.84.3-REASONING-DETAILS.md)
+records the cause, evidence, fix, upgrade checks, and recurrence procedure.
 
 ## Extensions are hardened forks
 
@@ -528,6 +529,9 @@ Authentication files, model credentials, session transcripts, SSH material, and 
 must never be committed here.
 
 ### Exporting traces to a dataset
+
+[`docs/TRACE-DATASET.md`](docs/TRACE-DATASET.md) defines the sanitation policy,
+manifest schema, review procedure, and post-upload checks.
 
 `bin/convert-pi-traces` turns local pi sessions into the row format of the private
 [`eewer/glm-5.2-multi-harness-agent`](https://huggingface.co/datasets/eewer/glm-5.2-multi-harness-agent)
