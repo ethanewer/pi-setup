@@ -39,8 +39,7 @@ Task tiers:
 ## Downloading the run results
 
 Logs, trajectories, and verifier outputs live in the **private** HF dataset
-`eewer/general-agent-bench-results` (run-1 archive; run-2 archive pending —
-see Remaining tasks):
+`eewer/general-agent-bench-results`:
 
 ```bash
 pip install huggingface_hub
@@ -48,15 +47,17 @@ huggingface-cli login  # needs read access to eewer/*
 
 python3 - <<'PY'
 from huggingface_hub import hf_hub_download
-for name in ["benchmark-jobs.tar.gz",              # all harbor runs incl. deepseek-flash-run-1
-             "benchmark-reference-corpus.tar.gz",  # reference/corpus seeds
-             "benchmark-specs-progress.tar.gz"]:   # specs/ + progress/
+for name in ["benchmark-jobs.tar.gz",              # run-1 + misc harbor jobs
+             "benchmark-jobs-run2-run3.tar.gz",     # run-2 + run-3 (FINAL) jobs
+             "benchmark-reference-corpus.tar.gz",   # reference/corpus seeds
+             "benchmark-specs-progress.tar.gz"]:    # specs/ + progress/
     p = hf_hub_download("eewer/general-agent-bench-results",
                         name, repo_type="dataset")
     print(p)
 PY
 
-tar xzf benchmark-jobs.tar.gz       # -> jobs/
+tar xzf benchmark-jobs.tar.gz            # -> jobs/
+tar xzf benchmark-jobs-run2-run3.tar.gz  # -> jobs/ (run-2 + run-3)
 tar xzf benchmark-reference-corpus.tar.gz  # -> corpus/ (move under reference/)
 tar xzf benchmark-specs-progress.tar.gz    # -> specs/ progress/
 ```
@@ -91,6 +92,7 @@ with `agent/pi.txt` (full JSON-mode transcript), `verifier/`, and
 |-----|--------|--------|
 | run-1 (`jobs/deepseek-flash-run-1`, 2026-08-24, pre-fix) | p_agent + deepseek-v4-flash-0731, -n 20, k=1 | 502/524 scored, **457 pass (91.0% of scored)**, 31 exceptions, $2.05, 37.1M in / 1.56M out tokens. Mean reward 1.075 is INFLATED by the pre-fix item-040-main 0–100 scale bug. |
 | run-2 (`jobs/deepseek-flash-run-2`, 2026-08-24→25, post-fix) | same agent/model, -n 24, k=1 | 524/524 trials ran; **522 scored**, **489 pass (93.7% of scored)**, mean reward **0.9494**, 11 partial, 22 zero, 11 exceptions. |
+| run-3 (`jobs/deepseek-flash-run-3`, 2026-08-25, FINAL — post-triage fixes) | same agent/model, -n 24, k=1, wall 2h20m | **524/524 trials, 522 scored**, **488 pass (93.5% of scored)**, mean reward **0.9411**, 9 partial, 25 zero, 13 exceptions (11 AgentTimeout, 2 NonZeroExit). Verified by `tools/audit_benchmark.py`: 0 missing, anomalies fully triaged (below). |
 
 Run-2 caveats:
 - `result.json` was written mid-execution (finished_at = null): the PC was
@@ -142,17 +144,11 @@ Run-2 caveats:
 
 ## Remaining tasks (in order)
 
-All pre-final-run work was COMPLETED on 2026-08-25 (see "2026-08-25
-triage pass" below). Only steps 5–6 remain:
-
-5. **Stability call (in progress)**: run-3 is executing now via
-   `tools/finalize.sh` (single harbor invocation, -n 24 -k 1,
-   job `deepseek-flash-run-3`). It supersedes step 2's single-task
-   reruns (run-3 covers item-043-hard and item-054-main).
-6. **Wrap-up**: `python3 tools/audit_benchmark.py <final-job>`, commit +
-   push results, write the final report, archive run-2 (+run-3) to the HF
-   dataset eewer/general-agent-bench-results (same tarball pattern as
-   run-1's `benchmark-jobs.tar.gz`).
+**ALL DONE 2026-08-25.** Run-3 (`deepseek-flash-run-3`) is the
+**FINAL** benchmark result. Steps 1–4 were the 2026-08-25 triage pass
+(documented below); step 5's stability call resolved in run-3's favor:
+488 pass reproduces run-2's 489 within ±1 (mean 0.9411 vs 0.9494).
+Step 6 (audit/commit/report/archive) is complete; see "Final result".
 
 ## 2026-08-25 triage pass (all remaining-tasks 1–4 DONE)
 
@@ -196,7 +192,41 @@ Run-2 zero-triage verdicts (per-trial transcript + verifier inspection):
 - Verifier bugs fixed: skill-post-receive-hooks, skill-port-forwarding,
   skill-static-binary-analysis (see above).
 
-All changed tasks were oracle re-checked (jobs-oracle3/) before run-3.
+All changed tasks were oracle re-checked (jobs-oracle3/) before run-3:
+skill-post-receive-hooks 1, skill-static-binary-analysis 1,
+skill-port-forwarding 1, item-054-main 1.0000.
+
+## Final result (run-3, 2026-08-25)
+
+`p_agent` (pi lean profile) + `openrouter/deepseek/deepseek-v4-flash-0731`,
+524 tasks, k=1 rollout each, concurrency 24, wall clock 2h20m:
+
+- **Pass (reward 1.0): 488 / 522 scored (93.5%); 488/524 overall**
+- **Mean reward: 0.9411**
+- Partials (9): item-005-hard 0.744, item-014-main 0.3,
+  item-014-hard 0.4, item-033-hard 0.8, item-034-hard 0.7,
+  item-035-main 0.8, item-041-hard 0.4, item-047-main 0.5,
+  item-073-main 0.5 (graded/staged evaluators, same as oracle).
+- Exceptions (13): 11 AgentTimeoutError (item-001-main/hard*,
+  item-005-main, item-036-hard, item-043-main, item-043-hard*,
+  item-045-hard, item-072-hard, item-076-hard,
+  skill-pipeline-parallelism; *no reward.txt written, counted zero)
+  + 2 NonZeroAgentExitCodeError (item-034-main scored 1.00,
+  item-035-main scored 0.80 — exit-code noise, artifacts fine).
+- Fixed-task confirmation: skill-post-receive-hooks, skill-port-
+  forwarding, skill-static-binary-analysis, item-054-main all 1.0;
+  item-069-main and item-072 timeout bumps took effect (069-main
+  passed; 072-main ran to completion but its fastText model was
+  degenerate — genuine verifier catch).
+- Run-3 zero deltas vs run-2: timeouts move around with agent
+  execution-time variance (036-hard, 045-hard, 072-hard,
+  pipeline-parallelism, 001-main/hard, 043-main/hard timed out this
+  time; 054-hard/069-main passed this time). Genuinely new failures:
+  item-046-hard, item-049-main, item-074-hard, skill-cli-abi,
+  skill-gdb-objdump, skill-port-process-management, item-072-main
+  (degenerate model). skill-node-js-qemu-like-vm fails again (genuine).
+- Stability: run-2 489 pass / 0.9494 vs run-3 488 pass / 0.9411 →
+  post-fix result reproduces; run-3 is the benchmark of record.
 
 
 ## Ops notes (learned the hard way)
