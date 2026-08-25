@@ -1,5 +1,6 @@
 #!/bin/bash
-# Post-oracle: launch final benchmark run.
+# Final benchmark run: single harbor invocation (parallel harbor runs
+# on overlapping scratch dirs corrupt state).
 set -u
 cd "$(dirname "$0")/.."
 docker network prune -f >/dev/null 2>&1
