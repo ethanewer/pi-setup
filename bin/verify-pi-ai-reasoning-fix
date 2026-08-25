@@ -1,0 +1,128 @@
+#!/usr/bin/env bun
+import { createServer } from "node:http";
+import { join } from "node:path";
+import { pathToFileURL } from "node:url";
+
+const bunInstall = process.env.BUN_INSTALL ?? join(process.env.HOME ?? "", ".bun");
+const piAiRoot = process.argv[2] ?? join(bunInstall, "install", "global", "node_modules", "@earendil-works", "pi-ai");
+const modulePath = join(piAiRoot, "dist", "api", "openai-completions.js");
+const { streamSimple } = await import(pathToFileURL(modulePath).href);
+
+const requests = [];
+const server = createServer(async (request, response) => {
+	let body = "";
+	for await (const chunk of request) body += chunk;
+	requests.push(JSON.parse(body));
+	response.writeHead(200, { "content-type": "text/event-stream" });
+	for (const data of [
+		{
+			id: "reasoning-fix-check",
+			model: "test",
+			choices: [
+				{
+					index: 0,
+					delta: {
+						reasoning_details: [
+							{ type: "reasoning.text", text: "New" },
+							{ type: "reasoning.text", text: " stream", signature: "new-signature" },
+						],
+					},
+					finish_reason: null,
+				},
+			],
+		},
+		{
+			id: "reasoning-fix-check",
+			model: "test",
+			choices: [{ index: 0, delta: { content: "ok" }, finish_reason: null }],
+		},
+		{
+			id: "reasoning-fix-check",
+			model: "test",
+			choices: [{ index: 0, delta: {}, finish_reason: "stop" }],
+		},
+	]) {
+		response.write(`data: ${JSON.stringify(data)}\n\n`);
+	}
+	response.end("data: [DONE]\n\n");
+});
+
+try {
+	await new Promise((resolve, reject) => {
+		server.once("error", reject);
+		server.listen(0, "127.0.0.1", resolve);
+	});
+	const address = server.address();
+	if (!address || typeof address === "string") throw new Error("Could not allocate a local verification port");
+	const model = {
+		id: "test",
+		name: "test",
+		api: "openai-completions",
+		provider: "openrouter",
+		baseUrl: `http://127.0.0.1:${address.port}/v1`,
+		reasoning: true,
+		input: ["text"],
+		cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+		contextWindow: 100_000,
+		maxTokens: 1_000,
+	};
+	const historicalDetails = [
+		{ type: "reasoning.text", text: "Old", index: 0 },
+		{ type: "reasoning.text", text: " replay", signature: "old-signature", format: "fmt" },
+		{ type: "reasoning.encrypted", id: "opaque", data: "ciphertext" },
+		{ type: "reasoning.summary", summary: "Sum" },
+		{ type: "reasoning.summary", summary: "mary", index: 1 },
+	];
+	const priorAssistant = {
+		role: "assistant",
+		content: [
+			{ type: "thinking", thinking: "", thinkingSignature: JSON.stringify(historicalDetails) },
+			{ type: "text", text: "prior answer" },
+		],
+		api: "openai-completions",
+		provider: "openrouter",
+		model: "test",
+		usage: {
+			input: 0,
+			output: 0,
+			cacheRead: 0,
+			cacheWrite: 0,
+			totalTokens: 0,
+			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+		},
+		stopReason: "stop",
+		timestamp: Date.now(),
+	};
+	const events = streamSimple(
+		model,
+		{
+			systemPrompt: "reasoning fix verification",
+			messages: [priorAssistant, { role: "user", content: "continue", timestamp: Date.now() }],
+		},
+		{ apiKey: "local-test", maxTokens: 20 },
+	);
+	let completed;
+	for await (const event of events) {
+		if (event.type === "error") throw new Error(event.error?.errorMessage ?? "Pi AI verification stream failed");
+		if (event.type === "done") completed = event.message;
+	}
+
+	const replayed = requests[0]?.messages?.find((message) => message.role === "assistant")?.reasoning_details;
+	const expectedReplay = [
+		{ type: "reasoning.text", text: "Old replay", index: 0, signature: "old-signature", format: "fmt" },
+		{ type: "reasoning.encrypted", id: "opaque", data: "ciphertext" },
+		{ type: "reasoning.summary", summary: "Summary", index: 1 },
+	];
+	const thinking = completed?.content?.find((block) => block.type === "thinking");
+	const streamed = thinking?.thinkingSignature ? JSON.parse(thinking.thinkingSignature) : undefined;
+	const expectedStream = [{ type: "reasoning.text", text: "New stream", signature: "new-signature" }];
+	if (JSON.stringify(replayed) !== JSON.stringify(expectedReplay)) {
+		throw new Error(`Historical reasoning_details were not normalized: ${JSON.stringify(replayed)}`);
+	}
+	if (JSON.stringify(streamed) !== JSON.stringify(expectedStream)) {
+		throw new Error(`Streamed reasoning_details were not concatenated: ${JSON.stringify(streamed)}`);
+	}
+	console.log("Pi AI reasoning-details fix verified: stream concatenation and historical replay normalization");
+} finally {
+	await new Promise((resolve) => server.close(() => resolve()));
+}

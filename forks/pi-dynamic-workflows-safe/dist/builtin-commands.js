@@ -12,6 +12,7 @@
 import { spawn } from "node:child_process";
 import { findBuiltinWorkflow } from "./builtin-workflows.js";
 import { MAX_DIFF_CHARS } from "./code-review.js";
+import { claimCommand, isCommandRegistered } from "./command-registry.js";
 import { confirmRepoLocalWorkflow, parseCommandArgs } from "./saved-commands.js";
 import { createWorkflowStorage } from "./workflow-saved.js";
 const COMMAND_ERROR_MAX_CHARS = 32_000;
@@ -207,12 +208,7 @@ function shortError(error) {
     return message.length > 500 ? `${message.slice(0, 500)}…` : message;
 }
 function alreadyRegistered(pi, name) {
-    try {
-        return (pi.getCommands?.() ?? []).some((c) => c.name === name);
-    }
-    catch {
-        return false;
-    }
+    return isCommandRegistered(pi, name);
 }
 /** Split a command argument string into tokens, respecting single/double quotes. */
 function tokenizeArgs(input) {
@@ -327,6 +323,7 @@ export function registerBuiltinWorkflows(pi, opts) {
                 });
             },
         });
+        claimCommand(pi, "deep-research", "builtin");
     }
     if (!alreadyRegistered(pi, "adversarial-review")) {
         pi.registerCommand("adversarial-review", {
@@ -343,6 +340,7 @@ export function registerBuiltinWorkflows(pi, opts) {
                 startBackground(getManager(), ctx, "adversarial-review", resolved.script, { task });
             },
         });
+        claimCommand(pi, "adversarial-review", "builtin");
     }
     if (!alreadyRegistered(pi, "code-review")) {
         pi.registerCommand("code-review", {
@@ -458,6 +456,7 @@ export function registerBuiltinWorkflows(pi, opts) {
                 startBackground(getManager(), ctx, "code-review", resolved.script, { diff, diffSource });
             },
         });
+        claimCommand(pi, "code-review", "builtin");
     }
     if (!alreadyRegistered(pi, "multi-perspective")) {
         pi.registerCommand("multi-perspective", {
@@ -477,6 +476,7 @@ export function registerBuiltinWorkflows(pi, opts) {
                 startBackground(getManager(), ctx, "multi-perspective", resolved.script);
             },
         });
+        claimCommand(pi, "multi-perspective", "builtin");
     }
     if (!alreadyRegistered(pi, "codebase-audit")) {
         pi.registerCommand("codebase-audit", {
@@ -494,5 +494,6 @@ export function registerBuiltinWorkflows(pi, opts) {
                 startBackground(getManager(), ctx, "codebase-audit", resolved.script);
             },
         });
+        claimCommand(pi, "codebase-audit", "builtin");
     }
 }

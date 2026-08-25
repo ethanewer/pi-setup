@@ -17,9 +17,40 @@ import type { MarkdownTheme } from "@earendil-works/pi-tui";
 import type { AgentUsage } from "./agent.js";
 import type { ThemeLike, WorkflowAgentSnapshot } from "./display.js";
 import type { WorkflowManager } from "./workflow-manager.js";
-import type { SavedWorkflow, WorkflowStorage } from "./workflow-saved.js";
+import { type SavedWorkflow, type SavedWorkflowMutationResult, type WorkflowStorage } from "./workflow-saved.js";
 export type ViewKind = "runs" | "phases" | "agents" | "detail" | "savedDetail";
 export type ItemKind = "run" | "saved";
+export type NavigatorInputMode = "browse" | "filter" | "rename" | "confirm";
+export type ItemIdentity = {
+    kind: "run";
+    runId: string;
+} | {
+    kind: "saved";
+    path: string;
+    source: SavedWorkflow["source"];
+    name: string;
+    revision: string;
+};
+export interface VisibleRunItem {
+    kind: "run";
+    identity: Extract<ItemIdentity, {
+        kind: "run";
+    }>;
+    row: RunRow;
+}
+export interface VisibleSavedItem {
+    kind: "saved";
+    identity: Extract<ItemIdentity, {
+        kind: "saved";
+    }>;
+    workflow: SavedWorkflow;
+}
+export type VisibleNavigatorItem = VisibleRunItem | VisibleSavedItem;
+/** One coherent, filtered source of truth for every runs-pane operation. */
+export interface NavigatorSnapshot {
+    filter: string;
+    items: VisibleNavigatorItem[];
+}
 interface RunRow {
     runId: string;
     name: string;
@@ -54,14 +85,12 @@ export declare function shortModel(model: string | undefined): string | undefine
 /** Reads run/phase/agent data from the manager, preferring live snapshots. */
 export declare class NavigatorModel {
     private readonly manager;
-    private readonly storage?;
     private frameDepth;
     private frameRuns;
+    private frameSaved;
     private readonly frameSnapshots;
-    constructor(manager: Pick<WorkflowManager, "listRuns" | "getRun">, storage?: {
-        list(): SavedWorkflow[];
-        delete(name: string, location?: string): boolean;
-    } | undefined);
+    private readonly getStorage;
+    constructor(manager: Pick<WorkflowManager, "listRuns" | "getRun">, storage?: Pick<WorkflowStorage, "list" | "delete" | "rename"> | (() => Pick<WorkflowStorage, "list" | "delete" | "rename"> | undefined));
     /** Share persisted data across all model lookups performed by one render. */
     withRenderFrame<T>(render: () => T): T;
     private persistedRuns;
@@ -69,8 +98,12 @@ export declare class NavigatorModel {
     runs(): RunRow[];
     /** Return saved workflows sorted by name, or [] when no storage configured. */
     saved(): SavedWorkflow[];
-    /** Delete a saved workflow by name. */
-    deleteSaved(name: string): boolean;
+    /** Build the sole filtered item list used by list rendering, footer, drill, and actions. */
+    visible(filter: string): NavigatorSnapshot;
+    /** Delete exactly the currently visible saved source. */
+    deleteSaved(workflow: SavedWorkflow): SavedWorkflowMutationResult;
+    /** Rename exactly the currently visible saved source. */
+    renameSaved(workflow: SavedWorkflow, name: string): SavedWorkflowMutationResult;
     runName(runId: string): string;
     runStatus(runId: string): string;
     phases(runId: string): PhaseRow[];
@@ -84,9 +117,17 @@ export declare class NavigatorModel {
     agentsByPhase(runId: string): Map<string, AgentRow[]>;
     agentDetail(runId: string, agentId: number): WorkflowAgentSnapshot | undefined;
 }
-/** Navigation state machine: a stack of (view, cursor) frames plus detail scroll. */
+type ConfirmKind = "pause" | "stop" | "deleteSaved";
+/** Remove terminal control sequences while preserving ordinary pasted text. */
+export declare function safeInputText(data: string): string;
 export declare class NavigatorState {
     private stack;
+    private pending?;
+    private renameTarget?;
+    private filterSelection?;
+    mode: NavigatorInputMode;
+    filter: string;
+    draft: string;
     scroll: number;
     tailing: boolean;
     pagerOpen: boolean;
@@ -98,36 +139,49 @@ export declare class NavigatorState {
     get runId(): string | undefined;
     get phase(): string | undefined;
     get agentId(): number | undefined;
-    /** The saved workflow name at the cursor in savedDetail view */
     get savedName(): string | undefined;
     get depth(): number;
-    /**
-     * Determine what kind of item is at the given cursor position in the
-     * runs view. Positions before runs.length are "run"; after are "saved".
-     */
+    get confirmationAction(): ConfirmKind | undefined;
+    /** Reconcile selection after any list/filter/manager change without drifting. */
+    reconcile(snapshot: NavigatorSnapshot, managerEvent?: boolean): void;
+    noteManagerEvent(snapshot: NavigatorSnapshot): void;
+    currentItem(snapshot: NavigatorSnapshot): VisibleNavigatorItem | undefined;
     itemKindAt(model: NavigatorModel, cursor: number): ItemKind;
-    /** Clamp the cursor to [0, count). */
     clamp(count: number): void;
-    move(delta: number, count: number): void;
-    /** Update the amount moved by page keys to match the rendered viewport. */
+    moveRuns(delta: number, snapshot: NavigatorSnapshot): void;
+    move(delta: number, count: number, snapshot?: NavigatorSnapshot): void;
     setPageSize(rows: number): void;
-    /** Move by almost one viewport, retaining one line of reading context. */
-    movePage(direction: -1 | 1, count: number): void;
-    /** Jump to the beginning or end of the current list/detail. End also enables
-     * follow mode for a live agent detail; start disables it. */
-    jump(edge: "start" | "end", count: number): void;
-    /** Open the full pager without closing an already-open pager. */
+    movePage(direction: -1 | 1, count: number, snapshot?: NavigatorSnapshot): void;
+    jump(edge: "start" | "end", count: number, snapshot?: NavigatorSnapshot): void;
     openPager(): boolean;
-    /** Toggle the full pager while retaining the compact agent summary view. */
     togglePager(): boolean;
-    /** Toggle live follow mode in an agent detail pager. */
     toggleTail(): boolean;
-    /** Drill into the selected item. Returns true if the view changed. */
-    drill(model: NavigatorModel): boolean;
-    /** Pop one level. Returns false when already at the top (caller should close). */
+    drill(model: NavigatorModel, provided?: NavigatorSnapshot): boolean;
     back(): boolean;
-    /** The runId at cursor, or undefined when on a saved item. */
-    activeRunId(model: NavigatorModel): string | undefined;
+    activeRunId(model: NavigatorModel, snapshot?: NavigatorSnapshot): string | undefined;
+    activeSaved(snapshot: NavigatorSnapshot, allSaved: SavedWorkflow[]): SavedWorkflow | undefined;
+    beginFilter(): void;
+    /** Query used to render the live draft while filter text is being edited. */
+    effectiveFilter(): string;
+    beginRename(workflow: SavedWorkflow): void;
+    appendInput(data: string): void;
+    backspaceInput(): void;
+    applyFilter(model: NavigatorModel): NavigatorSnapshot;
+    takeRename(): {
+        target: Extract<ItemIdentity, {
+            kind: "saved";
+        }>;
+        name: string;
+    } | undefined;
+    replaceSavedIdentity(previous: Extract<ItemIdentity, {
+        kind: "saved";
+    }>, workflow: SavedWorkflow): void;
+    cancelInput(): void;
+    private confirmationContext;
+    private sameConfirmationContext;
+    beginConfirmation(action: ConfirmKind, target: ItemIdentity, snapshot: NavigatorSnapshot): boolean;
+    confirm(action: ConfirmKind, snapshot: NavigatorSnapshot): ItemIdentity | undefined;
+    cancelConfirmation(): void;
 }
 /** Build the lines for the current view. Pure: depends only on state + model + theme. */
 export declare function renderNavigator(state: NavigatorState, model: NavigatorModel, width: number, theme?: ThemeLike, viewportRows?: number, markdownTheme?: MarkdownTheme): string[];
@@ -163,6 +217,10 @@ export type NavAction = {
     type: "save";
 } | {
     type: "deleteSaved";
+} | {
+    type: "filter";
+} | {
+    type: "rename";
 } | {
     type: "none";
 };

@@ -3,15 +3,21 @@
  * command that runs its script, passing parsed arguments through as `args`.
  */
 import { createCodingTools } from "@earendil-works/pi-coding-agent";
+import { claimCommand, commandOwner, isCommandRegistered } from "./command-registry.js";
 import { runWorkflow } from "./workflow.js";
 import { loadWorkflowSettings } from "./workflow-settings.js";
-function isRegistered(pi, name) {
-    try {
-        return (pi.getCommands?.() ?? []).some((c) => c.name === name);
-    }
-    catch {
-        return false;
-    }
+function savedCommandOwnedByExtension(pi, name) {
+    const owner = commandOwner(pi, name);
+    return owner === "builtin" || owner === "saved";
+}
+/**
+ * Pi cannot unregister a slash command. Distinguish commands this extension
+ * owns from built-ins/other extensions before a save or rename reaches disk.
+ */
+export function savedWorkflowCommandAvailability(pi, name) {
+    if (!isCommandRegistered(pi, name) || savedCommandOwnedByExtension(pi, name))
+        return { ok: true };
+    return { ok: false, message: `/${name} is already provided by Pi or another extension.` };
 }
 /**
  * Ask before running a workflow whose script came from the project rather than
@@ -42,20 +48,15 @@ function reportText(result) {
         return r.report;
     return JSON.stringify(result.result, null, 2);
 }
-/**
- * Parse a command argument string into an `args` object for the script.
- * Supports `key=value` tokens; everything else collects into `_` (and `_raw`).
- * Declared parameter defaults fill in missing keys.
- */
 export function parseCommandArgs(raw, parameters) {
     const out = {};
     const positional = [];
-    for (const tok of raw.trim().split(/\s+/).filter(Boolean)) {
-        const eq = tok.indexOf("=");
+    for (const token of raw.trim().split(/\s+/).filter(Boolean)) {
+        const eq = token.indexOf("=");
         if (eq > 0)
-            out[tok.slice(0, eq)] = tok.slice(eq + 1);
+            out[token.slice(0, eq)] = token.slice(eq + 1);
         else
-            positional.push(tok);
+            positional.push(token);
     }
     out._ = positional.join(" ");
     out._raw = raw.trim();
@@ -65,88 +66,67 @@ export function parseCommandArgs(raw, parameters) {
     }
     return out;
 }
-/** Register one saved workflow as a `/<name>` command (idempotent).
- * When a WorkflowManager is provided, the workflow runs through it (visible in
- * /workflows TUI, background execution, task panel). Otherwise falls back to
- * the inline runWorkflow() (foreground, no TUI tracking).
- *
- * Pi has no `unregisterCommand`, so a command cannot be removed mid-session
- * after its workflow is deleted (it is correctly gone on next launch, since
- * registerAllSavedWorkflows only registers what's in storage). The optional
- * `exists` predicate lets the handler detect that case at invocation time and
- * tell the user to reload rather than silently re-running a deleted workflow. */
-export function registerSavedWorkflow(pi, cwd, wf, manager, exists, 
-/**
- * Live loader for this command's workflow. Prefer this over the registration-
- * time `wf` snapshot: after an in-process project switch the same slash
- * command name may resolve to a different script (or nothing) in the new
- * project's storage. When omitted, `wf` is used as a frozen snapshot.
- */
-loadWorkflow) {
-    if (isRegistered(pi, wf.name))
-        return;
+/** Register one saved workflow as a dynamically loaded slash command. */
+export function registerSavedWorkflow(pi, cwd, wf, manager, exists, loadWorkflow) {
+    const availability = savedWorkflowCommandAvailability(pi, wf.name);
+    if (!availability.ok)
+        return availability;
+    if (isCommandRegistered(pi, wf.name))
+        return { ok: true };
     const getCwd = typeof cwd === "function" ? cwd : () => cwd;
     const getManager = typeof manager === "function" ? manager : () => manager;
-    pi.registerCommand(wf.name, {
-        description: wf.description || `Saved workflow: ${wf.name}`,
-        async handler(args, ctx) {
-            // Resolve the workflow at invocation time so a cross-project session
-            // switch picks up the target project's script (or reports deletion)
-            // instead of replaying the source project's registration-time snapshot.
-            const liveWf = loadWorkflow ? loadWorkflow() : exists && !exists() ? null : wf;
-            if (!liveWf) {
-                ctx.ui.notify(`/${wf.name} is not available in this project — reload the session to drop the stale command.`, "warning");
-                return;
-            }
-            if (!(await confirmRepoLocalWorkflow(ctx, liveWf, getCwd())))
-                return;
-            try {
-                const liveManager = getManager();
-                if (liveManager) {
-                    // Run through the WorkflowManager's background path: the handler
-                    // returns immediately (awaiting the promise here would block the whole
-                    // session, #104), progress shows in the /workflows TUI and task panel,
-                    // and installResultDelivery posts the result back into the
-                    // conversation on completion — sending it here too would duplicate it.
-                    const { runId } = liveManager.startInBackground(liveWf.script, parseCommandArgs(args, liveWf.parameters));
-                    ctx.ui.notify(`/${liveWf.name} running in the background (${runId}) — watch the task panel or /workflows; the result is posted here when it finishes.`, "info");
+    try {
+        pi.registerCommand(wf.name, {
+            description: wf.description || `Saved workflow: ${wf.name}`,
+            async handler(args, ctx) {
+                // Resolve at invocation so project switches and deletion cannot replay a stale script.
+                const liveWorkflow = loadWorkflow ? loadWorkflow() : exists && !exists() ? null : wf;
+                if (!liveWorkflow) {
+                    ctx.ui.notify(`/${wf.name} is not available in this project — reload the session to drop the stale command.`, "warning");
                     return;
                 }
-                // Fallback: inline runWorkflow (foreground, no TUI tracking, blocks).
-                const liveCwd = getCwd();
-                ctx.ui.notify(`Starting /${liveWf.name}…`, "info");
-                const result = await runWorkflow(liveWf.script, {
-                    cwd: liveCwd,
-                    args: parseCommandArgs(args, liveWf.parameters),
-                    tools: createCodingTools(liveCwd),
-                    onPhase: (title) => ctx.ui.setStatus(`wf:${liveWf.name}`, `${liveWf.name}: ${title}`),
-                });
-                ctx.ui.setStatus(`wf:${liveWf.name}`, undefined);
-                await pi.sendMessage({
-                    customType: `workflow:${liveWf.name}`,
-                    content: reportText(result),
-                    display: true,
-                });
-            }
-            catch (error) {
-                ctx.ui.setStatus(`wf:${liveWf.name}`, undefined);
-                ctx.ui.notify(`/${liveWf.name} failed: ${error instanceof Error ? error.message : error}`, "error");
-            }
-        },
-    });
+                if (!(await confirmRepoLocalWorkflow(ctx, liveWorkflow, getCwd())))
+                    return;
+                try {
+                    const liveManager = getManager();
+                    if (liveManager) {
+                        const { runId } = liveManager.startInBackground(liveWorkflow.script, parseCommandArgs(args, liveWorkflow.parameters));
+                        ctx.ui.notify(`/${liveWorkflow.name} running in the background (${runId}) — watch the task panel or /workflows; the result is posted here when it finishes.`, "info");
+                        return;
+                    }
+                    const liveCwd = getCwd();
+                    ctx.ui.notify(`Starting /${liveWorkflow.name}…`, "info");
+                    const result = await runWorkflow(liveWorkflow.script, {
+                        cwd: liveCwd,
+                        args: parseCommandArgs(args, liveWorkflow.parameters),
+                        tools: createCodingTools(liveCwd),
+                        onPhase: (title) => ctx.ui.setStatus(`wf:${liveWorkflow.name}`, `${liveWorkflow.name}: ${title}`),
+                    });
+                    ctx.ui.setStatus(`wf:${liveWorkflow.name}`, undefined);
+                    await pi.sendMessage({
+                        customType: `workflow:${liveWorkflow.name}`,
+                        content: reportText(result),
+                        display: true,
+                    });
+                }
+                catch (error) {
+                    ctx.ui.setStatus(`wf:${liveWorkflow.name}`, undefined);
+                    ctx.ui.notify(`/${liveWorkflow.name} failed: ${error instanceof Error ? error.message : error}`, "error");
+                }
+            },
+        });
+        claimCommand(pi, wf.name, "saved");
+        return { ok: true };
+    }
+    catch (error) {
+        return { ok: false, message: error instanceof Error ? error.message : String(error) };
+    }
 }
-/** Register every saved workflow found in storage.
- * When a WorkflowManager is provided, workflows run through it (visible in
- * /workflows TUI, background execution, task panel). Idempotent: names already
- * registered (including from a previous project) are skipped at registration
- * time, but each handler re-loads by name from the live storage so a later
- * project switch executes the target project's script. Call again after a
- * cross-project session_start to pick up target-only names. */
 export function registerAllSavedWorkflows(pi, cwd, storage, manager) {
     const getStorage = typeof storage === "function" ? storage : () => storage;
     const getCwd = typeof cwd === "function" ? cwd : () => cwd;
-    for (const wf of getStorage().list()) {
-        const name = wf.name;
-        registerSavedWorkflow(pi, getCwd, wf, manager, () => getStorage().load(name) != null, () => getStorage().load(name));
+    for (const workflow of getStorage().list()) {
+        const name = workflow.name;
+        registerSavedWorkflow(pi, getCwd, workflow, manager, () => getStorage().load(name) != null, () => getStorage().load(name));
     }
 }

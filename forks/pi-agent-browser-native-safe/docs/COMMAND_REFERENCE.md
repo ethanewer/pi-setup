@@ -18,11 +18,15 @@ This project intentionally blocks normal `agent-browser` bash usage in most agen
 
 <!-- agent-browser-capability-baseline:start upstream-baseline -->
 <!-- Generated from scripts/agent-browser-capability-baseline.mjs. Run `npm run docs -- command-reference write` to update. Do not edit manually. -->
-This reference is baselined to the locally installed `agent-browser 0.34.0` command/help surface, audited against vercel-labs/agent-browser@548b159b30eef119ccf6846c8bc807d0eaa3f6f8. Upstream `agent-browser` remains the source of truth for command semantics; this file is the local fallback for Pi agent sessions where direct binary help is blocked or discouraged.
+This reference is baselined to the locally installed `agent-browser 0.35.0` command/help surface, audited against vercel-labs/agent-browser@585e740fcef069d74e21f0e88e8bf4ea7df34385. Upstream `agent-browser` remains the source of truth for command semantics; this file is the local fallback for Pi agent sessions where direct binary help is blocked or discouraged.
 
 The lightweight drift check is `npm run verify -- command-reference`. Run it whenever the installed upstream `agent-browser` version changes or this reference is edited.
 
 <!-- agent-browser-capability-baseline:end upstream-baseline -->
+
+### Upstream 0.35.0 rebaseline
+
+The 0.35.0 release adds custom CA trust for local Linux Chromium (`--ca-cert <path>` / `AGENT_BROWSER_CA_CERT`, with `--no-ca-cert` / `AGENT_BROWSER_CLEAR_CA_CERT` to clear retained trust) and the `protected-vercel-deployments` built-in skill. This package targets exactly `agent-browser 0.35.0`. The wrapper treats CA files as guarded local paths and custom trust as a browser mutation: managed restore is disabled, `.agent-browser` paths are rejected, and CA install/clear flags require a fresh managed session once one is active.
 
 ### Upstream 0.34.0 rebaseline
 
@@ -615,7 +619,7 @@ Session note: `skills list`, `skills get …`, and `skills path …` are **state
 | `skills list` | List available CLI-bundled skills. |
 | `skills get core` | Print the core usage guide. |
 | `skills get core --full` | Print the full version-matched core command reference and templates. |
-| `skills get <name>` | Load a specialized skill such as `electron` or `slack`. Common specialized calls include `skills get electron`, `skills get slack`, `skills get dogfood`, `skills get vercel-sandbox`, `skills get agentcore`, and `skills get derive-client` (HAR-to-API-client workflow). |
+| `skills get <name>` | Load a specialized skill such as `electron` or `slack`. Common specialized calls include `skills get electron`, `skills get slack`, `skills get dogfood`, `skills get vercel-sandbox`, `skills get protected-vercel-deployments`, `skills get agentcore`, and `skills get derive-client` (HAR-to-API-client workflow). |
 | `skills get <name> --full` | Include a skill's supplementary references/templates when present. |
 | `skills get --all` | Print all visible bundled skills for broad audit/debug work. |
 | `skills path [name]` | Print a skill directory path. |
@@ -939,6 +943,8 @@ Browser default config is conservative: it adds agent guidance for signed-in/acc
 - `--proxy <server>`: proxy server URL. Environments: `AGENT_BROWSER_PROXY`, `HTTP_PROXY`, `HTTPS_PROXY`, `ALL_PROXY`.
 - `--proxy-bypass <hosts>`: proxy bypass hosts. Environments: `AGENT_BROWSER_PROXY_BYPASS`, `NO_PROXY`.
 - `--ignore-https-errors`: ignore HTTPS certificate errors. Environment: `AGENT_BROWSER_IGNORE_HTTPS_ERRORS`.
+- `--ca-cert <path>`: trust a CA certificate or PEM bundle in locally launched Linux Chromium. Environment: `AGENT_BROWSER_CA_CERT`. This wrapper guards the file path, rejects protected `.agent-browser` targets, disables managed restore, and requires a fresh managed session once active.
+- `--no-ca-cert`: clear retained custom CA trust. Environment: `AGENT_BROWSER_CLEAR_CA_CERT`. This is treated as the same isolated browser mutation.
 - `--allow-file-access`: upstream capability, but enabled argv/`AGENT_BROWSER_ALLOW_FILE_ACCESS` forms and file-access-enabling `--args` / `AGENT_BROWSER_ARGS` Chrome switches are rejected by this native wrapper. Local-browser spawns add canonical `--allow-file-access false`; routine HTTP(S) work relies on the protected empty config and cleared raw-args environment instead of sending an empty `--args` launch override. Local-file navigation is limited to wrapper-managed local browsers; caller-owned and attached browsers are blocked because their file-access launch provenance is unknown. A fixed non-empty `--args` value is added only when a wrapper user-agent compatibility session is launching or its daemon is proven inactive; active follow-ups omit it. Explicit validated safe CLI `--args` and `--user-agent` remain usable as launch-scoped input. Attached-session follow-ups omit launch-only defaults. Every spawn removes all caller occurrences before any canonical separated `--allow-file-access false` is added, so unsupported equals forms cannot preserve an earlier enabled flag and config cannot re-enable local filesystem access. Unknown top-level or batch tab/attachment/script/state-load transitions remain blocked for page inspection until `get url` or explicit safe navigation establishes the target. `tab list` and non-content `tab <id>` selection remain available while unknown, but selection stays unverified until `get url`; post-transition summaries (including after arbitrary `eval`) read the live URL before title and stop if the target is a local file page.
 - `--hide-scrollbars <bool>`: explicitly show or hide native scrollbars in headless Chromium screenshots.
 - `--headed`: ask upstream to show the browser window. Environment: `AGENT_BROWSER_HEADED`. Use it on the first launch, normally with `sessionMode: "fresh"` when changing an existing managed session; verify visibility with screenshot/tab evidence because the wrapper cannot yet prove the OS window is visible to the user.
@@ -1014,14 +1020,14 @@ Other useful environment variables include `AGENT_BROWSER_DEFAULT_TIMEOUT`, `AGE
 <!-- agent-browser-capability-baseline:start capability-token-baseline -->
 <!-- Generated from scripts/agent-browser-capability-baseline.mjs. Run `npm run docs -- command-reference write` to update. Do not edit manually. -->
 <details>
-<summary>Generated verifier capability baseline for agent-browser 0.34.0</summary>
+<summary>Generated verifier capability baseline for agent-browser 0.35.0</summary>
 
 This generated block is review data for maintainers. The human-authored reference sections above remain the readable command guide.
 
 #### Source evidence
 - repository: `vercel-labs/agent-browser`
-- upstream HEAD: `548b159b30eef119ccf6846c8bc807d0eaa3f6f8`
-- upstream package version: `0.34.0`
+- upstream HEAD: `585e740fcef069d74e21f0e88e8bf4ea7df34385`
+- upstream package version: `0.35.0`
 - inspected: `agent-browser --version`
 - inspected: `agent-browser --help`
 - inspected: `selected agent-browser <command> --help output`
@@ -1031,6 +1037,7 @@ This generated block is review data for maintainers. The human-authored referenc
 - inspected: `agent-browser skills list`
 - inspected: `agent-browser skills get core --full`
 - inspected: `agent-browser skills get derive-client --full`
+- inspected: `agent-browser skills get protected-vercel-deployments --full`
 - inspected: `README.md`
 - inspected: `CHANGELOG.md`
 - inspected: `agent-browser.schema.json`
@@ -1065,6 +1072,7 @@ This generated block is review data for maintainers. The human-authored referenc
 - skills list: `agent-browser skills list`
 - core skill full: `agent-browser skills get core --full`
 - vercel sandbox skill full: `agent-browser skills get vercel-sandbox --full`
+- protected vercel skill full: `agent-browser skills get protected-vercel-deployments --full`
 - open help: `agent-browser open --help`
 - read help: `agent-browser read --help`
 - click help: `agent-browser click --help`
@@ -1118,12 +1126,12 @@ This generated block is review data for maintainers. The human-authored referenc
 - plugin help: `agent-browser plugin --help`
 
 #### Inventory sections
-- Built-in skills: 16 human-doc token(s), 18 upstream token(s)
+- Built-in skills: 17 human-doc token(s), 19 upstream token(s)
 - Core page, element, navigation, and extraction commands: 82 human-doc token(s), 84 upstream token(s)
 - Sessions, state, tabs, frames, dialogs, and windows: 28 human-doc token(s), 25 upstream token(s)
 - Network, storage, artifacts, diagnostics, and performance: 49 human-doc token(s), 60 upstream token(s)
 - Batch, auth, confirmations, setup, dashboard, devices, and AI commands: 33 human-doc token(s), 37 upstream token(s)
-- Global flags, config, providers, policy, and environment: 145 human-doc token(s), 113 upstream token(s)
+- Global flags, config, providers, policy, and environment: 149 human-doc token(s), 117 upstream token(s)
 
 #### Human-authored doc tokens required
 ##### Built-in skills
@@ -1137,6 +1145,7 @@ This generated block is review data for maintainers. The human-authored referenc
 - `skills get slack`
 - `skills get dogfood`
 - `skills get vercel-sandbox`
+- `skills get protected-vercel-deployments`
 - `skills get agentcore`
 - `skills get derive-client`
 - `@agent-browser/sandbox`
@@ -1393,6 +1402,10 @@ This generated block is review data for maintainers. The human-authored referenc
 - `NO_PROXY`
 - `--ignore-https-errors`
 - `AGENT_BROWSER_IGNORE_HTTPS_ERRORS`
+- `--ca-cert <path>`
+- `AGENT_BROWSER_CA_CERT`
+- `--no-ca-cert`
+- `AGENT_BROWSER_CLEAR_CA_CERT`
 - `--allow-file-access`
 - `AGENT_BROWSER_ALLOW_FILE_ACCESS`
 - `--hide-scrollbars <bool>`
@@ -1502,6 +1515,7 @@ This generated block is review data for maintainers. The human-authored referenc
 - skills list: `slack`
 - skills list: `dogfood`
 - skills list: `vercel-sandbox`
+- skills list: `protected-vercel-deployments`
 - skills list: `agentcore`
 - skills list: `derive-client`
 - vercel sandbox skill full: `@agent-browser/sandbox`
@@ -1774,6 +1788,10 @@ This generated block is review data for maintainers. The human-authored referenc
 - root help: `NO_PROXY`
 - root help: `--ignore-https-errors`
 - root help: `AGENT_BROWSER_IGNORE_HTTPS_ERRORS`
+- root help: `--ca-cert <path>`
+- root help: `AGENT_BROWSER_CA_CERT`
+- root help: `--no-ca-cert`
+- root help: `AGENT_BROWSER_CLEAR_CA_CERT`
 - root help: `--allow-file-access`
 - root help: `AGENT_BROWSER_ALLOW_FILE_ACCESS`
 - root help: `--hide-scrollbars <bool>`

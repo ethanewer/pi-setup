@@ -117,6 +117,8 @@ build of the merged `src/` (47/47 modules mirrored; the fork's `DEFAULT_AGENT_RE
 `DEFAULT_AGENT_TIMEOUT_MS`/`defaultAgentRetries` constants present in both) and is byte-identical
 to the patched tree; `bin/pi-setup-vendor --verify` reproduces the fork exactly.
 
+Re-vendored onto 3.8.0 on 2026-08-22. Upstream added committed per-agent usage accounting, logical agent-slot accounting across nested quality helpers, command ownership checks for saved workflows, exact-source saved-workflow rename/delete transactions, and a larger workflow navigator. A three-way merge preserved the fork's project-script provenance checks, confirmed restart/save paths, atomic recovery files, finite timeout/retry defaults, exponential retry delay, vm error adoption, and 100-agent default with a 1000 ceiling. The merged source passes the 3.8.0 TypeScript build. The compiled `dist/` tree was rebuilt from that source, and `bin/pi-setup-vendor --verify` reproduces it from the 3.8.0 package.
+
 **Default changes.** A run defaults to 100 agents (was 1000).
 `DEFAULT_AGENT_TIMEOUT_MS` is 60 minutes (was unbounded), sized so a legitimately long
 subagent is not silently degraded to `null`. `DEFAULT_AGENT_RETRIES` is 2 with exponential
@@ -138,8 +140,7 @@ lock is reclaimable after a staleness window rather than immediately.
 
 ## pi-agent-browser-native-safe
 
-Based on `pi-agent-browser-native@0.3.0`, which targets `agent-browser 0.33.2` (which
-`install.sh` pins). Only `dist/` is shipped, so the fixes are in the compiled tree.
+Based on `pi-agent-browser-native@0.5.0`, with the external CLI rebaselined to the `agent-browser 0.35.0` version that `install.sh` pins. Only `dist/` is shipped, so the runtime fixes are in the compiled tree.
 
 **Re-vendored 0.2.72 -> 0.2.77 on 2026-08-04, and this one was a real merge.** Five upstream
 releases landed a new managed-session subsystem (nine new modules, crash-safe restore keys,
@@ -226,6 +227,8 @@ existed and are already in `inventorySections` — so the artifact-path guards t
 command prefixes are unaffected. `--pin-tab`/`--no-pin-tab` are sticky optional global booleans
 (not launch-scoped), already in `GLOBAL_BOOLEAN_FLAGS_WITH_OPTIONAL_VALUES`, so no new flag
 reaches the argv tokenizer unhandled.
+
+Rebaselined the external CLI from 0.34.0 to 0.35.0 on 2026-08-22. The published package comparison found two new global controls, `--ca-cert` and `--no-ca-cert`, plus the `protected-vercel-deployments` skill. No command was removed. The wrapper parses both flags, treats CA installation and clearing as managed-session browser mutations, disables managed restore for the matching argument and environment forms, and checks `--ca-cert` and `AGENT_BROWSER_CA_CERT` as local file paths so they cannot read protected `.agent-browser` storage. A real-upstream contract run exposed changed 0.35.0 `connect` behavior. Direct and batched remote attachments now fail before execution for wrapper-managed sessions and remain available through explicit caller-owned sessions. The generated command reference, live 0.35.0 help verifier, updated real-upstream contract, and native browser smoke pass.
 
 Hardening re-verified against the merged tree: config trust fails closed (project config only
 when Pi reports the project trusted; the `AGENT_BROWSER_CONFIG` pin for sessionless commands

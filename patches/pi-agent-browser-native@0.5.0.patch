@@ -1,45 +1,22 @@
-diff -ruN --exclude=node_modules a/README.md b/README.md
---- a/README.md	1985-10-26 03:15:00
-+++ b/README.md	2026-08-22 23:51:58
-@@ -59,7 +59,7 @@
+diff -ruN '--exclude=node_modules' a/CHANGELOG.md b/CHANGELOG.md
+--- a/CHANGELOG.md	1985-10-26 03:15:00.000000000 -0500
++++ b/CHANGELOG.md	2026-08-25 15:29:52.000000000 -0500
+@@ -2,6 +2,12 @@
  
- - shell strings are easy for agents to quote wrong
- - large page snapshots can waste model context
--- screenshots and downloads need artifact metadata, not just text paths
-+- screenshots and downloads need artifact metadata, not bare text paths
- - implicit browser sessions need predictable reuse and cleanup
- - profile/debug launches need a clear way to start fresh after public browsing
- - secrets and auth material must not be echoed into model-visible output
-@@ -105,6 +105,8 @@
+ ## Unreleased
  
- Keep both binaries on `PATH`. This package targets exactly `agent-browser 0.34.0`; browser-backed calls fail fast on a different installed version while local inspection/setup commands remain available for diagnosis. `record start` can begin without a file on disk, but `record stop` needs `ffmpeg` to encode the WebM.
- 
-+The wrapper pins the `agent-browser` file it spawns instead of letting a repo-local shim win: an absolute `PI_AGENT_BROWSER_CLI_PATH` takes precedence, otherwise the first executable `PATH` match that is not reached through a relative `PATH` entry or a `node_modules` directory inside the current project. If the only match is such a workspace-local copy, the call fails as `policy-blocked` until you install it outside the workspace, set `PI_AGENT_BROWSER_CLI_PATH`, or opt in with `PI_AGENT_BROWSER_ALLOW_WORKSPACE_CLI=1`.
++### Changed
 +
- ### Android / Termux
++- Rebaselined the exact upstream runtime and command inventory to `agent-browser 0.35.0` / vercel-labs/agent-browser@585e740fcef069d74e21f0e88e8bf4ea7df34385. Added the `protected-vercel-deployments` skill and the new custom-CA controls.
++- Treat `--ca-cert` / `AGENT_BROWSER_CA_CERT` as path-bearing browser mutation inputs, reject protected `.agent-browser` targets, disable managed auth restore when custom trust is present, and require a fresh managed session for CA install or clear flags. `--no-ca-cert` / `AGENT_BROWSER_CLEAR_CA_CERT` receive the same restore and launch isolation.
++- Block direct and batched remote `connect` commands before they can replace a wrapper-managed browser under the changed 0.35.0 attachment behavior. Explicit caller-owned sessions still support remote attachment.
++
+ ## 0.5.0 - 2026-08-20
  
- Android support currently uses Termux's system Chromium rather than Chrome for Testing. Upstream issue [vercel-labs/agent-browser#1587](https://github.com/vercel-labs/agent-browser/issues/1587) tracks native Android packaging; until upstream ships an Android launcher, install the packaged Linux-musl arm64 binary without lifecycle scripts and point the global command at it:
-@@ -144,7 +146,7 @@
- pi --no-extensions -e npm:pi-agent-browser-native
- ```
- 
--Pi 0.84.0+ may ask whether to trust the current project before loading project-local instructions, settings, or resources. This extension treats its own project-local package config as developer-trusted by default; use `--no-approve` when you intentionally want Pi and this extension to ignore project-local inputs for that run.
-+Pi 0.84.0+ may ask whether to trust the current project before loading project-local instructions, settings, or resources. This extension loads its own project-local package config only when Pi affirms project trust, and ignores that layer when the project is untrusted, when Pi runs with `--no-approve`, or when the host exposes no trust check; set `PI_AGENT_BROWSER_TRUST_PROJECT_CONFIG=1` to load project config on a host without a trust check. The same variable also governs upstream's own project layer: because `agent-browser` discovers `./agent-browser.json` from the working directory it is spawned in, a repo-local file would otherwise set `executablePath`, `initScripts`, `proxy`, `allowFileAccess`, or `plugins` without any flag, so the wrapper pins upstream's `AGENT_BROWSER_CONFIG` to a wrapper-owned copy of `~/.agent-browser/config.json` (or an empty config) whenever a repo-local `agent-browser.json` is present and that variable is unset. Your own `AGENT_BROWSER_CONFIG` is never overridden.
- 
- For a specific published version:
- 
-@@ -255,7 +257,7 @@
- npm exec --yes --package pi-agent-browser-native@latest -- pi-agent-browser-config web-search set-command "op read 'op://Private/Brave Search/API Key'" --provider brave --global
- ```
- 
--Config merges in this order: global → project → `PI_AGENT_BROWSER_CONFIG` override. Under Pi 0.84.0+, the globally installed or CLI-loaded extension still loads project-local `.pi/config/pi-agent-browser-native/config.json` when Pi trust allows that project layer; it skips that project layer when Pi reports the project is untrusted or when Pi is launched with `--no-approve`. `webSearch.enabled` is evaluated after the loaded layers merge. Use `web-search disable --global` for a user default, `web-search disable --project` for one repo, and a `PI_AGENT_BROWSER_CONFIG` override with `{ "webSearch": { "enabled": false } }` when web search must stay off even if project config exists. Loaded config may use plaintext, custom environment aliases, interpolation literals, malformed-or-late-bound `$` values, and `!command` credential sources; the resolved secret is passed to the provider request while tool content, details, status output, and docs examples stay redacted. `web-search set-key`, `set-command`, and `clear` require `--provider`; `set-env` infers Exa/Brave from `EXA_API_KEY` or `BRAVE_API_KEY` unless you pass `--provider`.
-+Config merges in this order: global → project → `PI_AGENT_BROWSER_CONFIG` override. Under Pi 0.84.0+, the globally installed or CLI-loaded extension loads project-local `.pi/config/pi-agent-browser-native/config.json` when Pi affirms project trust; it skips that project layer when Pi reports the project is untrusted, when Pi is launched with `--no-approve`, or when the host exposes no trust check (`PI_AGENT_BROWSER_TRUST_PROJECT_CONFIG=1` opts back in). Project-layer web-search keys may only interpolate an environment variable such as `$EXA_API_KEY`: project-scope `!command` and plaintext values are ignored with a config warning so a cloned repo cannot run a host command or supply a key, and `PI_AGENT_BROWSER_ALLOW_PROJECT_CREDENTIAL_COMMANDS=1` opts back in. `webSearch.enabled` is evaluated after the loaded layers merge. Use `web-search disable --global` for a user default, `web-search disable --project` for one repo, and a `PI_AGENT_BROWSER_CONFIG` override with `{ "webSearch": { "enabled": false } }` when web search must stay off even if project config exists. Loaded config may use plaintext, custom environment aliases, interpolation literals, malformed-or-late-bound `$` values, and `!command` credential sources; the resolved secret is passed to the provider request while tool content, details, status output, and docs examples stay redacted. Credential commands run without a shell, so a value that needs a pipe, redirection, or variable expansion must name its shell (`!/bin/sh -c "pass show key | head -1"`) or be written as an exact JSON argv array (`!["/bin/sh", "-c", "pass show key | head -1"]`); a value that would silently resolve to literal shell text is rejected with an error naming both forms, including an unquoted leading `~`, which stays a literal path segment without a shell. Filename patterns (`*`, `?`, `[`) are not rejected: `execFile` passes them to the executable exactly as written, so they either work as literal arguments or fail loudly in the command itself. `web-search set-key`, `set-command`, and `clear` require `--provider`; `set-env` infers Exa/Brave from `EXA_API_KEY` or `BRAVE_API_KEY` unless you pass `--provider`.
- 
- For Exa, the tool defaults to `searchType: "auto"` with `contents.highlights: true`. Agents may pass `searchType` (`fast`, `instant`, `deep-lite`, `deep`, or `deep-reasoning`) only when the task needs that latency/depth tradeoff; structured output schemas are intentionally not exposed yet.
- 
-diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/index.js b/dist/extensions/agent-browser/index.js
---- a/dist/extensions/agent-browser/index.js	1985-10-26 03:15:00
-+++ b/dist/extensions/agent-browser/index.js	2026-08-22 14:57:02
+ ### Added
+diff -ruN '--exclude=node_modules' a/dist/extensions/agent-browser/index.js b/dist/extensions/agent-browser/index.js
+--- a/dist/extensions/agent-browser/index.js	1985-10-26 03:15:00.000000000 -0500
++++ b/dist/extensions/agent-browser/index.js	2026-08-24 15:09:58.000000000 -0500
 @@ -25,7 +25,8 @@
  import { canonicalizeExplicitArtifactDestination, getExplicitArtifactDestination } from "./lib/orchestration/browser-run/artifact-paths.js";
  import { findElectronLaunchRecordForSession, getActiveElectronRecords } from "./lib/orchestration/browser-run/session-state.js";
@@ -148,9 +125,46 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/index.js b/dist
              };
          }
      });
-diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/bash-guard.js b/dist/extensions/agent-browser/lib/bash-guard.js
---- a/dist/extensions/agent-browser/lib/bash-guard.js	1985-10-26 03:15:00
-+++ b/dist/extensions/agent-browser/lib/bash-guard.js	2026-08-22 14:51:27
+diff -ruN '--exclude=node_modules' a/dist/extensions/agent-browser/lib/argv-grammar.js b/dist/extensions/agent-browser/lib/argv-grammar.js
+--- a/dist/extensions/agent-browser/lib/argv-grammar.js	1985-10-26 03:15:00.000000000 -0500
++++ b/dist/extensions/agent-browser/lib/argv-grammar.js	2026-08-25 15:00:32.000000000 -0500
+@@ -12,6 +12,7 @@
+     "--restore-check-fn",
+     "--proxy",
+     "--proxy-bypass",
++    "--ca-cert",
+     "--headers",
+     "--executable-path",
+     "--extension",
+@@ -90,6 +91,7 @@
+     "--ignore-https-errors",
+     "--json",
+     "--no-auto-dialog",
++    "--no-ca-cert",
+     "--no-pin-tab",
+     "--offline",
+     "--pin-tab",
+@@ -169,7 +171,7 @@
+     const prefix = getAgentBrowserSessionIdentityKey("", namespace);
+     return prefix ? identityKey.startsWith(prefix) : !identityKey.includes("\0");
+ }
+-/** Mirror upstream 0.34.0 global parsing: full argv, no `--` sentinel, and only global value payloads are skipped. */
++/** Mirror upstream 0.35.0 global parsing: full argv, no `--` sentinel, and only global value payloads are skipped. */
+ export function scanUpstreamGlobalFlagOccurrences(args, targetFlag) {
+     const occurrences = [];
+     for (let index = 0; index < args.length; index += 1) {
+@@ -295,7 +297,7 @@
+     }
+     return { indices, tokens };
+ }
+-/** Mirror upstream 0.34.0 clean_args: remove global flags wherever they appear before command parsing. */
++/** Mirror upstream 0.35.0 clean_args: remove global flags wherever they appear before command parsing. */
+ export function stripUpstreamGlobalFlags(args) {
+     return projectUpstreamGlobalFlags(args).tokens;
+ }
+diff -ruN '--exclude=node_modules' a/dist/extensions/agent-browser/lib/bash-guard.js b/dist/extensions/agent-browser/lib/bash-guard.js
+--- a/dist/extensions/agent-browser/lib/bash-guard.js	1985-10-26 03:15:00.000000000 -0500
++++ b/dist/extensions/agent-browser/lib/bash-guard.js	2026-08-24 15:09:58.000000000 -0500
 @@ -1,9 +1,12 @@
 -import { readFile } from "node:fs/promises";
 -import { join } from "node:path";
@@ -241,9 +255,9 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/bash-guard.
          return packageJson.name === PACKAGE_NAME;
      }
      catch {
-diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/child-process-policy.js b/dist/extensions/agent-browser/lib/child-process-policy.js
---- a/dist/extensions/agent-browser/lib/child-process-policy.js	1969-12-31 18:00:00
-+++ b/dist/extensions/agent-browser/lib/child-process-policy.js	2026-08-22 14:51:27
+diff -ruN '--exclude=node_modules' a/dist/extensions/agent-browser/lib/child-process-policy.js b/dist/extensions/agent-browser/lib/child-process-policy.js
+--- a/dist/extensions/agent-browser/lib/child-process-policy.js	1969-12-31 18:00:00.000000000 -0600
++++ b/dist/extensions/agent-browser/lib/child-process-policy.js	2026-08-24 15:09:58.000000000 -0500
 @@ -0,0 +1,138 @@
 +/**
 + * Purpose: Own which upstream `agent-browser` executable the wrapper spawns and which parent environment variables reach it.
@@ -383,130 +397,9 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/child-proce
 +    }
 +    return {};
 +}
-diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/config-policy.js b/dist/extensions/agent-browser/lib/config-policy.js
---- a/dist/extensions/agent-browser/lib/config-policy.js	1985-10-26 03:15:00
-+++ b/dist/extensions/agent-browser/lib/config-policy.js	2026-08-22 14:51:27
-@@ -26,6 +26,7 @@
- export const CONFIG_RELATIVE_PATH = /** @type {const} */ ([CONFIG_DIR_NAME, "config", "pi-agent-browser-native", "config.json"]);
- export const GLOBAL_CONFIG_RELATIVE_PATH = /** @type {const} */ ([CONFIG_DIR_NAME, "config", "pi-agent-browser-native", "config.json"]);
- export const SECRET_COMMAND_TIMEOUT_MS = 15_000;
-+export const PROJECT_CREDENTIAL_COMMANDS_ENV = "PI_AGENT_BROWSER_ALLOW_PROJECT_CREDENTIAL_COMMANDS";
- /** @type {Readonly<Record<WebSearchProvider, WebSearchProviderDescriptor>>} */
- export const WEB_SEARCH_PROVIDER_DESCRIPTORS = Object.freeze({
-     exa: Object.freeze({
-@@ -214,14 +215,49 @@
-     return Boolean(trimmed) && !trimmed.startsWith("!") && !trimmed.startsWith("$");
- }
- /**
-+ * Project-scope credentials may only name an environment variable: a repo-authored `!command` value would be
-+ * executed on the host, and a repo-authored plaintext value is not a secret the user chose to share.
-  * @param {string} rawValue
-  * @param {WebSearchProvider} provider
-  */
- export function isProjectSafeCredentialValueForProvider(rawValue, provider) {
-     void provider;
--    return rawValue.trim().length > 0;
-+    const trimmed = rawValue.trim();
-+    if (trimmed.length === 0)
-+        return false;
-+    return !trimmed.startsWith("!") && hasEnvInterpolationReference(trimmed);
- }
- /**
-+ * True only when the value actually names an environment variable, so an escaped `$$` or a trailing `$` inside an
-+ * otherwise plaintext key is not mistaken for interpolation.
-+ * @param {string} rawValue
-+ */
-+function hasEnvInterpolationReference(rawValue) {
-+    for (let index = 0; index < rawValue.length; index += 1) {
-+        if (rawValue[index] !== "$")
-+            continue;
-+        const next = rawValue[index + 1];
-+        if (next === "$" || next === "!") {
-+            index += 1;
-+            continue;
-+        }
-+        if (next === "{") {
-+            const end = rawValue.indexOf("}", index + 2);
-+            if (end !== -1 && /^[A-Za-z_][A-Za-z0-9_]*$/.test(rawValue.slice(index + 2, end)))
-+                return true;
-+            continue;
-+        }
-+        if (next !== undefined && /^[A-Za-z_]/.test(next))
-+            return true;
-+    }
-+    return false;
-+}
-+/** @param {NodeJS.ProcessEnv} [env] */
-+export function isProjectCredentialCommandAllowed(env = process.env) {
-+    const value = env[PROJECT_CREDENTIAL_COMMANDS_ENV]?.trim().toLowerCase();
-+    return value === "1" || value === "true" || value === "yes";
-+}
-+/**
-  * @param {unknown} value
-  * @param {string} path
-  * @param {string[]} errors
-@@ -361,13 +397,22 @@
-     return undefined;
- }
- /**
-+ * The trusted projections drive always-on prompt guidance, so they only read user-owned layers; project-scope
-+ * browser targets stay in the plain `browser*` projections and reach the agent only through the trusted
-+ * project-config path in the extension entrypoint.
-+ * @param {ConfigLayer} layer
-+ */
-+function isTrustedConfigLayer(layer) {
-+    return layer.scope !== "project";
-+}
-+/**
-  * @param {ConfigLayer[]} layers
-  * @returns {{ profile: Required<BrowserDefaultProfileConfig>; scope: ConfigLayerScope } | undefined}
-  */
- function getTrustedBrowserDefaultProfile(layers) {
-     for (let index = layers.length - 1; index >= 0; index -= 1) {
-         const layer = layers[index];
--        if (!layer)
-+        if (!layer || !isTrustedConfigLayer(layer))
-             continue;
-         const profile = getBrowserDefaultProfile(layer.config);
-         if (profile)
-@@ -382,7 +427,7 @@
- function getTrustedBrowserExecutablePath(layers) {
-     for (let index = layers.length - 1; index >= 0; index -= 1) {
-         const layer = layers[index];
--        if (!layer)
-+        if (!layer || !isTrustedConfigLayer(layer))
-             continue;
-         const executablePath = getBrowserExecutablePath(layer.config);
-         if (executablePath)
-@@ -404,7 +449,7 @@
-     return "global";
- }
- /**
-- * @param {{ env: NodeJS.ProcessEnv; layers: ConfigLayer[]; mergedConfig: AgentBrowserConfig }} options
-+ * @param {{ env: NodeJS.ProcessEnv; layers: ConfigLayer[]; mergedConfig: AgentBrowserConfig; warnings?: string[] }} options
-  * @returns {Partial<Record<WebSearchProvider, CredentialSource>>}
-  */
- export function buildWebSearchCredentialSources(options) {
-@@ -414,7 +459,15 @@
-         const descriptor = getWebSearchProviderDescriptor(provider);
-         const apiKey = options.mergedConfig.webSearch?.[descriptor.configKey];
-         if (apiKey !== undefined) {
--            sources[provider] = classifyCredentialSource(apiKey, getWebSearchCredentialScope(options.layers, descriptor.configKey), provider);
-+            const scope = getWebSearchCredentialScope(options.layers, descriptor.configKey);
-+            if (scope !== "project"
-+                || isProjectSafeCredentialValueForProvider(apiKey, provider)
-+                || isProjectCredentialCommandAllowed(options.env)) {
-+                sources[provider] = classifyCredentialSource(apiKey, scope, provider);
-+            }
-+            else {
-+                options.warnings?.push(`webSearch.${descriptor.configKey} from project config was ignored: project-scope credentials must interpolate an environment variable such as $${descriptor.apiKeyEnv}. Move command or plaintext credentials to the global config, or set ${PROJECT_CREDENTIAL_COMMANDS_ENV}=1 to opt in to project-scope credential commands.`);
-+            }
-         }
-         if (!sources[provider] && options.env[descriptor.apiKeyEnv]?.trim()) {
-             sources[provider] = { kind: "literal", provider, rawValue: options.env[descriptor.apiKeyEnv] ?? "", scope: "env-fallback" };
-diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/config.js b/dist/extensions/agent-browser/lib/config.js
---- a/dist/extensions/agent-browser/lib/config.js	1985-10-26 03:15:00
-+++ b/dist/extensions/agent-browser/lib/config.js	2026-08-22 14:51:27
+diff -ruN '--exclude=node_modules' a/dist/extensions/agent-browser/lib/config.js b/dist/extensions/agent-browser/lib/config.js
+--- a/dist/extensions/agent-browser/lib/config.js	1985-10-26 03:15:00.000000000 -0500
++++ b/dist/extensions/agent-browser/lib/config.js	2026-08-24 15:09:58.000000000 -0500
 @@ -1,9 +1,135 @@
 -import { exec as execCallback } from "node:child_process";
 +/**
@@ -667,9 +560,128 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/config.js b
          value = await resolveCommandCredential(source.rawValue, options.signal);
      }
      else if (source.kind === "env") {
-diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/electron/discovery.js b/dist/extensions/agent-browser/lib/electron/discovery.js
---- a/dist/extensions/agent-browser/lib/electron/discovery.js	1985-10-26 03:15:00
-+++ b/dist/extensions/agent-browser/lib/electron/discovery.js	2026-08-22 14:51:27
+diff -ruN '--exclude=node_modules' a/dist/extensions/agent-browser/lib/config-policy.js b/dist/extensions/agent-browser/lib/config-policy.js
+--- a/dist/extensions/agent-browser/lib/config-policy.js	1985-10-26 03:15:00.000000000 -0500
++++ b/dist/extensions/agent-browser/lib/config-policy.js	2026-08-24 15:09:58.000000000 -0500
+@@ -26,6 +26,7 @@
+ export const CONFIG_RELATIVE_PATH = /** @type {const} */ ([CONFIG_DIR_NAME, "config", "pi-agent-browser-native", "config.json"]);
+ export const GLOBAL_CONFIG_RELATIVE_PATH = /** @type {const} */ ([CONFIG_DIR_NAME, "config", "pi-agent-browser-native", "config.json"]);
+ export const SECRET_COMMAND_TIMEOUT_MS = 15_000;
++export const PROJECT_CREDENTIAL_COMMANDS_ENV = "PI_AGENT_BROWSER_ALLOW_PROJECT_CREDENTIAL_COMMANDS";
+ /** @type {Readonly<Record<WebSearchProvider, WebSearchProviderDescriptor>>} */
+ export const WEB_SEARCH_PROVIDER_DESCRIPTORS = Object.freeze({
+     exa: Object.freeze({
+@@ -214,12 +215,47 @@
+     return Boolean(trimmed) && !trimmed.startsWith("!") && !trimmed.startsWith("$");
+ }
+ /**
++ * Project-scope credentials may only name an environment variable: a repo-authored `!command` value would be
++ * executed on the host, and a repo-authored plaintext value is not a secret the user chose to share.
+  * @param {string} rawValue
+  * @param {WebSearchProvider} provider
+  */
+ export function isProjectSafeCredentialValueForProvider(rawValue, provider) {
+     void provider;
+-    return rawValue.trim().length > 0;
++    const trimmed = rawValue.trim();
++    if (trimmed.length === 0)
++        return false;
++    return !trimmed.startsWith("!") && hasEnvInterpolationReference(trimmed);
++}
++/**
++ * True only when the value actually names an environment variable, so an escaped `$$` or a trailing `$` inside an
++ * otherwise plaintext key is not mistaken for interpolation.
++ * @param {string} rawValue
++ */
++function hasEnvInterpolationReference(rawValue) {
++    for (let index = 0; index < rawValue.length; index += 1) {
++        if (rawValue[index] !== "$")
++            continue;
++        const next = rawValue[index + 1];
++        if (next === "$" || next === "!") {
++            index += 1;
++            continue;
++        }
++        if (next === "{") {
++            const end = rawValue.indexOf("}", index + 2);
++            if (end !== -1 && /^[A-Za-z_][A-Za-z0-9_]*$/.test(rawValue.slice(index + 2, end)))
++                return true;
++            continue;
++        }
++        if (next !== undefined && /^[A-Za-z_]/.test(next))
++            return true;
++    }
++    return false;
++}
++/** @param {NodeJS.ProcessEnv} [env] */
++export function isProjectCredentialCommandAllowed(env = process.env) {
++    const value = env[PROJECT_CREDENTIAL_COMMANDS_ENV]?.trim().toLowerCase();
++    return value === "1" || value === "true" || value === "yes";
+ }
+ /**
+  * @param {unknown} value
+@@ -361,13 +397,22 @@
+     return undefined;
+ }
+ /**
++ * The trusted projections drive always-on prompt guidance, so they only read user-owned layers; project-scope
++ * browser targets stay in the plain `browser*` projections and reach the agent only through the trusted
++ * project-config path in the extension entrypoint.
++ * @param {ConfigLayer} layer
++ */
++function isTrustedConfigLayer(layer) {
++    return layer.scope !== "project";
++}
++/**
+  * @param {ConfigLayer[]} layers
+  * @returns {{ profile: Required<BrowserDefaultProfileConfig>; scope: ConfigLayerScope } | undefined}
+  */
+ function getTrustedBrowserDefaultProfile(layers) {
+     for (let index = layers.length - 1; index >= 0; index -= 1) {
+         const layer = layers[index];
+-        if (!layer)
++        if (!layer || !isTrustedConfigLayer(layer))
+             continue;
+         const profile = getBrowserDefaultProfile(layer.config);
+         if (profile)
+@@ -382,7 +427,7 @@
+ function getTrustedBrowserExecutablePath(layers) {
+     for (let index = layers.length - 1; index >= 0; index -= 1) {
+         const layer = layers[index];
+-        if (!layer)
++        if (!layer || !isTrustedConfigLayer(layer))
+             continue;
+         const executablePath = getBrowserExecutablePath(layer.config);
+         if (executablePath)
+@@ -404,7 +449,7 @@
+     return "global";
+ }
+ /**
+- * @param {{ env: NodeJS.ProcessEnv; layers: ConfigLayer[]; mergedConfig: AgentBrowserConfig }} options
++ * @param {{ env: NodeJS.ProcessEnv; layers: ConfigLayer[]; mergedConfig: AgentBrowserConfig; warnings?: string[] }} options
+  * @returns {Partial<Record<WebSearchProvider, CredentialSource>>}
+  */
+ export function buildWebSearchCredentialSources(options) {
+@@ -414,7 +459,15 @@
+         const descriptor = getWebSearchProviderDescriptor(provider);
+         const apiKey = options.mergedConfig.webSearch?.[descriptor.configKey];
+         if (apiKey !== undefined) {
+-            sources[provider] = classifyCredentialSource(apiKey, getWebSearchCredentialScope(options.layers, descriptor.configKey), provider);
++            const scope = getWebSearchCredentialScope(options.layers, descriptor.configKey);
++            if (scope !== "project"
++                || isProjectSafeCredentialValueForProvider(apiKey, provider)
++                || isProjectCredentialCommandAllowed(options.env)) {
++                sources[provider] = classifyCredentialSource(apiKey, scope, provider);
++            }
++            else {
++                options.warnings?.push(`webSearch.${descriptor.configKey} from project config was ignored: project-scope credentials must interpolate an environment variable such as $${descriptor.apiKeyEnv}. Move command or plaintext credentials to the global config, or set ${PROJECT_CREDENTIAL_COMMANDS_ENV}=1 to opt in to project-scope credential commands.`);
++            }
+         }
+         if (!sources[provider] && options.env[descriptor.apiKeyEnv]?.trim()) {
+             sources[provider] = { kind: "literal", provider, rawValue: options.env[descriptor.apiKeyEnv] ?? "", scope: "env-fallback" };
+diff -ruN '--exclude=node_modules' a/dist/extensions/agent-browser/lib/electron/discovery.js b/dist/extensions/agent-browser/lib/electron/discovery.js
+--- a/dist/extensions/agent-browser/lib/electron/discovery.js	1985-10-26 03:15:00.000000000 -0500
++++ b/dist/extensions/agent-browser/lib/electron/discovery.js	2026-08-24 15:09:58.000000000 -0500
 @@ -1,13 +1,18 @@
  import { constants as fsConstants } from "node:fs";
 -import { access, readdir, readFile, realpath, stat } from "node:fs/promises";
@@ -810,9 +822,9 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/electron/di
          return undefined;
      const executableDirectory = dirname(resolvedExecutablePath);
      const resourcesDirectory = join(executableDirectory, "resources");
-diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/electron/launch.js b/dist/extensions/agent-browser/lib/electron/launch.js
---- a/dist/extensions/agent-browser/lib/electron/launch.js	1985-10-26 03:15:00
-+++ b/dist/extensions/agent-browser/lib/electron/launch.js	2026-08-22 14:51:27
+diff -ruN '--exclude=node_modules' a/dist/extensions/agent-browser/lib/electron/launch.js b/dist/extensions/agent-browser/lib/electron/launch.js
+--- a/dist/extensions/agent-browser/lib/electron/launch.js	1985-10-26 03:15:00.000000000 -0500
++++ b/dist/extensions/agent-browser/lib/electron/launch.js	2026-08-24 15:09:58.000000000 -0500
 @@ -1,7 +1,14 @@
 +/**
 + * Purpose: Launch wrapper-owned Electron applications and discover their CDP endpoint.
@@ -919,9 +931,9 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/electron/la
      const connectArg = selectElectronConnectArg({
          port: portResult.port,
          targets: metadata.targets,
-diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/electron/orphans.js b/dist/extensions/agent-browser/lib/electron/orphans.js
---- a/dist/extensions/agent-browser/lib/electron/orphans.js	1969-12-31 18:00:00
-+++ b/dist/extensions/agent-browser/lib/electron/orphans.js	2026-08-22 14:51:27
+diff -ruN '--exclude=node_modules' a/dist/extensions/agent-browser/lib/electron/orphans.js b/dist/extensions/agent-browser/lib/electron/orphans.js
+--- a/dist/extensions/agent-browser/lib/electron/orphans.js	1969-12-31 18:00:00.000000000 -0600
++++ b/dist/extensions/agent-browser/lib/electron/orphans.js	2026-08-24 15:09:58.000000000 -0500
 @@ -0,0 +1,88 @@
 +/**
 + * Purpose: Reap wrapper-owned Electron launches whose pi process died before its shutdown hook could clean them up.
@@ -1011,9 +1023,9 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/electron/or
 +    }
 +    return { adopted, skippedCount };
 +}
-diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/input-modes/electron.js b/dist/extensions/agent-browser/lib/input-modes/electron.js
---- a/dist/extensions/agent-browser/lib/input-modes/electron.js	1985-10-26 03:15:00
-+++ b/dist/extensions/agent-browser/lib/input-modes/electron.js	2026-08-22 14:51:27
+diff -ruN '--exclude=node_modules' a/dist/extensions/agent-browser/lib/input-modes/electron.js b/dist/extensions/agent-browser/lib/input-modes/electron.js
+--- a/dist/extensions/agent-browser/lib/input-modes/electron.js	1985-10-26 03:15:00.000000000 -0500
++++ b/dist/extensions/agent-browser/lib/input-modes/electron.js	2026-08-24 15:09:58.000000000 -0500
 @@ -1,5 +1,7 @@
  import { isRecord } from "../parsing.js";
 -import { AGENT_BROWSER_ELECTRON_ACTIONS, AGENT_BROWSER_ELECTRON_HANDOFFS, AGENT_BROWSER_ELECTRON_LIST_FIELDS, AGENT_BROWSER_ELECTRON_PROBE_FIELDS, AGENT_BROWSER_ELECTRON_RESERVED_APP_ARGS, AGENT_BROWSER_ELECTRON_TARGET_TYPES, } from "./types.js";
@@ -1064,9 +1076,9 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/input-modes
  }
  function validateOptionalElectronPositiveInteger(input, fieldName) {
      const value = input[fieldName];
-diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/input-modes/params.js b/dist/extensions/agent-browser/lib/input-modes/params.js
---- a/dist/extensions/agent-browser/lib/input-modes/params.js	1985-10-26 03:15:00
-+++ b/dist/extensions/agent-browser/lib/input-modes/params.js	2026-08-22 14:53:17
+diff -ruN '--exclude=node_modules' a/dist/extensions/agent-browser/lib/input-modes/params.js b/dist/extensions/agent-browser/lib/input-modes/params.js
+--- a/dist/extensions/agent-browser/lib/input-modes/params.js	1985-10-26 03:15:00.000000000 -0500
++++ b/dist/extensions/agent-browser/lib/input-modes/params.js	2026-08-24 15:09:58.000000000 -0500
 @@ -75,12 +75,12 @@
                  appName: Type.Optional(Type.String({ description: "Name from electron.list.", minLength: 1 })),
                  bundleId: Type.Optional(Type.String({ description: "Bundle id from electron.list.", minLength: 1 })),
@@ -1086,9 +1098,9 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/input-modes
              }, { additionalProperties: false }),
              Type.Object({
                  action: StringEnum(["status", "cleanup"]),
-diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/input-modes/types.js b/dist/extensions/agent-browser/lib/input-modes/types.js
---- a/dist/extensions/agent-browser/lib/input-modes/types.js	1985-10-26 03:15:00
-+++ b/dist/extensions/agent-browser/lib/input-modes/types.js	2026-08-22 14:51:27
+diff -ruN '--exclude=node_modules' a/dist/extensions/agent-browser/lib/input-modes/types.js b/dist/extensions/agent-browser/lib/input-modes/types.js
+--- a/dist/extensions/agent-browser/lib/input-modes/types.js	1985-10-26 03:15:00.000000000 -0500
++++ b/dist/extensions/agent-browser/lib/input-modes/types.js	2026-08-24 15:09:58.000000000 -0500
 @@ -10,6 +10,7 @@
  export const AGENT_BROWSER_ELECTRON_LIST_FIELDS = new Set(["action", "query", "maxResults"]);
  export const AGENT_BROWSER_ELECTRON_PROBE_FIELDS = new Set(["action", "launchId", "timeoutMs"]);
@@ -1097,9 +1109,9 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/input-modes
  export const SOURCE_LOOKUP_WORKSPACE_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".jsx"]);
  export const SOURCE_LOOKUP_IGNORED_DIRECTORIES = new Set([".git", "node_modules", "dist", "build", "coverage", ".next", "out", "tmp", "temp"]);
  export const SOURCE_LOOKUP_DEFAULT_MAX_WORKSPACE_FILES = 2_000;
-diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/launch-flag-policy.js b/dist/extensions/agent-browser/lib/launch-flag-policy.js
---- a/dist/extensions/agent-browser/lib/launch-flag-policy.js	1969-12-31 18:00:00
-+++ b/dist/extensions/agent-browser/lib/launch-flag-policy.js	2026-08-22 14:51:27
+diff -ruN '--exclude=node_modules' a/dist/extensions/agent-browser/lib/launch-flag-policy.js b/dist/extensions/agent-browser/lib/launch-flag-policy.js
+--- a/dist/extensions/agent-browser/lib/launch-flag-policy.js	1969-12-31 18:00:00.000000000 -0600
++++ b/dist/extensions/agent-browser/lib/launch-flag-policy.js	2026-08-24 15:09:58.000000000 -0500
 @@ -0,0 +1,157 @@
 +/**
 + * Purpose: Own the wrapper policy for raw browser/Electron launch switches that can execute host code or read local files.
@@ -1258,9 +1270,80 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/launch-flag
 +    const configuredPath = getUserScopedBrowserExecutablePath(env);
 +    return configuredPath !== undefined && isSameExecutablePath(value, configuredPath);
 +}
-diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/navigation-policy.js b/dist/extensions/agent-browser/lib/navigation-policy.js
---- a/dist/extensions/agent-browser/lib/navigation-policy.js	1985-10-26 03:15:00
-+++ b/dist/extensions/agent-browser/lib/navigation-policy.js	2026-08-22 14:51:27
+diff -ruN '--exclude=node_modules' a/dist/extensions/agent-browser/lib/launch-scoped-flags.js b/dist/extensions/agent-browser/lib/launch-scoped-flags.js
+--- a/dist/extensions/agent-browser/lib/launch-scoped-flags.js	1985-10-26 03:15:00.000000000 -0500
++++ b/dist/extensions/agent-browser/lib/launch-scoped-flags.js	2026-08-25 15:00:37.000000000 -0500
+@@ -93,6 +93,14 @@
+         flag: "--state",
+         reason: "loads persisted upstream browser/auth state at launch time",
+     },
++    {
++        flag: "--ca-cert",
++        reason: "installs custom CA trust and may relaunch the upstream Chromium session",
++    },
++    {
++        flag: "--no-ca-cert",
++        reason: "clears retained custom CA trust and may relaunch the upstream Chromium session",
++    },
+ ];
+ export const LAUNCH_SCOPED_FLAGS = LAUNCH_SCOPED_FLAG_DEFINITIONS.map((definition) => definition.flag);
+ export const LAUNCH_SCOPED_FLAG_LABEL = LAUNCH_SCOPED_FLAGS.join(", ");
+@@ -121,6 +129,8 @@
+     "--proxy",
+     "--proxy-bypass",
+     "--ignore-https-errors",
++    "--ca-cert",
++    "--no-ca-cert",
+     "--allow-file-access",
+     "--webgpu",
+     "--device",
+@@ -148,6 +158,7 @@
+     "AGENT_BROWSER_USER_AGENT",
+     "AGENT_BROWSER_PROXY",
+     "AGENT_BROWSER_PROXY_BYPASS",
++    "AGENT_BROWSER_CA_CERT",
+     "AGENT_BROWSER_PLUGINS",
+     "AGENT_BROWSER_IOS_DEVICE",
+     "AGENT_BROWSER_IOS_UDID",
+@@ -163,6 +174,7 @@
+ export const MANAGED_RESTORE_INCOMPATIBLE_BOOLEAN_ENVS = [
+     "AGENT_BROWSER_AUTO_CONNECT",
+     "AGENT_BROWSER_IGNORE_HTTPS_ERRORS",
++    "AGENT_BROWSER_CLEAR_CA_CERT",
+     "AGENT_BROWSER_ALLOW_FILE_ACCESS",
+     "AGENT_BROWSER_WEBGPU",
+ ];
+diff -ruN '--exclude=node_modules' a/dist/extensions/agent-browser/lib/managed-session-state-policy.js b/dist/extensions/agent-browser/lib/managed-session-state-policy.js
+--- a/dist/extensions/agent-browser/lib/managed-session-state-policy.js	1985-10-26 03:15:00.000000000 -0500
++++ b/dist/extensions/agent-browser/lib/managed-session-state-policy.js	2026-08-25 15:17:59.000000000 -0500
+@@ -20,12 +20,14 @@
+ const BATCH_UNVERIFIED_PAGE_MESSAGE = `${UNVERIFIED_PAGE_MESSAGE} In a batch, put get url after the transition before later content steps, or split the batch at that boundary.`;
+ const UNSAFE_BATCH_ARGUMENT_MESSAGE = "Batch command arguments could not be safely inspected. Use batch stdin JSON command arrays instead.";
+ const NESTED_BATCH_ARGUMENT_MESSAGE = "Nested batch commands are blocked by the wrapper's page-state safety policy. Flatten the batch steps instead.";
++const BLOCKED_MANAGED_ATTACHMENT_MESSAGE = "Connecting or attaching a wrapper-managed browser session to another browser is blocked. Use an explicit caller-owned --session for remote browser attachments.";
+ const NON_BAIL_BATCH_NAVIGATION_MESSAGE = "Batches that navigate before page-content access must use exact batch --bail so a failed navigation cannot expose the prior page.";
+ const MAX_NON_BAIL_BATCH_PAGE_STATES = 64;
+ const EXPLICIT_NAVIGATION_COMMANDS = new Set(["a11y", "goto", "navigate", "open", "pushstate", "visit", "vitals", "web-vitals"]);
+-const FILE_PATH_GLOBAL_FLAGS = ["--action-policy", "--config", "--download-path", "--executable-path", "--extension", "--init-script", "--profile", "--screenshot-dir", "--state"];
++const FILE_PATH_GLOBAL_FLAGS = ["--action-policy", "--ca-cert", "--config", "--download-path", "--executable-path", "--extension", "--init-script", "--profile", "--screenshot-dir", "--state"];
+ const FILE_PATH_ENV_VARIABLES = [
+     "AGENT_BROWSER_ACTION_POLICY",
++    "AGENT_BROWSER_CA_CERT",
+     "AGENT_BROWSER_CONFIG",
+     "AGENT_BROWSER_DOWNLOAD_PATH",
+     "AGENT_BROWSER_EXECUTABLE_PATH",
+@@ -497,6 +499,8 @@
+     const descriptor = parseArgvDescriptor(options.args);
+     const command = descriptor.commandInfo.command;
+     const subcommand = descriptor.commandInfo.subcommand;
++    if (options.blockBrowserAttachment === true && command === "connect")
++        return BLOCKED_MANAGED_ATTACHMENT_MESSAGE;
+     if (["close", "exit", "quit"].includes(command ?? ""))
+         return undefined;
+     if (!options.trustedPinnedEmptyConfig && needsManagedSession(descriptor) && agentBrowserExplicitConfigIsPresent(effectiveEnv, options.args))
+diff -ruN '--exclude=node_modules' a/dist/extensions/agent-browser/lib/navigation-policy.js b/dist/extensions/agent-browser/lib/navigation-policy.js
+--- a/dist/extensions/agent-browser/lib/navigation-policy.js	1985-10-26 03:15:00.000000000 -0500
++++ b/dist/extensions/agent-browser/lib/navigation-policy.js	2026-08-24 15:09:58.000000000 -0500
 @@ -1,7 +1,132 @@
 +/**
 + * Purpose: Keep wrapper-side navigation policy parsing and evaluation small and explicit.
@@ -1479,9 +1562,9 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/navigation-
      return {
          allowedDomains: options.policy.allowedDomains,
          allowedDisplay: options.policy.display,
-diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/orchestration/browser-run/artifact-paths.js b/dist/extensions/agent-browser/lib/orchestration/browser-run/artifact-paths.js
---- a/dist/extensions/agent-browser/lib/orchestration/browser-run/artifact-paths.js	1985-10-26 03:15:00
-+++ b/dist/extensions/agent-browser/lib/orchestration/browser-run/artifact-paths.js	2026-08-22 14:52:59
+diff -ruN '--exclude=node_modules' a/dist/extensions/agent-browser/lib/orchestration/browser-run/artifact-paths.js b/dist/extensions/agent-browser/lib/orchestration/browser-run/artifact-paths.js
+--- a/dist/extensions/agent-browser/lib/orchestration/browser-run/artifact-paths.js	1985-10-26 03:15:00.000000000 -0500
++++ b/dist/extensions/agent-browser/lib/orchestration/browser-run/artifact-paths.js	2026-08-24 15:09:58.000000000 -0500
 @@ -1,6 +1,6 @@
  import { lstatSync, readlinkSync, realpathSync, statSync } from "node:fs";
  import { basename, dirname, join, resolve } from "node:path";
@@ -1490,11 +1573,10 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/orchestrati
  import { parseWaitCommandTokens } from "../../argv-descriptor.js";
  const SCREENSHOT_BOOLEAN_FLAGS = new Set(["--annotate", "--full", "-f"]);
  const SCREENSHOT_VALUE_FLAGS = new Set(["--screenshot-dir", "--screenshot-format", "--screenshot-quality"]);
-@@ -37,6 +37,67 @@
-         return candidateIndex;
+@@ -38,6 +38,67 @@
      }
      return undefined;
-+}
+ }
 +/**
 + * The remaining upstream commands that write a file the caller names. `download`, `pdf`, `state save`,
 + * `wait --download`, and `screenshot` are read by the token readers above, so without these a trace, profile,
@@ -1555,12 +1637,13 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/orchestrati
 +        }
 +    }
 +    return requestedPaths.filter((requestedPath) => requestedPath.length > 0);
- }
++}
  const DIFF_SCREENSHOT_VALUE_FLAGS = new Set(["-b", "--baseline", "-o", "--output", "-s", "--selector", "-t", "--threshold"]);
  function getDiffScreenshotOutputPath(commandTokens) {
-diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/orchestration/browser-run/diagnostics.js b/dist/extensions/agent-browser/lib/orchestration/browser-run/diagnostics.js
---- a/dist/extensions/agent-browser/lib/orchestration/browser-run/diagnostics.js	1985-10-26 03:15:00
-+++ b/dist/extensions/agent-browser/lib/orchestration/browser-run/diagnostics.js	2026-08-22 14:51:27
+     let outputPath;
+diff -ruN '--exclude=node_modules' a/dist/extensions/agent-browser/lib/orchestration/browser-run/diagnostics.js b/dist/extensions/agent-browser/lib/orchestration/browser-run/diagnostics.js
+--- a/dist/extensions/agent-browser/lib/orchestration/browser-run/diagnostics.js	1985-10-26 03:15:00.000000000 -0500
++++ b/dist/extensions/agent-browser/lib/orchestration/browser-run/diagnostics.js	2026-08-24 15:09:58.000000000 -0500
 @@ -873,10 +873,16 @@
  export async function collectTimeoutPartialProgress(options) {
      const rawSteps = getTimeoutProgressSteps(options.compiledJob, options.command, options.stdin);
@@ -1580,9 +1663,9 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/orchestrati
          : undefined;
      const title = extractStringResultField(titleData, "result") ?? extractStringResultField(titleData, "title");
      const plannedUrl = recoveredUrl ? undefined : getPlannedCurrentPageUrl(rawSteps);
-diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/orchestration/browser-run/prepare/direct-anchor-download.js b/dist/extensions/agent-browser/lib/orchestration/browser-run/prepare/direct-anchor-download.js
---- a/dist/extensions/agent-browser/lib/orchestration/browser-run/prepare/direct-anchor-download.js	1985-10-26 03:15:00
-+++ b/dist/extensions/agent-browser/lib/orchestration/browser-run/prepare/direct-anchor-download.js	2026-08-22 14:51:27
+diff -ruN '--exclude=node_modules' a/dist/extensions/agent-browser/lib/orchestration/browser-run/prepare/direct-anchor-download.js b/dist/extensions/agent-browser/lib/orchestration/browser-run/prepare/direct-anchor-download.js
+--- a/dist/extensions/agent-browser/lib/orchestration/browser-run/prepare/direct-anchor-download.js	1985-10-26 03:15:00.000000000 -0500
++++ b/dist/extensions/agent-browser/lib/orchestration/browser-run/prepare/direct-anchor-download.js	2026-08-24 15:09:58.000000000 -0500
 @@ -4,6 +4,7 @@
  import { buildAgentBrowserResultCategoryDetails } from "../../../results/categories.js";
  import { formatSessionArtifactRetentionSummary, mergeSessionArtifactManifest } from "../../../results/artifact-manifest.js";
@@ -1591,18 +1674,18 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/orchestrati
  import { buildSessionDetailFields, runSessionCommandData } from "../session-state.js";
  const DIRECT_ANCHOR_DOWNLOAD_MAX_BYTES = 2 * 1024 * 1024;
  function getDirectDownloadRequest(commandTokens) {
-@@ -24,6 +25,8 @@
- export async function tryDirectAnchorDownload(options) {
+@@ -25,6 +26,8 @@
      const request = getDirectDownloadRequest(options.commandTokens);
      if (!request || !options.sessionName)
-+        return undefined;
-+    if (getWritePathConfinementError(request.path, options.cwd, "download path"))
          return undefined;
++    if (getWritePathConfinementError(request.path, options.cwd, "download path"))
++        return undefined;
      try {
          const probeData = await runSessionCommandData({
-diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/orchestration/browser-run/prepare.js b/dist/extensions/agent-browser/lib/orchestration/browser-run/prepare.js
---- a/dist/extensions/agent-browser/lib/orchestration/browser-run/prepare.js	1985-10-26 03:15:00
-+++ b/dist/extensions/agent-browser/lib/orchestration/browser-run/prepare.js	2026-08-22 14:51:27
+             args: ["eval", "--stdin"],
+diff -ruN '--exclude=node_modules' a/dist/extensions/agent-browser/lib/orchestration/browser-run/prepare.js b/dist/extensions/agent-browser/lib/orchestration/browser-run/prepare.js
+--- a/dist/extensions/agent-browser/lib/orchestration/browser-run/prepare.js	1985-10-26 03:15:00.000000000 -0500
++++ b/dist/extensions/agent-browser/lib/orchestration/browser-run/prepare.js	2026-08-25 15:18:08.000000000 -0500
 @@ -5,6 +5,8 @@
  import { cleanupElectronLaunchResources } from "../../electron/cleanup.js";
  import { launchElectronApp } from "../../electron/launch.js";
@@ -1771,9 +1854,17 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/orchestrati
      const sessionMode = compiledElectron?.action === "launch" ? "fresh" : params.sessionMode ?? "auto";
      const freshSessionName = createFreshSessionName(managedSessionBaseName, ephemeralSessionSeed, freshSessionOrdinal + 1);
      const rawManagedStateAccessError = getManagedSessionStateAccessValidationError({
-diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/orchestration/browser-run/process-output.js b/dist/extensions/agent-browser/lib/orchestration/browser-run/process-output.js
---- a/dist/extensions/agent-browser/lib/orchestration/browser-run/process-output.js	1985-10-26 03:15:00
-+++ b/dist/extensions/agent-browser/lib/orchestration/browser-run/process-output.js	2026-08-22 14:54:43
+@@ -426,6 +564,7 @@
+             cwd,
+             parentEnv: agentBrowserProcessEnv,
+             stdin: runtimeToolStdin,
++            blockBrowserAttachment: executionPlan.managedSessionName !== undefined && compiledElectron?.action !== "launch",
+         });
+         if (!executionPlan.validationError && managedStateAccessError)
+             executionPlan = { ...executionPlan, recoveryHint: undefined, validationError: managedStateAccessError };
+diff -ruN '--exclude=node_modules' a/dist/extensions/agent-browser/lib/orchestration/browser-run/process-output.js b/dist/extensions/agent-browser/lib/orchestration/browser-run/process-output.js
+--- a/dist/extensions/agent-browser/lib/orchestration/browser-run/process-output.js	1985-10-26 03:15:00.000000000 -0500
++++ b/dist/extensions/agent-browser/lib/orchestration/browser-run/process-output.js	2026-08-24 15:09:58.000000000 -0500
 @@ -4,7 +4,7 @@
  import { isCloseAllCommand, isCloseCommand, isNavigationObservableCommandName, isOpenNavigationCommand, isRecordPageTransitionCommand, isUnverifiedPageTransitionCommand } from "../../command-taxonomy.js";
  import { OPEN_RESULT_TAB_CORRECTION_FLAGS } from "../../launch-scoped-flags.js";
@@ -1847,9 +1938,9 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/orchestrati
          if (!currentSessionTabTarget && timeoutPartialProgress?.currentPage?.source === "live") {
              currentSessionTabTarget = normalizeSessionTabTarget(timeoutPartialProgress.currentPage);
          }
-diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/orchestration/electron-host/index.js b/dist/extensions/agent-browser/lib/orchestration/electron-host/index.js
---- a/dist/extensions/agent-browser/lib/orchestration/electron-host/index.js	1985-10-26 03:15:00
-+++ b/dist/extensions/agent-browser/lib/orchestration/electron-host/index.js	2026-08-22 14:51:27
+diff -ruN '--exclude=node_modules' a/dist/extensions/agent-browser/lib/orchestration/electron-host/index.js b/dist/extensions/agent-browser/lib/orchestration/electron-host/index.js
+--- a/dist/extensions/agent-browser/lib/orchestration/electron-host/index.js	1985-10-26 03:15:00.000000000 -0500
++++ b/dist/extensions/agent-browser/lib/orchestration/electron-host/index.js	2026-08-24 15:09:58.000000000 -0500
 @@ -1,4 +1,10 @@
 +/**
 + * Purpose: Own wrapper-side Electron host orchestration for agent_browser structured electron input.
@@ -1861,9 +1952,9 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/orchestrati
  import { discoverElectronApps } from "../../electron/discovery.js";
  import { boundElectronProbeString } from "../../electron/cdp.js";
  import { buildOwnedManagedSessionRestoreContext, withOwnedManagedSessionContext, } from "../../managed-session-restore.js";
-diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/orchestration/output-file.js b/dist/extensions/agent-browser/lib/orchestration/output-file.js
---- a/dist/extensions/agent-browser/lib/orchestration/output-file.js	1985-10-26 03:15:00
-+++ b/dist/extensions/agent-browser/lib/orchestration/output-file.js	2026-08-22 14:51:27
+diff -ruN '--exclude=node_modules' a/dist/extensions/agent-browser/lib/orchestration/output-file.js b/dist/extensions/agent-browser/lib/orchestration/output-file.js
+--- a/dist/extensions/agent-browser/lib/orchestration/output-file.js	1985-10-26 03:15:00.000000000 -0500
++++ b/dist/extensions/agent-browser/lib/orchestration/output-file.js	2026-08-24 15:09:58.000000000 -0500
 @@ -2,6 +2,7 @@
  import { dirname, isAbsolute, resolve } from "node:path";
  import { getAgentBrowserStoragePathValidationError } from "../managed-session-state-policy.js";
@@ -1882,9 +1973,9 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/orchestrati
          const serialized = serializeOutputPayload(payload.value);
          await mkdir(dirname(absolutePath), { recursive: true });
          await writeFile(absolutePath, serialized, "utf8");
-diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/playbook.js b/dist/extensions/agent-browser/lib/playbook.js
---- a/dist/extensions/agent-browser/lib/playbook.js	1985-10-26 03:15:00
-+++ b/dist/extensions/agent-browser/lib/playbook.js	2026-08-22 14:51:27
+diff -ruN '--exclude=node_modules' a/dist/extensions/agent-browser/lib/playbook.js b/dist/extensions/agent-browser/lib/playbook.js
+--- a/dist/extensions/agent-browser/lib/playbook.js	1985-10-26 03:15:00.000000000 -0500
++++ b/dist/extensions/agent-browser/lib/playbook.js	2026-08-24 15:09:58.000000000 -0500
 @@ -86,10 +86,19 @@
      "When agent_browser details.nextActions exists, use exact payloads. Check Omitted high-value controls in dense snapshots. Dashboards: verify scroll with screenshot/snapshot.",
      "agent_browser: read <url> for docs/text or active DOM; get title/url; get text/html/value/count <selector>; get attr <selector> <name>. Batch 3+ getters; heed visibility warnings.",
@@ -1916,9 +2007,9 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/playbook.js
      return [
          ...TOOL_PROMPT_GUIDELINES_PREFIX,
          ...(options.docs ? [buildInstalledDocsGuideline(options.docs)] : []),
-diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/process.js b/dist/extensions/agent-browser/lib/process.js
---- a/dist/extensions/agent-browser/lib/process.js	1985-10-26 03:15:00
-+++ b/dist/extensions/agent-browser/lib/process.js	2026-08-22 14:56:17
+diff -ruN '--exclude=node_modules' a/dist/extensions/agent-browser/lib/process.js b/dist/extensions/agent-browser/lib/process.js
+--- a/dist/extensions/agent-browser/lib/process.js	1985-10-26 03:15:00.000000000 -0500
++++ b/dist/extensions/agent-browser/lib/process.js	2026-08-24 15:09:58.000000000 -0500
 @@ -12,6 +12,8 @@
  import { getImplicitSessionIdleTimeoutMs, isPlainTextInspectionArgs } from "./runtime.js";
  import { getAgentBrowserProcessEnvironment } from "./process-environment.js";
@@ -1971,13 +2062,13 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/process.js 
  }
  export function isWindowsAgentBrowserCommandMissing(stderr) {
      const normalized = stderr.toLowerCase();
-@@ -159,7 +171,19 @@
+@@ -159,6 +171,18 @@
          const killer = spawn("taskkill.exe", ["/PID", String(child.pid), "/T", "/F"], { stdio: "ignore" });
          killer.on("error", () => undefined);
          killer.unref();
 +        child.kill(signal);
 +        return;
-     }
++    }
 +    // The child leads its own POSIX process group, so signal the group to reach descendants holding the stdio pipes.
 +    if (child.pid) {
 +        try {
@@ -1987,10 +2078,9 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/process.js 
 +        catch {
 +            // Group already gone or never created; fall back to the direct child signal.
 +        }
-+    }
+     }
      child.kill(signal);
  }
- /** Exported for unit tests that lock subprocess exit-code precedence. */
 @@ -367,11 +391,15 @@
          return undefined;
      return `Agent-browser Unix socket path would be ${pathBytes} bytes (max 103) for session ${JSON.stringify(sessionName)} under ${JSON.stringify(options.socketDir)}. Set PI_AGENT_BROWSER_SOCKET_DIR to a shorter absolute private directory such as /tmp/piab-<uid> with mode 0700; retrying sessionMode \"fresh\" cannot shorten this configured root.`;
@@ -2081,9 +2171,9 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/process.js 
              env: childEnv,
              stdio: ["pipe", "pipe", "pipe"],
          });
-diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/prompt-policy.js b/dist/extensions/agent-browser/lib/prompt-policy.js
---- a/dist/extensions/agent-browser/lib/prompt-policy.js	1985-10-26 03:15:00
-+++ b/dist/extensions/agent-browser/lib/prompt-policy.js	2026-08-22 14:51:27
+diff -ruN '--exclude=node_modules' a/dist/extensions/agent-browser/lib/prompt-policy.js b/dist/extensions/agent-browser/lib/prompt-policy.js
+--- a/dist/extensions/agent-browser/lib/prompt-policy.js	1985-10-26 03:15:00.000000000 -0500
++++ b/dist/extensions/agent-browser/lib/prompt-policy.js	2026-08-24 15:09:58.000000000 -0500
 @@ -5,12 +5,16 @@
      /\bbrowser\b.*\b(?:automation|click|fill|navigate|open|page|screenshot|site|snapshot|tab|url|visit|web(?:site| page)?)\b/i,
      /\b(?:browse|click|fill|login|navigate|open|visit)\b.*\b(?:https?:\/\/\S+|page|site|tab|url|web(?:site| page)?)\b/i,
@@ -2104,9 +2194,9 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/prompt-poli
  ];
  const PROMPT_ARTIFACT_PATH_PATTERN = /(?:^|[\s"'`(:])((?:\/[^\s"'`),;]+|[A-Za-z]:[\\/][^\s"'`),;]+|\.{1,2}[\\/][^\s"'`),;]+|[^\s"'`()[\],;:\\/]+(?:[\\/][^\s"'`()[\],;\\/]+)+|[^\s"'`()[\],;:\\/]+)\.(?:png|jpe?g|webp|gif|webm|mp4|har|pdf|trace|json))(?=[\s"'`),;.!?]|$)/gi;
  const PROMPT_ARTIFACT_COLON_OUTPUT_INTENT_PATTERN = /\b(?:capture|create|export|generate|output|record|render|save|screenshot|start|take|write)\s+(?:(?:a|an|another|the)\s+)?(?:short\s+)?(?:(?:full[- ]page|page|screen)\s+)?(?:image|page|recordings?|screenshots?|screen|video)\s*:\s*$/i;
-diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/runtime.js b/dist/extensions/agent-browser/lib/runtime.js
---- a/dist/extensions/agent-browser/lib/runtime.js	1985-10-26 03:15:00
-+++ b/dist/extensions/agent-browser/lib/runtime.js	2026-08-22 14:54:05
+diff -ruN '--exclude=node_modules' a/dist/extensions/agent-browser/lib/runtime.js b/dist/extensions/agent-browser/lib/runtime.js
+--- a/dist/extensions/agent-browser/lib/runtime.js	1985-10-26 03:15:00.000000000 -0500
++++ b/dist/extensions/agent-browser/lib/runtime.js	2026-08-24 15:09:58.000000000 -0500
 @@ -2,11 +2,12 @@
  import { basename } from "node:path";
  import { extractUpstreamCommandTokens, findCommandStartIndex, parseArgvDescriptor, parseCommandInfo, } from "./argv-descriptor.js";
@@ -2182,9 +2272,9 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/runtime.js 
  }
  function getInvalidValueFlagDetails(args) {
      for (let index = 0; index < args.length; index += 1) {
-diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/temp.js b/dist/extensions/agent-browser/lib/temp.js
---- a/dist/extensions/agent-browser/lib/temp.js	1985-10-26 03:15:00
-+++ b/dist/extensions/agent-browser/lib/temp.js	2026-08-22 14:51:27
+diff -ruN '--exclude=node_modules' a/dist/extensions/agent-browser/lib/temp.js b/dist/extensions/agent-browser/lib/temp.js
+--- a/dist/extensions/agent-browser/lib/temp.js	1985-10-26 03:15:00.000000000 -0500
++++ b/dist/extensions/agent-browser/lib/temp.js	2026-08-24 15:09:58.000000000 -0500
 @@ -1,3 +1,10 @@
 +/**
 + * Purpose: Create private temporary and persisted spill files for the pi-agent-browser extension without leaking artifacts broadly on disk.
@@ -2196,11 +2286,10 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/temp.js b/d
  import { randomBytes } from "node:crypto";
  import { existsSync, readdirSync, rmSync } from "node:fs";
  import { chmod, mkdir, mkdtemp, open, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
-@@ -434,6 +441,37 @@
-     await chmod(directory, 0o700).catch(() => undefined);
+@@ -435,6 +442,37 @@
      await refreshSecureTempRootLease(tempRoot).catch(() => undefined);
      return directory;
-+}
+ }
 +/**
 + * Lists prefix-matched child directories under owned temp roots whose owner process is provably gone, so
 + * long-lived resources created by a killed run can be adopted instead of leaking. Roots whose owner is alive or
@@ -2231,12 +2320,13 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/temp.js b/d
 +        }
 +    }
 +    return childDirectories.sort();
- }
++}
  export async function getSecureTempChildDirectoryValidationError(path, childPrefix) {
      const parentDirectory = dirname(path);
-diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/upstream-config-policy.js b/dist/extensions/agent-browser/lib/upstream-config-policy.js
---- a/dist/extensions/agent-browser/lib/upstream-config-policy.js	1969-12-31 18:00:00
-+++ b/dist/extensions/agent-browser/lib/upstream-config-policy.js	2026-08-22 14:51:27
+     const childName = path.slice(parentDirectory.length + 1);
+diff -ruN '--exclude=node_modules' a/dist/extensions/agent-browser/lib/upstream-config-policy.js b/dist/extensions/agent-browser/lib/upstream-config-policy.js
+--- a/dist/extensions/agent-browser/lib/upstream-config-policy.js	1969-12-31 18:00:00.000000000 -0600
++++ b/dist/extensions/agent-browser/lib/upstream-config-policy.js	2026-08-24 15:09:58.000000000 -0500
 @@ -0,0 +1,87 @@
 +/**
 + * Purpose: Keep the upstream agent-browser CLI from silently loading configuration the checked-out project controls.
@@ -2325,9 +2415,9 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/upstream-co
 +        `To apply the project file, have the user start pi with ${UPSTREAM_PROJECT_CONFIG_TRUST_ENV}=1.`,
 +    ].join(" ");
 +}
-diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/write-path-policy.js b/dist/extensions/agent-browser/lib/write-path-policy.js
---- a/dist/extensions/agent-browser/lib/write-path-policy.js	1969-12-31 18:00:00
-+++ b/dist/extensions/agent-browser/lib/write-path-policy.js	2026-08-22 14:51:27
+diff -ruN '--exclude=node_modules' a/dist/extensions/agent-browser/lib/write-path-policy.js b/dist/extensions/agent-browser/lib/write-path-policy.js
+--- a/dist/extensions/agent-browser/lib/write-path-policy.js	1969-12-31 18:00:00.000000000 -0600
++++ b/dist/extensions/agent-browser/lib/write-path-policy.js	2026-08-24 15:09:58.000000000 -0500
 @@ -0,0 +1,154 @@
 +/**
 + * Purpose: Confine wrapper-created files and directories to operator-approved roots.
@@ -2483,9 +2573,17 @@ diff -ruN --exclude=node_modules a/dist/extensions/agent-browser/lib/write-path-
 +        `Use a path inside the workspace, or have the user approve the location by starting pi with ${ALLOWED_WRITE_ROOTS_ENV}=<root> (or ${UNCONFINED_WRITES_ENV}=1).`,
 +    ].join(" ");
 +}
-diff -ruN --exclude=node_modules a/docs/ARCHITECTURE.md b/docs/ARCHITECTURE.md
---- a/docs/ARCHITECTURE.md	1985-10-26 03:15:00
-+++ b/docs/ARCHITECTURE.md	2026-08-22 14:51:27
+diff -ruN '--exclude=node_modules' a/dist/scripts/agent-browser-target.mjs b/dist/scripts/agent-browser-target.mjs
+--- a/dist/scripts/agent-browser-target.mjs	1985-10-26 03:15:00.000000000 -0500
++++ b/dist/scripts/agent-browser-target.mjs	2026-08-25 15:00:21.000000000 -0500
+@@ -1,3 +1,3 @@
+ export const TARGET_AGENT_BROWSER_SOURCE = "scripts/agent-browser-target.mjs";
+-export const TARGET_AGENT_BROWSER_VERSION = "0.34.0";
++export const TARGET_AGENT_BROWSER_VERSION = "0.35.0";
+ export const TARGET_AGENT_BROWSER_VERSION_LABEL = `agent-browser ${TARGET_AGENT_BROWSER_VERSION}`;
+diff -ruN '--exclude=node_modules' a/docs/ARCHITECTURE.md b/docs/ARCHITECTURE.md
+--- a/docs/ARCHITECTURE.md	1985-10-26 03:15:00.000000000 -0500
++++ b/docs/ARCHITECTURE.md	2026-08-25 15:18:45.000000000 -0500
 @@ -35,10 +35,10 @@
  ### Direct subprocess execution
  
@@ -2509,6 +2607,15 @@ diff -ruN --exclude=node_modules a/docs/ARCHITECTURE.md b/docs/ARCHITECTURE.md
  
  `agent_browser_web_search` availability is conditional. Startup registration uses global, override, and environment fallback config without reading project-local config before Pi trust context exists; trusted project config can register the companion tool on `session_start`, and every execution reloads the final session config so `webSearch.enabled: false` still prevents a request even if a startup credential made the tool visible. A global disable is the normal user default and can still be overridden by project config or `PI_AGENT_BROWSER_CONFIG`; a project disable applies to one repo; an explicit `PI_AGENT_BROWSER_CONFIG` file with `webSearch.enabled: false` is the highest-priority hard disable for that run. Literal and env-backed sources must resolve before they make the tool available; command-backed sources are considered configured without running the command until tool execution, so secret managers do not slow startup or prompt unexpectedly. The tool resolves the selected key lazily, chooses Exa or Brave from available credentials (preferring Exa by default unless `webSearch.preferredProvider` says otherwise), then follows one provider-agnostic execution path through provider adapters for request building, HTTP JSON fetch, response normalization, and provider-specific detail fields. It calls Exa `/search` with highlights or Brave Search and returns compact result details without exposing keys.
  
+@@ -164,7 +164,7 @@
+ - reconstruct the current branch-visible extension-managed session, every transcript-proven still-active wrapper-owned managed identity, page-scoped refs, newest-revision aggregate artifact manifest, unbounded active-recording reservation events, and Electron launch records from the active transcript branch on `session_start` and `session_tree` so later default and explicit off-current calls keep following owned browsers after resume/reload or branch switching; restore also honors successful explicit `--session <wrapper-owned> close` rows, terminal nested-batch close outcomes even when aggregate artifact verification failed, and `electron.cleanup` managed-session steps so closed wrapper-owned sessions are not resurrected; a nested close invalidates the pre-close page target so a lifecycle-proven relaunch at `about:blank` is not treated as stale focus drift; explicit lifecycle evidence that a later diagnostic did not launch a browser preserves the terminal close, while any later row—including a failed row—whose lifecycle reports a browser launch keeps active/attached provenance; failed-step presentation persists only that bounded launch boolean so transcript replay reaches the same decision, missing lifecycle evidence remains conservatively active even on the first managed call, successful closes clear wrapper trace/profiler ownership before ordered later successful rows can rebuild it, namespace-scoped `close --all` clears all matching managed/attached/page/ref/route/trace/recording ownership, and recording starts after close are rejected before spawn
+ - keep active recording destination reservations separate from the bounded metadata-only artifact manifest. The process-wide map is keyed by canonical namespace/session identity, rebuilt from append-only branch events, and retained for still-live process-owned recordings across branch switches. Shutdown/reload appends both terminal tombstones and still-live reservations onto the current branch so restart cannot resurrect a cross-branch close or lose a live-daemon reservation. One artifact lifecycle/output queue makes global destination preflight and reservation updates atomic across otherwise-concurrent caller-owned session queues. Every successful direct, ordered nested-batch, managed replacement, script, Electron, or shutdown close retires its exact identity at that lifecycle point; only the newest pending recording path remains authoritative across live merge and transcript replay (including same-timestamp restart rows), legacy terminal batch closes override stale pending manifests, and recording starts after a nested close are rejected because upstream can falsely report success. Existing and dangling symlink ancestry, hardlink inode identity, full Unicode/platform case folding, and same-call `outputPath` comparison prevent alias reuse. One shared command-token projection mirrors upstream's full-argv global cleanup before artifact, recording, presentation, and protected-path parsing; wait-download detection removes only the first timeout pair, follows upstream long/short mode precedence, and accepts both `--download` and `-d` wherever download mode wins; screenshot destinations use upstream's exact-flag, selector-prefix, case-sensitive extension, slash-path, and second-positional rules, while retaining the wrapper's intentional slash-bearing hidden-workspace path normalization. Legacy aggregate replay retires a pending manifest only when the ordered lifecycle leaves recording closed, and malformed manifest rows are ignored rather than reaching session/path identity code
+ - keep process-owned cleanup registries for extension-managed sessions and wrapper-launched Electron records separate from the current branch-visible view; `session_tree` restore and wrapper-owned browser commands are serialized with managed-session work, while caller-owned explicit-session commands are serialized by process-local queues keyed to effective canonical namespace/session across prepare helpers (explicit namespace argv overrides inherited `AGENT_BROWSER_NAMESPACE`, including an explicit empty default) and main execution. macOS and Windows additionally normalize and case-fold namespace and session components to match case-insensitive daemon identity. Different caller-owned identities remain concurrent, except namespace-scoped `close --all` drains and exclusively barriers managed plus matching caller-owned work before clearing global namespace state; nested helpers never re-enter the outer queue, policy/route/artifact deltas merge across unrelated managed-state commits, and a separate branch-restore generation guard prevents stale completions from overwriting newer branch-visible state; aggregate artifact results use monotonic revisions so transcript replay cannot lose a concurrently completed entry. Branch switches still must not drop resources the current Pi process owns and must keep fresh-session allocation monotonic
+-- record successful `connect`, `--cdp`, enabled `--auto-connect`, environment-configured CDP/auto-connect, and wrapper Electron attachment identities in branch-visible state, then run their main commands, helper probes, and cleanup inside an attached-browser process context that omits wrapper launch-only `--args` / `--allow-file-access` defaults. Re-sending those flags makes upstream choose local launch instead of its existing CDP connection and can trigger remote-debugging permission on every call. Block first-use attachment/content combinations until URL verification, and apply the existing live `get url` gate before every later content-bearing read or interaction because attached targets can drift outside Pi. Every child clears `AGENT_BROWSER_ALLOW_FILE_ACCESS`, including attached calls that omit the canonical launch flags. A terminal successful close removes the marker; a close followed by a later step whose lifecycle reports a browser launch preserves it, while a non-launching diagnostic such as `stream status` leaves the close terminal. Existing config, environment, URL, and protected-path checks still apply
++- record successful `connect`, `--cdp`, enabled `--auto-connect`, environment-configured CDP/auto-connect, and wrapper Electron attachment identities in branch-visible state, then run their main commands, helper probes, and cleanup inside an attached-browser process context that omits wrapper launch-only `--args` / `--allow-file-access` defaults. Re-sending those flags makes upstream choose local launch instead of its existing CDP connection and can trigger remote-debugging permission on every call. Block direct or batched remote `connect` when planning a wrapper-managed session; remote attachment must use an explicit caller-owned session. Block first-use attachment/content combinations until URL verification, and apply the existing live `get url` gate before every later content-bearing read or interaction because attached targets can drift outside Pi. Every child clears `AGENT_BROWSER_ALLOW_FILE_ACCESS`, including attached calls that omit the canonical launch flags. A terminal successful close removes the marker; a close followed by a later step whose lifecycle reports a browser launch preserves it, while a non-launching diagnostic such as `stream status` leaves the close terminal. Existing config, environment, URL, and protected-path checks still apply
+ - when a successful close targets the current extension-managed session, including an explicit `--session <current> close` or an `electron.cleanup` managed-session step, clear page/ref state, mark that session inactive, untrack cleanup ownership, and rotate the next default auto call to a fresh wrapper-generated session name rather than reusing the closed name
+ - on non-quit shutdown such as `/reload`, close off-branch owned managed sessions and off-branch owned Electron launches before clearing process-local ownership, but preserve the current branch-visible active managed session and Electron launch plus that launch's isolated `userDataDir` so reload continuity still works from the active transcript branch
+ - expose still-owned off-branch Electron launch records to `electron.status { launchId }`, `electron.status { all: true }`, `electron.probe { launchId }`, and `electron.cleanup`, while leaving default `electron.probe` scoped to the current managed session
 @@ -226,7 +226,7 @@
  ### `pi-agent-browser-native` owns
  
@@ -2518,10 +2625,28 @@ diff -ruN --exclude=node_modules a/docs/ARCHITECTURE.md b/docs/ARCHITECTURE.md
  - clear missing-binary errors
  - compact result summaries, including presentation-time redaction: stateful browser-context commands (`auth`, `cookies`, `storage`, `dialog`, `frame`, `state`) use field-aware value redaction and compact formatters, while other structured upstream JSON (for example `network`, `diff`, `trace` / `profiler` / `record`, `console` / `errors` / `highlight` / `inspect` / `clipboard`, `stream`, `dashboard`, and `chat`) is passed through `redactPresentationData` in `extensions/agent-browser/lib/results/presentation.ts` so model-facing `details.data` and batch roll-ups stay compact and do not echo bearer tokens, proxy passwords, or similar fields verbatim; `redactInvocationArgs` in `extensions/agent-browser/lib/runtime.ts` masks trailing values for sensitive global flags such as `--body`, `--headers`, `--password`, and `--proxy`, preserves positional rules for `cookies set` and `storage local|session set`, and nested `batch` steps use the same argv and error-body scrubbing before echoing commands or errors
  - bounded machine-readable outcome metadata on tool `details` (`resultCategory`, `successCategory`, `failureCategory`, optional `nextActions`, optional `pageChangeSummary` with per-step summaries on `batch`, optional `artifactVerification` with the same shape on each successful `batchSteps[]` row) so agents can branch without parsing prose; enums, classifier precedence, and generic follow-up payloads are implemented under `extensions/agent-browser/lib/results/` in focused modules (`contracts.ts` for shared types, `categories.ts` for `classifyAgentBrowserSuccessCategory` / `classifyAgentBrowserFailureCategory` / `buildAgentBrowserResultCategoryDetails`, `action-recommendations.ts` for `buildAgentBrowserNextActions`, `next-actions.ts` for the `AgentBrowserNextAction` shape and merge helpers, `recovery-actions.ts` for recovery id registries and `buildRecoveryNextActions`, `network.ts` for `classifyNetworkRequestFailure` / `summarizeNetworkFailures`, and related helpers). Per-session tab target, `refSnapshot` alignment, invalidation, and tab pinning observations flow through `extensions/agent-browser/lib/session-page-state.ts` from `extensions/agent-browser/index.ts`. Compact page-change summaries and artifact verification rollups are built in `extensions/agent-browser/lib/results/presentation.ts` (`buildPageChangeSummary`, `buildArtifactVerificationSummary`), and the human contract lives in [`TOOL_CONTRACT.md`](TOOL_CONTRACT.md#details). Real Pi custom tools otherwise only mark a row failed when `execute` throws, so the extension also registers `pi.on("tool_result", …)` and patches `agent_browser` results whose `details.resultCategory` is `failure` to set `isError: true`. Prose results also receive a short category notice, while caller-requested `--json` results with parseable JSON content keep that text unchanged so JSONL transcripts, UI affordances, and the machine-readable contract stay aligned for wrapper-side reclassifications such as `qa-failure` (`buildAgentBrowserToolResultPatch` in `extensions/agent-browser/lib/pi-tool-rendering.ts`; transcript semantics in the same contract doc)
-diff -ruN --exclude=node_modules a/docs/COMMAND_REFERENCE.md b/docs/COMMAND_REFERENCE.md
---- a/docs/COMMAND_REFERENCE.md	1985-10-26 03:15:00
-+++ b/docs/COMMAND_REFERENCE.md	2026-08-22 23:51:58
-@@ -74,7 +74,7 @@
+diff -ruN '--exclude=node_modules' a/docs/COMMAND_REFERENCE.md b/docs/COMMAND_REFERENCE.md
+--- a/docs/COMMAND_REFERENCE.md	1985-10-26 03:15:00.000000000 -0500
++++ b/docs/COMMAND_REFERENCE.md	2026-08-25 15:09:28.000000000 -0500
+@@ -18,12 +18,16 @@
+ 
+ <!-- agent-browser-capability-baseline:start upstream-baseline -->
+ <!-- Generated from scripts/agent-browser-capability-baseline.mjs. Run `npm run docs -- command-reference write` to update. Do not edit manually. -->
+-This reference is baselined to the locally installed `agent-browser 0.34.0` command/help surface, audited against vercel-labs/agent-browser@548b159b30eef119ccf6846c8bc807d0eaa3f6f8. Upstream `agent-browser` remains the source of truth for command semantics; this file is the local fallback for Pi agent sessions where direct binary help is blocked or discouraged.
++This reference is baselined to the locally installed `agent-browser 0.35.0` command/help surface, audited against vercel-labs/agent-browser@585e740fcef069d74e21f0e88e8bf4ea7df34385. Upstream `agent-browser` remains the source of truth for command semantics; this file is the local fallback for Pi agent sessions where direct binary help is blocked or discouraged.
+ 
+ The lightweight drift check is `npm run verify -- command-reference`. Run it whenever the installed upstream `agent-browser` version changes or this reference is edited.
+ 
+ <!-- agent-browser-capability-baseline:end upstream-baseline -->
+ 
++### Upstream 0.35.0 rebaseline
++
++The 0.35.0 release adds custom CA trust for local Linux Chromium (`--ca-cert <path>` / `AGENT_BROWSER_CA_CERT`, with `--no-ca-cert` / `AGENT_BROWSER_CLEAR_CA_CERT` to clear retained trust) and the `protected-vercel-deployments` built-in skill. This package targets exactly `agent-browser 0.35.0`. The wrapper treats CA files as guarded local paths and custom trust as a browser mutation: managed restore is disabled, `.agent-browser` paths are rejected, and CA install/clear flags require a fresh managed session once one is active.
++
+ ### Upstream 0.34.0 rebaseline
+ 
+ The 0.34.0 release adds persistent session-to-tab binding for shared Chrome sessions. This package targets exactly `agent-browser 0.34.0`: before browser-backed work, the extension caches one `agent-browser --version` check per cwd/PATH and fails a mismatch with expected/observed version details. Plain help/version, close recovery, and sessionless local setup/diagnostics remain available.
+@@ -74,7 +78,7 @@
  
  The 0.31.2 rebaseline adds a WebGPU launch preset and periodic restore-state autosaves:
  
@@ -2530,7 +2655,16 @@ diff -ruN --exclude=node_modules a/docs/COMMAND_REFERENCE.md b/docs/COMMAND_REFE
  - WebGPU requires a local browser launch. Upstream rejects enabled WebGPU with `--cdp`, `--auto-connect`, or `-p` / `--provider`. Use `doctor --webgpu` to pixel-check rendering and screenshot capture; use `doctor --webgpu --headed` when validating the headed capture path.
  - Headless WebGPU screenshots work on macOS. Upstream documents black headless WebGPU canvas captures on Windows and Linux even when in-page rendering succeeds; Windows needs a logged-in headed desktop, while Linux can use `--headed` with automatic Xvfb unless `AGENT_BROWSER_NO_XVFB=1`. Linux software rendering also needs `libvulkan1` and `mesa-vulkan-drivers`.
  - Restore-enabled sessions now save periodically while the browser remains open, including idle page-driven cookie/storage changes. `AGENT_BROWSER_AUTOSAVE_INTERVAL_MS` defaults to `30000`; `0` disables periodic saves but keeps native close saves. The existing `--restore-save` policy still controls whether automatic saves are allowed. For wrapper-owned headed launches, this extension defaults the interval to `0` because upstream 0.33.2 collects multi-origin storage through visible temporary tabs; upstream exempts headed browsers from idle shutdown, so direct window close can lose newer state unless an explicit interval was set before launch. The wrapper retains the effective launch-time interval across resume and rejects changes in either direction on a running wrapper-owned headed daemon until close plus a fresh launch.
-@@ -851,7 +851,7 @@
+@@ -615,7 +619,7 @@
+ | `skills list` | List available CLI-bundled skills. |
+ | `skills get core` | Print the core usage guide. |
+ | `skills get core --full` | Print the full version-matched core command reference and templates. |
+-| `skills get <name>` | Load a specialized skill such as `electron` or `slack`. Common specialized calls include `skills get electron`, `skills get slack`, `skills get dogfood`, `skills get vercel-sandbox`, `skills get agentcore`, and `skills get derive-client` (HAR-to-API-client workflow). |
++| `skills get <name>` | Load a specialized skill such as `electron` or `slack`. Common specialized calls include `skills get electron`, `skills get slack`, `skills get dogfood`, `skills get vercel-sandbox`, `skills get protected-vercel-deployments`, `skills get agentcore`, and `skills get derive-client` (HAR-to-API-client workflow). |
+ | `skills get <name> --full` | Include a skill's supplementary references/templates when present. |
+ | `skills get --all` | Print all visible bundled skills for broad audit/debug work. |
+ | `skills path [name]` | Print a skill directory path. |
+@@ -851,7 +855,7 @@
  - project-local: `.pi/config/pi-agent-browser-native/config.json`
  - explicit override: `PI_AGENT_BROWSER_CONFIG=/path/to/config.json`
  
@@ -2539,7 +2673,7 @@ diff -ruN --exclude=node_modules a/docs/COMMAND_REFERENCE.md b/docs/COMMAND_REFE
  
  `pi install npm:pi-agent-browser-native` loads the extension, but it does **not** usually put the package helper on your shell `PATH`. The clearest setup is to write the config file directly and keep actual keys in the environment that launches `pi`:
  
-@@ -887,7 +887,7 @@
+@@ -887,7 +891,7 @@
  npm exec --yes --package pi-agent-browser-native@latest -- pi-agent-browser-config browser executable set "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser"
  ```
  
@@ -2548,7 +2682,16 @@ diff -ruN --exclude=node_modules a/docs/COMMAND_REFERENCE.md b/docs/COMMAND_REFE
  
  Example config:
  
-@@ -962,7 +962,7 @@
+@@ -939,6 +943,8 @@
+ - `--proxy <server>`: proxy server URL. Environments: `AGENT_BROWSER_PROXY`, `HTTP_PROXY`, `HTTPS_PROXY`, `ALL_PROXY`.
+ - `--proxy-bypass <hosts>`: proxy bypass hosts. Environments: `AGENT_BROWSER_PROXY_BYPASS`, `NO_PROXY`.
+ - `--ignore-https-errors`: ignore HTTPS certificate errors. Environment: `AGENT_BROWSER_IGNORE_HTTPS_ERRORS`.
++- `--ca-cert <path>`: trust a CA certificate or PEM bundle in locally launched Linux Chromium. Environment: `AGENT_BROWSER_CA_CERT`. This wrapper guards the file path, rejects protected `.agent-browser` targets, disables managed restore, and requires a fresh managed session once active.
++- `--no-ca-cert`: clear retained custom CA trust. Environment: `AGENT_BROWSER_CLEAR_CA_CERT`. This is treated as the same isolated browser mutation.
+ - `--allow-file-access`: upstream capability, but enabled argv/`AGENT_BROWSER_ALLOW_FILE_ACCESS` forms and file-access-enabling `--args` / `AGENT_BROWSER_ARGS` Chrome switches are rejected by this native wrapper. Local-browser spawns add canonical `--allow-file-access false`; routine HTTP(S) work relies on the protected empty config and cleared raw-args environment instead of sending an empty `--args` launch override. Local-file navigation is limited to wrapper-managed local browsers; caller-owned and attached browsers are blocked because their file-access launch provenance is unknown. A fixed non-empty `--args` value is added only when a wrapper user-agent compatibility session is launching or its daemon is proven inactive; active follow-ups omit it. Explicit validated safe CLI `--args` and `--user-agent` remain usable as launch-scoped input. Attached-session follow-ups omit launch-only defaults. Every spawn removes all caller occurrences before any canonical separated `--allow-file-access false` is added, so unsupported equals forms cannot preserve an earlier enabled flag and config cannot re-enable local filesystem access. Unknown top-level or batch tab/attachment/script/state-load transitions remain blocked for page inspection until `get url` or explicit safe navigation establishes the target. `tab list` and non-content `tab <id>` selection remain available while unknown, but selection stays unverified until `get url`; post-transition summaries (including after arbitrary `eval`) read the live URL before title and stop if the target is a local file page.
+ - `--hide-scrollbars <bool>`: explicitly show or hide native scrollbars in headless Chromium screenshots.
+ - `--headed`: ask upstream to show the browser window. Environment: `AGENT_BROWSER_HEADED`. Use it on the first launch, normally with `sessionMode: "fresh"` when changing an existing managed session; verify visibility with screenshot/tab evidence because the wrapper cannot yet prove the OS window is visible to the user.
+@@ -962,7 +968,7 @@
  - `--screenshot-format <fmt>`: `png` or `jpeg`. Environment: `AGENT_BROWSER_SCREENSHOT_FORMAT`.
  - `--content-boundaries`: wrap page output in boundary markers. Environment: `AGENT_BROWSER_CONTENT_BOUNDARIES`.
  - `--max-output <chars>`: truncate page output to N characters. Environment: `AGENT_BROWSER_MAX_OUTPUT`.
@@ -2557,22 +2700,21 @@ diff -ruN --exclude=node_modules a/docs/COMMAND_REFERENCE.md b/docs/COMMAND_REFE
  - `--action-policy <path>`: action policy JSON file. Environment: `AGENT_BROWSER_ACTION_POLICY`.
  - `--confirm-actions <list>`: action categories requiring confirmation. Environment: `AGENT_BROWSER_CONFIRM_ACTIONS`.
  - `--confirm-interactive`: interactive confirmations; auto-denies when stdin is not a TTY. Environment: `AGENT_BROWSER_CONFIRM_INTERACTIVE`.
-@@ -985,10 +985,12 @@
+@@ -985,9 +991,11 @@
  3. Environment variables, including `AGENT_BROWSER_CONFIG`.
  4. CLI flags.
  
 -Use separated `--config <path>` to load a specific config file in standalone upstream; upstream 0.33.2 does not recognize `--config=<path>` as the global config selector. For browser-backed native calls, passive project/user upstream config files are ignored because the wrapper pins a process-private empty config; explicit `--config` and `AGENT_BROWSER_CONFIG` overrides are rejected without reading them. The protected empty config is pinned for every accepted browser-backed spawn so a file created after planning cannot change the browser. Sessionless local/setup commands keep upstream config behavior. This policy is separate from the Pi-scoped package config under `.pi/config/pi-agent-browser-native/`; pass safe browser settings through native `args`/environment or that package's advisory browser guidance. Boolean flags accept optional `true` or `false` values, such as `--headed false` or `--webgpu false`, to override config. Browser extensions from user and project configs are merged rather than replaced.
 +Step 2 is discovered from the upstream child's working directory, which is the Pi session workspace, so a checked-out project that merely ships `./agent-browser.json` would reach `executablePath`, `initScripts`, `proxy`, `allowFileAccess`, and `plugins` with no flag at all. Two layers stop that. For browser-backed calls upstream itself now rejects discovered, environment-selected, or explicit upstream config without reading it and pins a process-private empty config for every accepted spawn, so a file created after planning cannot change the browser. For the calls upstream leaves alone — sessionless local and setup commands — this wrapper pins upstream's `AGENT_BROWSER_CONFIG` to a wrapper-owned copy of `~/.agent-browser/config.json` (or an empty config when there is no user-level file) whenever a repo-local `agent-browser.json` is present, so user defaults keep applying and the project layer is dropped. The wrapper's pin only applies where upstream pinned nothing, so the two never overwrite each other. Start Pi with `PI_AGENT_BROWSER_TRUST_PROJECT_CONFIG=1` to apply the project file, or set `AGENT_BROWSER_CONFIG` yourself to pin an exact path; either way the wrapper leaves the resolution alone. A pinned config is loaded, never written, and `plugin add` writes the file its own scope names (`./agent-browser.json`, or `~/.agent-browser/config.json` with `--global`), so no configuration write is lost or redirected. A plugin added to the project file does stay inactive until that file is trusted, so follow `plugin add` with `PI_AGENT_BROWSER_TRUST_PROJECT_CONFIG=1` (or add it with `--global`) when it needs to take effect. This policy is separate from the Pi-scoped package config under `.pi/config/pi-agent-browser-native/`.
- 
--Other useful environment variables include `AGENT_BROWSER_DEFAULT_TIMEOUT`, `AGENT_BROWSER_AUTOSAVE_INTERVAL_MS`, `AGENT_BROWSER_STREAM_PORT`, `AGENT_BROWSER_STREAM_QUALITY`, `AGENT_BROWSER_STREAM_MAX_WIDTH`, `AGENT_BROWSER_STREAM_MAX_HEIGHT`, `AGENT_BROWSER_IDLE_TIMEOUT_MS`, `AGENT_BROWSER_ENCRYPTION_KEY`, `AGENT_BROWSER_STATE_EXPIRE_DAYS`, `AGENT_BROWSER_IOS_DEVICE`, `AGENT_BROWSER_IOS_UDID`, `AI_GATEWAY_URL`, `AI_GATEWAY_API_KEY`, provider credential names, and AWS credential names when using AgentCore. The upstream child receives the parent environment plus wrapper overrides such as the managed socket directory, clamped default operation timeout, canonical owned-session namespace (including empty default), and Pi-transcript- plus Git-checkout-generation-scoped `AGENT_BROWSER_RESTORE` for wrapper-owned managed sessions (`buildAgentBrowserProcessEnv` in `extensions/agent-browser/lib/process.ts`, ownership carried by the wrapper's typed process options and call-scoped managed-session context). Model-facing output still redacts recognized secret values.
++
 +Use separated `--config <path>` to load a specific config file in standalone upstream; upstream 0.33.2 does not recognize `--config=<path>` as the global config selector. Through the native `agent_browser` tool that flag is gated like the other privileged launch flags, because a config file can set the browser executable, init scripts, a proxy, and file access: pass it only when Pi runs with `PI_AGENT_BROWSER_ALLOW_PRIVILEGED_FLAGS=--config` (or `=1`), and prefer `PI_AGENT_BROWSER_CONFIG` for a user-owned override path. Boolean flags accept optional `true` or `false` values, such as `--headed false` or `--webgpu false`, to override config. Browser extensions from user and project configs are merged rather than replaced.
  
+-Other useful environment variables include `AGENT_BROWSER_DEFAULT_TIMEOUT`, `AGENT_BROWSER_AUTOSAVE_INTERVAL_MS`, `AGENT_BROWSER_STREAM_PORT`, `AGENT_BROWSER_STREAM_QUALITY`, `AGENT_BROWSER_STREAM_MAX_WIDTH`, `AGENT_BROWSER_STREAM_MAX_HEIGHT`, `AGENT_BROWSER_IDLE_TIMEOUT_MS`, `AGENT_BROWSER_ENCRYPTION_KEY`, `AGENT_BROWSER_STATE_EXPIRE_DAYS`, `AGENT_BROWSER_IOS_DEVICE`, `AGENT_BROWSER_IOS_UDID`, `AI_GATEWAY_URL`, `AI_GATEWAY_API_KEY`, provider credential names, and AWS credential names when using AgentCore. The upstream child receives the parent environment plus wrapper overrides such as the managed socket directory, clamped default operation timeout, canonical owned-session namespace (including empty default), and Pi-transcript- plus Git-checkout-generation-scoped `AGENT_BROWSER_RESTORE` for wrapper-owned managed sessions (`buildAgentBrowserProcessEnv` in `extensions/agent-browser/lib/process.ts`, ownership carried by the wrapper's typed process options and call-scoped managed-session context). Model-facing output still redacts recognized secret values.
 +Other useful environment variables include `AGENT_BROWSER_DEFAULT_TIMEOUT`, `AGENT_BROWSER_AUTOSAVE_INTERVAL_MS`, `AGENT_BROWSER_STREAM_PORT`, `AGENT_BROWSER_STREAM_QUALITY`, `AGENT_BROWSER_STREAM_MAX_WIDTH`, `AGENT_BROWSER_STREAM_MAX_HEIGHT`, `AGENT_BROWSER_IDLE_TIMEOUT_MS`, `AGENT_BROWSER_ENCRYPTION_KEY`, `AGENT_BROWSER_STATE_EXPIRE_DAYS`, `AGENT_BROWSER_IOS_DEVICE`, `AGENT_BROWSER_IOS_UDID`, `AI_GATEWAY_URL`, `AI_GATEWAY_API_KEY`, provider credential names, and AWS credential names when using AgentCore. The upstream child receives the parent environment plus wrapper overrides such as the managed socket directory, clamped default operation timeout, canonical owned-session namespace (including empty default), and Pi-transcript- plus Git-checkout-generation-scoped `AGENT_BROWSER_RESTORE` for wrapper-owned managed sessions, minus loader/interpreter injection variables such as `NODE_OPTIONS`, `LD_PRELOAD`, `DYLD_INSERT_LIBRARIES`, and `ELECTRON_RUN_AS_NODE`, and minus workspace-local `PATH` entries (`buildAgentBrowserProcessEnv` in `extensions/agent-browser/lib/process.ts`; `PI_AGENT_BROWSER_FORWARD_ALL_ENV=1` forwards everything verbatim). Model-facing output still redacts recognized secret values.
-+
+ 
  ## Wrapper-specific behavior worth knowing
  
- - The extension may keep following one implicit managed session across later tool calls.
-@@ -1003,7 +1005,7 @@
+@@ -1003,7 +1011,7 @@
  - If a known session target unexpectedly reports about:blank, agent_browser best-effort re-selects the prior intended target when it still exists; if recovery fails, it records the observed about:blank target and reports exact recovery guidance instead of treating the prior page as active.
  - If upstream reports tab_gone, the pinned bound tab is gone; use details.nextActions (tab list / tab new) instead of assuming another tab is yours.
  <!-- agent-browser-playbook:end wrapper-tab-recovery -->
@@ -2581,9 +2723,96 @@ diff -ruN --exclude=node_modules a/docs/COMMAND_REFERENCE.md b/docs/COMMAND_REFE
  - Oversized snapshots and oversized generic outputs may be compacted in tool content, with the full raw output written to a spill file path shown directly in the tool result. Recent artifact metadata is bounded by `PI_AGENT_BROWSER_SESSION_ARTIFACT_MANIFEST_MAX_ENTRIES` (default 100); persisted spill files are separately bounded by `PI_AGENT_BROWSER_SESSION_ARTIFACT_MAX_BYTES` (default 32 MiB).
  - The wrapper keeps `--help` and `--version` stateless so they do not consume the implicit managed-session slot.
  
-diff -ruN --exclude=node_modules a/docs/ELECTRON.md b/docs/ELECTRON.md
---- a/docs/ELECTRON.md	1985-10-26 03:15:00
-+++ b/docs/ELECTRON.md	2026-08-22 14:51:27
+@@ -1012,14 +1020,14 @@
+ <!-- agent-browser-capability-baseline:start capability-token-baseline -->
+ <!-- Generated from scripts/agent-browser-capability-baseline.mjs. Run `npm run docs -- command-reference write` to update. Do not edit manually. -->
+ <details>
+-<summary>Generated verifier capability baseline for agent-browser 0.34.0</summary>
++<summary>Generated verifier capability baseline for agent-browser 0.35.0</summary>
+ 
+ This generated block is review data for maintainers. The human-authored reference sections above remain the readable command guide.
+ 
+ #### Source evidence
+ - repository: `vercel-labs/agent-browser`
+-- upstream HEAD: `548b159b30eef119ccf6846c8bc807d0eaa3f6f8`
+-- upstream package version: `0.34.0`
++- upstream HEAD: `585e740fcef069d74e21f0e88e8bf4ea7df34385`
++- upstream package version: `0.35.0`
+ - inspected: `agent-browser --version`
+ - inspected: `agent-browser --help`
+ - inspected: `selected agent-browser <command> --help output`
+@@ -1029,6 +1037,7 @@
+ - inspected: `agent-browser skills list`
+ - inspected: `agent-browser skills get core --full`
+ - inspected: `agent-browser skills get derive-client --full`
++- inspected: `agent-browser skills get protected-vercel-deployments --full`
+ - inspected: `README.md`
+ - inspected: `CHANGELOG.md`
+ - inspected: `agent-browser.schema.json`
+@@ -1063,6 +1072,7 @@
+ - skills list: `agent-browser skills list`
+ - core skill full: `agent-browser skills get core --full`
+ - vercel sandbox skill full: `agent-browser skills get vercel-sandbox --full`
++- protected vercel skill full: `agent-browser skills get protected-vercel-deployments --full`
+ - open help: `agent-browser open --help`
+ - read help: `agent-browser read --help`
+ - click help: `agent-browser click --help`
+@@ -1116,12 +1126,12 @@
+ - plugin help: `agent-browser plugin --help`
+ 
+ #### Inventory sections
+-- Built-in skills: 16 human-doc token(s), 18 upstream token(s)
++- Built-in skills: 17 human-doc token(s), 19 upstream token(s)
+ - Core page, element, navigation, and extraction commands: 82 human-doc token(s), 84 upstream token(s)
+ - Sessions, state, tabs, frames, dialogs, and windows: 28 human-doc token(s), 25 upstream token(s)
+ - Network, storage, artifacts, diagnostics, and performance: 49 human-doc token(s), 60 upstream token(s)
+ - Batch, auth, confirmations, setup, dashboard, devices, and AI commands: 33 human-doc token(s), 37 upstream token(s)
+-- Global flags, config, providers, policy, and environment: 145 human-doc token(s), 113 upstream token(s)
++- Global flags, config, providers, policy, and environment: 149 human-doc token(s), 117 upstream token(s)
+ 
+ #### Human-authored doc tokens required
+ ##### Built-in skills
+@@ -1135,6 +1145,7 @@
+ - `skills get slack`
+ - `skills get dogfood`
+ - `skills get vercel-sandbox`
++- `skills get protected-vercel-deployments`
+ - `skills get agentcore`
+ - `skills get derive-client`
+ - `@agent-browser/sandbox`
+@@ -1391,6 +1402,10 @@
+ - `NO_PROXY`
+ - `--ignore-https-errors`
+ - `AGENT_BROWSER_IGNORE_HTTPS_ERRORS`
++- `--ca-cert <path>`
++- `AGENT_BROWSER_CA_CERT`
++- `--no-ca-cert`
++- `AGENT_BROWSER_CLEAR_CA_CERT`
+ - `--allow-file-access`
+ - `AGENT_BROWSER_ALLOW_FILE_ACCESS`
+ - `--hide-scrollbars <bool>`
+@@ -1500,6 +1515,7 @@
+ - skills list: `slack`
+ - skills list: `dogfood`
+ - skills list: `vercel-sandbox`
++- skills list: `protected-vercel-deployments`
+ - skills list: `agentcore`
+ - skills list: `derive-client`
+ - vercel sandbox skill full: `@agent-browser/sandbox`
+@@ -1772,6 +1788,10 @@
+ - root help: `NO_PROXY`
+ - root help: `--ignore-https-errors`
+ - root help: `AGENT_BROWSER_IGNORE_HTTPS_ERRORS`
++- root help: `--ca-cert <path>`
++- root help: `AGENT_BROWSER_CA_CERT`
++- root help: `--no-ca-cert`
++- root help: `AGENT_BROWSER_CLEAR_CA_CERT`
+ - root help: `--allow-file-access`
+ - root help: `AGENT_BROWSER_ALLOW_FILE_ACCESS`
+ - root help: `--hide-scrollbars <bool>`
+diff -ruN '--exclude=node_modules' a/docs/ELECTRON.md b/docs/ELECTRON.md
+--- a/docs/ELECTRON.md	1985-10-26 03:15:00.000000000 -0500
++++ b/docs/ELECTRON.md	2026-08-24 15:09:58.000000000 -0500
 @@ -155,7 +155,7 @@
  
  Optional `timeoutMs` on `electron.launch` bounds host-side CDP readiness (waiting for `DevToolsActivePort` and attach). When omitted, the default is **15 seconds** with a hard maximum of **120 seconds**, matching `ELECTRON_LAUNCH_DEFAULT_TIMEOUT_MS` and `ELECTRON_LAUNCH_MAX_TIMEOUT_MS` in `extensions/agent-browser/lib/electron/launch.ts`. Pi cancellation is separate: an already-cancelled call never launches the app, while cancellation during readiness polling or URL/tab/snapshot handoff closes the managed session, stops the tracked process, removes its isolated profile, and returns `failureCategory: "aborted"` without waiting for the launch timeout.
@@ -2615,20 +2844,48 @@ diff -ruN --exclude=node_modules a/docs/ELECTRON.md b/docs/ELECTRON.md
  - Treats `electron.cleanup` as wrapper-owned only; never touches manually launched apps.
  
  ### What the **caller** owns
-diff -ruN --exclude=node_modules a/docs/SUPPORT_MATRIX.md b/docs/SUPPORT_MATRIX.md
---- a/docs/SUPPORT_MATRIX.md	1985-10-26 03:15:00
-+++ b/docs/SUPPORT_MATRIX.md	2026-08-22 15:00:51
-@@ -27,6 +27,7 @@
+diff -ruN '--exclude=node_modules' a/docs/SUPPORT_MATRIX.md b/docs/SUPPORT_MATRIX.md
+--- a/docs/SUPPORT_MATRIX.md	1985-10-26 03:15:00.000000000 -0500
++++ b/docs/SUPPORT_MATRIX.md	2026-08-25 15:28:50.000000000 -0500
+@@ -26,9 +26,11 @@
+ 
  ## Audit result
  
- - Target upstream: `agent-browser 0.34.0` (must match `TARGET_AGENT_BROWSER_VERSION` in [`scripts/agent-browser-target.mjs`](../scripts/agent-browser-target.mjs); the capability baseline imports it).
+-- Target upstream: `agent-browser 0.34.0` (must match `TARGET_AGENT_BROWSER_VERSION` in [`scripts/agent-browser-target.mjs`](../scripts/agent-browser-target.mjs); the capability baseline imports it).
++- Target upstream: `agent-browser 0.35.0` (must match `TARGET_AGENT_BROWSER_VERSION` in [`scripts/agent-browser-target.mjs`](../scripts/agent-browser-target.mjs); the capability baseline imports it).
 +- Re-baselined 0.33.2 -> 0.34.0 in this fork on 2026-08-22, as part of the 0.3.0 -> 0.5.0 re-vendor. Checked the same way as every prior rebaseline: all 56 help surfaces the baseline samples were diffed between the two published binaries. 53 are byte-identical and the other 3 (root help, core skill full, tab help) are purely additive — **nothing was removed anywhere**. Root help gains `--pin-tab` / `--no-pin-tab` (`AGENT_BROWSER_PIN_TAB`), `tab --help` gains CDP `targetId` as a tab ref and `tab_gone` recovery, and the core skill gains a tab-pinning section. The command set is unchanged — `tab`, `tab list`, `tab close`, `tab new` already existed and are already in `inventorySections` — so the artifact-path guards that key off command prefixes are unaffected. `--pin-tab` / `--no-pin-tab` are sticky optional global booleans (not launch-scoped), already in the wrapper's `GLOBAL_BOOLEAN_FLAGS_WITH_OPTIONAL_VALUES`, so no new flag reaches the argv tokenizer unhandled. The 0.5.0 re-vendor brought in `scripts/agent-browser-target.mjs` (`TARGET_AGENT_BROWSER_VERSION = "0.34.0"`), the 0.34.0-baselined `inventorySections` (including `--pin-tab`, `--no-pin-tab`, `tab_gone`, `data.targetId`), and the 0.34.0 `upstreamHead` (`548b159b30eef119ccf6846c8bc807d0eaa3f6f8`); the fork's hardening was re-applied on top (see `docs/FORKS.md`).
  - Source of truth: `CAPABILITY_BASELINE.inventorySections` in the same file (stable `id` keys: `skills`, `core-commands`, `state-tabs-frames-dialogs`, `network-storage-artifacts-diagnostics`, `batch-auth-setup-ai`, `options-and-env`).
- - Status: source and wrapper adaptation target the 2026-08-11 0.34.0 audit. Keeps 0.33.0 a11y/HAR/`find` coverage, documents 0.33.1 idle-timeout/tab-recovery and 0.33.2 stream quality/size env vars, and enables Git-checkout-generation-stable `AGENT_BROWSER_RESTORE` for extension-managed `piab-*` sessions so SSO cookies survive browser relaunches. Prior helper idle-timeout, post-`tab close` target refresh, and document-direction scroll behavior remain.
+-- Status: source and wrapper adaptation target the 2026-08-11 0.34.0 audit. Keeps 0.33.0 a11y/HAR/`find` coverage, documents 0.33.1 idle-timeout/tab-recovery and 0.33.2 stream quality/size env vars, and enables Git-checkout-generation-stable `AGENT_BROWSER_RESTORE` for extension-managed `piab-*` sessions so SSO cookies survive browser relaunches. Prior helper idle-timeout, post-`tab close` target refresh, and document-direction scroll behavior remain.
++- Re-baselined 0.34.0 -> 0.35.0 in this fork on 2026-08-22. Published package and binary comparison found an additive root-help change (`--ca-cert`, `--no-ca-cert` and their environment variables), a new `protected-vercel-deployments` skill, and no removed command surface. The wrapper classifies CA certificate input as a guarded path-bearing browser mutation, blocks protected `.agent-browser` paths, disables managed restore for both path and clear forms, and requires a fresh active managed session for the argv flags.
++- Status: source and wrapper adaptation target the 0.35.0 audit while preserving the prior 0.34.0 tab-binding audit. Keeps 0.33.0 a11y/HAR/`find` coverage, documents 0.33.1 idle-timeout/tab-recovery and 0.33.2 stream quality/size env vars, and enables Git-checkout-generation-stable `AGENT_BROWSER_RESTORE` for extension-managed `piab-*` sessions so SSO cookies survive browser relaunches. Prior helper idle-timeout, post-`tab close` target refresh, and document-direction scroll behavior remain.
  - High-priority support gaps: 2026-05-26 audit found sessionless local commands and command-scoped value flags needed sharper wrapper handling; runtime/tests/docs now cover those paths. The 0.28.0 rebaseline added local `mcp` and `plugin` surfaces plus plugin-backed credential login; wrapper docs/tests mark `mcp` and known `plugin` commands sessionless, with no compatibility shim for older upstream releases. The 0.29.1 rebaseline added upstream `@agent-browser/sandbox` helper-package guidance and stricter `install --with-deps` failure semantics; no new wrapper runtime mode or bundled dependency was required. The 0.30.1 rebaseline fixed upstream `wait --url` glob matching, so constrained `job.assertUrl` delegates glob and exact patterns directly to `wait --url`. The 0.31.0 rebaseline adds restore workflow and namespace/session lifecycle surfaces (`--restore`, restore checks, `--namespace`, `session id`, and `session info`) without adding a wrapper compatibility layer. The 0.31.1 rebaseline fixes upstream React renderer selection for `react tree`, `react inspect`, and `react suspense`; no wrapper runtime change was required. The 0.31.2 rebaseline adds the local-launch-only `--webgpu` preset and `doctor --webgpu`, plus periodic restore-state autosaves controlled by `AGENT_BROWSER_AUTOSAVE_INTERVAL_MS`; the wrapper treats WebGPU as launch-scoped and, for wrapper-owned headed launches, defaults autosave off to avoid upstream 0.33.2's visible temporary storage-collector tabs while preserving save-on-close and explicit opt-in at daemon launch; changing a running daemon requires close plus a fresh launch. The 0.32.0 rebaseline hardens request/worker/popup/WebRTC containment behind `--allowed-domains`, fixes waits against already-complete documents, and adds a separate `@agent-browser/eve` package; the wrapper makes containment launch-scoped, retains its final-URL check as defense in depth, and adds no Eve-specific mode. The 0.32.1–0.32.2 rebaseline updates only eve compatibility/packaging, but the full current-surface audit also found the local reference had omitted upstream `read [url]` since 0.30.0; baseline/help sampling, content-first presentation, tab-target preservation, timeout budgeting, docs, and tests now cover it. The 0.32.3–0.32.4 rebaseline adds HAR response-body capture modes, the `derive-client` skill, fixed `find role` implicit-ARIA / accessible-name matching with locator-detail misses, and an advertised `find` action list of `click, fill, check, hover, text` only; the wrapper documents and classifies those surfaces without adding a new input mode. Remaining upstream-owned caveat: some help paths still mention `wait <selector> --state hidden` / `detached`, but runtime probes show those shapes still fail, so wrapper docs keep `wait --fn` disappearance predicates and top-level `uncheck` / `type` / `focus` passthrough instead of `find` for those actions. `wait --download <path>` still reports the requested path without guaranteed on-disk persistence ([#1300](https://github.com/vercel-labs/agent-browser/issues/1300)).
-diff -ruN --exclude=node_modules a/docs/TOOL_CONTRACT.md b/docs/TOOL_CONTRACT.md
---- a/docs/TOOL_CONTRACT.md	1985-10-26 03:15:00
-+++ b/docs/TOOL_CONTRACT.md	2026-08-22 23:51:58
+ - Post-`v0.2.29` review state: commits `eb55320` through `86abbfb` add browser guidance/smoke coverage plus `RQ-0086` click-probe reduction, `RQ-0087` same-snapshot form fill batching, `RQ-0088` current-ref fallback on locator misses, `RQ-0089` direct-upstream click mutation investigation, and `RQ-0090` stop-boundary/artifact-path guidance. Verification gates below were rerun on 2026-05-18 after those tasks landed. Constrained `job` (`RQ-0064`), the lightweight `qa` preset (`RQ-0065`), the experimental `sourceLookup` helper (`RQ-0066`), the experimental `networkSourceLookup` helper (`RQ-0067`), optional Exa/Brave-backed `agent_browser_web_search` with Pi-scoped package config (`RQ-0121`), and agent recovery for search/profile configuration failures (`RQ-0122`) are implemented; see [`TOOL_CONTRACT.md`](TOOL_CONTRACT.md#job), [`TOOL_CONTRACT.md`](TOOL_CONTRACT.md#qa), [`TOOL_CONTRACT.md`](TOOL_CONTRACT.md#sourcelookup), [`TOOL_CONTRACT.md`](TOOL_CONTRACT.md#networksourcelookup), and [`TOOL_CONTRACT.md`](TOOL_CONTRACT.md#optional-companion-web-search). Reusable browser recipes (`RQ-0068`) are intentionally not adopted as a runtime surface; see [`ARCHITECTURE.md`](ARCHITECTURE.md#no-reusable-recipe-layer-yet).
+ 
+@@ -61,18 +63,19 @@
+ | RQ-0143 | Browser-backed calls require the exact canonical upstream version at runtime, report expected/observed version mismatch before launch, and keep stateless/local diagnostics available; target metadata is shared by runtime, docs verification, and package contents. | [`scripts/agent-browser-target.mjs`](../scripts/agent-browser-target.mjs), [`docs/COMMAND_REFERENCE.md`](COMMAND_REFERENCE.md#upstream-0332-rebaseline), `test/agent-browser.upstream-version.test.ts` |
+ | RQ-0144 | Managed restore keys are scoped to both checkout generation and Pi transcript so upstream 0.33.2's newest-file-wins loading cannot let concurrent chats clobber or inherit cookies/storage. Fresh rotations, reload, restart, and `/resume` of one transcript retain continuity; passive upstream configs are safely ignored under the pinned empty config while explicit overrides remain incompatible. | [`docs/ARCHITECTURE.md`](ARCHITECTURE.md), [`docs/TOOL_CONTRACT.md`](TOOL_CONTRACT.md), `test/agent-browser.managed-session-restore.test.ts`, `test/agent-browser.real-upstream-contract.test.ts` |
+ | RQ-0145 | Mega-dogfood correctness closes false-positive success paths: URL QA subtracts only unchanged post-clear page-error residue and waits 150 ms for immediate post-load diagnostics, stale pre-existing artifacts and missing/stale recordings finalized by restart fail verification, aliased destinations (including dangling symlinks, full macOS/Windows Unicode folds, final short/long diff output flags, and same-call `outputPath` aliases) and active recording-path reuse through artifacts, path-bearing HAR stops, long/short or reordered explicit download waits, interspersed-global command forms, Electron cleanup output, or normalized output writes is rejected through an atomic process-wide, transcript-backed namespace/session reservation index independent of bounded manifest eviction; cross-branch close tombstones survive reload and each direct or ordered nested close retires exact identity at that lifecycle point while terminal closes clear attached/ref/page/route state, later lifecycle-proven browser launches—including failed post-close rows and `record stop`—can reactivate/rebuild it without stale pre-close `about:blank` recovery while bounded launch evidence survives failed-step presentation and transcript replay, explicitly non-launching diagnostics preserve the close, missing evidence stays conservatively active even on the first managed call, every successful direct/nested close clears wrapper trace/profiler ownership before later successful rows can rebuild it, and namespace-scoped `close --all` clears all matching managed/attached/page/ref/route/trace/recording ownership, only the newest pending recording path remains authoritative even across same-timestamp restart rows, legacy batch replay retires stale pending manifests only when ordered lifecycle leaves recording closed, while later browser reactivation plus recording start keeps the new reservation and malformed manifest rows are ignored, definitive direct/batch no-recording stop failures retire stale state at their ordered step, recording starts after nested close are rejected, pending rows coalesce into terminal batch outcomes without retaining an intermediate close-abandoned duplicate after a later saved stop, and any later same-session failure retains exact cleanup actions, same-page getter refs are refreshed, locator select resolves exact current native controls, no-movement scroll fails honestly, and script cleanup always attempts fail-closed close. | [`docs/TOOL_CONTRACT.md`](TOOL_CONTRACT.md#details), [`docs/COMMAND_REFERENCE.md`](COMMAND_REFERENCE.md), `test/agent-browser.extension-input-modes.test.ts`, `test/agent-browser.extension-ref-guards.test.ts`, `test/agent-browser.presentation.test.ts`, `test/agent-browser.presentation-artifacts-batch.test.ts`, `test/agent-browser.recording-reservations.test.ts`, `test/agent-browser.extension-validation.test.ts`, `test/agent-browser.script.test.ts` |
++| RQ-0148 | Upstream `agent-browser 0.35.0` adds `--ca-cert` / `AGENT_BROWSER_CA_CERT`, `--no-ca-cert` / `AGENT_BROWSER_CLEAR_CA_CERT`, and the `protected-vercel-deployments` skill. The wrapper guards CA file paths and isolates custom trust from managed restore and active managed sessions. | [`docs/COMMAND_REFERENCE.md`](COMMAND_REFERENCE.md#upstream-0350-rebaseline), `dist/extensions/agent-browser/lib/argv-grammar.js`, `dist/extensions/agent-browser/lib/launch-scoped-flags.js`, `dist/extensions/agent-browser/lib/managed-session-state-policy.js` |
+ | RQ-0146 | Upstream `agent-browser 0.34.0` rebaseline adds sticky `--pin-tab` / `--no-pin-tab` (`AGENT_BROWSER_PIN_TAB`) for shared CDP/auto-connect sessions, CDP target ids as tab refs, and `tab_gone` recovery data (`data.targetId`, optional `data.lastUrl`). The wrapper parses those flags as optional global booleans rather than launch-scoped, classifies `tab_gone` as `failureCategory: "tab-gone"` with `list-tabs-after-tab-gone` / `open-tab-after-tab-gone`, and shows `targetId` in `tab list` presentation. | [`docs/COMMAND_REFERENCE.md`](COMMAND_REFERENCE.md#upstream-0340-rebaseline), [`docs/TOOL_CONTRACT.md`](TOOL_CONTRACT.md#details), `test/agent-browser.results.test.ts`, `test/agent-browser.runtime.test.ts` |
+ | RQ-0147 | Native follow-ups preserve profiled and other launch-configured browser pages by omitting empty or retained compatibility launch arguments while the daemon is active; daemon inspection reapplies the retained compatibility user agent only when relaunch is required. Caller `--args` and `--user-agent` are launch-scoped, untrusted caller-owned/attached sessions cannot navigate to local files, and cancellation wins over policy validation before spawn. | [`docs/ARCHITECTURE.md`](ARCHITECTURE.md), [`docs/TOOL_CONTRACT.md`](TOOL_CONTRACT.md), `test/agent-browser.runtime.test.ts`, `test/agent-browser.process.test.ts`, `test/agent-browser.real-upstream-contract.test.ts` |
+ 
+ ## Verification evidence
+ 
+-Re-run the gates below before each release; this table records what the closure audit exercised. Package 0.4.2 was refreshed on 2026-08-13 against upstream 0.34.0 and Pi 0.84.1. Default/pre-PR, package, real-upstream, deterministic dogfood, doctor, and isolated checkout tmux smoke passed. Configured-source lifecycle, packaged-Pi, startup profile, and the full Crabbox platform matrix were not rerun for this rebaseline.
++Re-run the gates below before each release; this table records what the closure audit exercised. Package 0.4.2 was refreshed on 2026-08-13 against upstream 0.34.0 and Pi 0.84.1. Package 0.5.0 was rebaselined on 2026-08-25 against upstream 0.35.0 and Pi 0.84.3; command-reference verification, the real-upstream contract, doctor, and native browser smoke passed. Configured-source lifecycle, packaged-Pi, startup profile, deterministic dogfood, and the full Crabbox platform matrix were not rerun for the 0.35.0 rebaseline.
+ 
+ | Gate | Evidence | Status |
+ | --- | --- | --- |
+ | Default local gate | `npm run verify` checks generated playbook drift, clean-builds generated `dist/`, runs `tsc --noEmit`, unit/fake tests, generated command-reference blocks, and live command-reference sampling. | **Current for 0.34.0 / package 0.4.2 / Pi 0.84.1:** pass on 2026-08-13; 768 tests passed, two opt-in real-upstream tests skipped, and build/typecheck/docs/live command-reference gates passed. |
+ | Pre-PR local gate | `npm run verify -- pre-pr` composes the default gate with package-content verification. Use before larger local handoffs or PR-ready claims when lifecycle/platform/live dogfood cost is not warranted. | **Current for 0.34.0 / package 0.4.2:** pass on 2026-08-13; the serial default suite and 130-file tarball verification completed in one composed run. |
+-| Real upstream contract | `npm run verify -- real-upstream` runs the localhost fixture matrix against the real installed `agent-browser` matching the baseline. | **Current for 0.34.0:** pass on 2026-08-13 (2/2 real-upstream tests). |
++| Real upstream contract | `npm run verify -- real-upstream` runs the localhost fixture matrix against the real installed `agent-browser` matching the baseline. | **Current for 0.35.0 / package 0.5.0:** pass on 2026-08-25 (2/2 real-upstream tests) under Node 22 with a private test umask and ambient proxy variables cleared so managed-restore coverage remained enabled. |
+ | Packaged Pi smoke | `npm run verify -- package-pi` validates package contents, loads the packaged `agent_browser` tool without requiring optional Brave config, and executes fake-upstream `--version`. | **Current for package 0.4.1 / Pi 0.84.1:** pass on 2026-08-10; the 130-file tarball includes the compiled script worker and canonical runtime target metadata. |
+ | Startup profile | `npm run verify -- startup-profile --samples <n>` clean-builds generated `dist/`, records direct package entrypoint import/factory timing in fresh Node processes, and writes `.artifacts/startup-profile/latest.json`. It must not launch Pi, tmux, mise, npm, browsers, or `agent-browser`; full Pi TUI ready-prompt profiling is intentionally excluded after it proved too invasive for routine verification. Run this opt-in evidence when package layout, the compiled entrypoint, top-level imports, schema registration, or prompt/config startup logic changes. | **Current for compiled 0.4.1 entrypoint:** pass on 2026-08-10 with five samples; median 67.7 ms and max 74.1 ms, below the 250 ms budget. |
+ | Deterministic dogfood smoke | `npm run verify -- dogfood` clean-builds, then `scripts/verify-agent-browser-dogfood.ts` drives the native wrapper against a loopback HTTP fixture through top-level `script` conditional aggregation/cleanup, `qa`, `semanticAction`, constrained `job`, screenshot artifact verification, and session close with the real `agent-browser` on `PATH`. | **Current for 0.34.0 / package 0.4.2 / Pi 0.84.1:** pass on 2026-08-13; QA, script branching/cleanup, fresh/current opens, semantic navigation, constrained-job screenshot verification, and final close all passed. |
+diff -ruN '--exclude=node_modules' a/docs/TOOL_CONTRACT.md b/docs/TOOL_CONTRACT.md
+--- a/docs/TOOL_CONTRACT.md	1985-10-26 03:15:00.000000000 -0500
++++ b/docs/TOOL_CONTRACT.md	2026-08-25 15:18:41.000000000 -0500
 @@ -24,7 +24,7 @@
  - low-maintenance
  - close to upstream `agent-browser`
@@ -2692,7 +2949,7 @@ diff -ruN --exclude=node_modules a/docs/TOOL_CONTRACT.md b/docs/TOOL_CONTRACT.md
  
  `nextActions` is an optional machine-readable list of exact native `agent_browser` follow-ups. Each entry includes `tool: "agent_browser"`, an `id`, a short `reason`, optional `safety`, and either `params` (`args`, optional `stdin`, optional `sessionMode`, optional `networkSourceLookup`, optional `electron`) or an `artifactPath` for saved-file workflows. Agents should prefer these payloads over prose when present. Browser-bearing follow-ups preserve a known `details.sessionName` with `--session <name>` so retries and diagnostics cannot drift into the implicit session, except actions whose `params.sessionMode` is `"fresh"`, which deliberately stay unprefixed because the planner ignores `sessionMode` alongside an explicit `--session`; when a result also ran under an upstream namespace, follow-up `params.args` preserve its exact value, including explicit `--namespace ""`, so an ambient namespace cannot redirect the same daemon/restore-state identity. Tab/session recovery id strings are centralized in `AGENT_BROWSER_RECOVERY_NEXT_ACTION_IDS`, while rich-input focus/click recovery ids are centralized in `AGENT_BROWSER_RICH_INPUT_RECOVERY_NEXT_ACTION_IDS` plus `getAgentBrowserRichInputRecoveryNextActionId(s)` in `extensions/agent-browser/lib/results/recovery-actions.ts`; docs and tests mirror those registries/helpers rather than inventing recovery ids in prose. Current recommendations include: ordinary `timeout` failures → `inspect-after-timeout` (`snapshot -i`), with `wait --text` using the more specific `inspect-after-text-assertion-failure`, and `wait --url` (including compiled `job.assertUrl`) also appending `fresh-session-after-url-wait-timeout` (`sessionMode: "fresh"` + `open about:blank`, ranked after the inspect action) with guidance that a silently missed upstream click dispatch may have prevented the expected navigation and that the fresh session should replay the flow as one batch; navigation-shaped `upstream-error` failures → `inspect-page-after-navigation-error`; failed script-session cleanup → exact `close-script-session-after-cleanup-failure`; timed-out jobs/batches with a retryable read-only/idempotent first incomplete step → `retry-timeout-step`, while timed-out flows whose first incomplete step may be mutating → `inspect-current-page-after-timeout` (`snapshot -i`) before splitting the remaining work into shorter batches; raw `connect` success → session-scoped `verify-connected-session-url` (`get url`) plus `list-connected-session-tabs`; page-content reads remain blocked until a non-file target is verified, after which the agent can select/confirm a stable `tab t<N>`, verify it with `get url`, and run `snapshot -i`; `snapshot` failures whose upstream error says `No active page` and whose wrapper result has a known session → `list-tabs-after-no-active-page` only, because this path has no wrapper-observed safe tab id to select atomically; browser profile/user-data-dir resolution failures → `inspect-browser-profiles` (`profiles`) and `run-agent-browser-doctor` (`doctor`) before retrying opens; Electron launches → wrapper-tracked `electron.status` / `electron.probe` / `electron.cleanup` actions plus session-scoped tab/snapshot inspection when attached; Electron status/probe mismatch diagnostics → `reattach-electron-launch` plus fresh tab/snapshot inspection; Electron post-command health failures → status/probe/cleanup for the same `launchId`; Electron or contenteditable fill verification mismatches → `inspect-after-fill-verification` and `verify-filled-value`; Electron same-URL ref freshness warnings → `refresh-electron-refs-after-rerender`; packaged-Electron `sourceLookup` no-candidate diagnostics → session snapshot, launch probe, and tab list; Electron cleanup partial failures → status plus retry-cleanup for the same wrapper-owned `launchId`; `open` success → `snapshot -i`; mutating/navigation commands (see `buildAgentBrowserNextActions` in source for the exact command set) → `snapshot -i`; stale refs and selector failures → `snapshot -i` via `refresh-interactive-refs` (prefixed with `--session <name>` when the failed call ran in a named or managed session); selector misses with exact current snapshot role/name matches → direct ref retries via `try-current-visible-ref` or bounded `try-current-visible-ref-N` for non-fill targets; semantic `fill` selector misses with exact current editable refs → `focus-current-editable-ref` / `click-current-editable-ref` or numbered variants that do not include fill text or submit; unknown getter shortcuts such as `title` / `url` → exact read-only retries like `get title` / `get url` with ids `use-get-title` / `use-get-url`; compact `network requests` results with safe request IDs → bounded read-only request detail, `networkSourceLookup`, path filter, or HAR-capture follow-ups; semantic `selector-not-found` failures that compiled from `semanticAction` may append `try-button-name-candidate` or `try-link-name-candidate` after presentation `nextActions` only for the bounded click pair enumerated under `semanticAction`; semantic `stale-ref` failures that compiled from `semanticAction` `find` argv may also include `retry-semantic-action-after-stale-ref` after that snapshot step; successful snapshots or qualifying same-URL non-Electron top-level clicks (see `overlayBlockers` below) with snapshot evidence of likely overlay/banner/dialog close controls may append `inspect-overlay-state` and bounded `try-overlay-blocker-candidate-*` entries; successful top-level `scroll` calls whose pre/post viewport and sampled scroll-container positions do not change may append `inspect-after-noop-scroll` and `verify-noop-scroll-visually`; explicit combobox-targeted actions that focus a combobox without visible options may append `inspect-focused-combobox`, `try-open-combobox-with-arrow`, and `try-open-combobox-with-enter`; `get text <selector>` calls with hidden/multiple CSS matches may append `inspect-visible-text-candidates` with a read-only `eval --stdin` probe (each prefixed with `--session <name>` when `details.sessionName` is set, same `sessionPrefixArgs` rule as other session-scoped follow-ups); confirmations → exact `confirm <id>` and `deny <id>` choices; generic tab drift → `list-tabs-for-recovery` with `tab list` first, then select or confirm the stable target before running `snapshot -i`; about:blank or tab-drift recovery with a wrapper-known target → `list-tabs-for-about-blank-recovery` or `list-tabs-for-tab-drift-recovery`, plus `select-intended-tab-after-drift` and `snapshot-after-tab-recovery` when the wrapper already observed the stable `t<N>` tab id; `wait --text` assertion failures → `inspect-after-text-assertion-failure` with a read-only snapshot; download verification failures or missing successful download artifacts → `wait --download [path]`; saved artifacts → the artifact path to inspect/consume after checking `artifactVerification`/metadata; missing non-download artifacts → `verify-artifact-path` so agents do not trust an absent file. When nothing applies, the field is omitted.
  
-@@ -921,7 +923,7 @@
+@@ -921,13 +923,13 @@
  - set one idle timeout on extension-managed sessions as a backstop for abnormal exits or cleanup failures, and pass that same `AGENT_BROWSER_IDLE_TIMEOUT_MS` to top-level commands plus every wrapper helper subprocess so upstream does not restart the background browser, reset the active tab, or discard current refs between a snapshot and action
  - clean up process-private temp spill artifacts on shutdown, while keeping persisted-session snapshot spill files in a private session-scoped artifact directory so `details.fullOutputPath` survives reload/restart and the oldest spill files are evicted if the per-session artifact budget is exceeded
  - reconstruct the current branch-visible extension-managed session, every transcript-proven still-active wrapper-owned identity, latest page-scoped refs, newest-revision aggregate `artifactManifest`, and wrapper-tracked Electron launch records from the active transcript branch on `session_start` and Pi `session_tree` so later default and explicit off-current calls keep following owned managed browsers and can continue reporting artifact retention state; successful explicit wrapper-owned close rows and `electron.cleanup` managed-session steps are restore-visible close events
@@ -2701,9 +2958,16 @@ diff -ruN --exclude=node_modules a/docs/TOOL_CONTRACT.md b/docs/TOOL_CONTRACT.md
  - when a close command or `electron.cleanup` successfully closes the current wrapper-managed session, clear live page/ref state, reserve the next generated fresh-session ordinal, and rotate the next default auto call to a fresh wrapper-generated session name rather than reusing the closed name
  - when `/reload` shuts down an extension instance, close off-branch owned managed sessions and off-branch owned Electron launches before clearing process-local ownership; retain attached-browser context for those still-owned off-branch resources so cleanup cannot resend local-launch defaults. Preserve only the current branch-visible active managed session and active Electron launch plus its isolated `userDataDir` for reload continuity, and also persistently protect `userDataDir` paths when partial cleanup intentionally skips or fails profile removal so later temp cleanup, process exit, and stale temp-root pruning after restart do not violate Electron cleanup's safety decision; rebuild active branch state from the active branch on the next `session_start`
  - when an unnamed `sessionMode: "fresh"` launch succeeds, make it the new extension-managed session so later default calls keep using it
-diff -ruN --exclude=node_modules a/package.json b/package.json
---- a/package.json	1985-10-26 03:15:00
-+++ b/package.json	2026-08-22 14:52:23
+ - when an unnamed `sessionMode: "fresh"` launch fails or times out, preserve the previous managed session when one was active or report the attempted fresh session as abandoned when no managed session was active (`details.managedSessionOutcome`; visible `Managed session outcome: …` when the final tool call used `sessionMode: "fresh"` and failed, or when automatic close of its replaced session failed—see `#details`)
+ - if that unnamed fresh launch replaced an already-active managed session, best-effort close the old managed session after the switch succeeds; `details.managedSessionOutcome.replacedSessionClosed` records the cleanup result, and `false` keeps the older identity wrapper-owned across transcript resume for explicit follow-up or cleanup
+-- treat explicit caller-provided non-managed `--session` choices outside the reserved `piab-*` prefix as user-managed; those names alone isolate a live browser session but are not a persisted tab/auth restore mechanism after a close command (`close`, `quit`, or `exit`), so use `--session <id> --restore`, `--profile`, or `--state` when persisted auth/tab state is required. Wrapper-owned managed sessions (the current/generated identity or an exact namespace/session in this extension instance's ownership records; foreign `piab-*` targets are rejected) set a Pi-transcript- and Git-checkout-generation-scoped `AGENT_BROWSER_RESTORE` env key automatically (disable with `PI_AGENT_BROWSER_MANAGED_SESSION_RESTORE=0`) so SSO cookies/localStorage/sessionStorage can survive idle shutdown, reload, restart, and `/resume` of that transcript without a manual `state save` flow. Distinct Pi transcripts get distinct restore pools because upstream 0.33.2 loads the newest file for a key regardless of browser-session suffix; this prevents concurrent chats from overwriting or inheriting each other's state. Passive project/user upstream config files are ignored because accepted browser-backed subprocesses, including wrapper-owned closes, pin a process-private empty config. Explicit `--config` or `AGENT_BROWSER_CONFIG` overrides still block browser-backed native calls without parsing caller-selected content; that empty config is mode `0400` on POSIX and lives in the marked secure-temp lifecycle so later config creation cannot change the receiving browser. Sessionless local/setup commands retain upstream config behavior, and this restriction is separate from the package's Pi-scoped config. Raw batch argv, batch stdin containing nested `connect`/`batch`, and browser mutation flags/env such as extensions, init scripts, raw launch args, custom user agents/executables, proxies, plugins, WebGPU, profiles, parent env namespaces, CDP, providers, state, and containment also disable automatic managed restore. Wrapper-owned close canonicalizes upstream argv to the known namespace/session, discards caller config/restore globals, and preserves the live daemon's existing restore key rather than injecting one derived from a replacement checkout. A failed fresh call probes its exact daemon identity and remains owned when that daemon is live or uninspectable, so shutdown still closes it. After a wrapper-owned close succeeds, the wrapper persists the returned state path as an atomic record in a lockless convergent per-key ownership directory (`0700`, with `0600` records, on POSIX), retains the two newest proven snapshots for its exact restore key across Pi restarts, self-heals malformed regular records, removes additional proven snapshots older than 30 days, expires stale ownership-proven snapshots and empty manifests from other restore-key generations after 30 days only when a private lineage record proves the same canonical checkout path, and caps young close churn at 256 records per restore key without running namespace-wide `state clean`; unrecorded matching files and the current checkout key are untouched. Automatic restore requires a durable Git checkout generation and an absolute home root. The generation UUID lives in the checkout's Git admin directory and is combined with checkout-root, Git-admin filesystem identity, and the transcript's cwd-derived managed-session base name; Android publishes that marker with exclusive create because its app storage rejects hard links; the generation component survives a rename, but the composite key does not, so a renamed checkout or a different working directory starts a fresh key fail-closed (re-authenticate once), the key changes on checkout replacement/copy or a different transcript, and it is not migrated from cwd-only keys. On POSIX the wrapper canonicalizes and pins `HOME`, requires trusted non-writable owner ancestry plus stable device/inode/birth-time metadata for checkout and Git-admin directories (Android recognizes the private app-data trust anchor and uses stable device/inode identity plus the generation UUID because Node reports mutable ctime as birth time), enforces owner-only mode `0700` without silently repairing insecure existing directories, and rejects symlinks/non-directories along `~/.agent-browser[/namespaces/<canonical>/state]/sessions` and its `.tmp` write area; Windows requires a valid 64-character hex `AGENT_BROWSER_ENCRYPTION_KEY`. Namespace identity uses upstream's lowercase sanitized form, and wrapper-owned subprocesses pin it (including an explicit empty default) so parent environment cannot redirect helpers or close. `electron.status` target reads and `electron.probe` hold the managed daemon-policy lock and apply the owned restore context to each underlying title/URL/focus/tab/snapshot read. When a managed session was launched with restore suppressed by an incompatible path or the explicit opt-out, `details.managedSessionRestoreDisabled: true` means later bare follow-ups do not inject wrapper restore. Same-process `session_tree` transitions retain the process-owned daemon-policy proof; reload, restart, and `/resume` restore the sticky flag but not that proof, so a still-live restore-disabled daemon fails closed until it is closed or a fresh identity is used. If inspection proves the prior daemon inactive, the next owned no-restore spawn records a null daemon policy so later follow-ups can reuse the replacement. A user-private immutable ticket-claim lock serializes policy inspection through the receiving same-identity spawn and bridges the pre-update v2 lock path; every lock winner re-inspects the live daemon with a fixed bounded timeout independent of shorter caller watchdog overrides, and abandoned v2 locks fail closed for manual repair. Before incompatible reuse, the wrapper inspects the actual same-identity daemon and fails closed when it retains any restore key, cannot be inspected, or reports restore-disabled policy without current-process provenance, including live daemons absent from transcript state and explicit restore-key sessions; close it first, retry without an explicit session using `sessionMode: "fresh"`, or use a distinct explicit session. Managed restore keys and key-bearing paths are redacted from visible text, structured details, JSON-mode output, and persisted tool rows. Browser access to `.agent-browser` local storage is rejected before spawn through command-specific input/output operands (including dash-prefixed values), every path-bearing upstream environment mirror (state/profile/config, executable/extension/init-script, action-policy, artifact, skills, and socket paths), encoded, nested-file-scheme, Windows-aliased, or symlinked paths (including nonexistent descendants of symlinked directories), protected top-level `outputPath`, content-returning local-URL calls, all follow-ups on local file pages, and persisted unverified top-level or batch tab/attachment/script/state-load transitions, plus raw batch command strings recursively tokenized on literal ASCII spaces exactly like upstream. Electron probes and later capture from a wrapper-tracked protected target use the same guard. Raw artifact destinations use the same command parser as preparation and are checked before it creates parent directories. Enabled `--allow-file-access` argv/env and file-access-enabling or protected-path raw Chrome values are rejected. Every subprocess clears `AGENT_BROWSER_ARGS` and removes caller file-access occurrences. Local-browser spawns add canonical `--allow-file-access false`; routine HTTP(S) work relies on the protected empty config and cleared raw-args environment instead of sending `--args ""`, which `agent-browser 0.34.0` treats as a launch override. Local-file navigation is limited to wrapper-managed local browsers; caller-owned and attached browsers are blocked because their file-access launch provenance is unknown. A fixed non-empty `--args` value is added only when a wrapper user-agent compatibility session is launching or its daemon is proven inactive; active and attached follow-ups omit launch-only defaults. Explicit validated safe CLI `--args` and `--user-agent` remain usable as launch-scoped input and require `sessionMode: "fresh"` once the managed session is active. Post-transition summaries, including forced live probes after arbitrary `eval`, verify URL before title and fail implicit transitions to local file pages. Failed or unexecuted navigation attempts remain unverified, and stale concurrent completions serialize only the authoritative page state; transcript replay gives `sessionTabTargetUnknown` precedence over any inconsistent stale target/ref fields. `get url`, `tab list`, non-content `tab <id>` selection, safe explicit navigation away, and session/tab close remain available; tab selection stays unverified until `get url` succeeds. `session list` and `state list` omit wrapper-managed rows; the `piab-*` live-session reservation is case-insensitive, and foreign managed live-session and restore/state references, broad state clearing/cleaning, and managed save/rename targets fail before spawn. Malformed oversized upstream output is discarded rather than persisted as a parse-failure spill. Checkout, storage, environment, managed-session ownership, and state-access policy is checked again after async config/socket setup immediately before spawn. POSIX socket storage is accepted only when the target is current-user-owned mode `0700`, its ancestry is trusted, and existing entries are current-user-owned regular files, sockets, or directories without symlinks; pre-existing unsafe modes are rejected rather than repaired. Identity and config globals use upstream's separated forms (`--session <name>`, `--namespace <name>`, `--config <path>`); the wrapper rejects leading identity equals forms that upstream 0.33.2 does not recognize, while equals-shaped tokens in command payload positions remain ordinary payload rather than silently selecting wrapper ownership or config. Native Windows command-first adaptation relocates only syntactically valid leading globals, rewrites valued `--restore <name>` as `--restore=<name>`, and leaves command-scoped or invalid leading input untouched. Optional global booleans also follow upstream's separated, last-occurrence-wins form: only exact lowercase `false` after the flag disables it, and an unsupported token such as `--auto-connect=false` does not override an earlier bare flag
++- treat explicit caller-provided non-managed `--session` choices outside the reserved `piab-*` prefix as user-managed; those names alone isolate a live browser session but are not a persisted tab/auth restore mechanism after a close command (`close`, `quit`, or `exit`), so use `--session <id> --restore`, `--profile`, or `--state` when persisted auth/tab state is required. Wrapper-owned managed sessions (the current/generated identity or an exact namespace/session in this extension instance's ownership records; foreign `piab-*` targets are rejected) set a Pi-transcript- and Git-checkout-generation-scoped `AGENT_BROWSER_RESTORE` env key automatically (disable with `PI_AGENT_BROWSER_MANAGED_SESSION_RESTORE=0`) so SSO cookies/localStorage/sessionStorage can survive idle shutdown, reload, restart, and `/resume` of that transcript without a manual `state save` flow. Distinct Pi transcripts get distinct restore pools because upstream 0.33.2 loads the newest file for a key regardless of browser-session suffix; this prevents concurrent chats from overwriting or inheriting each other's state. Passive project/user upstream config files are ignored because accepted browser-backed subprocesses, including wrapper-owned closes, pin a process-private empty config. Explicit `--config` or `AGENT_BROWSER_CONFIG` overrides still block browser-backed native calls without parsing caller-selected content; that empty config is mode `0400` on POSIX and lives in the marked secure-temp lifecycle so later config creation cannot change the receiving browser. Sessionless local/setup commands retain upstream config behavior, and this restriction is separate from the package's Pi-scoped config. A direct or batched `connect` targeting a wrapper-managed session is blocked before upstream execution; remote attachment remains available through an explicit caller-owned `--session`. Raw batch argv, batch stdin containing nested `connect`/`batch`, and browser mutation flags/env such as extensions, init scripts, raw launch args, custom user agents/executables, proxies, plugins, WebGPU, profiles, parent env namespaces, CDP, providers, state, and containment also disable automatic managed restore. Wrapper-owned close canonicalizes upstream argv to the known namespace/session, discards caller config/restore globals, and preserves the live daemon's existing restore key rather than injecting one derived from a replacement checkout. A failed fresh call probes its exact daemon identity and remains owned when that daemon is live or uninspectable, so shutdown still closes it. After a wrapper-owned close succeeds, the wrapper persists the returned state path as an atomic record in a lockless convergent per-key ownership directory (`0700`, with `0600` records, on POSIX), retains the two newest proven snapshots for its exact restore key across Pi restarts, self-heals malformed regular records, removes additional proven snapshots older than 30 days, expires stale ownership-proven snapshots and empty manifests from other restore-key generations after 30 days only when a private lineage record proves the same canonical checkout path, and caps young close churn at 256 records per restore key without running namespace-wide `state clean`; unrecorded matching files and the current checkout key are untouched. Automatic restore requires a durable Git checkout generation and an absolute home root. The generation UUID lives in the checkout's Git admin directory and is combined with checkout-root, Git-admin filesystem identity, and the transcript's cwd-derived managed-session base name; Android publishes that marker with exclusive create because its app storage rejects hard links; the generation component survives a rename, but the composite key does not, so a renamed checkout or a different working directory starts a fresh key fail-closed (re-authenticate once), the key changes on checkout replacement/copy or a different transcript, and it is not migrated from cwd-only keys. On POSIX the wrapper canonicalizes and pins `HOME`, requires trusted non-writable owner ancestry plus stable device/inode/birth-time metadata for checkout and Git-admin directories (Android recognizes the private app-data trust anchor and uses stable device/inode identity plus the generation UUID because Node reports mutable ctime as birth time), enforces owner-only mode `0700` without silently repairing insecure existing directories, and rejects symlinks/non-directories along `~/.agent-browser[/namespaces/<canonical>/state]/sessions` and its `.tmp` write area; Windows requires a valid 64-character hex `AGENT_BROWSER_ENCRYPTION_KEY`. Namespace identity uses upstream's lowercase sanitized form, and wrapper-owned subprocesses pin it (including an explicit empty default) so parent environment cannot redirect helpers or close. `electron.status` target reads and `electron.probe` hold the managed daemon-policy lock and apply the owned restore context to each underlying title/URL/focus/tab/snapshot read. When a managed session was launched with restore suppressed by an incompatible path or the explicit opt-out, `details.managedSessionRestoreDisabled: true` means later bare follow-ups do not inject wrapper restore. Same-process `session_tree` transitions retain the process-owned daemon-policy proof; reload, restart, and `/resume` restore the sticky flag but not that proof, so a still-live restore-disabled daemon fails closed until it is closed or a fresh identity is used. If inspection proves the prior daemon inactive, the next owned no-restore spawn records a null daemon policy so later follow-ups can reuse the replacement. A user-private immutable ticket-claim lock serializes policy inspection through the receiving same-identity spawn and bridges the pre-update v2 lock path; every lock winner re-inspects the live daemon with a fixed bounded timeout independent of shorter caller watchdog overrides, and abandoned v2 locks fail closed for manual repair. Before incompatible reuse, the wrapper inspects the actual same-identity daemon and fails closed when it retains any restore key, cannot be inspected, or reports restore-disabled policy without current-process provenance, including live daemons absent from transcript state and explicit restore-key sessions; close it first, retry without an explicit session using `sessionMode: "fresh"`, or use a distinct explicit session. Managed restore keys and key-bearing paths are redacted from visible text, structured details, JSON-mode output, and persisted tool rows. Browser access to `.agent-browser` local storage is rejected before spawn through command-specific input/output operands (including dash-prefixed values), every path-bearing upstream environment mirror (state/profile/config, executable/extension/init-script, action-policy, artifact, skills, and socket paths), encoded, nested-file-scheme, Windows-aliased, or symlinked paths (including nonexistent descendants of symlinked directories), protected top-level `outputPath`, content-returning local-URL calls, all follow-ups on local file pages, and persisted unverified top-level or batch tab/attachment/script/state-load transitions, plus raw batch command strings recursively tokenized on literal ASCII spaces exactly like upstream. Electron probes and later capture from a wrapper-tracked protected target use the same guard. Raw artifact destinations use the same command parser as preparation and are checked before it creates parent directories. Enabled `--allow-file-access` argv/env and file-access-enabling or protected-path raw Chrome values are rejected. Every subprocess clears `AGENT_BROWSER_ARGS` and removes caller file-access occurrences. Local-browser spawns add canonical `--allow-file-access false`; routine HTTP(S) work relies on the protected empty config and cleared raw-args environment instead of sending `--args ""`, which `agent-browser 0.34.0` treats as a launch override. Local-file navigation is limited to wrapper-managed local browsers; caller-owned and attached browsers are blocked because their file-access launch provenance is unknown. A fixed non-empty `--args` value is added only when a wrapper user-agent compatibility session is launching or its daemon is proven inactive; active and attached follow-ups omit launch-only defaults. Explicit validated safe CLI `--args` and `--user-agent` remain usable as launch-scoped input and require `sessionMode: "fresh"` once the managed session is active. Post-transition summaries, including forced live probes after arbitrary `eval`, verify URL before title and fail implicit transitions to local file pages. Failed or unexecuted navigation attempts remain unverified, and stale concurrent completions serialize only the authoritative page state; transcript replay gives `sessionTabTargetUnknown` precedence over any inconsistent stale target/ref fields. `get url`, `tab list`, non-content `tab <id>` selection, safe explicit navigation away, and session/tab close remain available; tab selection stays unverified until `get url` succeeds. `session list` and `state list` omit wrapper-managed rows; the `piab-*` live-session reservation is case-insensitive, and foreign managed live-session and restore/state references, broad state clearing/cleaning, and managed save/rename targets fail before spawn. Malformed oversized upstream output is discarded rather than persisted as a parse-failure spill. Checkout, storage, environment, managed-session ownership, and state-access policy is checked again after async config/socket setup immediately before spawn. POSIX socket storage is accepted only when the target is current-user-owned mode `0700`, its ancestry is trusted, and existing entries are current-user-owned regular files, sockets, or directories without symlinks; pre-existing unsafe modes are rejected rather than repaired. Identity and config globals use upstream's separated forms (`--session <name>`, `--namespace <name>`, `--config <path>`); the wrapper rejects leading identity equals forms that upstream 0.33.2 does not recognize, while equals-shaped tokens in command payload positions remain ordinary payload rather than silently selecting wrapper ownership or config. Native Windows command-first adaptation relocates only syntactically valid leading globals, rewrites valued `--restore <name>` as `--restore=<name>`, and leaves command-scoped or invalid leading input untouched. Optional global booleans also follow upstream's separated, last-occurrence-wins form: only exact lowercase `false` after the flag disables it, and an unsupported token such as `--auto-connect=false` does not override an earlier bare flag
+ - before a content-bearing read or interaction against a caller-owned explicit session or any established attached browser, run a session-scoped `get url` probe and apply the local-state boundary to that live target. A first-use attach/content combination is blocked until the caller establishes the attachment with `connect`, `get url`, `tab list`, or safe navigation. Missing or stale transcript page state is not accepted as proof; a failed or non-URL probe blocks the requested content command. The process-local effective-namespace/session queue keeps that probe atomic with semantic snapshot resolution and the main command inside one extension instance; external attached-browser activity, direct CLI calls, and other Pi processes remain outside this guarantee. Non-bail batch validation retains every possible pre-transition page state up to a fixed bound, so later content is rejected when any failed transition could expose local or unverified content and branching beyond that bound fails closed with exact `batch --bail` guidance; exact `batch --bail` or split calls remove that continuation path. Protected Windows paths include drive-relative forms such as `C:.agent-browser\\state\\...`. Nested `batch` steps are rejected, while raw batch command strings mirror upstream's ASCII-space tokenizer, including its single/double-quote and backslash handling, without splitting on other Unicode whitespace.
+ - pass explicit `--profile` straight through to upstream `agent-browser`; no profile-cloning or isolation layer is added in v1
+ <!-- agent-browser-playbook:start wrapper-tab-recovery -->
+diff -ruN '--exclude=node_modules' a/package.json b/package.json
+--- a/package.json	1985-10-26 03:15:00.000000000 -0500
++++ b/package.json	2026-08-24 15:09:58.000000000 -0500
 @@ -1,6 +1,7 @@
  {
    "name": "pi-agent-browser-native",
@@ -2712,9 +2976,135 @@ diff -ruN --exclude=node_modules a/package.json b/package.json
    "description": "pi extension that exposes agent-browser as a native tool for browser automation",
    "type": "module",
    "author": "Mitch Fultz (https://github.com/fitchmultz)",
-diff -ruN --exclude=node_modules a/scripts/config.mjs b/scripts/config.mjs
---- a/scripts/config.mjs	1985-10-26 03:15:00
-+++ b/scripts/config.mjs	2026-08-22 14:51:27
+diff -ruN '--exclude=node_modules' a/README.md b/README.md
+--- a/README.md	1985-10-26 03:15:00.000000000 -0500
++++ b/README.md	2026-08-25 15:12:33.000000000 -0500
+@@ -59,7 +59,7 @@
+ 
+ - shell strings are easy for agents to quote wrong
+ - large page snapshots can waste model context
+-- screenshots and downloads need artifact metadata, not just text paths
++- screenshots and downloads need artifact metadata, not bare text paths
+ - implicit browser sessions need predictable reuse and cleanup
+ - profile/debug launches need a clear way to start fresh after public browsing
+ - secrets and auth material must not be echoed into model-visible output
+@@ -83,7 +83,7 @@
+ | Dashboard scroll commands can look successful while nothing moves | Handles standard `scroll <dir> [px]` against the document first (including pages whose smooth-scroll CSS defeats upstream wheel timing), falls back upstream when the document cannot move, and samples viewport/containers around the fallback; unchanged positions fail as `upstream-error` with `details.scrollNoop`, visible recovery guidance, and exact snapshot/screenshot checks | [`docs/TOOL_CONTRACT.md`](docs/TOOL_CONTRACT.md#details), [`docs/COMMAND_REFERENCE.md`](docs/COMMAND_REFERENCE.md#core-page-and-element-commands), `test/agent-browser.extension-validation.test.ts` |
+ | Dropdown/combobox clicks can focus or hit native option box-model errors | Adds first-class `select <selector> <value...>` paths through raw `args`, `job`, and `semanticAction`; semantic role/name or label select resolves exactly one current visible combobox/listbox ref before action. Custom combobox clicks still detect focused controls with explicit `aria-expanded` state but no visible options and return `details.comboboxFocus` plus exact recovery `nextActions` | [`docs/TOOL_CONTRACT.md`](docs/TOOL_CONTRACT.md#details), [`docs/COMMAND_REFERENCE.md`](docs/COMMAND_REFERENCE.md#core-page-and-element-commands), `extensions/agent-browser/lib/input-modes/semantic-action.ts`, `test/agent-browser.extension-input-modes.test.ts`, `test/agent-browser.extension-validation.test.ts` |
+ | Recording workflows fail late when `ffmpeg` is missing or report stale lifecycle state | After successful `record start` / `record restart`, reports `successCategory: "artifact-pending"`, returns an exact `stop-pending-recording` action, warns when `ffmpeg` is unavailable, and tells agents that `record start` switches to a fresh active page whose in-page state does not carry over while invalidating prior page-scoped `@e…` refs on every executed start attempt (even a failed already-active one) and on URL-bearing `record restart` (stale-ref until a fresh snapshot); an unbounded transcript-backed namespace/session index reserves active destinations across aliases, serializes artifact lifecycle and explicit wait/output writes, persists cross-branch close tombstones, retires every successful close path (including every matching namespace owner for `close --all`), rejects missing/stale restart output, coalesces terminal batch state, keeps only the newest pending path per identity, rejects recording starts after a nested close, folds Unicode path aliases, and retains exact cleanup actions with visible guidance on any later same-session failure | [`docs/TOOL_CONTRACT.md`](docs/TOOL_CONTRACT.md#details), [`docs/COMMAND_REFERENCE.md`](docs/COMMAND_REFERENCE.md#diff-debug-and-streaming), `test/agent-browser.extension-validation.test.ts`, `test/agent-browser.presentation-artifacts-batch.test.ts` |
+-| Upstream CLI drift can silently invalidate wrapper behavior | Publishes a repo-readable command reference, verifies it against the target, and probes browser-backed calls once per cwd/PATH so anything other than exact `agent-browser 0.34.0` fails before browser launch with installed/expected version evidence | `npm run verify` |
++| Upstream CLI drift can silently invalidate wrapper behavior | Publishes a repo-readable command reference, verifies it against the target, and probes browser-backed calls once per cwd/PATH so anything other than exact `agent-browser 0.35.0` fails before browser launch with installed/expected version evidence | `npm run verify` |
+ | Desktop Electron apps need discovery, CDP attach, and safe teardown | Top-level `electron` runs host `list` / isolated `launch` (temp profile, OS-chosen debug port) / `status` / `probe` / `cleanup`, merges `launchId` plus managed `sessionName`, supports `handoff` `snapshot` / `tabs` / `connect`, and surfaces mismatch and post-command health guidance; wrapper cleanup applies only to launches it created | `extensions/agent-browser/lib/electron/discovery.ts`, `launch.ts`, `cleanup.ts`, [`docs/TOOL_CONTRACT.md`](docs/TOOL_CONTRACT.md#electron), [`docs/COMMAND_REFERENCE.md`](docs/COMMAND_REFERENCE.md#electron-desktop-apps) |
+ | Agents need bundled `skills` text and local setup/status commands without touching the live session | Treats `skills list`, `skills get …`, `skills path …`, local auth profile management (`auth save/list/show/delete/remove`), `profiles`, `dashboard`, `device list`, `doctor`, `install`, `upgrade`, `session list` (with wrapper-managed rows hidden), `session id`, `session info`, `plugin add/list/show/run`, `mcp --help`, and caller-owned saved-state inspection/targeted maintenance (`state list/show/rename` or named clear) as sessionless reads/actions: no implicit managed `--session` under default `sessionMode: "auto"`; broad clear/clean and managed-state targets are rejected before spawn (same session-ownership goal as plain-text `--help` / `--version`), while bare `mcp` server calls are blocked and provider/browser-backed workflows stay thin passthroughs that require upstream setup and credentials | [`docs/COMMAND_REFERENCE.md`](docs/COMMAND_REFERENCE.md#built-in-skills), `extensions/agent-browser/lib/command-policy.ts`, `extensions/agent-browser/lib/runtime.ts` |
+ 
+@@ -103,7 +103,9 @@
+ | `agent-browser` | All browser automation through this extension | See upstream install docs |
+ | `ffmpeg` | `record stop` WebM encoding after `record start` / `record restart` | `brew install ffmpeg` or `brew install ffmpeg-full` |
+ 
+-Keep both binaries on `PATH`. This package targets exactly `agent-browser 0.34.0`; browser-backed calls fail fast on a different installed version while local inspection/setup commands remain available for diagnosis. `record start` can begin without a file on disk, but `record stop` needs `ffmpeg` to encode the WebM.
++Keep both binaries on `PATH`. This package targets exactly `agent-browser 0.35.0`; browser-backed calls fail fast on a different installed version while local inspection/setup commands remain available for diagnosis. `record start` can begin without a file on disk, but `record stop` needs `ffmpeg` to encode the WebM.
++
++The wrapper pins the `agent-browser` file it spawns instead of letting a repo-local shim win: an absolute `PI_AGENT_BROWSER_CLI_PATH` takes precedence, otherwise the first executable `PATH` match that is not reached through a relative `PATH` entry or a `node_modules` directory inside the current project. If the only match is such a workspace-local copy, the call fails as `policy-blocked` until you install it outside the workspace, set `PI_AGENT_BROWSER_CLI_PATH`, or opt in with `PI_AGENT_BROWSER_ALLOW_WORKSPACE_CLI=1`.
+ 
+ ### Android / Termux
+ 
+@@ -144,7 +146,7 @@
+ pi --no-extensions -e npm:pi-agent-browser-native
+ ```
+ 
+-Pi 0.84.0+ may ask whether to trust the current project before loading project-local instructions, settings, or resources. This extension treats its own project-local package config as developer-trusted by default; use `--no-approve` when you intentionally want Pi and this extension to ignore project-local inputs for that run.
++Pi 0.84.0+ may ask whether to trust the current project before loading project-local instructions, settings, or resources. This extension loads its own project-local package config only when Pi affirms project trust, and ignores that layer when the project is untrusted, when Pi runs with `--no-approve`, or when the host exposes no trust check; set `PI_AGENT_BROWSER_TRUST_PROJECT_CONFIG=1` to load project config on a host without a trust check. The same variable also governs upstream's own project layer: because `agent-browser` discovers `./agent-browser.json` from the working directory it is spawned in, a repo-local file would otherwise set `executablePath`, `initScripts`, `proxy`, `allowFileAccess`, or `plugins` without any flag, so the wrapper pins upstream's `AGENT_BROWSER_CONFIG` to a wrapper-owned copy of `~/.agent-browser/config.json` (or an empty config) whenever a repo-local `agent-browser.json` is present and that variable is unset. Your own `AGENT_BROWSER_CONFIG` is never overridden.
+ 
+ For a specific published version:
+ 
+@@ -255,7 +257,7 @@
+ npm exec --yes --package pi-agent-browser-native@latest -- pi-agent-browser-config web-search set-command "op read 'op://Private/Brave Search/API Key'" --provider brave --global
+ ```
+ 
+-Config merges in this order: global → project → `PI_AGENT_BROWSER_CONFIG` override. Under Pi 0.84.0+, the globally installed or CLI-loaded extension still loads project-local `.pi/config/pi-agent-browser-native/config.json` when Pi trust allows that project layer; it skips that project layer when Pi reports the project is untrusted or when Pi is launched with `--no-approve`. `webSearch.enabled` is evaluated after the loaded layers merge. Use `web-search disable --global` for a user default, `web-search disable --project` for one repo, and a `PI_AGENT_BROWSER_CONFIG` override with `{ "webSearch": { "enabled": false } }` when web search must stay off even if project config exists. Loaded config may use plaintext, custom environment aliases, interpolation literals, malformed-or-late-bound `$` values, and `!command` credential sources; the resolved secret is passed to the provider request while tool content, details, status output, and docs examples stay redacted. `web-search set-key`, `set-command`, and `clear` require `--provider`; `set-env` infers Exa/Brave from `EXA_API_KEY` or `BRAVE_API_KEY` unless you pass `--provider`.
++Config merges in this order: global → project → `PI_AGENT_BROWSER_CONFIG` override. Under Pi 0.84.0+, the globally installed or CLI-loaded extension loads project-local `.pi/config/pi-agent-browser-native/config.json` when Pi affirms project trust; it skips that project layer when Pi reports the project is untrusted, when Pi is launched with `--no-approve`, or when the host exposes no trust check (`PI_AGENT_BROWSER_TRUST_PROJECT_CONFIG=1` opts back in). Project-layer web-search keys may only interpolate an environment variable such as `$EXA_API_KEY`: project-scope `!command` and plaintext values are ignored with a config warning so a cloned repo cannot run a host command or supply a key, and `PI_AGENT_BROWSER_ALLOW_PROJECT_CREDENTIAL_COMMANDS=1` opts back in. `webSearch.enabled` is evaluated after the loaded layers merge. Use `web-search disable --global` for a user default, `web-search disable --project` for one repo, and a `PI_AGENT_BROWSER_CONFIG` override with `{ "webSearch": { "enabled": false } }` when web search must stay off even if project config exists. Loaded config may use plaintext, custom environment aliases, interpolation literals, malformed-or-late-bound `$` values, and `!command` credential sources; the resolved secret is passed to the provider request while tool content, details, status output, and docs examples stay redacted. Credential commands run without a shell, so a value that needs a pipe, redirection, or variable expansion must name its shell (`!/bin/sh -c "pass show key | head -1"`) or be written as an exact JSON argv array (`!["/bin/sh", "-c", "pass show key | head -1"]`); a value that would silently resolve to literal shell text is rejected with an error naming both forms, including an unquoted leading `~`, which stays a literal path segment without a shell. Filename patterns (`*`, `?`, `[`) are not rejected: `execFile` passes them to the executable exactly as written, so they either work as literal arguments or fail loudly in the command itself. `web-search set-key`, `set-command`, and `clear` require `--provider`; `set-env` infers Exa/Brave from `EXA_API_KEY` or `BRAVE_API_KEY` unless you pass `--provider`.
+ 
+ For Exa, the tool defaults to `searchType: "auto"` with `contents.highlights: true`. Agents may pass `searchType` (`fast`, `instant`, `deep-lite`, `deep`, or `deep-reasoning`) only when the task needs that latency/depth tradeoff; structured output schemas are intentionally not exposed yet.
+ 
+diff -ruN '--exclude=node_modules' a/scripts/agent-browser-capability-baseline.mjs b/scripts/agent-browser-capability-baseline.mjs
+--- a/scripts/agent-browser-capability-baseline.mjs	1985-10-26 03:15:00.000000000 -0500
++++ b/scripts/agent-browser-capability-baseline.mjs	2026-08-25 15:00:17.000000000 -0500
+@@ -16,8 +16,8 @@
+ 
+ const sourceEvidence = Object.freeze({
+   repository: "vercel-labs/agent-browser",
+-  upstreamHead: "548b159b30eef119ccf6846c8bc807d0eaa3f6f8",
+-  upstreamPackageVersion: "0.34.0",
++  upstreamHead: "585e740fcef069d74e21f0e88e8bf4ea7df34385",
++  upstreamPackageVersion: "0.35.0",
+   inspectedSources: Object.freeze([
+     "agent-browser --version",
+     "agent-browser --help",
+@@ -28,6 +28,7 @@
+     "agent-browser skills list",
+     "agent-browser skills get core --full",
+     "agent-browser skills get derive-client --full",
++    "agent-browser skills get protected-vercel-deployments --full",
+     "README.md",
+     "CHANGELOG.md",
+     "agent-browser.schema.json",
+@@ -75,6 +76,7 @@
+   helpCommand("skills list", ["skills", "list"]),
+   helpCommand("core skill full", ["skills", "get", "core", "--full"]),
+   helpCommand("vercel sandbox skill full", ["skills", "get", "vercel-sandbox", "--full"]),
++  helpCommand("protected vercel skill full", ["skills", "get", "protected-vercel-deployments", "--full"]),
+   helpCommand("open help", ["open", "--help"]),
+   helpCommand("read help", ["read", "--help"]),
+   helpCommand("click help", ["click", "--help"]),
+@@ -143,6 +145,7 @@
+       "skills get slack",
+       "skills get dogfood",
+       "skills get vercel-sandbox",
++      "skills get protected-vercel-deployments",
+       "skills get agentcore",
+       "skills get derive-client",
+       "@agent-browser/sandbox",
+@@ -160,6 +163,7 @@
+       ["skills list", "slack"],
+       ["skills list", "dogfood"],
+       ["skills list", "vercel-sandbox"],
++      ["skills list", "protected-vercel-deployments"],
+       ["skills list", "agentcore"],
+       ["skills list", "derive-client"],
+       ["vercel sandbox skill full", "@agent-browser/sandbox"],
+@@ -653,6 +657,10 @@
+       "NO_PROXY",
+       "--ignore-https-errors",
+       "AGENT_BROWSER_IGNORE_HTTPS_ERRORS",
++      "--ca-cert <path>",
++      "AGENT_BROWSER_CA_CERT",
++      "--no-ca-cert",
++      "AGENT_BROWSER_CLEAR_CA_CERT",
+       "--allow-file-access",
+       "AGENT_BROWSER_ALLOW_FILE_ACCESS",
+       "--hide-scrollbars <bool>",
+@@ -799,6 +807,10 @@
+       root("NO_PROXY"),
+       root("--ignore-https-errors"),
+       root("AGENT_BROWSER_IGNORE_HTTPS_ERRORS"),
++      root("--ca-cert <path>"),
++      root("AGENT_BROWSER_CA_CERT"),
++      root("--no-ca-cert"),
++      root("AGENT_BROWSER_CLEAR_CA_CERT"),
+       root("--allow-file-access"),
+       root("AGENT_BROWSER_ALLOW_FILE_ACCESS"),
+       root("--hide-scrollbars <bool>"),
+diff -ruN '--exclude=node_modules' a/scripts/agent-browser-target.mjs b/scripts/agent-browser-target.mjs
+--- a/scripts/agent-browser-target.mjs	1985-10-26 03:15:00.000000000 -0500
++++ b/scripts/agent-browser-target.mjs	2026-08-25 15:00:09.000000000 -0500
+@@ -1,3 +1,3 @@
+ export const TARGET_AGENT_BROWSER_SOURCE = "scripts/agent-browser-target.mjs";
+-export const TARGET_AGENT_BROWSER_VERSION = "0.34.0";
++export const TARGET_AGENT_BROWSER_VERSION = "0.35.0";
+ export const TARGET_AGENT_BROWSER_VERSION_LABEL = `agent-browser ${TARGET_AGENT_BROWSER_VERSION}`;
+diff -ruN '--exclude=node_modules' a/scripts/config.mjs b/scripts/config.mjs
+--- a/scripts/config.mjs	1985-10-26 03:15:00.000000000 -0500
++++ b/scripts/config.mjs	2026-08-24 15:09:58.000000000 -0500
 @@ -68,6 +68,7 @@
    Project config: .pi/config/pi-agent-browser-native/config.json
    Override:       ${AGENT_BROWSER_CONFIG_ENV}=/path/to/config.json
@@ -2723,9 +3113,9 @@ diff -ruN --exclude=node_modules a/scripts/config.mjs b/scripts/config.mjs
    Use --provider for set-key, set-command, and clear; set-env infers exa/brave from ${EXA_API_KEY_ENV} or ${BRAVE_API_KEY_ENV}.
  `;
  }
-diff -ruN --exclude=node_modules a/scripts/doctor.mjs b/scripts/doctor.mjs
---- a/scripts/doctor.mjs	1985-10-26 03:15:00
-+++ b/scripts/doctor.mjs	2026-08-22 14:51:27
+diff -ruN '--exclude=node_modules' a/scripts/doctor.mjs b/scripts/doctor.mjs
+--- a/scripts/doctor.mjs	1985-10-26 03:15:00.000000000 -0500
++++ b/scripts/doctor.mjs	2026-08-24 15:09:58.000000000 -0500
 @@ -165,8 +165,12 @@
  	if (text === PACKAGE_NAME) return true;
  	if (text.includes(REPO_URL_FRAGMENT)) return true;

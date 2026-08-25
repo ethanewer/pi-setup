@@ -33,11 +33,11 @@ export const WORKFLOW_COMPREHENSION_SCENARIO_IDS = COMPREHENSION_SCENARIOS.map((
 export const WORKFLOW_AUTHORING_FROZEN_FILES = [
   {
     path: "skills/workflow-authoring/SKILL.md",
-    sha256: "44f68f4302c278ac998dbcd43b3b8a2041087dfdc6adf81f96e24c85194243c4",
+    sha256: "6799431f0d390bb6bb34cc3e0702376818b82ae0cd7826db5430e2a1b854ee1b",
   },
   {
     path: "skills/workflow-authoring/references/runtime.md",
-    sha256: "5eb9d6f9b7f5403f84cdb2f9e06a0926d87b6292eb01ce5e4ae533393c0b173f",
+    sha256: "d3a2bdb36c350a1b6656a7275f150f313a758a9ca9a92dbeb27c24de74c442e1",
   },
   {
     path: "skills/workflow-authoring/references/helpers.md",
@@ -45,11 +45,11 @@ export const WORKFLOW_AUTHORING_FROZEN_FILES = [
   },
   {
     path: "skills/workflow-authoring/references/specialized-helpers.md",
-    sha256: "7597c94bbacea885697fb2d05a96ed9ec39403ca6d3a94547bf8ce5e233b2c76",
+    sha256: "8cf78fe0285fecd65e1a80626f29ff8c3b4977f65c7370cc1d3511ff6eda4305",
   },
   {
     path: "skills/workflow-authoring/references/lifecycle.md",
-    sha256: "04a07ddbc03ac7b4452e4bea82418000ff84e429c4a3de602fbc47abaaae8843",
+    sha256: "e5f75ae16944a58f16278a70cc0e5130590ef5747ce315a89ff58aab6669d43e",
   },
   {
     path: "skills/workflow-authoring/references/pattern-selection.md",
@@ -151,7 +151,7 @@ const FROZEN_GUIDANCE_BY_CAPABILITY: Readonly<Record<string, readonly ProtectedG
     {
       path: SPECIALIZED_HELPERS_PATH,
       requiredText:
-        "`completenessCheck(args, results)` | Returns `{ complete, missing? }` or recoverable `null`. The critic sees only the first 4,000 serialized characters, so chunk or summarize larger evidence. Treat the verdict as advisory.",
+        "`completenessCheck(args, results)` | Consumes one logical agent slot and preflights that capacity before starting the critic; an external pause/stop abort wins before the critic starts. Returns `{ complete, missing? }` or recoverable `null`. The critic sees only the first 4,000 serialized characters, so chunk or summarize larger evidence. Treat the verdict as advisory.",
     },
   ],
   "workflow.runtime.gate": [

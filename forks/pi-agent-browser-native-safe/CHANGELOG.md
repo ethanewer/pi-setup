@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Changed
+
+- Rebaselined the exact upstream runtime and command inventory to `agent-browser 0.35.0` / vercel-labs/agent-browser@585e740fcef069d74e21f0e88e8bf4ea7df34385. Added the `protected-vercel-deployments` skill and the new custom-CA controls.
+- Treat `--ca-cert` / `AGENT_BROWSER_CA_CERT` as path-bearing browser mutation inputs, reject protected `.agent-browser` targets, disable managed auth restore when custom trust is present, and require a fresh managed session for CA install or clear flags. `--no-ca-cert` / `AGENT_BROWSER_CLEAR_CA_CERT` receive the same restore and launch isolation.
+- Block direct and batched remote `connect` commands before they can replace a wrapper-managed browser under the changed 0.35.0 attachment behavior. Explicit caller-owned sessions still support remote attachment.
+
 ## 0.5.0 - 2026-08-20
 
 ### Added

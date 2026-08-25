@@ -60,14 +60,7 @@ const RUN_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,199}$/;
 export function isSafeRunId(runId) {
     return typeof runId === "string" && RUN_ID_PATTERN.test(runId) && !runId.includes("..");
 }
-const RUN_STATUSES = new Set([
-    "pending",
-    "running",
-    "paused",
-    "completed",
-    "failed",
-    "aborted",
-]);
+const RUN_STATUSES = new Set(["pending", "running", "paused", "completed", "failed", "aborted"]);
 const AGENT_STATUSES = new Set(["queued", "running", "done", "error", "skipped"]);
 const isPlainObject = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 const isText = (value) => typeof value === "string";
@@ -381,7 +374,9 @@ export function createRunPersistence(cwd, fsOverride, options) {
             if (quietFor <= foreignLockStaleMs)
                 return true;
             console.warn(`[workflow-runs] reclaiming the run lock for ${lock.runId}: it was taken by host "${lock.host}" ` +
-                `(pid ${lock.pid}) and ${lastSeen > 0 ? `has not been refreshed for ${Math.round(quietFor / 60_000)}m` : "carries no credible refresh time"}`);
+                `(pid ${lock.pid}) and ${lastSeen > 0
+                    ? `has not been refreshed for ${Math.round(quietFor / 60_000)}m`
+                    : "carries no credible refresh time"}`);
             return false;
         }
         if (typeof lock.processStartedAt === "number" && Number.isFinite(lock.processStartedAt)) {

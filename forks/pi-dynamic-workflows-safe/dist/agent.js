@@ -4,11 +4,13 @@ import { join } from "node:path";
 import { createAgentSession, createCodingTools, DefaultResourceLoader, getAgentDir, ModelRegistry, ModelRuntime, SessionManager, SettingsManager, } from "@earendil-works/pi-coding-agent";
 import { Check, Convert } from "typebox/value";
 import { compactAgentHistory } from "./agent-history.js";
+import { agentUsageEquals, createEmptyAgentUsage, sumAgentUsage } from "./agent-usage.js";
 import { applyToolPolicy } from "./agent-registry.js";
 import { classifyProviderLimit, WorkflowError, WorkflowErrorCode } from "./errors.js";
 import { canonicalModelSpec, resolveModelSpecWithThinking } from "./model-spec.js";
 import { formatTierFallbackNotice, loadModelTierConfig, resolveTierModel, } from "./model-tier-config.js";
 import { createStructuredOutputTool } from "./structured-output.js";
+const LIVE_USAGE_EMIT_INTERVAL_MS = 250;
 /**
  * Find a JSON object/array in free-form text: a fenced ```json block if present,
  * else the first balanced {...} or [...]. Best-effort (the schema check is the
@@ -294,6 +296,72 @@ export function usageFromStats(stats) {
         total: tokens.total,
         cost,
     };
+}
+function estimateStreamingAssistantUsage(event) {
+    if (event.type !== "message_update" && event.type !== "message_end") {
+        return undefined;
+    }
+    if (event.message.role !== "assistant") {
+        return undefined;
+    }
+    const reported = event.message.usage;
+    const reportedTotal = reported.input + reported.output + reported.cacheRead + reported.cacheWrite;
+    if (reportedTotal > 0 || reported.cost.total > 0) {
+        return {
+            input: reported.input,
+            output: reported.output,
+            cacheRead: reported.cacheRead,
+            cacheWrite: reported.cacheWrite,
+            total: reportedTotal,
+            cost: reported.cost.total,
+        };
+    }
+    let streamedCharacters = 0;
+    for (const content of event.message.content) {
+        if (content.type === "text") {
+            streamedCharacters += content.text.length;
+        }
+        else if (content.type === "thinking") {
+            streamedCharacters += content.thinking.length;
+        }
+        else if (content.type === "toolCall") {
+            streamedCharacters += JSON.stringify(content.arguments).length;
+        }
+    }
+    if (streamedCharacters === 0) {
+        return undefined;
+    }
+    const estimatedOutput = Math.max(1, Math.ceil(streamedCharacters / 4));
+    return { input: 0, output: estimatedOutput, cacheRead: 0, cacheWrite: 0, total: estimatedOutput, cost: 0 };
+}
+function subtractSessionUsageStats(stats, baseline) {
+    if (!baseline) {
+        return stats;
+    }
+    return {
+        tokens: {
+            input: Math.max(0, stats.tokens.input - baseline.tokens.input),
+            output: Math.max(0, stats.tokens.output - baseline.tokens.output),
+            cacheRead: Math.max(0, stats.tokens.cacheRead - baseline.tokens.cacheRead),
+            cacheWrite: Math.max(0, stats.tokens.cacheWrite - baseline.tokens.cacheWrite),
+            total: Math.max(0, stats.tokens.total - baseline.tokens.total),
+        },
+        cost: Math.max(0, stats.cost - baseline.cost),
+    };
+}
+/**
+ * Combine usage from completed messages with the current streaming message.
+ * AgentSession notifies subscribers before it appends a message_end event to
+ * SessionManager, so the event's assistant usage is absent from stats and must
+ * be added exactly once. The real-session regression test pins this ordering.
+ */
+function usageFromSessionProgress(stats, event) {
+    const persisted = usageFromStats(stats);
+    const streaming = estimateStreamingAssistantUsage(event);
+    if (!streaming) {
+        return persisted;
+    }
+    return sumAgentUsage(persisted ?? createEmptyAgentUsage(), streaming);
 }
 /**
  * Orchestration tools ALWAYS denied to workflow subagents. The `workflow` and
@@ -683,6 +751,9 @@ export class WorkflowAgent {
         let removeTurnListener;
         let lastHistoryEmit = 0;
         let threadTurnSucceeded = false;
+        let removeSessionListener;
+        let lastUsageProgressEmit = 0;
+        let lastProgressUsage;
         const emitHistory = () => options.onHistory?.(compactAgentHistory(session.messages));
         const maybeEmitHistory = () => {
             if (!options.onHistory)
@@ -693,6 +764,33 @@ export class WorkflowAgent {
             lastHistoryEmit = now;
             emitHistory();
         };
+        const emitUsageProgress = (event) => {
+            if (!options.onUsageProgress) {
+                return;
+            }
+            const now = Date.now();
+            if (event.type === "message_update" &&
+                lastProgressUsage &&
+                now - lastUsageProgressEmit < LIVE_USAGE_EMIT_INTERVAL_MS) {
+                return;
+            }
+            const usage = usageFromSessionProgress(subtractSessionUsageStats(session.getSessionStats(), usageBeforeTurn), event);
+            if (!usage || (lastProgressUsage && agentUsageEquals(lastProgressUsage, usage))) {
+                return;
+            }
+            lastUsageProgressEmit = now;
+            lastProgressUsage = usage;
+            options.onUsageProgress(usage);
+        };
+        const emitSessionProgress = (event) => {
+            maybeEmitHistory();
+            try {
+                emitUsageProgress(event);
+            }
+            catch {
+                // Usage progress is best-effort; never let stats failure interrupt the agent.
+            }
+        };
         try {
             if (options.signal?.aborted)
                 throw new Error("Subagent was aborted");
@@ -701,8 +799,8 @@ export class WorkflowAgent {
                 options.signal.addEventListener("abort", onAbort, { once: true });
                 removeAbortListener = () => options.signal?.removeEventListener("abort", onAbort);
             }
-            if (options.onHistory) {
-                removeHistoryListener = session.subscribe(() => maybeEmitHistory());
+            if (options.onHistory || options.onUsageProgress) {
+                removeSessionListener = session.subscribe(emitSessionProgress);
             }
             removeTurnListener = session.subscribe((event) => {
                 if (event.type === "message_end")
@@ -741,6 +839,7 @@ export class WorkflowAgent {
             removeAbortListener?.();
             removeHistoryListener?.();
             removeTurnListener?.();
+            removeSessionListener?.();
             try {
                 emitHistory();
             }
@@ -754,18 +853,7 @@ export class WorkflowAgent {
             if (options.onUsage) {
                 try {
                     const stats = session.getSessionStats();
-                    const usage = usageFromStats(usageBeforeTurn
-                        ? {
-                            tokens: {
-                                input: Math.max(0, stats.tokens.input - usageBeforeTurn.tokens.input),
-                                output: Math.max(0, stats.tokens.output - usageBeforeTurn.tokens.output),
-                                cacheRead: Math.max(0, stats.tokens.cacheRead - usageBeforeTurn.tokens.cacheRead),
-                                cacheWrite: Math.max(0, stats.tokens.cacheWrite - usageBeforeTurn.tokens.cacheWrite),
-                                total: Math.max(0, stats.tokens.total - usageBeforeTurn.tokens.total),
-                            },
-                            cost: Math.max(0, stats.cost - usageBeforeTurn.cost),
-                        }
-                        : stats);
+                    const usage = usageFromStats(subtractSessionUsageStats(stats, usageBeforeTurn));
                     if (usage)
                         options.onUsage(usage);
                 }

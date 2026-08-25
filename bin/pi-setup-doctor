@@ -430,8 +430,9 @@ try { process.stdout.write(String(JSON.parse(readFileSync(path, "utf8")).version
 ' "$1" 2>/dev/null
 }
 INSTALLED_PI="$(pkg_version "$BUN_GLOBAL/@earendil-works/pi-coding-agent")"
+INSTALLED_PI_AI="$(pkg_version "$BUN_GLOBAL/@earendil-works/pi-ai")"
 INSTALLED_AB="$(pkg_version "$BUN_GLOBAL/agent-browser")"
-for entry in "Pi|$PINNED_PI|$INSTALLED_PI" "agent-browser|$PINNED_AB|$INSTALLED_AB"; do
+for entry in "Pi|$PINNED_PI|$INSTALLED_PI" "Pi AI|$PINNED_PI|$INSTALLED_PI_AI" "agent-browser|$PINNED_AB|$INSTALLED_AB"; do
   IFS='|' read -r NAME PINNED INSTALLED <<< "$entry"
   if [[ -z "$PINNED" ]]; then
     bad "could not read the $NAME version pinned in install.sh"
@@ -445,6 +446,16 @@ for entry in "Pi|$PINNED_PI|$INSTALLED_PI" "agent-browser|$PINNED_AB|$INSTALLED_
     fixable install
   fi
 done
+
+PI_AI_REASONING_TARGET="$BUN_GLOBAL/@earendil-works/pi-ai/dist/api/openai-completions.js"
+if [[ -f "$PI_AI_REASONING_TARGET" ]] \
+  && grep -q 'normalizeOpenAIReasoningDetails(parsed)' "$PI_AI_REASONING_TARGET" \
+  && grep -q 'appendOpenAIReasoningDetail(preservedDetails, detail)' "$PI_AI_REASONING_TARGET"; then
+  ok "Pi AI reasoning-details stream concatenation and historical replay normalization are installed"
+else
+  bad "Pi AI $PINNED_PI is missing the repository's reasoning-details fix (run ./install.sh)"
+  fixable install
+fi
 
 say ""
 say "Compaction settings"

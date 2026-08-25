@@ -1,8 +1,8 @@
 import type { TSchema } from "typebox";
-import type { AgentUsage } from "./agent.js";
 import { type AgentRunOptions, type WorkflowAgentOptions } from "./agent.js";
 import type { AgentHistoryEntry } from "./agent-history.js";
 import { type AgentRegistry } from "./agent-registry.js";
+import { type AgentUsage } from "./agent-usage.js";
 import { WorkflowErrorCode } from "./errors.js";
 import { SharedStore } from "./shared-store.js";
 export interface WorkflowMetaPhase {
@@ -17,7 +17,7 @@ export interface WorkflowMeta {
     /** Default model for agents whose phase has no route and that set no model/tier. */
     model?: string;
 }
-/** One cached agent() result, keyed by its deterministic call index. */
+/** One cached agent/checkpoint result, keyed by its deterministic workflow call identity. */
 export interface JournalEntry {
     index: number;
     /**
@@ -53,14 +53,8 @@ export interface SharedRuntime {
     limiter: <T>(fn: () => Promise<T>) => Promise<T>;
     agentCount: number;
     spent: number;
-    tokenUsage: {
-        input: number;
-        output: number;
-        total: number;
-        cost: number;
-        cacheRead: number;
-        cacheWrite: number;
-    };
+    tokenUsage: AgentUsage;
+    /** @deprecated Nesting depth is async-context scoped; retained for injected runtime compatibility. */
     depth: number;
     /**
      * Monotonic count of every workflow() call anywhere in this run tree,
@@ -192,17 +186,9 @@ export interface WorkflowRunOptions extends WorkflowAgentOptions {
     /** Called after each live agent completes so the caller can persist the journal. */
     onAgentJournal?: (entry: JournalEntry) => void;
     /**
-     * Called once per FAILED-AND-RETRIED attempt (not the final attempt of an
-     * agent() call, which reports its own tokens via onAgentEnd as before),
-     * with that attempt's token cost. recordTokens() already folds a retried
-     * attempt's spend into shared.spent/shared.tokenUsage (so the run-wide
-     * budget was never leaky) — but onAgentEnd only ever reports the FINAL
-     * attempt's tokens, so a caller accumulating a persisted total purely from
-     * onAgentEnd (see WorkflowManager) would under-count by exactly the
-     * wasted retried attempts' spend. This is a separate, silent channel
-     * specifically so retried-attempt spend can be accounted for without
-     * changing onAgentEnd's one-call-per-agent-call cadence (a contract other
-     * code depends on).
+     * Called once per failed-and-retried attempt with that attempt's finalized token cost.
+     * @deprecated Use `onAgentUsage` for per-agent display and `onTokenUsage` for
+     * finalized run accounting. Do not combine those cumulative callbacks with this delta.
      */
     onRetrySpend?: (tokens: number) => void;
     /** Internal: shared runtime inherited by a nested workflow() call. */
@@ -217,14 +203,7 @@ export interface WorkflowRunOptions extends WorkflowAgentOptions {
      * enforce the ceiling against only what THIS execution spends, ignoring
      * whatever was already spent before the pause.
      */
-    initialTokenUsage?: {
-        input: number;
-        output: number;
-        total: number;
-        cost: number;
-        cacheRead: number;
-        cacheWrite: number;
-    };
+    initialTokenUsage?: AgentUsage;
     /**
      * Shared store for this run. One instance is created per top-level run and
      * propagated into nested workflow() calls. Pass an existing instance to share
@@ -271,6 +250,14 @@ export interface WorkflowRunOptions extends WorkflowAgentOptions {
         errorCode?: WorkflowErrorCode;
         recoverable?: boolean;
     }) => void;
+    /** Called with cumulative display usage and an exact delta whenever usage becomes committed. */
+    onAgentUsage?: (event: {
+        id: string;
+        label: string;
+        phase?: string;
+        tokenUsage: AgentUsage;
+        committedUsage?: AgentUsage;
+    }) => void;
     onAgentHistory?: (event: {
         id: string;
         label: string;
@@ -286,12 +273,12 @@ export interface WorkflowRunOptions extends WorkflowAgentOptions {
         cacheWrite?: number;
     }) => void;
     /**
-     * Ceiling on one synchronous stretch of script execution inside the realm
-     * (default DEFAULT_SCRIPT_TIMEOUT_MS). A vm timeout only bounds synchronous
-     * work, so this is what stops a script that never yields; awaited work is
-     * bounded by agentTimeoutMs and the token budget instead.
+     * Ceiling on one synchronous stretch of script execution inside the realm.
+     * A vm timeout only bounds synchronous work; awaited work is separately bounded.
      */
     scriptTimeoutMs?: number;
+    /** Top-level workflow error observed before in-flight agents drain. */
+    onRunFatal?: (error: unknown) => void | PromiseLike<void>;
 }
 export interface WorkflowRunResult<T = unknown> {
     meta: WorkflowMeta;

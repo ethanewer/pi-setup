@@ -55,7 +55,7 @@ function watchRun(manager, pi, ctx, id) {
             update();
     };
     let settled = false;
-    const progressEvents = ["agentStart", "agentEnd", "phase", "log"];
+    const progressEvents = ["agentStart", "agentEnd", "phase", "log", "tokenUsage"];
     const finalEvents = ["complete", "error", "stopped", "paused"];
     const finish = (e) => {
         if (e && e.runId !== id)

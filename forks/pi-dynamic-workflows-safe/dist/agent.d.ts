@@ -1,6 +1,8 @@
 import { type CreateAgentSessionOptions, ModelRegistry, ModelRuntime, type ToolDefinition } from "@earendil-works/pi-coding-agent";
 import type { Static, TSchema } from "typebox";
 import { type AgentHistoryEntry } from "./agent-history.js";
+import { type AgentUsage } from "./agent-usage.js";
+export type { AgentUsage } from "./agent-usage.js";
 import { type ModelTierConfig, type RankableModel } from "./model-tier-config.js";
 import { type StructuredOutputCapture } from "./structured-output.js";
 /**
@@ -129,15 +131,6 @@ export declare function listAvailableModels(registry?: ModelRegistry): RankableM
  * returns [] if the registry can't be built.
  */
 export declare function listAvailableModelSpecs(registry?: ModelRegistry): string[];
-/** Real token/cost usage for a single subagent run, read from the SDK session. */
-export interface AgentUsage {
-    input: number;
-    output: number;
-    cacheRead: number;
-    cacheWrite: number;
-    total: number;
-    cost: number;
-}
 /**
  * Map session stats to an AgentUsage, or undefined when the provider reported
  * no usage at all (all-zero stats). Returning undefined — instead of a zero
@@ -167,13 +160,14 @@ export interface AgentRunOptions<TSchemaDef extends TSchema | undefined = undefi
     tools?: ToolDefinition[];
     instructions?: string;
     signal?: AbortSignal;
-    /**
-     * Called once with this subagent's real usage, read from the session right
-     * before disposal. Fires on both the success and error paths so partial
-     * usage is never lost — but NOT when the provider reported no usage at all
-     * (all-zero stats), so consumers keep their scalar fallback.
-     */
+    /** Called once before disposal with exact cumulative provider usage, when reported. */
     onUsage?: (usage: AgentUsage) => void;
+    /**
+     * Called with cumulative progress while the subagent runs. The current
+     * streaming response uses an output-token estimate until the provider's exact
+     * terminal usage replaces it.
+     */
+    onUsageProgress?: (usage: AgentUsage) => void;
     /**
      * Model spec for this subagent: either `provider/modelId` (unambiguous) or a
      * bare `modelId`, parsed with the same grammar as Pi CLI's `--model`. When it

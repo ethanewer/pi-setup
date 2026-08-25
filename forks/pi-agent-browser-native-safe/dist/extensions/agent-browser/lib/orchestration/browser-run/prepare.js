@@ -564,6 +564,7 @@ export async function prepareBrowserRun(options) {
             cwd,
             parentEnv: agentBrowserProcessEnv,
             stdin: runtimeToolStdin,
+            blockBrowserAttachment: executionPlan.managedSessionName !== undefined && compiledElectron?.action !== "launch",
         });
         if (!executionPlan.validationError && managedStateAccessError)
             executionPlan = { ...executionPlan, recoveryHint: undefined, validationError: managedStateAccessError };

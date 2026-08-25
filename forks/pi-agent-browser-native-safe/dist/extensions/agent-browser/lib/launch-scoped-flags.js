@@ -93,6 +93,14 @@ export const LAUNCH_SCOPED_FLAG_DEFINITIONS = [
         flag: "--state",
         reason: "loads persisted upstream browser/auth state at launch time",
     },
+    {
+        flag: "--ca-cert",
+        reason: "installs custom CA trust and may relaunch the upstream Chromium session",
+    },
+    {
+        flag: "--no-ca-cert",
+        reason: "clears retained custom CA trust and may relaunch the upstream Chromium session",
+    },
 ];
 export const LAUNCH_SCOPED_FLAGS = LAUNCH_SCOPED_FLAG_DEFINITIONS.map((definition) => definition.flag);
 export const LAUNCH_SCOPED_FLAG_LABEL = LAUNCH_SCOPED_FLAGS.join(", ");
@@ -121,6 +129,8 @@ export const MANAGED_RESTORE_INCOMPATIBLE_FLAGS = [
     "--proxy",
     "--proxy-bypass",
     "--ignore-https-errors",
+    "--ca-cert",
+    "--no-ca-cert",
     "--allow-file-access",
     "--webgpu",
     "--device",
@@ -148,6 +158,7 @@ export const MANAGED_RESTORE_INCOMPATIBLE_ENVS = [
     "AGENT_BROWSER_USER_AGENT",
     "AGENT_BROWSER_PROXY",
     "AGENT_BROWSER_PROXY_BYPASS",
+    "AGENT_BROWSER_CA_CERT",
     "AGENT_BROWSER_PLUGINS",
     "AGENT_BROWSER_IOS_DEVICE",
     "AGENT_BROWSER_IOS_UDID",
@@ -163,6 +174,7 @@ export const MANAGED_RESTORE_INCOMPATIBLE_ENVS = [
 export const MANAGED_RESTORE_INCOMPATIBLE_BOOLEAN_ENVS = [
     "AGENT_BROWSER_AUTO_CONNECT",
     "AGENT_BROWSER_IGNORE_HTTPS_ERRORS",
+    "AGENT_BROWSER_CLEAR_CA_CERT",
     "AGENT_BROWSER_ALLOW_FILE_ACCESS",
     "AGENT_BROWSER_WEBGPU",
 ];

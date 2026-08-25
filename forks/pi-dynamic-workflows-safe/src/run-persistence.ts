@@ -46,6 +46,15 @@ export interface PersistedAgentState {
   model?: string;
 }
 
+/** Serialized journal entry; runId is absent on legacy numeric-only journals. */
+export interface PersistedJournalEntry {
+  index: number;
+  runId?: string;
+  hash: string;
+  result: unknown;
+  storeDelta?: Record<string, unknown>;
+}
+
 export interface PersistedRunState {
   runId: string;
   workflowName: string;
@@ -80,17 +89,11 @@ export interface PersistedRunState {
    * Cached agent/checkpoint results for resume, keyed by deterministic call
    * index. `runId` namespaces `index` (a nested workflow() call restarts its
    * own callSeq at 0) — absent on journals persisted before that namespacing
-   * existed; see JournalEntry.runId in workflow.ts for the resume-time
-   * legacy-degradation behavior. `storeDelta` is this call's SharedStore
-   * write delta, replayed additively on resume.
+   * existed; see PersistedJournalEntry.runId in workflow.ts / the manager's
+   * resume() for the resume-time legacy-degradation behavior. `storeDelta` is
+   * this call's SharedStore write delta, replayed additively on resume.
    */
-  journal?: Array<{
-    index: number;
-    runId?: string;
-    hash: string;
-    result: unknown;
-    storeDelta?: Record<string, unknown>;
-  }>;
+  journal?: PersistedJournalEntry[];
   /**
    * Opt-out of auto-resume for this run (default true, i.e. eligible unless
    * explicitly set to false via ExecOptions.autoResume). Set once at run start
@@ -318,14 +321,7 @@ export function isSafeRunId(runId: unknown): runId is string {
   return typeof runId === "string" && RUN_ID_PATTERN.test(runId) && !runId.includes("..");
 }
 
-const RUN_STATUSES: ReadonlySet<string> = new Set([
-  "pending",
-  "running",
-  "paused",
-  "completed",
-  "failed",
-  "aborted",
-]);
+const RUN_STATUSES: ReadonlySet<string> = new Set(["pending", "running", "paused", "completed", "failed", "aborted"]);
 
 const AGENT_STATUSES: ReadonlySet<string> = new Set(["queued", "running", "done", "error", "skipped"]);
 
@@ -646,7 +642,9 @@ export function createRunPersistence(
       console.warn(
         `[workflow-runs] reclaiming the run lock for ${lock.runId}: it was taken by host "${lock.host}" ` +
           `(pid ${lock.pid}) and ${
-            lastSeen > 0 ? `has not been refreshed for ${Math.round(quietFor / 60_000)}m` : "carries no credible refresh time"
+            lastSeen > 0
+              ? `has not been refreshed for ${Math.round(quietFor / 60_000)}m`
+              : "carries no credible refresh time"
           }`,
       );
       return false;

@@ -53,9 +53,9 @@ const workflowToolSchema = Type.Object({
         description: "Run the workflow in the background. Default: true. The tool returns immediately with a run ID, the turn ends so the user isn't blocked, and the result is delivered back into the conversation when it finishes. Set to false only when you need the result inline in this same turn. When false, the call blocks until the workflow completes.",
     })),
     maxAgents: Type.Optional(Type.Number({
-        description: `Maximum number of agents allowed in this run. Default: ${DEFAULT_MAX_AGENTS_PER_RUN}, clamped to a hard ceiling of ` +
-            `${MAX_AGENTS_PER_RUN}; this is a safety ceiling, not a target. Set a lower limit for dynamic or exploratory fan-out, ` +
-            "and reserve large fan-outs for explicit user intent.",
+        description: `Maximum logical agent calls in this run. Default: ${DEFAULT_MAX_AGENTS_PER_RUN}, clamped to a hard ceiling of ` +
+            `${MAX_AGENTS_PER_RUN}. Count verify reviewers, judgePanel entries×judges, and completenessCheck; execution retries add no slots. ` +
+            "Set a lower limit for dynamic fan-out, and reserve large fan-outs for explicit user intent.",
     })),
     concurrency: Type.Optional(Type.Number({
         description: "Maximum concurrent agents for this run. Clamped to the runtime maximum. Use when provider/transport stability matters.",

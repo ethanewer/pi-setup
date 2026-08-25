@@ -2,6 +2,7 @@
  * Save and load reusable workflow commands.
  */
 import { type PersistenceFsLayer } from "./fs-persistence.js";
+export type SavedWorkflowSource = "project" | "legacy" | "user";
 export interface SavedWorkflow {
     /** Command name (filename without extension). */
     name: string;
@@ -16,9 +17,11 @@ export interface SavedWorkflow {
         required?: boolean;
         default?: unknown;
     }>;
-    /** Where this workflow is saved. */
+    /** Display location retained for compatibility with existing callers. */
     location: "project" | "user";
-    /** Full file path. */
+    /** Exact persistence tier that supplied this row. */
+    source: SavedWorkflowSource;
+    /** Full file path. This is part of the row's identity, not display metadata. */
     path: string;
     /** When it was saved. */
     savedAt: string;
@@ -42,16 +45,35 @@ export interface SavedWorkflow {
      */
     scriptOrigin?: string;
 }
+export type SavedWorkflowMutationResult = {
+    ok: true;
+    workflow?: SavedWorkflow;
+} | {
+    ok: false;
+    code: "missing" | "stale" | "conflict" | "invalid" | "io-error";
+    message: string;
+};
+/** Stable content fingerprint used to guard mutations against same-path races. */
+export declare function savedWorkflowRevision(workflow: Pick<SavedWorkflow, "name" | "description" | "script" | "parameters" | "savedAt">): string;
 export interface WorkflowStorage {
-    /** Save a workflow. */
-    save(workflow: Omit<SavedWorkflow, "path" | "savedAt">, location?: "project" | "user"): SavedWorkflow;
-    /** Load a workflow by name. */
+    /** Save a workflow. New saves default to the current project tier. */
+    save(workflow: Omit<SavedWorkflow, "path" | "savedAt" | "source">, location?: "project" | "user"): SavedWorkflow;
+    /** Load a workflow by name according to project > legacy > user precedence. */
     load(name: string): SavedWorkflow | null;
-    /** List all saved workflows. */
+    /** List visible workflows, one highest-precedence row per command name. */
     list(): SavedWorkflow[];
-    /** Delete a saved workflow. */
-    delete(name: string, location?: "project" | "user"): boolean;
+    /** Delete precisely the source represented by the visible row. */
+    delete(workflow: SavedWorkflow | string, location?: "project" | "user"): SavedWorkflowMutationResult | boolean;
+    /** Rename precisely the source represented by the visible row. */
+    rename(workflow: SavedWorkflow, name: string): SavedWorkflowMutationResult;
 }
+/**
+ * Saved workflow names are Pi slash-command names as well as filenames. Keep the
+ * validation in one place so `/workflows save`, rename, and command registration
+ * have the same reachability boundary. Whitespace, controls, Unicode format
+ * characters (including bidi controls), and path separators never form a safe
+ * command/file identity.
+ */
 export declare function isSafeSavedWorkflowName(name: string): boolean;
 export declare function assertSafeSavedWorkflowName(name: string): void;
 export interface WorkflowStorageOptions {

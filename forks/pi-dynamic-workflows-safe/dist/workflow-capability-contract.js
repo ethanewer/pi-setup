@@ -41,7 +41,9 @@ const PHASE_OPTIONS = {
 const VERIFY_OPTIONS = {
     id: "verify-options",
     options: [
-        option("reviewers", "number", true, "2", ["authors should provide a finite integer; runtime clamps below 1"]),
+        option("reviewers", "number", true, "2", [
+            "only undefined uses the default; all supplied values, including null, must be finite integers >= 1 or throw TypeError",
+        ]),
         option("threshold", "number", true, "0.5"),
         option("lens", "string | string[]", true),
     ],
@@ -49,7 +51,9 @@ const VERIFY_OPTIONS = {
 const JUDGE_PANEL_OPTIONS = {
     id: "judge-panel-options",
     options: [
-        option("judges", "number", true, "3", ["authors should provide a finite integer; runtime clamps below 1"]),
+        option("judges", "number", true, "3", [
+            "only undefined uses the default; all supplied values, including null, must be finite integers >= 1 or throw TypeError",
+        ]),
         option("rubric", "string", true, '"overall quality and correctness"'),
     ],
 };
@@ -171,6 +175,9 @@ const capabilities = [
         discovery: DiscoveryPlacement.WORKFLOW_AUTHORING_SKILL,
         optionShape: "verify-options",
         constraints: [
+            "external abort takes precedence over capacity preflight and option validation; no reviewer starts",
+            "consumes one logical agent slot per reviewer (default 2); runtime preflights the whole reviewer fan-out before starting any reviewer",
+            "agent execution retries do not consume extra logical slots",
             "reviewer failures are omitted; successful votes form the denominator in realCount / total",
             "threshold comparison is inclusive and real is false when no reviewer succeeds",
             "multiple lenses cycle across reviewers",
@@ -182,6 +189,10 @@ const capabilities = [
         discovery: DiscoveryPlacement.WORKFLOW_AUTHORING_SKILL,
         optionShape: "judge-panel-options",
         constraints: [
+            "external abort takes precedence over capacity preflight and option validation; no judge starts",
+            "consumes populated attempts × judges logical agent slots (dense input: attempts.length × judges; default judges 3); runtime preflights the full normalized fan-out before starting any judge",
+            "sparse attempt holes are absent candidates and consume no slots; populated candidates retain their original input index",
+            "agent execution retries do not consume extra logical slots",
             "failed judgments are omitted and each candidate score averages successful judgments only",
             "a candidate with no successful judgments scores 0",
             "highest mean score wins with stable input index as the tie-break; empty input returns undefined",
@@ -204,6 +215,9 @@ const capabilities = [
         signature: "completenessCheck(taskArgs: unknown, results: unknown) => Promise<{ complete: boolean; missing?: string[] } | null>",
         discovery: DiscoveryPlacement.WORKFLOW_AUTHORING_SKILL,
         constraints: [
+            "external abort takes precedence over capacity preflight; no critic starts",
+            "consumes one logical agent slot; runtime preflights capacity before starting the critic",
+            "agent execution retries do not consume extra logical slots",
             "only the first 4,000 characters of serialized result evidence are sent to the critic",
             "missing is optional and recoverable critic failure returns null",
             "large evidence sets must be chunked or summarized before relying on the advisory verdict",
@@ -279,7 +293,11 @@ const capabilities = [
     toolInput("background", "background?: boolean = true", [
         "background workflows are headless; use background false when checkpoint must show foreground confirmation",
     ]),
-    toolInput("maxAgents", "maxAgents?: number = 100", ["configurable default; runtime clamps to a 1000 ceiling"]),
+    toolInput("maxAgents", "maxAgents?: number = 100", [
+        "configurable safe-fork default; runtime clamps to a 1000 ceiling",
+        "counts logical agent calls across the shared nested run tree, including quality-helper expansion: verify = reviewers, judgePanel = populated attempts × judges (dense input: attempts.length × judges), completenessCheck = 1",
+        "agent execution retries do not consume extra logical slots; retry(), gate(), and loopUntilDry callbacks must be budgeted from their bounded planned calls",
+    ]),
     toolInput("concurrency", "concurrency?: number", ["runtime clamps to 1..16"]),
     toolInput("agentRetries", "agentRetries?: number = configured value or 2", ["floored and clamped to 0..3"]),
     toolInput("agentTimeoutMs", "agentTimeoutMs?: number = configured default, else 60m"),

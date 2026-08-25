@@ -82,9 +82,9 @@ const workflowToolSchema = Type.Object({
   maxAgents: Type.Optional(
     Type.Number({
       description:
-        `Maximum number of agents allowed in this run. Default: ${DEFAULT_MAX_AGENTS_PER_RUN}, clamped to a hard ceiling of ` +
-        `${MAX_AGENTS_PER_RUN}; this is a safety ceiling, not a target. Set a lower limit for dynamic or exploratory fan-out, ` +
-        "and reserve large fan-outs for explicit user intent.",
+        `Maximum logical agent calls in this run. Default: ${DEFAULT_MAX_AGENTS_PER_RUN}, clamped to a hard ceiling of ` +
+        `${MAX_AGENTS_PER_RUN}. Count verify reviewers, judgePanel entries×judges, and completenessCheck; execution retries add no slots. ` +
+        "Set a lower limit for dynamic fan-out, and reserve large fan-outs for explicit user intent.",
     }),
   ),
   concurrency: Type.Optional(

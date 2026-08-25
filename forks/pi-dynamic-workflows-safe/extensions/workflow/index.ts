@@ -92,10 +92,10 @@ export function sessionFileCwd(sessionFile: string | undefined): string | undefi
 }
 
 /** Where the web tools may fetch, from settings (see WebFetchPolicy). */
-function webFetchPolicy(settings: {
-  webFetchAllowedHosts?: string[];
-  webFetchAllowPrivateNetwork?: boolean;
-}): { allowedHosts?: string[]; allowPrivateNetwork?: boolean } {
+function webFetchPolicy(settings: { webFetchAllowedHosts?: string[]; webFetchAllowPrivateNetwork?: boolean }): {
+  allowedHosts?: string[];
+  allowPrivateNetwork?: boolean;
+} {
   return {
     allowedHosts: settings.webFetchAllowedHosts,
     allowPrivateNetwork: settings.webFetchAllowPrivateNetwork,

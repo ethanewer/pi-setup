@@ -58,6 +58,12 @@ export declare function ensureDir(fs: PersistenceFsLayer, dir: string): void;
  */
 export declare function writeJsonAtomicWithBackup(fs: PersistenceFsLayer, path: string, data: unknown): void;
 /**
+ * The same tmp-write + atomic-rename protocol, but reports a backup-write
+ * failure. Mutations that must retain a source record until a replacement is
+ * fully recoverable (notably saved-workflow rename) use this stricter variant.
+ */
+export declare function writeJsonAtomicWithBackupStrict(fs: PersistenceFsLayer, path: string, data: unknown): void;
+/**
  * Read JSON from `path`, falling back to `path.bak` if the primary is
  * missing or fails to parse. Returns null if neither candidate parses.
  */

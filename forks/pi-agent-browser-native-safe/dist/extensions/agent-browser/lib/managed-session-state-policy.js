@@ -20,12 +20,14 @@ const UNVERIFIED_PAGE_MESSAGE = "The active page became unverified after a tab, 
 const BATCH_UNVERIFIED_PAGE_MESSAGE = `${UNVERIFIED_PAGE_MESSAGE} In a batch, put get url after the transition before later content steps, or split the batch at that boundary.`;
 const UNSAFE_BATCH_ARGUMENT_MESSAGE = "Batch command arguments could not be safely inspected. Use batch stdin JSON command arrays instead.";
 const NESTED_BATCH_ARGUMENT_MESSAGE = "Nested batch commands are blocked by the wrapper's page-state safety policy. Flatten the batch steps instead.";
+const BLOCKED_MANAGED_ATTACHMENT_MESSAGE = "Connecting or attaching a wrapper-managed browser session to another browser is blocked. Use an explicit caller-owned --session for remote browser attachments.";
 const NON_BAIL_BATCH_NAVIGATION_MESSAGE = "Batches that navigate before page-content access must use exact batch --bail so a failed navigation cannot expose the prior page.";
 const MAX_NON_BAIL_BATCH_PAGE_STATES = 64;
 const EXPLICIT_NAVIGATION_COMMANDS = new Set(["a11y", "goto", "navigate", "open", "pushstate", "visit", "vitals", "web-vitals"]);
-const FILE_PATH_GLOBAL_FLAGS = ["--action-policy", "--config", "--download-path", "--executable-path", "--extension", "--init-script", "--profile", "--screenshot-dir", "--state"];
+const FILE_PATH_GLOBAL_FLAGS = ["--action-policy", "--ca-cert", "--config", "--download-path", "--executable-path", "--extension", "--init-script", "--profile", "--screenshot-dir", "--state"];
 const FILE_PATH_ENV_VARIABLES = [
     "AGENT_BROWSER_ACTION_POLICY",
+    "AGENT_BROWSER_CA_CERT",
     "AGENT_BROWSER_CONFIG",
     "AGENT_BROWSER_DOWNLOAD_PATH",
     "AGENT_BROWSER_EXECUTABLE_PATH",
@@ -497,6 +499,8 @@ export function getManagedSessionStateAccessValidationError(options) {
     const descriptor = parseArgvDescriptor(options.args);
     const command = descriptor.commandInfo.command;
     const subcommand = descriptor.commandInfo.subcommand;
+    if (options.blockBrowserAttachment === true && command === "connect")
+        return BLOCKED_MANAGED_ATTACHMENT_MESSAGE;
     if (["close", "exit", "quit"].includes(command ?? ""))
         return undefined;
     if (!options.trustedPinnedEmptyConfig && needsManagedSession(descriptor) && agentBrowserExplicitConfigIsPresent(effectiveEnv, options.args))

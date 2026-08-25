@@ -4,10 +4,20 @@
 import { EventEmitter } from "node:events";
 import type { ModelRegistry, ToolDefinition } from "@earendil-works/pi-coding-agent";
 import type { WorkflowAgent } from "./agent.js";
+import { type AgentUsage } from "./agent-usage.js";
 import { type WorkflowAgentSnapshot, type WorkflowSnapshot } from "./display.js";
 import { WorkflowError } from "./errors.js";
 import { type PendingDeliveryMarker, type PersistedRunState, type RunLease, type RunPersistence, type RunStatus } from "./run-persistence.js";
 import { type JournalEntry, type WorkflowRunResult } from "./workflow.js";
+/** Per-execution identity for an abort initiated by pause()/stop(). */
+interface LifecycleControl {
+    action: "pause" | "stop";
+    abortReason: object;
+}
+/** Per-execution identity for an abort received from the host/tool signal. */
+interface ExternalAbort {
+    abortReason: object;
+}
 export interface ManagedRun {
     runId: string;
     status: RunStatus;
@@ -53,10 +63,17 @@ export interface ManagedRun {
     /**
      * Set when this run was adopted from a run store outside the user's workflow
      * home (a confirmed resume of a project-supplied record). Persisted so the
-     * run keeps needing an explicit confirmation and never becomes auto-resumable
-     * (see PersistedRunState.foreignSource).
+     * run keeps needing an explicit confirmation and never becomes auto-resumable.
      */
     foreignSource?: string;
+    /** A user-requested lifecycle transition that aborted this exact execution. */
+    lifecycleControl?: LifecycleControl;
+    /** External abort that owns this execution. */
+    externalAbort?: ExternalAbort;
+    /** Provider limit that escaped before manager lifecycle control could race with draining. */
+    usageLimitEscapedBeforeLifecycleControl?: WorkflowError;
+    /** A provider-limit pause accepted as this run's durable pause reason. */
+    usageLimitPause?: WorkflowError;
     /**
      * The run's resolved hard token budget (per-run value, else the manager
      * default), fixed at run start and carried through resume() — a resumed run
@@ -175,14 +192,7 @@ export interface ExecOptions {
      * execution's fresh SharedRuntime starts counting from the already-spent
      * total instead of zero (see A2 in workflow-manager's resume()).
      */
-    initialTokenUsage?: {
-        input: number;
-        output: number;
-        total: number;
-        cost: number;
-        cacheRead: number;
-        cacheWrite: number;
-    };
+    initialTokenUsage?: AgentUsage;
 }
 export interface WorkflowManagerOptions {
     cwd?: string;
@@ -324,6 +334,8 @@ export declare class WorkflowManager extends EventEmitter {
      */
     private terminalRunQueue;
     private maxTerminalRunsInMemory;
+    /** Executions by managed run, so pause/resume can wait for settlement before overlapping. */
+    private readonly executions;
     private persistence;
     private cwd;
     private concurrency;
@@ -472,16 +484,18 @@ export declare class WorkflowManager extends EventEmitter {
      * queued here but before its turn to be evicted came up.
      */
     private recordTerminalRun;
-    /**
-     * Additively fold one agent-call's token cost into the run-wide persisted
-     * aggregate (managed.snapshot.tokenUsage), seeded (on resume) from the
-     * persisted total-at-pause — see A2. Shared by onAgentEnd (a completed or
-     * finally-failed agent call) and onRetrySpend (a failed attempt that WILL
-     * be retried, whose cost recordTokens() already folded into
-     * shared.spent/tokenUsage in workflow.ts, but which onAgentEnd never sees —
-     * see WorkflowRunOptions.onRetrySpend for why that needs its own channel).
+    /** Add one settled logical agent's exact usage to the persisted run aggregate. */
+    private commitFinalizedAgentUsage;
+    /** Abort this execution for a host/tool signal, retaining provenance so a
+     * non-cooperative agent's late result cannot overwrite the external abort. */
+    private abortForExternalSignal;
+    /** Abort this execution for an explicit user lifecycle action.
+     *
+     * AbortSignal.reason is an execution-scoped identity token. If the controller
+     * had already been aborted externally, do not replace or annotate it: the
+     * original external failure must remain observable when executeRun() settles.
      */
-    private accumulateTokenUsage;
+    private abortForLifecycleControl;
     private releaseRunLease;
     /** Trailing-edge throttle window for high-frequency progress persists (see schedulePersist). */
     private static readonly PERSIST_THROTTLE_MS;
@@ -519,9 +533,10 @@ export declare class WorkflowManager extends EventEmitter {
      *
      * `opts.script` lets the orchestrating model resume with an EDITED script
      * (cached-prefix reuse / iteration): unchanged agent() calls whose content
-     * hash still matches the journal entry at their positional callIndex replay
-     * from cache, while the first changed or newly inserted call — and everything
-     * after it — re-runs live. When `opts.script` is omitted, resume behaves
+     * hash still matches the journal entry at their run-qualified call identity
+     * replay from cache, while the first changed or newly inserted call — including
+     * downstream nested workflows — and everything after it re-runs live. When
+     * `opts.script` is omitted, resume behaves
      * exactly as before and uses the persisted script (auto-resume, TUI resume);
      * this keeps the existing single-arg `resume(runId)` callers (e.g. the
      * UsageLimitScheduler) unchanged. `opts.args` overrides the persisted args
@@ -602,3 +617,4 @@ export declare class WorkflowManager extends EventEmitter {
      */
     getPersistence(): RunPersistence;
 }
+export {};
