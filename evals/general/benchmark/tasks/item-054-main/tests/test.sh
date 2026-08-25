@@ -40,6 +40,7 @@ scenes = sorted(f for f in os.listdir(SCENES_DIR)
 # source presence
 results["source_exists"] = os.path.isfile("/app/pov/tracer.c")
 results["binary_exists"] = os.path.isfile(TRACER) and os.access(TRACER, os.X_OK)
+tracer_ok = results["binary_exists"]
 
 n_scene = 0
 for scene in scenes:
@@ -47,6 +48,9 @@ for scene in scenes:
     r1 = subprocess.run(["/tmp/ref", os.path.join(SCENES_DIR, scene), ref_out],
                         capture_output=True)
     if r1.returncode != 0:
+        results[scene] = False
+        continue
+    if not tracer_ok:
         results[scene] = False
         continue
     got_out = f"/tmp/got_{scene}.ppm"
@@ -69,6 +73,8 @@ for scene in scenes:
 time_ok = False
 try:
     big = os.path.join(SCENES_DIR, "big.pov")
+    if not tracer_ok:
+        raise RuntimeError("tracer missing")
     r = subprocess.run(["timeout", "5", TRACER, big, "/tmp/big_ppm.ppm"],
                        capture_output=True, timeout=20)
     if r.returncode == 0 and os.path.exists("/tmp/big_ppm.ppm"):
@@ -88,5 +94,9 @@ score = sum(1 for c in checks if results.get(c)) / len(checks)
 print(f"{score:.4f}")
 PY
 )
+case "$REWARD" in
+  *[!0-9.]*) REWARD=0.0000 ;;  # empty/garbage -> fail-closed reward 0
+  '') REWARD=0.0000 ;;
+esac
 printf '%s\n' "$REWARD" > /logs/verifier/reward.txt
 exit 0

@@ -105,7 +105,10 @@ automake names program objects `program-source.o`. Point gcov at that object so
 it reads the right `.gcno`/`.gcda` pair.)
 
 `gcov` prints a summary line like `Lines executed:51.23% of 218345`. Save this
-summary **verbatim** and compute the percentage.
+summary **verbatim** and compute the percentage. If gcov prints more than one
+`Lines executed:` line (e.g. extra lines for fortified header files in the
+same translation unit), the summary line is the **first** one — the line that
+belongs to `sqlite3.c`.
 
 ### 7. Write the artifact contract (exact)
 
@@ -134,7 +137,9 @@ Rules:
 - `vendor_sha256` must equal the value from step 1.
 - `gcov_lines_executed_pct` / `gcov_total_lines` must be the numbers parsed
   from the `Lines executed:… of …` summary line — and the same numbers must be
-  recoverable from `coverage-summary.txt` (the verifier parses both).
+  recoverable from `coverage-summary.txt` (the verifier parses both). If the
+  saved gcov output contains several `Lines executed:` lines, use the first
+  one (the `sqlite3.c` line).
 - `behavior_checks` must all be `true`, and they must genuinely hold (the
   verifier re-runs the same four probes itself).
 - `configure_command` and `cflags` must match what you actually ran.

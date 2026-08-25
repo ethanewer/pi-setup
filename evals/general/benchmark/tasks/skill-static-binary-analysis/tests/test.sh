@@ -21,7 +21,9 @@ for ln in lines:
     k, _, v = ln.partition('=')
     got[k.strip()] = v.strip()
 
-assert got.get('elf') == elf, (got.get('elf'), elf)
+got_elf = got.get('elf')
+# accept both the bare format value and the verbatim objdump phrasing
+assert got_elf == elf or got_elf == f"file format {elf}", (got_elf, elf)
 assert got.get('entry') == entry, (got.get('entry'), entry)
 assert got.get('secret') == secret, (got.get('secret'), secret)
 PY

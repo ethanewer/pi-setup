@@ -4,6 +4,9 @@ A benchmark of **general coding-agent ability**, built on
 [harbor](https://github.com/harbor-framework/harbor). Tasks are derived from
 `../skills.json` (76 skill items with agentic soft-skills + technical skills).
 
+Verified as of 2026-08-25 02:00 CDT (post machine restart; all numbers below
+were re-checked against the job directories on disk).
+
 ## Goal
 
 Measure how well a general coding agent (the local `p` pi setup, running
@@ -22,7 +25,9 @@ specs/                   plan.json, buckets, audit reports, oracle reports
 reference/corpus/        76 sampled reference tasks (Nemotron/TMax) used as seeds
 tools/                   make_plan.py, lint_tasks.py, oracle sweeps, audit, run scripts
 progress/                task-authoring guide + pipeline notes
-jobs/                    harbor run outputs (gitignored; archived to HF, see below)
+jobs/                    harbor run outputs (gitignored) — run-1, run-2, misc jobs
+jobs-oracle2/            oracle sweep-2 outputs (gitignored), collected by
+                         tools/collect_oracle2.py -> specs/oracle2_report.json
 ```
 
 Task tiers:
@@ -34,7 +39,8 @@ Task tiers:
 ## Downloading the run results
 
 Logs, trajectories, and verifier outputs live in the **private** HF dataset
-`eewer/general-agent-bench-results`:
+`eewer/general-agent-bench-results` (run-1 archive; run-2 archive pending —
+see Remaining tasks):
 
 ```bash
 pip install huggingface_hub
@@ -55,132 +61,175 @@ tar xzf benchmark-reference-corpus.tar.gz  # -> corpus/ (move under reference/)
 tar xzf benchmark-specs-progress.tar.gz    # -> specs/ progress/
 ```
 
-The key result file is `jobs/deepseek-flash-run-1/result.json` plus per-trial
-dirs with `agent/pi.txt` (full JSON-mode transcript), `verifier/`, and
+The key result file is `jobs/<job-name>/result.json` plus per-trial dirs
+with `agent/pi.txt` (full JSON-mode transcript), `verifier/`, and
 `result.json`.
 
-## What's done
+## Current state (verified 2026-08-25)
 
-- 524/524 tasks authored, all lint-clean (`tools/lint_tasks.py`)
-- Oracle validation: full sweep done, ~493/524 oracle-green (94%+)
-- **Benchmark run-1 complete** (`jobs/deepseek-flash-run-1`):
-  `p` agent + deepseek-v4-flash-0731, concurrency 20, k=1
-  → **456/524 pass (87.0%)**, $2.05, 37.1M input / 1.56M output tokens
-- Audit round-1 (`specs/audit_deepseek-flash-run-1.json`): 32 zero, 30
-  exceptions, 13 partial. Fixed so far: item-040-main reward scale (0–100 →
-  [0,1]), skill-git-reflog (verifier newline strictness + solve.sh `set -e`
-  loop bug), skill-stdin-stdout (newline strictness).
+### Tasks & oracle: DONE
 
-## What remains (in order)
+- 524/524 tasks authored, all lint-clean (`python3 tools/lint_tasks.py`
+  → "524 ok, 0 bad").
+- Oracle validation sweep-2 (`jobs-oracle2/`, `python3 tools/collect_oracle2.py`):
+  **518 green, 0 zero, 6 partial, 0 errored, 0 missing**.
+  The 6 partials are correct oracle scores, not defects:
+  - Graded/staged evaluators by design: item-014-main 0.3, item-033-hard 0.8,
+    item-041-hard 0.4, item-044-main 0.86
+  - item-043-main 0.6 and item-043-hard 0.6: both MCMC fits run, but the
+    oracle's own fits trip the hard convergence gates (rhat/n_eff/cross-check)
+    — the honest oracle score; the same gates apply to any agent.
+- All ~30 task/verifier/environment bugs found during run-1 triage and the
+  oracle2 sweep are FIXED and committed (see git log: `Fix 20+ oracle-broken
+  tasks...`, `Fix 8 more oracle-broken tasks...`, the item-043 series
+  ending at `Oracle complete: 524/524 accounted`). Git tree clean, in sync
+  with origin/main.
 
-1. ~~**Verifier-strictness sweep**~~ DONE (2026-08-24, new machine):
-   - `skill-indexes`: verifier read `/app/answer.txt` but instruction says
-     `/app/result.txt` → verifier + solve.sh + instruction example aligned to
-     `/app/result.txt`. Oracle: PASS.
-   - `skill-cli-argument-handling`: verifier checked a *stale*
-     `parsed.json` (agent correctly ran both stipulated invocations, last one
-     leaves run-2 state) → verifier now runs the parser itself, checks both
-     contract invocations + interleaved/short-form + rejection behavior.
-     Oracle: PASS.
-   - `skill-git-reflog`, `skill-stdin-stdout` (previously fixed) re-oracle:
-     PASS. `item-040-main` (0–100 → [0,1] scale) re-oracle: 1.0.
-2. **Triage run-1's 32 zeros** (done 2026-08-24):
-   - Verifier bugs FIXED:
-     - `skill-image-normalization`: instruction says `norm.txt`, verifier +
-       solve.sh used `normalization.txt` → aligned to `norm.txt`. Oracle: PASS.
-     - `item-048-main`: exact `top2` equality while similarity allows 1e-4
-       tolerance → verifier now tolerates near-tie swaps (<1e-4). Oracle: 1.0.
-     - `skill-http-server`: verifier made more robust (retry curl for 30s,
-       second pkill) — the zero was likely a start-timing race.
-     - `skill-post-receive-hooks`: verifier push stderr was hidden
-       (`2>/dev/null`) → now logs push rc/output/hook.log for diagnosis.
-   - Verifier bugs disproven / GENUINE model failures:
-     - `skill-open-english-wordnet-schema` — agent's traversal wrongly
-       included the root synset; verifier correct.
-     - item-009-main, item-022-main, item-057-main, item-072-main,
-       item-021-hard, item-022-hard, item-032-hard, item-037-hard,
-       item-045-hard, item-046-hard, item-070-hard, item-072-main,
-       skill-assembly-like-addressing, skill-cli-abi, skill-history-rewriting,
-       skill-feal-like-cipher, skill-mp4-video-frames, skill-pmars-core-war,
-       skill-mips-instruction-set, skill-differential-cryptanalysis,
-       skill-telnet (NonZeroAgentExitCodeError exit 143 = transient, retry).
-   - Exceptions overlapping zeros: item-009-main, item-055-main,
-     skill-pipeline-parallelism had AgentTimeoutError.
-3. **Exceptions from run-1** (handled 2026-08-24):
-   - 17 EnvironmentStartTimeoutError → bumped
-     `environment.build_timeout_sec` to ≥2400 (3600 for the 1800s ones) on all
-     16 env-timeout tasks.
-   - 7 AgentTimeoutError → bumped `[agent] timeout_sec` to 2400s on
-     item-001-main, item-005-{main,hard}, item-009-main, item-032-hard,
-     item-055-main, skill-pipeline-parallelism (+ item-048-hard).
-   - 4 RuntimeError (docker compose) + 1 NetworkConnectionError + 2
-     NonZeroAgentExitCodeError → transient; fixed by re-run.
-   - NOTE: final run can go up to concurrency ~32 (2GB per container healthy
-     on the new 64GB machine). Sequential harbor invocations only — parallel
-     harbor processes corrupt shared scratch state.
-4. Re-oracle sweep **oracle2** (jobs-oracle2/): first pass hit two infra
-   issues — disk-full (reclaimed ~120GB: docker build cache, uv/HF caches,
-   duplex-model dirs) and docker bridge-network exhaustion
-   ("all predefined address pools fully subnetted" — fixed by pruning
-   networks between chunks; do NOT run parallel harbor invocations).
-   Second pass (o2-re-chunk-*, 250 tasks) completed: ~96% oracle-green.
+### Benchmark runs
 
-   Oracle-broken tasks found & FIXED (2026-08-24/25):
-   - item-004-main: tests/test_check.py defined main() but never called it
-     (reward.txt never written → always 0).
-   - item-005-hard: pmars-src.tar.gz ships stale macOS Mach-O .o files;
-     oracle now `rm -f *.o` before make.
-   - item-013-main: configure wrote `# generated by configure` (invalid C
-     directive) into deploy.h → `/* ... */`.
-   - item-013-hard: oracle now also handles -Werror=unused-result on fread.
-   - item-019-main: oracle never wrote the repaired WAL bytes back to disk.
-   - item-034-main: ws_bridge.py had THREE bugs — missing `import time`,
-     called nonexistent `client_to_tcp()` (→ client_to_target), missing
-     `--path` argparse option. Bridge now verified end-to-end.
-   - item-055-main: Dockerfile COPY created /app/polyglot/polyglot/
-     (nested); oracle main.rs had rust compile errors (collect::<String>,
-     char subtraction, u64 overflow on fib(93) → wrapping_add).
-   - item-057-main: oracle NameError (J → overlap).
-   - item-058-hard: oracle final_goal proof wrong (induction leaves
-     (y+z)+0); fixed with comm+assoc two-rewrite proof.
-   - item-075-main: oracle verified exploit but never wrote the deliverable
-     /app/payload.bin.
-   - item-075-hard: UTF-8 decode error in ELF section-name parse →
-     decode('utf-8','replace').
-   - skill-assembly-like-addressing: verifier didn't skip the '#'
-     comment line in ea.txt.
-   - skill-async-process-i-o: oracle only wrote solver.py, never ran it.
-   - skill-configure: Dockerfile-generated server_app.py defined load()
-     but never called it → always printed nothing.
-   - skill-differential-cryptanalysis: S-box output diffs span 0..255 but
-     task/verifier/oracle assumed 0..15 → respecified to 256-line
-     distribution.
-   - skill-gdb-objdump: gcc -O2 folds the secret into movabs immediates
-     (no .rodata string); oracle now recovers it from disassembly.
-   - skill-history-rewriting: test.sh missing `then reward=1` after the
-     python heredoc (reward could never be set).
-   - skill-pip-index-url: PEP 503 layout wrong (wheel+index not under
-     /myprobe/ project page).
-   - skill-relu-piecewise-linear-analysis: oracle ran /app/relu.py but
-     never wrote it.
-5. Iterate run → audit → fix until grades stabilize across two runs.
-6. **Final full run**: `p` + deepseek-v4-flash-0731, k=1, concurrency up to
-   32 (single harbor invocation, not parallel). Prune docker networks
-   between runs; keep ≥40GB disk free.
+| run | config | result |
+|-----|--------|--------|
+| run-1 (`jobs/deepseek-flash-run-1`, 2026-08-24, pre-fix) | p_agent + deepseek-v4-flash-0731, -n 20, k=1 | 502/524 scored, **457 pass (91.0% of scored)**, 31 exceptions, $2.05, 37.1M in / 1.56M out tokens. Mean reward 1.075 is INFLATED by the pre-fix item-040-main 0–100 scale bug. |
+| run-2 (`jobs/deepseek-flash-run-2`, 2026-08-24→25, post-fix) | same agent/model, -n 24, k=1 | 524/524 trials ran; **522 scored**, **489 pass (93.7% of scored)**, mean reward **0.9494**, 11 partial, 22 zero, 11 exceptions. |
+
+Run-2 caveats:
+- `result.json` was written mid-execution (finished_at = null): the PC was
+  restarted while the last trial (item-043-hard) was still running; harbor
+  was killed. Stats above were recomputed directly from the per-trial
+  verifier/reward.txt files.
+- **item-043-hard: UNSCORED** in run-2 (killed mid-trial; the subsequent
+  single-task rerun was stopped and its incomplete job dir removed).
+- **item-054-main: reward.txt is EMPTY** — the agent hit the 1200s timeout
+  (not bumped like the other timeout tasks), never built /app/pov/tracer,
+  and tests/test.sh crashes with FileNotFoundError on the missing binary
+  instead of writing reward 0. Both bugs still unfixed (see below).
+
+### Run-2 exceptions (11)
+
+- AgentTimeoutError (6): item-005-main (2400s), item-054-hard (2400s),
+  item-054-main (1200s — needs bump), item-069-main (1500s — needs bump),
+  item-072-main (1800s — needs bump), item-076-hard (2400s)
+- NonZeroAgentExitCodeError exit 143 (5, SIGTERM, same transient class as
+  run-1): item-033-main, item-034-hard, item-035-main, item-043-main,
+  item-061-hard. Several of these still scored partial credit.
+
+### Run-2 zeros (22)
+
+- Zero in BOTH runs (11 — model legitimately fails these; oracle green):
+  item-009-main, item-021-hard, item-022-hard, item-022-main,
+  item-057-main, item-070-hard, item-072-main, skill-feal-like-cipher,
+  skill-mips-instruction-set, skill-pmars-core-war, skill-post-receive-hooks
+- item-034-hard: zero due to exit-143 (run-1 scored it 0.7)
+- **REGRESSIONS — passed 1.0 in run-1, zero in run-2 (10, NEED TRIAGE)**:
+  item-064-hard, item-069-hard, item-069-main (AgentTimeout 1500s),
+  item-070-main, item-076-hard (AgentTimeout 2400s),
+  skill-node-js-qemu-like-vm, skill-port-forwarding (empty verifier stdout),
+  skill-static-binary-analysis, skill-vimscript-macros,
+  skill-warrior-benchmarking.
+  Two zeros are explained by agent timeouts; the other 8 need per-trial
+  inspection (verifier change vs agent variance vs task bug).
+
+### Machine state (verified)
+
+- No harbor/monitor processes running; no containers running; git tree clean.
+- bench-base:{ubuntu-24.04,python-3.12,node-22} images present.
+- Env vars set: OPENROUTER_API_KEY, HF_TOKEN, DOCKER_USERNAME/DOCKER_PAT.
+- Disk: 539G drive, ~124G free. Docker build cache holds ~45GB reclaimable
+  layers (kept on purpose — they make the next full run's image rebuilds
+  fast; `docker builder prune -af` only if disk gets tight). ~116 leftover
+  task/test images (207GB) from run-2 are also reclaimable if needed — do
+  NOT delete `alexgshaw/*` images.
+
+## Remaining tasks (in order)
+
+All pre-final-run work was COMPLETED on 2026-08-25 (see "2026-08-25
+triage pass" below). Only steps 5–6 remain:
+
+5. **Stability call (in progress)**: run-3 is executing now via
+   `tools/finalize.sh` (single harbor invocation, -n 24 -k 1,
+   job `deepseek-flash-run-3`). It supersedes step 2's single-task
+   reruns (run-3 covers item-043-hard and item-054-main).
+6. **Wrap-up**: `python3 tools/audit_benchmark.py <final-job>`, commit +
+   push results, write the final report, archive run-2 (+run-3) to the HF
+   dataset eewer/general-agent-bench-results (same tarball pattern as
+   run-1's `benchmark-jobs.tar.gz`).
+
+## 2026-08-25 triage pass (all remaining-tasks 1–4 DONE)
+
+Task/timeout fixes applied (git-committed):
+
+- item-054-main: agent timeout 1200 → 2400; tests/test.sh no longer
+  crashes when /app/pov/tracer is missing — always writes reward.txt
+  (fail-closed 0.0000 for empty/garbage output too). Unit-tested both
+  branches locally.
+- item-069-main: timeout 1500 → 2400; item-072-main: 1800 → 2400.
+- skill-post-receive-hooks: verifier bug — its scratch push was rejected
+  (non-fast-forward) when the agent had already test-pushed to master.
+  Verifier now force-pushes (hook fires identically).
+- skill-port-forwarding: verifier bug — the agent's leftover test server
+  on 9097 (any cmdline, e.g. `python3 -c`) shadowed the verifier's
+  server because only exact-cmdline pkill was used. Verifier now frees
+  8090+9097 via fuser/pkill, polls the source server until it answers,
+  and retries the tunnel check.
+- skill-static-binary-analysis: instruction example shows
+  `elf=file format elf64-x86-64` but the verifier only accepted the
+  stripped form (run-1 pass was luck of model phrasing). Verifier now
+  accepts both forms.
+- item-070-main: instruction clarified — when `gcov -n` prints several
+  `Lines executed:` lines (fortified headers + total), the summary line
+  is the FIRST one (the sqlite3.c line). Oracle and verifier already
+  agreed on this; agent variance, not a bug.
+
+Run-2 zero-triage verdicts (per-trial transcript + verifier inspection):
+
+- Genuine agent failures: item-064-hard (wrong verdicts, agent falsely
+  claimed done), item-069-hard (turn ended mid-plan without executing),
+  skill-node-js-qemu-like-vm (VM emitted wrong sequence),
+  skill-vimscript-macros (model ended turn after ~4.8k reasoning tokens
+  with zero tool calls), skill-warrior-benchmarking (agent phrasing
+  matched none of the verifier's concept keywords repeat|iteration|
+  multiple — keyword contract is by design).
+- Genuine budget limits (already at 2400s): item-005-main,
+  item-054-hard, item-076-hard.
+- Timeouts fixed by bumps: item-069-main, item-072-main, item-054-main.
+- Transient: item-034-hard (SIGTERM exit-143 from machine restart).
+- Verifier bugs fixed: skill-post-receive-hooks, skill-port-forwarding,
+  skill-static-binary-analysis (see above).
+
+All changed tasks were oracle re-checked (jobs-oracle3/) before run-3.
+
+
+## Ops notes (learned the hard way)
+
+- NEVER run parallel harbor invocations — they corrupt shared scratch state
+  (FileNotFoundError on trial dirs) and exhaust docker bridge networks.
+  Sequential chunks only; `docker network prune -f` between chunks.
+- Keep ≥40GB disk free; prune `docker builder prune -af` between big runs.
+- Concurrency: up to ~32 is OK (64GB RAM, 24 cores; ~2GB per container);
+  run-2 used -n 24 cleanly.
+- Harbor job names must be unique (FileExistsError on reuse) — delete the
+  old job dir first or pick a new name.
+- Verifiers must match the instruction contract (agent-facing spec is
+  authoritative) and MUST always write /logs/verifier/reward.txt.
+- RStan/PyStan env (item-043-main/hard, skill-rstan-2-32-7): needs cmake
+  in the Dockerfile, pip --break-system-packages (PEP 668), and ~1h
+  build+fit time; verifier/build timeouts are 3600s.
 
 ## Re-running
 
 ```bash
 # oracle-check a task
-harbor run -p tasks/<name> -a oracle -y -o jobs
+harbor run -p tasks/<name> -a oracle -y -o jobs-oracle2 --job-name o2-check-<name>
 
-# full benchmark
+# full benchmark (single invocation, concurrency 24)
 PYTHONPATH=$PWD/agents harbor run -p tasks -a p_agent:PAgent \
   -m openrouter/deepseek/deepseek-v4-flash-0731 \
-  -n 12 -k 1 -y -o jobs --job-name deepseek-flash-run-2
+  -n 24 -k 1 -y -o jobs --job-name deepseek-flash-run-3
 
-# audit a run
+# audit a run / oracle status / lint
 python3 tools/audit_benchmark.py <job-name>
+python3 tools/collect_oracle2.py
+python3 tools/lint_tasks.py
 ```
 
 ## Machine notes
@@ -188,8 +237,8 @@ python3 tools/audit_benchmark.py <job-name>
 - Base images `bench-base:{ubuntu-24.04,python-3.12,node-22}` must be built
   from `bases/` on a machine behind the corporate TLS proxy (they embed
   `certs/corp-root-ca.pem`). On a normal network, plain `ubuntu:24.04` /
-  `python:3.12-slim` / `node:22-slim` work fine — either retag them locally as
-  the bench-base names or sed the FROM lines.
+  `python:3.12-slim` / `node:22-slim` work fine — either retag them locally
+  as the bench-base names or sed the FROM lines.
 - `reference/` full corpora (12GB) are NOT archived — re-download from HF if
   needed (NVIDIA Nemotron-Terminal-Synthetic-Tasks, allenai/TMax-15K,
   nebius/SWE-rebench-V2). Only the 76-task sample corpus is on HF.

@@ -22,7 +22,10 @@ if [ "$bare_ok" = "1" ] && [ -f "$APP/repo.git/hooks/post-receive" ] && [ -x "$A
   git -C /tmp/pushsrc add f
   git -C /tmp/pushsrc commit -q -m "test commit"
   git -C /tmp/pushsrc remote add origin "$APP/repo.git" 2>/dev/null || git -C /tmp/pushsrc remote set-url origin "$APP/repo.git"
-  push_out=$(git -C /tmp/pushsrc push origin HEAD 2>&1)
+  # force-push: the agent may already have pushed test commits to master,
+  # which would otherwise reject this push as non-fast-forward; the
+  # post-receive hook fires identically for a forced update.
+  push_out=$(git -C /tmp/pushsrc push -f origin HEAD 2>&1)
   push_rc=$?
   echo "push rc=$push_rc out=$push_out"
   sleep 1
