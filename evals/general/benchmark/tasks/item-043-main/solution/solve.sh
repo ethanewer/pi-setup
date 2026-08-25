@@ -16,7 +16,7 @@ suppressMessages({
 d <- read.csv("/app/data.csv")
 fit <- rstan::stan("/app/model.stan",
   data = with(d, list(N = nrow(d), G = max(g), g = g, x = x, y = y)),
-  chains = 2, iter = 1500, warmup = 750, seed = 42, init = 0,
+  chains = 2, iter = 4000, warmup = 2000, seed = 42, init = 0,
   pars = c("rho", "alpha", "sigma", "b0", "tau", "b_g"))
 s <- as.data.frame(summary(fit)$summary)
 s$param <- rownames(s)
@@ -54,7 +54,7 @@ _model_src = (open("/app/model.stan").read()
               .replace("int<lower=1, upper=G> g[N];",
                        "array[N] int<lower=1, upper=G> g;"))
 sm = stan.build(_model_src, data=data)
-fit = sm.sample(num_chains=2, num_samples=750, num_warmup=750,
+fit = sm.sample(num_chains=2, num_samples=2000, num_warmup=2000,
                 save_warmup=False)
 
 df = fit.to_frame()
