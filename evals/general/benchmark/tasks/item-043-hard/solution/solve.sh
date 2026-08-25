@@ -22,7 +22,7 @@ fit <- rstan::stan("/app/model.stan",
 s <- as.data.frame(summary(fit)$summary)
 s$param <- rownames(s)
 s <- s[grepl("^(rho|alpha|sigma|b0|tau|b_g\\[)", s$param), ]
-keep <- c("mean", "sd", "2.5%", "97.5%", "Rhat", "n_eff")
+keep <- c("param", "mean", "sd", "2.5%", "97.5%", "Rhat", "n_eff")
 s2 <- s[, keep]
 names(s2) <- c("param", "mean", "sd", "lo", "hi", "rhat", "n_eff")
 write.csv(s2, "/app/rstan_summary.csv", row.names = FALSE)
