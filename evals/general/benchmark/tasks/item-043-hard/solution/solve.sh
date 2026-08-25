@@ -57,17 +57,20 @@ fit = sm.sample(num_chains=4, num_samples=1250, num_warmup=1250,
 df = fit.to_frame()
 cols = list(df.columns)
 idx_names = list(df.index.names)
-chain_lvl = idx_names.index("chain") if "chain" in idx_names else 1
-chain_ids = sorted(df.index.get_level_values(chain_lvl).unique())
+if "chain" in idx_names:
+    chain_lvl = idx_names.index("chain")
+    chain_ids = sorted(df.index.get_level_values(chain_lvl).unique())
+    def segs(param):
+        return [df.loc[df.index.get_level_values(chain_lvl) == c, param].values
+                for c in chain_ids]
+else:
+    chain_ids = [0, 1]
+    half = len(df) // 2
+    def segs(param):
+        v = df[param].values
+        return [v[:half], v[half:]]
 m = len(chain_ids)
-n = int(len(chain_ids) and len([i for i in range(len(df)) if df.index.get_level_values(chain_lvl)[i] == chain_ids[0]]))
-
-def segs(param):
-    out = []
-    for c in chain_ids:
-        sel = df.index.get_level_values(chain_lvl) == c
-        out.append(df.loc[sel, param].values)
-    return out
+n = len(df) // m
 
 def stats(param):
     draws = df[param].values
