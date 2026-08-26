@@ -90,3 +90,14 @@ test("ordinary reasoning paragraphs, lists, and code layout remain byte-identica
 	expect(clean).toEqual(row);
 	expect(clean.messages[1].reasoning_content).toBe(reasoning);
 });
+
+test("one-word-per-line reasoning is not mistaken for token fragmentation", () => {
+	const reasoning = "Inspect\nCompare\nValidate\nDocument\nFinish";
+	const row = baseRow([
+		{ role: "user", content: [{ type: "text", text: "request" }] },
+		{ role: "assistant", content: "done", reasoning_content: reasoning },
+	]);
+	const { clean, record } = sanitize(row);
+	expect(record).toBeNull();
+	expect(clean).toEqual(row);
+});

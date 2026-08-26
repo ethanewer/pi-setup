@@ -114,7 +114,7 @@ Android support currently uses Termux's system Chromium rather than Chrome for T
 ```bash
 pkg install tur-repo x11-repo
 pkg install chromium ffmpeg which
-npm install -g --ignore-scripts agent-browser@0.34.0
+npm install -g --ignore-scripts agent-browser@0.35.0
 ln -sfn "$(npm root -g)/agent-browser/bin/agent-browser-linux-musl-arm64" \
   "$(npm prefix -g)/bin/agent-browser"
 ln -sfn "$PREFIX/lib/chromium/chromium-launcher.sh" "$PREFIX/bin/chromium"

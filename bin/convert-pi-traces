@@ -109,13 +109,19 @@ HOME = Path.home()
 
 DEFAULT_ROOTS = [
     HOME / ".pi" / "agent" / "sessions",
+    # piwf (workflow profile) persists workflow subagent transcripts under its
+    # own agent dir (PI_CODING_AGENT_DIR), not the shared sessions dir.
+    HOME / ".pi" / "agent-wf" / "sessions",
     HOME / "mk-sessions",
     Path("/tmp"),
     Path("/private/tmp"),
 ]
 
 # Always also pull the archived sessions out of the pi session-archives dir.
-DEFAULT_ARCHIVE_GLOBS = [HOME / ".pi" / "agent" / "session-archives"]
+DEFAULT_ARCHIVE_GLOBS = [
+    HOME / ".pi" / "agent" / "session-archives",
+    HOME / ".pi" / "agent-wf" / "session-archives",
+]
 
 UPLOAD_REPO = "eewer/pi-trace-cache"
 DEFAULT_OUT = HOME / "pi-trace-cache-tool" / "out"
@@ -459,6 +465,15 @@ def newline_reasoning_metrics(text: str) -> dict[str, int | float | bool]:
         if left.endswith((".", ":", ";", "?", "!", "`", "{", "}", "[", "]")):
             continue
         if re.match(r"^(?:[-*#>`]|\d+[.)]\s)", left):
+            continue
+        # A column of whole words is valid layout (for example, a short
+        # checklist without bullets). Token-fragment corruption can also place
+        # an occasional word on its own line, but its severe boundaries are the
+        # transitions into or out of partial/multi-word fragments.
+        if (
+            re.fullmatch(r"[^\W\d_]+(?:['’-][^\W\d_]+)*[,.]?", left)
+            and re.fullmatch(r"[^\W\d_]+(?:['’-][^\W\d_]+)*[,.]?", right)
+        ):
             continue
         if len(left) <= 15 or len(right) <= 15:
             suspicious += 1

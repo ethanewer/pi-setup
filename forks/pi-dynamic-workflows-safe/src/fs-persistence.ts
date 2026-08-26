@@ -100,7 +100,7 @@ function writeJsonAtomic(fs: PersistenceFsLayer, path: string, data: unknown, st
   fs.writeFileSync(`${path}.tmp`, json, { mode: PRIVATE_FILE_MODE });
   fs.renameSync(`${path}.tmp`, path);
   if (strictBackup) {
-    fs.writeFileSync(`${path}.bak`, json);
+    fs.writeFileSync(`${path}.bak`, json, { mode: PRIVATE_FILE_MODE });
     return;
   }
   try {

@@ -573,9 +573,9 @@ diff -ruN '--exclude=node_modules' a/dist/fs-persistence.d.ts b/dist/fs-persiste
  export declare function ensureDir(fs: PersistenceFsLayer, dir: string): void;
  /**
   * Atomically write JSON to `path`: tmp-write + rename (atomic on the same
-diff -ruN '--exclude=node_modules' a/dist/fs-persistence.js b/dist/fs-persistence.js
---- a/dist/fs-persistence.js	1985-10-26 03:15:00.000000000 -0500
-+++ b/dist/fs-persistence.js	2026-08-25 15:12:01.000000000 -0500
+diff -ruN --exclude=node_modules a/dist/fs-persistence.js b/dist/fs-persistence.js
+--- a/dist/fs-persistence.js	1985-10-26 03:15:00
++++ b/dist/fs-persistence.js	2026-08-26 16:31:22
 @@ -13,8 +13,12 @@
   *  3. A missing or unreadable directory degrades to "no files" rather than
   *     throwing — a listing must never crash because one storage location is
@@ -621,7 +621,8 @@ diff -ruN '--exclude=node_modules' a/dist/fs-persistence.js b/dist/fs-persistenc
 +    fs.writeFileSync(`${path}.tmp`, json, { mode: PRIVATE_FILE_MODE });
      fs.renameSync(`${path}.tmp`, path);
      if (strictBackup) {
-         fs.writeFileSync(`${path}.bak`, json);
+-        fs.writeFileSync(`${path}.bak`, json);
++        fs.writeFileSync(`${path}.bak`, json, { mode: PRIVATE_FILE_MODE });
          return;
      }
      try {
@@ -5807,9 +5808,9 @@ diff -ruN '--exclude=node_modules' a/src/errors.ts b/src/errors.ts
    return new WorkflowError(
      error instanceof Error ? error.message : String(error),
      WorkflowErrorCode.AGENT_EXECUTION_ERROR,
-diff -ruN '--exclude=node_modules' a/src/fs-persistence.ts b/src/fs-persistence.ts
---- a/src/fs-persistence.ts	1985-10-26 03:15:00.000000000 -0500
-+++ b/src/fs-persistence.ts	2026-08-25 14:54:54.000000000 -0500
+diff -ruN --exclude=node_modules a/src/fs-persistence.ts b/src/fs-persistence.ts
+--- a/src/fs-persistence.ts	1985-10-26 03:15:00
++++ b/src/fs-persistence.ts	2026-08-26 16:31:18
 @@ -13,8 +13,12 @@
   *  3. A missing or unreadable directory degrades to "no files" rather than
   *     throwing — a listing must never crash because one storage location is
@@ -5856,7 +5857,8 @@ diff -ruN '--exclude=node_modules' a/src/fs-persistence.ts b/src/fs-persistence.
 +  fs.writeFileSync(`${path}.tmp`, json, { mode: PRIVATE_FILE_MODE });
    fs.renameSync(`${path}.tmp`, path);
    if (strictBackup) {
-     fs.writeFileSync(`${path}.bak`, json);
+-    fs.writeFileSync(`${path}.bak`, json);
++    fs.writeFileSync(`${path}.bak`, json, { mode: PRIVATE_FILE_MODE });
      return;
    }
    try {

@@ -2,6 +2,7 @@
 set -euo pipefail
 
 PI_VERSION="0.84.3"
+PI_AI_VERSION="0.84.3"
 AGENT_BROWSER_VERSION="0.35.0"
 
 # Upstream versions live in vendor.json, which is what bin/pi-setup-doctor and
@@ -88,6 +89,7 @@ log "Installing Pi and agent-browser with Bun"
 # enterprise TLS-inspection roots). Install through the system store as well.
 "$BUN_BIN" --use-system-ca add --global \
   "@earendil-works/pi-coding-agent@$PI_VERSION" \
+  "@earendil-works/pi-ai@$PI_AI_VERSION" \
   "agent-browser@$AGENT_BROWSER_VERSION"
 
 PI_ROOT="$BUN_INSTALL/install/global/node_modules/@earendil-works/pi-coding-agent"
@@ -97,22 +99,20 @@ AGENT_BROWSER_ROOT="$BUN_INSTALL/install/global/node_modules/agent-browser"
 [[ -f "$PI_AI_ROOT/dist/api/openai-completions.js" ]] || fail "Could not find Pi AI at $PI_AI_ROOT"
 [[ -f "$AGENT_BROWSER_ROOT/bin/agent-browser.js" ]] || fail "Could not find agent-browser at $AGENT_BROWSER_ROOT"
 
-log "Applying the Pi $PI_VERSION reasoning-details fix"
+log "Applying the Pi AI $PI_AI_VERSION reasoning-details fix"
 PI_AI_INSTALLED_VERSION="$($BUN_BIN -e 'console.log(require(process.argv[1] + "/package.json").version)' "$PI_AI_ROOT")"
-[[ "$PI_AI_INSTALLED_VERSION" == "$PI_VERSION" ]] \
-  || fail "Expected @earendil-works/pi-ai $PI_VERSION, found $PI_AI_INSTALLED_VERSION; refusing to apply a version-specific patch."
-PI_AI_REASONING_TARGET="$PI_AI_ROOT/dist/api/openai-completions.js"
+[[ "$PI_AI_INSTALLED_VERSION" == "$PI_AI_VERSION" ]] \
+  || fail "Expected @earendil-works/pi-ai $PI_AI_VERSION, found $PI_AI_INSTALLED_VERSION; refusing to apply a version-specific patch."
 PI_AI_REASONING_PATCH="$SRC_DIR/patches/pi-ai@0.84.3-reasoning-details.patch"
 [[ -f "$PI_AI_REASONING_PATCH" ]] || fail "Missing Pi reasoning patch: $PI_AI_REASONING_PATCH"
-if grep -q 'function normalizeOpenAIReasoningDetails' "$PI_AI_REASONING_TARGET" \
-  && grep -q 'appendOpenAIReasoningDetail(preservedDetails, detail)' "$PI_AI_REASONING_TARGET"; then
+[[ -f "$SRC_DIR/bin/verify-pi-ai-reasoning-fix" ]] || fail "Missing Pi reasoning verifier."
+if "$BUN_BIN" "$SRC_DIR/bin/verify-pi-ai-reasoning-fix" "$PI_AI_ROOT" >/dev/null 2>&1; then
   printf '    reasoning-details patch already present\n'
 elif patch --dry-run --batch --forward -d "$PI_AI_ROOT" -p1 < "$PI_AI_REASONING_PATCH" >/dev/null; then
   patch --batch --forward -d "$PI_AI_ROOT" -p1 < "$PI_AI_REASONING_PATCH"
 else
-  fail "The Pi reasoning patch does not apply cleanly to @earendil-works/pi-ai $PI_VERSION. Refusing a partial install."
+  fail "The Pi reasoning patch does not apply cleanly to @earendil-works/pi-ai $PI_AI_VERSION. Refusing a partial install."
 fi
-[[ -f "$SRC_DIR/bin/verify-pi-ai-reasoning-fix" ]] || fail "Missing Pi reasoning verifier."
 "$BUN_BIN" "$SRC_DIR/bin/verify-pi-ai-reasoning-fix" "$PI_AI_ROOT"
 
 log "Installing hardened extension forks as Pi local packages"
