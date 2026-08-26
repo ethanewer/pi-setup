@@ -7,6 +7,11 @@ A benchmark of **general coding-agent ability**, built on
 Verified as of 2026-08-25 02:00 CDT (post machine restart; all numbers below
 were re-checked against the job directories on disk).
 
+**2026-08-26 update:** runs 1–3 below were contaminated by the
+`pi-ai 0.84.3` reasoning-newline regression (see "Run-4" section) and are
+superseded by `pi-run-4-postfix` as the pi benchmark of record. A terminus-2
+harness run (`terminus2-deepseek-run-1`) is in progress.
+
 ## Goal
 
 Measure how well a general coding agent (the local `p` pi setup, running
@@ -230,6 +235,69 @@ skill-port-forwarding 1, item-054-main 1.0000.
   (degenerate model). skill-node-js-qemu-like-vm fails again (genuine).
 - Stability: run-2 489 pass / 0.9494 vs run-3 488 pass / 0.9411 →
   post-fix result reproduces; run-3 is the benchmark of record.
+
+
+## Run-4 (2026-08-26) — clean pi run, benchmark of record
+
+Runs 1–3 ran pi through harbor's npm install (`@earendil-works/pi-coding-agent@latest`),
+whose entrypoint `dist/bundle/cli.js` loads pi-ai from a **bundled chunk**
+(`dist/bundle/chunks/openai-completions-*.js`) — not the node_modules copy the
+repo's reasoning-details patch targeted. All three runs therefore carried the
+fragmented-`reasoning_details` storage bug: 98.7–99.8% of thinking signatures
+were stored fragmented, and reasoning text grew token-fragment newlines as
+turns replayed contaminated signatures (1–2 signals/1k chars on first blocks,
+climbing to 38–67/1k by turn 5+; failures were far more contaminated than
+passes). Full analysis: `docs/incidents/PI-AI-0.84.3-REASONING-DETAILS.md`
+("Bundle entrypoint gap").
+
+The first run-4 attempt (148/524 trials) was stopped when its transcripts
+showed the same fragmentation; its job dir was deleted.
+
+Fixes (all committed):
+- `bin/patch-pi-bundle` applies the stream-concatenation + replay-normalization
+  fix to the bundle chunk (exact-string, version-guarded to 0.84.3, idempotent);
+  `install.sh` runs it and `bin/pi-setup-doctor` checks both library and bundle.
+- `bases/` bake pinned `pi-coding-agent@0.84.3` with nvm/node-22, the library
+  patch, the bundle patch, and tmux into all three `bench-base:*` images.
+- `agents/p_agent.py` overrides `install()`: verifies the baked pi (version +
+  bundle marker + absence of the bug pattern; probe always exits 0 via marker),
+  never touches npm on bench-base images, and for the two texlive tasks runs a
+  pinned in-container install + `bin/patch-pi-bundle` fallback. It refuses to
+  run rollouts on unpatched code.
+
+Runtime proof before the clean run: golden-example's first-turn signature went
+from five fragmented deltas (unpatched) to one merged entry (patched).
+
+`pi-run-4-postfix` (same agent/model, -n 24, k=1):
+
+- **523/524 scored: 491 pass (93.9% of scored), 14 partial, 18 zero,
+  mean reward 0.9549.** Overall 491/524.
+- item-043-hard: AgentTimeout at its 7200s budget, unscored (counted zero;
+  same outcome in run-3).
+- Exceptions: 6 AgentTimeoutError + 7 NonZeroAgentExitCodeError (run-3 had
+  11 timeouts + 2 exit errors).
+- Cleanliness: 522 transcripts, 1,745 thinking signatures, **0 fragmented**;
+  symptom density flat at 0.42/1k across all turn positions.
+- The two texlive tasks (`item-052-main`, `skill-pdflatex`) failed agent setup
+  in the main job due to p_agent fallback bugs (fixed across three commits:
+  probe raising on non-zero exit, `set -e` probe abort, double-appended marker,
+  wrong patcher path) and were re-run as single-trial make-up jobs
+  `run4-texlive-*`: both 1.0, clean signatures. Their results are included in
+  the run-4 numbers above.
+- Task-level vs run-3: 15 improvements (mostly former zeros/timeouts now
+  passing, incl. item-001/005/036-main, item-064-hard,
+  skill-node-js-qemu-like-vm) vs 12 regressions (stochastic variance,
+  incl. item-032-main timeout). Passes 488→491, zeros 25→18 (+1 unscored),
+  partials 9→14, mean 0.9411→0.9549.
+
+## Terminus-2 run (2026-08-26, in progress)
+
+Same 524 tasks and model, harness = harbor's built-in `terminus-2` (tmux +
+LiteLLM, TerminalBench's default agent). LitellM does not know the model, so
+the invocation passes `--ak model_info={max_input_tokens:1310720,...}`.
+LiteLLM is a separate stack from pi-ai, so this run is structurally free of
+the reasoning regression. golden-example smoke passed (1.0) before launch.
+Job: `terminus2-deepseek-run-1`.
 
 
 ## Ops notes (learned the hard way)
