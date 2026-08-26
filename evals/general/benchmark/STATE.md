@@ -299,12 +299,22 @@ LiteLLM is a separate stack from pi-ai, so this run is structurally free of
 the reasoning regression. golden-example smoke passed (1.0) before launch.
 Job: `terminus2-deepseek-run-1`, -n 24, k=1, wall ~4h40m.
 
-- **520/524 scored: 379 pass (72.9% of scored), 10 partial, 131 zero,
-  mean reward 0.7354.** Overall 379/524.
-- Exceptions: 164 AgentTimeoutError (terminus-2's slower step loop exhausts
-  task budgets; timed-out trials are still verified where artifacts exist) +
-  2 RuntimeError (skill-rstan-2-32-7, skill-ocaml-runtime; asyncio exec
-  timeouts, unscored).
+- **Initial: 520/524 scored: 379 pass (72.9% of scored), 10 partial,
+  131 zero, mean reward 0.7354.**
+- Exceptions: 164 AgentTimeoutError + 2 RuntimeError (skill-rstan-2-32-7,
+  skill-ocaml-runtime: terminus-2's per-trial asciinema install hung on a
+  dropped network connection and aborted the trial).
+- **Infra re-run (`t2-rerun-infra`):** audit split the timeouts into genuine
+  pace/context failures and 19 silent stalls (<=3 agent steps, <15k tokens,
+  then no activity until the budget expired = hung LLM connections). The 21
+  infra-failed trials were re-run on bases with asciinema baked in: 17
+  recovered (16x 1.0, item-035-main 0.8); 4 failed again, now genuinely
+  (item-021-hard zero, item-045-hard / item-050-hard / skill-branch-reset-
+  merge timeouts with real work).
+- **UPDATED record: 522/524 scored: 395 pass (75.7% of scored), 11 partial,
+  116 zero, mean reward 0.7648.** Unscored: item-019-main (verifier prints
+  'recovered db missing' instead of 0 when the artifact is absent) and
+  item-054-hard (verifier capture edge); both pass under pi.
 - Pass-rate by tier: skill probes pi 98% vs terminus-2 90%; item-main 84%
   vs 33%; item-hard 78% vs 19%. The gap concentrates in multi-skill items.
 - Overlap: 374 tasks pass under both harnesses; 113 pass only under pi;
@@ -315,7 +325,7 @@ Job: `terminus2-deepseek-run-1`, -n 24, k=1, wall ~4h40m.
 | harness | pass | partial | zero | unscored | mean (scored) |
 |---|---|---|---|---|---|
 | pi lean profile (`p_agent`, patched 0.84.3) — run-4 | 491/524 | 14 | 18 | 1 | 0.9549 |
-| terminus-2 (harbor built-in) | 379/524 | 10 | 131 | 4 | 0.7354 |
+| terminus-2 (harbor built-in) — post infra re-run | 395/524 | 11 | 116 | 2 | 0.7648 |
 
 
 ## Ops notes (learned the hard way)
