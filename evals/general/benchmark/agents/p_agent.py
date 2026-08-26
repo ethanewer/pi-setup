@@ -63,10 +63,13 @@ class PAgent(Pi):
     async def install(self, environment: BaseEnvironment) -> None:
         # Fast path: the task image descends from a bench-base image with the
         # pinned, patched Pi baked in. Verify it and skip npm entirely.
+        # exec_as_agent raises on non-zero exit, so the probe always exits 0
+        # and reports via a marker.
         result = await self.exec_as_agent(
-            environment, command=_pi_bake_verify_command()
+            environment,
+            command=_pi_bake_verify_command() + " && echo PI_BAKE_OK || echo PI_BAKE_MISSING",
         )
-        if result.return_code == 0:
+        if "PI_BAKE_OK" in (result.stdout or ""):
             return
 
         # Fallback for non-bench-base images (item-052-main, skill-pdflatex
@@ -93,13 +96,15 @@ class PAgent(Pi):
             command=(
                 "set -eo pipefail; . ~/.nvm/nvm.sh; "
                 "python3 /tmp/patch-pi-bundle "
-                '"$(npm root -g)/@earendil-works/pi-coding-agent"'
+                '"$(npm root -g)/@earendil-works/pi-coding-agent" && '
+                "echo PI_BUNDLE_PATCHED || echo PI_BUNDLE_PATCH_FAILED"
             ),
         )
-        if result.return_code != 0:
+        if "PI_BUNDLE_PATCHED" not in (result.stdout or ""):
             raise RuntimeError(
                 "Failed to patch the pi bundle in-container; refusing to run "
                 "rollouts on unpatched pi-ai 0.84.3. "
+                f"stdout: {(result.stdout or '')[-2000:]} "
                 f"stderr: {result.stderr[-2000:] if result.stderr else ''}"
             )
 
