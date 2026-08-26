@@ -17,11 +17,41 @@ Run with:
 """
 
 import shlex
+from pathlib import Path
 from typing import override
 
 from harbor.agents.installed.pi import Pi, with_prompt_template
 from harbor.environments.base import BaseEnvironment
 from harbor.models.agent.context import AgentContext
+
+# The bench-base images bake this pinned Pi plus the repo's reasoning-details
+# patch. harbor's stock install resolves @latest -> pi-ai 0.84.3, whose
+# fragmented reasoning_details replay contaminates multi-turn rollouts (see
+# docs/incidents/PI-AI-0.84.3-REASONING-DETAILS.md); the upstream fix is not
+# in any published release, so never let npm touch the baked install.
+_PI_PIN = "0.84.3"
+_PI_AI_PATCH_MARKER = "normalizeOpenAIReasoningDetails"
+_PI_AI_PATCHED_FILE = "dist/api/openai-completions.js"
+_PI_AI_REASONING_PATCH = (
+    Path(__file__).resolve().parents[3]
+    / "patches"
+    / "pi-ai@0.84.3-reasoning-details.patch"
+)
+
+
+def _pi_bake_verify_command() -> str:
+    # pi-coding-agent bundles a shrinkwrap, so pi-ai normally nests under
+    # pi-coding-agent/node_modules; fall back to a hoisted top-level copy.
+    return (
+        "set -e; . ~/.nvm/nvm.sh; "
+        'v="$(pi --version | tail -n 1)"; '
+        f'[ "$v" = "{_PI_PIN}" ]; '
+        'PI_AI_ROOT="$(npm root -g)/@earendil-works/pi-coding-agent'
+        '/node_modules/@earendil-works/pi-ai"; '
+        '[ -f "$PI_AI_ROOT/package.json" ] '
+        '|| PI_AI_ROOT="$(npm root -g)/@earendil-works/pi-ai"; '
+        f'grep -q {_PI_AI_PATCH_MARKER} "$PI_AI_ROOT/{_PI_AI_PATCHED_FILE}"'
+    )
 
 
 class PAgent(Pi):
@@ -31,6 +61,56 @@ class PAgent(Pi):
     @override
     def name() -> str:
         return "p-pi"
+
+    @override
+    async def install(self, environment: BaseEnvironment) -> None:
+        # Fast path: the task image descends from a bench-base image with the
+        # pinned, patched Pi baked in. Verify it and skip npm entirely.
+        result = await self.exec_as_agent(
+            environment, command=_pi_bake_verify_command()
+        )
+        if result.return_code == 0:
+            return
+
+        # Fallback for non-bench-base images (item-052-main, skill-pdflatex
+        # use texlive/texlive): pinned install, then apply the same
+        # version-guarded patch inside the container.
+        from harbor.agents.installed.node_install import nvm_node_install_snippet
+
+        await self.ensure_system_dependencies(environment, ("curl", "patch"))
+        await self.exec_as_agent(
+            environment,
+            command=(
+                "set -euo pipefail; "
+                f"{nvm_node_install_snippet()} && "
+                f"npm install -g --ignore-scripts "
+                f"@earendil-works/pi-coding-agent@{_PI_PIN} && "
+                "pi --version"
+            ),
+        )
+        await environment.upload_file(
+            _PI_AI_REASONING_PATCH, "/tmp/pi-ai-reasoning-details.patch"
+        )
+        result = await self.exec_as_agent(
+            environment,
+            command=(
+                "set -eo pipefail; . ~/.nvm/nvm.sh; "
+                'PI_AI_ROOT="$(npm root -g)/@earendil-works/pi-coding-agent'
+                '/node_modules/@earendil-works/pi-ai"; '
+                '[ -f "$PI_AI_ROOT/package.json" ] '
+                '|| PI_AI_ROOT="$(npm root -g)/@earendil-works/pi-ai"; '
+                f'grep -q \'"version": "{_PI_PIN}"\' "$PI_AI_ROOT/package.json" && '
+                'patch --batch --forward -d "$PI_AI_ROOT" -p1 '
+                "< /tmp/pi-ai-reasoning-details.patch && "
+                f'grep -q {_PI_AI_PATCH_MARKER} "$PI_AI_ROOT/{_PI_AI_PATCHED_FILE}"'
+            ),
+        )
+        if result.return_code != 0:
+            raise RuntimeError(
+                "Failed to apply the pi-ai reasoning-details patch in-container; "
+                "refusing to run rollouts on unpatched pi-ai 0.84.3. "
+                f"stderr: {result.stderr[-2000:] if result.stderr else ''}"
+            )
 
     @override
     @with_prompt_template
