@@ -71,7 +71,7 @@ class PAgent(Pi):
         # and reports via a marker.
         result = await self.exec_as_agent(
             environment,
-            command=_pi_bake_verify_command() + " && echo PI_BAKE_OK || echo PI_BAKE_MISSING",
+            command=_pi_bake_verify_command(),
         )
         if "PI_BAKE_OK" in (result.stdout or ""):
             return
