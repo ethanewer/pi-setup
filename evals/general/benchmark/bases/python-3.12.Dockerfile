@@ -1,7 +1,7 @@
 FROM python:3.12-slim
 
 COPY corp-root-ca.pem /usr/local/share/ca-certificates/corp-root-ca.crt
-RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl git jq unzip zip procps patch tmux \
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl git jq unzip zip procps patch tmux asciinema \
     && update-ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
