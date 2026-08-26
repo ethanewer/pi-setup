@@ -39,15 +39,19 @@ _PATCH_PI_BUNDLE = Path(__file__).resolve().parents[3] / "bin" / "patch-pi-bundl
 
 
 def _pi_bake_verify_command() -> str:
+    # Always exits 0; the PI_BAKE_OK / PI_BAKE_MISSING marker decides the path.
+    # No `set -e`: on non-bench-base images the nvm source legitimately fails,
+    # and harbor's exec_as_agent raises on any non-zero exit.
     return (
-        "set -e; . ~/.nvm/nvm.sh; "
-        'v="$(pi --version | tail -n 1)"; '
-        f'[ "$v" = "{_PI_PIN}" ]; '
-        'PI_ROOT="$(npm root -g)/@earendil-works/pi-coding-agent"; '
+        "( . ~/.nvm/nvm.sh && "
+        'v="$(pi --version | tail -n 1)" && '
+        f'[ "$v" = "{_PI_PIN}" ] && '
+        'PI_ROOT="$(npm root -g)/@earendil-works/pi-coding-agent" && '
         f'grep -q {_PI_AI_PATCH_MARKER} '
-        f'"$PI_ROOT"/dist/bundle/chunks/openai-completions-*.js && '
+        '"$PI_ROOT"/dist/bundle/chunks/openai-completions-*.js && '
         f'! grep -q "{_PI_AI_BUG_PATTERN}" '
-        '"$PI_ROOT"/dist/bundle/chunks/openai-completions-*.js'
+        '"$PI_ROOT"/dist/bundle/chunks/openai-completions-*.js && '
+        "echo PI_BAKE_OK ) || echo PI_BAKE_MISSING"
     )
 
 
