@@ -35,7 +35,7 @@ from harbor.models.agent.context import AgentContext
 _PI_PIN = "0.84.3"
 _PI_AI_PATCH_MARKER = "normalizeOpenAIReasoningDetails"
 _PI_AI_BUG_PATTERN = "preservedDetails.push(detail)"
-_PATCH_PI_BUNDLE = Path(__file__).resolve().parents[3] / "bin" / "patch-pi-bundle"
+_PATCH_PI_BUNDLE = Path(__file__).resolve().parents[4] / "bin" / "patch-pi-bundle"
 
 
 def _pi_bake_verify_command() -> str:
