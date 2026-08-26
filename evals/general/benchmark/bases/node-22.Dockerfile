@@ -17,6 +17,7 @@ ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
 # never touches npm on bench-base images.
 SHELL ["/bin/bash", "-c"]
 COPY pi-ai@0.84.3-reasoning-details.patch /tmp/pi-ai-reasoning-details.patch
+COPY patch-pi-bundle /tmp/patch-pi-bundle
 RUN set -ex \
     && curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.2/install.sh | env -u NODE_VERSION bash \
     && export NVM_DIR="$HOME/.nvm" \
@@ -24,10 +25,13 @@ RUN set -ex \
     && nvm install 22 \
     && nvm alias default 22 \
     && npm install -g --ignore-scripts @earendil-works/pi-coding-agent@0.84.3 \
-    && PI_AI_ROOT="$(npm root -g)/@earendil-works/pi-coding-agent/node_modules/@earendil-works/pi-ai" \
+    && PI_ROOT="$(npm root -g)/@earendil-works/pi-coding-agent" \
+    && PI_AI_ROOT="$PI_ROOT/node_modules/@earendil-works/pi-ai" \
     && { [ -f "$PI_AI_ROOT/package.json" ] || PI_AI_ROOT="$(npm root -g)/@earendil-works/pi-ai"; } \
     && grep -q '"version": "0.84.3"' "$PI_AI_ROOT/package.json" \
     && patch --batch --forward -d "$PI_AI_ROOT" -p1 < /tmp/pi-ai-reasoning-details.patch \
-    && grep -q 'normalizeOpenAIReasoningDetails' "$PI_AI_ROOT/dist/api/openai-completions.js" \
+    && python3 /tmp/patch-pi-bundle "$PI_ROOT" \
+    && grep -q 'normalizeOpenAIReasoningDetails' "$PI_ROOT"/dist/bundle/chunks/openai-completions-*.js \
+    && ! grep -q 'preservedDetails.push(detail)' "$PI_ROOT"/dist/bundle/chunks/openai-completions-*.js \
     && pi --version \
-    && rm /tmp/pi-ai-reasoning-details.patch
+    && rm /tmp/pi-ai-reasoning-details.patch /tmp/patch-pi-bundle

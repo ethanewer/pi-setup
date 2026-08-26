@@ -115,6 +115,13 @@ else
 fi
 "$BUN_BIN" "$SRC_DIR/bin/verify-pi-ai-reasoning-fix" "$PI_AI_ROOT"
 
+# The npm entrypoint (dist/bundle/cli.js) loads pi-ai from the bundle chunk,
+# not from node_modules, so the library patch above does not cover it. Apply
+# the same fix to the bundle (idempotent, version-guarded).
+log "Applying the Pi $PI_VERSION reasoning-details fix to the npm bundle entrypoint"
+command -v python3 >/dev/null 2>&1 || fail "python3 is required to patch Pi's npm bundle."
+python3 "$SRC_DIR/bin/patch-pi-bundle" "$PI_ROOT"
+
 log "Installing hardened extension forks as Pi local packages"
 for fork in $FORKS; do
   [[ -d "$SRC_DIR/forks/$fork" ]] || fail "Missing fork: $SRC_DIR/forks/$fork"
