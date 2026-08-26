@@ -290,14 +290,32 @@ from five fragmented deltas (unpatched) to one merged entry (patched).
   incl. item-032-main timeout). Passes 488→491, zeros 25→18 (+1 unscored),
   partials 9→14, mean 0.9411→0.9549.
 
-## Terminus-2 run (2026-08-26, in progress)
+## Terminus-2 run (2026-08-26) — FINAL
 
 Same 524 tasks and model, harness = harbor's built-in `terminus-2` (tmux +
 LiteLLM, TerminalBench's default agent). LitellM does not know the model, so
 the invocation passes `--ak model_info={max_input_tokens:1310720,...}`.
 LiteLLM is a separate stack from pi-ai, so this run is structurally free of
 the reasoning regression. golden-example smoke passed (1.0) before launch.
-Job: `terminus2-deepseek-run-1`.
+Job: `terminus2-deepseek-run-1`, -n 24, k=1, wall ~4h40m.
+
+- **520/524 scored: 379 pass (72.9% of scored), 10 partial, 131 zero,
+  mean reward 0.7354.** Overall 379/524.
+- Exceptions: 164 AgentTimeoutError (terminus-2's slower step loop exhausts
+  task budgets; timed-out trials are still verified where artifacts exist) +
+  2 RuntimeError (skill-rstan-2-32-7, skill-ocaml-runtime; asyncio exec
+  timeouts, unscored).
+- Pass-rate by tier: skill probes pi 98% vs terminus-2 90%; item-main 84%
+  vs 33%; item-hard 78% vs 19%. The gap concentrates in multi-skill items.
+- Overlap: 374 tasks pass under both harnesses; 113 pass only under pi;
+  5 pass only under terminus-2.
+
+### Harness comparison (deepseek-v4-flash-0731, k=1)
+
+| harness | pass | partial | zero | unscored | mean (scored) |
+|---|---|---|---|---|---|
+| pi lean profile (`p_agent`, patched 0.84.3) — run-4 | 491/524 | 14 | 18 | 1 | 0.9549 |
+| terminus-2 (harbor built-in) | 379/524 | 10 | 131 | 4 | 0.7354 |
 
 
 ## Ops notes (learned the hard way)
