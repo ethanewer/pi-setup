@@ -327,6 +327,48 @@ Job: `terminus2-deepseek-run-1`, -n 24, k=1, wall ~4h40m.
 | pi lean profile (`p_agent`, patched 0.84.3) — run-4 | 491/524 | 14 | 18 | 1 | 0.9549 |
 | terminus-2 (harbor built-in) — post infra re-run | 395/524 | 11 | 116 | 2 | 0.7648 |
 
+## Pi tool-setup variants (2026-08-26) — FINAL
+
+Two additional pi runs with a simplified system prompt ("You are an expert
+coding assistant operating inside a coding agent harness. You help users by
+reading files, executing commands, editing code, and writing new files.
+Current working directory: <cwd>", `<cwd>` resolved to the container's pwd)
+and restricted tool sets via `--system-prompt` / `--tools`
+(`agents/p_variant.py`):
+
+| variant | pass | partial | zero | unscored | mean (scored) | timeouts |
+|---|---|---|---|---|---|---|
+| `pi-bashonly-run-1` (bash only) | 456/524 | 12 | 56 | 0 | 0.8818 | 40 |
+| `pi-bashedit-run-1` (bash + edit) | 442/524 | 9 | 71 | 2 | 0.8563 | 68 |
+
+Unscored in bash-edit: item-043-main (no reward written) and item-054-hard
+(same reward-capture edge seen under terminus-2).
+
+Observations:
+- Pass-rate by tier: item-main 84%→80%→80%, item-hard 78%→77%→79%,
+  skill 98%→90%→86% (run-4 → bashonly → bashedit). The losses concentrate
+  in the 600s skill probes: restricted tools raise step counts and trip
+  short budgets (timeouts 6→40→68 vs run-4), while multi-step item tasks
+  are essentially unaffected.
+- Adding `edit` on top of bash did not help (net −14 pass, +28 timeouts;
+  33 tasks improved vs 46 regressed — with no `read` tool, exact-match
+  edits are often made against stale/blind context and burn turns on
+  mismatches). k=1 variance accounts for part of the symmetric churn.
+- Tool compliance held: bashonly made 17,358 tool calls, all bash;
+  bashedit made 11,079 bash + 1,114 edit plus 5 hallucinated disallowed-tool
+  calls (bogus names/DSML text) that never executed.
+- Reasoning-newline regression: absent in both runs (0 fragmented of 13,781
+  and 13,408 signatures; densities 0.30/1k and 0.34/1k).
+
+### Full comparison (deepseek-v4-flash-0731, k=1)
+
+| configuration | pass | mean (scored) |
+|---|---|---|
+| pi lean profile, full prompt + read/bash/edit/write | 491/524 (93.7%) | 0.9549 |
+| pi simplified prompt + bash only | 456/524 (87.0%) | 0.8818 |
+| pi simplified prompt + bash + edit | 442/524 (84.7%) | 0.8563 |
+| terminus-2 (default TerminalBench harness) | 395/524 (75.7%) | 0.7648 |
+
 
 ## Ops notes (learned the hard way)
 
