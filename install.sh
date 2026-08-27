@@ -327,8 +327,8 @@ main.defaultThinkingLevel = "medium";
 // Provider and model decide which credentials Pi uses, so they are seeded and then left
 // alone. Forcing them reverted a deliberate choice on every install: one machine here runs
 // openai-codex, and a reinstall would have silently pointed it at plain openai auth.
-main.defaultProvider ??= "openai";
-main.defaultModel ??= "gpt-5.6-sol";
+main.defaultProvider ??= "openrouter";
+main.defaultModel ??= "z-ai/glm-5.3-flash";
 main.theme ??= "dark";
 delete main.quietStartup;
 
@@ -372,9 +372,10 @@ applyCompaction(main);
 const MODEL_SCOPE = [
   "openrouter/deepseek/deepseek-v4-flash-0731",
   "openrouter/deepseek/deepseek-v4-pro-0813",
-  "openrouter/z-ai/glm-5.2",
   "openrouter/z-ai/glm-5.3",
+  "openrouter/z-ai/glm-5.3-flash",
   "openrouter/moonshotai/kimi-k3",
+  "openrouter/qwen/qwen3.8-flash",
   "openrouter/qwen/qwen3.8-max",
   "openai/gpt-5.6-sol",
   "openai/gpt-5.6-terra",
