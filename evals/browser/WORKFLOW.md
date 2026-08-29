@@ -190,7 +190,8 @@ Verdict:
    gates on first contact when the model was functioning; the failures observed were
    misread codes (re-submitted blindly) and degenerate outputs.
 5. deepseek-v4-flash-latest is noticeably cheaper per call than glm but degenerates
-   mid-task at a meaningful rate (18/19 degenerate runs). If it is used, the CLI arms
+   mid-task at a meaningful rate (all 19 degenerate runs were deepseek; 21% of its
+   run-slots, peaking at 47% in the guided arm). If it is used, the CLI arms
    also had the fewest degenerate episodes relative to runs.
 
 Caveats: n=3 seeds per cell (±1 run swings are normal); local fixture site (live-web
