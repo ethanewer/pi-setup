@@ -28,23 +28,24 @@ const SCOPE = [
 ];
 const FORKS_MINUS_WORKFLOWS = [
 	"local/pi-voice-stt-safe",
-	"local/pi-agent-browser-native-safe",
 	"local/pi-context-handoff",
 	"local/pi-btw-side",
 	"local/pi-process-monitor-safe",
 	"local/pi-setup-maintenance",
 	"local/unslop",
+	"local/pi-browser-cli",
 ];
 const ALL_FORKS = [
 	"local/pi-voice-stt-safe",
-	"local/pi-agent-browser-native-safe",
 	"local/pi-dynamic-workflows-safe",
 	"local/pi-context-handoff",
 	"local/pi-btw-side",
 	"local/pi-process-monitor-safe",
 	"local/pi-setup-maintenance",
 	"local/unslop",
+	"local/pi-browser-cli",
 ];
+const BROWSER_TOOL = "local/pi-agent-browser-native-safe";
 
 const dir = mkdtempSync(join(tmpdir(), "pi-config-writer-"));
 afterAll(() => rmSync(dir, { recursive: true, force: true }));
@@ -99,7 +100,7 @@ writeFileSync(modelsStorePath, JSON.stringify({
 const scriptPath = join(dir, "config-writer.mjs");
 writeFileSync(scriptPath, configScript);
 
-function runWriter() {
+function runWriter(browserTool = "") {
 	const result = Bun.spawnSync([
 		"bun",
 		scriptPath,
@@ -119,6 +120,7 @@ function runWriter() {
 		modelsStorePath,
 		modelTiersSrcPath,
 		modelTiersDestPath,
+		browserTool,
 	]);
 	expect(result.exitCode).toBe(0);
 }
@@ -136,6 +138,25 @@ test("pi loads every fork except workflows; piwf loads all forks", () => {
 	expect(main.packages).toEqual(["npm:user-pkg", ...FORKS_MINUS_WORKFLOWS]);
 	const wf = JSON.parse(readFileSync(wfPath, "utf8"));
 	expect(wf.packages).toEqual(ALL_FORKS);
+});
+
+test("the native browser tool stays out by default and returns with PI_SETUP_BROWSER_TOOL=1", () => {
+	runWriter();
+	const main = JSON.parse(readFileSync(mainPath, "utf8"));
+	const wf = JSON.parse(readFileSync(wfPath, "utf8"));
+	expect(main.packages).not.toContain(BROWSER_TOOL);
+	expect(wf.packages).not.toContain(BROWSER_TOOL);
+	// A stale entry from before the CLI+skill default is removed on reinstall.
+	main.packages.push(BROWSER_TOOL);
+	writeFileSync(mainPath, JSON.stringify(main));
+	runWriter();
+	expect(JSON.parse(readFileSync(mainPath, "utf8")).packages).not.toContain(BROWSER_TOOL);
+	// The opt-in puts it back on both profiles, and it survives the next rewrite.
+	runWriter("1");
+	expect(JSON.parse(readFileSync(mainPath, "utf8")).packages).toContain(BROWSER_TOOL);
+	expect(JSON.parse(readFileSync(wfPath, "utf8")).packages).toContain(BROWSER_TOOL);
+	runWriter("1");
+	expect(JSON.parse(readFileSync(mainPath, "utf8")).packages).toContain(BROWSER_TOOL);
 });
 
 test("user-persisted values survive the rewrite", () => {

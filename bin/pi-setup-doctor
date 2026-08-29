@@ -124,6 +124,10 @@ const identity = (entry) => {
 // present in the piwf profile and absent from pi. `forbidden` lists forks that must NOT
 // be loaded, so the whole check (parsing included) lives in one guarded path.
 const WF_ONLY = "pi-dynamic-workflows-safe";
+// The native browser tool was demoted to an opt-in (PI_SETUP_BROWSER_TOOL=1) by the
+// browser eval: the CLI+skill surface is the default. Its installed copy is still
+// checked against forks/ above; only the settings requirement is lifted.
+const OPTIONAL = "pi-agent-browser-native-safe";
 const allForks = Object.keys(vendor.forks);
 const shadowForks = Object.entries(vendor.forks).filter(([, m]) => m.upstream);
 const check = (path, label, required, forbidden = []) => {
@@ -149,8 +153,8 @@ const check = (path, label, required, forbidden = []) => {
   }
   return out;
 };
-const out = check(settingsPath, "pi", allForks.filter((f) => f !== WF_ONLY), [WF_ONLY]);
-out.push(...check(wfSettingsPath, "piwf", allForks));
+const out = check(settingsPath, "pi", allForks.filter((f) => f !== WF_ONLY && f !== OPTIONAL), [WF_ONLY]);
+out.push(...check(wfSettingsPath, "piwf", allForks.filter((f) => f !== OPTIONAL)));
 console.log(out.join("\n"));
 ' "$SETTINGS" "$WF_SETTINGS" "$REPO_DIR")"
   while IFS=$'\t' read -r kind message; do

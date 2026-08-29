@@ -194,7 +194,8 @@ again at the next release, because `reviewedAgainst` will no longer equal latest
 
 ## 5. Change a first-party package
 
-`pi-context-handoff`, `pi-btw-side`, `pi-setup-maintenance`, and `unslop` have no upstream. Edit
+`pi-context-handoff`, `pi-btw-side`, `pi-setup-maintenance`, `unslop`, and
+`pi-browser-cli` have no upstream. Edit
 them directly, bump `version` in both `package.json` and `vendor.json` if the change is
 worth marking, then `./install.sh`.
 
@@ -228,7 +229,9 @@ artefacts of the invocation rather than defects in the code.
 
 ## 6. agent-browser is pinned to the fork's baseline, on purpose
 
-`AGENT_BROWSER_VERSION` in `install.sh` is not "whatever npm has latest". The
+`AGENT_BROWSER_VERSION` in `install.sh` is not "whatever npm has latest".
+`agent-browser` is the default browser surface itself (the CLI driven from bash,
+taught by the `agent-browser-cli` skill), and the opt-in
 `pi-agent-browser-native-safe` wrapper is validated against one specific CLI release.
 `docs/SUPPORT_MATRIX.md` in that fork names it as the capability baseline. Raising it is
 a re-baseline job. Note that the fork vendors only `dist/`, `scripts/` and `docs/`. The
@@ -280,20 +283,23 @@ Then start `pi` and `piwf` once interactively and confirm each startup listing i
 ```text
 pi   (must omit workflow and the workflow skills/commands)
      [Skills]
-       monitor, unslop, update-pi-setup
+       agent-browser-cli, monitor, unslop, update-pi-setup
      [Prompts]
        /watch
      [Extensions]
-       agent-browser, btw, context-handoff, monitor, voice-stt
+       btw, context-handoff, monitor, voice-stt
 
 piwf (must include workflow)
      [Skills]
-       monitor, unslop, update-pi-setup, workflow-authoring, workflow-patterns
+       agent-browser-cli, monitor, unslop, update-pi-setup, workflow-authoring, workflow-patterns
      [Prompts]
        /watch
      [Extensions]
-       agent-browser, btw, context-handoff, monitor, voice-stt, workflow
+       btw, context-handoff, monitor, voice-stt, workflow
 ```
+
+With `PI_SETUP_BROWSER_TOOL=1` both listings also show the `agent-browser` extension
+again.
 
 A fork that failed to load is **silently absent** from that listing rather than raising
 an error, so check the names rather than assuming success.

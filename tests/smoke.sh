@@ -50,6 +50,14 @@ if grep -qi 'workflow' <<< "$wow_piwf"; then
 else
   FAIL=$((FAIL + 1)); printf '  FAIL  piwf does not expose the workflow tool\n'
 fi
+# The browser default is the agent-browser CLI driven from bash (taught by the
+# agent-browser-cli skill), not the agent_browser tool. A PI_SETUP_BROWSER_TOOL=1
+# install legitimately fails this check.
+if grep -qi 'agent_browser' <<< "$wow_pi"; then
+  FAIL=$((FAIL + 1)); printf '  FAIL  pi must NOT expose the agent_browser tool by default\n'
+else
+  PASS=$((PASS + 1)); printf '  PASS  pi has no agent_browser tool\n'
+fi
 # Every extension's tools must be registered in pi. A fork that failed to load is
 # silently absent from this list rather than raising an error at startup.
 run "tools registered" "monitor_kill" \
@@ -62,12 +70,12 @@ run_with p "lean p btw side conversation" "hello-from-alpha" \
   "/btw What constant does alpha.ts export? Reply with only its value."
 
 if [[ "$QUICK" == "0" ]]; then
-  run "agent_browser" "Example Domain" \
-    "Use agent_browser to open https://example.com and reply with only the page title."
+  run "browser via agent-browser CLI" "Example Domain" \
+    "Open https://example.com in the browser and reply with only the page title."
   run_with piwf "dynamic workflow" "GAMMA-DELTA" \
     "Run a dynamic workflow with a single agent whose only job is to return the exact string GAMMA-DELTA, then reply with only what it returned."
 else
-  printf '  skip  agent_browser and dynamic workflow (--quick)\n'
+  printf '  skip  browser and dynamic workflow (--quick)\n'
 fi
 
 printf '\n%s passed, %s failed\n' "$PASS" "$FAIL"

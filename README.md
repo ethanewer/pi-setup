@@ -2,8 +2,9 @@
 
 A reproducible, fast [Pi coding agent](https://pi.dev) setup with three entrypoints:
 
-- **`pi`** — full environment without dynamic workflows: Voice STT, native browser
-  automation, mid-run and between-runs context compaction, background process monitoring,
+- **`pi`** — full environment without dynamic workflows: Voice STT, browser
+  automation via the `agent-browser` CLI, mid-run and between-runs context compaction,
+  background process monitoring,
   `/btw` side questions, and local MLX model management on macOS.
 - **`piwf`** — the same full environment **with** dynamic workflows (the historical `pi`):
   everything `pi` has, plus the `workflow` tool, `/workflows` and `/deep-research`, and the
@@ -79,6 +80,7 @@ Extension forks and the upstream releases they are based on:
 | `pi-btw-side` | — | first-party |
 | `pi-setup-maintenance` | — | first-party, skills only |
 | `unslop` | — | first-party, skills only |
+| `pi-browser-cli` | — | first-party, skills only |
 
 `vendor.json` is the machine-readable version of this table and is what the tooling
 reads.
@@ -151,7 +153,8 @@ else ships:
 
 - built-in `read`, `bash`, `edit`, and `write` tools
 - Voice STT
-- `agent_browser`
+- browser automation: the `agent-browser` CLI driven from bash, taught by the
+  `agent-browser-cli` skill (see [Browser automation](#browser-automation))
 - the `update-pi-setup` maintenance skill
 - compaction handoff briefs that keep a long run going
 - mid-run context folding, so one long run stays inside the context window
@@ -167,7 +170,7 @@ are deliberately not loaded — they live behind the `piwf` entrypoint.
 
 `piwf` is the historical `pi`: the full environment **including** the dynamic-workflows
 extension. It runs against its own agent directory `~/.pi/agent-wf` whose settings load
-all eight hardened forks. On top of everything `pi` lists, `piwf` adds:
+every package in `forks/`. On top of everything `pi` lists, `piwf` adds:
 
 - the `workflow` tool and `workflow_control`
 - `/workflows`, `/deep-research`, `/code-review`, and the other built-in workflow commands
@@ -228,6 +231,44 @@ consequences of how Pi applies the list are worth knowing:
   the first scoped model (`openrouter/deepseek/deepseek-v4-flash-0731`) instead of the saved default. All
   three profiles' current defaults are inside the scope, so this only bites if the
   default is later changed to something outside it.
+
+## Browser automation
+
+The default browser surface is a **CLI plus a skill, not a Pi tool**. `install.sh`
+installs and version-pins the `agent-browser` CLI and its Chrome runtime, and the
+first-party `pi-browser-cli` package ships the `agent-browser-cli` skill that teaches
+the agent to drive the CLI from bash: open a page, take a `snapshot -i`, act on the
+`@eN` refs, re-snapshot after every change — plus the behavior rules that matter on
+the live web: read a bot check or CAPTCHA and complete it instead of retrying
+blindly, wait out "checking your browser" interstitials instead of refreshing, and
+honor `Retry-After` on HTTP 429.
+
+This default comes from **browser-bench** (`evals/browser/` on the `browser-eval`
+branch): six surfaces — the native `agent_browser` tool, the same tool plus prompt
+guidance, `@playwright/mcp` and `chrome-devtools-mcp` behind a shared bridge, and
+CLI+skill arms for `agent-browser` and `@playwright/cli` — run across two models,
+three seeds, and five tasks on a seeded fixture site with deterministic,
+server-instrumented friction (human gates that escalate to a code captcha, a timed
+browser-check interstitial, a rate limiter with `Retry-After`, runtime-bound login,
+JS-only content). The CLI+skill arms matched or beat every extension arm on task
+outcome for both models at roughly half the browser calls and tokens; `agent-browser`
+was the most robust single choice. See `evals/browser/REPORT.md` on the
+`browser-eval` branch for the full writeup, caveats, and raw results.
+
+Two deliberate alternatives:
+
+- **Native tool surface.** The hardened `pi-agent-browser-native-safe` fork stays
+  installed but is not loaded by default. It was the best *extension* arm for the
+  weaker model in the eval, so a setup that runs only weak models may prefer it:
+  `PI_SETUP_BROWSER_TOOL=1 ./install.sh` loads it on every profile and keeps it
+  across reinstalls.
+- **Debugging-heavy work.** For performance traces and network inspection the eval
+  points at `chrome-devtools-mcp` behind an MCP bridge. It is not installed by this
+  setup.
+
+Live-web captchas are mostly IP reputation, automation signals, and profile state —
+switching tools does not change them. What an agent controls is handling, which is
+what the skill's behavior rules encode.
 
 ## Local MLX models (`/mlx`, macOS only)
 
@@ -360,7 +401,8 @@ bin/pi-setup-doctor
 
 Verifies that every fork in `forks/` matches the copy installed under
 `~/.pi/agent/local/`, that Pi's settings load the forks and not the unpatched npm
-packages, that `stt.json` is owner-only, that `trust.json` has no home-wide entry, and
+packages (the native browser fork is optional since the browser eval — its absence is
+not a defect, its presence still checked), that `stt.json` is owner-only, that `trust.json` has no home-wide entry, and
 that the installed Pi and `agent-browser` match the versions `install.sh` pins, and that
 `pi-dynamic-workflows-safe`'s `dist/` still mirrors its `src/` — the package exports reach
 both, so a stale `dist` would export code nobody audited. It also checks
@@ -458,6 +500,15 @@ See [`evals/monitor/README.md`](evals/monitor/README.md) for task design, metric
 (four models x three seeds: adoption 10–12/12 long-job tasks, genuine ping-waiting
 8–11/12; the eval also drove a simplification of the monitor extension's model surface
 from 4 tools/10 params/3 guidelines to 3/6/1, which improved trust for every model).
+
+The second is **browser-bench** (`evals/browser/` on the `browser-eval` branch): six
+browser surfaces x two models x three seeds x five tasks on a seeded fixture site
+whose request log is the ground truth for every friction metric. It found the CLI+skill
+surface (the `agent-browser` CLI plus one SKILL.md, no tool) matched or beat every
+extension arm on outcome at roughly half the calls and tokens, and it is why this
+setup's default browser is a CLI and a skill rather than the `agent_browser` tool. See
+the [Browser automation](#browser-automation) section and the branch's
+`evals/browser/REPORT.md`.
 
 ## Performance
 

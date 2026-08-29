@@ -144,6 +144,13 @@ lock is reclaimable after a staleness window rather than immediately.
 
 Based on `pi-agent-browser-native@0.5.0`, with the external CLI rebaselined to the `agent-browser 0.35.0` version that `install.sh` pins. Only `dist/` is shipped, so the runtime fixes are in the compiled tree.
 
+**No longer loaded by default.** The browser eval (`evals/browser/` on the `browser-eval`
+branch) found the CLI+skill surface shipped by `pi-browser-cli` matched or beat this tool
+surface on task outcome for both models at roughly half the calls and tokens. The fork
+stays installed and hardened for the opt-in: `PI_SETUP_BROWSER_TOOL=1 ./install.sh`. Its
+bash guard (`PI_AGENT_BROWSER_ALLOW_DIRECT_BASH`) only applies when the extension is
+loaded; with the CLI default, direct `agent-browser` launches from bash are the point.
+
 **Re-vendored 0.2.72 -> 0.2.77 on 2026-08-04, and this one was a real merge.** Five upstream
 releases landed a new managed-session subsystem (nine new modules, crash-safe restore keys,
 process identity, socket-directory ancestry validation) and touched 22 of the 37 files this
@@ -482,6 +489,26 @@ three steps. The skill tells the model to cut AI tells from any writing and to
 always apply, so every model-facing string in this repository is something the
 skill itself would flag if it regresses.
 
+## pi-browser-cli
+
+First-party, skills only: no extensions, no tools, nothing loaded into a running
+session beyond the skill description. It carries `agent-browser-cli`, which teaches
+the agent to drive the `agent-browser` CLI that `install.sh` already installs and
+pins — the core open/snapshot/act/re-snapshot loop plus the live-web behavior
+rules that matter most: complete bot checks by reading them, wait out
+"checking your browser" interstitials instead of refreshing, and honor `Retry-After`
+on 429s. The skill points at `agent-browser skills get core` for the full reference,
+which the CLI serves matched to the installed version.
+
+on 429s. The skill points at `agent-browser skills get core` for the full reference,
+which the CLI serves matched to the installed version.
+
+It exists because the browser eval's headline result was that a CLI plus one skill —
+zero additions to Pi's tool surface — matched or beat every extension arm on outcome
+at roughly half the browser calls and tokens, on both models tested. This
+package is how that result ships; `forks/pi-browser-cli/README.md` records the
+reasoning and the opt-in back to the native tool.
+
 ## Startup labels
 
 Pi labels an extension by the directory holding its index file, falling back to the bare
@@ -495,20 +522,23 @@ entrypoints — `pi` deliberately excludes the workflow fork, `piwf` loads it:
 ```text
 pi   (full, without dynamic workflows)
      [Skills]
-       monitor, unslop, update-pi-setup
+       agent-browser-cli, monitor, unslop, update-pi-setup
      [Prompts]
        /watch
      [Extensions]
-       agent-browser, btw, context-handoff, monitor, voice-stt
+       btw, context-handoff, monitor, voice-stt
 
 piwf (full, with dynamic workflows — the historical `pi`)
      [Skills]
-       monitor, unslop, update-pi-setup, workflow-authoring, workflow-patterns
+       agent-browser-cli, monitor, unslop, update-pi-setup, workflow-authoring, workflow-patterns
      [Prompts]
        /watch
      [Extensions]
-       agent-browser, btw, context-handoff, monitor, voice-stt, workflow
+       btw, context-handoff, monitor, voice-stt, workflow
 ```
+
+With `PI_SETUP_BROWSER_TOOL=1` the listings gain `agent-browser` under [Extensions]
+again. The order Pi prints is alphabetical within each group.
 
 For voice-stt that entry is a one-line re-export; `src/` is still the implementation. For
 dynamic-workflows the entry file moved into its own directory and its two relative imports
@@ -519,8 +549,9 @@ A stray upstream package is still distinguishable at a glance: Pi prefixes `npm:
 sources bare, so anything showing a version prefix is not one of these forks.
 
 The lean `p` wrapper disables extension and skill discovery, then explicitly loads only
-`voice-stt`, `btw`, and `context-handoff` (plus its prompt-removal helper). Browser and
-monitor are in both full entrypoints (`pi`, `piwf`); workflow is full-profile-only and, of
+`voice-stt`, `btw`, and `context-handoff` (plus its prompt-removal helper). Monitor is in
+both full entrypoints (`pi`, `piwf`); the browser is there as the `agent-browser-cli`
+skill plus the CLI on PATH; workflow is full-profile-only and, of
 the two full entrypoints, only `piwf` loads it. `bin/pi-setup-doctor` checks the `p`
 allowlist and enforces that the workflow fork is absent from `pi` and present in `piwf`, so
 an accidental addition or omission is install-fixable drift.
@@ -532,6 +563,7 @@ reachable by repo-controlled or model-chosen input before.
 
 | Opt-in | Restores |
 |---|---|
+| `PI_SETUP_BROWSER_TOOL=1` (install-time) | Loading the `pi-agent-browser-native-safe` extension and its `agent_browser` tool (the browser eval's default is the CLI plus skill instead) |
 | `PI_AGENT_BROWSER_ALLOW_PRIVILEGED_FLAGS` | `--executable-path`, `--args`, `--init-script`, `--extension`, `--proxy`, `--config`, `--allow-file-access` in raw `args` |
 | `PI_AGENT_BROWSER_TRUST_PROJECT_CONFIG` | Project-scope browser config, including upstream's `./agent-browser.json` |
 | `PI_AGENT_BROWSER_ALLOW_UNCONFINED_WRITES` | Writes outside the workspace |

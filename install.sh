@@ -12,7 +12,7 @@ AGENT_BROWSER_VERSION="0.35.0"
 # Extensions are installed as Pi "local" packages from forks/ in this repository,
 # never from npm. Pi never rewrites local packages, so the security fixes in these
 # forks cannot be silently reverted by a later `bun install` or package update.
-FORKS="pi-voice-stt-safe pi-agent-browser-native-safe pi-dynamic-workflows-safe pi-context-handoff pi-btw-side pi-process-monitor-safe pi-setup-maintenance unslop"
+FORKS="pi-voice-stt-safe pi-agent-browser-native-safe pi-dynamic-workflows-safe pi-context-handoff pi-btw-side pi-process-monitor-safe pi-setup-maintenance unslop pi-browser-cli"
 
 REPO_URL="${PI_SETUP_REPO_URL:-https://github.com/ethanewer/pi-setup.git}"
 REPO_REF="${PI_SETUP_REF:-main}"
@@ -317,7 +317,7 @@ CONFIG_SCRIPT="$(mktemp)"
 cat > "$CONFIG_SCRIPT" <<'JS'
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import * as path from "node:path";
-const [mainPath, pPath, wfPath, sttPath, npmPkgPath, pNpmPkgPath, wfNpmPkgPath, piVersion, keybindingsSrcPath, mainKeybindsPath, pKeybindsPath, wfKeybindsPath, compactionSrcPath, modelsStorePath, modelTiersSrcPath, modelTiersDestPath] = process.argv.slice(2);
+const [mainPath, pPath, wfPath, sttPath, npmPkgPath, pNpmPkgPath, wfNpmPkgPath, piVersion, keybindingsSrcPath, mainKeybindsPath, pKeybindsPath, wfKeybindsPath, compactionSrcPath, modelsStorePath, modelTiersSrcPath, modelTiersDestPath, browserTool] = process.argv.slice(2);
 const read = (path) => existsSync(path) ? JSON.parse(readFileSync(path, "utf8")) : {};
 const writeJson = (path, value) => writeFileSync(path, JSON.stringify(value, null, 2) + "\n");
 
@@ -384,16 +384,26 @@ const MODEL_SCOPE = [
 
 // Every extension is a hardened local fork. The upstream npm identities are dropped
 // so a previously npm-installed copy cannot shadow the fork.
+//
+// The browser default is a CLI plus a skill, not a tool: evals/browser on the
+// browser-eval branch benchmarked six surfaces (native agent_browser tool, the same
+// with prompt guidance, @playwright/mcp, chrome-devtools-mcp, and CLI+skill arms for
+// agent-browser and @playwright/cli) across two models and found the CLI+skill arms
+// matched or beat every extension arm on outcome at roughly half the calls and tokens.
+// pi-agent-browser-native-safe therefore stays installed but is only loaded when the
+// install is run with PI_SETUP_BROWSER_TOOL=1; the managed list below still names it,
+// so a stale entry from before that change is removed on reinstall.
 const wanted = [
   "local/pi-voice-stt-safe",
-  "local/pi-agent-browser-native-safe",
   "local/pi-dynamic-workflows-safe",
   "local/pi-context-handoff",
   "local/pi-btw-side",
   "local/pi-process-monitor-safe",
   "local/pi-setup-maintenance",
   "local/unslop",
+  "local/pi-browser-cli",
 ];
+if (browserTool === "1") wanted.push("local/pi-agent-browser-native-safe");
 const managed = new Set([
   "pi-voice-stt",
   "pi-agent-browser-native",
@@ -408,6 +418,7 @@ const managed = new Set([
   "pi-process-monitor-safe",
   "pi-setup-maintenance",
   "unslop",
+  "pi-browser-cli",
   // Unrelated npm packages that also register /btw through a TUI overlay. Listed so an
   // existing install of one is dropped rather than left racing pi-btw-side for the name.
   "pi-btw",
@@ -541,7 +552,8 @@ JS
   "$SRC_DIR/config/compaction.json" \
   "$MAIN_DIR/models-store.json" \
   "$SRC_DIR/config/model-tiers.json" \
-  "$MODEL_TIERS_DEST"
+  "$MODEL_TIERS_DEST" \
+  "${PI_SETUP_BROWSER_TOOL:-0}"
 rm -f "$CONFIG_SCRIPT"
 
 # stt.json holds provider and capture configuration that the voice fork re-reads on

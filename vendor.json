@@ -13,7 +13,8 @@
       "version": "0.5.0",
       "live": "dist/extensions/agent-browser/index.js",
       "liveTree": "dist",
-      "patch": "patches/pi-agent-browser-native@0.5.0.patch"
+      "patch": "patches/pi-agent-browser-native@0.5.0.patch",
+      "note": "Demoted from the default load by the browser eval (evals/browser on the browser-eval branch): the CLI+skill surface shipped by pi-browser-cli matched or beat the native tool at roughly half the calls and tokens. Still installed; load it with PI_SETUP_BROWSER_TOOL=1 ./install.sh."
     },
     "pi-dynamic-workflows-safe": {
       "upstream": "@quintinshaw/pi-dynamic-workflows",
@@ -55,6 +56,14 @@
       "liveTree": "skills",
       "patch": null,
       "note": "First-party, skills only: no extensions and no tools. Carries the unslop skill, adapted from cursor/plugins with the Adding Soul section removed and the process reduced to three steps. Nothing to re-vendor."
+    },
+    "pi-browser-cli": {
+      "upstream": null,
+      "version": "1.0.0",
+      "live": "skills/agent-browser-cli/SKILL.md",
+      "liveTree": "skills",
+      "patch": null,
+      "note": "First-party, skills only: no extensions and no tools. Ships the agent-browser-cli skill that makes the installed agent-browser CLI the default browser surface; written from the browser-bench eval (evals/browser on the browser-eval branch), where the CLI+skill arms matched or beat every extension arm on outcome at roughly half the calls and tokens. Nothing to re-vendor."
     },
     "pi-context-handoff": {
       "upstream": null,
