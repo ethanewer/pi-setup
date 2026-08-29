@@ -1,0 +1,17 @@
+{
+  "name": "browser-bench",
+  "type": "module",
+  "private": true,
+  "description": "Benchmark: how efficiently do models use browser tools, and how do they handle captchas, interstitials, and rate limits?",
+  "scripts": {
+    "bench": "bash run.sh"
+  },
+  "dependencies": {
+    "@earendil-works/pi-coding-agent": "0.84.4",
+    "@earendil-works/pi-ai": "0.84.4"
+  },
+  "trustedDependencies": [
+    "@google/genai",
+    "protobufjs"
+  ]
+}
