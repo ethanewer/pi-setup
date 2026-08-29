@@ -119,7 +119,7 @@ Findings:
    tokens 11.4k→8.8k, but t3 outcome fell 0.83→0.67 (n=3; within noise per monitor
    lesson 6). The tips helped the model behave politely without making it more right.
 
-## Phase 5 — Verdict
+## Phase 5 — First verdict (before the CLI arms)
 
 - **Keep agent-browser as the default.** Highest outcome, best rate-limit handling,
   mature recovery surface. The captcha complaint is real but is not caused by the
@@ -134,7 +134,69 @@ Findings:
   and reading the challenge page — all behavioral or configuration, not tool choice.
   A small amount of user context nudges pacing; it does not fix weak models.
 
-## Lessons
+## Phase 6 — The CLI + skill arms (no new tools, no extensions)
+
+The user's hypothesis: install a browser CLI alongside pi and teach it with a skill —
+no new tools or extensions at all. That is also the pattern Playwright itself now
+recommends for coding agents (CLI+SKILLS over MCP for token efficiency).
+
+Two new arms, each with **zero packages** in the agent dir:
+
+- `cli-agent-browser` — the already-installed `agent-browser` CLI + one SKILL.md
+  (core loop: open → `snapshot -i` → refs → click/fill; behavioral rules). Session
+  isolation per run via `AGENT_BROWSER_SESSION`/`AGENT_BROWSER_NAMESPACE`.
+- `cli-playwright` — the official `@playwright/cli@0.1.18` (installed alongside pi)
+  + one SKILL.md. Session isolation via `PLAYWRIGHT_CLI_SESSION`.
+
+The `cli-agent-browser` arm doubles as a controlled experiment: same engine as the
+native baseline, so the native-tool-vs-CLI+skill difference is isolated.
+
+Two harness bugs bit here, both race conditions from parallel tasks of one arm
+sharing a PIHOME: concurrent `rmSync`+`symlinkSync` of the package link (EEXIST) and
+of the skill directory (Bun EFAULT, one crashed run). Fixed create-once. A scoring
+contamination was also caught: stale pre-fix run dirs were still in `results/` and
+silently double-counted glm t1/t3 — archived, and the merged table rebuilt.
+
+## Phase 7 — Final results and verdict (both models)
+
+Run: 6 arms × 2 models (glm-5.3-flash, deepseek-v4-flash-latest) × 3 seeds × 5 tasks
+= 176 scored runs; 19 deepseek runs flagged degenerate (chat-template junk as final
+assistant text — the failure mode the monitor eval also hit) and excluded.
+
+| arm | glm out | ds out | glm calls/tok | ds calls/tok |
+|---|---|---|---|---|
+| agent-browser (native) | 0.93 | 0.92 | 14.5 / 11.1k | 14.0 / 23.2k |
+| agent-browser-guided | 1.00 | 1.00* | 16.7 / 8.9k | 31.4 / 30.8k |
+| playwright-mcp | 0.93 | 0.92 | 11.1 / 9.7k | 16.4 / 29.4k |
+| devtools-mcp | 0.86 | 0.77 | 11.3 / 12.2k | 14.4 / **49.1k** |
+| cli-agent-browser | 0.93 | **1.00** | **7.2 / 8.4k** | **8.1 / 11.1k** |
+| cli-playwright | **1.00** | 0.82 | **5.1 / 7.9k** | 5.7 / 11.1k |
+
+*guided-ds: n=8 valid (7 degenerate-excluded), and no valid t3 runs — weak evidence.
+
+Verdict:
+
+1. **The user's hunch was right.** CLI + skill — no new tools, no extensions — matches
+   or beats every extension arm on outcome for both models at roughly **half the calls
+   and tokens**. For glm, cli-playwright went 15/15. For deepseek, cli-agent-browser
+   went 12/12 valid.
+2. **The native tool earns its keep for weaker models.** agent-browser-native was the
+   best extension arm for deepseek (0.92): the structured tool surface and
+   nextActions-style recovery guidance matter when the model is weak. But the CLI arm
+   with the same engine still beat it (1.00) — the skill text is doing real work.
+3. **devtools-mcp is the wrong default here**: weakest outcomes and, with deepseek,
+   49k tokens per task — 4–6× the CLI arms.
+4. **Captcha behavior is model behavior, not tool behavior.** Every arm solved the
+   gates on first contact when the model was functioning; the failures observed were
+   misread codes (re-submitted blindly) and degenerate outputs.
+5. deepseek-v4-flash-latest is noticeably cheaper per call than glm but degenerates
+   mid-task at a meaningful rate (18/19 degenerate runs). If it is used, the CLI arms
+   also had the fewest degenerate episodes relative to runs.
+
+Caveats: n=3 seeds per cell (±1 run swings are normal); local fixture site (live-web
+captcha friction is represented by construction, not sampled); one eval author.
+
+## Lessons (cumulative)
 
 1. **Benchmarks catch your own bugs first.** Two fixture signature bugs and a ground
    truth reachable at `../` were all found by watching models fail plausibly.
@@ -154,11 +216,21 @@ Findings:
 
 ```bash
 cd evals/browser
-(cd vendor && bun add pi-mcp-adapter@2.31.0)   # once
-ARMS="agent-browser agent-browser-guided playwright devtools" SEEDS="101 202 303" ./run-multi.sh
-for d in results/*_seed*; do python3 score/score.py "$d"; done
-python3 score/aggregate.py results/*_seed*
-# t1 was re-run after the fixture fix:
-#   results/*t1rerun_*/t1 hold the valid t1 scores; results/combined-scores.json
-#   is the merged per-run table used for the tables above.
+(cd vendor && bun add pi-mcp-adapter@2.31.0)   # once, for the MCP arms
+npm install -g @playwright/cli@0.1.18          # once, for the cli-playwright arm
+
+ARMS="agent-browser agent-browser-guided playwright devtools cli-agent-browser cli-playwright" \
+  MODELS="openrouter/z-ai/glm-5.3-flash openrouter/~deepseek/deepseek-v4-flash-latest" \
+  SEEDS="101 202 303" ./run-multi.sh
+for d in results/2026*_seed*; do python3 score/score.py "$d"; done
+python3 score/aggregate.py final results/2026*_seed*
+# merged/degenerate-flagged tables: results/combined-scores.json, results/invalid-runs.json
+# runs from before the fixture fix are archived under results/archive-pre-fix/
 ```
+
+6. **Watch for stale results dirs.** An aggregate that globs `results/*` will happily
+   mix runs from before and after a fixture fix; archive superseded runs.
+7. **Create-once for shared agent dirs.** Parallel tasks of one arm must not rm/race
+   on PIHOME content; Bun surfaces the race as EFAULT/EEXIST in exactly one task.
+8. **Degenerate output is not task failure.** Count it, report it, exclude it —
+   otherwise a model's template bug masquerades as a tool ranking.

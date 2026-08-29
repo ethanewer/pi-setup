@@ -51,11 +51,14 @@ mkdirSync(workDir, { recursive: true });
 mkdirSync(path.join(PIHOME, "local"), { recursive: true });
 
 // ---- agent dir: exactly one browser tool surface per arm ----
+// Parallel tasks of one arm share the PIHOME: create-once, never rm (Bun races).
 function linkPackage(src: string, name: string) {
   if (!existsSync(src)) throw new Error(`package source missing: ${src}`);
   const dst = path.join(PIHOME, "local", name);
-  try { rmSync(dst); } catch { /* not a symlink */ }
-  symlinkSync(src, dst);
+  if (!existsSync(dst)) {
+    mkdirSync(path.dirname(dst), { recursive: true });
+    try { symlinkSync(src, dst); } catch { /* lost race; the winner linked the same src */ }
+  }
   return `local/${name}`;
 }
 const settingsPath = path.join(PIHOME, "settings.json");

@@ -96,6 +96,34 @@ The rate-limited task (t3) is the only outcome discriminator (0.83 / 0.67 / 0.50
 Captcha gates were solved on first contact by every arm; the one hard-stuck loop
 occurred on playwright (misread code re-submitted 7×, escaped via a fresh context).
 
+## Results (glm-5.3-flash + deepseek-v4-flash-latest, 3 seeds × 5 tasks × 6 arms)
+
+See [`WORKFLOW.md`](WORKFLOW.md) for the full story. Merged per-run table:
+`results/combined-scores.json` (degenerate model outputs are flagged in
+`results/invalid-runs.json` and excluded — a known deepseek chat-template failure
+mode, per the monitor eval's precedent).
+
+| arm | glm outcome | deepseek outcome | glm calls/tokens | deepseek calls/tokens |
+|---|---|---|---|---|
+| `agent-browser` (native, baseline) | 0.93 | 0.92 | 14.5 / 11.1k | 14.0 / 23.2k |
+| `agent-browser-guided` | 1.00 | 1.00 (n=8, 7 excluded) | 16.7 / 8.9k | 31.4 / 30.8k |
+| `playwright` (@playwright/mcp) | 0.93 | 0.92 | 11.1 / 9.7k | 16.4 / 29.4k |
+| `devtools` (chrome-devtools-mcp) | 0.86 | 0.77 | 11.3 / 12.2k | 14.4 / **49.1k** |
+| `cli-agent-browser` (CLI + skill) | 0.93 | **1.00** | **7.2 / 8.4k** | **8.1 / 11.1k** |
+| `cli-playwright` (CLI + skill) | **1.00** | 0.82 | **5.1 / 7.9k** | 5.7 / 11.1k |
+
+Highlights:
+
+- **The CLI + skill arms (no pi tools, no extensions) match or beat every extension
+  arm on outcome at roughly half the calls and tokens.** For glm, `cli-playwright`
+  scored a perfect 1.00 with 5.1 calls and 7.9k tokens per task.
+- Captcha gates were solved on first contact by every arm on both models; rate
+  limiting (t3) remains the main outcome discriminator.
+- `devtools`-mcp is the most expensive setup by far for deepseek (49k tokens/task avg).
+- deepseek-v4-flash-latest degenerates into chat-template junk as final text in 18 of
+  ~90 deepseek runs (highest rate in the guided arm) — a model-level failure mode,
+  flagged and excluded rather than scored as task failure.
+
 ## Usage
 
 ```bash

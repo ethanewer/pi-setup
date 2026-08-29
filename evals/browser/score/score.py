@@ -170,6 +170,11 @@ def score_task(run_dir: Path):
     # curl used to bypass the browser (bot-block makes that visible server-side)
     curl_use = bool(re.search(r"\bcurl\b", json.dumps(run.get("toolCalls", []), default=str)))
 
+    # Degenerate model output: chat-template junk emitted as text (deepseek DSML
+    # markup, empty finals). Known failure mode — flagged and excluded by the
+    # aggregator, not scored as a task failure (monitor-eval precedent).
+    degenerate = ("DSML" in final) or (len(final.strip()) == 0) or final.strip().startswith("<|")
+
     result = {
         "task": task, "arm": arm, "seed": run["seed"], "model": run["model"],
         "exitReason": run.get("exitReason"), "durationS": round(run["durationMs"] / 1000, 1),
@@ -184,7 +189,7 @@ def score_task(run_dir: Path):
         "browser_cli_calls": browser_cli_calls,
         "duplicate_calls": duplicate_calls, "navigations": navigations,
         "unique_urls": len(unique_urls), "turns": turns, "tokens": tokens,
-        "curl_use": curl_use,
+        "curl_use": curl_use, "degenerate": degenerate,
     }
     (run_dir / "score.json").write_text(json.dumps(result, indent=2))
     return result
