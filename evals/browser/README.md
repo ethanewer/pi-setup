@@ -80,6 +80,22 @@ waiting. Prompts and tasks are identical across arms except the documented
 - **Getting stuck** — challenge loops, ignored Retry-After, curl bypass attempts
   (visible server-side as `bot_blocked`), budget exits.
 
+## Results (glm-5.3-flash, 3 seeds × 5 tasks × 4 arms)
+
+See [`WORKFLOW.md`](WORKFLOW.md) for the full story. Summary (t1 from the post-fixture-fix
+rerun; merged table in `results/combined-scores.json`):
+
+| arm | outcome | browser calls | challenges served/solved | 429s | tokens |
+|---|---|---|---|---|---|
+| `agent-browser` (baseline) | **0.97** | 14.3 | 3/3 | 25 | 11.4k |
+| `agent-browser-guided` | 0.93 | 14.7 | 3/3 | **6** | **8.8k** |
+| `devtools` (chrome-devtools-mcp) | 0.90 | 12.3 | 3/3 | 18 | 10.3k |
+| `playwright` (@playwright/mcp) | 0.90 | **11.1** | 10/3 | **6** | 10.4k |
+
+The rate-limited task (t3) is the only outcome discriminator (0.83 / 0.67 / 0.50 / 0.50).
+Captcha gates were solved on first contact by every arm; the one hard-stuck loop
+occurred on playwright (misread code re-submitted 7×, escaped via a fresh context).
+
 ## Usage
 
 ```bash

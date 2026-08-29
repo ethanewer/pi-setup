@@ -288,7 +288,8 @@ async function handler(req: Request): Promise<Response> {
     const nav = Array.from({ length: pages }, (_, i) =>
       `<a href="/catalog?cat=${cat}&page=${i + 1}">${i + 1}</a>`).join(" ");
     const catNav = CATS.map((c) => `<a href="/catalog?cat=${c}">${c}</a>`).join(" · ");
-    return done(html(page(`${cat} catalog (page ${pg} of ${pages})`, `<p class="muted">Categories: ${catNav}</p>`,
+    return done(html(page(`${cat} catalog (page ${pg} of ${pages})`,
+      `<p class="muted">Categories: ${catNav}</p>` +
       slice.map((p) => `<div class="card"><a href="/product/${p.sku}"><b>${esc(p.name)}</b></a> — $${p.price.toFixed(2)} · <span class="muted">${p.sku}</span></div>`).join("") +
       `<p>Pages: ${nav}</p>`)), { event: "page" });
   }

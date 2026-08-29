@@ -35,7 +35,7 @@ const QUIESCE_MS = 30_000;
 const ARMS = ["agent-browser", "agent-browser-guided", "playwright", "devtools"] as const;
 if (!ARMS.includes(ARM as any)) throw new Error(`unknown ARM '${ARM}' (want one of ${ARMS.join(", ")})`);
 
-const PIHOME = path.join(ROOT, "harness", "pihome");
+const PIHOME = path.join(ROOT, "harness", `pihome-${ARM}`);
 const vendorAdapter = path.join(ROOT, "vendor", "node_modules", "pi-mcp-adapter");
 if (!existsSync(vendorAdapter)) throw new Error("pi-mcp-adapter missing from vendor/ — run: (cd vendor && bun add pi-mcp-adapter@2.31.0)");
 
