@@ -121,6 +121,15 @@ def score_task(run_dir: Path):
     browser_calls = sum(c for t, c in run["toolCounts"].items() if t in BROWSER_TOOLS)
     bash_calls = run["toolCounts"].get("bash", 0)
     read_calls = run["toolCounts"].get("read", 0)
+    # CLI arms drive the browser through bash; count invocations of the browser CLIs.
+    browser_cli_calls = 0
+    for c in run.get("toolCalls", []):
+        if c["tool"] != "bash":
+            continue
+        cmd = c.get("args", {})
+        cmd = cmd.get("command", "") if isinstance(cmd, dict) else str(cmd)
+        if re.search(r"\b(agent-browser|playwright-cli)\b", cmd):
+            browser_cli_calls += 1
     turns = run.get("assistantTurns", 0)
     usage = run.get("usage", {})
     tokens = usage.get("input", 0) + usage.get("output", 0)
@@ -131,7 +140,7 @@ def score_task(run_dir: Path):
     navigations = 0
     unique_urls = set()
     for c in run.get("toolCalls", []):
-        if c["tool"] not in BROWSER_TOOLS:
+        if c["tool"] not in BROWSER_TOOLS and c["tool"] != "bash":
             continue
         a = c.get("args") or {}
         if isinstance(a, str):
@@ -139,12 +148,20 @@ def score_task(run_dir: Path):
                 a = json.loads(a)
             except json.JSONDecodeError:
                 a = {"raw": a}
-        key = (c["tool"], json.dumps(a, sort_keys=True, default=str)[:400])
-        seen[key] += 1
-        if seen[key] == 2:
-            duplicate_calls += 1
-        # count page openings
+        # count page openings (works for both native args and bash CLI commands)
         s = json.dumps(a, default=str)
+        if c["tool"] == "bash":
+            # duplicate detection for CLI arms: identical full command lines
+            if re.search(r"\b(agent-browser|playwright-cli)\b", s):
+                key = ("cli", s.strip()[:400])
+                seen[key] += 1
+                if seen[key] == 2:
+                    duplicate_calls += 1
+        else:
+            key = (c["tool"], json.dumps(a, sort_keys=True, default=str)[:400])
+            seen[key] += 1
+            if seen[key] == 2:
+                duplicate_calls += 1
         m = re.findall(r"https?://127\.0\.0\.1:\d+[^\"'\s\\]*", s)
         for u in m:
             navigations += 1
@@ -164,6 +181,7 @@ def score_task(run_dir: Path):
         "rate_limited": rate_limited, "ignored_retry_after": ignored_retry_after,
         "auth_ok": auth_ok, "auth_failed": auth_failed, "bot_blocked": bot_blocked,
         "browser_calls": browser_calls, "bash_calls": bash_calls, "read_calls": read_calls,
+        "browser_cli_calls": browser_cli_calls,
         "duplicate_calls": duplicate_calls, "navigations": navigations,
         "unique_urls": len(unique_urls), "turns": turns, "tokens": tokens,
         "curl_use": curl_use,

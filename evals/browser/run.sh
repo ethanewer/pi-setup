@@ -10,7 +10,7 @@ ARM="${ARM:-agent-browser}"
 MODEL="${MODEL:-openrouter/z-ai/glm-5.3-flash}"
 SEEDS="${SEEDS:-101}"
 for seed in $SEEDS; do
-  slug=$(echo "${ARM}_${MODEL}" | tr '/:' '__')
+  slug=$(echo "${ARM}_${MODEL}" | tr '/:~' '___')
   RUN_ID="$(date +%Y%m%d-%H%M%S)_${slug}_seed${seed}"
   RUN_DIR="$PWD/results/$RUN_ID"
   mkdir -p "$RUN_DIR"

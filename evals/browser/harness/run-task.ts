@@ -32,7 +32,10 @@ const BUDGETS: Record<string, number> = { t1: 600, t2: 480, t3: 600, t4: 480, t5
 const BUDGET_S = Number(process.env.BUDGET_S ?? BUDGETS[TASK] ?? 600);
 const QUIESCE_MS = 30_000;
 
-const ARMS = ["agent-browser", "agent-browser-guided", "playwright", "devtools"] as const;
+const ARMS = [
+  "agent-browser", "agent-browser-guided", "playwright", "devtools",
+  "cli-agent-browser", "cli-playwright",
+] as const;
 if (!ARMS.includes(ARM as any)) throw new Error(`unknown ARM '${ARM}' (want one of ${ARMS.join(", ")})`);
 
 const PIHOME = path.join(ROOT, "harness", `pihome-${ARM}`);
@@ -65,13 +68,25 @@ if (ARM === "agent-browser" || ARM === "agent-browser-guided") {
   const src = candidates.find((p) => existsSync(p));
   if (!src) throw new Error(`pi-agent-browser-native-safe not found in: ${candidates.join(", ")}`);
   packages = [linkPackage(src, "pi-agent-browser-native")];
-} else {
+} else if (ARM === "playwright" || ARM === "devtools") {
   packages = [linkPackage(vendorAdapter, "pi-mcp-adapter")];
 }
+// else: CLI arms load NO packages — the browser is a CLI on PATH, taught by a skill.
 writeFileSync(settingsPath, JSON.stringify({
   defaultThinkingLevel: "medium",
   packages,
 }, null, 2) + "\n");
+
+// CLI arms: install the how-to skill into the agent dir (no extension involved).
+// Parallel tasks of the same arm share this PIHOME, so never rm — first writer wins.
+if (ARM === "cli-agent-browser" || ARM === "cli-playwright") {
+  const skillName = ARM === "cli-agent-browser" ? "agent-browser-cli" : "playwright-cli";
+  const skillDst = path.join(PIHOME, "skills", skillName);
+  if (!existsSync(path.join(skillDst, "SKILL.md"))) {
+    mkdirSync(skillDst, { recursive: true });
+    cpSync(path.join(ROOT, "harness", "skills", skillName, "SKILL.md"), path.join(skillDst, "SKILL.md"));
+  }
+}
 
 // ---- per-run site ----
 const NONCE = randomBytes(6).toString("hex");
@@ -198,6 +213,15 @@ if (!model) throw new Error(`model not found: ${MODEL}`);
 const resourceLoader = new DefaultResourceLoader({ cwd: workDir, agentDir: PIHOME });
 await resourceLoader.reload();
 process.chdir(workDir);
+
+// CLI arms: per-run browser session via env so parallel runs never share state.
+if (ARM === "cli-agent-browser") {
+  process.env.AGENT_BROWSER_SESSION = `bb-${NONCE}`;
+  process.env.AGENT_BROWSER_NAMESPACE = `bb-${NONCE}`;
+}
+if (ARM === "cli-playwright") {
+  process.env.PLAYWRIGHT_CLI_SESSION = `bb-${NONCE}`;
+}
 
 const { session } = await createAgentSession({
   cwd: workDir,
