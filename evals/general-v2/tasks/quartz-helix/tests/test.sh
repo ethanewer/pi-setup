@@ -206,19 +206,29 @@ r = run("python3", "/app/clean.py", "filter", c2 + "/records.csv", c2 + "/target
 if r.returncode != 0:
     check("case2 filter", False, "crash: " + (r.stderr or r.stdout)[-200:])
 else:
-    gotf = read_csv("/tmp/qh_f.csv")
-    expf = ref_filter(read_csv(c2+"/records.csv"), read_csv(c2+"/target.csv"))
-    ok, why = eq_rows(gotf, expf)
-    check("case2 filter", ok, why)
-    check("case2 filter count", len(gotf) == len(expf), "expected %d rows got %d" % (len(expf), len(gotf)))
+    try:
+        gotf = read_csv("/tmp/qh_f.csv")
+    except Exception as e:
+        gotf = None
+        check("case2 filter", False, "output unreadable: %s" % e)
+    if gotf is not None:
+        expf = ref_filter(read_csv(c2+"/records.csv"), read_csv(c2+"/target.csv"))
+        ok, why = eq_rows(gotf, expf)
+        check("case2 filter", ok, why)
+        check("case2 filter count", len(gotf) == len(expf), "expected %d rows got %d" % (len(expf), len(gotf)))
 
 r = run("python3", "/app/clean.py", "topk", c2 + "/requests.csv", "-k", "2", "-o", "/tmp/qh_top.tsv")
 if r.returncode != 0:
     check("case2 topk", False, "crash: " + (r.stderr or r.stdout)[-200:])
 else:
-    got_t = [(ln.split("\t")[0], int(ln.split("\t")[1])) for ln in open("/tmp/qh_top.tsv").read().splitlines() if ln.strip()]
-    exp_t = ref_topk(read_csv(c2+"/requests.csv"), 2)
-    check("case2 topk", got_t == exp_t, "top-k mismatch %r vs %r" % (got_t, exp_t))
+    try:
+        got_t = [(ln.split("\t")[0], int(ln.split("\t")[1])) for ln in open("/tmp/qh_top.tsv").read().splitlines() if ln.strip()]
+    except Exception as e:
+        got_t = None
+        check("case2 topk", False, "output unreadable: %s" % e)
+    if got_t is not None:
+        exp_t = ref_topk(read_csv(c2+"/requests.csv"), 2)
+        check("case2 topk", got_t == exp_t, "top-k mismatch %r vs %r" % (got_t, exp_t))
 
 # case3: totals + series
 c3 = H + "/case3"
@@ -248,16 +258,21 @@ r = run("python3", "/app/clean.py", "series", c3 + "/hourly.tsv", "-o", "/tmp/qh
 if r.returncode != 0:
     check("case3 series", False, "crash: " + (r.stderr or r.stdout)[-200:])
 else:
-    got_s = [(r["hour"], num(r["value"])) for r in read_csv("/tmp/qh_s.csv")]
-    exp_s = ref_series(read_csv(c3+"/hourly.tsv", "\t"))
-    if len(got_s) != len(exp_s):
-        check("case3 series", False, "row count %d vs %d" % (len(got_s), len(exp_s)))
-    else:
-        bad = None
-        for (gh, gv), (eh, ev) in zip(got_s, exp_s):
-            if gh != eh or not close(gv, ev):
-                bad = (gh, gv, eh, ev); break
-        check("case3 series", bad is None, "series mismatch %r" % (bad,))
+    try:
+        got_s = [(r["hour"], num(r["value"])) for r in read_csv("/tmp/qh_s.csv")]
+    except Exception as ex:
+        got_s = None
+        check("case3 series", False, "unreadable series output: %s" % ex)
+    if got_s is not None:
+        exp_s = ref_series(read_csv(c3+"/hourly.tsv", "\t"))
+        if len(got_s) != len(exp_s):
+            check("case3 series", False, "row count %d vs %d" % (len(got_s), len(exp_s)))
+        else:
+            bad = None
+            for (gh, gv), (eh, ev) in zip(got_s, exp_s):
+                if gh != eh or not close(gv, ev):
+                    bad = (gh, gv, eh, ev); break
+            check("case3 series", bad is None, "series mismatch %r" % (bad,))
 
 # case4: grouped + papers
 c4 = H + "/case4"
@@ -265,32 +280,42 @@ r = run("python3", "/app/clean.py", "grouped", c4 + "/sales.csv", "--category", 
 if r.returncode != 0:
     check("case4 grouped", False, "crash: " + (r.stderr or r.stdout)[-200:])
 else:
-    got_g = read_csv("/tmp/qh_g.csv")
-    exp_g, fields = ref_grouped(read_csv(c4+"/sales.csv"), "category", ["revenue", "in_stock"])
-    check("case4 grouped fields", [c for c in got_g[0].keys()] == fields if got_g else True, "field names")
-    ok, why = eq_rows(got_g, exp_g)
-    check("case4 grouped", ok, why)
+    try:
+        got_g = read_csv("/tmp/qh_g.csv")
+    except Exception as e:
+        got_g = None
+        check("case4 grouped", False, "output unreadable: %s" % e)
+    if got_g is not None:
+        exp_g, fields = ref_grouped(read_csv(c4+"/sales.csv"), "category", ["revenue", "in_stock"])
+        check("case4 grouped fields", [c for c in got_g[0].keys()] == fields if got_g else True, "field names")
+        ok, why = eq_rows(got_g, exp_g)
+        check("case4 grouped", ok, why)
 
 r = run("python3", "/app/clean.py", "papers", c4 + "/papers.csv", "-o", "/tmp/qh_p.jsonl")
 if r.returncode != 0:
     check("case4 papers", False, "crash: " + (r.stderr or r.stdout)[-200:])
 else:
-    lines = [ln for ln in open("/tmp/qh_p.jsonl").read().splitlines() if ln.strip()]
-    exp_p = ref_papers(read_csv(c4+"/papers.csv"))
-    if len(lines) != len(exp_p):
-        check("case4 papers", False, "line count %d vs %d" % (len(lines), len(exp_p)))
-    else:
-        bad = None
-        for ln, e in zip(lines, exp_p):
-            try:
-                o = json.loads(ln)
-            except Exception as ex:
-                bad = ("json", ex); break
-            if set(o.keys()) != {"title", "doi"}:
-                bad = ("fields", o); break
-            if o["title"] != e["title"] or o["doi"] != e["doi"]:
-                bad = ("value", o, e); break
-        check("case4 papers", bad is None, "papers mismatch %r" % (bad,))
+    try:
+        lines = [ln for ln in open("/tmp/qh_p.jsonl").read().splitlines() if ln.strip()]
+    except Exception as e:
+        lines = None
+        check("case4 papers", False, "output unreadable: %s" % e)
+    if lines is not None:
+        exp_p = ref_papers(read_csv(c4+"/papers.csv"))
+        if len(lines) != len(exp_p):
+            check("case4 papers", False, "line count %d vs %d" % (len(lines), len(exp_p)))
+        else:
+            bad = None
+            for ln, e in zip(lines, exp_p):
+                try:
+                    o = json.loads(ln)
+                except Exception as ex:
+                    bad = ("json", ex); break
+                if set(o.keys()) != {"title", "doi"}:
+                    bad = ("fields", o); break
+                if o["title"] != e["title"] or o["doi"] != e["doi"]:
+                    bad = ("value", o, e); break
+            check("case4 papers", bad is None, "papers mismatch %r" % (bad,))
 
 # ---- reward ----
 if FAILS:
