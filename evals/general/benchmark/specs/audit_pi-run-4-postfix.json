@@ -1,0 +1,80 @@
+{
+ "job": "pi-run-4-postfix",
+ "n_trials": 524,
+ "passed": 489,
+ "zero": 18,
+ "partial": 14,
+ "missing": [],
+ "anomalies": [
+  {
+   "task": "skill-python-bottle",
+   "kind": "exception",
+   "info": "NonZeroAgentExitCodeError"
+  },
+  {
+   "task": "item-010-hard",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-034-hard",
+   "kind": "exception",
+   "info": "NonZeroAgentExitCodeError"
+  },
+  {
+   "task": "item-052-main",
+   "kind": "exception",
+   "info": "NonZeroAgentExitCodeError"
+  },
+  {
+   "task": "item-009-main",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "skill-vimscript-macros",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "skill-port-forwarding",
+   "kind": "exception",
+   "info": "NonZeroAgentExitCodeError"
+  },
+  {
+   "task": "item-045-hard",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-043-hard",
+   "kind": "exception",
+   "info": "NonZeroAgentExitCodeError"
+  },
+  {
+   "task": "skill-pipeline-parallelism",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "skill-pdflatex",
+   "kind": "exception",
+   "info": "NonZeroAgentExitCodeError"
+  },
+  {
+   "task": "item-032-main",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-033-main",
+   "kind": "exception",
+   "info": "NonZeroAgentExitCodeError"
+  }
+ ],
+ "trivial_zero_count": 6,
+ "cost_usd": 0.0,
+ "n_input_tokens": 0,
+ "n_output_tokens": 0,
+ "mean_reward": 0.9492
+}
