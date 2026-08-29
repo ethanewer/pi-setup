@@ -459,6 +459,17 @@ See [`evals/monitor/README.md`](evals/monitor/README.md) for task design, metric
 8–11/12; the eval also drove a simplification of the monitor extension's model surface
 from 4 tools/10 params/3 guidelines to 3/6/1, which improved trust for every model).
 
+The second is **browser-bench** (under `evals/browser/`, `browser-eval` branch): a seeded
+demo store whose bot checks, browser-check interstitials, and rate limits reproduce the
+friction agents hit on the live web, with the site's request log as ground truth. It
+compares browser stacks — the installed `agent-browser`, and `@playwright/mcp` /
+`chrome-devtools-mcp` through a shared `pi-mcp-adapter` bridge — on outcome, efficiency,
+and how agents handle captchas and 429s. Reference results (glm-5.3-flash, 3 seeds):
+outcome 0.97 / 0.93 / 0.90 / 0.90; captcha gates solved on first contact by every stack;
+rate limiting is the only discriminator. See
+[`evals/browser/README.md`](evals/browser/README.md) and
+[`evals/browser/WORKFLOW.md`](evals/browser/WORKFLOW.md).
+
 ## Performance
 
 Measured warm startup to the beginning of an agent turn on Apple Silicon:
