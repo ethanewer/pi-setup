@@ -59,7 +59,7 @@ These are the honest gaps. Everything else is gate-verified (see checklist).
 7. **No frontier-model reference run.** Scores are from a flash-class model
    only; a frontier-model run would better anchor the difficulty scale.
 
-## Completion status (updated 2026-08-27, final)
+## Completion status (updated 2026-08-29, final)
 
 The benchmark build and verification are COMPLETE. The suite is ready for
 model-score comparison and contamination-sensitive development. Summary:
@@ -97,7 +97,7 @@ Do not mark this TODO complete until all boxes are checked:
 - [x] Fixed-block and long-n-gram scan reports zero matches. (Final audit: block=0 ngram=0; residual collisions documented as idioms/generic vocabulary/official distributions/hash-pinned encoder-signature media.)
 - [x] Canary scan reports zero matches.
 - [x] Source-repository provenance comparison reports zero disallowed matches. (`external_sources` empty; policy: zero shared repositories.)
-- [x] All task-owned files have provenance entries. (5,109 files recorded; check_reproducibility.py content-freeze passes with 0 drift.)
+- [x] All task-owned files have provenance entries. (5,074 files recorded; check_reproducibility.py content-freeze passes with 0 drift.)
 - [x] Easy, medium, and hard tasks are present and calibrated. (2 easy / 84 medium / 118 hard; rubric-based; difficulty floors enforced.)
 - [x] Every competency has an equal-or-harder task, except documented probes. (check_difficulty.py reports 0 competency-floor errors.)
 - [x] All oracle trials pass from pristine containers. (204/204 in two independent full sweeps.)
@@ -112,6 +112,7 @@ Only after this checklist passes should v2 be used for model score comparisons o
 - 2026-08-26: reference frozen; D1 (drop optional General inventory); tool suite written; 24 integrated tasks upgraded to the full contract and oracle-verified; competency inventory built (726); 163 task specs staged; authoring wave 1 (16 tasks).
 - 2026-08-27: wave 1 verified (16/16 after fixes/redos); flint-mantle and meadow-bridge hand-authored and verified (positive + negative controls); full Harbor oracle sweep #1 over 40 tasks: **40/40 reward=1, 0 errored** (`/tmp/general-v2-oracle-full-1`, specs/oracle_report.json + oracle_times.json). Suite at 42 tasks, lint-clean; coverage claims 133 cells / 118 competencies. Independence audit converged on idiom classes; final zero-match run pending content freeze. Waves 2–4 + feasibility-probe batch staged in /tmp, ready to launch on workflow re-arm.
 - 2026-08-27 (final): build-out complete at 204 tasks (24 integrated + 180 clean-room). Coverage 722/726 competencies (4 documented environmentally infeasible). Two full oracle sweeps reproduced identically (204/204). Final independence audit CLEAN (exact=0 block=0 ngram=0 canary=0 repo=0 over 30,128 payloads). Blind review cleared all 6 flagged pairs. Model runs on openrouter/z-ai/glm-5.3-flash: pi (PAgent) 136/204=0.667; terminus-2 141/204=0.691 (verifier-authoritative) / 107/204=0.525 (strict). 408-trial forensic grading audit found 0 false positives; 28 verifier/instruction contract defects repaired and re-run. tools/suite_report.py -> SUITE PASS. See reports/benchmark_report.md and private-audit/DECISIONS.md (D1-D4).
+- 2026-08-29 (packaging): all work committed and pushed to branch `general-v2-eval` of ethanewer/pi-setup (5,032 files; five >20MB fixture binaries gitignored, listed in specs/large_assets.json with sha256/sources; hollow-atlas git fixture archived as root-owned tarball and re-verified). All traces, results, and audit evidence archived in HF dataset eewer/general-agent-bench-results under v2/ (2,145 files: per-task trials for pi and terminus-2, results.json, audit evidence, assets, raw-jobs.tar.gz). Provenance re-verified after the tarball change (5,074 files, 0 drift). Final gate re-run: SUITE PASS.
 
 
 ---
@@ -134,6 +135,12 @@ There are two different inventories that must not be conflated:
 - `/home/eewer/pi-setup/evals/general/skills.json`, which is an optional larger inventory. If General skills are retained, they must be covered in addition to the Terminal-Bench inventory, not substituted for it.
 
 ## Current v2 gaps to resolve
+
+> Historical: this section describes the state of the v2 DRAFT when the
+> contract was written. All items below have since been resolved — see the
+> completion status and checklist at the top of this file (probes removed
+> per decision D1; verifiers execute deliverables; hidden cases lint-enforced;
+> audits re-run after content freeze).
 
 The current v2 draft has 24 integrated tasks and generated probes for the 384 General skills. The probes are currently generic data/number/byte/graph exercises and therefore do not prove proficiency in skills such as R, Cython, QEMU, Coq, pMARS, distributed PyTorch, or X.509. Several integrated tasks also request programs while their verifiers only compare `answer.json`.
 
@@ -453,30 +460,10 @@ python3 tools/check_difficulty.py
 
 These tools must fail closed when an input manifest is missing or stale.
 
-## 7. Completion checklist (superseded by the status section at the top)
+## 7. Completion checklist (original text)
 
-Do not mark this TODO complete until all boxes are checked:
+The live, annotated checklist is maintained at the top of this file
+("7. Completion checklist (current state)"). The original unchecked contract
+text is preserved in git history; it is intentionally not duplicated here to
+avoid two divergent checklists.
 
-- [ ] Frozen Terminal-Bench 2.1 manifest and provenance recorded externally.
-- [ ] Atomic Terminal-Bench competency inventory reviewed by a human.
-- [ ] Every Terminal-Bench competency has real v2 verifier evidence.
-- [ ] Every optional General skill is mapped to a real v2 probe or integrated task.
-- [ ] High-risk and rare competencies have independent second-task coverage.
-- [ ] Generic placeholder probes have been replaced or their claims removed.
-- [ ] Every task's requested deliverable is checked by its verifier.
-- [ ] Every task has hidden/generalization cases where appropriate.
-- [ ] Task IDs and ordering are not derived from the reference ordering.
-- [ ] Two-person blind direct-mapping review is complete.
-- [ ] Exact file and archive-member scan reports zero matches.
-- [ ] Fixed-block and long-n-gram scan reports zero matches.
-- [ ] Canary scan reports zero matches.
-- [ ] Source-repository provenance comparison reports zero disallowed matches.
-- [ ] All task-owned files have provenance entries.
-- [ ] Easy, medium, and hard tasks are present and calibrated.
-- [ ] Every competency has an equal-or-harder task, except documented probes.
-- [ ] All oracle trials pass from pristine containers.
-- [ ] Reproducibility check passes on a second run.
-- [ ] A model pilot shows failures caused by intended skills rather than infrastructure.
-- [ ] Final coverage, contamination, similarity, difficulty, and oracle reports are archived outside the task images.
-
-Only after this checklist passes should v2 be used for model score comparisons or contamination-sensitive development.

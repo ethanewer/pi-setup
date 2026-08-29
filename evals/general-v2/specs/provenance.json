@@ -1,6 +1,6 @@
 {
   "external_sources": [],
-  "generated_at": "2026-08-29T00:37:11.467021+00:00",
+  "generated_at": "2026-08-29T06:42:26.260197+00:00",
   "policy": "clean-room; zero shared source repositories with the frozen reference provenance set",
   "task_files": {
     "agents/p_agent.py": {
@@ -14,7 +14,7 @@
     "specs/coverage.json": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2-spec",
-      "sha256": "c4a989b8edd6b8d99e1fd81bf259e50377ab990f408f8972feb0db8165ad9125",
+      "sha256": "13fb8918185dae4eab563494073e470a57c1ae586e56a5994cc1122bb57a06f7",
       "source_commit": null,
       "source_repository": null,
       "transformation": "derived from private audit records"
@@ -22,7 +22,7 @@
     "specs/coverage_claims.json": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2-spec",
-      "sha256": "f0c7104b883a49a23c68256b42504bc30ef2772255eb1304ac026e57b886698e",
+      "sha256": "d87b12ed1f12c8f94483daf366755909d0b4de9902f2246642e677db566a6329",
       "source_commit": null,
       "source_repository": null,
       "transformation": "derived from private audit records"
@@ -30,7 +30,7 @@
     "specs/difficulty.json": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2-spec",
-      "sha256": "bdba13373e85d0f1a36981b9f20ee606f260548ee20943fed0bdca37d1b89b2a",
+      "sha256": "751e174c1dadec04d6a70c7a53b8e6fb9e1b36c6c98506e778a71a8d7b95f404",
       "source_commit": null,
       "source_repository": null,
       "transformation": "derived from private audit records"
@@ -39,6 +39,14 @@
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2-spec",
       "sha256": "11f84e2384d5736f939ab8d932289a0625fc8a970d46e2423a010a3f79e6363b",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "derived from private audit records"
+    },
+    "specs/large_assets.json": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2-spec",
+      "sha256": "eb60e4d8bf09f4bf24d55eb1b2ad1086c33ad18bf84110b15d1b31791f9c89c2",
       "source_commit": null,
       "source_repository": null,
       "transformation": "derived from private audit records"
@@ -16155,298 +16163,10 @@
       "source_repository": null,
       "transformation": "hand-authored"
     },
-    "tasks/hollow-atlas/tests/hidden/checkout/repo/.git/COMMIT_EDITMSG": {
+    "tasks/hollow-atlas/tests/hidden/checkout/repo.tar.gz": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "56656877b8b0e0c06a96e83df12157565b91bb8f6b55c4051c0466edf0f08b85",
-      "source_commit": null,
-      "source_repository": null,
-      "transformation": "hand-authored"
-    },
-    "tasks/hollow-atlas/tests/hidden/checkout/repo/.git/HEAD": {
-      "license": "internal (authored for general-v2)",
-      "origin": "authored-clean-room-v2",
-      "sha256": "28d25bf82af4c0e2b72f50959b2beb859e3e60b9630a5e8c603dad4ddb2b6e80",
-      "source_commit": null,
-      "source_repository": null,
-      "transformation": "hand-authored"
-    },
-    "tasks/hollow-atlas/tests/hidden/checkout/repo/.git/config": {
-      "license": "internal (authored for general-v2)",
-      "origin": "authored-clean-room-v2",
-      "sha256": "5bb821bed2e55539e66538bca407c4ed833e9d7a0659004bd18a82b358a21e95",
-      "source_commit": null,
-      "source_repository": null,
-      "transformation": "hand-authored"
-    },
-    "tasks/hollow-atlas/tests/hidden/checkout/repo/.git/description": {
-      "license": "internal (authored for general-v2)",
-      "origin": "authored-clean-room-v2",
-      "sha256": "85ab6c163d43a17ea9cf7788308bca1466f1b0a8d1cc92e26e9bf63da4062aee",
-      "source_commit": null,
-      "source_repository": null,
-      "transformation": "hand-authored"
-    },
-    "tasks/hollow-atlas/tests/hidden/checkout/repo/.git/hooks/applypatch-msg.sample": {
-      "license": "internal (authored for general-v2)",
-      "origin": "authored-clean-room-v2",
-      "sha256": "0223497a0b8b033aa58a3a521b8629869386cf7ab0e2f101963d328aa62193f7",
-      "source_commit": null,
-      "source_repository": null,
-      "transformation": "hand-authored"
-    },
-    "tasks/hollow-atlas/tests/hidden/checkout/repo/.git/hooks/commit-msg.sample": {
-      "license": "internal (authored for general-v2)",
-      "origin": "authored-clean-room-v2",
-      "sha256": "1f74d5e9292979b573ebd59741d46cb93ff391acdd083d340b94370753d92437",
-      "source_commit": null,
-      "source_repository": null,
-      "transformation": "hand-authored"
-    },
-    "tasks/hollow-atlas/tests/hidden/checkout/repo/.git/hooks/fsmonitor-watchman.sample": {
-      "license": "internal (authored for general-v2)",
-      "origin": "authored-clean-room-v2",
-      "sha256": "e0549964e93897b519bd8e333c037e51fff0f88ba13e086a331592bf801fa1d0",
-      "source_commit": null,
-      "source_repository": null,
-      "transformation": "hand-authored"
-    },
-    "tasks/hollow-atlas/tests/hidden/checkout/repo/.git/hooks/post-update.sample": {
-      "license": "internal (authored for general-v2)",
-      "origin": "authored-clean-room-v2",
-      "sha256": "81765af2daef323061dcbc5e61fc16481cb74b3bac9ad8a174b186523586f6c5",
-      "source_commit": null,
-      "source_repository": null,
-      "transformation": "hand-authored"
-    },
-    "tasks/hollow-atlas/tests/hidden/checkout/repo/.git/hooks/pre-applypatch.sample": {
-      "license": "internal (authored for general-v2)",
-      "origin": "authored-clean-room-v2",
-      "sha256": "e15c5b469ea3e0a695bea6f2c82bcf8e62821074939ddd85b77e0007ff165475",
-      "source_commit": null,
-      "source_repository": null,
-      "transformation": "hand-authored"
-    },
-    "tasks/hollow-atlas/tests/hidden/checkout/repo/.git/hooks/pre-commit.sample": {
-      "license": "internal (authored for general-v2)",
-      "origin": "authored-clean-room-v2",
-      "sha256": "f9af7d95eb1231ecf2eba9770fedfa8d4797a12b02d7240e98d568201251244a",
-      "source_commit": null,
-      "source_repository": null,
-      "transformation": "hand-authored"
-    },
-    "tasks/hollow-atlas/tests/hidden/checkout/repo/.git/hooks/pre-merge-commit.sample": {
-      "license": "internal (authored for general-v2)",
-      "origin": "authored-clean-room-v2",
-      "sha256": "d3825a70337940ebbd0a5c072984e13245920cdf8898bd225c8d27a6dfc9cb53",
-      "source_commit": null,
-      "source_repository": null,
-      "transformation": "hand-authored"
-    },
-    "tasks/hollow-atlas/tests/hidden/checkout/repo/.git/hooks/pre-push.sample": {
-      "license": "internal (authored for general-v2)",
-      "origin": "authored-clean-room-v2",
-      "sha256": "ecce9c7e04d3f5dd9d8ada81753dd1d549a9634b26770042b58dda00217d086a",
-      "source_commit": null,
-      "source_repository": null,
-      "transformation": "hand-authored"
-    },
-    "tasks/hollow-atlas/tests/hidden/checkout/repo/.git/hooks/pre-rebase.sample": {
-      "license": "internal (authored for general-v2)",
-      "origin": "authored-clean-room-v2",
-      "sha256": "4febce867790052338076f4e66cc47efb14879d18097d1d61c8261859eaaa7b3",
-      "source_commit": null,
-      "source_repository": null,
-      "transformation": "hand-authored"
-    },
-    "tasks/hollow-atlas/tests/hidden/checkout/repo/.git/hooks/pre-receive.sample": {
-      "license": "internal (authored for general-v2)",
-      "origin": "authored-clean-room-v2",
-      "sha256": "a4c3d2b9c7bb3fd8d1441c31bd4ee71a595d66b44fcf49ddb310252320169989",
-      "source_commit": null,
-      "source_repository": null,
-      "transformation": "hand-authored"
-    },
-    "tasks/hollow-atlas/tests/hidden/checkout/repo/.git/hooks/prepare-commit-msg.sample": {
-      "license": "internal (authored for general-v2)",
-      "origin": "authored-clean-room-v2",
-      "sha256": "e9ddcaa4189fddd25ed97fc8c789eca7b6ca16390b2392ae3276f0c8e1aa4619",
-      "source_commit": null,
-      "source_repository": null,
-      "transformation": "hand-authored"
-    },
-    "tasks/hollow-atlas/tests/hidden/checkout/repo/.git/hooks/push-to-checkout.sample": {
-      "license": "internal (authored for general-v2)",
-      "origin": "authored-clean-room-v2",
-      "sha256": "a53d0741798b287c6dd7afa64aee473f305e65d3f49463bb9d7408ec3b12bf5f",
-      "source_commit": null,
-      "source_repository": null,
-      "transformation": "hand-authored"
-    },
-    "tasks/hollow-atlas/tests/hidden/checkout/repo/.git/hooks/sendemail-validate.sample": {
-      "license": "internal (authored for general-v2)",
-      "origin": "authored-clean-room-v2",
-      "sha256": "44ebfc923dc5466bc009602f0ecf067b9c65459abfe8868ddc49b78e6ced7a92",
-      "source_commit": null,
-      "source_repository": null,
-      "transformation": "hand-authored"
-    },
-    "tasks/hollow-atlas/tests/hidden/checkout/repo/.git/hooks/update.sample": {
-      "license": "internal (authored for general-v2)",
-      "origin": "authored-clean-room-v2",
-      "sha256": "8d5f2fa83e103cf08b57eaa67521df9194f45cbdbcb37da52ad586097a14d106",
-      "source_commit": null,
-      "source_repository": null,
-      "transformation": "hand-authored"
-    },
-    "tasks/hollow-atlas/tests/hidden/checkout/repo/.git/index": {
-      "license": "internal (authored for general-v2)",
-      "origin": "authored-clean-room-v2",
-      "sha256": "9cefe4431b423bdb1c07b50351a81b069e4ed4c02e0a3a033cbae326f2d0894b",
-      "source_commit": null,
-      "source_repository": null,
-      "transformation": "hand-authored"
-    },
-    "tasks/hollow-atlas/tests/hidden/checkout/repo/.git/info/exclude": {
-      "license": "internal (authored for general-v2)",
-      "origin": "authored-clean-room-v2",
-      "sha256": "6671fe83b7a07c8932ee89164d1f2793b2318058eb8b98dc5c06ee0a5a3b0ec1",
-      "source_commit": null,
-      "source_repository": null,
-      "transformation": "hand-authored"
-    },
-    "tasks/hollow-atlas/tests/hidden/checkout/repo/.git/logs/HEAD": {
-      "license": "internal (authored for general-v2)",
-      "origin": "authored-clean-room-v2",
-      "sha256": "61ac09d8c9f4372bb588ae5b8c87d4d5af62b9f7fedf8ea1275646b8078ccc11",
-      "source_commit": null,
-      "source_repository": null,
-      "transformation": "hand-authored"
-    },
-    "tasks/hollow-atlas/tests/hidden/checkout/repo/.git/logs/refs/heads/main": {
-      "license": "internal (authored for general-v2)",
-      "origin": "authored-clean-room-v2",
-      "sha256": "df99bcc421414cb13c7e3229a13829dcf21020e8ff87bee44feb5b65d12c01cd",
-      "source_commit": null,
-      "source_repository": null,
-      "transformation": "hand-authored"
-    },
-    "tasks/hollow-atlas/tests/hidden/checkout/repo/.git/objects/1a/83c23593052e8a8d5953c0637dd5f842700b0e": {
-      "license": "internal (authored for general-v2)",
-      "origin": "authored-clean-room-v2",
-      "sha256": "60e38e6b03bbbd04afbdf15bda0dc0ab94964f31b9044bf28570f8cd14832edc",
-      "source_commit": null,
-      "source_repository": null,
-      "transformation": "hand-authored"
-    },
-    "tasks/hollow-atlas/tests/hidden/checkout/repo/.git/objects/22/91f697d64513987e3bb519c1a85ad03cfa5bc8": {
-      "license": "internal (authored for general-v2)",
-      "origin": "authored-clean-room-v2",
-      "sha256": "5429dda37ba83ab4c5f2ba2ea929c46072864bdd52c371a82c274a02b7ff04cb",
-      "source_commit": null,
-      "source_repository": null,
-      "transformation": "hand-authored"
-    },
-    "tasks/hollow-atlas/tests/hidden/checkout/repo/.git/objects/23/18778b326aa18bbb5d3dfc8270836f2626643e": {
-      "license": "internal (authored for general-v2)",
-      "origin": "authored-clean-room-v2",
-      "sha256": "f75289a488e212d584e1bfca822994abec23afee59dbad5403ef904e02bbbab9",
-      "source_commit": null,
-      "source_repository": null,
-      "transformation": "hand-authored"
-    },
-    "tasks/hollow-atlas/tests/hidden/checkout/repo/.git/objects/35/549d03ddee6444f5c53abc7f96cbe465118867": {
-      "license": "internal (authored for general-v2)",
-      "origin": "authored-clean-room-v2",
-      "sha256": "5f4644efe02fd55e9abfd1c1b7880bbf3e316e09a681600ab39a759273cd5630",
-      "source_commit": null,
-      "source_repository": null,
-      "transformation": "hand-authored"
-    },
-    "tasks/hollow-atlas/tests/hidden/checkout/repo/.git/objects/59/d3870bb3cb69d7905ea8dac6b8d57b708aa3a1": {
-      "license": "internal (authored for general-v2)",
-      "origin": "authored-clean-room-v2",
-      "sha256": "6b362076b65c32b2b3503a23a25d121b4eebd9fdeca383740e65159ee5c61313",
-      "source_commit": null,
-      "source_repository": null,
-      "transformation": "hand-authored"
-    },
-    "tasks/hollow-atlas/tests/hidden/checkout/repo/.git/objects/67/a5d050255445dd11ca4215e850d225b2ea8db4": {
-      "license": "internal (authored for general-v2)",
-      "origin": "authored-clean-room-v2",
-      "sha256": "c5f23a1b2e0ae2bc897637ec1859bf86be4fc1ae8294689007315b10e9757649",
-      "source_commit": null,
-      "source_repository": null,
-      "transformation": "hand-authored"
-    },
-    "tasks/hollow-atlas/tests/hidden/checkout/repo/.git/objects/72/a458a58c62f0cc3fb497291f8a61ff7f0ac835": {
-      "license": "internal (authored for general-v2)",
-      "origin": "authored-clean-room-v2",
-      "sha256": "36ea076519420c591bb431aa41879e42025b503a0c2886860ef5dc6f53a19365",
-      "source_commit": null,
-      "source_repository": null,
-      "transformation": "hand-authored"
-    },
-    "tasks/hollow-atlas/tests/hidden/checkout/repo/.git/objects/79/e8cdc34249b14afb64f12f9011e81914211c9d": {
-      "license": "internal (authored for general-v2)",
-      "origin": "authored-clean-room-v2",
-      "sha256": "7f6d41f93fbb2cce0d16d73fbc71db527b070981607a078725ed2e0aebc1e6ae",
-      "source_commit": null,
-      "source_repository": null,
-      "transformation": "hand-authored"
-    },
-    "tasks/hollow-atlas/tests/hidden/checkout/repo/.git/objects/a0/c9be07dc38cbb6076d3079976d70d87e15825e": {
-      "license": "internal (authored for general-v2)",
-      "origin": "authored-clean-room-v2",
-      "sha256": "401ec41b5c5f0862f78e707455fdfb29bfbd9cee0ef37a7affdcfc62b21f2699",
-      "source_commit": null,
-      "source_repository": null,
-      "transformation": "hand-authored"
-    },
-    "tasks/hollow-atlas/tests/hidden/checkout/repo/.git/objects/c5/486dca631799220a5bd9320ac137a7a18ebcea": {
-      "license": "internal (authored for general-v2)",
-      "origin": "authored-clean-room-v2",
-      "sha256": "43f34da92fcb48fef2cd7f230d64df51fd9f85aa4359eb14a9d73d702326fe3b",
-      "source_commit": null,
-      "source_repository": null,
-      "transformation": "hand-authored"
-    },
-    "tasks/hollow-atlas/tests/hidden/checkout/repo/.git/objects/e2/44e8c93a43a2e25925bc7698f1b17791410acd": {
-      "license": "internal (authored for general-v2)",
-      "origin": "authored-clean-room-v2",
-      "sha256": "290be4a1caa8328ee79f99de8c0e7a16ed87c8e53ee8283ed75788bc7d795ba5",
-      "source_commit": null,
-      "source_repository": null,
-      "transformation": "hand-authored"
-    },
-    "tasks/hollow-atlas/tests/hidden/checkout/repo/.git/objects/f5/a90dfeb0c486d3780820d281a82f54aff15e25": {
-      "license": "internal (authored for general-v2)",
-      "origin": "authored-clean-room-v2",
-      "sha256": "8cb7543242d24b756f896585c3d2f529e290ca9eb6f3618bfe219400e2d343f1",
-      "source_commit": null,
-      "source_repository": null,
-      "transformation": "hand-authored"
-    },
-    "tasks/hollow-atlas/tests/hidden/checkout/repo/.git/packed-refs": {
-      "license": "internal (authored for general-v2)",
-      "origin": "authored-clean-room-v2",
-      "sha256": "6110899c7adc374885f9552bddfb76fa28a7f7ca3c05fb8b74471a457e1e57c8",
-      "source_commit": null,
-      "source_repository": null,
-      "transformation": "hand-authored"
-    },
-    "tasks/hollow-atlas/tests/hidden/checkout/repo/.git/refs/heads/main": {
-      "license": "internal (authored for general-v2)",
-      "origin": "authored-clean-room-v2",
-      "sha256": "6cc4114e39bf2033b173758ea6ac948ab520bb05befcfd8de6e933ab513f702a",
-      "source_commit": null,
-      "source_repository": null,
-      "transformation": "hand-authored"
-    },
-    "tasks/hollow-atlas/tests/hidden/checkout/repo/src/api.py": {
-      "license": "internal (authored for general-v2)",
-      "origin": "authored-clean-room-v2",
-      "sha256": "d34b0966ee6e5ee8f289ce1b7488cae1761741150beb807e9cf80b9ddaf403dd",
+      "sha256": "28d27a9162b8668312e4f4f961358afb129f1041e57fbc8f30ce63dff67f764b",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -16478,7 +16198,7 @@
     "tasks/hollow-atlas/tests/test.sh": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "78821de1c8f8e3c573c71ca2c25f5d521fa52e5ee10bd235214a4a8056ea658b",
+      "sha256": "f7832bd010ba68a815a67c08bf4e97d5e579b051673b8c9e734be89d17ce8460",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -40862,7 +40582,7 @@
     "tools/suite_report.py": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2-tooling",
-      "sha256": "6a37e35ec357b08bf15ecbe1f282a730506f3ffba520b07aea8978d381bd819a",
+      "sha256": "137a68c06f77d7424c830477752d8e3de87bbc4331ee8b95958e7d3ee944f63c",
       "source_commit": null,
       "source_repository": null,
       "transformation": "authored tooling"
