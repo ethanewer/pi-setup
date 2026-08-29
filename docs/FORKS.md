@@ -145,7 +145,8 @@ lock is reclaimable after a staleness window rather than immediately.
 Based on `pi-agent-browser-native@0.5.0`, with the external CLI rebaselined to the `agent-browser 0.35.0` version that `install.sh` pins. Only `dist/` is shipped, so the runtime fixes are in the compiled tree.
 
 **No longer loaded by default.** The browser eval (`evals/browser/` on the `browser-eval`
-branch) found the CLI+skill surface shipped by `pi-browser-cli` matched or beat this tool
+branch) found the CLI+skill surface shipped by the `agent-browser-cli` skill
+(`skills/`) matched or beat this tool
 surface on task outcome for both models at roughly half the calls and tokens. The fork
 stays installed and hardened for the opt-in: `PI_SETUP_BROWSER_TOOL=1 ./install.sh`. Its
 bash guard (`PI_AGENT_BROWSER_ALLOW_DIRECT_BASH`) only applies when the extension is
@@ -467,47 +468,13 @@ tail: that is what a terminal would be displaying, it is naturally small, and it
 marker printed *after* a long bar still matches when its newline arrives. Under the cap
 nothing is rewritten at all, so ordinary output reaches the matcher byte-for-byte.
 
-## pi-setup-maintenance
+## First-party skills live in `skills/`, not here
 
-First-party, skills only: no extensions, no tools, nothing loaded into a running session
-beyond one skill description. It carries `update-pi-setup`, the procedure for updating Pi,
-`agent-browser`, and each fork, plus what to re-review after an upstream merge and how to
-roll back.
-
-It exists because the failure mode is predictable: an agent told to "update pi" reaches
-for `pi update`, which bypasses the version pin in `install.sh`, is silently reverted by
-the next install, and shows up later as drift. The skill puts the pinned path where an
-agent will find it. `bin/pi-setup-doctor` now reports that drift directly, comparing the
-installed Pi and `agent-browser` against the versions `install.sh` pins.
-
-## unslop
-
-First-party, skills only: no extensions, no tools, nothing loaded into a running
-session beyond the skill description. It carries `unslop`, adapted from
-cursor/plugins with the "Adding soul" section removed and the process reduced to
-three steps. The skill tells the model to cut AI tells from any writing and to
-always apply, so every model-facing string in this repository is something the
-skill itself would flag if it regresses.
-
-## pi-browser-cli
-
-First-party, skills only: no extensions, no tools, nothing loaded into a running
-session beyond the skill description. It carries `agent-browser-cli`, which teaches
-the agent to drive the `agent-browser` CLI that `install.sh` already installs and
-pins — the core open/snapshot/act/re-snapshot loop plus the live-web behavior
-rules that matter most: complete bot checks by reading them, wait out
-"checking your browser" interstitials instead of refreshing, and honor `Retry-After`
-on 429s. The skill points at `agent-browser skills get core` for the full reference,
-which the CLI serves matched to the installed version.
-
-on 429s. The skill points at `agent-browser skills get core` for the full reference,
-which the CLI serves matched to the installed version.
-
-It exists because the browser eval's headline result was that a CLI plus one skill —
-zero additions to Pi's tool surface — matched or beat every extension arm on outcome
-at roughly half the browser calls and tokens, on both models tested. This
-package is how that result ships; `forks/pi-browser-cli/README.md` records the
-reasoning and the opt-in back to the native tool.
+`agent-browser-cli`, `update-pi-setup`, and `unslop` used to be skills-only packages in
+`forks/`, but a skill is not a package — it needs no `package.json`, no `settings.json`
+entry, and none of the patch/provenance machinery this file documents. They moved to
+[`skills/`](../skills/README.md) and are installed into the agent directories by
+`install.sh`; `bin/pi-setup-doctor` checks the installed copies.
 
 ## Startup labels
 

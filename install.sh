@@ -12,7 +12,7 @@ AGENT_BROWSER_VERSION="0.35.0"
 # Extensions are installed as Pi "local" packages from forks/ in this repository,
 # never from npm. Pi never rewrites local packages, so the security fixes in these
 # forks cannot be silently reverted by a later `bun install` or package update.
-FORKS="pi-voice-stt-safe pi-agent-browser-native-safe pi-dynamic-workflows-safe pi-context-handoff pi-btw-side pi-process-monitor-safe pi-setup-maintenance unslop pi-browser-cli"
+FORKS="pi-voice-stt-safe pi-agent-browser-native-safe pi-dynamic-workflows-safe pi-context-handoff pi-btw-side pi-process-monitor-safe"
 
 REPO_URL="${PI_SETUP_REPO_URL:-https://github.com/ethanewer/pi-setup.git}"
 REPO_REF="${PI_SETUP_REF:-main}"
@@ -142,6 +142,31 @@ rm -f "$MAIN_DIR/extensions/mlx.ts"
 rm -rf "$MAIN_DIR/extensions/mlx"
 mkdir -p "$MAIN_DIR/extensions/mlx"
 (cd "$SRC_DIR/extensions/mlx" && tar cf - .) | (cd "$MAIN_DIR/extensions/mlx" && tar xf -)
+
+log "Installing first-party skills into the agent directories"
+# Skills are not Pi packages: they need no package.json and no settings.json entry, so
+# they live in skills/ here and in the agent directories' own skills/ there, not under
+# local/ (three of them used to be skills-only packages; see skills/README.md). Only the
+# named directories are managed - anything else a user put in these skills directories
+# is left alone. piwf has its own agent directory, so it gets its own copies; the lean
+# p profile runs --no-skills and gets none.
+SKILLS="agent-browser-cli unslop update-pi-setup"
+for skill in $SKILLS; do
+  [[ -f "$SRC_DIR/skills/$skill/SKILL.md" ]] || fail "Missing skill: $SRC_DIR/skills/$skill/SKILL.md"
+  for dest in "$MAIN_DIR/skills" "$WF_DIR/skills"; do
+    rm -rf "$dest/$skill"
+    mkdir -p "$dest/$skill"
+    cp "$SRC_DIR/skills/$skill/SKILL.md" "$dest/$skill/SKILL.md"
+  done
+done
+
+# Retire the skills-only packages these skills replaced. Their settings entries are
+# stripped by the config writer below (the managed set still names them); this removes
+# the installed package directories themselves so the doctor's unknown-package check
+# stays quiet.
+for retired in pi-setup-maintenance unslop pi-browser-cli; do
+  rm -rf "$LOCAL_PKG_DIR/$retired"
+done
 
 # The browser fork ships two CLIs that npm used to link. Local packages get no bin
 # links from Pi, so wrap them explicitly to keep both commands available.
@@ -399,9 +424,6 @@ const wanted = [
   "local/pi-context-handoff",
   "local/pi-btw-side",
   "local/pi-process-monitor-safe",
-  "local/pi-setup-maintenance",
-  "local/unslop",
-  "local/pi-browser-cli",
 ];
 if (browserTool === "1") wanted.push("local/pi-agent-browser-native-safe");
 const managed = new Set([
@@ -416,6 +438,9 @@ const managed = new Set([
   "pi-context-handoff",
   "pi-btw-side",
   "pi-process-monitor-safe",
+  // Retired as packages: agent-browser-cli, update-pi-setup, and unslop are now plain
+  // skills installed from skills/ into the agent directories. Their identities stay
+  // here so stale settings entries and npm copies are removed on reinstall.
   "pi-setup-maintenance",
   "unslop",
   "pi-browser-cli",

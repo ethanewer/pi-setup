@@ -7,7 +7,8 @@ description: Update this machine's Pi installation, the pinned agent-browser, or
 
 Everything is driven from the git repository at `~/pi-setup`. `install.sh` there is the
 single source of truth: it pins the Pi and `agent-browser` versions, copies each fork
-from `forks/` into `~/.pi/agent/local/`, rewrites the `pi`, `p`, and `agent-browser`
+from `forks/` into `~/.pi/agent/local/` and each first-party skill from `skills/` into
+the agent directories' `skills/`, rewrites the `pi`, `p`, and `agent-browser`
 wrappers in `~/.local/bin`, and prunes stale npm copies of the extensions.
 
 ## Rules
@@ -15,8 +16,10 @@ wrappers in `~/.local/bin`, and prunes stale npm copies of the extensions.
 1. **Never** run `pi update`, `bun add --global @earendil-works/pi-coding-agent`, or
    `pi package add` for these extensions. They bypass the pin, the next `./install.sh`
    silently reverts them, and `bin/pi-setup-doctor` reports the drift as a PROBLEM.
-2. **Never** edit anything under `~/.pi/agent/local/`. That directory is install output.
-   Edit `forks/<name>/` in the repository and reinstall.
+2. **Never** edit anything under `~/.pi/agent/local/` or the managed skill directories
+   under `~/.pi/agent/skills/` (`agent-browser-cli`, `update-pi-setup`, `unslop`). They
+   are install output. Edit `forks/<name>/` or `skills/<name>/` in the repository and
+   reinstall.
 3. Read the upstream changelog for breaking changes **before** bumping a version, not
    after. Extensions here use Pi's SDK deeply; a removed API is a real risk.
 4. Finish every change with [Verify](#verify) and a commit. `bin/pi-setup-doctor` must
@@ -64,6 +67,7 @@ section can emit a PROBLEM and fail the exit code.
 | Section | What a finding means |
 |---|---|
 | Forks: repository vs installed | An installed copy no longer matches `forks/`. Re-run `./install.sh`. |
+| First-party skills: repository vs installed | An installed copy no longer matches `skills/`. Re-run `./install.sh`. |
 | Pi settings | `settings.json` does not load a fork, or still loads the unpatched npm package that would shadow it. |
 | Configuration hygiene | `stt.json` is not mode 600, or `trust.json` trusts a directory that every repository sits under. |
 | Compiled mirrors | `pi-dynamic-workflows-safe`'s `dist/` no longer matches its `src/`. Both are reachable through the package exports, so a stale `dist` exports code nobody audited. Run `npm run build` in that fork. |
@@ -192,12 +196,15 @@ teaches the reader to skip notes. Instead:
 The doctor then reports `reviewed and declined` instead of drift, and starts reporting
 again at the next release, because `reviewedAgainst` will no longer equal latest.
 
-## 5. Change a first-party package
+## 5. Change a first-party package or skill
 
-`pi-context-handoff`, `pi-btw-side`, `pi-setup-maintenance`, `unslop`, and
-`pi-browser-cli` have no upstream. Edit
+`pi-context-handoff` and `pi-btw-side` are first-party packages with no upstream. Edit
 them directly, bump `version` in both `package.json` and `vendor.json` if the change is
 worth marking, then `./install.sh`.
+
+First-party skills are not packages: `agent-browser-cli`, `update-pi-setup` (this one),
+and `unslop` live in `skills/` and are installed into the agent directories' `skills/`.
+Edit them directly and `./install.sh`; no version file exists to bump.
 
 `config/keybindings.json` is the other tree the installer owns: it is merged into
 `~/.pi/agent/keybindings.json` and the `p` profile's copy, touching only the ids listed in
@@ -327,7 +334,7 @@ reinstall:
 
 ```bash
 cd ~/pi-setup
-git revert <commit>     # or: git checkout <good-commit> -- install.sh forks/ patches/ vendor.json config/
+git revert <commit>     # or: git checkout <good-commit> -- install.sh forks/ skills/ patches/ vendor.json config/
 ./install.sh
 bin/pi-setup-doctor
 ```

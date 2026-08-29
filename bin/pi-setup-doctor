@@ -99,6 +99,27 @@ for fork in $FORK_NAMES; do
 done
 
 say ""
+say "First-party skills: repository vs installed"
+# skills/ is installed into the agent directories' own skills/, not as a package; see
+# skills/README.md. Both full profiles get copies (piwf has its own agent directory);
+# the lean p runs --no-skills and gets none.
+for skill in agent-browser-cli unslop update-pi-setup; do
+  SRC="$REPO_DIR/skills/$skill/SKILL.md"
+  if [[ ! -f "$SRC" ]]; then
+    bad "skill $skill is missing from skills/"
+    continue
+  fi
+  for dest in "$MAIN_DIR/skills" "$WF_DIR/skills"; do
+    if diff -q "$SRC" "$dest/$skill/SKILL.md" >/dev/null 2>&1; then
+      ok "skill $skill matches the copy in $dest"
+    else
+      bad "skill $skill differs from the copy in $dest (bin/pi-setup-doctor --fix)"
+      fixable install
+    fi
+  done
+done
+
+say ""
 say "Pi settings"
 # pi (MAIN_DIR) deliberately excludes the workflows fork, which now lives behind the
 # piwf profile (~/.pi/agent-wf). piwf must load every fork, including workflows.

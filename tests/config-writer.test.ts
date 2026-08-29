@@ -31,9 +31,6 @@ const FORKS_MINUS_WORKFLOWS = [
 	"local/pi-context-handoff",
 	"local/pi-btw-side",
 	"local/pi-process-monitor-safe",
-	"local/pi-setup-maintenance",
-	"local/unslop",
-	"local/pi-browser-cli",
 ];
 const ALL_FORKS = [
 	"local/pi-voice-stt-safe",
@@ -41,9 +38,6 @@ const ALL_FORKS = [
 	"local/pi-context-handoff",
 	"local/pi-btw-side",
 	"local/pi-process-monitor-safe",
-	"local/pi-setup-maintenance",
-	"local/unslop",
-	"local/pi-browser-cli",
 ];
 const BROWSER_TOOL = "local/pi-agent-browser-native-safe";
 
@@ -69,7 +63,9 @@ writeFileSync(mainPath, JSON.stringify({
 	defaultProvider: "openai",
 	defaultModel: "gpt-5.6-sol",
 	httpProxy: "http://keep-main",
-	packages: ["npm:pi-btw", "npm:user-pkg"],
+	// npm:pi-btw is a managed identity that gets dropped; local/unslop is a retired
+	// skills-only package whose stale settings entry must be stripped the same way.
+	packages: ["npm:pi-btw", "npm:user-pkg", "local/unslop"],
 }));
 // piwf and p carry values a previous run persisted: they must survive the rewrite.
 writeFileSync(wfPath, JSON.stringify({

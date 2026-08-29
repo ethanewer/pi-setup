@@ -78,9 +78,6 @@ Extension forks and the upstream releases they are based on:
 | `pi-process-monitor-safe` | `pi-process-monitor` | rewrite, built on `1.3.0`, `2.0.2` reviewed and declined |
 | `pi-context-handoff` | — | first-party |
 | `pi-btw-side` | — | first-party |
-| `pi-setup-maintenance` | — | first-party, skills only |
-| `unslop` | — | first-party, skills only |
-| `pi-browser-cli` | — | first-party, skills only |
 
 `vendor.json` is the machine-readable version of this table and is what the tooling
 reads.
@@ -131,6 +128,7 @@ The trade-off is that upstream upgrades are a deliberate step rather than automa
 
 ```text
 forks/<name>-safe/          The hardened package Pi loads, vendored in full
+skills/<name>/SKILL.md      First-party skills installed into the agent directories
 patches/<pkg>@<ver>.patch   Diff of the fork against pristine upstream
 vendor.json                 Which upstream release each fork is based on
 bin/pi-setup-doctor         Verify the installed setup matches this repository
@@ -138,6 +136,12 @@ bin/pi-setup-vendor         Regenerate patches, or re-vendor onto a new upstream
 docs/AUDIT.md               Every finding, with file and line references
 docs/FORKS.md               What each fork changes, and residual risk
 ```
+
+`forks/` is the install path for Pi local *packages*; its patch and provenance
+machinery applies to packages alone. First-party skills (`agent-browser-cli`,
+`update-pi-setup`, `unslop`) are not packages and live in `skills/`, installed into
+`~/.pi/agent/skills/` and `~/.pi/agent-wf/skills/`; see
+[`skills/README.md`](skills/README.md).
 
 Git history is arranged so the hardening is reviewable: upstream sources were committed
 byte-identical to the published npm tarballs first, so `git log -p -- forks/<name>-safe`
@@ -236,7 +240,7 @@ consequences of how Pi applies the list are worth knowing:
 
 The default browser surface is a **CLI plus a skill, not a Pi tool**. `install.sh`
 installs and version-pins the `agent-browser` CLI and its Chrome runtime, and the
-first-party `pi-browser-cli` package ships the `agent-browser-cli` skill that teaches
+first-party `agent-browser-cli` skill (from [`skills/`](skills/README.md)) teaches
 the agent to drive the CLI from bash: open a page, take a `snapshot -i`, act on the
 `@eN` refs, re-snapshot after every change — plus the behavior rules that matter on
 the live web: read a bot check or CAPTCHA and complete it instead of retrying
@@ -386,7 +390,7 @@ The whole procedure — updating Pi, updating a fork onto a newer upstream, what
 re-review afterwards, and how to roll back — is also a Pi skill, `update-pi-setup`, so an
 agent asked to "update pi" follows the pinned path instead of reaching for `pi update`.
 Read it at
-[`forks/pi-setup-maintenance/skills/update-pi-setup/SKILL.md`](forks/pi-setup-maintenance/skills/update-pi-setup/SKILL.md)
+[`skills/update-pi-setup/SKILL.md`](skills/update-pi-setup/SKILL.md)
 or invoke it with `/skill:update-pi-setup`.
 
 > Do not run `pi update` or `bun add --global` for Pi or the extensions. `install.sh`
@@ -400,7 +404,8 @@ bin/pi-setup-doctor
 ```
 
 Verifies that every fork in `forks/` matches the copy installed under
-`~/.pi/agent/local/`, that Pi's settings load the forks and not the unpatched npm
+`~/.pi/agent/local/`, that every skill in `skills/` matches its copies in the two full
+profiles' agent directories, that Pi's settings load the forks and not the unpatched npm
 packages (the native browser fork is optional since the browser eval — its absence is
 not a defect, its presence still checked), that `stt.json` is owner-only, that `trust.json` has no home-wide entry, and
 that the installed Pi and `agent-browser` match the versions `install.sh` pins, and that
@@ -545,6 +550,8 @@ added to that profile; the full-profile measurements predate context handoff and
 ~/.pi/agent/stt.json                         Voice STT configuration (mode 600)
 ~/.pi/agent/keybindings.json                 Keys remapped for tmux and Kitty terminals
 ~/.pi/agent/local/                           Hardened extension forks
+~/.pi/agent/skills/                          First-party skills (agent-browser-cli,
+                                             update-pi-setup, unslop)
 ~/.pi/agent/extensions/mlx/                  Conditional local MLX extension
 ~/.pi/agent/npm/                             Shared extension packages (no longer used
                                              by this setup; pruned on install)
@@ -557,6 +564,7 @@ added to that profile; the full-profile measurements predate context handoff and
 ~/.pi/agent-p/models-store.json              Symlink to main model catalog
 ~/.pi/agent-p/bin                            Symlink to main helper binaries
 ~/.pi/agent-wf/settings.json                 Full settings overlay incl. the workflow fork
+~/.pi/agent-wf/skills/                       The same first-party skills for the piwf profile
 ~/.pi/agent-wf/keybindings.json              The same remapped keys for the piwf profile
 ~/.pi/agent-wf/auth.json                     Symlink to main auth
 ~/.pi/agent-wf/models-store.json             Symlink to main model catalog
