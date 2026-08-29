@@ -3,22 +3,28 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-const installer = readFileSync(join(import.meta.dir, "..", "install.sh"), "utf8");
-const doctor = readFileSync(join(import.meta.dir, "..", "bin", "pi-setup-doctor"), "utf8");
+const root = join(import.meta.dir, "..");
+const wrappers = join(root, "lib/wrappers");
+const installer = readFileSync(join(root, "lib", "install.mjs"), "utf8");
+const doctor = readFileSync(join(root, "bin", "pi-setup-doctor"), "utf8");
 
 test("every Bun entry point uses the operating system CA store", () => {
-	expect(installer).toContain('"$BUN_BIN" --use-system-ca add --global');
-	expect(installer.match(/exec "\\?\$BUN_BIN" --use-system-ca "\\?\$ROOT\/dist\/bun\/cli\.js"/g)).toHaveLength(3);
-	expect(installer).toContain('exec "$BUN_BIN" --use-system-ca "$ROOT/bin/agent-browser.js" "$@"');
-	expect(installer).toContain('exec "\\$BUN_BIN" --use-system-ca "$TARGET" "\\$@"');
+	expect(readFileSync(join(root, "lib/install.mjs"), "utf8")).toContain('"--use-system-ca"');
+	for (const name of ["pi.sh", "p.sh", "piwf.sh", "agent-browser.sh", "pi-agent-browser-cli.sh"]) {
+		expect(readFileSync(join(wrappers, name), "utf8")).toContain("--use-system-ca");
+	}
+	for (const name of ["pi.cmd", "p.cmd", "piwf.cmd", "agent-browser.cmd", "pi-agent-browser-cli.cmd"]) {
+		expect(readFileSync(join(wrappers, name), "utf8")).toContain("--use-system-ca");
+	}
 });
 
 test("installer applies the version-guarded Pi reasoning-details patch", () => {
-	expect(installer).toContain('PI_AI_REASONING_PATCH="$SRC_DIR/patches/pi-ai@0.84.4-reasoning-details.patch"');
-	expect(installer).toContain('PI_AI_VERSION="0.84.4"');
-	expect(installer).toContain('[[ "$PI_AI_INSTALLED_VERSION" == "$PI_AI_VERSION" ]]');
+	const versions = JSON.parse(readFileSync(join(root, "lib", "versions.json"), "utf8"));
+	expect(versions.piAi).toBe("0.84.4");
+	expect(installer).toContain("pi-ai@${versions.piAi}-reasoning-details.patch");
+	expect(installer).toContain("refusing to apply a version-specific patch");
 	expect(installer).toContain("patch --dry-run --batch --forward");
-	expect(installer).toContain('"$BUN_BIN" "$SRC_DIR/bin/verify-pi-ai-reasoning-fix" "$PI_AI_ROOT"');
+	expect(installer).toContain("verify-pi-ai-reasoning-fix");
 });
 
 test("reasoning-fix verifier executes its stream and replay behavior checks", () => {
@@ -69,14 +75,18 @@ export async function* streamSimple(model, context) {
 });
 
 test("doctor uses the independent Pi AI pin and behavior verifier", () => {
-	expect(doctor).toContain('PINNED_PI_AI="$(sed -n');
+	expect(doctor).toContain('PINNED_PI_AI="$("$JS"');
 	expect(doctor).toContain('"Pi AI|$PINNED_PI_AI|$INSTALLED_PI_AI"');
 	expect(doctor).toContain('"$JS" "$PI_AI_VERIFIER" "$PI_AI_ROOT"');
 	expect(doctor).not.toContain("appendOpenAIReasoningDetail(preservedDetails, detail)");
 });
 
 test("pi and piwf both reject an inherited p profile environment", () => {
-	// A tmux server started from `p` retains PI_SKIP_VERSION_CHECK (and friends). Both
-	// full wrappers must drop them, or a later session silently runs a different profile.
-	expect(installer.match(/unset PI_CODING_AGENT_DIR PI_CODING_AGENT_SESSION_DIR PI_SKIP_VERSION_CHECK/g)).toHaveLength(2);
+	const pi = readFileSync(join(wrappers, "pi.sh"), "utf8");
+	const piwf = readFileSync(join(wrappers, "piwf.sh"), "utf8");
+	expect(pi).toContain("unset PI_CODING_AGENT_DIR PI_CODING_AGENT_SESSION_DIR PI_SKIP_VERSION_CHECK");
+	expect(piwf).toContain("unset PI_CODING_AGENT_DIR PI_CODING_AGENT_SESSION_DIR PI_SKIP_VERSION_CHECK");
+	expect(pi).toContain('"$HOME/.pi/agent-wf"');
+	expect(readFileSync(join(wrappers, "pi.cmd"), "utf8")).toContain("%USERPROFILE%\\.pi\\agent-wf");
+	expect(readFileSync(join(wrappers, "piwf.cmd"), "utf8")).toContain("%USERPROFILE%\\.pi\\agent-wf");
 });

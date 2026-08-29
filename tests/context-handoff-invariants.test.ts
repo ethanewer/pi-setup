@@ -36,10 +36,9 @@ describe("merge invariants", () => {
 
 	test("no fork other than pi-context-handoff registers a context handler", () => {
 		// Any other fork adding a `context` handler would chain-fold on the same request.
-		const install = readFileSync(join(__dirname, "..", "install.sh"), "utf8");
-		const forksLine = install.match(/^FORKS="([^"]+)"/m);
-		expect(forksLine).not.toBeNull();
-		const forks = forksLine![1].split(/\s+/).filter((f) => f !== "pi-context-handoff");
+		// The fork list lives in vendor.json (lib/install.mjs reads it from there).
+		const vendor = JSON.parse(readFileSync(join(__dirname, "..", "vendor.json"), "utf8"));
+		const forks = Object.keys(vendor.forks).filter((f) => f !== "pi-context-handoff");
 		for (const fork of forks) {
 			const dir = join(FORKS, fork, "extensions");
 			let found: string[] = [];

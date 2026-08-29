@@ -15,6 +15,8 @@ import type {
 
 const platformCaptureDefaults = (): Pick<FfmpegCaptureConfig, "inputFormat" | "input"> => {
   if (process.platform === "darwin") return { inputFormat: "avfoundation", input: ":0" };
+  // `audio=Microphone` is a placeholder. Device listing is deferred until
+  // recording starts (and warmed in the background) so Pi startup is not stalled.
   if (process.platform === "win32") return { inputFormat: "dshow", input: "audio=Microphone" };
   return { inputFormat: "pulse", input: "default" };
 };

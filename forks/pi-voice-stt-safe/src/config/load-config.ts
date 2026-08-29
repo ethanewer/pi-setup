@@ -108,15 +108,22 @@ const ffmpegPathFrom = async (command: string): Promise<Pick<FfmpegCaptureConfig
   }
 };
 
-const ffmpegCaptureFrom = async (merged: Record<string, unknown>, capture: Record<string, unknown>): Promise<FfmpegCaptureConfig> => ({
-  type: "ffmpeg",
-  ...(await ffmpegPathFrom(textFrom(capture.ffmpegPath, textFrom(capture.ffmpeg, textFrom(merged.ffmpeg, defaultFfmpegCaptureConfig.ffmpegPath))))),
-  inputFormat: textFrom(capture.inputFormat, textFrom(merged.inputFormat, defaultFfmpegCaptureConfig.inputFormat)),
-  input: textFrom(capture.input, textFrom(merged.input, defaultFfmpegCaptureConfig.input)),
-  sampleRate: positiveIntegerFrom(capture.sampleRate ?? merged.sampleRate, defaultFfmpegCaptureConfig.sampleRate),
-  channels: positiveIntegerFrom(capture.channels ?? merged.channels, defaultFfmpegCaptureConfig.channels),
-  ...commonCaptureFields(capture, merged, defaultFfmpegCaptureConfig),
-});
+const ffmpegCaptureFrom = async (merged: Record<string, unknown>, capture: Record<string, unknown>): Promise<FfmpegCaptureConfig> => {
+  const ffmpeg = await ffmpegPathFrom(
+    textFrom(capture.ffmpegPath, textFrom(capture.ffmpeg, textFrom(merged.ffmpeg, defaultFfmpegCaptureConfig.ffmpegPath))),
+  );
+  const inputFormat = textFrom(capture.inputFormat, textFrom(merged.inputFormat, defaultFfmpegCaptureConfig.inputFormat));
+  const input = textFrom(capture.input, textFrom(merged.input, defaultFfmpegCaptureConfig.input));
+  return {
+    type: "ffmpeg",
+    ...ffmpeg,
+    inputFormat,
+    input,
+    sampleRate: positiveIntegerFrom(capture.sampleRate ?? merged.sampleRate, defaultFfmpegCaptureConfig.sampleRate),
+    channels: positiveIntegerFrom(capture.channels ?? merged.channels, defaultFfmpegCaptureConfig.channels),
+    ...commonCaptureFields(capture, merged, defaultFfmpegCaptureConfig),
+  };
+};
 
 const bridgeCaptureFrom = async (merged: Record<string, unknown>, capture: Record<string, unknown>): Promise<BridgeCaptureConfig> => {
   const tokenEnv = envNameFrom(capture.tokenEnv ?? merged.bridgeTokenEnv, defaultBridgeCaptureConfig.tokenEnv);

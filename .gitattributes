@@ -1,0 +1,12 @@
+# POSIX scripts must not carry a CR in the shebang.
+*.sh text eol=lf
+*.mjs text eol=lf
+install.sh text eol=lf
+install.ps1 text eol=lf
+lib/wrappers/*.sh text eol=lf
+bin/pi-setup-doctor text eol=lf
+bin/pi-setup-vendor text eol=lf
+bin/pi-setup-keyprobe text eol=lf
+
+# cmd.exe shims
+*.cmd text eol=crlf

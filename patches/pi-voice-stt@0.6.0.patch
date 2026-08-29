@@ -1,6 +1,6 @@
 diff -ruN --exclude=node_modules a/README.md b/README.md
 --- a/README.md	1985-10-26 03:15:00
-+++ b/README.md	2026-08-18 11:03:35
++++ b/README.md	2026-08-29 13:11:05
 @@ -4,29 +4,34 @@
  
  Provider-agnostic speech-to-text dictation for the [Pi coding agent](https://github.com/earendil-works/pi-coding-agent) TUI.
@@ -114,16 +114,32 @@ diff -ruN --exclude=node_modules a/README.md b/README.md
  ## Audio capture notes
  
  With `capture.type: "ffmpeg"`, the extension records through `ffmpeg`. Platform defaults are:
-@@ -454,6 +466,8 @@
+@@ -452,8 +464,10 @@
+ | --- | --- | --- |
+ | macOS | `avfoundation` | `:0` |
  | Linux | `pulse` | `default` |
- | Windows | `dshow` | `audio=Microphone` |
+-| Windows | `dshow` | `audio=Microphone` |
++| Windows | `dshow` | first physical microphone, probed on first recording |
  
 +`capture.maxSeconds` (default `120`) is passed to the recorder itself (`ffmpeg -t`, or the bridge daemon's own limit), so capture always stops at the cap even if the session is busy; the extension then transcribes what was recorded.
 +
  On macOS, list devices with:
  
  ```bash
-@@ -485,22 +499,33 @@
+@@ -480,27 +494,46 @@
+    ```
+    List ALSA devices with `arecord -L` (common inputs: `default`, `hw:0`, `plughw:0`).
+ 4. **macOS** — confirm the device with `ffmpeg -f avfoundation -list_devices true -i ""` and set `capture.input` (e.g. `":1"`).
++5. **Windows** — the fork probes DirectShow on first recording. It prefers a physical USB microphone over Steam/Oculus virtual devices. Override with the exact friendly name:
++   ```bash
++   ffmpeg -f dshow -list_devices true -i dummy
++   ```
++   ```json
++   { "capture": { "inputFormat": "dshow", "input": "audio=Microphone (USB Advanced Audio Device)" } }
++   ```
++   Allow desktop apps to use the microphone in Windows privacy settings. The name `audio=Microphone` alone is not a real device.
+ 
+ You can also lower the threshold with `capture.minBytes` (default `4096`), but a working source should far exceed it. See [docs/macos-bridge.md](docs/macos-bridge.md) for the VPS bridge as an alternative when the VPS has no local microphone.
  
  ## Usage
  
@@ -164,7 +180,7 @@ diff -ruN --exclude=node_modules a/README.md b/README.md
  ## Secret handling
  
  Prefer environment variables:
-@@ -514,6 +539,8 @@
+@@ -514,6 +547,8 @@
  export GLADIA_API_KEY=...
  export ASSEMBLYAI_API_KEY=...
  ```
@@ -388,7 +404,7 @@ diff -ruN --exclude=node_modules a/extensions/voice-stt/index.ts b/extensions/vo
 +export { default } from "../../src/index.js";
 diff -ruN --exclude=node_modules a/package.json b/package.json
 --- a/package.json	1985-10-26 03:15:00
-+++ b/package.json	2026-08-18 11:03:32
++++ b/package.json	2026-08-29 13:11:05
 @@ -1,6 +1,7 @@
  {
    "name": "pi-voice-stt",
@@ -412,7 +428,7 @@ diff -ruN --exclude=node_modules a/package.json b/package.json
    "pi": {
      "extensions": [
 -      "./src/index.ts"
-+      "./extensions/voice-stt/index.ts"
++      "./extensions/voice-stt/index.js"
      ],
      "image": "https://raw.githubusercontent.com/cgarrot/pi-voice-stt/main/assets/preview.gif"
    },
@@ -429,37 +445,291 @@ diff -ruN --exclude=node_modules a/src/audio/bridge-recorder.ts b/src/audio/brid
        const body = await response.text().catch(() => "");
 diff -ruN --exclude=node_modules a/src/audio/ffmpeg-recorder.ts b/src/audio/ffmpeg-recorder.ts
 --- a/src/audio/ffmpeg-recorder.ts	1985-10-26 03:15:00
-+++ b/src/audio/ffmpeg-recorder.ts	2026-08-18 11:02:06
-@@ -4,6 +4,7 @@
++++ b/src/audio/ffmpeg-recorder.ts	2026-08-29 13:11:05
+@@ -1,13 +1,16 @@
+-import { spawn, type ChildProcess } from "node:child_process";
++import { spawn, spawnSync, type ChildProcess } from "node:child_process";
+ import { mkdtempSync } from "node:fs";
+ import { rm, stat } from "node:fs/promises";
  import { tmpdir } from "node:os";
  import { join } from "node:path";
  import type { FfmpegCaptureConfig } from "../config/types";
 +import { assertExecutablePath } from "../utils/executable";
  import { formatError, truncate } from "../utils/text";
  import type { AudioRecorder, RecordingHandle } from "./types";
++import { isPlaceholderDshowMic } from "./windows-dshow.ts";
  
-@@ -30,6 +31,10 @@
+ const MAX_STDERR_BYTES = 24 * 1024;
++const WIN32 = process.platform === "win32";
  
+ const collectStderr = (stream: NodeJS.ReadableStream): (() => string) => {
+   let stderr = "";
+@@ -21,51 +24,90 @@
+   return () => stderr;
+ };
+ 
+-const waitForExit = (process: ChildProcess): Promise<string> => {
++const waitForExit = (child: ChildProcess): Promise<string> => {
+   return new Promise((resolve) => {
+-    process.once("error", (error) => resolve(`process error: ${formatError(error)}`));
+-    process.once("close", (code, signal) => resolve(signal ? `signal ${signal}` : `exit ${code ?? "unknown"}`));
++    child.once("error", (error) => resolve(`process error: ${formatError(error)}`));
++    child.once("close", (code, signal) => resolve(signal ? `signal ${signal}` : `exit ${code ?? "unknown"}`));
+   });
+ };
+ 
++const taskkill = (pid: number, force: boolean): void => {
++  const args = ["/PID", String(pid), "/T"];
++  if (force) args.push("/F");
++  spawnSync("taskkill", args, { stdio: "ignore", windowsHide: true });
++};
++
++const ffmpegArgs = (config: FfmpegCaptureConfig, inputFormat: string, input: string, outputPath: string): string[] => {
++  const args = ["-hide_banner", "-loglevel", "warning", "-f", inputFormat];
++  // Input options must precede -i. dshow otherwise drops or never delivers frames.
++  if (inputFormat === "dshow") args.push("-rtbufsize", "16M");
++  args.push(
++    "-i",
++    input,
++    "-vn",
++    "-acodec",
++    "pcm_s16le",
++    "-ar",
++    String(config.sampleRate),
++    "-ac",
++    String(config.channels),
++    "-t",
++    String(config.maxSeconds),
++    "-y",
++    outputPath,
++  );
++  return args;
++};
++
  export const createFfmpegRecorder = (config: FfmpegCaptureConfig): AudioRecorder => ({
-   start() {
+-  start() {
++  async start() {
 +    // Config load only reports an unresolvable path so the diagnostics still
 +    // run; nothing is spawned until it resolves to an absolute executable.
 +    if (config.ffmpegPathError) throw new Error(config.ffmpegPathError);
 +    assertExecutablePath(config.ffmpegPath, "STT capture.ffmpegPath");
++
++    let inputFormat = config.inputFormat;
++    let input = config.input;
++    if (WIN32 && inputFormat === "dshow" && isPlaceholderDshowMic(input)) {
++      const { probeWindowsDshowInput } = await import("./windows-dshow-probe.ts");
++      const probed = await probeWindowsDshowInput(config.ffmpegPath);
++      if (probed) input = probed;
++    }
++
      const tempDir = mkdtempSync(join(tmpdir(), "pi-voice-stt-"));
      const outputPath = join(tempDir, "recording.wav");
-     const process = spawn(config.ffmpegPath, [
-@@ -48,6 +53,10 @@
-       String(config.sampleRate),
-       "-ac",
-       String(config.channels),
-+      // ffmpeg enforces the cap itself: the controller timer is only the
-+      // transcribe trigger and can be blocked by a busy session.
-+      "-t",
-+      String(config.maxSeconds),
-       "-y",
-       outputPath,
-     ], {
+-    const process = spawn(config.ffmpegPath, [
+-      "-hide_banner",
+-      "-nostdin",
+-      "-loglevel",
+-      "warning",
+-      "-f",
+-      config.inputFormat,
+-      "-i",
+-      config.input,
+-      "-vn",
+-      "-acodec",
+-      "pcm_s16le",
+-      "-ar",
+-      String(config.sampleRate),
+-      "-ac",
+-      String(config.channels),
+-      "-y",
+-      outputPath,
+-    ], {
+-      stdio: ["ignore", "ignore", "pipe"],
++    // stdin stays open so we can send ffmpeg's interactive `q` — SIGINT does not
++    // stop ffmpeg on Windows, and killing it leaves a 0-byte WAV.
++    const child = spawn(config.ffmpegPath, ffmpegArgs(config, inputFormat, input, outputPath), {
++      stdio: ["pipe", "ignore", "pipe"],
++      windowsHide: true,
+     });
+ 
+-    const getStderr = collectStderr(process.stderr);
+-    const exited = waitForExit(process);
++    const getStderr = collectStderr(child.stderr!);
++    const exited = waitForExit(child);
+     let stopped = false;
+ 
+     const terminate = () => {
+-      if (process.exitCode !== null) return;
+-      try { process.kill("SIGINT"); } catch { /* already dead */ }
++      if (child.exitCode !== null || child.signalCode !== null) return;
++      try {
++        child.stdin?.write("q");
++        child.stdin?.end();
++      } catch {
++        /* already dead */
++      }
+     };
+ 
+     const forceKill = () => {
+-      if (process.exitCode !== null) return;
+-      try { process.kill("SIGKILL"); } catch { /* already dead */ }
++      if (child.exitCode !== null || child.signalCode !== null) return;
++      if (WIN32 && child.pid !== undefined) {
++        taskkill(child.pid, true);
++        return;
++      }
++      try {
++        child.kill("SIGKILL");
++      } catch {
++        /* already dead */
++      }
+     };
+ 
+     const stop = async () => {
+@@ -83,13 +125,17 @@
+       try {
+         size = (await stat(outputPath)).size;
+       } catch {
+-        throw new Error(`ffmpeg did not create an audio file (${exitResult}). ${truncate(stderrText)}`);
++        throw new Error(
++          `ffmpeg did not create an audio file (${exitResult}) using ${inputFormat} ${input}. ${truncate(stderrText)}`,
++        );
+       }
+ 
+       if (size < config.minBytes) {
+         throw new Error(
+-          `Recording is too small (${size} bytes) — the audio source produced no data. ` +
++          `Recording is too small (${size} bytes) — the audio source produced no data ` +
++            `(${inputFormat} ${input}). ` +
+             `Check microphone permission and that capture.inputFormat/capture.input point to a real device. ` +
++            `On Windows, list devices with: ffmpeg -f dshow -list_devices true -i dummy and set capture.input to audio=<exact name>. ` +
+             `On Linux, if the default PulseAudio source is empty, try ALSA (inputFormat "alsa", input "default"; list with: arecord -L). ` +
+             truncate(stderrText),
+         );
+@@ -108,7 +154,7 @@
+         console.warn(`Pi Voice STT recording cleanup failed: ${formatError(error)}`);
+       });
+       clearTimeout(killTimer);
+-      await rm(tempDir, { force: true, recursive: true }).catch((error: unknown) => {
++      await rm(tempDir, { recursive: true, force: true }).catch((error: unknown) => {
+         console.warn(`Pi Voice STT temp cleanup failed: ${formatError(error)}`);
+       });
+     };
+diff -ruN --exclude=node_modules a/src/audio/windows-dshow-probe.ts b/src/audio/windows-dshow-probe.ts
+--- a/src/audio/windows-dshow-probe.ts	1969-12-31 18:00:00
++++ b/src/audio/windows-dshow-probe.ts	2026-08-29 13:11:05
+@@ -0,0 +1,69 @@
++import { spawn, spawnSync } from "node:child_process";
++import { parseDshowAudioDevices, pickWindowsMicrophone, toDshowInput } from "./windows-dshow.ts";
++
++const LIST_TIMEOUT_MS = 8000;
++
++let cached: string | undefined;
++let inflight: Promise<string | undefined> | undefined;
++
++const listDshowStderr = (ffmpegPath: string): Promise<string> =>
++  new Promise((resolve) => {
++    const child = spawn(
++      ffmpegPath,
++      ["-hide_banner", "-f", "dshow", "-list_devices", "true", "-i", "dummy"],
++      { stdio: ["ignore", "ignore", "pipe"], windowsHide: true },
++    );
++    let stderr = "";
++    let finished = false;
++    const finish = (value: string) => {
++      if (finished) return;
++      finished = true;
++      clearTimeout(timer);
++      resolve(value);
++    };
++    const timer = setTimeout(() => {
++      if (child.pid !== undefined) {
++        spawnSync("taskkill", ["/PID", String(child.pid), "/T", "/F"], { stdio: "ignore", windowsHide: true });
++      } else {
++        try {
++          child.kill("SIGKILL");
++        } catch {
++          /* already gone */
++        }
++      }
++      finish(stderr);
++    }, LIST_TIMEOUT_MS);
++    child.stderr?.setEncoding("utf8");
++    child.stderr?.on("data", (chunk: string) => {
++      stderr += chunk;
++    });
++    child.once("error", () => finish(""));
++    child.once("close", () => finish(stderr));
++  });
++
++/** Resolve `audio=<friendly name>` after a successful listing; retry on empty or failed probes. */
++export const probeWindowsDshowInput = async (
++  ffmpegPath: string,
++  listDevices: (ffmpegPath: string) => Promise<string> = listDshowStderr,
++): Promise<string | undefined> => {
++  if (cached) return cached;
++  if (inflight) return inflight;
++  inflight = (async () => {
++    try {
++      const name = pickWindowsMicrophone(parseDshowAudioDevices(await listDevices(ffmpegPath)));
++      const result = name ? toDshowInput(name) : undefined;
++      if (result) cached = result;
++      return result;
++    } catch {
++      return undefined;
++    }
++  })().finally(() => {
++    inflight = undefined;
++  });
++  return inflight;
++};
++
++export const resetWindowsDshowProbeCache = (): void => {
++  cached = undefined;
++  inflight = undefined;
++};
+diff -ruN --exclude=node_modules a/src/audio/windows-dshow.ts b/src/audio/windows-dshow.ts
+--- a/src/audio/windows-dshow.ts	1969-12-31 18:00:00
++++ b/src/audio/windows-dshow.ts	2026-08-29 13:11:05
+@@ -0,0 +1,39 @@
++/**
++ * DirectShow device listing for Windows ffmpeg capture.
++ *
++ * ffmpeg's stock default `audio=Microphone` is not a real device name. dshow
++ * wants the friendly name from `-list_devices`, e.g. `audio=Microphone (USB …)`.
++ */
++
++const VIRTUAL_AUDIO =
++  /steam streaming|oculus virtual|nvidia broadcast|vb-audio|cable (input|output)|stereo mix|wave out mix|what u hear|internal aux jack/i;
++
++/** Parse friendly audio names from `ffmpeg -f dshow -list_devices true` stderr. */
++export const parseDshowAudioDevices = (stderr: string): string[] => {
++  const names: string[] = [];
++  for (const line of stderr.split(/\r?\n/)) {
++    const match = line.match(/"([^"]+)"\s*\(audio\)/i);
++    if (match && !names.includes(match[1])) names.push(match[1]);
++  }
++  return names;
++};
++
++/**
++ * Prefer a physical microphone over virtual loopbacks. USB mics win over
++ * onboard when both exist; virtual Steam/Oculus devices are last resorts.
++ */
++export const pickWindowsMicrophone = (names: string[]): string | undefined => {
++  if (names.length === 0) return undefined;
++  const physical = names.filter((name) => !VIRTUAL_AUDIO.test(name));
++  const pool = physical.length > 0 ? physical : names;
++  const mics = pool.filter((name) => /microphone/i.test(name));
++  const usb = mics.filter((name) => /usb/i.test(name));
++  return usb[0] ?? mics[0] ?? pool[0];
++};
++
++export const toDshowInput = (deviceName: string): string => `audio=${deviceName}`;
++
++/** Stock default that is not a real DirectShow friendly name. */
++export const isPlaceholderDshowMic = (input: string): boolean =>
++  input === "audio=Microphone" || input === "Microphone";
++
 diff -ruN --exclude=node_modules a/src/cleanup/openai-compatible.ts b/src/cleanup/openai-compatible.ts
 --- a/src/cleanup/openai-compatible.ts	1985-10-26 03:15:00
 +++ b/src/cleanup/openai-compatible.ts	2026-08-18 11:02:06
@@ -495,8 +765,17 @@ diff -ruN --exclude=node_modules a/src/cleanup/openai-compatible.ts b/src/cleanu
          max_tokens: config.maxTokens,
 diff -ruN --exclude=node_modules a/src/config/defaults.ts b/src/config/defaults.ts
 --- a/src/config/defaults.ts	1985-10-26 03:15:00
-+++ b/src/config/defaults.ts	2026-08-18 11:02:06
-@@ -22,6 +22,7 @@
++++ b/src/config/defaults.ts	2026-08-29 13:11:05
+@@ -15,6 +15,8 @@
+ 
+ const platformCaptureDefaults = (): Pick<FfmpegCaptureConfig, "inputFormat" | "input"> => {
+   if (process.platform === "darwin") return { inputFormat: "avfoundation", input: ":0" };
++  // `audio=Microphone` is a placeholder. Device listing is deferred until
++  // recording starts (and warmed in the background) so Pi startup is not stalled.
+   if (process.platform === "win32") return { inputFormat: "dshow", input: "audio=Microphone" };
+   return { inputFormat: "pulse", input: "default" };
+ };
+@@ -22,6 +24,7 @@
  export const defaultFfmpegCaptureConfig = {
    type: "ffmpeg",
    ffmpegPath: "ffmpeg",
@@ -504,7 +783,7 @@ diff -ruN --exclude=node_modules a/src/config/defaults.ts b/src/config/defaults.
    ...platformCaptureDefaults(),
    sampleRate: 16000,
    channels: 1,
-@@ -128,7 +129,6 @@
+@@ -128,7 +131,6 @@
  
  export const defaultOutputConfig = {
    appendTrailingSpace: true,
@@ -761,7 +1040,7 @@ diff -ruN --exclude=node_modules a/src/config/endpoint.ts b/src/config/endpoint.
  export const endpointRequiresAuth = (endpoint: string): boolean => {
 diff -ruN --exclude=node_modules a/src/config/load-config.ts b/src/config/load-config.ts
 --- a/src/config/load-config.ts	1985-10-26 03:15:00
-+++ b/src/config/load-config.ts	2026-08-18 11:02:06
++++ b/src/config/load-config.ts	2026-08-29 13:11:05
 @@ -13,7 +13,7 @@
    defaultOutputConfig,
    defaultVoiceCommandsConfig,
@@ -799,11 +1078,19 @@ diff -ruN --exclude=node_modules a/src/config/load-config.ts b/src/config/load-c
  const commonCaptureFields = (
    capture: Record<string, unknown>,
    merged: Record<string, unknown>,
-@@ -81,9 +95,22 @@
+@@ -81,16 +95,36 @@
    minBytes: Math.max(44, positiveIntegerFrom(capture.minBytes ?? merged.minBytes, defaults.minBytes)),
  });
  
 -const ffmpegCaptureFrom = (merged: Record<string, unknown>, capture: Record<string, unknown>): FfmpegCaptureConfig => ({
+-  type: "ffmpeg",
+-  ffmpegPath: textFrom(capture.ffmpegPath, textFrom(capture.ffmpeg, textFrom(merged.ffmpeg, defaultFfmpegCaptureConfig.ffmpegPath))),
+-  inputFormat: textFrom(capture.inputFormat, textFrom(merged.inputFormat, defaultFfmpegCaptureConfig.inputFormat)),
+-  input: textFrom(capture.input, textFrom(merged.input, defaultFfmpegCaptureConfig.input)),
+-  sampleRate: positiveIntegerFrom(capture.sampleRate ?? merged.sampleRate, defaultFfmpegCaptureConfig.sampleRate),
+-  channels: positiveIntegerFrom(capture.channels ?? merged.channels, defaultFfmpegCaptureConfig.channels),
+-  ...commonCaptureFields(capture, merged, defaultFfmpegCaptureConfig),
+-});
 +/**
 + * A missing ffmpeg is a run-time problem, not a config syntax error: the
 + * failure is reported so `/stt status` and `/stt doctor` still load, and the
@@ -816,15 +1103,28 @@ diff -ruN --exclude=node_modules a/src/config/load-config.ts b/src/config/load-c
 +    return { ffmpegPath: command, ffmpegPathError: formatError(error) };
 +  }
 +};
+ 
++const ffmpegCaptureFrom = async (merged: Record<string, unknown>, capture: Record<string, unknown>): Promise<FfmpegCaptureConfig> => {
++  const ffmpeg = await ffmpegPathFrom(
++    textFrom(capture.ffmpegPath, textFrom(capture.ffmpeg, textFrom(merged.ffmpeg, defaultFfmpegCaptureConfig.ffmpegPath))),
++  );
++  const inputFormat = textFrom(capture.inputFormat, textFrom(merged.inputFormat, defaultFfmpegCaptureConfig.inputFormat));
++  const input = textFrom(capture.input, textFrom(merged.input, defaultFfmpegCaptureConfig.input));
++  return {
++    type: "ffmpeg",
++    ...ffmpeg,
++    inputFormat,
++    input,
++    sampleRate: positiveIntegerFrom(capture.sampleRate ?? merged.sampleRate, defaultFfmpegCaptureConfig.sampleRate),
++    channels: positiveIntegerFrom(capture.channels ?? merged.channels, defaultFfmpegCaptureConfig.channels),
++    ...commonCaptureFields(capture, merged, defaultFfmpegCaptureConfig),
++  };
++};
 +
-+const ffmpegCaptureFrom = async (merged: Record<string, unknown>, capture: Record<string, unknown>): Promise<FfmpegCaptureConfig> => ({
-   type: "ffmpeg",
--  ffmpegPath: textFrom(capture.ffmpegPath, textFrom(capture.ffmpeg, textFrom(merged.ffmpeg, defaultFfmpegCaptureConfig.ffmpegPath))),
-+  ...(await ffmpegPathFrom(textFrom(capture.ffmpegPath, textFrom(capture.ffmpeg, textFrom(merged.ffmpeg, defaultFfmpegCaptureConfig.ffmpegPath))))),
-   inputFormat: textFrom(capture.inputFormat, textFrom(merged.inputFormat, defaultFfmpegCaptureConfig.inputFormat)),
-   input: textFrom(capture.input, textFrom(merged.input, defaultFfmpegCaptureConfig.input)),
-   sampleRate: positiveIntegerFrom(capture.sampleRate ?? merged.sampleRate, defaultFfmpegCaptureConfig.sampleRate),
-@@ -130,6 +157,52 @@
+ const bridgeCaptureFrom = async (merged: Record<string, unknown>, capture: Record<string, unknown>): Promise<BridgeCaptureConfig> => {
+   const tokenEnv = envNameFrom(capture.tokenEnv ?? merged.bridgeTokenEnv, defaultBridgeCaptureConfig.tokenEnv);
+   const tokenFile = textFrom(capture.tokenFile, textFrom(merged.bridgeTokenFile, defaultBridgeCaptureConfig.tokenFile));
+@@ -130,6 +164,52 @@
    keychainAccount: provider.keychainAccount ?? merged.keychainAccount,
  });
  
@@ -877,7 +1177,7 @@ diff -ruN --exclude=node_modules a/src/config/load-config.ts b/src/config/load-c
  const commonProviderFields = async <TDefault extends { apiKeyEnv: string; timeoutSeconds: number }>(
    merged: Record<string, unknown>,
    provider: Record<string, unknown>,
-@@ -148,7 +221,7 @@
+@@ -148,7 +228,7 @@
  
  const mistralProviderFrom = async (merged: Record<string, unknown>, provider: Record<string, unknown>): Promise<MistralProviderConfig> => ({
    type: "mistral",
@@ -886,7 +1186,7 @@ diff -ruN --exclude=node_modules a/src/config/load-config.ts b/src/config/load-c
    model: textFrom(provider.model, textFrom(merged.model, defaultMistralProviderConfig.model)),
    language: textFrom(provider.language, textFrom(merged.language, defaultMistralProviderConfig.language)),
    ...(await commonProviderFields(merged, provider, defaultMistralProviderConfig)),
-@@ -157,18 +230,44 @@
+@@ -157,18 +237,44 @@
  const openAiCompatibleProviderFrom = async (
    merged: Record<string, unknown>,
    provider: Record<string, unknown>,
@@ -940,7 +1240,7 @@ diff -ruN --exclude=node_modules a/src/config/load-config.ts b/src/config/load-c
    model: textFrom(provider.model, textFrom(merged.model, defaultDeepgramProviderConfig.model)),
    language: textFrom(provider.language, textFrom(merged.language, defaultDeepgramProviderConfig.language)),
    smartFormat: booleanFrom(provider.smartFormat ?? merged.smartFormat, defaultDeepgramProviderConfig.smartFormat),
-@@ -180,7 +279,7 @@
+@@ -180,7 +286,7 @@
    provider: Record<string, unknown>,
  ): Promise<ElevenLabsProviderConfig> => ({
    type: "elevenlabs",
@@ -949,7 +1249,7 @@ diff -ruN --exclude=node_modules a/src/config/load-config.ts b/src/config/load-c
    model: textFrom(provider.model, textFrom(merged.model, defaultElevenLabsProviderConfig.model)),
    language: textFrom(provider.language, textFrom(merged.language, defaultElevenLabsProviderConfig.language)),
    ...(await commonProviderFields(merged, provider, defaultElevenLabsProviderConfig)),
-@@ -188,10 +287,11 @@
+@@ -188,10 +294,11 @@
  
  const gladiaProviderFrom = async (merged: Record<string, unknown>, provider: Record<string, unknown>): Promise<GladiaProviderConfig> => ({
    type: "gladia",
@@ -962,7 +1262,7 @@ diff -ruN --exclude=node_modules a/src/config/load-config.ts b/src/config/load-c
    ),
    model: textFrom(provider.model, textFrom(merged.model, defaultGladiaProviderConfig.model)),
    language: textFrom(provider.language, textFrom(merged.language, defaultGladiaProviderConfig.language)),
-@@ -204,10 +304,11 @@
+@@ -204,10 +311,11 @@
    provider: Record<string, unknown>,
  ): Promise<AssemblyAiProviderConfig> => ({
    type: "assemblyai",
@@ -975,7 +1275,7 @@ diff -ruN --exclude=node_modules a/src/config/load-config.ts b/src/config/load-c
    ),
    model: textFrom(provider.model, textFrom(merged.model, defaultAssemblyAiProviderConfig.model)),
    language: textFrom(provider.language, textFrom(merged.language, defaultAssemblyAiProviderConfig.language)),
-@@ -215,6 +316,13 @@
+@@ -215,6 +323,13 @@
    ...(await commonProviderFields(merged, provider, defaultAssemblyAiProviderConfig)),
  });
  
@@ -989,7 +1289,7 @@ diff -ruN --exclude=node_modules a/src/config/load-config.ts b/src/config/load-c
  const providerFrom = async (merged: Record<string, unknown>): Promise<ProviderConfig> => {
    const provider = objectFrom(merged.provider);
    const providerType = textFrom(provider.type, textFrom(merged.provider, defaultMistralProviderConfig.type)).toLowerCase();
-@@ -225,11 +333,21 @@
+@@ -225,11 +340,21 @@
      const providerDefaults = providerType === "groq"
        ? { endpoint: "https://api.groq.com/openai/v1/audio/transcriptions", model: "whisper-large-v3-turbo", apiKeyEnv: "GROQ_API_KEY" }
        : providerType === "local"
@@ -1013,7 +1313,7 @@ diff -ruN --exclude=node_modules a/src/config/load-config.ts b/src/config/load-c
    }
  
    if (providerType === "deepgram") return deepgramProviderFrom(merged, provider);
-@@ -244,16 +362,26 @@
+@@ -244,16 +369,26 @@
    const output = objectFrom(merged.output);
    return {
      appendTrailingSpace: booleanFrom(output.appendTrailingSpace ?? merged.appendTrailingSpace, defaultOutputConfig.appendTrailingSpace),
@@ -1043,7 +1343,7 @@ diff -ruN --exclude=node_modules a/src/config/load-config.ts b/src/config/load-c
      model: textFrom(cleanup.model, defaultCleanupConfig.model),
      language: textFrom(cleanup.language, defaultCleanupConfig.language),
      prompt: textFrom(cleanup.prompt, defaultCleanupConfig.prompt),
-@@ -261,8 +389,8 @@
+@@ -261,8 +396,8 @@
      useRepoContext: booleanFrom(cleanup.useRepoContext, defaultCleanupConfig.useRepoContext),
      maxTokens: positiveIntegerFrom(cleanup.maxTokens, defaultCleanupConfig.maxTokens),
      timeoutSeconds: positiveIntegerFrom(cleanup.timeoutSeconds, defaultCleanupConfig.timeoutSeconds),

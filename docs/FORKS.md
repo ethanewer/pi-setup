@@ -400,7 +400,7 @@ driven end to end without a microphone or an API call.
 microphone audio to an arbitrary HTTPS host by naming a credential explicitly, or run any
 already-executable binary via `capture.ffmpegPath`. Both are the documented feature set; the
 fix removed the *silent* variants, where a defaulted key followed a host you never named.
-`install.sh` keeps that file mode `600` and `bin/pi-setup-doctor` checks it.
+`install.sh` keeps that file mode `600` on Unix and `bin/pi-setup-doctor` checks it (skipped on Windows, where NTFS has no Unix modes).
 
 ## pi-process-monitor-safe
 
@@ -429,7 +429,7 @@ Revisit that schema if strict constrained sampling is enabled for this tool.
 bound, so a poll child that never exited — a hung SSH, which is the case poll mode exists
 for — held the guard forever and the watcher went permanently silent, with no error to
 latch onto. A tick now gets `intervalMs - 1000` and is killed through the existing
-process-group escalation, reported once through the existing failure latch.
+process-group escalation (POSIX negative PID, `taskkill /T` on Windows), reported once through the existing failure latch.
 
 Declined from 2.0.0, with reasons:
 
@@ -473,8 +473,9 @@ nothing is rewritten at all, so ordinary output reaches the matcher byte-for-byt
 `agent-browser-cli`, `update-pi-setup`, and `unslop` used to be skills-only packages in
 `forks/`, but a skill is not a package — it needs no `package.json`, no `settings.json`
 entry, and none of the patch/provenance machinery this file documents. They moved to
-[`skills/`](../skills/README.md) and are installed into the agent directories by
-`install.sh`; `bin/pi-setup-doctor` checks the installed copies.
+[`skills/`](../skills/README.md) and are installed into the agent directories by the
+installer (install.sh on Unix, install.ps1 on Windows); `bin/pi-setup-doctor` checks the
+installed copies.
 
 ## Startup labels
 
@@ -483,8 +484,11 @@ filename when the entry is not an `index.*` (`modes/interactive/interactive-mode
 Upstream `pi-voice-stt` points at `src/index.ts` and upstream dynamic-workflows at
 `extensions/workflow.ts`, so the startup listing read `src` and `workflow.ts`. Both forks
 now use the `extensions/<name>/index.ts` convention the other three already followed, so
-the listing identifies every extension by name. The listing differs between the two full
-entrypoints — `pi` deliberately excludes the workflow fork, `piwf` loads it:
+the listing identifies every extension by name. The installer compiles each TypeScript
+entry to a sibling `index.js` in the same folder so Pi does not pay jiti transpile cost
+on every startup, and the listing still uses the `extensions/<name>/` directory name.
+The listing differs between the two full entrypoints — `pi` deliberately excludes the
+workflow fork, `piwf` loads it:
 
 ```text
 pi   (full, without dynamic workflows)
@@ -516,7 +520,8 @@ A stray upstream package is still distinguishable at a glance: Pi prefixes `npm:
 sources bare, so anything showing a version prefix is not one of these forks.
 
 The lean `p` wrapper disables extension and skill discovery, then explicitly loads only
-`voice-stt`, `btw`, and `context-handoff` (plus its prompt-removal helper). Monitor is in
+`voice-stt`, `btw`, `context-handoff`, and the conditional `mlx` extension (plus its
+prompt-removal helper). Monitor is in
 both full entrypoints (`pi`, `piwf`); the browser is there as the `agent-browser-cli`
 skill plus the CLI on PATH; workflow is full-profile-only and, of
 the two full entrypoints, only `piwf` loads it. `bin/pi-setup-doctor` checks the `p`

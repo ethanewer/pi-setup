@@ -2,16 +2,12 @@ import { afterAll, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
+import { writeConfig } from "../lib/install.mjs";
 
-// install.sh embeds its settings writer in a heredoc. Extract that exact script and run
-// it against fixture files, so the committed tests cover what install.sh actually writes
-// (the fork split, the model scope, and the preserve-user-keys rule) instead of a copy.
-const installer = readFileSync(join(import.meta.dir, "..", "install.sh"), "utf8");
-const START = 'cat > "$CONFIG_SCRIPT" <<\'JS\'\n';
-const start = installer.indexOf(START);
-const end = installer.indexOf("\nJS\n", start);
-expect(start).toBeGreaterThan(-1);
-const configScript = installer.slice(start + START.length, end);
+// The settings writer lives in lib/install.mjs and is shared by install.sh and
+// install.ps1. Import it directly and run it against fixture files, so the committed
+// tests cover what the installer actually writes (the fork split, the model scope, and
+// the preserve-user-keys rule) instead of a copy.
 
 const REPO = join(import.meta.dir, "..");
 const SCOPE = [
@@ -28,16 +24,16 @@ const SCOPE = [
 ];
 const FORKS_MINUS_WORKFLOWS = [
 	"local/pi-voice-stt-safe",
-	"local/pi-context-handoff",
-	"local/pi-btw-side",
 	"local/pi-process-monitor-safe",
+	"local/pi-btw-side",
+	"local/pi-context-handoff",
 ];
 const ALL_FORKS = [
 	"local/pi-voice-stt-safe",
 	"local/pi-dynamic-workflows-safe",
-	"local/pi-context-handoff",
-	"local/pi-btw-side",
 	"local/pi-process-monitor-safe",
+	"local/pi-btw-side",
+	"local/pi-context-handoff",
 ];
 const BROWSER_TOOL = "local/pi-agent-browser-native-safe";
 
@@ -93,13 +89,10 @@ writeFileSync(modelsStorePath, JSON.stringify({
 	},
 }));
 
-const scriptPath = join(dir, "config-writer.mjs");
-writeFileSync(scriptPath, configScript);
-
-function runWriter(browserTool = "") {
-	const result = Bun.spawnSync([
-		"bun",
-		scriptPath,
+function runWriter(browserTool) {
+	if (browserTool === undefined) delete process.env.PI_SETUP_BROWSER_TOOL;
+	else process.env.PI_SETUP_BROWSER_TOOL = browserTool;
+	writeConfig({
 		mainPath,
 		pPath,
 		wfPath,
@@ -107,18 +100,16 @@ function runWriter(browserTool = "") {
 		npmPkgPath,
 		pNpmPkgPath,
 		wfNpmPkgPath,
-		"0.84.2",
-		join(REPO, "config/keybindings.json"),
-		keybinds[0],
-		keybinds[1],
-		keybinds[2],
-		join(REPO, "config/compaction.json"),
+		piVersion: "0.84.4",
+		keybindingsSrcPath: join(REPO, "config/keybindings.json"),
+		mainKeybindsPath: keybinds[0],
+		pKeybindsPath: keybinds[1],
+		wfKeybindsPath: keybinds[2],
+		compactionSrcPath: join(REPO, "config/compaction.json"),
 		modelsStorePath,
 		modelTiersSrcPath,
 		modelTiersDestPath,
-		browserTool,
-	]);
-	expect(result.exitCode).toBe(0);
+	});
 }
 
 test("the model scope lands on all three profiles", () => {

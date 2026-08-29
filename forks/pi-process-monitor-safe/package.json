@@ -29,15 +29,9 @@
     "LICENSE"
   ],
   "pi": {
-    "extensions": [
-      "./extensions"
-    ],
-    "skills": [
-      "./skills"
-    ],
-    "prompts": [
-      "./prompts"
-    ]
+    "extensions": ["./extensions/monitor/index.js"],
+    "skills": ["./skills"],
+    "prompts": ["./prompts"]
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",
