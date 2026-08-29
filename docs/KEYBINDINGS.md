@@ -85,6 +85,30 @@ silently did nothing on a Linux desktop:
   `config/keybindings.json`. `ctrl+enter` and `ctrl+j` need none of this and work
   everywhere.
 
+## VS Code's integrated terminal
+
+VS Code dispatches **Alt+Enter** to its own commands before xterm.js ever sees the key,
+so the chord produces literal newlines or nothing at all for every setup. Add to
+`~/.config/Code/User/keybindings.json` (Ctrl+Shift+P → *Preferences: Open Keyboard
+Shortcuts (JSON)*):
+
+```json
+[
+  {
+    "key": "alt+enter",
+    "command": "workbench.action.terminal.sendToTerminal",
+    "args": { "text": "\r" },
+    "when": "terminalFocus"
+  }
+]
+```
+
+Reload the window afterwards (Ctrl+Shift+P → *Developer: Reload Window*); the shortcut
+then sends the same `ESC CR` sequence GNOME terminal and Pi's default macOS terminals
+produce, and the probe confirms it as `alt+enter`. This is specific to the integrated
+terminal — Alt+Enter works unmodified in GNOME Terminal, Konsole, tmux, and the macOS
+terminals.
+
 ## What this setup binds
 
 `config/keybindings.json`, installed to `~/.pi/agent/keybindings.json` and the `p` profile.
