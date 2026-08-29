@@ -2,6 +2,28 @@
 
 This file is the completion contract for `evals/general-v2`. The benchmark is not complete until every gate below passes. A task directory existing, an oracle passing, or a skill appearing in a tag is not sufficient evidence of completion.
 
+## Current state at a glance (2026-08-29)
+
+**Built:** 204 clean-room Harbor tasks covering 722/726 atomic Terminal-Bench
+competencies (4 documented environmentally infeasible: GPU Triton kernels,
+Linux-kernel rebuild x2, telephony). Difficulty mix 2 easy / 84 medium / 118
+hard. Every verifier executes its deliverables with hidden generalization
+cases; every task has an oracle that passes from a pristine container.
+
+**Verified:** two identical full oracle sweeps (204/204); final independence
+audit clean (exact/block/ngram/canary/repo = 0 over 30,128 payloads); blind
+two-reviewer similarity check passed; 408-trial forensic grading audit with 0
+false positives (28 contract defects found, fixed, re-run). All gates:
+`tools/suite_report.py` -> SUITE PASS.
+
+**Benchmarked** on openrouter/z-ai/glm-5.3-flash (204 trials each): pi (PAgent)
+136/204 = 0.667; terminus-2 141/204 = 0.691 (0.525 strict). Traces in the HF
+dataset; code on branch `general-v2-eval`.
+
+**Remaining:** see "Parts NOT fully tested / known residuals" + "How to work
+on the remaining items" below. Nothing blocks use of the benchmark; the
+residuals are scope/quality enhancements.
+
 ## How the data is saved
 
 **Git** — branch `general-v2-eval` of `ethanewer/pi-setup`: the full benchmark
@@ -58,6 +80,37 @@ These are the honest gaps. Everything else is gate-verified (see checklist).
    threshold is a judgment call.
 7. **No frontier-model reference run.** Scores are from a flash-class model
    only; a frontier-model run would better anchor the difficulty scale.
+
+## How to work on the remaining items
+
+Concrete starting points for each residual above:
+
+1. *Second-task coverage*: use the existing pipeline — cluster uncovered /
+   single-covered competencies (specs/coverage.json + specs/tb21_competencies.json,
+   `second_task_required` field) into task families, author with the
+   private-audit/AUTHOR_GUIDE.md contract (workflow waves were used for the
+   first build-out), then re-run tools/build_coverage.py + check_tb21_coverage.py.
+2. *Human inventory review*: edit specs/tb21_competencies.json directly
+   (opaque IDs; keep private-audit/competency_map.json consistent), then
+   rebuild coverage claims.
+3. *Calibration panel*: tools/run_pilot.sh runs a model panel over a task
+   subset; compare completion rates per difficulty bucket.
+4. *Expert-time calibration*: replace `expected_expert_time_min` estimates in
+   tasks/*/difficulty.json with measured values; tools/build_difficulty.py
+   aggregates them into specs/difficulty.json.
+5. *Stress-testing heavy tasks*: re-run the QEMU/kernel/heavy-install tasks
+   (e.g. brisk-jetty, dune-hearth, prism-bridge) repeatedly and on slower
+   hosts; raise [environment] budgets where failures are environmental.
+6. *Verifier-timeout policy*: revisit per-task verifier timeouts vs
+   deliverable-execution bounds (amber-dial is the reference case).
+7. *Frontier-model run*: same harness as the glm runs —
+   `harbor run -p runsets/general-v2-x1 -a p_agent:PAgent -m <frontier-model>`
+   and `-a terminus-2`; build runsets with tools/build_runsets.py.
+
+Note for fresh checkouts: five >20MB fixture binaries are gitignored — fetch
+them from the HF dataset `v2/assets/` (or upstream) per specs/large_assets.json
+before building the prism-bridge, harbor-gasket, zephyr-orchid, and
+raven-orchid images.
 
 ## Completion status (updated 2026-08-29, final)
 
