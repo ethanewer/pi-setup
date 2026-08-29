@@ -47,6 +47,15 @@ RUN printf 'host3\n' > /etc/hostname
 #    inject it and there is no DNS entry for the invented hollow.farm zone,
 #    so `getent hosts <host>` fails until the host is added to /etc/hosts.
 # 3) nsswitch "hosts" line is fragmented to "files" only (no dns fallback)
+# (Pre-baked before the sabotage: the claude-code agent CLI is installed here
+# so the eval harness's agent-installer — which needs working DNS — is skipped
+# at trial time; it is inert for task semantics and for other agents.)
+RUN apt-get update \
+ && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends curl ca-certificates \
+ && rm -rf /var/lib/apt/lists/* \
+ && curl -fsSL https://downloads.claude.ai/claude-code-releases/bootstrap.sh | bash -s -- \
+ && ln -sf /root/.local/bin/claude /usr/local/bin/claude \
+ && claude --version
 RUN cp /etc/nsswitch.conf /etc/nsswitch.conf.orig \
  && sed -i 's/^hosts:.*/hosts:      files/' /etc/nsswitch.conf
 # 4) mail relay deliberately hijacked: every message is forced outbound via a

@@ -1,7 +1,8 @@
 # general-v2 benchmark report
 
-Generated 2026-08-27. Frozen clean-room suite; model runs on
-`openrouter/z-ai/glm-5.3-flash`.
+Generated 2026-08-27; updated 2026-08-29 with the claude-code run and the
+three-agent comparison (`reports/comparison_glm53flash.md`). Frozen clean-room
+suite; model runs on `openrouter/z-ai/glm-5.3-flash`.
 
 ## Suite
 
@@ -18,8 +19,15 @@ Generated 2026-08-27. Frozen clean-room suite; model runs on
 
 | Agent | Verifier-authoritative | Strict (agent-timeout forces 0) |
 |---|---|---|
-| **pi (PAgent, the user's `p` setup)** | **136/204 = 0.667** | 136/204 = 0.667 |
+| **claude-code** | **146/204 = 0.716** | **129/204 = 0.632** |
 | **terminus-2** | **141/204 = 0.691** | 107/204 = 0.525 |
+| **pi (PAgent, the user's `p` setup)** | **136/204 = 0.667** | 136/204 = 0.667 |
+
+Claude Code 2.1.251 (harbor `claude-code` agent, bypassPermissions), model via
+OpenRouter's Anthropic-compatible endpoint — same serving path as the other two
+runs. Its merged records audited clean (0 problems, 204/204 valid). Full
+details, per-bucket splits, cost (≈$24 real pricing), and caveats:
+`reports/comparison_glm53flash.md`.
 
 - Verifier-authoritative = the harness-native rule: the verifier verdict on the
   final container state is the grade (Terminal-Bench semantics). Under this rule

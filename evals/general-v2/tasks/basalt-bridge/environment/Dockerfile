@@ -43,6 +43,14 @@ RUN mkdir -p /opt/gk && \
     echo "guest-kernel:" && ls -la /opt/gk && echo "modules:" && ls -la /opt/gk/modules && \
     echo ok
 
+# (Pre-baked before the curl sabotage: the claude-code agent CLI is installed
+# here so the eval harness's agent-installer — which shells out to /usr/bin/curl
+# and would hit the stub — is skipped at trial time; it is inert for task
+# semantics and for other agents.)
+RUN curl -fsSL https://downloads.claude.ai/claude-code-releases/bootstrap.sh | bash -s -- \
+ && ln -sf /root/.local/bin/claude /usr/local/bin/claude \
+ && claude --version
+
 # Save a pristine curl for restoration, then break /usr/bin/curl into a stub so a
 # pristine container is broken until repaired (the agent must restore a genuine ELF).
 RUN cp -f "$(command -v curl)" /opt/gk/curl.orig && \
