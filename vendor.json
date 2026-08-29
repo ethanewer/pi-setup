@@ -17,10 +17,10 @@
     },
     "pi-dynamic-workflows-safe": {
       "upstream": "@quintinshaw/pi-dynamic-workflows",
-      "version": "3.8.0",
+      "version": "3.9.0",
       "live": "extensions/workflow/index.ts",
       "liveTree": "src",
-      "patch": "patches/@quintinshaw+pi-dynamic-workflows@3.8.0.patch",
+      "patch": "patches/@quintinshaw+pi-dynamic-workflows@3.9.0.patch",
       "note": "extensions/workflow/index.ts imports ../../src/*.js, so src/ is the tree Pi loads. dist/ is a compiled mirror reachable only through the package exports field; rebuild it with npm run build."
     },
     "pi-process-monitor-safe": {

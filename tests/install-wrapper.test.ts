@@ -14,8 +14,8 @@ test("every Bun entry point uses the operating system CA store", () => {
 });
 
 test("installer applies the version-guarded Pi reasoning-details patch", () => {
-	expect(installer).toContain('PI_AI_REASONING_PATCH="$SRC_DIR/patches/pi-ai@0.84.3-reasoning-details.patch"');
-	expect(installer).toContain('PI_AI_VERSION="0.84.3"');
+	expect(installer).toContain('PI_AI_REASONING_PATCH="$SRC_DIR/patches/pi-ai@0.84.4-reasoning-details.patch"');
+	expect(installer).toContain('PI_AI_VERSION="0.84.4"');
 	expect(installer).toContain('[[ "$PI_AI_INSTALLED_VERSION" == "$PI_AI_VERSION" ]]');
 	expect(installer).toContain("patch --dry-run --batch --forward");
 	expect(installer).toContain('"$BUN_BIN" "$SRC_DIR/bin/verify-pi-ai-reasoning-fix" "$PI_AI_ROOT"');

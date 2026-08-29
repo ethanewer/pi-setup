@@ -1696,6 +1696,7 @@ export function openWorkflowNavigator(pi, manager, ui, opts = {}) {
         const renderCache = new NavigatorTextRenderCache();
         const events = [
             "agentStart",
+            "agentModel",
             "agentEnd",
             "phase",
             "log",

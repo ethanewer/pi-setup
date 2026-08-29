@@ -48,7 +48,10 @@ wait_line1() { # wait_line1 <text> [seconds]
   return 1
 }
 # Wait for the side view to stop answering, so a later keystroke is not raced.
-wait_idle() { local i=0; while (( i < 200 )); do screen | grep -q "answering" || return 0; sleep 1; i=$((i+1)); done; return 1; }
+# The busy indicator renders only in the footer's last row, so match that row rather
+# than the whole screen: transcript content (a tool output quoting "answering", say)
+# would otherwise hold this check open for its full 200s.
+wait_idle() { local i=0; while (( i < 200 )); do screen | tail -1 | grep -q "answering" || return 0; sleep 1; i=$((i+1)); done; return 1; }
 check() { if [[ "$2" == "0" ]]; then PASS=$((PASS+1)); printf '  PASS  %s\n' "$1"; else FAIL=$((FAIL+1)); printf '  FAIL  %s\n' "$1"; fi }
 send() { tmux send-keys -t "$SESSION" -l "$1"; sleep 0.4; tmux send-keys -t "$SESSION" Enter; }
 
@@ -83,7 +86,11 @@ screen | grep -q "Reply with exactly ACK"; check "main transcript is back" $?
 screen | grep -q "side conversation"; [[ $? == 1 ]]; check "side view is gone" $?
 
 printf '\nThe main thread keeps running while the view is open\n'
-send "Run the bash command 'sleep 40; echo DONE-MAIN' and then reply with its output."
+# Name the bash tool explicitly: the monitor skill in the system prompt tells the model
+# to background anything over ~30s, and a monitor watcher returns instantly, which ends
+# the main agent's run and makes the header legitimately report idle. The check below
+# needs a main turn that is genuinely mid-run, so pin the blocking tool.
+send "Use the bash tool (not the monitor tool) to run the command 'sleep 40; echo DONE-MAIN' and then reply with its output."
 sleep 10
 send "/btw Reply with exactly SIDE-DURING and nothing else."
 # Question and answer both carry the token here, so two lines means it was answered.

@@ -1,0 +1,26 @@
+--- a/dist/api/openai-completions.js
++++ b/dist/api/openai-completions.js
+@@ -109,7 +109,9 @@
+         return undefined;
+     try {
+         const parsed = JSON.parse(signature);
+-        return Array.isArray(parsed) && parsed.length > 0 && parsed.every(isOpenAIReasoningDetail) ? parsed : undefined;
++        return Array.isArray(parsed) && parsed.length > 0 && parsed.every(isOpenAIReasoningDetail)
++            ? normalizeOpenAIReasoningDetails(parsed)
++            : undefined;
+     }
+     catch {
+         return undefined;
+@@ -151,6 +153,12 @@
+         return;
+     }
+     details.push({ ...detail });
++}
++function normalizeOpenAIReasoningDetails(details) {
++    const normalized = [];
++    for (const detail of details)
++        appendOpenAIReasoningDetail(normalized, detail);
++    return normalized;
+ }
+ const OPENAI_COMPLETIONS_REASONING_FIELDS = ["reasoning", "reasoning_content", "reasoning_text"];
+ function isOpenAICompletionsReasoningField(field) {

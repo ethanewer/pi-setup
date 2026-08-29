@@ -122,10 +122,17 @@ The exact historical system prompt was not stored in session JSONL. Tests recons
 
 ## Repository fix
 
-[`patches/pi-ai@0.84.3-reasoning-details.patch`](../../patches/pi-ai@0.84.3-reasoning-details.patch) adds two protections:
+Upstream `pi-ai 0.84.4` absorbed protection 1 (stream concatenation via
+`appendOpenAIReasoningDetail`). [`patches/pi-ai@0.84.4-reasoning-details.patch`](../../patches/pi-ai@0.84.4-reasoning-details.patch)
+adds only protection 2: it introduces `normalizeOpenAIReasoningDetails` on top of the
+upstream merge helpers and routes `parseOpenAIReasoningDetails` through it. The original
+0.84.3-era patch (`pi-ai@0.84.3-reasoning-details.patch`, now removed) carried both
+halves because `0.84.3` shipped neither. The version bump history:
 
-1. Stream handling appends adjacent `reasoning.text` and `reasoning.summary` deltas to one logical detail.
-2. Signature parsing applies the same normalization before replaying historical arrays.
+- `pi-ai 0.84.3`: patch added both stream concatenation and replay normalization.
+- `pi-ai 0.84.4`: upstream took the stream half; the rebased patch keeps only replay
+  normalization and must not re-declare the upstream helpers (a later duplicate function
+  declaration would silently override upstream's).
 
 Opaque `reasoning.encrypted` entries remain separate and preserve order. The normalizer carries forward common fields such as `id`, `format`, `index`, and text signatures.
 

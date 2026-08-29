@@ -43,6 +43,13 @@ export interface JournalEntry {
      * which agent finished first. Absent on older journal entries.
      */
     storeDelta?: Record<string, unknown>;
+    /**
+     * The model this call actually ran on, captured post-resolution so a replayed
+     * cache hit displays what really ran instead of the pre-resolution guess.
+     * Absent on journal entries persisted before this field existed (and on
+     * checkpoints, which run no model) — those degrade to the old behavior.
+     */
+    model?: string;
 }
 /**
  * Global resources shared across a run and any workflow() nested inside it, so
@@ -263,6 +270,24 @@ export interface WorkflowRunOptions extends WorkflowAgentOptions {
         label: string;
         phase?: string;
         history: AgentHistoryEntry[];
+    }) => void;
+    /**
+     * The agent's REAL model, pushed the moment WorkflowAgent resolves it — mid-run,
+     * long before onAgentEnd. onAgentStart can only carry the pre-resolution guess
+     * (this call's explicit/phase spec, else the session's main model), which is wrong
+     * for every tier-routed agent: an explicit `tier` deliberately defers the choice to
+     * the agent layer, and an untagged agent is implicitly routed through the "medium"
+     * tier whenever model-tiers.json exists (see resolveAgentModelSpec). Without this
+     * channel those agents display the main session model for their whole lifetime and
+     * only flip to the truth once they finish. Fires once per ATTEMPT (and per turn for
+     * a named thread), so treat it as idempotent, not once-per-agent. `id` is the same
+     * per-CALL id as onAgentStart/onAgentEnd/onAgentHistory/onAgentUsage.
+     */
+    onAgentModel?: (event: {
+        id: string;
+        label: string;
+        phase?: string;
+        model: string;
     }) => void;
     onTokenUsage?: (usage: {
         input: number;

@@ -64,7 +64,7 @@ rather than as a supported claim.
 
 | Component | Version |
 |---|---:|
-| `@earendil-works/pi-coding-agent` | `0.84.3` |
+| `@earendil-works/pi-coding-agent` | `0.84.4` |
 | `agent-browser` | `0.35.0` |
 
 Extension forks and the upstream releases they are based on:
@@ -73,7 +73,7 @@ Extension forks and the upstream releases they are based on:
 |---|---|---:|
 | `pi-voice-stt-safe` | `pi-voice-stt` | `0.6.0` |
 | `pi-agent-browser-native-safe` | `pi-agent-browser-native` | `0.5.0` |
-| `pi-dynamic-workflows-safe` | `@quintinshaw/pi-dynamic-workflows` | `3.8.0` |
+| `pi-dynamic-workflows-safe` | `@quintinshaw/pi-dynamic-workflows` | `3.9.0` |
 | `pi-process-monitor-safe` | `pi-process-monitor` | rewrite, built on `1.3.0`, `2.0.2` reviewed and declined |
 | `pi-context-handoff` | — | first-party |
 | `pi-btw-side` | — | first-party |
@@ -83,15 +83,16 @@ Extension forks and the upstream releases they are based on:
 `vendor.json` is the machine-readable version of this table and is what the tooling
 reads.
 
-Pi `0.84.3` is the latest published release, but it predates upstream fix
-`c5ad7c1b` for fragmented OpenAI-compatible `reasoning_details`. The installer therefore
-applies [`patches/pi-ai@0.84.3-reasoning-details.patch`](patches/pi-ai@0.84.3-reasoning-details.patch)
-after the version-pinned install. It includes upstream's adjacent stream-delta
-concatenation and also normalizes adjacent text/summary entries when replaying historical
-sessions, so already-affected transcripts no longer send token-fragmented reasoning back
-to the model. The patch is version-guarded and `bin/pi-setup-doctor` reports if a package
-update removes it. Remove this temporary core patch once a published Pi release contains
-both behaviors. [`docs/incidents/PI-AI-0.84.3-REASONING-DETAILS.md`](docs/incidents/PI-AI-0.84.3-REASONING-DETAILS.md)
+Pi `0.84.4` ships upstream's fix for the stream half of the fragmented OpenAI-compatible
+`reasoning_details` regression, but still replays historical signatures unnormalized. The
+installer therefore applies
+[`patches/pi-ai@0.84.4-reasoning-details.patch`](patches/pi-ai@0.84.4-reasoning-details.patch)
+after the version-pinned install. It wraps `parseOpenAIReasoningDetails` in the existing
+upstream merge helpers so adjacent text/summary entries are also normalized when replaying
+historical sessions, and already-affected transcripts no longer send token-fragmented
+reasoning back to the model. The patch is version-guarded and `bin/pi-setup-doctor`
+reports if a package update removes it. Remove this temporary core patch once a published
+Pi release contains both behaviors. [`docs/incidents/PI-AI-0.84.3-REASONING-DETAILS.md`](docs/incidents/PI-AI-0.84.3-REASONING-DETAILS.md)
 records the cause, evidence, fix, upgrade checks, and recurrence procedure.
 
 ## Extensions are hardened forks

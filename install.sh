@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-PI_VERSION="0.84.3"
-PI_AI_VERSION="0.84.3"
+PI_VERSION="0.84.4"
+PI_AI_VERSION="0.84.4"
 AGENT_BROWSER_VERSION="0.35.0"
 
 # Upstream versions live in vendor.json, which is what bin/pi-setup-doctor and
@@ -103,7 +103,7 @@ log "Applying the Pi AI $PI_AI_VERSION reasoning-details fix"
 PI_AI_INSTALLED_VERSION="$($BUN_BIN -e 'console.log(require(process.argv[1] + "/package.json").version)' "$PI_AI_ROOT")"
 [[ "$PI_AI_INSTALLED_VERSION" == "$PI_AI_VERSION" ]] \
   || fail "Expected @earendil-works/pi-ai $PI_AI_VERSION, found $PI_AI_INSTALLED_VERSION; refusing to apply a version-specific patch."
-PI_AI_REASONING_PATCH="$SRC_DIR/patches/pi-ai@0.84.3-reasoning-details.patch"
+PI_AI_REASONING_PATCH="$SRC_DIR/patches/pi-ai@0.84.4-reasoning-details.patch"
 [[ -f "$PI_AI_REASONING_PATCH" ]] || fail "Missing Pi reasoning patch: $PI_AI_REASONING_PATCH"
 [[ -f "$SRC_DIR/bin/verify-pi-ai-reasoning-fix" ]] || fail "Missing Pi reasoning verifier."
 if "$BUN_BIN" "$SRC_DIR/bin/verify-pi-ai-reasoning-fix" "$PI_AI_ROOT" >/dev/null 2>&1; then

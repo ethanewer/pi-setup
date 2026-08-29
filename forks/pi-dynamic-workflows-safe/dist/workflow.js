@@ -543,9 +543,12 @@ export async function runWorkflow(script, options = {}) {
         // the phase model) decides inside WorkflowAgent.run().
         const explicitModel = agentOptions.model ?? agentDef?.model;
         const modelSpec = explicitModel ?? (agentOptions.tier ? undefined : resolveModelForPhase(assignedPhase, routingConfig));
-        // For display in /workflows: the model this agent runs on — its explicit/phase
-        // spec, else the session's main model. The real resolved id overrides this via
-        // onModelResolved once the subagent session is created.
+        // For display in /workflows: a PRE-RESOLUTION guess — this agent's explicit/phase
+        // spec, else the session's main model. It is only a guess: a `tier` deliberately
+        // leaves modelSpec undefined so the agent layer picks, and an untagged agent is
+        // implicitly routed through the "medium" tier when model-tiers.json exists. The
+        // real resolved id replaces it via onModelResolved below, which also pushes the
+        // correction out on onAgentModel so a RUNNING agent's row stops showing the guess.
         let displayModel = modelSpec ?? options.mainModel;
         // Deterministic resume key: assigned at lexical call time, before the limiter,
         // so parallel()/pipeline() fan-out is reproducible for a fixed script.
@@ -586,14 +589,18 @@ export async function runWorkflow(script, options = {}) {
         const hashMatches = cached != null && cached.hash === callHash;
         const cachedEmptyOutput = hashMatches && isEmptyTextAgentResult(cached.result, agentOptions.schema);
         if (!shared.resumeBarrierReached && hashMatches && !cachedEmptyOutput && callIndex < state.firstMiss) {
-            options.onAgentStart?.({ id: deltaKey, label, phase: assignedPhase, prompt, model: displayModel });
+            // A replayed call never runs an agent, so onModelResolved never fires for it.
+            // Use the model journaled when it originally ran; legacy entries have none and
+            // fall back to the pre-resolution guess, exactly as before this field existed.
+            const replayModel = cached.model ?? displayModel;
+            options.onAgentStart?.({ id: deltaKey, label, phase: assignedPhase, prompt, model: replayModel });
             options.onAgentEnd?.({
                 id: deltaKey,
                 label,
                 phase: assignedPhase,
                 result: cached.result,
                 tokens: 0,
-                model: displayModel,
+                model: replayModel,
             });
             // Apply this agent's write delta so live agents later in the run see a
             // consistent store. Additive apply preserves parallel-agent writes that
@@ -727,6 +734,10 @@ export async function runWorkflow(script, options = {}) {
                             cwd: runCwd,
                             onModelResolved: (id) => {
                                 displayModel = id;
+                                // Correct what /workflows shows for an agent that is STILL RUNNING.
+                                // onAgentEnd keeps carrying the same value so late subscribers and
+                                // the persisted snapshot stay consistent with this push.
+                                options.onAgentModel?.({ id: deltaKey, label, phase: assignedPhase, model: id });
                             },
                             onModelFallback: ({ tier, requestedSpec }) => {
                                 // Untagged agents' implicit default tier degrading to the session
@@ -760,6 +771,11 @@ export async function runWorkflow(script, options = {}) {
                                 runId,
                                 hash: callHash,
                                 result,
+                                // displayModel is post-resolution here; recording it keeps a
+                                // resumed run's replayed rows from regressing to mainModel.
+                                // Deliberately NOT part of callHash (see hashAgentCall): the
+                                // cache key stays spec-level, so no cached agent is invalidated.
+                                model: displayModel,
                                 storeDelta: store.commitDelta(deltaKey),
                             });
                         }
