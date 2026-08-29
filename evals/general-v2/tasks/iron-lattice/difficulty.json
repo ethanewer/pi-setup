@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 0,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 1,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 30,
+  "documented_probe": null,
+  "notes": "Medium. The core is a self-contained algorithm (power iteration) that must generalize to unseen matrices (1x1, diagonal, 2x2, 4x4) probed by hidden cases, which drives hidden_case_generalization = 2 and quantitative_correctness = 2. reasoning_depth = 2 comes from correctly handling convergence stopping, the all-ones degeneracy, eigenvalue estimation via Rayleigh quotient, and floating-point normalization. Resource pressure = 1 from a hard iteration bound and adversarial convergence (near-tied eigenvalues). Overall 11 -> medium bucket."
+}

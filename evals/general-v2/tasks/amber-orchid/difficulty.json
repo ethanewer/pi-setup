@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 3,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 2,
+    "resource_pressure": 1,
+    "interaction_statefulness": 1,
+    "unsafe_action_penalty": 2
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": null,
+  "notes": "Web-http-contract hardening task: total 21 = hard, and the highest competency floor is hard (C-45ccc851 CWE mapping, C-a2521d7a end-to-end rollout), so the bucket keeps hard. Difficulty comes from (a) reading the provided /app/helpers.py source to recognise the naive os.path.join upload normalizer as a classic path-traversal and pinning it to CWE-22 in the security.report deliverable, (b) a 400/404 disambiguation contract (height must be a non-negative base-10 integer or 400; unknown blocks/txs must yield a not_found body whose single top-level field is `error`), and (c) neutralizing traversal-typed uploads so nothing escapes /app/uploads while the service stays reachable/functional, all standing hidden replayed in fresh processes plus a sanitizer-bypass payload that must auto-fire in the headless Chromium the tests launch. Adversarial matrix equals the hidden height/identifier/upload/render sets; hidden_case_generalization is high because the delivered api.py is executed live on /tests/hidden in fresh instances; unsafe_action_penalty=2 since a browser XSS proof-of-concept is deliberately exercised inside the sandboxed headless browser."
+}

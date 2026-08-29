@@ -1,0 +1,35 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "hard"
+category = "data_processing"
+verifier_kind = "executes-deliverable"
+deliverables = [
+    "/app/forge_report.py",
+    "/app/report.txt",
+    "/app/decision.txt",
+    "/app/result.txt",
+    "/app/out.jpg",
+    "/app/construct.txt",
+]
+tags = [
+    "quartz-forge",
+    "data_processing",
+    "C-315ad440",
+    "C-6ce533a8",
+    "C-528db289",
+    "C-9d7c0a52",
+    "C-c8c8a093",
+]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 1800.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096

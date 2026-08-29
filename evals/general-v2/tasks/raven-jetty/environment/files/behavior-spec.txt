@@ -1,0 +1,31 @@
+ravens-jetty / recovered behavior spec
+---------------------------------------
+
+As-is wire protocol ported out of the legacy "tx-71" loader. Only the forward
+byte transform is required. It is byte-exact, deterministic, and defined over
+arbitrary byte sequences (including empty and NUL-containing buffers).
+
+NAME: the "shoal" transform (also called the reverse-and-weave decode).
+
+GIVEN: an input byte sequence B with length L.
+
+STEP 1 - about-face:
+    Build the reversed sequence R of length L where R[i] = B[L-1-i].
+    (For L == 0, R is empty.)
+
+STEP 2 - weave:
+    Maintain one running key k, an unsigned 8-bit quantity.
+    For i = 0,1,...,L-1 in order:
+        v   = R[i] XOR k                     (bitwise XOR, take low 8 bits)
+        out[i] = v
+        k   = (k + v + 0x0D) & 0xFF          (stride constant 0x0D)
+    The key starts at k = 0xC1 before the first byte.
+
+OUTPUT: the byte sequence out (length L). The transform is required to be
+invertible over the same byte space, but only the forward direction is used or
+checked here.
+
+The standalone program in /app/clone must implement exactly this transform,
+reading bytes from standard input and writing the transformed bytes to
+standard output, exiting 0 on success. It must not read any file and it must
+not consult the original loader.

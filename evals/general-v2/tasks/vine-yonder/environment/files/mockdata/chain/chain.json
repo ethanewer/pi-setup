@@ -1,0 +1,162 @@
+{
+ "node": {
+  "name": "orchid-node",
+  "version": "1.3.0",
+  "network": "devnet",
+  "syncing": false,
+  "peers": 4,
+  "height": 9
+ },
+ "blocks": {
+  "1": {
+   "hash": "0x03e9",
+   "prevHash": null,
+   "number": 1,
+   "timestamp": 1700000011,
+   "txCount": 1,
+   "txs": [
+    {
+     "hash": "0x90001",
+     "from": "0xF00D",
+     "to": "0xBeef1",
+     "amount": "51000",
+     "gasUsed": 21000
+    }
+   ]
+  },
+  "2": {
+   "hash": "0x03ea",
+   "prevHash": "0x03e9",
+   "number": 2,
+   "timestamp": 1700000022,
+   "txCount": 1,
+   "txs": [
+    {
+     "hash": "0x90002",
+     "from": "0xF00D",
+     "to": "0xBeef2",
+     "amount": "52000",
+     "gasUsed": 21000
+    }
+   ]
+  },
+  "3": {
+   "hash": "0x03eb",
+   "prevHash": "0x03ea",
+   "number": 3,
+   "timestamp": 1700000033,
+   "txCount": 2,
+   "txs": [
+    {
+     "hash": "0x90003",
+     "from": "0xF00D",
+     "to": "0xBeef3",
+     "amount": "53000",
+     "gasUsed": 21000
+    }
+   ]
+  },
+  "4": {
+   "hash": "0x03ec",
+   "prevHash": "0x03eb",
+   "number": 4,
+   "timestamp": 1700000044,
+   "txCount": 1,
+   "txs": [
+    {
+     "hash": "0x90004",
+     "from": "0xF00D",
+     "to": "0xBeef4",
+     "amount": "54000",
+     "gasUsed": 21000
+    }
+   ]
+  },
+  "5": {
+   "hash": "0x03ed",
+   "prevHash": "0x03ec",
+   "number": 5,
+   "timestamp": 1700000055,
+   "txCount": 1,
+   "txs": [
+    {
+     "hash": "0x90005",
+     "from": "0xF00D",
+     "to": "0xBeef5",
+     "amount": "55000",
+     "gasUsed": 21000
+    }
+   ]
+  },
+  "6": {
+   "hash": "0x03ee",
+   "prevHash": "0x03ed",
+   "number": 6,
+   "timestamp": 1700000066,
+   "txCount": 2,
+   "txs": [
+    {
+     "hash": "0x90006",
+     "from": "0xF00D",
+     "to": "0xBeef6",
+     "amount": "56000",
+     "gasUsed": 21000
+    }
+   ]
+  },
+  "7": {
+   "hash": "0x03ef",
+   "prevHash": "0x03ee",
+   "number": 7,
+   "timestamp": 1700000077,
+   "txCount": 1,
+   "txs": [
+    {
+     "hash": "0x90007",
+     "from": "0xF00D",
+     "to": "0xBeef7",
+     "amount": "57000",
+     "gasUsed": 21000
+    }
+   ]
+  },
+  "8": {
+   "hash": "0x03f0",
+   "prevHash": "0x03ef",
+   "number": 8,
+   "timestamp": 1700000088,
+   "txCount": 1,
+   "txs": [
+    {
+     "hash": "0x90008",
+     "from": "0xF00D",
+     "to": "0xBeef8",
+     "amount": "58000",
+     "gasUsed": 21000
+    }
+   ]
+  },
+  "9": {
+   "hash": "0x03f1",
+   "prevHash": "0x03f0",
+   "number": 9,
+   "timestamp": 1700000099,
+   "txCount": 2,
+   "txs": [
+    {
+     "hash": "0x90009",
+     "from": "0xF00D",
+     "to": "0xBeef9",
+     "amount": "59000",
+     "gasUsed": 21000
+    }
+   ]
+  }
+ },
+ "accounts": {
+  "0xF00D": {
+   "balance": "1200000000000000000",
+   "nonce": 9
+  }
+ }
+}

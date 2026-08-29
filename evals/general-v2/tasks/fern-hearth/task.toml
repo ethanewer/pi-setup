@@ -1,0 +1,32 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "hard"
+category = "programming"
+verifier_kind = "executes-deliverable"
+deliverables = [
+  "/app/repo.git/hooks/post-receive",
+  "/app/deployed",
+  "/app/normalize_url.py",
+  "/app/urls.tsv",
+  "/app/paper_links.json",
+]
+tags = [
+  "fern-hearth",
+  "programming",
+  "C-24da5a66",
+  "C-f9865e4b",
+  "C-1d220ecf",
+]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 2400.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096

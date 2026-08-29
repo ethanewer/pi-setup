@@ -1,0 +1,32 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "hard"
+category = "system_administration"
+verifier_kind = "executes-deliverable"
+deliverables = [
+    "/app/repair.sh",
+    "/app/env.txt",
+    "/app/rebuilt",
+]
+tags = [
+    "onyx-ember",
+    "system_administration",
+    "default-interpreter-package-repair",
+    "package-manager-bootstrap-restore",
+    "extension-fallback-agreement",
+    "global-numpy-quality",
+    "conda-env-from-spec",
+]
+
+[verifier]
+timeout_sec = 600.0
+
+[agent]
+timeout_sec = 1800.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096

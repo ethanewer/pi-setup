@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 3,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 1,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 90,
+  "documented_probe": null,
+  "notes": "Hard bucket (rubric total 18). Seven competencies chained in one pipeline: author a reusable R solver (structure recovery via coupling heuristics: fixed-edge-count max-|corr| spanning tree, root-constraint orientation, child-analogy ambiguity rule; parametric network fit; ATE with the confounder adjustment set), then a hierarchical beta-binomial Stan model with a Jeffreys-type hyperprior, sample it with rstan, and publish an R Markdown document plus a legacy nbformat R-kernel notebook that load the data and DAG spec. The verifier re-runs /app/solver.R on 3 hidden topologies (chain-like, ladder, star) with different group counts and effect sizes, requiring exact directed edge sets, ATE within 0.12, and network slopes within 0.12. Difficulty derives from the multi-stage dependent pipeline (install-free but runtime C++ model compilation), the reasoning needed to design the recovery+adjustment-set logic that generalizes, and the tight quantitative tolerances; every competency carries a hard floor (one medium), so difficulty >= max floor."
+}

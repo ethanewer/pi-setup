@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 3,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 3,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 3,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": null,
+  "notes": "data_science batch rated hard (rubric total 19). (a) pooling.py must implement an attention-gated pooling nn.Module with three FIXED attribute names (gate_a, gate_b, aggregate) producing a (bag,1) softmax-normalized weight tensor summing to one over the bag, checked by running forward on hidden bag tensors including a single-element bag. (b) embeddings.npy must be a 24x48 float32 matrix, row-aligned to the fixture word list, whose vectors solve word-vector analogies (v(a)-v(b)+v(c) must top-1 rank v(d) for EVERY cross-category quadruple, including hidden combinations) and give positive same-category cosine similarity - satisfied by sharing one adult->young direction across orthogonal per-category directions; a naive or over-fitted embedding fails routing. (c) featurizer.py::featurize_smiles must deterministically map (possibly invalid/empty) SMILES to fixed 128-dim float32 RDKit Morgan bit vectors, verified against an independent reference on a hidden list, and smiles.npz must be produced BY RUNNING that featurizer and match it on the visible catalog. tool_breadth=3 (torch, numpy, rdkit). reasoning_depth=3: the category+role embedding construction, the softmax-over-bag gating, exact bit-vector featurization. debugging_ambiguity=2: attribute naming and sum-to-one edge cases plus embedding margins on hidden queries. adversarial_inputs=3: hidden analogy routing must be strictly top-1 amid 24 candidates, hidden SMILES include malformed/blank inputs, hidden bag sizes vary. hidden_case_generalization=3: all three deliverables re-run on hidden batches. quantitative_correctness=3: exact shapes/dtypes, sum-to-one, exact bit equality, row alignment. dependent_stages=2: embeddings derived from the relations dataset, and smiles.npz produced by running featurize_smiles. Rates hard since the reference floor for the two hardest competencies (embeddings=hard, featurizer=hard) is met (pooling floor is medium but only lifts above it). No competency is faked."
+}

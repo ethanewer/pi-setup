@@ -1,0 +1,1 @@
+# midnight theme — deep-blue prompt palette for the framework.

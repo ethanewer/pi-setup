@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 3,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 1,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": null,
+  "notes": "Medium (total 15). One scenario spanning four toolchains, each with an independently re-verified deliverable and its own strict contract: (1) a Coq file on the image that is deliberately left admitting, which the consultant must complete by structural induction (base reflexivity, step rewrites the IH and uses plus-commutativity via lia), terminating in Qed with no Admitted/admit/Oops tokens; coqc must compile it to a .vo and two hidden dependent .v files must link against the compiled module via Require Import proof and derive corollaries, so incomplete or admitted proofs fail. (2) a sympy script that integrates hidden expressions over [0,1] and prints exact simplified closed forms (string-identical to a freshly computed sp.simplify(sp.expand(...)) result, so numerics/unsimplified forms fail), with an unparseable input that must exit 2. (3) an R script whose two entry-point names are regex-matched verbatim and whose willow_sample(n,a) must land within tolerance of 1/(a+1) on hidden (n,a) incl. n=1, with willow_selftest() re-run requiring exit 0 + 'PASS'. (4) a LaTeX memo rebuilt fresh by pdflatex that must have zero 'Overfull \\hbox' warnings, must not contain the over-wide unbreakable token and must contain no \\texttt-verbatim token longer than 24 chars (synonym substitution), with the shipped pdflatex.log/prof also warning-free. Tool breadth (Coq+R+sympy+LaTeX) and the independent audit of every artifact drive the difficulty; the induction itself is easy-per-competency, and this task meets/exceeds the medium floor of the R naming competency."
+}

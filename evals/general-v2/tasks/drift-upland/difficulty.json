@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 0,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 1,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": null,
+  "notes": "Five independent competency modules in one CLI. reasoning_depth=2: mahjong requires a correct chow-over-pung decomposition search, pursuit requires planning multiple turns against a deterministic greedy chaser, and puzzle requires a shortest-path BFS. quantitative_correctness=2: exact integer run counts, minimal whole-hour meeting times, exact optimal move counts and tile/coordinate legality. adversarial_inputs=2 and hidden_case_generalization=2: each of the five modules has its own hidden cases incl. edge/malformed (empty series, no-feasible meeting, not-winnable hand, wrong-tile-count hand, horizon-0, already-solved puzzle, non-identity goal). interaction_statefulness=1 for the multi-turn pursuit strategy. Tool breadth 0 (single python file), no resource pressure, no unsafe actions. Total 11 -> medium, which also satisfies the max competency floor (medium)."
+}

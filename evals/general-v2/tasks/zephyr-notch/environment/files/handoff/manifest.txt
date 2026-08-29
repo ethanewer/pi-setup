@@ -1,0 +1,16 @@
+Zephyr handoff bundle
+=====================
+
+The payload we shipped over the backbone before teardown is at msg.enc.
+It was sealed with the OpenSSL symmetric stream/block utility (the command
+named `enc`), a raw cipher with NO padding, operating AES-256 in counter
+mode (a streaming mode, so no message-lengthening padding bytes are added).
+
+The 256-bit key and initialisation vector are supplied hex-encoded in
+key.hex and iv.hex. Decrypt msg.enc to recover the exact message and record
+it verbatim.
+
+The exact option spelling for that cipher mode is documented in the local
+manual page that shipped with the tool. Consult it before running:
+
+    man openssl-enc

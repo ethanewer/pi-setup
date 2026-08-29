@@ -1,0 +1,9 @@
+{
+  "cases": [
+    {"n": 5000, "a": 2, "tol": 0.05},
+    {"n": 5000, "a": 3, "tol": 0.05},
+    {"n": 5000, "a": 0, "tol": 0.001},
+    {"n": 1, "a": 2, "edge": true}
+  ],
+  "note": "each non-edge case must give a finite Monte-Carlo estimate of 1/(a+1) within tol; the n=1 case is an edge probe (single sample, must still be finite)."
+}

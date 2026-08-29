@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 3,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 1,
+    "interaction_statefulness": 1,
+    "unsafe_action_penalty": 2
+  },
+  "expected_expert_time_min": 120,
+  "documented_probe": null,
+  "notes": "hard bucket (total 19). Seven independent competencies chained into one dossier: a CLI solver (WCNF weighted-MAX-SAT optimum, QF_BV stdin verdict, seating CSP fixed point), a PATH-invocable LLVM-bitcode symbolic executor (two/three-outcome paths, malformed-input error), a clean Coq compile to a .vo proof object with forbidden search-tactic tokens in no comment, and an aggregate /app/answer.json derived by running all of it. Hidden cases force generalization (extra WCNF with comments/blank/%/top tokens, sat and unsat QF_BV, a second seating layout, 2- and 3-outcome bitcode, non-bitcode rejection). Reasoning_depth and adversarial_inputs each >=2 and dependent_stages >=2, meeting the hard-commitment rule."
+}

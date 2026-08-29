@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 3,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 2,
+    "resource_pressure": 1,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 1
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": null,
+  "notes": "Seven slice competencies bundled. The make-or-break skill is reassembling a hexdump that carries an offset column and an ascii annotation (must strip both via token filtering) into a compressed streamed tar member -- reasoning_depth=3. dependent_stages=3 because out.bin requires (a) streaming exactly one archive member without expanding, then (b) reassembling that hexdump; exclusions require auditing every entry (caches, vendored deps, build objects, version metadata, 0600 creds). hidden_case_generalization is required by 3 distinct hidden trees (plaintext printer, a __pycache__-less tree, different names/bytes). Bucket total = 19 -> hard. task.toml difficulty is set to hard because the spec max competency floor (reassemble-hexdump) is hard, exceeding the nominal easy target."
+}

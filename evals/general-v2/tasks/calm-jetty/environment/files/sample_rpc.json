@@ -1,0 +1,38 @@
+[
+  {
+    "request_id": "r_40917",
+    "lookup": {
+      "account_id": "acct_7781",
+      "handle": "tjennings",
+      "contact": {"email": "t.jennings@corp.example", "market": "north"},
+      "entitlement": {"tier": "enterprise"},
+      "budget": {"storage_gb": 512, "breach": 24},
+      "guardrail": {"aware": true}
+    },
+    "status": "ok"
+  },
+  {
+    "request_id": "r_40918",
+    "lookup": {
+      "account_id": "acct_0822",
+      "handle": "w.orer",
+      "contact": {"email": "w.orer@corp.example", "market": "south"},
+      "entitlement": {"tier": "pro"},
+      "budget": {"storage_gb": 128, "breach": 6},
+      "guardrail": {"aware": false}
+    },
+    "status": "ok"
+  },
+  {
+    "request_id": "r_40919",
+    "lookup": {
+      "account_id": "acct_5519",
+      "handle": "kmoy",
+      "contact": {"email": "kmoy@corp.example", "market": "east"},
+      "entitlement": {"tier": "starter"},
+      "budget": {"storage_gb": 40, "breach": 2},
+      "guardrail": {"aware": true}
+    },
+    "status": "ok"
+  }
+]

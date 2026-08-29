@@ -1,0 +1,31 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "hard"
+category = "scientific_computing"
+verifier_kind = "executes-deliverable"
+deliverables = [
+  "/app/fit_spectra.py",
+  "/app/fit_results.json",
+  "/app/stack_models.py",
+  "/app/wasserstein.py",
+]
+tags = [
+  "iris-terrace",
+  "scientific_computing",
+  "lorentzian-spectral-fit",
+  "compound-separability",
+  "sqrt-wasserstein",
+]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 1800.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096

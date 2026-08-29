@@ -1,0 +1,20 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "medium"
+category = "programming"
+verifier_kind = "executes-deliverable"
+deliverables = ["/app/solve.py", "/app/answer.json"]
+tags = ["gale-ledge", "programming", "test-suite-target-pass-count", "editable-reinstall-async-fs-test", "focused-test-subset-iteration", "gc-sweep-path-bug", "script-runs-prints-completion"]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 1200.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096

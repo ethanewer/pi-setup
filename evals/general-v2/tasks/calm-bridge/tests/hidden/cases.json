@@ -1,0 +1,12 @@
+{
+  "_doc": "Hidden-case definitions for calm-bridge. The verifier builds each scenario with gen.py, runs the delivered /app/recover.py, and compares against the independent expected truth which itself enforces id-sorted, id-unique JSON. n/seed vary the damaged split; malformed injects structurally-broken journal lines a correct parser must skip; journal_share/dup_share tune partition and dedupe pressure.",
+  "recovery": [
+    { "seed": 20111, "n": 90,  "malformed": 3 },
+    { "seed": 31117, "n": 480, "malformed": 0,             "journal_share": 0.25 },
+    { "seed": 49991, "n": 130, "malformed": 6, "journal_share": 0.65, "dup_share": 0.3 },
+    { "seed": 71237, "n": 250, "malformed": 2, "journal_share": 0.0,  "dup_share": 0.05 },
+    { "seed": 81901, "n": 70,  "malformed": 1, "journal_share": 0.9 }
+  ],
+  "perf_nrows": 1200000,
+  "perf_threshold_ms": 2500
+}

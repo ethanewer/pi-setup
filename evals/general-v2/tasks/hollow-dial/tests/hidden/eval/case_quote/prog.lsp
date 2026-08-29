@@ -1,0 +1,5 @@
+(print (quote hello))
+(print (cons 1 (cons 2 (quote ()))))
+(print (* -1 -1))
+(print (if (null? (quote ())) 33 44))
+(print ((lambda (x) (+ x 10)) (quotient 45 3)))

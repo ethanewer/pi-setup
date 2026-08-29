@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 3,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": null,
+  "notes": "Medium. One reusable CLI (/app/schedule.py) must scan attendee availability minutes for the earliest conflict-free UTC slot, honour a recovery buffer around any late-ending block (>= late_hour_utc, expanded both before and after), and emit a standards-conformant ICS while leaving inputs untouched; the same program is then re-run on four hidden scenario directories. Separately the agent must discover a provided per-member roster helper under /app/kit, learn its calling convention, and save each member's stdout byte-for-byte into /app/personals/<name>.txt. Difficulty comes from hidden_case_generalization (the verifier re-executes the program on four adversarial scenarios probing free-window/malformed blocks, a buffer-forcing late block, the inclusive clock-time <= boundary, and a missing attendee file), quantitative_correctness (exact UTC earliest start must match a brute-force ground truth, byte-equal snapshots), adversarial_inputs (malformed VEVENTs, absent per-member files, boundary minutes), and reasoning_depth (buffer expansion around late blocks and the wind-down-before/next-meeting semantics). No system services or unsafe actions."
+}

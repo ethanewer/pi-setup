@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 2,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 2
+  },
+  "expected_expert_time_min": 80,
+  "documented_probe": null,
+  "notes": "Hard red/purple-team recovery pipeline. Multiple dependent stages: (1) enumerate strictly-formatted passphrase candidates on CPU, derive a SHA-1 structural count filter from the documented subkey-seed constraint (units digit equals count of a-f letters in the 40-hex digest), probe the encrypted header with p7zip to isolate the vault key, decrypt and extract the member, parse out the credentials. (2) Sanitize a git repo by replacing only the byte-contaminated tracked files (mixed letter-case leaks), proving absence case-insensitively. (3) Patch a vulnerable Java jar-upload filename resolver so only the base name survives separators, percent-encoded separators and traversal/mask components, then rebuild the runtime jar. (4) generate and place a self-signed cert+key pair in a conventions directory with domain-named filenames. Difficulty comes from adversarial jar inputs (traversal/`%2F`/`%5C`/mask), the SHA-1 subkey constraint requiring genuine enumeration+filter+probe reasoning, strict multi-step dependences, and generalized re-running of the solver on a second encrypted archive. max competency floor = hard (java jar-upload rebuild)."
+}

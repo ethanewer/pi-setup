@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 0,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 40,
+  "documented_probe": "C-96b1223d (decode a proprietary binary 3d model format into structured json): reference floor is hard but the covering task exercises it at medium; the verifier fully checks the capability on hidden cases. Documented probe waiver.",
+  "notes": "Binary archive-volume parser tuned into a reusable tool. dependent_stages=2: header decode -> 32-byte record-table walk -> payload bounds checks -> CRC-32 validation -> UTF-8 decode -> SHA-256 evidence hashing is a real multi-step chain. reasoning_depth=2: the exact little-endian fixed-layout and the multiple independent validity gates (magic, status, length cap 4096, in-page and in-file bounds, CRC, UTF-8) must all be implemented precisely or hidden cases diverge. adversarial_inputs=2: hidden volumes include wrong magic, too-short files, out-of-bounds and >4096 payloads, bad CRCs, empty and all-tombstone tables, and zero/garbage slots. hidden_case_generalization=2: the program must run cleanly on 5 unseen volumes with different records and numbers. quantitative_correctness=2: exact JSON records and exact SHA-256 evidence hashes are compared byte-for-byte. Debugging ambiguity is mild (1) because endianness and CRC conventions can be misread, and the format is fully documented so nothing needs live exploration beyond stdlib. Medium bucket (total 11)."
+}

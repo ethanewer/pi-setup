@@ -1,0 +1,22 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "hard"
+category = "system_administration"
+verifier_kind = "executes-deliverable"
+deliverables = ["/app/mpi_main.c", "/app/markers/", "/app/serve.py"]
+tags = ["brisk-wharf", "system_administration", "gloo-distributed-training",
+        "s3-bucket-local-endpoint", "mailing-list-server-stack",
+        "reverse-engineer-binary-protocol", "netflow-v5-serialization"]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 1800.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 4096
+storage_mb = 8192

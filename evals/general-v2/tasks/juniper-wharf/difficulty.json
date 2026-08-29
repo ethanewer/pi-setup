@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 2,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 3,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": "The 'large' training set is delivered as a handful of modest parquet splits (a few KB each, ~2k combined rows in the visible fixture) rather than gigabytes. The competency exercised — reaching an S3-object endpoint over the loopback HTTP socket, enumerating a manifest, retrieving every split by key, SHA-256 verifying each object, validating the parquet schema, and assembling train/val/test locally — is preserved identically; only the byte volume is scaled down to fit the 4 GB storage / ~5-minute build limits of a single lean container.",
+  "notes": "Hard. Four independent infrastructure artifacts each pull in a distinct toolchain (grpc_tools proto codegen + a live gRPC round-trip on the schema; cryptography/SAN + strict ISO-8601 expiry formatting for certcheck; anonymous S3-style object retrieval + SHA-256 integrity + parquet assembly for download; an HTTP Basic-auth default-credential mint probe that must produce honest response). Each stage depends on reading a live service the harness starts (dependent_stages 3): codegen, cert, object-store and control head. Debugging ambiguity is high (anonymous S3 access, exact ISO date formatting, gRPC stub generation/import, handling sealed endpoints). Hidden-case generalization is high: the same four binaries are re-run on 3 hidden scenarios with different buckets/columns/row counts, different certs (different CNs/lifespans), and different control-head credential pairs incl. a sealed (rotated) case that must be reported reachable=false. Quantitative-correctness covers SHA-256 equality, split row counts, and exact ISO dates. Adversarial_inputs captures the sealed control head and cert changelog. unsafe_action_penalty is 0 because the default-credential probe is an authorized benchmark scenario on a loopback-only fixture, not a real system."
+}

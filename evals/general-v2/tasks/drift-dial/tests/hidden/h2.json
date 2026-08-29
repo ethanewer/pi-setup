@@ -1,0 +1,25 @@
+{
+  "title": "Vartak Mesh Board",
+  "nonce": "NZ-wq31",
+  "login_user": "tinker",
+  "login_pass": "ironclad-2024",
+  "session": {
+    "before": "SVQ4",
+    "after": "SVQ4"
+  },
+  "stations": [
+    {"id": "S-11", "name": "Fenwick", "city": "Ossera", "temp": 28.1},
+    {"id": "S-12", "name": "Brick", "city": "Mahk", "temp": 6.7},
+    {"id": "S-13", "name": "Vanish", "city": "Tyel", "temp": 34.6},
+    {"id": "R-7/9", "name": "Odd Mold", "city": "Kot", "temp": -3.3}
+  ],
+  "quirks": {
+    "decoy": true,
+    "header": true,
+    "missing_cells": ["S-12"],
+    "empty_city": ["S-13"],
+    "footer": false,
+    "whitespace": true,
+    "header_nonce": false
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 3,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 2,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 90,
+  "documented_probe": null,
+  "notes": "Hard. A single idempotent provisioner (/app/provision.sh) that must stand up, in one chained pipeline, a pinned Python venv with a runnable CLI and exact function values, a pinned (24.9.2) Miniconda plus a conda env with a specific requested python (3.11, deliberately distinct from the 3.12 system) whose packages pass functional checks under `conda run`, a non-interactive git/nginx/openssh stack (no systemd, so the web server is started and probed over HTTP), a self-contained uv project whose deps resolve offline from the local index, and bash+zsh login init that auto-activates conda. dependent_stages=3 (conda install -> conda env -> in-env package install; each feeds the next, plus venv/uv/services in parallel chains). tool_breadth=3 (venv, conda installer+env, apt non-interactive, uv sync, pip local index, shell init, nginx start). reasoning_depth=2/debugging_ambiguity=2 (version-pin correctness only surfaces at runtime across three interpreters; conda version and env-python checks are exact). adversarial_inputs=2 (wrong-pin venv, wrong-python conda env, purged services, missing uv/shell). interaction_statefulness=2 (provision.sh must recover the full spec when re-run from each genuinely different pre-existing state). Bucket total = 18 -> hard."
+}

@@ -1,0 +1,6 @@
+# h1 MANIFEST (expect: PASS) — combined specs, inline comments, blank lines.
+# Reference env (hv): numpy 1.26.4, scipy 1.12.0, requests 2.32.3.
+numpy==1.26.4   # exact pin
+scipy>=1.11     # minimum bound
+
+requests >= 2.20.0 , < 3.0.0

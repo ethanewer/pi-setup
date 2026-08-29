@@ -1,0 +1,68 @@
+{
+  "dataset": "fathom-sets",
+  "version": 3,
+  "columns": [
+    "rack",
+    "temperature",
+    "depth",
+    "state",
+    "price"
+  ],
+  "files": [
+    {
+      "key": "test/test_part000.parquet",
+      "role": "test",
+      "rows": 70,
+      "sha256": "b288ac5e6dc4a40318983505e3445b23c4502f5788b071ada3d97cc7efc6d1fd"
+    },
+    {
+      "key": "train/train_part000.parquet",
+      "role": "train",
+      "rows": 220,
+      "sha256": "4952c87f89cae88da101eb8cace145f0716cf879830eaa375cd1b942c3fe2564"
+    },
+    {
+      "key": "train/train_part001.parquet",
+      "role": "train",
+      "rows": 220,
+      "sha256": "4b3ec6f781c98cfa27d92734d8f842f2e7d96a3f6cc001240744641f8d0c929c"
+    },
+    {
+      "key": "train/train_part002.parquet",
+      "role": "train",
+      "rows": 220,
+      "sha256": "b5cf80a1e0ead5808eb0099f2d28eddac4bd75a8e5f60195bc608c04f3fc137f"
+    },
+    {
+      "key": "train/train_part003.parquet",
+      "role": "train",
+      "rows": 220,
+      "sha256": "a0f08a71fd34332d5e1092a88465d1cb631d0347debd4f9aab1fe32df38d5546"
+    },
+    {
+      "key": "train/train_part004.parquet",
+      "role": "train",
+      "rows": 220,
+      "sha256": "da76e19c427c0a3039cc3633451a205de99fdc182d2192ba5d826128ae1910ea"
+    },
+    {
+      "key": "train/train_part005.parquet",
+      "role": "train",
+      "rows": 220,
+      "sha256": "628ade3cf92e0bf5316461782cebdae637f1d284b15e7c0ad18da2a2284e5a8b"
+    },
+    {
+      "key": "train/train_part006.parquet",
+      "role": "train",
+      "rows": 220,
+      "sha256": "4987264aaf3bad1d9b17128162e33f43e759e8a9889b518e9002f82f33501c1a"
+    },
+    {
+      "key": "val/val_part000.parquet",
+      "role": "val",
+      "rows": 110,
+      "sha256": "a58986563c7fa27fd23b1b9a3012e72706dcb9bb7b5fd36f2e78182b7d63770b"
+    }
+  ],
+  "host": "revetment-object-store"
+}

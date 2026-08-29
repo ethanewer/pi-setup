@@ -1,0 +1,18 @@
+{
+ "acl_group": "staff",
+ "dst_prefix": "/opt/release",
+ "iterations": 1500,
+ "paths": [
+  "/srv/build/pkg",
+  "/srv/buildpkg/x",
+  "/srv/build/pkg/a/b",
+  "/srv/buil/x"
+ ],
+ "prune_patterns": [
+  ".tmp",
+  "docs/"
+ ],
+ "salt": "audit-a",
+ "src_prefix": "/srv/build",
+ "target_pattern": "core.dat"
+}

@@ -1,0 +1,27 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "hard"
+category = "data_science"
+verifier_kind = "executes-deliverable"
+deliverables = ["/app/reconstruct.py", "/app/preds.csv", "/app/lowrank.npz"]
+tags = [
+    "tundra-terrace",
+    "data_science",
+    "C-69210d19",
+    "C-8b10891b",
+    "C-a41d1964",
+    "C-b37daad9",
+]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 1800.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096

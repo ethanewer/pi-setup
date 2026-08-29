@@ -1,0 +1,8 @@
+{
+  "kind": "wasm",
+  "id": "h3-wasm-malformed",
+  "cases": [
+    {"binary": "/app/data/bad.wasm", "expect_strict": "ValueError"},
+    {"binary": "/app/data/does_not_exist.wasm", "expect_strict": "ValueError"}
+  ]
+}

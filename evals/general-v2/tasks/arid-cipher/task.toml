@@ -1,0 +1,39 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "hard"
+category = "data_processing"
+verifier_kind = "executes-deliverable"
+deliverables = [
+  "/app/clean.py",
+  "/app/result.json",
+  "/app/top.tsv",
+  "/app/summaries.csv",
+  "/app/category_lists.csv",
+  "/app/contacts_filtered.csv",
+  "/app/hourly.csv",
+  "/app/papers.jsonl",
+  "/app/trials/trial_00.csv",
+  "/app/trials/trial_19.csv",
+]
+tags = [
+  "arid-cipher",
+  "data_processing",
+  "groupable-dataframe",
+  "trials-lowrank-csv",
+  "runnable-script",
+  "html-css-selectors",
+  "jsonl-papers",
+]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 1800.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096

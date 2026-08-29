@@ -1,0 +1,61 @@
+[
+  {
+    "request_id": "r_9001",
+    "lookup": {
+      "account_id": "acct_x001",
+      "handle": "q.stanton",
+      "contact": {"email": "q.stanton@corp.example", "market": "west"},
+      "entitlement": {"tier": "pro"},
+      "budget": {"storage_gb": 200, "breach": 10},
+      "guardrail": {"aware": true}
+    },
+    "status": "ok"
+  },
+  {
+    "request_id": "r_9002",
+    "lookup": {
+      "account_id": "acct_x002",
+      "handle": "plum.reed",
+      "contact": {"email": "plum.reed@corp.example", "market": "west"},
+      "entitlement": {"tier": "ENTERPRISE "},
+      "budget": {"storage_gb": "1000", "breach": "45"},
+      "guardrail": {"aware": false}
+    },
+    "status": "ok"
+  },
+  {
+    "request_id": "r_9003",
+    "lookup": {
+      "account_id": "acct_x003",
+      "handle": "grape-nell",
+      "entitlement": {"tier": "starter"},
+      "budget": {"storage_gb": 24},
+      "guardrail": {"aware": true}
+    },
+    "status": "warn"
+  },
+  {
+    "request_id": "r_9004",
+    "lookup": {
+      "account_id": "acct_x004",
+      "handle": "mossberg",
+      "contact": {"email": "", "market": "south"},
+      "budget": {"storage_gb": null, "breach": null}
+    },
+    "status": "ok"
+  },
+  {
+    "request_id": "r_9005"
+  },
+  {
+    "request_id": "r_9006",
+    "lookup": {
+      "account_id": 77420,
+      "handle": 1337,
+      "entitlement": {"tier": "FREE"},
+      "budget": {"storage_gb": "64", "breach": 3},
+      "guardrail": {"aware": "maybe"}
+    },
+    "status": "ok"
+  }
+]

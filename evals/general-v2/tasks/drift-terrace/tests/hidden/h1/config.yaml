@@ -1,0 +1,25 @@
+data:
+  path: /tests/hidden/h1/data.csv
+  target_column: renewed
+  drop_columns: []
+  id_column: null
+model:
+  reg_strength: 0.05
+  max_iter: 400
+optim:
+  driver_feature: driver_index
+  bound_epsilon: 0.0001
+split:
+  seed: 901
+  n_folds: 5
+  held_out_fold: 4
+evaluate:
+  accuracy_floor: 0.800
+debug:
+  one_epoch: false
+output:
+  dir: /tmp/rh1
+  model_file: model.joblib
+  vector_file: vector.out
+  log_dir: /tmp/rh1_logs
+  progress_file: progress.log

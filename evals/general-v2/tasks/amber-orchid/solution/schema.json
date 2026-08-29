@@ -1,0 +1,98 @@
+{
+  "api": "merkstock-index",
+  "base_url": "/api/v1",
+  "version": "1.0",
+  "error_envelope": {
+    "description": "Every error response body is {\"error\": {\"code\": \"bad_request\"|\"not_found\", \"message\": <string>}}. not_found bodies contain exactly one top-level field: error."
+  },
+  "paths": {
+    "/api/v1/health": {
+      "GET": {
+        "summary": "Liveness probe",
+        "responses": { "200": { "description": "{\"status\":\"ok\"}" } }
+      }
+    },
+    "/api/v1/blocks": {
+      "GET": {
+        "summary": "Fetch a block header by height",
+        "parameters": [
+          { "name": "height", "in": "query", "required": true, "type": "integer", "minimum": 0, "description": "Block height. missing/empty/non-integer/negative -> 400" }
+        ],
+        "responses": {
+          "200": { "description": "Block header from ledger.json" },
+          "400": { "description": "bad_request: height missing, empty, non-integer or negative" },
+          "404": { "description": "not_found: height integer but out of range" }
+        }
+      }
+    },
+    "/api/v1/blocks/{hash}": {
+      "GET": {
+        "summary": "Fetch a block by its 64-hex header hash",
+        "parameters": [ { "name": "hash", "in": "path", "required": true, "type": "string", "description": "64-hex block hash" } ],
+        "responses": {
+          "200": { "description": "The matching block object" },
+          "404": { "description": "not_found: unknown/malformed hash" }
+        }
+      }
+    },
+    "/api/v1/txs/{txid}": {
+      "GET": {
+        "summary": "Fetch a transaction by id",
+        "parameters": [ { "name": "txid", "in": "path", "required": true, "type": "string", "description": "64-hex transaction id" } ],
+        "responses": {
+          "200": { "description": "The matching transaction object" },
+          "404": { "description": "not_found: unknown/malformed txid" }
+        }
+      }
+    },
+    "/api/v1/uploads": {
+      "POST": {
+        "summary": "Store a token file, neutralizing path traversal",
+        "requestBody": { "content": { "application/json": { "schema": { "type": "object", "properties": {
+          "name": { "type": "string", "description": "bare safe filename; no / \\ .. or absolute, no whitespace/control chars" },
+          "data": { "type": "string", "description": "base64 payload" },
+          "tokens": { "type": "integer", "minimum": 0 }
+        }, "required": ["name", "data", "tokens"] } } } },
+        "responses": {
+          "201": { "description": "{\"stored\": <safe basename>, \"size\": <int>}" },
+          "400": { "description": "bad_request: traversal/unsafe name, bad base64, or negative tokens; nothing written" }
+        }
+      }
+    },
+    "/api/v1/comments": {
+      "POST": {
+        "summary": "Store a comment for rendering",
+        "requestBody": { "content": { "application/json": { "schema": { "type": "object", "properties": {
+          "title": { "type": "string" }, "body": { "type": "string" }
+        }, "required": ["title", "body"] } } } },
+        "responses": { "201": { "description": "{\"id\":<int>}" }, "400": { "description": "bad_request" } }
+      }
+    },
+    "/api/v1/comments/{id}/render": {
+      "GET": {
+        "summary": "Render a comment body as sanitized HTML",
+        "parameters": [ { "name": "id", "in": "path", "required": true, "type": "integer" } ],
+        "responses": {
+          "200": { "description": "text/html document containing sanitizer.sanitize(comment.body)" },
+          "400": { "description": "bad_request: id not a positive integer" },
+          "404": { "description": "not_found: unknown id" }
+        }
+      }
+    },
+    "/api/v1/doc.json": {
+      "GET": { "summary": "Serves this contract document verbatim", "responses": { "200": { "description": "same JSON as /app/schema.json" } } }
+    }
+  },
+  "security": {
+    "report": [
+      {
+        "cwe": "CWE-22",
+        "file": "/app/helpers.py",
+        "component": "store_token",
+        "severity": "high",
+        "status": "mitigated",
+        "evidence": "POST /api/v1/uploads rejects traversal names and writes only under /app/uploads; service stays alive"
+      }
+    ]
+  }
+}

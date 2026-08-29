@@ -1,0 +1,30 @@
+# Provided build file for the FK81 Fortran range tool.
+#
+# This file references the "g95" FORTRAN frontend, which is NOT installed on
+# this system.  The module+program sources (geom.f90, drive.f90) are LOCKED
+# and must NOT be edited.  Rewrite this build file to drive gfortran instead,
+# build it with the resulting Makefile, and install the produced executable
+# at /app/main.
+#
+# NOTE for the agent: gfortran requires the module source (.f90 building the
+# MODULE geom) to be compiled BEFORE the program that USEs it, so the object
+# ordering below is significant.
+
+FC      = g95
+FFLAGS  = -O2
+
+all: main
+
+geom.o: geom.f90
+	$(FC) $(FFLAGS) -c geom.f90
+
+drive.o: drive.f90 geom.o
+	$(FC) $(FFLAGS) -c drive.f90
+
+main: geom.o drive.o
+	$(FC) $(FFLAGS) -o main geom.o drive.o
+
+clean:
+	rm -f *.o main *.mod
+
+.PHONY: all clean

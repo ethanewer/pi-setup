@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 3,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 3,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 2,
+    "resource_pressure": 1,
+    "interaction_statefulness": 1,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 120,
+  "documented_probe": null,
+  "notes": "Four independent build/scaffold pipelines exercised end-to-end, each a chained multi-stage dependency. dependent_stages=3: (1) fetch+extract an authenticated source release from a live mirror, (2) patch the gauge and run a scoped Maven rebuild that ships a jar whose behavior must stay byte-identical on the unrelated REST endpoints, (3) scaffold a Lean lake project whose manifest pulls a bundled math library and whose theorems resolve against that library, (4) derive Python bindings from a .proto and consume them from a client. reasoning_depth=3: the gauge 'live' must equal the pure net flux (sum of every signed delta) — the shipped source hides an obsolete +7 penalty on every negative delta that must be removed — and the REST response shapes must be preserved exactly across the rebuild. adversarial_inputs=3: the fetch tool must detect and reject (a) a mirror whose published checksum does not match the downloaded archive (bad checksum store), and (b) an archive whose embedded MANIFEST.json checksum listing disagrees with its own contents (tampered tree), each leaving the destination removed and the command non-zero. hidden_case_generalization=3: test.sh replays the same fetch_src.sh against a fresh hidden release, adds a hidden theorem into the lake project that only compiles if the math library dependency resolves, regenerates bindings from a never-seen hidden .proto, and recompiles the distribution from the agent's /app/src tree. Correctness must come from genuine work (real fetch/extract, real mvn-jar, real lake build, real protoc), not from hard-coding constant outputs."
+}

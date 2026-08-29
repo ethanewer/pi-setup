@@ -1,0 +1,13 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "granite-eval"
+version = "0.3.0"
+description = "granite-inlet micro eval harness"
+requires-python = ">=3.10"
+dependencies = []
+
+[tool.setuptools]
+packages = ["granite_eval"]

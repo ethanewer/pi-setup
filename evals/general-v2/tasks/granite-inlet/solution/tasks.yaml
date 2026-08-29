@@ -1,0 +1,24 @@
+# granite-inlet classification task configuration (author-authored).
+#
+# This is a log-probs multiple-choice benchmarking task wired to a local
+# fixture dataset and its gold labels. The harness reads `query` and `title`
+# columns, exposes a fixed 4-way choice label set, embeds the mandated prompt
+# template, and keys the gold label per document through the `doc_to_choice`
+# selector onto the numeric label provided per document id.
+task_name: channel_fathom
+n_classes: 4
+choices:
+  - caldera
+  - canyon
+  - delta
+  - estuary
+query_column: query
+title_column: title
+doc_to_choice: label_id
+model_path: /app/model/cd_nano.json
+prompt_template: |-
+  Passage subject: {title}
+  Lead sentence: {query}
+
+  Which of these four categories best matches the passage?
+  [A] caldera   [B] canyon   [C] delta   [D] estuary

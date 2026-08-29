@@ -1,0 +1,25 @@
+data:
+  path: /tests/hidden/h3/data.csv
+  target_column: signal_flag
+  drop_columns: []
+  id_column: null
+model:
+  reg_strength: 0.05
+  max_iter: 400
+optim:
+  driver_feature: driver_ref
+  bound_epsilon: 0.0001
+split:
+  seed: 77
+  n_folds: 5
+  held_out_fold: 4
+evaluate:
+  accuracy_floor: 0.900
+debug:
+  one_epoch: true
+output:
+  dir: /tmp/rh3
+  model_file: model.joblib
+  vector_file: vector.out
+  log_dir: /tmp/rh3_logs
+  progress_file: progress.log

@@ -1,0 +1,42 @@
+{
+  "records": [
+    {
+      "type": "AC",
+      "code": "A-0098",
+      "holder": "Divide",
+      "balance": 123456
+    },
+    {
+      "type": "AC",
+      "code": "A-0099",
+      "holder": "Evening",
+      "balance": 1
+    },
+    {
+      "type": "TX",
+      "txn": "T-0033",
+      "account": "A-0098",
+      "kind": "WALLIN",
+      "amount": 7,
+      "sign": "+"
+    },
+    {
+      "type": "TX",
+      "txn": "T-0034",
+      "account": "A-0099",
+      "kind": "DRAWER",
+      "amount": 123,
+      "sign": "-"
+    }
+  ],
+  "summary": {
+    "n_account": 2,
+    "n_book": 0,
+    "n_txn": 2,
+    "n_unknown": 0,
+    "n_malformed": 0,
+    "total_balance": 123457,
+    "total_pages": 0,
+    "net_amount": -116
+  }
+}

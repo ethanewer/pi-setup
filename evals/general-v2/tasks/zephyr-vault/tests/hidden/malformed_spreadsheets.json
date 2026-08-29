@@ -1,0 +1,9 @@
+{
+  "label": "malformed-creates",
+  "cases": [
+    {"http_method": "POST", "path": "/spreadsheets", "body": {"name": ""}, "expect_http": 400},
+    {"http_method": "POST", "path": "/spreadsheets", "body": {}, "expect_http": 400},
+    {"http_method": "POST", "path": "/spreadsheets/ss-00000000/sheets", "body": {"name": "x"}, "expect_http": 404},
+    {"http_method": "GET", "path": "/spreadsheets/ss-00000000", "body": null, "expect_http": 404}
+  ]
+}

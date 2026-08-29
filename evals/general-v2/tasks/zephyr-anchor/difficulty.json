@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 0,
+    "tool_breadth": 3,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 3,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 3,
+    "resource_pressure": 0,
+    "interaction_statefulness": 2,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": null,
+  "notes": "A compact bioinformatics batch that must satisfy six distinct deliverables exercised end-to-end. window.py must construct a DNA string whose GC fraction stays inside a stated range in EVERY fixed-length sliding window (an invariant that must hold at exact integer counts, probed by re-running on hidden lengths/windows/GC ranges). fasta.py must emit exactly two records with forward-first orientation and template-derived headers and no stray whitespace, and must reverse-complement correctly on hidden templates (multi-line, mixed case, GC-rich). smiles.py converts SMILES to RDKit Mol objects and returns None for invalid or empty/whitespace input without ever raising (hidden catalogs include unresolvable elements, unbalanced/open rings, and blank entries; RDKit returns an empty Mol for the empty string, which the agent must detect). api_client.py starts the localhost fixture spectra/sequence server (no outbound net), selects a donor by its emission and an acceptor by its excitation against disjoint wavelength windows that are exactly-one on every hidden database, fetches amino-acid sequences by identifier and reproduces them exactly, and joins every project member to the employee row in the project's department. tool_breadth=3: RDKit, an HTTP client plus an in-process fixture server, subprocess lifecycle management, JSON I/O, and FASTA parsing. reasoning_depth=3: the window-balancing construction, the spectral donor/acceptor disambiguation, and the same-department referential join. interaction_statefulness=2: each api_client run brings up and tears down the local server with a readiness poll on a fresh free port. quantitative_correctness=3: exact per-window GC counts, exact reverse-complement equality, exact atom counts, and byte-exact API sequence equality are all required. hidden_case_generalization=3: every deliverable is re-run against hidden inputs it has never seen. The task rates hard because all six claimed competencies carry a hard reference floor; each is exercised here at full fidelity (nothing is faked or simplified)."
+}

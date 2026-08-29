@@ -1,0 +1,33 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "medium"
+category = "security"
+verifier_kind = "executes-deliverable"
+deliverables = [
+  "/app/audit_report.md",
+  "/app/ssti_locations.json",
+  "/app/login_session.py",
+  "/app/admin_result.json",
+  "/app/post_payload.py",
+]
+tags = [
+  "juniper-ledge",
+  "security",
+  "C-102832f1",
+  "C-19c9cfba",
+  "C-e40bd45e",
+  "C-9316fd7f",
+]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 1200.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096

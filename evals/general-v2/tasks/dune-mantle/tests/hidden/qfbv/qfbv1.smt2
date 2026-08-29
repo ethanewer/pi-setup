@@ -1,0 +1,6 @@
+(set-logic QF_BV)
+(declare-fun a () (_ BitVec 32))
+(declare-fun b () (_ BitVec 32))
+(assert (= (bvand a #x0000FFFF) #x0000CAFE))
+(assert (bvslt b (bvneg (bvadd a #x00000001))))
+(check-sat)

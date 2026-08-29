@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 3,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 1,
+    "interaction_statefulness": 1,
+    "unsafe_action_penalty": 1
+  },
+  "expected_expert_time_min": 70,
+  "documented_probe": null,
+  "notes": "Total 19 => hard bucket (>=18), satisfying the hard floor of competency C-b45b6939 (author a compact independent C implementation). The task chains four build stages that must all be produced and all re-verified fresh: (1) a static C clone of the recovered 'shoal' byte transform that is rebuilt by test.sh from source in a clean scratch dir (no /app includes, no reference binary) and must reproduce the documented byte-exact transform on hidden binary inputs, (2) wiring the engine's public header directory onto the preprocessor include path (CPATH) so clang resolves <hull/engine.h>, (3) compiling one source under distinct flag sets and instrumentation (fast -O2 -DNDEBUG vs debug -g -O0 --coverage) and reproducing the mode-specific behavior (different computed value, coverage .gcno/.gcda only where instrumentation is on), and (4) repairing the as-shipped toy compiler so it rejects variable-length arrays (a feature it genuinely lacks) with a non-zero error instead of silently compiling them. debugging_ambiguity=3: the toy compiler ships with its VLA-rejection guard disabled (the bug is easy to miss because the code path compiles and prints ok), and the build-mode stage requires understanding why only the instrumented binary emits coverage artifacts and what each flag set actually changes. dependent_stages=3: each competency gate is a separate deliverable produced by executing its own script, and the clone rebuild, include-path, build-modes, and toycc hidden checks all depend on the agent having produced working sources/scripts first. adversarial_inputs=2 (hidden inputs include empty and NUL-bearing binary fixtures, macro/non-literal VLA sizes, and fresh build-mode start/end ranges); hidden_case_generalization=2 (the clone is rebuilt and re-run on hidden inputs; build-modes runs with fresh arguments; toycc is recompiled and probed with hidden VLA and non-VLA sources)."
+}

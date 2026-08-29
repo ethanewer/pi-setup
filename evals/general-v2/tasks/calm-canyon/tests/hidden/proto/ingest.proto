@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package pulse.v1;
+
+// A single stream reading from the pulse gauge network.
+message Reading {
+  int64 ts = 1;
+  string node = 2;
+  double flux = 3;
+  bool healthy = 4;
+}
+
+// Batch of readings.
+message ReadingBatch {
+  repeated Reading items = 1;
+  string cluster = 2;
+}
+
+service Pulse {
+  rpc Poll(Reading) returns (Reading);
+  rpc Drain(ReadingBatch) returns (ReadingBatch);
+}

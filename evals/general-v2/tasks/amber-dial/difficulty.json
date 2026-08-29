@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 3,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 3,
+    "resource_pressure": 0,
+    "interaction_statefulness": 1,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": null,
+  "notes": "Chained model-serving build: implement two hand-rolled tensor-parallel linear layers (row-parallel shards the input dimension and all-reduces partial sums; column-parallel shards the output dimension and all-gathers, with sharded gradients that must match an unsharded dense reference), then build and train a two-head forward engine (policy_logits + post-softmax value) on top of them, then stand up a Flask /classify endpoint with the documented schema. dependent_stages=3: the PolicyWDLEngine forward relies on the parallel layers being numerically correct; the trained checkpoint is what the hidden --infer runs reuse; the /classify endpoint is a separate serving stage. quantitative_correctness=3 because the forward outputs and sharded gradients of the parallel layers must match a dense linear to ~1e-4 and the check is genuinely independent (verified by cross-checking the solver's printed row output against an independently rebuilt dense reference on a hidden input tensor). adversarial_inputs=3: hidden cases probe nondivisible world partitions (input and output dims), malformed/non-JSON /classify requests, a bad-shape --infer array, and an empty inference batch. hidden_case_generalization=3: the same /app/solve.py runs --validate-parallel over a fresh hidden (in,out,world,seed) numeric case and --infer over a fresh unlabeled feature set the agent has never seen. The reasoning floor is set by implementing correct sharded gradients for the parallel layers which are a genuine interior-stage correctness problem."
+}

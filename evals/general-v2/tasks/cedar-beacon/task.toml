@@ -1,0 +1,20 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "hard"
+category = "scientific_computing"
+verifier_kind = "executes-deliverable"
+deliverables = ["/app/solve.py", "/app/answer.json"]
+tags = ["cedar-beacon", "scientific_computing", "C-b343fa93", "C-30b4f3f4", "C-0d031b27", "C-6e802aa3", "C-13d6ca37"]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 2100.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096

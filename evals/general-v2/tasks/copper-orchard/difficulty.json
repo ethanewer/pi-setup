@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 25,
+  "documented_probe": "C-5b5e6c73 (compute and include derived statistics fields): reference floor is hard but the covering task exercises it at medium; the verifier fully checks the capability on hidden cases. Documented probe waiver.",
+  "notes": "Medium derives mostly from quantitative_correctness (exact median/trimmed/bootstrap statistics must match tolerance) and hidden_case_generalization (the agent must write a reusable solver, not a one-off output), plus adversarial_inputs for the deliberately noisy CSV (blank/non-numeric cells, whitespace-padded headers, negative and extreme values, single-reading devices). Low resource pressure, no multi-step orchestration, no dangerous actions, so the total stays in the 10-17 medium band."
+}

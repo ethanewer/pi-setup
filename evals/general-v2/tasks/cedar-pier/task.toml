@@ -1,0 +1,20 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "hard"
+category = "data_science"
+verifier_kind = "executes-deliverable"
+deliverables = ["/app/train.py", "/app/config.yaml", "/app/model.joblib", "/app/vector.out"]
+tags = ["cedar-pier", "data_science", "C-19c43363", "C-2b609283", "C-2dc20425", "C-4d2f3c04", "C-7210274e"]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 2100.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096

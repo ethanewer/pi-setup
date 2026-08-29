@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 0,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 1
+  },
+  "expected_expert_time_min": 40,
+  "documented_probe": null,
+  "notes": "The heavy weight is hidden-case generalization: the agent must ship a reusable X.509 inspection tool (inspect.py) whose RFC 4514 subject, mixed-type/absent SANs, RSA/ECDSA/Ed25519 key detection, floored day arithmetic, and dates_match comparison are all validated on fresh author-generated certificates (multi-SAN, ECDSA with fractional validity, SAN-less mismatch, multi-RDN Ed25519 with IP SAN). The visible half (openssl/cryptography cert generation with exact UTC start and an unencrypted mode-0600 matching key) adds a security/hardening component and a dependent generate-then-inspect stage, pushing the total into the medium bucket; complexity comes from the generalization/inspection contract, not prompt length."
+}

@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 1,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 35,
+  "documented_probe": null,
+  "notes": "Four independent CLI-tooling workstreams in one container, each verified by RE-RUNNING the agent's deliverable on fresh hidden inputs. dependent_stages=2: part 3 (/app/out.txt) is the integer accumulated by part 2's stateful CLI over a documented transaction sequence, so the exact value depends on the CLI behaving correctly across repeated invocations; the vim macro (part 4) must leave malformed rows byte-identical while rewriting valid rows, and the top-10 ranking (part 1) must strip CR/whitespace and resolve ties lexicographically. adversarial_inputs=2: hidden case disturbs blank/whitespace-only lines, CRLF endings, trailing whitespace, tie-boundary ties, empty inputs, malformed/varied-shape rows, missing state files, and negative deltas. hidden_case_generalization=2: every deliverable is re-executed on hidden inputs (a fresh callsite corpus incl. an empty dir, a fresh rows set, a reconstructed persistent-state transaction sequence, and a recomputed integer). quantitative_correctness=2: outputs are exact byte/line comparisons and an exact decimal integer, compared against an independent in-verifier recomputation. interaction_statefulness=1: the stateful CLI must read prior on-disk output rather than reset to a fixed initial value. Bucket total 13 -> medium, matching the max competency floor (medium)."
+}

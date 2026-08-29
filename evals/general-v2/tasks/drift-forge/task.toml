@@ -1,0 +1,34 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "medium"
+category = "data_processing"
+verifier_kind = "executes-deliverable"
+deliverables = [
+    "/app/normalize_lf.py",
+    "/app/reshard.py",
+    "/app/output_tree",
+    "/app/order_and_hash.py",
+    "/app/manifest.json",
+    "/app/parse_fw.py",
+]
+tags = [
+    "drift-forge",
+    "data_processing",
+    "C-21a3fd6a",
+    "C-c392bd6c",
+    "C-798c54e6",
+    "C-13b2f824",
+]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 1200.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096

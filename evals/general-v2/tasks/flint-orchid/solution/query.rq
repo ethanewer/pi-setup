@@ -1,0 +1,8 @@
+PREFIX ex: <http://supplywire.example/>
+SELECT DISTINCT ?person ?org
+WHERE {
+  ?p ex:worksAt ?o .
+  ?p ex:name ?person .
+  ?o ex:name ?org .
+}
+ORDER BY ?person ?org

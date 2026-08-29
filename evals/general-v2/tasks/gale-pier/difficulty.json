@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 3,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 3,
+    "resource_pressure": 2,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 75,
+  "documented_probe": null,
+  "notes": "Hard bring-up task: compile a Linux 6.8 kernel from the shipped distro source into a bootable x86_64 bzImage (config must force serial console/initramfs/devtmpfs, modules off, Werror off so the Ubuntu patched tree builds under GCC 13); provision a guest rootfs whose core binary (static busybox) must carry a content hash the verifier recognizes and which contains named users (bilge, halyard) and a group (spinnaker); boot bzImage+rootfs under QEMU -nographic to an operational shell marker captured to /app/boot-serial.log; and write a software emulator for a documented register machine that reproduces the arithmetic output of a legacy binary, including 32-bit wraparound, ignored invalid opcodes, and ignored truncated tail records, validated on hidden binaries. Everything is idempotent: provision.sh is re-run twice and must leave exactly one of each user/group/busybox; build-kernel.sh is re-run to rebuild a fresh bootable bzImage; boot-qemu.sh and emulate.sh are re-run to regenerate their logs/outputs. Stages chain: kernel build -> rootfs provision -> initramfs packaging -> qemu boot; any earlier failure breaks later stages (dependent_stages=3). Difficulty buckets: cannot be below the hard floor of competencies C-f9215470 (installed filesystem with recognized hashes + account), C-9058a916 (qemu boot to operational login), C-42872b99 (legacy emulator with captured output); reasoning_depth/quantitative_correctness carry the hard load (exact hash, exact marker, exact arithmetic incl. overflow)."
+}

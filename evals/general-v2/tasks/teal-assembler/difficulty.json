@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 0,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 30,
+  "documented_probe": null,
+  "notes": "Core is a two-pass assembler over a fixed 5-mnemonic instruction set: pass 1 must collect labels (including forward references and label-only lines) while computing byte addresses, pass 2 emits byte-exact machine code with packed ADD registers, big-endian 16-bit JMP addresses, and load immediate range checks. Difficulty comes from the sequential label-then-encode dependency (dependent_stages=2), exact byte-encoding correctness (quantitative_correctness=2), and generalizing one program to arbitrary inputs (hidden_case_generalization=2): hidden cases cover forward/backward jumps, r15, hex and 0/255 boundary immediates, and six documented error classes (duplicate label, unknown mnemonic, wrong operand count, register out of range, immediate out of range, jump to undefined label), each required to abort nonzero with a line-numbered diagnostic and no output file."
+}

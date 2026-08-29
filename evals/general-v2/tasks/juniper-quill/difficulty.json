@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 2,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 3,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 2,
+    "resource_pressure": 1,
+    "interaction_statefulness": 1,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 90,
+  "documented_probe": null,
+  "notes": "Hard (19/30). Difficulty comes from a long multi-stage pipeline that must generalize: reverse a 4-byte repeating XOR whose key is detected from the SQLite WAL header magic, recover the intact rows, apply in-database cleaning (lowercase, cast digits-only value to integer, drop rows with neither contact field, dedup by id under a total order), export byte/semantic-exact JSON + 20 per-trial CSVs that must equal the cleaned table, reclaim an unlinked-but-open fd via /proc, and hit a measured query-performance gate that fails any correct-but-unindexed solution. Hidden cases vary the transform key (including a zero key and a single-byte key), row counts (down to a 35-row edge basket), duplicate ids, rows missing both contacts, and leading-zero values. A correct agent that skips the WAL, the dedup order, the CSV/db consistency, the fd, or the index all fail distinct verifier gates. Max competency floor (C-6ef56211) is hard, so no probe is needed."
+}
