@@ -152,6 +152,13 @@ def classify_trial(td: Path) -> dict:
         out["problems"].append("no exception but no reward recorded")
     elif etype is None:
         out["class"] = "PASS" if reward == 1 else "FAIL"
+    elif reward is not None and etype != "VerifierTimeoutError":
+        # agent-side failure (crash/self-kill/timeout) but the verifier still
+        # graded the final container state: verdict is authoritative (D3)
+        out["class"] = ("AGENT_ERROR_PASS" if reward == 1
+                        else "AGENT_ERROR_FAIL")
+        out.setdefault("notes", []).append(
+            f"agent-side exception {etype} with verifier verdict {reward}")
     elif etype == "AgentTimeoutError":
         if reward is None:
             out["class"] = "TIMEOUT_NOVERDICT"
@@ -208,7 +215,7 @@ def main() -> int:
 
     n = len(trials)
     passed = sum(counts.get(c, 0) for c in
-                 ("PASS", "TIMEOUT_PASS", "VERIFIER_TIMEOUT_PASS"))
+                 ("PASS", "TIMEOUT_PASS", "AGENT_ERROR_PASS"))
     strict = counts.get("PASS", 0)
     invalid = sum(counts.get(c, 0) for c in ("INFRA", "VERIFIER_TIMEOUT"))
     print(f"trials={n} classes={counts}")
