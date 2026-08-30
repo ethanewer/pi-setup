@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 1,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 1,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 35,
+  "documented_probe": "C-1ea268be (expose the recovered key as a 32-bit unsigned value through the required calling convention): covered here at hard; hidden keys include 0xDEADBEEF and 0xFFFFFFFF so a signed/wrapped or narrower return fails the exact uint32 comparison, and the verifier calls recover_key through its own ctypes driver on fresh fixtures.",
+  "notes": "Analytic key recovery (inverting the documented bijection) rather than brute force, exact bit-level C implementation, robust hex/comment parsing, malformed-input handling returning 0, and the fixed calling convention checked via a compiled driver. Hidden cases vary keys (incl. top-bit-set), pair counts, payload lengths, and one malformed file."
+}

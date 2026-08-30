@@ -1,0 +1,93 @@
+#!/usr/bin/env python3
+"""corvid-emu -- generic, profile-driven host for Corvid-8 program images.
+
+The machine profile (JSON) must define:
+  memory_kib          uniform RAM size in KiB (addresses taken modulo the size)
+  load_address        where the program image is placed
+  entry               initial program counter
+  serial_out_address  memory-mapped serial data register (write-only)
+
+Usage:
+  corvid-emu --profile PROFILE.json --rom IMAGE.bin --serial-out OUT.txt
+
+Each write to the serial data register (opcode 0x30) transmits the accumulator
+as unsigned decimal followed by a line feed; the transmission log is written to
+the --serial-out file (overwritten on every run).
+"""
+import argparse
+import json
+import sys
+
+
+def main():
+    ap = argparse.ArgumentParser(prog="corvid-emu")
+    ap.add_argument("--profile", required=True)
+    ap.add_argument("--rom", required=True)
+    ap.add_argument("--serial-out", required=True, dest="serial_out")
+    args = ap.parse_args()
+
+    with open(args.profile, "r", encoding="utf-8") as fh:
+        prof = json.load(fh)
+    for key in ("memory_kib", "load_address", "entry", "serial_out_address"):
+        if key not in prof:
+            print("corvid-emu: profile missing key: %s" % key, file=sys.stderr)
+            sys.exit(2)
+
+    mem = bytearray(prof["memory_kib"] * 1024)
+    load = prof["load_address"]
+    entry = prof["entry"]
+
+    with open(args.rom, "rb") as fh:
+        rom = fh.read()
+    image_end = load + len(rom)
+    mem[load:image_end] = rom
+
+    pc = entry
+    a = 0
+    serial = []
+
+    def rd16(addr):
+        addr %= len(mem)
+        return mem[addr] | (mem[(addr + 1) % len(mem)] << 8)
+
+    def wr16(addr, val):
+        addr %= len(mem)
+        mem[addr] = val & 0xFF
+        mem[(addr + 1) % len(mem)] = (val >> 8) & 0xFF
+
+    while pc < image_end and pc < len(mem):
+        op = mem[pc]
+        if op == 0x00:                      # NOP
+            pc += 1
+        elif op == 0xFF:                    # HLT
+            break
+        elif op == 0x30:                    # OUT -> serial data register
+            serial.append("%d\n" % a)
+            pc += 1
+        elif op in (0x10, 0x11, 0x12, 0x13, 0x20, 0x21):
+            if pc + 3 > image_end:
+                break                       # truncated final record: discarded
+            imm = rd16(pc + 1)
+            if op == 0x10:                  # LDA imm16
+                a = imm
+            elif op == 0x11:                # ADD imm16
+                a = (a + imm) & 0xFFFF
+            elif op == 0x12:                # SUB imm16
+                a = (a - imm) & 0xFFFF
+            elif op == 0x13:                # MUL imm16
+                a = (a * imm) & 0xFFFF
+            elif op == 0x20:                # STA addr16
+                wr16(imm, a)
+            else:                           # LDM addr16
+                a = rd16(imm)
+            pc += 3
+        else:
+            pc += 1                         # unknown opcode: single byte discarded
+
+    with open(args.serial_out, "w", encoding="utf-8") as fh:
+        fh.write("".join(serial))
+    sys.exit(0)
+
+
+if __name__ == "__main__":
+    main()
