@@ -2,7 +2,7 @@
 
 This file is the completion contract for `evals/general-v2`. The benchmark is not complete until every gate below passes. A task directory existing, an oracle passing, or a skill appearing in a tag is not sufficient evidence of completion.
 
-## Current state at a glance (2026-08-29)
+## Current state at a glance (2026-08-29, handoff revision)
 
 **Built:** 204 clean-room Harbor tasks covering 722/726 atomic Terminal-Bench
 competencies (4 documented environmentally infeasible: GPU Triton kernels,
@@ -10,19 +10,49 @@ Linux-kernel rebuild x2, telephony). Difficulty mix 2 easy / 84 medium / 118
 hard. Every verifier executes its deliverables with hidden generalization
 cases; every task has an oracle that passes from a pristine container.
 
-**Verified:** two identical full oracle sweeps (204/204); final independence
-audit clean (exact/block/ngram/canary/repo = 0 over 30,128 payloads); blind
-two-reviewer similarity check passed; 408-trial forensic grading audit with 0
-false positives (28 contract defects found, fixed, re-run). All gates:
-`tools/suite_report.py` -> SUITE PASS.
+**Verified:** two identical full oracle sweeps (204/204); independence audit
+clean at the 05:00 content state (exact/block/ngram/canary/repo = 0 over
+30,169 payloads); blind two-reviewer similarity check passed; 408-trial
+forensic grading audit with 0 false positives (28 contract defects found,
+fixed, re-run). Gate-drift repair (D5) makes `tools/rebuild_and_audit.sh`
+pass end-to-end.
 
-**Benchmarked** on openrouter/z-ai/glm-5.3-flash (204 trials each): pi (PAgent)
-136/204 = 0.667; terminus-2 141/204 = 0.691 (0.525 strict). Traces in the HF
-dataset; code on branch `general-v2-eval`.
+**Benchmarked** on openrouter/z-ai/glm-5.3-flash (204 trials each) — final
+verifier-authoritative scores, all three merged record sets audited clean
+(204/204 valid each, 0 problems):
 
-**Remaining:** see "Parts NOT fully tested / known residuals" + "How to work
-on the remaining items" below. Nothing blocks use of the benchmark; the
-residuals are scope/quality enhancements.
+| Agent | Verifier-authoritative | Strict (timeout→0) |
+|---|---|---|
+| claude-code (2.1.251) | **146/204 = 0.716** | **129/204 = 0.632** |
+| terminus-2 | 141/204 = 0.691 | 107/204 = 0.525 |
+| pi (PAgent — the `p` lean profile) | 136/204 = 0.667 | 136/204 = 0.667 |
+
+Plus a 36-task stratified calibration pilot with an independent agent
+(deepseek-v4-flash, 15/36 = 0.417 VA; `reports/pilot_panel_deepseek.md`).
+All traces, raw jobs, and audit evidence are archived in the HF dataset
+`eewer/general-agent-bench-results` (incl. `v2/claude/` and
+`v2/raw-jobs-claude.tar.gz`).
+
+**Remaining for handoff (in order):**
+1. **Re-run the final independence audit over the last content change** — the
+   only open gate. The tree changed after the 05:00 clean audit (D6
+   quartz-helix verifier hardening, D7 claude-CLI pre-bake in two
+   Dockerfiles, new tools), so the "clean" claim must be re-proven over the
+   final tree. Run on a fast machine:
+   `cd evals/general-v2 && python3 -u tools/audit_independence.py`
+   (~36GB RAM, single-threaded CPU-bound, minutes on fast hardware; progress
+   counters stream per-phase; expected result exact=0 block=0 ngram=0
+   canary=0 repo=0, files_scanned=30175). Do NOT run two audits concurrently
+   (each needs ~36GB of 62GB RAM; a concurrent second copy caused an OOM that
+   killed a 3h audit and a desktop session on this host).
+2. After the audit passes: `python3 tools/suite_report.py` → SUITE PASS;
+   commit refreshed `specs/` and push.
+3. Re-upload `v2/audit/suite_report.json` + `v2/audit/independence_report.json`
+   to the HF dataset (the copies there are from the 05:00 run and predate
+   D6/D7).
+4. Optional residuals (unchanged, see below): second-task coverage, human
+   inventory review, full calibration panel, expert-time calibration,
+   heavy-task stress testing, verifier-timeout policy, frontier-model run.
 
 ## How the data is saved
 
@@ -112,10 +142,13 @@ them from the HF dataset `v2/assets/` (or upstream) per specs/large_assets.json
 before building the prism-bridge, harbor-gasket, zephyr-orchid, and
 raven-orchid images.
 
-## Completion status (updated 2026-08-29, final)
+## Completion status (updated 2026-08-29, final; handoff note 2026-08-29 late)
 
-The benchmark build and verification are COMPLETE. The suite is ready for
-model-score comparison and contamination-sensitive development. Summary:
+The benchmark build and verification are COMPLETE except one open gate: the
+independence audit must be re-run over the final tree (D6/D7 changes) — see
+"Remaining for handoff" at the top. All model-score comparison work (three
+agents on glm-5.3-flash + calibration pilot) is complete, audited, and
+archived. Summary:
 
 | Area | Status | Evidence |
 | --- | --- | --- |
@@ -169,6 +202,7 @@ Only after this checklist passes should v2 be used for model score comparisons o
 - 2026-08-29 (gate alignment, D5): a fresh end-to-end `tools/rebuild_and_audit.sh` run exposed that `tools/check_tb21_coverage.py` had drifted from the documented contract state (it had never actually re-run green after final packaging; the earlier "SUITE PASS" came from suite_report.py alone). Gate fixed (infeasible waiver, difficulty-floor probe waiver, second-task shortfall as documented WARN, traceability-based tag rule); all tasks unchanged. Full pipeline now passes end-to-end: independence audit clean over 30,169 payloads, SUITE PASS. See private-audit/DECISIONS.md D5.
 - 2026-08-29 (calibration pilot): 36-task stratified panel run with an independent agent+model (PAgent on openrouter/deepseek/deepseek-v4-flash-0731, no reference access): easy 2/2, medium 4/12, hard 9/22, total 15/36 = 0.417 verifier-authoritative; audit clean (0 problems). Partially addresses residual #3; see reports/pilot_panel_deepseek.md. New tools: tools/audit_run_rewards.py (reward audit; also re-audited the 408 published final records — clean, exactly reproduces published scores) and tools/collect_run.py (record merging; validated to reproduce the published pi and terminus-2 records exactly).
 - 2026-08-29 (claude-code run, three-way comparison complete): glm-5.3-flash via harbor's claude-code agent (Claude Code 2.1.251, bypassPermissions) through OpenRouter's Anthropic-compatible endpoint: **146/204 = 0.716 verifier-authoritative, 129/204 = 0.632 strict** — first under both conventions vs pi 0.667/0.667 and terminus-2 0.691/0.525. Merged records audited clean (204/204 valid, 0 problems). Infra remediations along the way: D6 (quartz-helix verifier parse hardening, oracle re-verified + negative control) and D7 (claude CLI pre-baked into the basalt-bridge/hollow-notch images whose task-designed sabotages break the runtime installer; sabotages verified intact, oracles re-passed). Real cost ≈$24 at glm-5.3-flash list pricing (trajectory cost_usd uses Sonnet pricing — invalid). See reports/comparison_glm53flash.md.
+- 2026-08-29 (handoff): work transferred to a faster host. Everything except one gate is complete: three-way agent comparison on glm-5.3-flash (claude-code 146/204 = 0.716 VA / 129/204 = 0.632 strict; terminus-2 0.691/0.525; pi 0.667/0.667 — all merged records audited clean), 36-task deepseek calibration pilot, D5 gate alignment, D6 quartz-helix verifier hardening (oracle + negative control re-verified), D7 claude-CLI pre-bake (oracles re-passed, sabotages verified intact). HF dataset holds v2/claude/ (1.2GB), raw-jobs-claude.tar.gz (193MB), results.json, comparison + pilot reports, and audits. OPEN: independence audit re-run over the final tree (D6/D7 changed 3 files) + suite_report + re-upload of the two audit JSONs. See "Remaining for handoff" at the top. Local note: the audit is compute-bound (~36GB RAM, single core, minutes on fast hardware); the 3h+ local run remained healthy and was lost to an OOM caused by a concurrently launched second audit — never run two at once.
 
 
 ---

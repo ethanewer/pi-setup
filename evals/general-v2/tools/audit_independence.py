@@ -501,7 +501,10 @@ def main():
     print('building reference block index ...')
     ref_blocks = {}
     ref_block_files = {}
-    for label, data in refs.items():
+    n_ref = len(refs)
+    for i_ref, (label, data) in enumerate(refs.items(), 1):
+        if i_ref % 500 == 0:
+            print(f'  block index: {i_ref}/{n_ref} payloads', flush=True)
         src = label.split('::')[0]
         for n_size, d, bp, _raw in block_digests(data):
             if d not in ref_blocks:
@@ -511,7 +514,10 @@ def main():
     print('comparing v2 blocks ...')
     allowlisted_hits = 0
     generic_hits = 0
-    for label, data in ours.items():
+    n_ours = len(ours)
+    for i_ours, (label, data) in enumerate(ours.items(), 1):
+        if i_ours % 1000 == 0:
+            print(f'  blocks compared: {i_ours}/{n_ours} payloads', flush=True)
         if excluded_media(label, data):
             report.setdefault('excluded_media', []).append(label.split('/general-v2/')[-1])
             continue  # documented hash-pinned encoder-signature fixtures
@@ -551,7 +557,9 @@ def main():
     print('building reference n-gram index ...')
     ref_ngrams = {}
     ref_ngram_files = {}
-    for label, data in refs.items():
+    for i_ref, (label, data) in enumerate(refs.items(), 1):
+        if i_ref % 500 == 0:
+            print(f'  ngram index: {i_ref}/{n_ref} payloads', flush=True)
         if len(data) > MAX_TEXT_NGRAM_BYTES:
             continue
         words = normalize_text(data)
@@ -564,7 +572,9 @@ def main():
     print('comparing v2 n-grams ...')
     ngram_generic = 0
     ngram_idiom = 0
-    for label, data in ours.items():
+    for i_ours, (label, data) in enumerate(ours.items(), 1):
+        if i_ours % 1000 == 0:
+            print(f'  ngrams compared: {i_ours}/{n_ours} payloads', flush=True)
         if excluded_media(label, data):
             continue  # documented hash-pinned encoder-signature fixtures
         if len(data) > MAX_TEXT_NGRAM_BYTES:
