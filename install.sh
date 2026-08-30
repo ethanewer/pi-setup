@@ -79,12 +79,22 @@ if [[ -z "$SRC_DIR" ]]; then
     log "Updating setup sources in $CLONE_DIR"
     git -C "$CLONE_DIR" remote set-url origin "$REPO_URL"
     git -C "$CLONE_DIR" fetch --depth 1 origin "$REPO_REF"
-    git -C "$CLONE_DIR" checkout -q FETCH_HEAD
+    rev="FETCH_HEAD"
   else
     log "Fetching setup sources into $CLONE_DIR"
     rm -rf "$CLONE_DIR"
-    git clone --depth 1 --branch "$REPO_REF" "$REPO_URL" "$CLONE_DIR"
+    git clone --no-checkout --depth 1 --branch "$REPO_REF" "$REPO_URL" "$CLONE_DIR"
+    rev="HEAD"
   fi
+  # evals/general-v2 contains fixture names Windows cannot represent (device
+  # names like `aux`, an embedded colon, paths over 260 chars). The installer
+  # never reads evals/, so keep the tree out of the checkout instead of
+  # letting it abort on a fresh machine (Git Bash runs this one-liner too).
+  git -C "$CLONE_DIR" config core.longpaths true
+  git -C "$CLONE_DIR" config core.protectNTFS false
+  git -C "$CLONE_DIR" sparse-checkout init --no-cone
+  printf '/*\n!/evals/\n' > "$CLONE_DIR/.git/info/sparse-checkout"
+  git -C "$CLONE_DIR" checkout -q "$rev"
   SRC_DIR="$CLONE_DIR"
 fi
 [[ -f "$SRC_DIR/lib/install.mjs" ]] || fail "Could not find lib/install.mjs in $SRC_DIR."

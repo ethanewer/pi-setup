@@ -9,8 +9,16 @@ clean, record = module["sanitize_newline_reasoning"](row)
 print(json.dumps({"clean": clean, "record": record}, sort_keys=True))
 `;
 
+function pythonBin(): string {
+	// Windows python.org installs ship `python` only; macOS/Linux ship `python3`.
+	for (const bin of ["python3", "python"]) {
+		if (Bun.spawnSync([bin, "--version"]).error === undefined) return bin;
+	}
+	throw new Error("neither python3 nor python is runnable");
+}
+
 function sanitize(row: Record<string, unknown>) {
-	const result = Bun.spawnSync(["python3", "-c", python, JSON.stringify(row)], {
+	const result = Bun.spawnSync([pythonBin(), "-c", python, JSON.stringify(row)], {
 		cwd: fileURLToPath(new URL("..", import.meta.url)),
 	});
 	expect(result.exitCode).toBe(0);

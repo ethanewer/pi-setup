@@ -59,13 +59,23 @@ if (-not $src) {
     Write-Log "Updating setup sources in $cloneDir"
     git -C $cloneDir remote set-url origin $RepoUrl
     git -C $cloneDir fetch --depth 1 origin $RepoRef
-    git -C $cloneDir checkout -q FETCH_HEAD
+    $rev = "FETCH_HEAD"
   } else {
     Write-Log "Fetching setup sources into $cloneDir"
     if (Test-Path $cloneDir) { Remove-Item -Recurse -Force $cloneDir }
     New-Item -ItemType Directory -Force -Path (Split-Path $cloneDir) | Out-Null
-    git clone --depth 1 --branch $RepoRef $RepoUrl $cloneDir
+    git clone --no-checkout --depth 1 --branch $RepoRef $RepoUrl $cloneDir
+    $rev = "HEAD"
   }
+  # evals/general-v2 contains fixture names Windows cannot represent (device
+  # names like `aux`, an embedded colon, paths over 260 chars). The installer
+  # never reads evals/, so keep the tree out of the checkout instead of
+  # letting it abort on a fresh machine.
+  git -C $cloneDir config core.longpaths true
+  git -C $cloneDir config core.protectNTFS false
+  git -C $cloneDir sparse-checkout init --no-cone
+  [System.IO.File]::WriteAllText((Join-Path $cloneDir ".git\info\sparse-checkout"), "/*`n!/evals/`n")
+  git -C $cloneDir checkout -q $rev
   $src = $cloneDir
 }
 

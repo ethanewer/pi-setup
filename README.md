@@ -70,6 +70,13 @@ Run `tests/linux-install.sh` to reproduce the Linux row; it needs Docker and tak
 minutes. It sets `PI_SETUP_SKIP_BROWSER_INSTALL=1`, so **Chrome and `agent-browser` are not
 exercised on Linux** — that part of the installer is covered on macOS only.
 
+`evals/general-v2` fixtures intentionally contain names Windows cannot represent (device
+names like `aux`, an embedded colon, paths over 260 chars). The bootstraps check out
+without `evals/` on every platform for that reason; a developer cloning this repository
+on Windows should clone with `git -c core.protectNTFS=false`, enable long paths
+(`git config --global core.longpaths true`), and keep `evals/` in a sparse-checkout
+exclusion — or work on the eval suite from WSL.
+
 An earlier revision of this file claimed validation on two Ubuntu 22.04 servers including
 Chrome and an `agent-browser` smoke test. That was recorded in a documentation-only commit
 (`76cc001`) with nothing in the repository reproducing it, so it is left here as history
