@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { fileURLToPath } from "node:url";
 
 const python = String.raw`
 import json, runpy, sys
@@ -10,7 +11,7 @@ print(json.dumps({"clean": clean, "record": record}, sort_keys=True))
 
 function sanitize(row: Record<string, unknown>) {
 	const result = Bun.spawnSync(["python3", "-c", python, JSON.stringify(row)], {
-		cwd: new URL("..", import.meta.url).pathname,
+		cwd: fileURLToPath(new URL("..", import.meta.url)),
 	});
 	expect(result.exitCode).toBe(0);
 	return JSON.parse(result.stdout.toString());
