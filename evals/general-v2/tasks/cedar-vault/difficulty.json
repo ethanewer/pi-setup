@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 0,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 0,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 1,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 25,
+  "documented_probe": "",
+  "notes": "Single deliverable program plus its visible-run artifact: implement exact-integer greedy next-token generation (argmax, lowest-id tie-break, fixed max_new count, context window) over a JSON model, with distractor sampling knobs (temperature/top_k/top_p/repetition_penalty) that must be ignored. Hidden cases probe ties, prompts shorter than ctx, max_new=0, and cyclic repetition, so any sampling deviation or off-by-one count fails. Rubric: reasoning_depth (tie-break + window logic), adversarial_inputs and hidden_case_generalization (4 distinct hidden models), quantitative_correctness (exact token sequences)."
+}

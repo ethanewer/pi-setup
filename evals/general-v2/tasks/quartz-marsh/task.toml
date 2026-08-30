@@ -1,0 +1,29 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "medium"
+category = "data_science"
+verifier_kind = "executes-deliverable"
+deliverables = ["/app/init_model.py", "/app/model_pack.pt", "/app/init_report.json"]
+tags = [
+    "quartz-marsh",
+    "data_science",
+    "C-27887ef1",
+    "model-init-adequacy",
+    "parameter-budget",
+    "instance-encoder",
+    "bag-classifier",
+    "state-dict-persist",
+]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 1800.0
+
+[environment]
+build_timeout_sec = 900.0
+cpus = 1
+memory_mb = 4096
+storage_mb = 8192

@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 0,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 1,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 30,
+  "documented_probe": "",
+  "notes": "Single program plus two artifacts: derive a hidden width H from a min/max combined-parameter budget (P = F*H + H + C*H + C), build torch nn.Linear instance_encoder and bag_classifier with consistent shapes, save the state dict, and emit a truthful report the verifier recomputes. One hidden config admits exactly one feasible H, so hard-coded or arbitrary widths fail the initialization adequacy checks (presence, non-None, shape consistency, finite values, budget). Rubric: tool_breadth (torch), reasoning_depth (closed-form budget solve), adversarial_inputs/hidden_case_generalization (3 hidden configs incl. single-solution), quantitative_correctness (exact parameter counts)."
+}
