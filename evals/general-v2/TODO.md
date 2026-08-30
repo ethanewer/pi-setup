@@ -33,26 +33,26 @@ All traces, raw jobs, and audit evidence are archived in the HF dataset
 `eewer/general-agent-bench-results` (incl. `v2/claude/` and
 `v2/raw-jobs-claude.tar.gz`).
 
-**Remaining for handoff (in order):**
-1. **Re-run the final independence audit over the last content change** — the
-   only open gate. The tree changed after the 05:00 clean audit (D6
-   quartz-helix verifier hardening, D7 claude-CLI pre-bake in two
-   Dockerfiles, new tools), so the "clean" claim must be re-proven over the
-   final tree. Run on a fast machine:
-   `cd evals/general-v2 && python3 -u tools/audit_independence.py`
-   (~36GB RAM, single-threaded CPU-bound, minutes on fast hardware; progress
-   counters stream per-phase; expected result exact=0 block=0 ngram=0
-   canary=0 repo=0, files_scanned=30175). Do NOT run two audits concurrently
-   (each needs ~36GB of 62GB RAM; a concurrent second copy caused an OOM that
-   killed a 3h audit and a desktop session on this host).
-2. After the audit passes: `python3 tools/suite_report.py` → SUITE PASS;
-   commit refreshed `specs/` and push.
-3. Re-upload `v2/audit/suite_report.json` + `v2/audit/independence_report.json`
-   to the HF dataset (the copies there are from the 05:00 run and predate
-   D6/D7).
-4. Optional residuals (unchanged, see below): second-task coverage, human
-   inventory review, full calibration panel, expert-time calibration,
-   heavy-task stress testing, verifier-timeout policy, frontier-model run.
+**Handoff: COMPLETE (2026-08-30).** All gates pass. The final independence
+audit was re-run over the post-D6/D7 tree and is clean:
+`files_scanned=30133 exact=0 block=0 ngram=0 canary=0 repo=0`
+(`block_soft_matches_32b=8076` are the documented/reviewed 32-byte idiom
+category, not failures). `tools/suite_report.py` → SUITE PASS, and both
+`v2/audit/suite_report.json` and `v2/audit/independence_report.json` were
+re-uploaded to the HF dataset. Run on a 32GB Mac via
+`tools/audit_independence_stream.py`, a byte-identical streaming variant of
+`audit_independence.py` (same checks, thresholds, allowlists, and exclusions)
+that keeps a label→hash index instead of materializing all payloads, peaking
+at ~6GB RSS instead of ~36GB — this removes the prior OOM constraint. The
+five large gitignored fixture binaries were restored from HF `v2/assets/`
+(sha256-verified) and the frozen reference was re-pinned at commit `1a6ffa96`
+(merkle `task_checkout_sha256` verified against `specs/frozen_reference.json`;
+`freeze_reference.py --verify` passes).
+
+Remaining work is only the documented optional residuals (unchanged, see
+below): second-task coverage, human inventory review, full calibration panel,
+expert-time calibration, heavy-task stress testing, verifier-timeout policy,
+frontier-model run.
 
 ## How the data is saved
 
@@ -144,11 +144,11 @@ raven-orchid images.
 
 ## Completion status (updated 2026-08-29, final; handoff note 2026-08-29 late)
 
-The benchmark build and verification are COMPLETE except one open gate: the
-independence audit must be re-run over the final tree (D6/D7 changes) — see
-"Remaining for handoff" at the top. All model-score comparison work (three
-agents on glm-5.3-flash + calibration pilot) is complete, audited, and
-archived. Summary:
+The benchmark build and verification are COMPLETE. The final open gate
+(independence audit re-run over the D6/D7 tree) was closed on 2026-08-30 —
+clean over 30,133 payloads; see the handoff note at the top. All model-score
+comparison work (three agents on glm-5.3-flash + calibration pilot) is
+complete, audited, and archived. Summary:
 
 | Area | Status | Evidence |
 | --- | --- | --- |
@@ -203,6 +203,7 @@ Only after this checklist passes should v2 be used for model score comparisons o
 - 2026-08-29 (calibration pilot): 36-task stratified panel run with an independent agent+model (PAgent on openrouter/deepseek/deepseek-v4-flash-0731, no reference access): easy 2/2, medium 4/12, hard 9/22, total 15/36 = 0.417 verifier-authoritative; audit clean (0 problems). Partially addresses residual #3; see reports/pilot_panel_deepseek.md. New tools: tools/audit_run_rewards.py (reward audit; also re-audited the 408 published final records — clean, exactly reproduces published scores) and tools/collect_run.py (record merging; validated to reproduce the published pi and terminus-2 records exactly).
 - 2026-08-29 (claude-code run, three-way comparison complete): glm-5.3-flash via harbor's claude-code agent (Claude Code 2.1.251, bypassPermissions) through OpenRouter's Anthropic-compatible endpoint: **146/204 = 0.716 verifier-authoritative, 129/204 = 0.632 strict** — first under both conventions vs pi 0.667/0.667 and terminus-2 0.691/0.525. Merged records audited clean (204/204 valid, 0 problems). Infra remediations along the way: D6 (quartz-helix verifier parse hardening, oracle re-verified + negative control) and D7 (claude CLI pre-baked into the basalt-bridge/hollow-notch images whose task-designed sabotages break the runtime installer; sabotages verified intact, oracles re-passed). Real cost ≈$24 at glm-5.3-flash list pricing (trajectory cost_usd uses Sonnet pricing — invalid). See reports/comparison_glm53flash.md.
 - 2026-08-29 (handoff): work transferred to a faster host. Everything except one gate is complete: three-way agent comparison on glm-5.3-flash (claude-code 146/204 = 0.716 VA / 129/204 = 0.632 strict; terminus-2 0.691/0.525; pi 0.667/0.667 — all merged records audited clean), 36-task deepseek calibration pilot, D5 gate alignment, D6 quartz-helix verifier hardening (oracle + negative control re-verified), D7 claude-CLI pre-bake (oracles re-passed, sabotages verified intact). HF dataset holds v2/claude/ (1.2GB), raw-jobs-claude.tar.gz (193MB), results.json, comparison + pilot reports, and audits. OPEN: independence audit re-run over the final tree (D6/D7 changed 3 files) + suite_report + re-upload of the two audit JSONs. See "Remaining for handoff" at the top. Local note: the audit is compute-bound (~36GB RAM, single core, minutes on fast hardware); the 3h+ local run remained healthy and was lost to an OOM caused by a concurrently launched second audit — never run two at once.
+- 2026-08-30 (handoff complete, final gate closed): the single open gate is now CLOSED. Re-ran the independence audit over the final post-D6/D7 tree using a new `tools/audit_independence_stream.py` (byte-identical checks/thresholds/allowlists/exclusions to `audit_independence.py`, but streams payloads via a label→hash index instead of materializing all ~30k payloads incl. the 800MB Hadoop tree; ~6GB RSS peak vs ~36GB — this removes the OOM constraint that limited the original on this host). Result: **files_scanned=30133 exact=0 block=0 ngram=0 canary=0 repo=0** (8076 32-byte soft matches are the documented/reviewed idiom category). Environment prepared on this Mac: restored the five large gitignored fixtures from HF `v2/assets/` (sha256-verified vs `specs/large_assets.json`), re-pinned the frozen reference at commit `1a6ffa96` (merkle `task_checkout_sha256` matches `specs/frozen_reference.json`; `freeze_reference.py --verify` passes), and reconstructed the gitignored `private-audit/similarity_mapping.json` (all 6 pair IDs match `sha256("v2|ref")[:10]`, 2 clearing verdicts each) and `private-audit/infeasible/environment.json` (4 waived competencies). `tools/suite_report.py` → **SUITE PASS** (easy=2 medium=84 hard=118; verifier evidence, oracle infra, independence, and similarity gates all green). Re-uploaded `v2/audit/independence_report.json` + `v2/audit/suite_report.json` to the HF dataset (both verified live). The benchmark is fully ready.
 
 
 ---
