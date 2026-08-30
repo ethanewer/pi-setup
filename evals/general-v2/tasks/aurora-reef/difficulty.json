@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 0,
+    "tool_breadth": 0,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 40,
+  "documented_probe": "C-457ed453 (produce embeddings that solve word-vector analogies and reflect semantic similarity): the agent must derive a structured embedding construction (orthogonal per-clan directions plus one shared relational shift) that solves every cross-clan analogy in both orientations by cosine top-1, and keeps same-clan similarity strictly above cross-clan similarity. The deliverable builder is re-executed on hidden relation files with different clan counts, dims, and vocab orders, so the construction must genuinely generalize.",
+  "notes": "Hard: requires geometric insight (shared difference vector across categories, orthonormal basis via QR) rather than fitting the visible quadruples. Verifier checks row alignment, float32 dtype, exact-shape output, cosine top-1 analogies over ALL cross-clan pairs in both orientations (including unlisted ones), and the similarity ordering property, on the visible fixture plus two hidden vocabularies."
+}

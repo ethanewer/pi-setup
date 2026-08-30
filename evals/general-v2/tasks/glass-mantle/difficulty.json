@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 1,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": "C-f254b292 (implement an attention-gated pooling module in pytorch with fixed attribute names): reference floor is medium and this covering task exercises it at medium — three named gate/aggregate layers, softmax-normalized attention over the bag axis, and empty/single-element set edge cases checked on hidden configurations.",
+  "notes": "The module is unit-checked by the verifier: exact attribute names (proj/score/head), attention weight shapes for rank-2 and rank-3 inputs, softmax sums to 1, bag=1 exact 1.0 weight, bag=0 no-crash, plus exact numeric equality (1e-4) against an in-container reference built under the same fixed seed. A CLI artifact on the visible cluster catalog is also required."
+}

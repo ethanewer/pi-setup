@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 3,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": "C-8c746cc6 (implement column-parallel 'tensor-parallel' linear layers with full reconstruction and correct sharded gradients): reference floor is hard and this covering task exercises it at hard — sharded forward with all-gather reconstruction, exact per-rank gradient slices, a CLI validation harness, and a non-divisible-dimension failure mode on hidden configs.",
+  "notes": "Hard because sharding indices are easy to get wrong: the verifier checks machine-precision equality between the sharded forward and the dense linear, exact reconstruction of the dense weight/bias gradients from per-rank slices, the flattened sharded output, the --input no-reseed rule, and graceful nondivisible_output handling."
+}

@@ -1,0 +1,56 @@
+{
+  "limit": 3,
+  "jobs": [
+    {
+      "dur_ms": 10,
+      "fail": false
+    },
+    {
+      "dur_ms": 17,
+      "fail": false
+    },
+    {
+      "dur_ms": 24,
+      "fail": false
+    },
+    {
+      "dur_ms": 31,
+      "fail": false
+    },
+    {
+      "dur_ms": 38,
+      "fail": false
+    },
+    {
+      "dur_ms": 14,
+      "fail": false
+    },
+    {
+      "dur_ms": 21,
+      "fail": false
+    },
+    {
+      "dur_ms": 28,
+      "fail": false
+    },
+    {
+      "dur_ms": 35,
+      "fail": false
+    }
+  ],
+  "expected": {
+    "results": [
+      0,
+      1,
+      4,
+      9,
+      16,
+      25,
+      36,
+      49,
+      64
+    ],
+    "max_peak": 3,
+    "mode": "run"
+  }
+}

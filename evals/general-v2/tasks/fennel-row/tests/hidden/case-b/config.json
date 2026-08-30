@@ -1,0 +1,20 @@
+{
+  "paths": {
+    "dataset": "/app/data/galehill.csv",
+    "experiment": "/app/experiments/gale-81/seed-3",
+    "model": "/app/model_gale.json"
+  },
+  "data": {
+    "target": "frost",
+    "features": [
+      "chill_hours",
+      "rainfall_mm",
+      "soil_ph"
+    ]
+  },
+  "training": {
+    "epochs": 75,
+    "learning_rate": 0.03,
+    "seed": 3
+  }
+}
