@@ -1,0 +1,32 @@
+VELLUM TRANSFORM — RECOVERED BEHAVIOR SPEC (Skyhook-44 boot-stage filter)
+Recovered from firmware rev 44.1 by the RE bench. This document is the only
+authoritative description; the firmware binary itself was destroyed.
+
+Pipeline over an input byte stream B[0..n-1] (n may be 0):
+
+  STAGE 1 — MIRROR
+      Reverse the byte order of the input:
+          R[i] = B[n-1-i]   for i = 0 .. n-1
+
+  STAGE 2 — CASCADE
+      A single 8-bit key register k, initialized to 0x5D.
+      For each mirrored byte r = R[i] in order (i = 0 .. n-1):
+          o = r XOR k                  (emit o as the next output byte)
+          k = (k + o + 0x33) & 0xFF    (the key advances using the EMITTED
+                                        byte, not the input byte)
+      All arithmetic is mod 256.
+
+  STAGE 3 — TRAILER
+      After the cascade, append exactly one byte: the XOR of every cascade
+      output byte emitted in stage 2. By convention the XOR over an empty
+      set of bytes is 0x00, so an empty input (n = 0) produces exactly one
+      output byte: 0x00.
+
+Total output length is n + 1 (cascade bytes in emission order, then trailer).
+
+Known-answer check: input "AB" (0x41 0x42)
+    mirror -> 0x42 0x41
+    k=0x5D: o = 0x42^0x5D = 0x1F ; k = 0x5D+0x1F+0x33 = 0xA9
+            o = 0x41^0xA9 = 0xE8 ; k = 0xA9+0xE8+0x33 = 0x24 (mod 256)
+    trailer = 0x1F ^ 0xE8 = 0xF7
+    output = 1F E8 F7

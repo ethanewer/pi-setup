@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 0,
+    "tool_breadth": 0,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 0,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 1,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 30,
+  "documented_probe": "C-01d6c7ae (select model parameters that reproduce the reference full-physics state within a tight absolute tolerance): the covering task exercises the competency directly at medium difficulty; the verifier executes the fixed engine with the agent's tuning config on the visible case plus five hidden randomized two-body cases (perigee in [0.55,1.0], eccentricity in [0.1,0.7], horizon in [2,5]) and requires status ok, budget respected, finite state, and max componentwise error <= 1e-6 versus the engine's reference mode.",
+  "notes": "Single-stage tuning task: the agent must experimentally select integrator scheme and step count under a hard acceleration-evaluation budget (euler/heun and coarse rk4 miss the 1e-6 tolerance on eccentric hidden cases; rk4 needs steps in roughly [150,750] so 4*steps <= 3000), and must leave all physics-changing knobs (drag, softening, renormalize) off. Reference convergence is ~1e-13 so the tolerance is meaningful. Rubric nonzero for reasoning_depth (budget/accuracy trade-off), adversarial_inputs (physics-change traps), hidden_case_generalization, and quantitative_correctness (tight numeric tolerance). No tool breadth, no dependency chain; totals bucket to medium."
+}
