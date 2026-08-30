@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 2,
+    "unsafe_action_penalty": 1
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": null,
+  "notes": "Hard floor (C-a9d4f82b). The agent must make interactive password SSH usable by scripts: automate the password prompt for git clone/push, pin the server host key port-aware into a known-hosts file while keeping strict checking enabled, and make the sync script fully self-contained (graded under a pristine HOME, stdin at EOF). Depends on a chain: parse URL form/port -> pin host key -> non-interactive auth -> clone (including an empty repo with an unborn branch) -> commit -> push back to whatever branch the clone checked out. Hidden probes generalize across an empty repo, a master-branch remote with a stale manifest and byte-preservation requirements, and an ssh:// port-2222 endpoint. Server integrity (password-only sshd, untouched /srv/git) is enforced; weakening host-key checking is penalized. Differs from umber-yonder (forensics/secret purging): here the competency is exercised purely as unattended clone+push automation."
+}

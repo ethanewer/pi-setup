@@ -1,0 +1,10 @@
+{
+  "name": "port-2222",
+  "remote": "ssh://deploy@127.0.0.1:2222/srv/git/quartz.git",
+  "message": "alt port probe",
+  "branch": "main",
+  "count_commits": null,
+  "keep": {
+    "sensors/instruments.log": "2031-02-01T00:00:00Z quartz-A ok\n2031-02-01T06:00:00Z quartz-B ok\n"
+  }
+}

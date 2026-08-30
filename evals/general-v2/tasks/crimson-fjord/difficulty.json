@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 0,
+    "tool_breadth": 0,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 0,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 1,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 20,
+  "documented_probe": "C-18b56bb0 (aggregate streamed JSON records: per-tag counts and rounded currency sums): reference floor is easy; this task exercises it at easy with full hidden-case coverage.",
+  "notes": "Single-stage: parse a JSONL tip stream, tally per-tag counts and sum amounts rounded to 2 decimal places, count skipped/blank lines. Failure mode targeted: unrounded floats (e.g. 0.30000000000000004) or integer-serialized integral sums (10 instead of 10.0) fail the verifier's precision and type checks. Small nonzero rubric for reasoning_depth (skip classification + rounding rule), adversarial_inputs/hidden_case_generalization (4 hidden cases: float drift, empty file, all-malformed, integral float), and quantitative_correctness (exact ints and rounded floats). No tool breadth, no dependency chain, no environment pressure; totals bucket to easy."
+}
