@@ -1,0 +1,48 @@
+{
+  "dataset": "hoarfrost-pits-2026",
+  "version": "3",
+  "columns": [
+    "pit",
+    "sampled_at",
+    "height_cm",
+    "temp_c",
+    "grain"
+  ],
+  "splits": [
+    {
+      "role": "train",
+      "files": [
+        {
+          "key": "train/part-000.parquet",
+          "sha256": "5c5264668ae3917ad03a309fe4a8bcd4508d378c4dff95dd0b64cd24147ff66f"
+        },
+        {
+          "key": "train/part-001.parquet",
+          "sha256": "33f11252b984c34b281253c7eb43224bae5fcac898e4d924aa2a7163c61a6ddd"
+        }
+      ]
+    },
+    {
+      "role": "val",
+      "files": [
+        {
+          "key": "val/part-000.parquet",
+          "sha256": "cea56617cdede32d7be839e0c4c341c74fbbbb0265ec0c825e369b2e7643304c"
+        },
+        {
+          "key": "val/part-001.parquet",
+          "sha256": "b05c4a429730f59a5af51cb42db6f6890057334ee1c80e7d087055552c5aca63"
+        }
+      ]
+    },
+    {
+      "role": "test",
+      "files": [
+        {
+          "key": "test/part-000.parquet",
+          "sha256": "a8aae893293a8e3095ff538ffcb0d0de65a270f95a1bb80ccc7c9d1894736af4"
+        }
+      ]
+    }
+  ]
+}

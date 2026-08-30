@@ -1,0 +1,66 @@
+{
+  "version": "1.0",
+  "truncation": null,
+  "padding": null,
+  "added_tokens": [
+    {
+      "id": 0,
+      "content": "<unk>",
+      "single_word": false,
+      "lstrip": false,
+      "rstrip": false,
+      "normalized": false,
+      "special": true
+    }
+  ],
+  "normalizer": null,
+  "pre_tokenizer": {
+    "type": "Whitespace"
+  },
+  "post_processor": null,
+  "decoder": null,
+  "model": {
+    "type": "WordLevel",
+    "vocab": {
+      "<unk>": 0,
+      "cairn": 1,
+      "line": 2,
+      "across": 3,
+      "fell": 4,
+      "the": 5,
+      "ridge": 6,
+      "topoline": 7,
+      "sweep": 8,
+      "aurora": 9,
+      "basin": 10,
+      "col": 11,
+      "tarn": 12,
+      "scree": 13,
+      "boulder": 14,
+      "gully": 15,
+      "arête": 16,
+      "hollow": 17,
+      "summit": 18,
+      "traverse": 19,
+      "ledge": 20,
+      "mantle": 21,
+      "crux": 22,
+      "belay": 23,
+      "rime": 24,
+      "cornice": 25,
+      "moraine": 26,
+      "cirque": 27,
+      "horn": 28,
+      "pyramid": 29,
+      "spire": 30,
+      "of": 31,
+      "and": 32,
+      "in": 33,
+      "on": 34,
+      "at": 35,
+      "to": 36,
+      "a": 37
+    },
+    "unk_token": "<unk>"
+  }
+}

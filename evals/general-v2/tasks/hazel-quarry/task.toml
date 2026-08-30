@@ -1,0 +1,26 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "hard"
+category = "data_processing"
+verifier_kind = "executes-deliverable"
+deliverables = ["/app/lexicon.py", "/app/lexicon.txt"]
+tags = [
+  "hazel-quarry",
+  "data_processing",
+  "C-6d088405",
+  "vocabulary-construction",
+  "frequency-filtering",
+]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 1800.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096

@@ -1,0 +1,16 @@
+{
+  "rubric": {
+    "dependent_stages": 0,
+    "tool_breadth": 0,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 35,
+  "notes": "Single reusable CLI (vocabulary builder with frequency filtering) plus its output artifact on the visible corpora. Hard elements: Unicode-aware lowercased \\w+ tokenization, multi-file count aggregation, protected-term override including count-0 and count-1 terms, mixed-case protected lists, threshold boundary semantics, punctuation/blank-line noise, exact sorted deduplicated output. Generalization is genuinely probed: the verifier re-executes the builder on three hidden (corpus, protected-list, threshold) triples with distinct inputs."
+}

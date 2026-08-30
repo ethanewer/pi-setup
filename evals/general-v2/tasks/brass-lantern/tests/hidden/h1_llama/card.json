@@ -1,0 +1,57 @@
+{
+  "model_name": "kestrel-mini-instruct",
+  "arch": "causal_decoder",
+  "modules": [
+    {
+      "name": "model.embed_tokens",
+      "type": "Embedding"
+    },
+    {
+      "name": "model.layers.0.self_attn.q_proj",
+      "type": "Linear"
+    },
+    {
+      "name": "model.layers.0.self_attn.k_proj",
+      "type": "Linear"
+    },
+    {
+      "name": "model.layers.0.self_attn.v_proj",
+      "type": "Linear"
+    },
+    {
+      "name": "model.layers.0.self_attn.o_proj",
+      "type": "Linear"
+    },
+    {
+      "name": "model.layers.0.mlp.gate_proj",
+      "type": "Linear",
+      "trainable": false
+    },
+    {
+      "name": "model.layers.0.mlp.up_proj",
+      "type": "Linear"
+    },
+    {
+      "name": "model.layers.0.mlp.down_proj",
+      "type": "Linear"
+    },
+    {
+      "name": "model.layers.0.input_layernorm",
+      "type": "LayerNorm"
+    },
+    {
+      "name": "model.norm",
+      "type": "LayerNorm"
+    },
+    {
+      "name": "lm_head",
+      "type": "Linear",
+      "head": true
+    }
+  ],
+  "lora": {
+    "r": 16,
+    "lora_alpha": 32,
+    "lora_dropout": 0.1
+  }
+}

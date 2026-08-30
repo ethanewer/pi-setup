@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 0,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 35,
+  "documented_probe": "C-488f50fd (emit vocabulary and merge-rule files in the exact format a given tokenizer loads): this task exercises the full capability — learn a BPE merge chain from a corpus under a precisely specified deterministic procedure and write vocab.txt/merges.txt that load cleanly with the shipped loader (one token per line; one space-separated merge pair per line, chain-consistent order).",
+  "notes": "Failure mode probed directly: malformed or misordered merge lines (loader raises ValueError on blank/whitespace/duplicate vocab lines and on merge rules referencing later-introduced symbols or tokens missing from vocab). The grader byte-compares the emitted files against the reference learner on hidden corpora with different alphabets and repetition structure, and checks probe tokenizations through the shipped loader."
+}

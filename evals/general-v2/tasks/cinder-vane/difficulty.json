@@ -1,0 +1,16 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 0,
+    "adversarial_inputs": 0,
+    "hidden_case_generalization": 1,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 25,
+  "notes": "Focused Hydra config-group probe: author a root config with a mode defaults group plus standard/debug group files, wire overrides (mode=debug, dataset=..., outputs.*=...) through Hydra's compose API into a numpy mini-batch SGD logistic trainer, and honor the debug semantics (debug flag true, effective epochs 1, batch 8) while every other default is kept. Verifier re-runs the trainer on the visible fixture and two hidden telemetry datasets in both modes and re-checks reported vs. model-reproduced accuracy. Easy: single-stage, one override mechanism, generous accuracy floors."
+}

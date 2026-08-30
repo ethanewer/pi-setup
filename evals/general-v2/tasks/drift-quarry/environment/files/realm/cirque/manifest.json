@@ -1,0 +1,56 @@
+{
+  "dataset": "cirque-avalanche-2024",
+  "version": "4",
+  "columns": [
+    "site",
+    "observed_at",
+    "depth_cm",
+    "wind_kph",
+    "danger"
+  ],
+  "splits": [
+    {
+      "role": "train",
+      "files": [
+        {
+          "key": "train/part-000.parquet",
+          "sha256": "70d492e899987db73e877f2e56474e34bbc4fc568a213061653f5c882489fc13"
+        },
+        {
+          "key": "train/part-001.parquet",
+          "sha256": "3a5a51b11b086da907d9c86985df316695cce45dab7532c110db13fc4af0ba41"
+        },
+        {
+          "key": "train/part-002.parquet",
+          "sha256": "50b9292f785c9c53333434173a1af916024d49d623be56fb553dece7e16536ec"
+        }
+      ]
+    },
+    {
+      "role": "val",
+      "files": [
+        {
+          "key": "val/part-000.parquet",
+          "sha256": "4f76e36d3195aaf36205f4ca0d9681e870b0b0e55cd445b753c3dbfbedd10ec7"
+        },
+        {
+          "key": "val/part-001.parquet",
+          "sha256": "ba925e604eb61d1413f6414381e29ee031c79397705457334bd0afd4c1f6caa0"
+        }
+      ]
+    },
+    {
+      "role": "test",
+      "files": [
+        {
+          "key": "test/part-000.parquet",
+          "sha256": "3fa286d60d10530e5444edff444ced7aa6c5f300c497b240ec4898fcb162226a"
+        },
+        {
+          "key": "test/part-001.parquet",
+          "sha256": "f86b750414d8e1ba3a61c2ff530a086555bafead1dd53b81d8886377e04b9d0a"
+        }
+      ]
+    }
+  ]
+}
