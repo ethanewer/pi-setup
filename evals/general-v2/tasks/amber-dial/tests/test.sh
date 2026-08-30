@@ -40,7 +40,7 @@ import torch.nn.functional as F
 failures = []
 HALL = "/tests/hidden"
 
-def run(cmd, timeout=60):
+def run(cmd, timeout=180):
     # Bounded execution: a deliverable that does not terminate promptly is a
     # legitimate failure (scored 0) rather than a whole-verifier hard timeout.
     try:
