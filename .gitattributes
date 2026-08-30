@@ -1,12 +1,9 @@
-# POSIX scripts must not carry a CR in the shebang.
-*.sh text eol=lf
-*.mjs text eol=lf
-install.sh text eol=lf
-install.ps1 text eol=lf
-lib/wrappers/*.sh text eol=lf
-bin/pi-setup-doctor text eol=lf
-bin/pi-setup-vendor text eol=lf
-bin/pi-setup-keyprobe text eol=lf
+# LF everywhere by default: bin/pi-setup-vendor --verify must reproduce
+# forks/ byte for byte from patches/, which record LF content. On machines
+# with core.autocrlf=true, per-file LF lists miss new paths and the
+# verification gate breaks.
+* text=auto eol=lf
 
 # cmd.exe shims
 *.cmd text eol=crlf
+*.bat text eol=crlf
