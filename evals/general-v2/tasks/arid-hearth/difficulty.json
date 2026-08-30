@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 0,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 40,
+  "documented_probe": null,
+  "notes": "Medium. The core difficulty is the multi-stage open-but-confirm flow (subscribe -> pending -> confirm-token -> active, with unsubscribe), the automation wrapper contract that must expose a token back to callers, and generalization to 4 different hidden join/confirm/leave scenarios that are checked behaviorally."
+}

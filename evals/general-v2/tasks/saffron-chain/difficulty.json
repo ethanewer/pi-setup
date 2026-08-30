@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 0,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 40,
+  "documented_probe": null,
+  "notes": "Implement a real bounded random-walk Metropolis sampler for a truncated normal and generalize to fresh configs (different support/center/scale/n/seed). Difficulty comes from the statistical-correctness requirements: hidden cases probe support enforcement, heavy truncation (moments far off center/scale require truncated-normal math, not naive untruncated samples), exact retained count after burn-in, and fixed-seed reproducibility. A plausible-looking but wrong sampler (uniform draws, ignoring truncation, or leaking burn-in) fails the moment/count checks, so quantitative_correctness, hidden_case_generalization and adversarial_inputs carry the score. Single self-contained stdlib file; no external deps."
+}

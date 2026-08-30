@@ -1,0 +1,31 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "medium"
+category = "security"
+verifier_kind = "executes-deliverable"
+deliverables = [
+  "/app/secure_erase.sh",
+  "/app/erased_ok.txt",
+  "/app/capability_notes.md",
+  "/app/results.txt",
+]
+tags = [
+  "zephyr-notch",
+  "security",
+  "C-51021b37",
+  "C-162982d2",
+  "C-a708220b",
+]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 1200.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096

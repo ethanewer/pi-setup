@@ -8,7 +8,8 @@ The repository contains protections for new streams, historical sessions, and de
 |---|---|
 | New provider streams | The version-specific patch concatenates adjacent reasoning text and summary deltas. |
 | Historical Pi sessions | The patch normalizes adjacent stored deltas before replay. It does not rewrite session JSONL. |
-| Installed package | `install.sh`, `bin/verify-pi-ai-reasoning-fix`, and `bin/pi-setup-doctor` check the fix. |
+| Installed package (bun/library path) | `install.sh`, `bin/verify-pi-ai-reasoning-fix`, and `bin/pi-setup-doctor` check the fix. |
+| Installed package (npm bundle path) | `bin/patch-pi-bundle` patches `dist/bundle/chunks/openai-completions-*.js`, the code the npm entrypoint actually loads; the installer runs it and `bin/pi-setup-doctor` checks it. |
 | Hugging Face trace cache | `bin/convert-pi-traces` removes affected suffixes and writes a decision manifest. |
 | Regression tests | `tests/reasoning-details-patch.test.ts` and `tests/trace-sanitization.test.ts` cover replay and export behavior. |
 
@@ -138,6 +139,41 @@ Opaque `reasoning.encrypted` entries remain separate and preserve order. The nor
 
 `install.sh` applies the patch only to the pinned Pi version. Installation then runs `bin/verify-pi-ai-reasoning-fix` against a local OpenAI-compatible server. The verifier checks the outgoing historical replay payload and the signature generated from a new streamed response. `bin/pi-setup-doctor` reports a missing installed fix.
 
+### Bundle entrypoint gap (found 2026-08-26)
+
+The library patch above does not cover pi's npm entrypoint. `pi-coding-agent`'s
+`bin` is `dist/bundle/cli.js`, which loads pi-ai from
+`dist/bundle/chunks/openai-completions-*.js` — a bundled copy — instead of
+`node_modules/@earendil-works/pi-ai`. Any pi installed through npm (every
+harbor benchmark container, runs 1–3 and the first run-4 attempt) therefore
+ran the unpatched code even when the node_modules copy carried the fix.
+`bin/verify-pi-ai-reasoning-fix` did not catch this because it imports the
+library file directly. The host `pi` wrapper was unaffected: it runs
+`dist/bun/cli.js`, which resolves pi-ai from the hoisted, patched
+`node_modules` copy.
+
+[`bin/patch-pi-bundle`](../../bin/patch-pi-bundle) applies the fix to the
+bundle chunk by exact, version-guarded, idempotent string replacement. The
+installer (`lib/install.mjs`, reached through `install.sh` or `install.ps1`)
+runs it after the library patch, and `bin/pi-setup-doctor` reports the bundle
+state separately. Benchmark base images
+(`evals/general/benchmark/bases/`) bake pinned pi 0.84.3 with both fixes using
+their own vendored copies of the 0.84.3-era patcher, and `PAgent.install()`
+verifies the bundle fix before every rollout, refusing to run on unpatched
+code. Runtime proof: the same golden-example trial stored its first-turn
+signature as five fragmented deltas before the bundle fix and as one merged
+entry after it; run-4 (522 transcripts, 1,745 signatures) showed zero
+fragmented signatures.
+
+The patcher tracks the pin in `lib/versions.json`. Under pi 0.84.3 the bundle
+chunk shipped neither behavior, so the replacement injected the merge helpers
+and rerouted both the stream push and the parse path. Under pi 0.84.4 the
+chunk already carries upstream's stream-side `appendOpenAIReasoningDetail`,
+so the replacement only adds `normalizeOpenAIReasoningDetails` and routes
+`parseOpenAIReasoningDetails` through it; it deliberately does not re-declare
+the upstream helpers (a later duplicate function declaration would silently
+override upstream's), and it refuses to run if the upstream helper is missing.
+
 ## Upgrade checklist
 
 Use this checklist whenever the Pi pin changes:
@@ -148,9 +184,10 @@ Use this checklist whenever the Pi pin changes:
 4. Confirm that historical fragmented signatures are normalized before replay.
 5. Confirm that encrypted or unknown detail types remain opaque and ordered.
 6. Run `tests/reasoning-details-patch.test.ts` and `bin/verify-pi-ai-reasoning-fix` against the candidate installation.
-7. Run `bin/convert-pi-traces --dry-run` and inspect every new sanitation decision.
-8. Remove or rebase the version-specific patch only after all checks pass.
-9. Update this incident document, `vendor.json`, and the installer in the same commit.
+7. Confirm `bin/patch-pi-bundle` applies cleanly to the new bundle chunk, or re-target it; re-check `bin/pi-setup-doctor`'s bundle line.
+8. Run `bin/convert-pi-traces --dry-run` and inspect every new sanitation decision.
+9. Remove or rebase the version-specific patches only after all checks pass.
+10. Update this incident document, `vendor.json`, and the installer in the same commit.
 
 A release note or the presence of upstream commit `c5ad7c1b` proves only the new-stream half of the fix. Historical replay normalization needs a separate check.
 

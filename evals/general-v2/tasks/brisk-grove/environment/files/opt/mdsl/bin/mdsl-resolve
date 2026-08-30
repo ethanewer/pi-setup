@@ -1,0 +1,147 @@
+#!/usr/bin/env python3
+"""
+mdsl-resolve - resolve a NAMED launcher from an MDS launcher config file.
+
+The MDS job launcher framework is a tiny stand-in so no heavy install is
+needed. An MDS launcher config (/app/launcher.yaml) lists named launchers.
+Each launcher is the program that submits a job. The operator selects one by
+name; the config must NOT alter the job (submission template) fields.
+
+The config format used here (a small accepted dialect):
+
+    selection: <name>
+    launchers:
+      <name>:
+        _target: <fully.qualified.Class>
+        partition: <str>
+        account: <str>
+        cpus_per_task: <int>
+        extra: <str>               # optional
+    job:                            # the submission fields, must stay intact
+      name: <str>
+      nodes: <int>
+
+Invocation:
+
+    mdsl-resolve /app/launcher.yaml [name]
+
+With no name it uses the `selection` field. It prints the resolved target and
+the non-job parameters as `key=value` pairs (sorted), one block after:
+
+    TARGET <package.Class>
+    partition=<...>
+    account=<...>
+    cpus_per_task=<...>
+    JOB_OK line plus the submitted job's declared fields.
+
+Exit 0 on success, non-zero otherwise.
+"""
+import re
+import sys
+
+
+def _norm(v):
+    if not isinstance(v, str):
+        return v
+    if re.fullmatch(r"-?\d+", v):
+        return int(v)
+    if re.fullmatch(r"-?\d+\.\d+", v):
+        return float(v)
+    return v.strip("'\"")
+
+
+def parse(path):
+    """Return (dict of launcher blocks keyed by name, job dict, selection)."""
+    with open(path) as fh:
+        text = fh.read()
+    lines = text.splitlines()
+    launchers = {}
+    job = {}
+    selection = None
+    cur = None  # 'launcher'|'job'
+    cur_name = None
+    depth = {}
+
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            i += 1
+            continue
+        indent = len(line) - len(line.lstrip())
+        m = re.match(r"^(\w[\w\-]*)\s*:\s*(.*)$", stripped)
+        if m:
+            key, val = m.group(1), m.group(2).strip()
+            if key == "selection" and val:
+                selection = val.strip("'\"")
+                i += 1
+                continue
+            if key == "launchers":
+                cur = "launcher"
+                cur_name = None
+                i += 1
+                continue
+            if key == "job":
+                cur = "job"
+                i += 1
+                continue
+            if cur == "launcher" and indent == 2 and not val:
+                cur_name = key
+                launchers.setdefault(cur_name, {})
+                i += 1
+                continue
+            if cur == "launcher" and cur_name and indent == 4:
+                k2, v2 = key, val
+                if v2.startswith("[") and v2.endswith("]"):
+                    v2 = v2[1:-1].strip().split(",")
+                    v2 = [x.strip().strip("'\\\"") for x in v2]
+                else:
+                    v2 = _norm(v2)
+                launchers[cur_name][k2] = v2
+                i += 1
+                continue
+            if cur == "job":
+                k2, v2 = key, val
+                job[k2] = _norm(v2)
+                i += 1
+                continue
+        i += 1
+    return launchers, job, selection
+
+
+def main():
+    args = sys.argv[1:]
+    if not args:
+        print("usage: mdsl-resolve <launcher.yaml> [name]", file=sys.stderr)
+        return 2
+    path = args[0]
+    try:
+        launchers, job, selection = parse(path)
+    except Exception as exc:
+        print("resolve: unparseable config: %r" % exc, file=sys.stderr)
+        return 1
+
+    name = args[1].strip() if len(args) > 1 else (selection or "")
+    if not name:
+        print("resolve: no launcher name selected", file=sys.stderr)
+        return 1
+    if name not in launchers:
+        print("resolve: unknown launcher name '%s'" % name, file=sys.stderr)
+        return 1
+    entry = launchers[name]
+    target = entry.get("_target")
+    if not target:
+        print("resolve: launcher '%s' has no _target" % name, file=sys.stderr)
+        return 1
+    nonjob = {k: v for k, v in entry.items() if k != "_target"}
+    print("TARGET %s" % target)
+    for k in sorted(nonjob):
+        print("%s=%s" % (k, nonjob[k]))
+    print("JOB_NAME=%s" % job.get("name", ""))
+    print("JOB_NODES=%s" % job.get("nodes", ""))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

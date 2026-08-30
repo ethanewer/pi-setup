@@ -1,0 +1,1 @@
+# zsh-autosuggestions plugin for zsh.

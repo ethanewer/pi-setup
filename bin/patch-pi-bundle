@@ -1,0 +1,114 @@
+#!/usr/bin/env bun
+/**
+ * Patch the bundled pi-ai inside @earendil-works/pi-coding-agent dist/bundle.
+ *
+ * The npm entrypoint of pi (`bin = dist/bundle/cli.js`) loads pi-ai from
+ * `dist/bundle/chunks/openai-completions-*.js`, NOT from node_modules. The
+ * repo's node_modules patch (patches/pi-ai@<ver>-reasoning-details.patch)
+ * therefore has no effect on any pi invoked through the bundle — e.g. every
+ * harbor container install. This script applies the same historical-replay
+ * normalization to the bundle chunk by exact string replacement.
+ *
+ * pi-ai 0.84.4 already ships upstream's stream-side concatenation
+ * (appendOpenAIReasoningDetail) in both the library and the bundle, so the
+ * only missing behavior is routing parseOpenAIReasoningDetails through a
+ * normalizer. The replacement deliberately does NOT re-declare the upstream
+ * helpers: a later duplicate function declaration would silently override
+ * upstream's.
+ *
+ * Version-guarded to the pi-coding-agent pin in lib/versions.json.
+ * Idempotent. Fails loudly.
+ *
+ * Usage: patch-pi-bundle <pi-coding-agent-root>
+ */
+import { readFileSync, writeFileSync, readdirSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const SRC_DIR = dirname(dirname(fileURLToPath(import.meta.url)));
+const PINNED_VERSION = JSON.parse(
+  readFileSync(join(SRC_DIR, "lib", "versions.json"), "utf8"),
+).pi;
+
+const PARSE_OLD =
+  "function parseOpenAIReasoningDetails(signature){if(signature)try{" +
+  "let parsed=JSON.parse(signature);return Array.isArray(parsed)&&" +
+  "parsed.length>0&&parsed.every(isOpenAIReasoningDetail)?parsed:void 0}" +
+  "catch{return}}";
+const PARSE_NEW =
+  "function normalizeOpenAIReasoningDetails(details){" +
+  "let normalized=[];for(let detail of details)" +
+  "appendOpenAIReasoningDetail(normalized,detail);return normalized}" +
+  "function parseOpenAIReasoningDetails(signature){if(signature)try{" +
+  "let parsed=JSON.parse(signature);return Array.isArray(parsed)&&" +
+  "parsed.length>0&&parsed.every(isOpenAIReasoningDetail)?" +
+  "normalizeOpenAIReasoningDetails(parsed):void 0}catch{return}}";
+const MARKER = "normalizeOpenAIReasoningDetails";
+// Present only when upstream's stream-side concatenation is already in the
+// chunk; the normalizer routes through it, so it must exist.
+const UPSTREAM_HELPER = "function appendOpenAIReasoningDetail(details,detail){";
+
+function fail(msg) {
+  console.error(`patch-pi-bundle: ${msg}`);
+  process.exit(1);
+}
+
+function main() {
+  if (process.argv.length !== 3) {
+    fail("usage: patch-pi-bundle <pi-coding-agent-root>");
+  }
+  const root = process.argv[2].replace(/\/+$/, "");
+
+  let version;
+  try {
+    version = JSON.parse(readFileSync(`${root}/package.json`, "utf8")).version;
+  } catch (exc) {
+    fail(`cannot read ${root}/package.json: ${exc}`);
+  }
+  if (version !== PINNED_VERSION) {
+    fail(
+      `refusing to patch pi-coding-agent ${version}; ` +
+        `this patcher is version-guarded to ${PINNED_VERSION}.`,
+    );
+  }
+
+  const chunks = readdirSync(`${root}/dist/bundle/chunks`).filter(
+    (f) => f.startsWith("openai-completions-") && f.endsWith(".js"),
+  );
+  if (chunks.length !== 1) {
+    fail(`expected exactly one bundle chunk, found: ${chunks}`);
+  }
+  const chunk = `${root}/dist/bundle/chunks/${chunks[0]}`;
+
+  const src = readFileSync(chunk, "utf8");
+  if (src.includes(MARKER) && !src.includes(PARSE_OLD)) {
+    console.log(`patch-pi-bundle: already patched (${chunk})`);
+    return;
+  }
+
+  if (!src.includes(UPSTREAM_HELPER)) {
+    fail(
+      `upstream appendOpenAIReasoningDetail not found in ${chunk}; ` +
+        "this patcher expects the stream-side fix to ship upstream.",
+    );
+  }
+  const occurrences = src.split(PARSE_OLD).length - 1;
+  if (occurrences !== 1) {
+    fail(
+      `parseOpenAIReasoningDetails anchor found ${occurrences} times in ${chunk}, expected exactly once`,
+    );
+  }
+
+  writeFileSync(chunk, src.replace(PARSE_OLD, PARSE_NEW), "utf8");
+
+  const check = readFileSync(chunk, "utf8");
+  if (
+    !check.includes(MARKER) ||
+    !check.includes("normalizeOpenAIReasoningDetails(parsed)")
+  ) {
+    fail("post-patch verification failed");
+  }
+  console.log(`patch-pi-bundle: patched ${chunk}`);
+}
+
+main();

@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 2,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 2,
+    "resource_pressure": 1,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": null,
+  "notes": "A five-component native C/C++ stack: (1) a plain-C JSON weight parser plus exact integer transformer forward pass doing arg-max autoregressive decoding and continue feeding output back (reasoning_depth=3; any transposition/off-by-one changes the continuation), (2) a C++11-strict constexpr template port of a post-C++11 header (debugging_ambiguity=2 - subtle relaxed-constexpr constructs), (3) a Makefile with serial + OpenMP (pgen) targets verified to actually thread and match checksums, (4) a CMake build that emits per-TU LLVM IR and links unified.bc exposing all symbols, and (5) a ctypes binding with a deliberately mismatched buffer length. dependent_stages=3: parse JSON -> build in-memory tensors -> forward pass -> argmax decode, plus the cmake/llvm-link pipeline. adversarial_inputs=2 and hidden_case_generalization=3: hidden weights with different dims/prompts/gen-length plus malformed JSON, ragged matrices, missing keys, out-of-range tokens, negative length, and hidden (N,x) C++11 cases must all behave exactly. quantitative_correctness=2: token sequences and constexpr sums are byte/int exact, sim checksums must match serial vs OMP. resource_pressure=1: OpenMP thread count plus a wide run-time speed band (single-core tolerant). Hard bucket (total 18)."
+}

@@ -1,0 +1,22 @@
+{
+  "visible": {
+    "reference": "/app/data/reference.txt",
+    "reference_bytes": 49524,
+    "reference_sha256": "e40ad7451555f6760d0ac6867737baad8e9f169cf0979bdacce4f21270ea252e",
+    "decoder": "/app/unpack",
+    "encoder": "/app/pack",
+    "compiler": "/app/cc/bin/cc",
+    "verify_line_prefix": "ROUNDTRIP_OK",
+    "probe": "/app/probe.o"
+  },
+  "standards": {
+    "compiler_obj_flag": "-c",
+    "probe_flag": "-std=c++11"
+  },
+  "hidden": [
+    "/tests/hidden/blot_bin.bin",
+    "/tests/hidden/blot_runs.bin",
+    "/tests/hidden/blot_text.bin",
+    "/tests/hidden/blot_edge.bin"
+  ]
+}

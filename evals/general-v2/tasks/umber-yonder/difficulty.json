@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 2,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 3,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 1
+  },
+  "expected_expert_time_min": 75,
+  "documented_probe": null,
+  "notes": "Hard 19/30. Multi-stage git forensics: automate a password-SSH clone, then design a reusable scrubber that recovers a committed-then-deleted credential, rewrites all reachable history (trees, blobs, commit messages) with typed placeholders while leaving every unrelated file byte-identical, and prunes dangling objects so a byte-level scan of the object store finds no trace. Hidden fixtures place secrets in working files, commit messages, and dangling-only objects, include case variants and a benign lookalike, and a malformed non-repository input. Requires the scrubber to generalize (hidden_case_generalization=3) and exact byte/placeholder correctness (quantitative_correctness=3). Difficulty is at/above the max competency floor (hard, C-a9d4f82b / C-162592ad)."
+}

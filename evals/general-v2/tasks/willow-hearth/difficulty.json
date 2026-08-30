@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 3,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 3,
+    "resource_pressure": 1,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 90,
+  "documented_probe": null,
+  "notes": "Hard. One C program /app/decode.c must implement the 'vigil' 16-bit 4-round SPN from the documented spec, mount linear-cryptanalysis bias statistics and exact verification over the compact 16-bit seed space to recover the round subkey from known plaintext/ciphertext pairs, expose it via uint32_t recover_round_key(const char*) (the required calling convention), and decrypt a block ciphertext; plus crack an encrypted zip's dictionary password, build a combined key+cert PEM, and write creds.txt. The verifier compiles decode.c and re-runs it on 4 hidden scenarios (different keys/pair counts/targets) checking recovered 32-bit key and plaintext, plus the visible key/record, the PEM parse/matching-key, and the passphrase that unlocks the archive. Hard: reasoning_depth (reverse-engineering the cipher and implementing the attack in C), dependent_stages (crack->decode->decrypt->creds->PEM pipeline), hidden_case_generalization (4 re-runs), quantitative_correctness (exact key/record), ad subtle adversarial_inputs (all-caps hex, large keys). No system services or dangerous actions."
+}

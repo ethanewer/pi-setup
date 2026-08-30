@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 2,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 3,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 50,
+  "documented_probe": null,
+  "notes": "One /app/clean.py pipeline must satisfy eight coordinated sub-tasks (boolean-column-detected grouped aggregation, a fixed-shape period/severity/count table, a nested dept->emp->project graph ordered by key with de-duplication, a category/product-id groupable table, entity filtering resolved across a closed alias/canonical lookup set including direct-owner and owner-name variants, top-5 URL frequency ranking with count ties, an hourly series filled by linear interpolation with leading/trailing boundary fallback, and per-paper two-field JSON Lines records). Hidden cases (a/b/c) exercise genuinely different data: a boolean column whose vocabulary is broken so boolean-column detection must drop it, duplicate/empty/malformed values, a target entity resolved only through an alias variant, single-point and fully-empty series giving boundary fallback and empty-span handling, empty filtered/paper sets, and whitespace/case noise. The verifier recomputes every artifact from scratch with its own reference and requires a full match, so an agent that memorizes the visible outputs fails all hidden runs. Difficulty is hard because the max competency floor across the spec's three competencies is hard (claimed C-f4c1e942 closed-set entity filter carries a hard floor; dropped C-d3c284ae was also hard), forcing the task above the nominal medium target; total rubric 18 (hard bucket 18-30) with reasoning_depth=3, dependent_stages=3, hidden_case_generalization=3, quantitative_correctness=3."
+}

@@ -1,0 +1,20 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "hard"
+category = "data_processing"
+verifier_kind = "executes-deliverable"
+deliverables = ["/app/ingest.py", "/app/media/manifest.json", "/app/transcript-raw.txt", "/app/transcript.txt", "/app/stack.py", "/app/stack-shape.txt", "/app/peaks.py", "/app/peaks.csv", "/app/animation.py", "/app/animation.json"]
+tags = ["raven-orchid", "data_processing", "url-hash-media-download", "transcript-text-normalization", "frequency-bin-peak-ranking", "image-stack-concatenation", "animation-timeline-keyframes"]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 1800.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096

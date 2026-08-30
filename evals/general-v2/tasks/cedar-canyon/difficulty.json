@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 3,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 3,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 3,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": null,
+  "notes": "Hard. The agent ships a native C/C++ math stack (/app/math) plus a reproducible driver /app/solve.py. Work is strictly staged and chained: author sources + Makefile + CMake -> build with make/cmake/clang -> drive the sim (measures work), maximal-square DP, natC ctypes binding -> report answer.json (dependent_stages=3). It must combine a multi-target make build, an OpenMP variant, a CMake target that emits per-translation-unit .ll, ctypes, and a plain python DP (tool_breadth=3). The native binding has an unpatched length/alias mismatch whose signature is all-zero outputs; diagnosing and patching it is genuinely ambiguous from the behaviour alone (debugging_ambiguity=3). Correctness is exact: OT streaming prefix equality, DP area equality, a real serial-vs-openmp speedup in a tight band, exact serial==openmp position checksums (quantitative=3). solve.py re-runs over fresh/malformed hidden fixtures (hidden_case_generalization=2), including empty/single-row grids and degenerate value lists (adversarial=2). Two hard-gated competencies (O(n) serial+OpenMP sim, binding patch) and the speed-report competency drive the difficulty."
+}

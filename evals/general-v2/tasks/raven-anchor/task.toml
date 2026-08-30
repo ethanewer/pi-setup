@@ -1,0 +1,37 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "hard"
+category = "data_processing"
+verifier_kind = "executes-deliverable"
+deliverables = [
+  "/app/clean.py",
+  "/app/aggregated.csv",
+  "/app/summary.csv",
+  "/app/result.json",
+  "/app/projects_grouped.csv",
+  "/app/filtered.csv",
+  "/app/top.tsv",
+  "/app/series_filled.csv",
+  "/app/papers.jsonl",
+]
+tags = [
+  "raven-anchor",
+  "data_processing",
+  "boolean-aware-aggregation",
+  "closed-set-entity-filter",
+  "interpolation-boundary-fallback",
+  "fixed-shape-csv",
+]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 1800.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096

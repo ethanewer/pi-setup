@@ -1,0 +1,20 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "medium"
+category = "system_administration"
+verifier_kind = "executes-deliverable"
+deliverables = ["/app/jupyter_server_config.py", "/app/ipv4_octet.awk"]
+tags = ["willow-bridge", "system_administration", "C-9feab250", "C-5c7fbe9f"]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 900.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096

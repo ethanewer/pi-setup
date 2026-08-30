@@ -7,6 +7,11 @@ A benchmark of **general coding-agent ability**, built on
 Verified as of 2026-08-25 02:00 CDT (post machine restart; all numbers below
 were re-checked against the job directories on disk).
 
+**2026-08-26 update:** runs 1–3 below were contaminated by the
+`pi-ai 0.84.3` reasoning-newline regression (see "Run-4" section) and are
+superseded by `pi-run-4-postfix` as the pi benchmark of record. A terminus-2
+harness run (`terminus2-deepseek-run-1`) is in progress.
+
 ## Goal
 
 Measure how well a general coding agent (the local `p` pi setup, running
@@ -230,6 +235,139 @@ skill-port-forwarding 1, item-054-main 1.0000.
   (degenerate model). skill-node-js-qemu-like-vm fails again (genuine).
 - Stability: run-2 489 pass / 0.9494 vs run-3 488 pass / 0.9411 →
   post-fix result reproduces; run-3 is the benchmark of record.
+
+
+## Run-4 (2026-08-26) — clean pi run, benchmark of record
+
+Runs 1–3 ran pi through harbor's npm install (`@earendil-works/pi-coding-agent@latest`),
+whose entrypoint `dist/bundle/cli.js` loads pi-ai from a **bundled chunk**
+(`dist/bundle/chunks/openai-completions-*.js`) — not the node_modules copy the
+repo's reasoning-details patch targeted. All three runs therefore carried the
+fragmented-`reasoning_details` storage bug: 98.7–99.8% of thinking signatures
+were stored fragmented, and reasoning text grew token-fragment newlines as
+turns replayed contaminated signatures (1–2 signals/1k chars on first blocks,
+climbing to 38–67/1k by turn 5+; failures were far more contaminated than
+passes). Full analysis: `docs/incidents/PI-AI-0.84.3-REASONING-DETAILS.md`
+("Bundle entrypoint gap").
+
+The first run-4 attempt (148/524 trials) was stopped when its transcripts
+showed the same fragmentation; its job dir was deleted.
+
+Fixes (all committed):
+- `bin/patch-pi-bundle` applies the stream-concatenation + replay-normalization
+  fix to the bundle chunk (exact-string, version-guarded to 0.84.3, idempotent);
+  `install.sh` runs it and `bin/pi-setup-doctor` checks both library and bundle.
+- `bases/` bake pinned `pi-coding-agent@0.84.3` with nvm/node-22, the library
+  patch, the bundle patch, and tmux into all three `bench-base:*` images.
+- `agents/p_agent.py` overrides `install()`: verifies the baked pi (version +
+  bundle marker + absence of the bug pattern; probe always exits 0 via marker),
+  never touches npm on bench-base images, and for the two texlive tasks runs a
+  pinned in-container install + `bin/patch-pi-bundle` fallback. It refuses to
+  run rollouts on unpatched code.
+
+Runtime proof before the clean run: golden-example's first-turn signature went
+from five fragmented deltas (unpatched) to one merged entry (patched).
+
+`pi-run-4-postfix` (same agent/model, -n 24, k=1):
+
+- **523/524 scored: 491 pass (93.9% of scored), 14 partial, 18 zero,
+  mean reward 0.9549.** Overall 491/524.
+- item-043-hard: AgentTimeout at its 7200s budget, unscored (counted zero;
+  same outcome in run-3).
+- Exceptions: 6 AgentTimeoutError + 7 NonZeroAgentExitCodeError (run-3 had
+  11 timeouts + 2 exit errors).
+- Cleanliness: 522 transcripts, 1,745 thinking signatures, **0 fragmented**;
+  symptom density flat at 0.42/1k across all turn positions.
+- The two texlive tasks (`item-052-main`, `skill-pdflatex`) failed agent setup
+  in the main job due to p_agent fallback bugs (fixed across three commits:
+  probe raising on non-zero exit, `set -e` probe abort, double-appended marker,
+  wrong patcher path) and were re-run as single-trial make-up jobs
+  `run4-texlive-*`: both 1.0, clean signatures. Their results are included in
+  the run-4 numbers above.
+- Task-level vs run-3: 15 improvements (mostly former zeros/timeouts now
+  passing, incl. item-001/005/036-main, item-064-hard,
+  skill-node-js-qemu-like-vm) vs 12 regressions (stochastic variance,
+  incl. item-032-main timeout). Passes 488→491, zeros 25→18 (+1 unscored),
+  partials 9→14, mean 0.9411→0.9549.
+
+## Terminus-2 run (2026-08-26) — FINAL
+
+Same 524 tasks and model, harness = harbor's built-in `terminus-2` (tmux +
+LiteLLM, TerminalBench's default agent). LitellM does not know the model, so
+the invocation passes `--ak model_info={max_input_tokens:1310720,...}`.
+LiteLLM is a separate stack from pi-ai, so this run is structurally free of
+the reasoning regression. golden-example smoke passed (1.0) before launch.
+Job: `terminus2-deepseek-run-1`, -n 24, k=1, wall ~4h40m.
+
+- **Initial: 520/524 scored: 379 pass (72.9% of scored), 10 partial,
+  131 zero, mean reward 0.7354.**
+- Exceptions: 164 AgentTimeoutError + 2 RuntimeError (skill-rstan-2-32-7,
+  skill-ocaml-runtime: terminus-2's per-trial asciinema install hung on a
+  dropped network connection and aborted the trial).
+- **Infra re-run (`t2-rerun-infra`):** audit split the timeouts into genuine
+  pace/context failures and 19 silent stalls (<=3 agent steps, <15k tokens,
+  then no activity until the budget expired = hung LLM connections). The 21
+  infra-failed trials were re-run on bases with asciinema baked in: 17
+  recovered (16x 1.0, item-035-main 0.8); 4 failed again, now genuinely
+  (item-021-hard zero, item-045-hard / item-050-hard / skill-branch-reset-
+  merge timeouts with real work).
+- **UPDATED record: 522/524 scored: 395 pass (75.7% of scored), 11 partial,
+  116 zero, mean reward 0.7648.** Unscored: item-019-main (verifier prints
+  'recovered db missing' instead of 0 when the artifact is absent) and
+  item-054-hard (verifier capture edge); both pass under pi.
+- Pass-rate by tier: skill probes pi 98% vs terminus-2 90%; item-main 84%
+  vs 33%; item-hard 78% vs 19%. The gap concentrates in multi-skill items.
+- Overlap: 374 tasks pass under both harnesses; 113 pass only under pi;
+  5 pass only under terminus-2.
+
+### Harness comparison (deepseek-v4-flash-0731, k=1)
+
+| harness | pass | partial | zero | unscored | mean (scored) |
+|---|---|---|---|---|---|
+| pi lean profile (`p_agent`, patched 0.84.3) — run-4 | 491/524 | 14 | 18 | 1 | 0.9549 |
+| terminus-2 (harbor built-in) — post infra re-run | 395/524 | 11 | 116 | 2 | 0.7648 |
+
+## Pi tool-setup variants (2026-08-26) — FINAL
+
+Two additional pi runs with a simplified system prompt ("You are an expert
+coding assistant operating inside a coding agent harness. You help users by
+reading files, executing commands, editing code, and writing new files.
+Current working directory: <cwd>", `<cwd>` resolved to the container's pwd)
+and restricted tool sets via `--system-prompt` / `--tools`
+(`agents/p_variant.py`):
+
+| variant | pass | partial | zero | unscored | mean (scored) | timeouts |
+|---|---|---|---|---|---|---|
+| `pi-bashonly-run-1` (bash only) | 456/524 | 12 | 56 | 0 | 0.8818 | 40 |
+| `pi-bashedit-run-1` (bash + edit) | 442/524 | 9 | 71 | 2 | 0.8563 | 68 |
+
+Unscored in bash-edit: item-043-main (no reward written) and item-054-hard
+(same reward-capture edge seen under terminus-2).
+
+Observations:
+- Pass-rate by tier: item-main 84%→80%→80%, item-hard 78%→77%→79%,
+  skill 98%→90%→86% (run-4 → bashonly → bashedit). The losses concentrate
+  in the 600s skill probes: restricted tools raise step counts and trip
+  short budgets (timeouts 6→40→68 vs run-4), while multi-step item tasks
+  are essentially unaffected.
+- Adding `edit` on top of bash did not help (net −14 pass, +28 timeouts;
+  33 tasks improved vs 46 regressed — with no `read` tool, exact-match
+  edits are often made against stale/blind context and burn turns on
+  mismatches). k=1 variance accounts for part of the symmetric churn.
+- Tool compliance held: bashonly made 17,358 tool calls, all bash;
+  bashedit made 11,079 bash + 1,114 edit plus 5 hallucinated disallowed-tool
+  calls (bogus names/DSML text) that never executed.
+- Reasoning-newline regression: absent in both runs (0 fragmented of 13,781
+  and 13,408 signatures; densities 0.30/1k and 0.34/1k).
+
+### Full comparison (deepseek-v4-flash-0731, k=1)
+
+| configuration | pass | mean (scored) |
+|---|---|---|
+| pi lean profile, full prompt + read/bash/edit/write | 491/524 (93.7%) | 0.9549 |
+| pi simplified prompt + bash only | 456/524 (87.0%) | 0.8818 |
+| pi simplified prompt + bash + edit | 442/524 (84.7%) | 0.8563 |
+| terminus-2 (default TerminalBench harness) | 395/524 (75.7%) | 0.7648 |
 
 
 ## Ops notes (learned the hard way)

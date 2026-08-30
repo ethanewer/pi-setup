@@ -524,6 +524,19 @@ else
   fixable install
 fi
 
+# The npm entrypoint (dist/bundle/cli.js) loads pi-ai from the bundle chunk,
+# not node_modules; it needs the same fix applied via bin/patch-pi-bundle.
+PI_BUNDLE_CHUNK="$(ls "$BUN_GLOBAL/@earendil-works/pi-coding-agent/dist/bundle/chunks/"openai-completions-*.js 2>/dev/null | head -n 1)"
+if [[ -n "$PI_BUNDLE_CHUNK" ]]; then
+  if grep -q 'normalizeOpenAIReasoningDetails' "$PI_BUNDLE_CHUNK" \
+    && ! grep -q 'preservedDetails.push(detail)' "$PI_BUNDLE_CHUNK"; then
+    ok "Pi bundle entrypoint carries the reasoning-details fix"
+  else
+    bad "Pi dist/bundle entrypoint is missing the reasoning-details fix (run ./install.sh)"
+    fixable install
+  fi
+fi
+
 say ""
 say "Compaction settings"
 COMPACTION_REPORT="$("$JS" -e '

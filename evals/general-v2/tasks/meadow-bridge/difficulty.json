@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 3,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 1
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": null,
+  "notes": "Six-stage pipeline across tar/iso/acl/pbkdf2/path semantics with adversarial prefix decoys and source-immutability checks; unsafe mutation of the source archive fails verification."
+}

@@ -1,0 +1,20 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "hard"
+category = "programming"
+verifier_kind = "executes-deliverable"
+deliverables = ["/app/link.py", "/app/all.bc", "/app/elf.py", "/app/sym.py", "/app/solver.py"]
+tags = ["elm-yonder", "programming", "C-0c70052d", "C-5c5377bf", "C-6c1e4526", "C-85b852db", "C-992ec77f", "C-cb07fa86", "C-e1e3902d"]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 1800.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096

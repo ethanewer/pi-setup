@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 1,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 3,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 3,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": null,
+  "notes": "Hand-built computation-engine task rated hard (rubric total 19). (a) /app/eval.py is a Scheme-like evaluator that MUST read the first stdin line as the path to an M program and relay later stdin to that program, while its prints go to stdout; the hidden verifier feeds meta-programs (a self-interpreter written in M) and a stdin-reading program, and demands the exact printed value of a subject expression through one extra interpreter level (self-interpretation). A loop-only or feature-thin evaluator cannot run the meta kernel (needs lists, quote, closures, apply, recursion) and fails. (b) /app/moves.fen.rules is an ordered list of [pattern,replacement] regex-rewrite pairs that apply to a starting FEN to enumerate legal next knight positions, one per output line, without a runtime move loop; hidden FENs include corners, edges and a knight-less board (empty output). (c) /app/gate_net.txt is a combinational logic-gate network computing fib(floor(sqrt(n))) for 7-bit n, verified against a reference simulator on squares/neighbours/edges; /app/simulate.py must evaluate it. reasoning_depth=3: the metacircular evaluator, the regex rewrite pipeline, combinational SOP synthesis. debugging_ambiguity=2: exact-line outputs, FEN set parity, stray-bit off-by-ones. adversarial_inputs=3: hidden subjects differ per meta program, hidden FEN/cell spread includes edges and a knight-less board, hidden n values are squares+neighbors+edges. hidden_case_generalization=3: every deliverable is re-run on hidden inputs. dependent_stages=3: gate network computed from the sqrt→fib mapping and simulate.py must agree with the reference; the evaluator must host a self-interpreter and relay stdin. No competency is faked."
+}

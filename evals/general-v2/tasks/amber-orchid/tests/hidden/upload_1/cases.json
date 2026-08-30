@@ -1,0 +1,13 @@
+[
+  {"name": "../escape.txt", "data": "aGVsbG8=", "tokens": 5, "expect": 400},
+  {"name": "../../etc/passwd", "data": "aGVsbG8=", "tokens": 5, "expect": 400},
+  {"name": "a/b", "data": "aGVsbG8=", "tokens": 5, "expect": 400},
+  {"name": "C:/Windows/tmp/x", "data": "aGVsbG8=", "tokens": 5, "expect": 400},
+  {"name": "\\win\\x", "data": "aGVsbG8=", "tokens": 5, "expect": 400},
+  {"name": "..hidden", "data": "aGVsbG8=", "tokens": 1, "expect": 400},
+  {"name": "   ", "data": "aGVsbG8=", "tokens": 0, "expect": 400},
+  {"name": "ok", "data": "not-base64!!!", "tokens": 0, "expect": 400},
+  {"name": "ok.txt", "data": "aGVsbG8=", "tokens": -1, "expect": 400},
+  {"name": "ok.txt", "data": "aGVsbG8=", "tokens": 3, "expect": 201},
+  {"name": "report.json", "data": "eyJhIjoxfQ==", "tokens": 0, "expect": 201}
+]

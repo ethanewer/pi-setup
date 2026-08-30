@@ -1,0 +1,29 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "medium"
+category = "web"
+verifier_kind = "executes-deliverable"
+deliverables = [
+  "/app/solve.py",
+  "/app/answer.json",
+]
+tags = [
+  "drift-dial",
+  "web",
+  "C-c871ba62",
+  "C-02cd42ad",
+  "C-9c7a5d75",
+]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 1200.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096

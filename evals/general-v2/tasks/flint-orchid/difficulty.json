@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 3,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 3,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 3,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 50,
+  "documented_probe": null,
+  "notes": "Total 20 (hard bucket 18-30), with all four competencies in play. reasoning_depth=3 drives the hardest floor (C-daf5acc4, decode skinned mesh): a custom binary format the agent must reverse from a byte-level spec, including per-vertex stride math (position/normal/texcoord/weights/bones), skeleton parent + bind-pose records, exact npz key/shape/dtype contracts, and clean non-zero rejection of malformed files (bad magic, version!=3, truncated). hidden_case_generalization=3 and adversarial_inputs=3: every one of the four extraction pipelines is re-run on fresh hidden inputs (hidden PDF forms incl. a field without a tooltip label; hidden HTML reports with total-class rows, spacer rows, empty-label cells, non-numeric amounts; hidden RDF datasets incl. multi-membership, duplicate statements, and empty graphs; hidden meshes incl. zero-vertex and large plus three distinct malformed binaries), each compared to an independent recomputation of the expected output. tool_breadth=3: pypdf field enumeration, BeautifulSoup table parsing, rdflib SPARQL execution, and numpy binary decoding in one task. quantitative_correctness=3: exact sorted JSON array equality, exact row indexes, exact result-tuple set membership, and exact float/u8/u16/i16 array equality. dependent_stages=3: each deliverable chains a reusable tool that must be written correctly before the data artifact can exist, and the visible results must reproduce when regenerated from tools/hidden inputs. All names, byte layouts, table structures, and datasets are invented for this task."
+}

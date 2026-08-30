@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 0,
+    "tool_breadth": 0,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 0,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 1,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 25,
+  "documented_probe": "C-2ecd751b (apply temporal/date-based filters against a fixed reference date): reference floor is hard but the covering task exercises it at easy; the verifier fully checks the capability on hidden cases. Documented probe waiver.\nC-bfecd929 (count severities across several rolling date bands): reference floor is medium but the covering task exercises it at easy; the verifier fully checks the capability on hidden cases. Documented probe waiver.",
+  "notes": "Single-stage: parse a mixed-format log, filter by an inclusive date range, aggregate counts and average ms, tally malformed lines. The must generalize to hidden inputs (both formats, boundaries, out-of-range, malformed/near-valid lines, empty log, fractional averages). Small rubric nonzero for reasoning_depth (2 formats + boundary logic), adversarial_inputs/hidden_case_generalization (multiple hidden cases), and quantitative_correctness (exact/intension: counts and floats). No tool breadth, no dependency chain, no environment pressure; totals bucket to easy."
+}

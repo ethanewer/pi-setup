@@ -1,0 +1,34 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "hard"
+category = "data_science"
+verifier_kind = "executes-deliverable"
+deliverables = [
+  "/app/pipeline.py",
+  "/app/cdecode",
+  "/app/out.csv",
+]
+tags = [
+  "prism-ledge",
+  "data_science",
+  "C-14b0632d",
+  "C-2a5821eb",
+  "C-6d89c915",
+  "C-7a6b9df2",
+  "C-9d0d1eb3",
+  "C-b231d022",
+  "C-be77f857",
+]
+
+[verifier]
+timeout_sec = 600.0
+
+[agent]
+timeout_sec = 2700.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096

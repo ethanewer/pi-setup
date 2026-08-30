@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 2,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 3,
+    "resource_pressure": 1,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 1
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": null,
+  "notes": "Hard ML-systems task bundling three independent strands that must all hold: (1) recover a one-hidden-layer ReLU MLP's input rows from forward queries alone (kink detection + full-gradient diffs; sign/permutation ambiguity must be handled), (2) low-rank matrix completion from sparse (row,col,val) observations that must return an explicitly low-rank reconstruction within a relative-Frobenius budget, and (3) a bit-level conversion of a compressed chess .cnet file into a PyTorch state dict that must load and run. Difficulty is hard because every claimed competency carries a hard floor; difficulty comes from dependent multi-stage reasoning plus strict quantitative tolerances and hidden-case generalization (the verifier re-runs the solver's routines on different-size MLPs, rank-deficient/low-sampling matrices, and a different chess architecture)."
+}

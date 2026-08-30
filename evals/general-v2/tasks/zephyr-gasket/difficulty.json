@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 0,
+    "tool_breadth": 0,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 3,
+    "resource_pressure": 0,
+    "interaction_statefulness": 1,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": null,
+  "notes": "Difficulty total 12 -> medium (matches task.toml 'medium', >= the max competency floor 'medium'). The maze side is a navigation-constrained, feedback-only unknown-maze explorer: the agent may only peek the cell it stands in and move a single cell through open passages, so it must run a real DFS with backtracking over cycles and dead ends within a move budget and reconstruct the full wall map plus a legal path to the far exit. This exercises explore/infer layout, per-id instance targeting, and navigation with constraints. The reference-maze selfcheck (offline known fixture) forces the same flood logic to generalize before it is trusted on the live unknown instances. The game side is mate-in-1 search over a precisely-specified chess subset (K,Q,R,B,N, no pawns/castling): the agent must generate legal moves, filter self-check, verify check, and prove the opponent has no reply, writing all winning moves in src-dest square notation. Every result is equality-checked against an independently re-deriving engine, and hidden cases vary maze size/layout/cycles and game piece/game configurations including zero-mate and missing-opponent-king edge positions (adversarial=2, hidden_generalization=3, quantitative=3). reasoning_depth=2 from the search + legality proofs; a single shared exploration core generalizes across all instances (hidden uncertainty). No heavy resource or interaction pressure beyond the single-file CLI contract."
+}

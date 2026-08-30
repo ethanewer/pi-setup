@@ -1,0 +1,38 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "hard"
+category = "system_administration"
+verifier_kind = "executes-deliverable"
+deliverables = [
+  "/app/solve.py",
+  "/app/maps/reef.out",
+  "/app/maps/island.out",
+  "/app/maps/channel.out",
+  "/app/ending.txt",
+  "/app/layout.vim",
+  "/app/macros.vim",
+]
+tags = [
+  "dune-beacon",
+  "system_administration",
+  "C-37683af0",
+  "C-5ec3cd70",
+  "C-632ef62c",
+  "C-7fa604fa",
+  "C-a4cd6f01",
+  "C-cdad201d",
+  "C-ce872852",
+]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 2400.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096

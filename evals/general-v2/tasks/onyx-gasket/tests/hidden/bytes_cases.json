@@ -1,0 +1,10 @@
+[
+  {"name": "empty", "hex": ""},
+  {"name": "one_byte", "hex": "41"},
+  {"name": "ascii_hello", "hex": "68656c6c6f20576f726c64"},
+  {"name": "bin_ff", "hex": "00ff10"},
+  {"name": "row_65535", "kind": "byte", "length": 65535, "fill": "0x07"},
+  {"name": "row_65536", "kind": "byte", "length": 65536, "fill": "0x5a"},
+  {"name": "row_65537", "kind": "byte", "length": 65537, "fill": "0x23"},
+  {"name": "varied_large", "kind": "pattern", "seed": 20240817, "length": 131072}
+]

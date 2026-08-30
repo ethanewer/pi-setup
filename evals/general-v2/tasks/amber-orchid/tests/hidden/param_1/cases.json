@@ -1,0 +1,13 @@
+[
+  {"path": "/api/v1/blocks?height=", "expect": 400, "code": "bad_request"},
+  {"path": "/api/v1/blocks", "expect": 400, "code": "bad_request"},
+  {"path": "/api/v1/blocks?height=-2", "expect": 400, "code": "bad_request"},
+  {"path": "/api/v1/blocks?height=1.5", "expect": 400, "code": "bad_request"},
+  {"path": "/api/v1/blocks?height=two", "expect": 400, "code": "bad_request"},
+  {"path": "/api/v1/blocks?height=0x10", "expect": 400, "code": "bad_request"},
+  {"path": "/api/v1/blocks?height=99999999999999999999", "expect": 400, "code": "bad_request"},
+  {"path": "/api/v1/blocks?height=0", "expect": 200},
+  {"path": "/api/v1/blocks?height=31", "expect": 200},
+  {"path": "/api/v1/blocks?height=32", "expect": 404, "code": "not_found"},
+  {"path": "/api/v1/blocks?height=500", "expect": 404, "code": "not_found"}
+]

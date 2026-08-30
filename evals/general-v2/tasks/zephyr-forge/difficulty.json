@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 3,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 3,
+    "resource_pressure": 1,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 120,
+  "documented_probe": null,
+  "notes": "Hard (total 19). Six distinct competencies must each be genuinely solved: (1) provision a real MIP solver that reads standard .mps and returns the exact integer optimum (hidden models carry an integrality gap, so an LP-relax-only solver fails); (2) exact weighted MAX-SAT optimum over 2^n assignments with a hard-UNSAT case that must be reported specifically; (3) formulate and minimize a convex quartic + per-vector quadratic penalty + global coupling objective numerically to a near-stationary optimum matching a reference minimizer; (4) enumerate every distinct basic-feasible corner of nonnegative LPs with exact rational arithmetic (duplicate columns, m>n and negative-rhs edge cases); (5) classify solver verdict text using a documented token rule incl. empty-file and case-mixed edges; (6) choose a literal-vs-back-reference segmentation (fixed self-delimiting format) that decodes byte-exact and stays strictly under a byte ceiling that a naive all-literal encoding always exceeds. tool_breadth 3 (HiGHS/CBC MIP, scipy numeric optimizer, exact Fraction linear solve, text classification, custom LZ packing); reasoning_depth 3 (the generalisation contract, the exactness of the optima/counts, and the DP over coding costs in F); hidden_case_generalization 3 (three hidden case dirs probe HARD_UNSAT, empty/to-be-over-255 verdicts, m>n and singular/duplicate corners, tight ceilings, and a fresh MIP with a general-integer variable)."
+}

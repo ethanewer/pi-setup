@@ -1,0 +1,845 @@
+{
+ "job": "terminus2-deepseek-run-1",
+ "n_trials": 524,
+ "passed": 379,
+ "zero": 131,
+ "partial": 10,
+ "missing": [],
+ "anomalies": [
+  {
+   "task": "item-053-hard",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-026-hard",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-018-main",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-021-hard",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-053-main",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-034-main",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-067-hard",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-063-main",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-065-main",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-050-hard",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "skill-bootstrap-compiler-debugging",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "skill-buffer-overflow",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-021-main",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "skill-vimscript-macros",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-070-hard",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-038-main",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "skill-web-research",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "skill-document-classification",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "skill-cli-argument-handling",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "skill-deepseek-tokenization",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-033-hard",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "skill-binary-truncation-recovery",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-024-hard",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-005-hard",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "skill-eval-apply",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "skill-bge-small-zh-v1-5",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-026-main",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-002-main",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "skill-filename-date-parsing",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "skill-bayesian-network-structure-learning",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-072-hard",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "skill-mp4-video-frames",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "skill-elf-loading",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "skill-legacy-c-c",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "skill-schema-reconciliation",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "skill-file-carving",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "skill-dom-sanitization",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-058-hard",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-059-main",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-055-main",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-003-main",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-008-main",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-022-main",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "skill-concurrent-server-state",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "skill-san-extensions",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-004-main",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "skill-port-forwarding",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-011-main",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "skill-arc-agi-data-formats",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-074-hard",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "skill-million-row-processing",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "skill-c-reverse-engineering",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-005-main",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-027-main",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-043-main",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-033-main",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "skill-rstan-2-32-7",
+   "kind": "exception",
+   "info": "RuntimeError"
+  },
+  {
+   "task": "skill-pystan-3-10",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "skill-gdb-objdump",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-074-main",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-032-hard",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-069-hard",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-020-main",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-066-main",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-044-main",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-013-hard",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-008-hard",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-010-hard",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-041-hard",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-062-main",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-014-main",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-076-main",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "skill-ocaml-runtime",
+   "kind": "exception",
+   "info": "RuntimeError"
+  },
+  {
+   "task": "item-030-main",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "skill-forward-backward-equivalence-across-shards",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-031-hard",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-039-main",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-039-hard",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-046-hard",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "skill-pipeline-parallelism",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-011-hard",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-004-hard",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-046-main",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-051-hard",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "skill-history-rewriting",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-006-hard",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-064-hard",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "skill-metacircular-interpreter",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-043-hard",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "skill-scipy-pandas",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-042-hard",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "skill-semaphores-concurrency-limits",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-054-main",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-049-hard",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-025-main",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-060-hard",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-006-main",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-066-hard",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-016-main",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-009-main",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-057-main",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-049-main",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "skill-power-iteration-or-lapack",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-054-hard",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "skill-fibonacci-arithmetic",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "skill-mips-instruction-set",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-045-hard",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-024-main",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-072-main",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-048-hard",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "skill-html-parsing",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-014-hard",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-040-main",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-003-hard",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "skill-static-graph-inference",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-062-hard",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-018-hard",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-040-hard",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-022-hard",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-019-main",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-001-hard",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-065-hard",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "skill-redcode",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-048-main",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "skill-cli-abi",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-047-main",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-034-hard",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-032-main",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-001-main",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-076-hard",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "skill-aws-github-token-patterns",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "skill-open-english-wordnet-schema",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "skill-telnet",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-015-main",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "skill-grpcio-grpcio-tools",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "skill-numpy-c-api",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "skill-pandas-pyarrow",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "skill-c4-shard-layout",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-045-main",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-038-hard",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-036-main",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-073-main",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-075-hard",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-031-main",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "skill-elf-headers-sections",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-071-hard",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-064-main",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-056-hard",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-002-hard",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "skill-setuptools",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-075-main",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-035-main",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-050-main",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-071-main",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-042-main",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-068-hard",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-073-hard",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-058-main",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "skill-branch-reset-merge",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-067-main",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-060-main",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-059-hard",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-030-hard",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-028-hard",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "item-069-main",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  },
+  {
+   "task": "skill-memory-register-emulation",
+   "kind": "exception",
+   "info": "AgentTimeoutError"
+  }
+ ],
+ "trivial_zero_count": 40,
+ "cost_usd": 0.0,
+ "n_input_tokens": 0,
+ "n_output_tokens": 0,
+ "mean_reward": 0.7298
+}

@@ -1,0 +1,24 @@
+{
+  "deliverables": [
+    "/app/filter_locale.py", "/app/locale.jsonl", "/app/offline_assets/model",
+    "/app/tokenize.py", "/app/token_counts.json", "/app/bpe.py",
+    "/app/bpe_model.json", "/app/detect_lang.py", "/app/lang_flags.json",
+    "/app/tasks.yaml", "/app/fetch_leaderboard.py", "/app/leaderboard_top.txt"
+  ],
+  "visible_case": {
+    "locale_filter": {
+      "locale": "EN",
+      "columns": ["doc_id", "title", "text", "query", "gold"],
+      "row_count": 44
+    },
+    "offline_assets": "AutoTokenizer + AutoModel load with network disabled",
+    "token_counts": "recomputed at verify time with the same offline tokenizer",
+    "bpe": {
+      "target_vocab_size": 400,
+      "vocab_window": [100, 400]
+    },
+    "lang_flags": "detected over data/news_corpus.jsonl; held-set thresholds at verify time",
+    "harness_task": "registered id quartz-article-sections; label_set = Politics/Science/Culture/Sports",
+    "leaderboard_top": "garnet-7b"
+  }
+}

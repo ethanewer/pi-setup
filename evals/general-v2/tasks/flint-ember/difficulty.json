@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 1,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": "C-f5ee7735 and C-6ce533a8 reference optimizers are deliberately simplified: the knapsack here is a tiny enumerable 0/1 instance (<=6 projects, unique optimum) rather than an integer-program of useful scale, so the 'optimize' step never needs a real solver. The exactness schema/output contract around the objective is kept in full.",
+  "notes": "Medium. A single Python pipeline must emit five byte-exact artifacts: JSONL plan records, a decision/NPV text block, a pandas-read CSV with an exact column set/order, a salted deterministic results.json, an integer objective answer, and openpyxl cells at exact addresses. Reasoning about the knapsack optimum plus strict output-format correctness and hidden-input generalization carry the difficulty; no heavy tools, resource pressure, or safety penalties."
+}

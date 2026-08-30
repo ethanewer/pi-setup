@@ -74,6 +74,51 @@ export async function* streamSimple(model, context) {
 	}
 });
 
+test("installer patches the Pi npm bundle entrypoint after the library patch", () => {
+	expect(installer).toContain('join(SRC_DIR, "bin", "patch-pi-bundle")');
+	expect(installer).toContain("refusing to leave the npm entrypoint unpatched");
+	// The library patch must land first so a bundle failure leaves nothing half-patched.
+	expect(installer.indexOf("applyPiAiReasoningPatch(bunBin")).toBeLessThan(
+		installer.indexOf('join(SRC_DIR, "bin", "patch-pi-bundle")'),
+	);
+	expect(doctor).toContain("openai-completions-*.js");
+	expect(doctor).toContain("normalizeOpenAIReasoningDetails");
+});
+
+test("patch-pi-bundle rewrites the pinned bundle chunk, idempotently", () => {
+	const versions = JSON.parse(readFileSync(join(root, "lib", "versions.json"), "utf8"));
+	const fake = mkdtempSync(join(tmpdir(), "pi-bundle-"));
+	const chunks = join(fake, "dist", "bundle", "chunks");
+	mkdirSync(chunks, { recursive: true });
+	writeFileSync(join(fake, "package.json"), JSON.stringify({ version: versions.pi }));
+	const parseOld =
+		"function parseOpenAIReasoningDetails(signature){if(signature)try{" +
+		"let parsed=JSON.parse(signature);return Array.isArray(parsed)&&" +
+		"parsed.length>0&&parsed.every(isOpenAIReasoningDetail)?parsed:void 0}" +
+		"catch{return}}";
+	writeFileSync(
+		join(chunks, "openai-completions-TEST.js"),
+		`function appendOpenAIReasoningDetail(details,detail){details.push({...detail})}${parseOld}`,
+	);
+	const script = join(root, "bin", "patch-pi-bundle");
+	try {
+		const first = Bun.spawnSync(["bun", script, fake]);
+		expect(first.exitCode).toBe(0);
+		const patched = readFileSync(join(chunks, "openai-completions-TEST.js"), "utf8");
+		expect(patched).toContain("normalizeOpenAIReasoningDetails(parsed)");
+		expect(patched.match(/function appendOpenAIReasoningDetail/g)).toHaveLength(1);
+		const second = Bun.spawnSync(["bun", script, fake]);
+		expect(second.exitCode).toBe(0);
+		expect(second.stdout.toString()).toContain("already patched");
+		writeFileSync(join(fake, "package.json"), JSON.stringify({ version: "0.0.0" }));
+		const wrongVersion = Bun.spawnSync(["bun", script, fake]);
+		expect(wrongVersion.exitCode).toBe(1);
+		expect(wrongVersion.stderr.toString()).toContain("version-guarded");
+	} finally {
+		rmSync(fake, { recursive: true, force: true });
+	}
+});
+
 test("doctor uses the independent Pi AI pin and behavior verifier", () => {
 	expect(doctor).toContain('PINNED_PI_AI="$("$JS"');
 	expect(doctor).toContain('"Pi AI|$PINNED_PI_AI|$INSTALLED_PI_AI"');

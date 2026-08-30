@@ -1,0 +1,10 @@
+OPEN t
+PUT keyonly
+FROBULATE x
+GET
+PUT dup v1
+PUT dup v2
+GET dup
+
+CLOSE
+PUT late x

@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 2,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 30,
+  "documented_probe": null,
+  "notes": "Medium messaging-queue-socket relay task (Juniper Notch). The agent is handed an unauthenticated loopback MQ bus (mosquitto on :31883), a relay worker (/app/relay/worker.py) that consumes retained 'rebalance' directives from topic juniper/jobs, and a raw-TCP survey gate (/app/relay/gate.py on :43979) speaking a MAP/SURVE text protocol. To succeed the agent must (1) discover the endpoints and protocol from /app/relay/station.toml and README.md, (2) craft /app/job.json matching the worker's exact schema and publish it retain=true via an MQTT client (paho) so the worker later consumes it (C-8dfb1620 queue injection, C-bc9fd958 unauthenticated-broker discovery/exploitation, C-5bf90775 protocol messaging), and (3) drive a structured socket request-response: connect, send MAP, read the JSON map, compute the nearest site by Manhattan distance with a documented tie-break, send SURVE <site>, and write the parsed site reply to /app/roundtrip.out (C-670b820b socket protocol + position parsing). The verifier re-executes the deliverable q.py on hidden inputs: a fresh unseen directive (generalized publish), a different unseen map (live re-survey proving roundtrip.out is computed, not hardcoded), and a malformed directive that must be rejected without crashing the worker. Difficulty comes from dependent_stages (bus + worker + gate + python tool must interoperate), interaction_statefulness (background broker/gate a live MQTT worker; multi-turn socket dialog), hidden_case_generalization (new directives and maps), and reasoning/quantitative correctness (schema crafting digits and the nearest-site computation incl. tie-breaks)."
+}

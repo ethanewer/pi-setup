@@ -1,0 +1,33 @@
+// pricing.proto -- a fresh RPC surface for the pricing team (hidden case).
+// Different package/service/messages/filename from the visible ledger.proto,
+// including an enum and a server-streaming rpc.
+syntax = "proto3";
+package pricing;
+
+enum Currency {
+  CUR_UNSPECIFIED = 0;
+  CUR_USD = 1;
+  CUR_EUR = 2;
+}
+
+message Money {
+  int64 cents = 1;
+  Currency currency = 2;
+}
+
+message QuoteRequest {
+  string sku = 1;
+  int32 qty = 2;
+  Money budget = 3;
+}
+
+message QuoteReply {
+  bool ok = 1;
+  string quote_id = 2;
+  int64 total_cents = 3;
+}
+
+service PricingService {
+  rpc Quote (QuoteRequest) returns (QuoteReply);
+  rpc Watch (QuoteRequest) returns (stream QuoteReply);
+}

@@ -1,0 +1,39 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "hard"
+category = "scientific_computing"
+verifier_kind = "executes-deliverable"
+deliverables = [
+    "/app/solver.R",
+    "/app/analysis.Rmd",
+    "/app/analysis.ipynb",
+    "/app/hierarchical_model.stan",
+    "/app/recovered_edges.csv",
+    "/app/network_fit.csv",
+    "/app/ate.txt",
+    "/app/posterior.csv",
+]
+tags = [
+    "tundra-jetty",
+    "scientific_computing",
+    "C-33fa1cfa",
+    "C-4013b634",
+    "C-4878683c",
+    "C-500da2a9",
+    "C-a967e2bb",
+    "C-bb7cec38",
+    "C-f1ee3a04",
+]
+
+[verifier]
+timeout_sec = 600.0
+
+[agent]
+timeout_sec = 1800.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 3072
+storage_mb = 4096

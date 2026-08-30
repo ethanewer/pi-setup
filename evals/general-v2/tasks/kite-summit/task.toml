@@ -1,0 +1,20 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "hard"
+category = "programming"
+verifier_kind = "executes-deliverable"
+deliverables = ["/app/gate_net.txt", "/app/gate_validate.py", "/app/compress.py", "/app/payload.bin", "/app/footprint_report.txt"]
+tags = ["kite-summit", "programming", "implement-an-integer-mathematical-function-as-a-finite-logic-gate-network", "select-literal-back-reference-choices-to-fit-a-strict-compressed-size-budget", "keep-the-global-environment-footprint-bounded"]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 3600.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096

@@ -1,0 +1,108 @@
+[
+ {
+  "id": "basic",
+  "batch": [
+   [
+    "gather",
+    "chop",
+    "forge",
+    "market"
+   ],
+   [
+    "free",
+    "gather",
+    "market"
+   ],
+   [
+    "forge",
+    "forge"
+   ],
+   []
+  ],
+  "expect": [
+   27,
+   8,
+   0,
+   0
+  ]
+ },
+ {
+  "id": "quarry_rising",
+  "batch": [
+   [
+    "quarry",
+    "quarry",
+    "quarry"
+   ],
+   [
+    "quarry"
+   ]
+  ],
+  "expect": [
+   13,
+   1
+  ]
+ },
+ {
+  "id": "forge_sequence",
+  "batch": [
+   [
+    "forge",
+    "chop",
+    "forge"
+   ],
+   [
+    "chop",
+    "forge",
+    "chop"
+   ]
+  ],
+  "expect": [
+   21,
+   28
+  ]
+ },
+ {
+  "id": "unknown_and_idle",
+  "batch": [
+   [
+    "gather",
+    "dance",
+    "market"
+   ],
+   [
+    "idle",
+    "gather"
+   ],
+   [
+    "nonsense"
+   ]
+  ],
+  "expect": [
+   6,
+   5,
+   0
+  ]
+ },
+ {
+  "id": "malformed_mix",
+  "batch": [
+   [
+    "gather"
+   ],
+   "notalist",
+   [
+    "chop"
+   ],
+   null,
+   []
+  ],
+  "expect": [
+   5,
+   0,
+   7,
+   0,
+   0
+  ]
+ }
+]

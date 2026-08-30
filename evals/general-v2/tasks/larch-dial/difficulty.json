@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 0,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 40,
+  "documented_probe": null,
+  "notes": "Medium. The task is a multi-step downstream which must (a) follow a strict four-argument CLI with no hard-coded fixture paths, (b) reuse only the preinstalled packages (pure stdlib plus pytest), (c) keep the gzip-compressed source under a 2400-byte ceiling, (d) rewrite a subordinate include by swapping only permitted synonym tokens while keeping the frame and synonym list byte-identical and rendering a compiled inlined output, and (e) keep the emitted report sequence inside the cap.txt length ceiling (the 64-hex digest, not the raw expansion). A partial/naive solver fails: botching the substitution, the immutability, or the source-size/length caps, or any non-stdlib import, is caught by the verifier; the fresh hidden fixture sets generalize the edit and the numeric scoring paths. Difficulty derives from hidden_case_generalization (re-run on 3 fresh fixture trees), adversarial_inputs (punctuation-attached synonym tokens, malformed CSV rows, empty data), debugging_ambiguity (the pytest suite only goes green when the edit/rendering is correct), and reasoning_depth (co-ordinating substitution, rendering, scoring and the two caps into one reusable CLI tool). Low resource pressure, no flagrantly dangerous actions."
+}

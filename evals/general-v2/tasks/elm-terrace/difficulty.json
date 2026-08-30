@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 2,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 3,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 1,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 40,
+  "documented_probe": null,
+  "notes": "Hard. A multi-stage (dependent_stages=3) model-artifact tuning pipeline: reconstruct a network purely from a state dict's key/shapes (reasoning_depth=3: infer in/hidden/out/blocks; handle both bare and wrapped tensor containers), fit rank-2 LoRA adapters on CPU under a 100KB serialized-model ceiling (resource_pressure=1), sample 1000 rows from the intervened model, emit one out-of-sample prediction per holdout row, produce low-rank factor matrices, and run a @triton.jit kernel through the TRITON_INTERPRET=1 CPU path. debugging_ambiguity=2: exact adapter_config fields (r=2, alpha=8, target_modules, CAUSAL_LM), Triton interpreter vs hardware, strict state-dict load errors. adversarial_inputs=3: hidden architectures vary hidden dim and block count; the verifier re-runs reconstruct.py load on hidden dicts and requires an exact parameter reproduction (hidden_case_generalization=2, quantitative_correctness=2). Difficulty converges to hard, satisfying the hard floor of every bundled slice competency."
+}

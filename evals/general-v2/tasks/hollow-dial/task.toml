@@ -1,0 +1,33 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "hard"
+category = "programming"
+verifier_kind = "executes-deliverable"
+deliverables = [
+    "/app/classify.py",
+    "/app/arch_report.json",
+    "/app/mips_interp.c",
+    "/app/mips_out.txt",
+    "/app/eval.py",
+    "/app/self_host.txt",
+]
+tags = [
+    "hollow-dial",
+    "programming",
+    "C-a1a5f09e",
+    "C-4f1f7a1d",
+    "C-90fab5c1",
+]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 2400.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096

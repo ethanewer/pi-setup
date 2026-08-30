@@ -1,0 +1,38 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "hard"
+category = "system_administration"
+verifier_kind = "executes-deliverable"
+deliverables = [
+  "/app/fetch_src.sh",
+  "/app/src/",
+  "/app/build.log",
+  "/app/flink_scoped_build/",
+  "/app/behavior_check.log",
+  "/app/lake_project/",
+  "/app/math_check.olean",
+  "/app/gen/",
+  "/app/gen_proto.py",
+  "/app/proto_client.py",
+]
+tags = [
+  "calm-canyon",
+  "system_administration",
+  "C-30710803",
+  "C-11cb4a6a",
+  "C-101e183a",
+  "C-f913ee6a",
+]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 1800.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096

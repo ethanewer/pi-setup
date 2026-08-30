@@ -1,0 +1,23 @@
+OPERATOR PASSPHRASE FORMAT
+=========================
+
+The account vault archive at /app/vault/box.7z is encrypted. The operator
+passphrases used by this fleet follow one strict shape:
+
+        <prefix>-<NNN>
+
+where:
+
+  * <prefix> is the shared fleet prefix: exactly the 4-letter word
+        morn
+  * <NNN> is a three-digit decimal integer, three digits always, within the
+    closed range [100, 999] (leading zeroes never appear; a value like 042 is
+    not a valid candidate).
+
+So the full candidate space is exactly
+        morn-100, morn-101, ..., morn-999
+i.e. 900 candidates total. It is entirely enumerable on a single CPU in
+milliseconds; there is no GPU aid and no external service.
+
+To go from this space to the one true passphrase, apply /app/recovery/seed.txt
+and /app/recovery/hash-rule.txt in that order.

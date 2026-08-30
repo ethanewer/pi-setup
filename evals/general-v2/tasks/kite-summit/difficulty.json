@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 2,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 3,
+    "resource_pressure": 1,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 1
+  },
+  "expected_expert_time_min": 120,
+  "documented_probe": null,
+  "notes": "Total 20 (hard bucket). Three genuinely independent, must-pass deliverable groups. (1) A 32-bit arithmetic SSA circuit built by hand (subtraction-based integer sqrt plus fast-doubling Fibonacci, all reduced mod 2^32) that must evaluate exactly on randomized hidden 32-bit vectors AND fit inside a hard 600-node-line ceiling, so a solver that hashes a lookup table or over-unrolls fails the size cap; this alone is reasoning_depth>=2. (2) A from-scratch literal/back-reference encoder that must keep each output under a strict byte ceiling strictly below the all-literal 2-bytes-per-byte cost, using dynamic programming over LZ segmentation, with hidden blobs hitting long-distance matches, RLE/overlap runs, and mostly-incompressible regions - naive or over-conservative tokenization exceeds the ceiling and the decode-must-equal-original check fails. (3) a footprint discipline deliverable gated on an independent size measurement of the global site-packages tree (a heavy pip install like scipy/torch pushes current size past the parsed-limit bound and fails)."
+}

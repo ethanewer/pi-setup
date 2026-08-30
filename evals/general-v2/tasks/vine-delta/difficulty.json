@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 0,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 2,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 40,
+  "documented_probe": null,
+  "notes": "Bundle of five pure-python computational competencies under the puzzle-algorithmics family: (1) periodic-scheduling maximum-gap via explicit least-common-multiple scan, (2) weighted-return dot product with strict tolerance and unequal-length rejection, (3) exact 9x9 sudoku completion via constraint-propagation backtracking, (4) a turn-based lane strategy that must emit exactly one legal in-bounds move per turn (a hold marker -1 when no open cell remains, and ERR for malformed descriptors so an invalid descriptor can never stall or crash the run), and (5) a strategy entrypoint `play(sock)` exposing the exact one-socket-parameter signature. Difficulty is medium: the flattest competency floor that can be honestly claimed for the resulting set (medium), with hidden-case generalization and quantitative correctness at 2 (multiple independent hidden gap / dot-product / sudoku / game scenarios including malformed and edge inputs), adversarial_inputs at 2 (malformed lanes, non-9x9 grids, unequal vector lengths, non-positive cycles), and interaction_statefulness at 2 (the multi-turn lane strategy must reply once-and-once per turn without pausing or double-moving across distinct boards). No external tools beyond the Python 3.12 stdlib are required (tool_breadth 0); pure numerical/algorithmic work, so resource_pressure and unsafe-action penalty are 0. The two spec slice-competencies with hard reference floors (C-fef928b0 chess-as-regex; C-f49d1fc8 RL policy threshold) are explicitly dropped rather than forced into this lean stdlib-only numerical family."
+}

@@ -1,0 +1,6 @@
+{"vars":{"x":[-4,4]},
+ "ops":[{"op":"set","dst":"c","val":10},
+        {"op":"mul","dst":"s","a":"x","b":"x"},
+        {"op":"sub","dst":"r","a":"s","b":"c"},
+        {"op":"ite","dst":"out","cond":["r","LT",-1],"a":"r","b":0}],
+ "goal":{"var":"out","eq":-6}}

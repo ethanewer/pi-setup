@@ -1,0 +1,30 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "hard"
+category = "programming"
+verifier_kind = "executes-deliverable"
+deliverables = ["/app/fix.sh", "/app/Makefile"]
+tags = [
+    "willow-upland",
+    "programming",
+    "correct-scripting-issues-such-as-shebang-and-line-endings",
+    "write-an-idempotent-bash-script-that-recreates-the-directory-structure",
+    "scan-all-log-files-for-severity-tokens",
+    "clean-generated-artifacts-to-the-allowed-file-set",
+    "make-a-command-line-script-regenerate-its-output-cleanly",
+    "restrict-a-transformation-script-to-an-allowlist-of-commands",
+    "write-a-makefile-producing-serial-and-parallel-targets",
+]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 1800.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096

@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 2,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 3,
+    "resource_pressure": 1,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 90,
+  "documented_probe": "Two competencies are exercised lean but faithfully. C-07c78691 (evaluate a trained policy deterministically under a fixed-seed environment): instead of full RL tooling, the 'environment' is a fixed-seed reward-collection loop over the held-out pool whose mean reward must be byte-for-byte reproducible across re-runs; the trained classifier is the 'policy' and its seeded mean reward is the artifact, and the verifier re-runs the evaluation and asserts identical values. C-4c743935 (LoRA adapter loadable via from_pretrained): the transformers/peer HF stack is not installed by design; the adapter directory persists weights + config with a small self-contained loader that reconstructs the Net (sequence classifier) exactly as from_pretrained would, so the persisted-reloadable-adapter semantics are preserved while the HF entry point is replaced by an equivalent local one.",
+  "notes": "The chain is: (1) diagnose the stalled classifier from the recorded training signals + module inspection (frozen / zero-initialised output layer -> loss flat at ln2, head gradient norm 0, val acc stuck at chance) -> (2) apply the one fix (unfreeze + re-initialise the designated output layer) and fine-tune ONLY that head while freezing fc1/fc2 (exact-match against the base enforces 'only the head may differ') -> (3) LoRA adapter trained on the frozen fc2, saved as a reloadable adapter dir, merged into the base (verifier recomputes fc2 == base + BA*scale) -> (4) persist every model/array as state-dict pickle, npy and an sklearn pickle -> (5) deterministic fixed-seed reward collection. hidden_case_generalization=3: the same /app/finetune.py must run on 4 hidden fixtures (different dims/seed) and each must clear the accuracy/freeze/merge/exact-keys thresholds; quantitative_correctness=3: exact-key set equality, frozen-only-head exact-match, merged-fc2 exact equality to base+LoRA, and reproducibility exact-equality of the seeded re-eval. adversarial_inputs=2: the detection that the head is frozen (head gradient 0) is only discoverable by inspecting recorded signals+module and must not be hardcoded per case. difficulty is achieved through correctness/diagnosis, not prompt length or timeouts."
+}

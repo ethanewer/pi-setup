@@ -1,0 +1,30 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "hard"
+category = "system_administration"
+verifier_kind = "executes-deliverable"
+deliverables = [
+  "/app/run.sh",
+  "/app/result.json",
+]
+tags = [
+  "iris-ledge",
+  "system_administration",
+  "C-01fe75ac",
+  "C-3654b094",
+  "C-fc5cfb57",
+  "C-900a820e",
+]
+
+[verifier]
+timeout_sec = 600.0
+
+[agent]
+timeout_sec = 1800.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 2
+memory_mb = 3072
+storage_mb = 8192

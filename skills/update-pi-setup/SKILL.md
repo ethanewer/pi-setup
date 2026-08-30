@@ -129,10 +129,15 @@ grep -rn "Type\.Base\|Type\.Awaited\|Type\.Promise\|Value\.Mutate" --include="*.
 Then:
 
 1. Set `pi` in `lib/versions.json`.
-2. Update the version table in `README.md`.
-3. Re-run the installer — `./install.sh` or `./install.ps1`. Use
+2. Rebase `patches/pi-ai@<ver>-reasoning-details.patch` if upstream moved the
+   reasoning-details code, and re-target `bin/patch-pi-bundle`'s anchors to the
+   new `dist/bundle/chunks/openai-completions-*.js` (the npm entrypoint loads
+   pi-ai from that chunk, not node_modules). Follow the upgrade checklist in
+   `docs/incidents/PI-AI-0.84.3-REASONING-DETAILS.md`.
+3. Update the version table in `README.md`.
+4. Re-run the installer — `./install.sh` or `./install.ps1`. Use
    `PI_SETUP_SKIP_BROWSER_INSTALL=1` to skip the Chrome check while iterating.
-4. [Verify](#verify), then commit.
+5. [Verify](#verify), then commit.
 
 ## 4. Move a fork onto a newer upstream release
 

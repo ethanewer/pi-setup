@@ -1,0 +1,16 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 3,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 3,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 3,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 95,
+  "documented_probe": null,
+  "notes": "A chained five-part multi-toolchain build bench. dependent_stages=3: part 2 (Rust compressor) must round-trip and pass cargo test before its /app/compressor_tests.log exists; part 4 (CompCert beacon) must be genuinely compiled by the CompCert toolchain so its .text byte-identity matches a recompile of the same source; part 5 (sizes.tsv) is only meaningful once every referenced binary (gcc-O0, gcc-O2, clang-O2, compcert_bin) really exists on disk and its stat size is read back into the table. tool_breadth=3: the agent must drive gcc/g++, CMake, clang, rustc/cargo, binutils (size/readelf/strip) and a real CompCert toolchain via opam/Coq, all headless. reasoning_depth=3: converting an obsolete-era C++ TU (register storage, auto_ptr, missing <hash> header) into C++17 that builds, and implementing a byte-exact codec in Rust plus reasoning about section-level ELF provenance. debugging_ambiguity=3: the legacy C++ throws genuine modern-compiler diagnostics, the Rust port must match a fixed wire format, and proving 'built by CompCert' means inspecting/ Stripping ELF sections rather than trusting a filename. adversarial_inputs=2: hidden cases include empty inputs, malformed compress-frame input, lines lacking the required separator, and a canonical recompilation check that defeats gcc/clang stand-ins. hidden_case_generalization=3: the same /app programs are re-run against unseen hidden inputs (choron lines, compressor frames, legacy engine lines) plus an independent CompCert recompile. quantitative_correctness=3: sizes.tsv byte figures must equal stat -c %s of the real binaries exactly, and the CompCert provenance check is a byte-exact .text hash comparison. Difficulty is set by the real multi-toolchain labor and CompCert/ELF provenance reasoning, not by prompt length."}

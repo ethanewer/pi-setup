@@ -1,0 +1,28 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "hard"
+category = "programming"
+verifier_kind = "executes-deliverable"
+deliverables = ["/app/callsites.py", "/app/vm/sweep.c", "/app/math/Sum.hpp", "/app/mkbin.py", "/app/sections.py"]
+tags = [
+    "flint-anchor",
+    "programming",
+    "define-call-sites-by-a-fixed-size-frame-signature",
+    "diagnose-a-bug-in-a-garbage-collector-sweeping-path",
+    "port-a-c-template-to-the-c-11-standard-preserving-constexpr-behaviour",
+    "regenerate-and-run-an-executable-from-the-emitted-ir-to-validate-it",
+    "resolve-the-sections-of-interest-and-the-symbol-string-tables",
+]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 1800.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096

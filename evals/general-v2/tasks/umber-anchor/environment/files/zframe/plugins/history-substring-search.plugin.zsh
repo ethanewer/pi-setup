@@ -1,0 +1,1 @@
+# history-substring-search plugin for zsh.

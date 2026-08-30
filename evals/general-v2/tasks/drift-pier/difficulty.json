@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 30,
+  "documented_probe": null,
+  "notes": "One pipeline (/app/clean.py) must generalize across a fixed source layout while reproducing five reference transformations exactly. dependent_stages=2: the transfer rule is sequential running-state (an asset rejected in an early row can become valid after a later approved row changes its owner, and the appended log must preserve row order), so the verifier replays the same initial state through fresh transfer inputs and asserts cumulative balances, ownership and the ordered log. hidden_case_generalization=2: clean.py is executed on 3 hidden input directories (plus the /app baseline) covering boolean columns expressed as 1/0 and true/false, top-3 url rank ties straddling the cutoff and under-populated top lists, tide ports with interior/leading/trailing gaps and a fully-empty port, and dup/missing-end iCalendar events. adversarial_inputs=2: malformed metric cells, unknown-parties/unknown-asset/same-party/not-owned transfer rows, empty url cells, and malformed .ics lines must be handled rather than crash. quantitative_correctness=2: grouped sums/means and interpolated floats are compared within tolerance and the top-k counts exactly. The medium bucket comes from juggling six independent sub-transformations in one runnable program, not from prompt length or timeouts."
+}

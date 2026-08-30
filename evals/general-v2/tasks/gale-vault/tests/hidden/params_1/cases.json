@@ -1,0 +1,16 @@
+[
+  {"method": "GET", "path": "/api/v1/notes", "expect": 400, "code": "bad_request"},
+  {"method": "GET", "path": "/api/v1/notes?limit=", "expect": 400, "code": "bad_request"},
+  {"method": "GET", "path": "/api/v1/notes?limit=-2", "expect": 400, "code": "bad_request"},
+  {"method": "GET", "path": "/api/v1/notes?limit=two", "expect": 400, "code": "bad_request"},
+  {"method": "GET", "path": "/api/v1/notes?limit=0", "expect": 200},
+  {"method": "GET", "path": "/api/v1/notes?limit=1", "expect": 200},
+  {"method": "GET", "path": "/api/v1/notes?limit=2", "expect": 200},
+  {"method": "GET", "path": "/api/v1/notes/notanum", "expect": 400, "code": "bad_request"},
+  {"method": "GET", "path": "/api/v1/notes/0", "expect": 400, "code": "bad_request"},
+  {"method": "GET", "path": "/api/v1/notes/-1", "expect": 400, "code": "bad_request"},
+  {"method": "GET", "path": "/api/v1/notes/9001", "expect": 404, "code": "not_found"},
+  {"method": "GET", "path": "/api/v1/notes/1", "expect": 200},
+  {"method": "GET", "path": "/api/v1/notes/1/render", "expect": 200},
+  {"method": "GET", "path": "/api/v1/notes/9001/render", "expect": 404, "code": "not_found"}
+]

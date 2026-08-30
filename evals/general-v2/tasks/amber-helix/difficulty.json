@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 2,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 3,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 3,
+    "resource_pressure": 1,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 90,
+  "documented_probe": null,
+  "notes": "Three independent computational-chemistry/molecular-biology competencies must all converge inside one container. dependent_stages=3: the deliverable chain is scaffold-then-serve — the catalog filter and primer design are separate correctness stages, and the affinity step is a third stage whose held-out Spearman gate (>=0.9 across 8 seeds) depends on the model/feature selection the agent tunes against the real descriptor matrix. The primer stage is an interior correctness problem: annealing regions must land on the exact upstream/downstream loci with correct 5'->3' orientation, encode the mutant (and its reverse complement), beat both length and Tm bounds, where Tm is the Wallace rule the verifier recomputes per anneal region. quantitative_correctness=3: catalog matches must be exact case-insensitive sets in order; primer annealing regions/Tm are re-derived independently; affinity Spearman is recomputed from the emitted per-seed test predictions against the ground-truth matrix and must clear 0.9 on every seed. adversarial_inputs=3: hidden probes cover whitespace-padded and missing-name catalog entries plus malformed catalog JSON, insufficient-upstream loci, non-standard (N/R) template bases, mutated-length mismatch, shape-mismatched descriptor/target matrices, and tiny (20-row) datasets. hidden_case_generalization=3: all three deliverables are executed on fresh inputs never seen by the agent (hidden catalog + name list, hidden locus/template, hidden descriptor/measurement pair). reasoning_depth=3 comes from the synergy gate: a linear model that misses the nonlinear descriptor interactions scores ~0.75 on held-out rows, below the 0.9 bar, so the agent must tune features/model (nonlinear ensemble) to pass; the primer Tm/length search is an additional search step."
+}

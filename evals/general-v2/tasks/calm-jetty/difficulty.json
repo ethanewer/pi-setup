@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 1,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": null,
+  "notes": "system_administration batch rated medium (rubric total 15). Four independent cloud-style competencies, each with its own deliverable, all verified by executing the artifacts both against the live local store and on hidden inputs. (a) bucket_policy.json must be a valid public-read S3-style policy granting s3:GetObject to Principal '*' on arn:aws:s3:::reports/*; the verifier re-applies the file onto a fresh blob store and confirms the bucket is publicly readable (C-f64f4486 floor easy, exceeds it). (b) sheets_client.py must create a spreadsheet and then a nested worksheet via sequential REST POSTs; it must generalize to arbitrary names/titles on a hidden scenario and its sheet_ids.json must resolve to real, usable resources (C-sheets floor medium). (c) normalize_rpc.py must map raw gateway responses to an EXACT flat schema with fixed key names/order, including handling absent fields (None), whitespace/case tier normalization, numeric-string/float coercion and non-boolean inert flags; checked against an independent reference on a hidden batch of edge and malformed cases (C-rpc floor medium). (d) delete_users.py must issue DELETE for exactly the listed accounts and leave all others present and reachable; scaled to a fresh hidden user list with different ids/targets (C-accounts floor easy). dependent_stages=2 (spreadsheet then nested worksheet; deletion then snapshot; normalize then artifact). hidden_case_generalization=2 (all four re-run on hidden inputs). adversarial_inputs=2 (hidden rpc anomalies, hidden id/lists). No competency faked; none made easier than its reference floor."
+}

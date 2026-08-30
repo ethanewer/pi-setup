@@ -1,0 +1,6 @@
+// broken.proto -- intentionally malformed (unbalanced braces) so codegen must fail.
+syntax = "proto3";
+package broken;
+
+message Unclosed {
+  string field = 1;

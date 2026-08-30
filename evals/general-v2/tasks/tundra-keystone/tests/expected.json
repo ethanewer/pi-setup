@@ -1,0 +1,8 @@
+{
+ "task": "tundra-keystone",
+ "description": "See instruction.md. Default deliverables: grad_exchange.npz for world_size=4,num_layers=8,d=16,batch=3; async_log.txt for n=6,cap=3,trigger=3.",
+ "visible": {
+  "grad_exchange.npz": "4 ranks / 8 layers / d=16 / batch=3; zero biases; act & grad shapes all [3,16]",
+  "async_log.txt": "n=6 cap=3 trigger=3; started=[0,1,2], never_started=[3,4,5]"
+ }
+}

@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 3,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 3,
+    "resource_pressure": 1,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": null,
+  "notes": "A self-written adaptive ODE/IVP integrator must hit a fine-grained DOP853 reference inside an absolute tolerance while never exceeding a hard ceiling on RHS-evaluation count and never emitting NaN/Inf, across four genuinely different hidden systems (damped pendulum with randomized initial states, van der Pol on a logarithmic grid, a high-frequency rotation on a coarse non-uniform grid, and a stiff scalar on a two-point minimal span). An eigen module must return the true largest-magnitude eigenvalue for non-symmetric matrices with complex eigenpairs and reconstruct the leading-principal-minor spectra row, all bounded in runtime against a numpy reference. A third deliverable must generate synthetic random portfolios and compare the serial path against the vectorized/parallel batched path (correctness and a reproducible speed-up), and the batched path must independently beat a serial loop by a required factor. Difficulty is hard: reasoning_depth and debugging_ambiguity are 3 (numeric stability vs an eval budget is genuinely iterative), hidden_case_generalization 3 and quantitative_correctness 3 (outputs compared against independently computed DOP853/np.eigvals references drift small), adversarial_inputs 2 (coarse grids, two-point spans, high-frequency and stiff dynamics that foil naive fixed-step integrators)."
+}

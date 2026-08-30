@@ -1,0 +1,13 @@
+{
+  "visible_scenario": "/app",
+  "expected_earliest_dtstart": "2026-03-16T17:45:00Z",
+  "expected_earliest_dtend": "2026-03-16T18:45:00Z",
+  "expected_attendees": [
+    "ada@juniper-upland.example",
+    "ben@juniper-upland.example",
+    "carol@juniper-upland.example",
+    "gwen@juniper-upland.example"
+  ],
+  "expected_snapshot_members": ["ada", "ben", "carol", "gwen"],
+  "note": "Late block ben 16:00-17:30 ends hour>=late_hour(17) => expanded buffer-forbidden [15:45,17:45); earliest feasible 60-min slot is 17:45."
+}
