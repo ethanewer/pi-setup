@@ -1,0 +1,16 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 1,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "notes": "Single tool with many adversarial byte-level edge cases: four PDP-11 a.out magic variants with 8-word header decoding (incl. truncated headers with null fields), ELF endianness/class/machine table, truncated ELF, MZ stub, text/junk/empty heuristic. Two hidden artifact sets (distinct PDP-11 binaries, big-endian MIPS ELF, unknown machine, x86_64 host case) plus a cross-checked archive inventory. Bucketed hard due to the header-layout reasoning and truncation semantics, though it is a focused single-competency task."
+}

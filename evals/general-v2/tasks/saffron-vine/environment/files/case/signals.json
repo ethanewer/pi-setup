@@ -1,0 +1,5 @@
+{
+  "pristine_holdout_accuracy": 0.935,
+  "degraded_holdout_accuracy": 0.5012,
+  "note": "a failed checkpoint restore zeroed fc2.weight and degraded the holdout accuracy; recover it with a low-rank adapter trained on fc2 only"
+}
