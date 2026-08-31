@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 0,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 0,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 1,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 20,
+  "documented_probe": "C-7210274e (meet a threshold accuracy on a held-out test set): second independent covering task. Fit a sklearn classifier on a training CSV so a strictly held-out test CSV classifies at or above the stated accuracy floor (0.85), persist a reloadable pickled model and metrics, and generalize to hidden cases with different seeds/sizes whose own floors are enforced by re-executing the deliverable. Easy: well-separated classes, single-stage fit, generous floor.",
+  "notes": "Distinct from cedar-pier (hydra-configured logistic trainer with sign-constrained coefficients and pipeline hardening): here the contract is a minimal data-driven CLI fit + persist + threshold check. The verifier never trusts the reported metrics: it unpickles the model, recomputes holdout accuracy against the case floor, checks metric consistency, and re-runs the deliverable on hidden cases. Rubric is small: single-stage fit, one floor, hidden replays, quantitative correctness on the threshold comparison."
+}
