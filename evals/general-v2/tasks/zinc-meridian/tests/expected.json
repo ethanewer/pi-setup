@@ -1,0 +1,41 @@
+{
+  "descriptor": "molecular_weight",
+  "target": 151.16,
+  "tolerance": 8.97,
+  "matches": [
+    {
+      "id": "APX-001",
+      "name": "Paracetamol",
+      "formula": "C8H9NO2",
+      "molecular_weight": 151.165,
+      "distance": 0.005,
+      "score": 0.995025
+    },
+    {
+      "id": "APX-006",
+      "name": "Magnesium nitrate",
+      "formula": "Mg(NO3)2",
+      "molecular_weight": 148.313,
+      "distance": 2.847,
+      "score": 0.259943
+    },
+    {
+      "id": "APX-011",
+      "name": "Boundary reference",
+      "formula": "CH12N4O5",
+      "molecular_weight": 160.13,
+      "distance": 8.97,
+      "score": 0.100301
+    }
+  ],
+  "report": {
+    "rows_in": 18,
+    "rows_parsed": 16,
+    "rows_rejected": 2,
+    "rejected_ids": [
+      "APX-014",
+      "APX-015"
+    ],
+    "matched": 3
+  }
+}

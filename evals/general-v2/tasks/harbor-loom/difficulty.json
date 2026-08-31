@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 2,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 30,
+  "documented_probe": "C-05017dfa (fetch protein sequences from an external structure-database api by identifier): covering task exercises it at full hard fidelity — the client must resolve structure identifiers of the form ACCESSION.CHAIN against a localhost API, normalize mixed-case identifiers, follow multi-hop obsolete->superseded_by redirections (up to three hops in hidden cases), re-join 80-column wrapped sequence lines, and verify a sha256 checksum, reproducing every returned sequence byte-exactly. Independent cover for zephyr-anchor in a different scenario (PDB-style structural-genomics mirror with entry metadata, 410 Gone supersession and checksum verification vs. flat sequence-id lookup).",
+  "notes": "Single-deliverable HTTP-client stage: start the localhost fixture server, poll /health, parse identifier strings (case normalization, last-dot split), loop on entry metadata to follow obsolete supersession chains, fetch wrapped sequences, join lines with no separator, verify sha256, and key results by the original identifier string. reasoning_depth=2: multi-step resolution protocol plus wrapped-sequence reassembly; interaction_statefulness=2: subprocess server lifecycle with readiness poll on a fresh free port per run; tool_breadth=2: HTTP client + subprocess + JSON/hashlib I/O. quantitative_correctness=2: sequences must equal the API payload byte-exactly and checksums must verify. hidden_case_generalization=2: verifier re-runs the unchanged client on fresh hidden databases and request lists. Totals bucket to hard."
+}

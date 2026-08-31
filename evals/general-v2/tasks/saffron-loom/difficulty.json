@@ -1,0 +1,16 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 0,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 0,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 30,
+  "notes": "Two-stage: write a reusable CLI exporter, then run it on the visible fixtures to produce the delivered JSONL. The competency (filter one locale subset, export requested columns as JSONL with exact row count/column names) is checked at medium floor: two dataset shapes (bare array vs {'records': ...} wrapper), missing/non-string/wrong-case locale rows, missing columns emitted as '', empty dataset, zero-match locale, exact row count and column order on every hidden case. Rubric nonzero for dependent_stages (program + delivered artifact), reasoning_depth (two shapes + field-absence semantics), adversarial_inputs and hidden_case_generalization (4 hidden cases), quantitative_correctness (exact rows/columns). No tool breadth, resource pressure, or statefulness; totals bucket to medium."
+}

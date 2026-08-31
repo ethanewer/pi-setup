@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 1,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 1,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 1,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 40,
+  "documented_probe": null,
+  "notes": "Single-deliverable HTTP-service task at full hard fidelity: the client must manage a local server process lifecycle (free port, start, readiness poll on /health, teardown), enumerate proteins via /api/proteins, tolerate retired proteins that 404 on /api/spectra, and apply a compound spectral rule: unique donor by inclusive emission band, unique acceptor by inclusive excitation band AND a non-negative gap to the donor capped at max_gap_nm (band-only selection picks a wrong acceptor on every seeded database). The report must reproduce the /api/spectra payloads byte-exactly. reasoning_depth=2 (two-stage fetch plus compound inclusive-band/gap predicate), adversarial_inputs=2 (retired-404 ids, in-band but gap-violating decoys)."
+}

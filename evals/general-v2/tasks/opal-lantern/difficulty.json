@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 0,
+    "tool_breadth": 0,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 0,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 1,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 20,
+  "documented_probe": "C-6dcccfe8 (filter a large dataset to a given locale subset and export columns to jsonl): reference floor is medium and this covering task is medium; the verifier fully checks the capability on hidden cases.",
+  "notes": "Single-stage: filter a JSONL survey archive to one locale and export dotted-path column selectors to JSONL. Medium via nested-path resolution with missing-key -> \"\" handling plus adversarial lines (malformed JSON, non-object JSON, blank lines) and a zero-match/empty-file edge. Hidden cases cover a different locale, reordered selectors, unicode preservation, and an empty input. Rubric nonzero for reasoning_depth (dotted-path semantics), adversarial_inputs/hidden_case_generalization (5 hidden cases), quantitative_correctness (exact rows, order, column names). No tools, no dependency chain, no environment pressure."
+}
