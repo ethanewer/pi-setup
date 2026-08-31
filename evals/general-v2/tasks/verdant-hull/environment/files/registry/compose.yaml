@@ -1,0 +1,21 @@
+# Grayhaven Maritime Registry -- component stack description (compose-style).
+# The `catalog` service is a PostgreSQL instance provisioned for this exercise.
+services:
+  catalog:
+    image: postgres:16
+    hostname: catalog
+    environment:
+      POSTGRES_DB: registry
+      POSTGRES_USER: harbormaster
+      POSTGRES_PASSWORD: "Quaylight-8416"
+    ports:
+      - "5544:5432"
+    networks:
+      default: {}
+    healthcheck:
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-p", "5544"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+networks:
+  default: {}
