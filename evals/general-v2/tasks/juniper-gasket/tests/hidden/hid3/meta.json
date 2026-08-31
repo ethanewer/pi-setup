@@ -1,0 +1,20 @@
+{
+  "case_id": "hid3",
+  "seed": 35,
+  "features": [
+    "moisture",
+    "weight_kg",
+    "metal_signal",
+    "odor_score",
+    "optical_density",
+    "conductivity"
+  ],
+  "target": "contaminated",
+  "classes": [
+    0,
+    1
+  ],
+  "accuracy_floor": 0.85,
+  "n_train": 1000,
+  "n_test": 450
+}
