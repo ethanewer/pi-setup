@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 1,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 35,
+  "documented_probe": null,
+  "notes": "Hard: recover a directed acyclic graph from raw observational samples by implementing a precisely-specified multi-step heuristic (Pearson max-|r| spanning tree with a strict tie-break, BFS orientation away from a declared root, and domain-hint flips that override BFS orientation). The ambiguity-resolution stage is where set equality breaks: a hint that conflicts must flip the BFS direction, while a hint referencing a non-skeleton pair or a non-network column must be ignored; distractor columns outside spec['columns'] must be excluded. The deliverable solver is re-executed on four hidden fixtures with different column counts (3-8), roots that are not the generative source, distractor columns, and mixed hint semantics, so a hard-coded or partially-implemented heuristic fails set equality. Rubric weights reasoning_depth (multi-stage ordering-sensitive algorithm), debugging_ambiguity (hint-conflict vs ignore), adversarial_inputs (distractors, non-source roots), hidden_case_generalization, and quantitative_correctness (exact edge-set equality)."
+}
