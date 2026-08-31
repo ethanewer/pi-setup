@@ -1,0 +1,25 @@
+{
+  "calls": [
+    {
+      "func": "hann",
+      "args": [
+        0
+      ],
+      "expect_error": "ValueError"
+    },
+    {
+      "func": "hann",
+      "args": [
+        -4
+      ],
+      "expect_error": "ValueError"
+    },
+    {
+      "func": "ramp",
+      "args": [
+        -1
+      ],
+      "expect_error": "ValueError"
+    }
+  ]
+}

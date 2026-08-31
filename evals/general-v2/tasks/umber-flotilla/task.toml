@@ -1,0 +1,20 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "medium"
+category = "web"
+verifier_kind = "executes-deliverable"
+deliverables = ["/app/service.py", "/app/summary.json"]
+tags = ["umber-flotilla", "web", "http-services", "portfolio-scale-aggregation", "C-84b8017c"]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 900.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096

@@ -1,0 +1,99 @@
+{
+ "bulk": [
+  [
+   {
+    "asset_id": "EDG-000001",
+    "price": 33.71,
+    "quantity": 734,
+    "ticker": "TK31"
+   },
+   {
+    "asset_id": "EDG-000002",
+    "price": 56.42,
+    "quantity": 112,
+    "ticker": "TK31"
+   },
+   {
+    "asset_id": "EDG-000003",
+    "price": 24.84,
+    "quantity": 826,
+    "ticker": "TK44"
+   },
+   {
+    "asset_id": "EDG-000004",
+    "price": 25.07,
+    "quantity": 202,
+    "ticker": "TK42"
+   }
+  ]
+ ],
+ "invalid_batches": [
+  [
+   {
+    "asset_id": "BAD-000001",
+    "price": 39.76,
+    "quantity": 544,
+    "ticker": "TK41"
+   },
+   {
+    "asset_id": "BAD-2",
+    "price": 5.0,
+    "quantity": -3,
+    "ticker": "TK01"
+   }
+  ],
+  [
+   {
+    "asset_id": "BM-1",
+    "quantity": 5,
+    "ticker": "TK02"
+   }
+  ],
+  [
+   {
+    "asset_id": 99,
+    "price": 1.0,
+    "quantity": 5,
+    "ticker": "TK03"
+   }
+  ],
+  [
+   {
+    "asset_id": "DUP-000001",
+    "price": 21.2,
+    "quantity": 636,
+    "ticker": "TK19"
+   },
+   {
+    "asset_id": "DUP-000001",
+    "price": 74.49,
+    "quantity": 623,
+    "ticker": "TK03"
+   }
+  ],
+  [
+   {
+    "asset_id": "EDG-000001",
+    "price": 33.71,
+    "quantity": 734,
+    "ticker": "TK31"
+   },
+   {
+    "asset_id": "NEW-000001",
+    "price": 10.86,
+    "quantity": 356,
+    "ticker": "TK21"
+   }
+  ],
+  []
+ ],
+ "lookups": [
+  "EDG-000001",
+  "EDG-000002",
+  "EDG-000003",
+  "EDG-000004",
+  "EDG-000005",
+  "EDG-000005"
+ ],
+ "time_limit_sec": 30
+}
