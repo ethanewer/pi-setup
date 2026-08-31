@@ -1,0 +1,14 @@
+{
+  "dagframe": [
+    {"expr": "df_parents(c('A>C','B>C','C>D'), 'C')", "expected": ["A", "B"]},
+    {"expr": "df_parents(c('A>C'), 'A')", "expected": []},
+    {"expr": "df_children(c('A>C','A>D','B>C'), 'A')", "expected": ["C", "D"]},
+    {"expr": "df_all_nodes(c('A>C','B>C'))", "expected": ["A", "B", "C"]}
+  ],
+  "framekit": [
+    {"expr": "as.character(fk_scale(c(0,5,10), 0, 1))", "expected": ["0", "0.5", "1"]},
+    {"expr": "as.character(fk_scale(numeric(0), 0, 1))", "expected": []},
+    {"expr": "as.character(fk_scale(c(3,3,3), 0, 10))", "expected": ["5", "5", "5"]},
+    {"expr": "fk_counts(c('a','b','a','a'))", "expected": ["a:3", "b:1"]}
+  ]
+}
