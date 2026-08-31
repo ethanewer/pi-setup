@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 0,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 1,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 1,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 30,
+  "documented_probe": "C-ac4a9918 (declare the mailing-list configuration in the canonical file): second covering task, independent of the exemplar echo-mantle. The agent must author the mailing-list manager configuration and place it at the daemon's fixed canonical path (/etc/listd/lists.conf); the daemon refuses to start without it, so a config left at a wrong path leaves the lists dead. Hidden probes exercise list/membership content, closed/open posting, subscribe semantics, archive persistence, and reload-from-canonical-path after restart.",
+  "notes": "Medium: author an INI configuration against a documented schema plus an idempotent installer, place it at the canonical path, and keep an HTTP mailing-list service healthy. Nonzero rubric for tool_breadth (daemon control + HTTP API), dependent_stages (author -> install -> restart -> serve), reasoning_depth (config schema + closed/open semantics), adversarial_inputs (wrong path / malformed config must not be honored), hidden_case_generalization (behavioral probes), quantitative_correctness (exact members/flags), interaction_statefulness (restart persistence, spool persistence)."
+}
