@@ -1,0 +1,96 @@
+{
+  "queries": [
+    {
+      "send": {
+        "op": "prod",
+        "values": [
+          2,
+          -3,
+          4
+        ]
+      },
+      "expect": {
+        "type": "result",
+        "value": -24
+      }
+    },
+    {
+      "send": {
+        "op": "prod",
+        "values": []
+      },
+      "expect": {
+        "type": "result",
+        "value": 1
+      }
+    },
+    {
+      "send": {
+        "op": "sum",
+        "values": []
+      },
+      "expect": {
+        "type": "result",
+        "value": 0
+      }
+    },
+    {
+      "send": {
+        "op": "uniq",
+        "values": []
+      },
+      "expect": {
+        "type": "result",
+        "values": []
+      }
+    },
+    {
+      "send": {
+        "op": "fnv1a",
+        "text": ""
+      },
+      "expect": {
+        "type": "result",
+        "value": 2166136261
+      }
+    },
+    {
+      "send": {
+        "op": "fnv1a",
+        "text": "éx"
+      },
+      "expect": {
+        "type": "result",
+        "value": 3952433979
+      }
+    },
+    {
+      "send": {
+        "op": "sum",
+        "values": [
+          1000000,
+          -999999,
+          7
+        ]
+      },
+      "expect": {
+        "type": "result",
+        "value": 8
+      }
+    },
+    {
+      "send": {
+        "op": "rev",
+        "values": [
+          -5
+        ]
+      },
+      "expect": {
+        "type": "result",
+        "values": [
+          -5
+        ]
+      }
+    }
+  ]
+}

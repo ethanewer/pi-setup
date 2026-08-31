@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 0,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 3,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 30,
+  "documented_probe": "C-c3adcbc5 (achieve memory-efficient near-linear scaling on large bags): the competency's reference floor is medium and this task exercises it at medium — the verifier fully checks the capability (chunked streaming forward over a 1.2M-patch stress set with a hard 400 MB peak-RSS cap and wall-clock deadline, plus exact score recompute).",
+  "notes": "Streaming inference under resource pressure: forward a frozen numpy MLP (Linear(32->16), ReLU, Linear(16->1), sigmoid) over trace sets of up to 1.2M patches, aggregating per-trace mean anomaly probabilities. resource_pressure=3: the verifier measures the scorer's peak VmHWM (cap 400 MB) and wall clock (150 s deadline) on a generated 1.2M-patch stress set — a full read_csv or whole-array materialization peaks around 1.2 GB and fails, while chunked aggregation runs in seconds. hidden_case_generalization=2 (string trace ids in unsorted first-occurrence order; a 3000-trace set). quantitative_correctness=2 (per-trace scores compared against an independent streamed recompute within one 4th-decimal unit). adversarial_inputs=2 (header-only, missing columns, non-numeric features, awkward chunk boundaries). No dependency chain, no interaction/unsafe surface."
+}
