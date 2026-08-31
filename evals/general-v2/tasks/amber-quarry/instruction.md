@@ -1,89 +1,84 @@
-# Quarry Calibration — mirror the ONNX calibration graph in pure numpy
+# Amber Quarry — solver verdict triage
 
-The quarry ops team ships a small **calibration network** as an ONNX graph.
-For embedded deployment you must provide a **pure-numpy mirror** of that
-graph that reproduces the onnxruntime reference outputs within a tight
-numeric tolerance — on fixed inputs and on random inputs. The mirror may
-*parse* the graph, but must never *execute* it with onnxruntime (blocked at
-verify time).
+The Amber Quarry scheduling office runs a constraint solver on haul plans. Each
+run leaves a **transcript**; a triage tool must read the transcripts and decide,
+for each one, whether the underlying constraint set was **satisfiable (SAT)**,
+**unsatisfiable (UNSAT)**, or whether no usable verdict was emitted
+(**NOVERDICT**).
 
-Everything runs on CPU in `/app` with `python3`, `numpy`, `onnx` and
-`onnxruntime` (installed). Work only in `/app`; do not read `/tests` or
-`/solution`.
+Python 3.12 standard library only; no network access.
 
-## The graph (identical structure in every case, different shapes/weights)
+## Deliverables (both required)
 
-Float32, opset 17, input `x` of shape `[B, D]`, output `out` of shape
-`[B, K]`:
-
-```
-h1 = x  @ W1 + b1                       # D -> H
-a1 = 0.5 * h1 * (1 + erf(h1 / sqrt(2))) # Gelu, erf form
-n1 = LayerNormalization(a1, g1, beta1)  # axis=-1, epsilon=1e-5
-h2 = n1 @ W2 + b2                       # H -> H
-a2 = 0.5 * h2 * (1 + erf(h2 / sqrt(2))) # Gelu, erf form
-o1 = a2 @ W3 + b3                       # H -> K
-out = Softmax(o1, axis=-1)
-```
-
-The initializers are named exactly `W1, b1, g1, beta1, W2, b2, W3, b3`
-(plus small constants). The Gelu subgraph is literally
-`Div(h, sqrt(2)) -> Erf -> Add(1) -> Mul(h) -> Mul(0.5)`.
-
-## Deliverables (both produced in `/app`)
-
-1. `/app/mirror.py` — a standalone program:
+1. `/app/verdict_scan.py` — a runnable Python 3 program:
 
    ```
-   python3 /app/mirror.py <model.onnx> <inputs.npz> <output.npz>
+   python3 /app/verdict_scan.py <log_dir> <out_file>
    ```
 
-   It loads `<model.onnx>` with the `onnx` package (graph parsing only),
-   reads array `x` from `<inputs.npz>`, evaluates the graph in numpy, and
-   writes the softmax output under key `out` into `<output.npz>`.
-   Implementation rules:
-   - **pure numpy + standard library** for the math (you may use
-     `math.erf` via vectorization); do NOT import `onnxruntime`, `torch`,
-     `tensorflow`, `jax` or `keras` — the verifier blocks `onnxruntime`
-     imports and scans your source.
-   - compute in double precision internally and cast the final result to
-     float32, so the numeric error stays far inside the tolerance;
-   - support exactly the ops above (`MatMul`, `Add`, `Mul`, `Div`, `Erf`,
-     `LayerNormalization`, `Softmax`), reading `axis` / `epsilon`
-     attributes from the graph rather than assuming defaults.
-
-2. `/app/answer.npz` — the output of running your mirror on the visible
-   case:
+   It scans `<log_dir>` for files matching `*.log` (non-recursive) and writes one
+   line per file to `<out_file>`, **sorted by filename** (lexicographic):
 
    ```
-   python3 /app/mirror.py /app/case/model.onnx /app/case/inputs_fixed.npz /app/answer.npz
+   <filename>:<TOKEN>
    ```
 
-## How the grader checks parity
+   where `<TOKEN>` is exactly one of `SAT`, `UNSAT`, `NOVERDICT`. For an empty
+   directory the output file must exist and be empty.
 
-For the visible case `/app/case/` and for each hidden case, the grader:
+2. `/app/verdicts_report.txt` — the report produced by running
 
-1. runs `/app/mirror.py` on the case's **fixed** inputs
-   (`inputs_fixed.npz`) and compares to an onnxruntime reference;
-2. generates **random** inputs as
-   `np.random.default_rng(meta["random_seed"]).standard_normal((meta["random_batch"], meta["in_dim"])).astype(np.float32)`,
-   runs `/app/mirror.py`, and compares to the reference;
-3. requires every comparison to satisfy
-   `np.allclose(got, ref, atol=meta["atol"], rtol=meta["rtol"])`
-   (default tolerance: `atol=1e-4`, `rtol=1e-3`), with finite values and
-   the exact reference shape `[B, K]`;
-4. for the visible case, additionally checks `/app/answer.npz` against the
-   fixed-input reference.
+   ```
+   python3 /app/verdict_scan.py /app/case/logs /app/verdicts_report.txt
+   ```
 
-Hidden cases differ in `D`, `H`, `K`, batch sizes, seeds and weights — your
-mirror must read all shapes and weights from the graph, never hardcode.
+   on the shipped visible transcripts.
 
-## Constraints
+**Do not modify anything under `/app/case/`.**
 
-- Standard library + `numpy` + `onnx` (parsing) only. No network at verify
-  time.
-- The verifier runs your program with `onnxruntime` imports blocked; if the
-  program tries to import it, the run fails.
-- Keep the numeric drift small: the tolerance is intentionally tight, and
-  reordering the softmax (unstable `exp`) or computing Gelu in single
-  precision can exceed it on adversarial magnitudes.
+## Classification rule
+
+A **verdict line** is a line that, after stripping leading whitespace and
+lowercasing, **starts with the word `verdict`**. Everything after that word is
+the value: strip leading separator characters (spaces, tabs, `:`, `=`), strip
+trailing whitespace, then strip trailing characters from the set `! . :`.
+
+Map the value (already lowercased):
+
+- `sat` or `satisfiable` → **SAT**
+- `unsat`, `unsatisfiable`, `no solution`, `infeasible` → **UNSAT**
+- anything else (including empty) → **NOVERDICT** (unrecognized verdict)
+
+Deciding the verdict for one transcript:
+
+1. Consider **only** verdict lines; any other line is noise even if it mentions
+   `unsat`, `satisfiable`, `no solution`, etc. somewhere in its text (solver
+   traces and comments love those words).
+2. If there is **no** verdict line → **NOVERDICT**.
+3. If there are several, the **last** one wins (later re-solves override).
+4. Apply the value mapping above.
+
+Examples:
+
+- `verdict: SATISFIABLE` → SAT
+- `  verdict = unsat` → UNSAT
+- `VERDICT:INFEASIBLE` → UNSAT
+- `verdict:sat.` → SAT (trailing period stripped)
+- `# verdict: unsat` → **not** a verdict line (starts with `#`)
+- `check: unsat-core retained` → noise, ignored
+- a transcript with `verdict: sat` and later `verdict: no solution` → UNSAT
+- a transcript with `verdict: maybe` → NOVERDICT
+
+## Edge cases the grader probes (hidden transcript sets)
+
+- Verdict lines with mixed case, extra whitespace, `=`/`:` separators, and
+  trailing `.`/`!`/`:` punctuation.
+- Noise lines that contain `unsat` / `UNSATISFIABLE` / `no solution` but do not
+  start with `verdict` (including a verdict mention inside a `#` comment).
+- Multiple verdict lines where the last must win.
+- Transcripts with no verdict line at all, whitespace-only transcripts, and
+  unrecognized verdict values → `NOVERDICT`.
+- An **empty log directory** → empty output file.
+
+The verifier re-runs your `/app/verdict_scan.py` unchanged on the visible and
+hidden transcript directories and compares the report token-for-token.

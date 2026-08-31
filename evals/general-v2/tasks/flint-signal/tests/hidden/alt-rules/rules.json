@@ -1,8 +1,0 @@
-{
-  "rules": [
-    {"id": "deploy_fail", "pattern": "deploy failed", "severity": "high"},
-    {"id": "retry_storm", "pattern": "retry", "threshold": 2},
-    {"id": "bad_regex", "pattern": "([unclosed", "threshold": 1, "severity": "low"},
-    {"id": "quiet", "pattern": "nevermatches", "threshold": 0, "severity": "info"}
-  ]
-}

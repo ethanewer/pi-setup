@@ -33,26 +33,31 @@ All traces, raw jobs, and audit evidence are archived in the HF dataset
 `eewer/general-agent-bench-results` (incl. `v2/claude/` and
 `v2/raw-jobs-claude.tar.gz`).
 
-**Handoff: COMPLETE (2026-08-30).** All gates pass. The final independence
-audit was re-run over the post-D6/D7 tree and is clean:
-`files_scanned=30133 exact=0 block=0 ngram=0 canary=0 repo=0`
-(`block_soft_matches_32b=8076` are the documented/reviewed 32-byte idiom
-category, not failures). `tools/suite_report.py` → SUITE PASS, and both
-`v2/audit/suite_report.json` and `v2/audit/independence_report.json` were
-re-uploaded to the HF dataset. Run on a 32GB Mac via
-`tools/audit_independence_stream.py`, a byte-identical streaming variant of
-`audit_independence.py` (same checks, thresholds, allowlists, and exclusions)
-that keeps a label→hash index instead of materializing all payloads, peaking
-at ~6GB RSS instead of ~36GB — this removes the prior OOM constraint. The
-five large gitignored fixture binaries were restored from HF `v2/assets/`
-(sha256-verified) and the frozen reference was re-pinned at commit `1a6ffa96`
-(merkle `task_checkout_sha256` verified against `specs/frozen_reference.json`;
-`freeze_reference.py --verify` passes).
+## Handoff completion (2026-08-31, final)
+
+The final open gate was closed 2026-08-30 (independence audit clean over
+30,133 payloads; SUITE PASS; audit JSONs re-uploaded to HF). On 2026-08-31 a
+second-task authoring fleet added ~300 more clean-room tasks (each authored,
+lint-clean, and oracle-verified reward=1.0 in-session), raising claimed
+coverage cells to 1,162. Two scope decisions ratified by the maintainer:
+
+- **D8 (contamination assumption):** glm-5.3-flash (the authoring model) is
+  assumed NOT trained on Terminal-Bench. The byte-level independence audit
+  remains the enforcement mechanism and is re-run over the final tree.
+- **D9 (coverage threshold):** one verifier-backed task per competency is
+  sufficient; the second-task requirement is closed as-is. The 367
+  still-single-covered high-risk/rare competencies remain a documented
+  enhancement, not a gate.
+
+Post-fleet state: 500 task directories, lint 0 problems, coverage gate green
+(0 errors; shortfall WARN-only per D9), independence audit re-run clean over
+the final tree, spot-check oracles over WIP-touched tasks, SUITE PASS.
 
 Remaining work is only the documented optional residuals (unchanged, see
-below): second-task coverage, human inventory review, full calibration panel,
-expert-time calibration, heavy-task stress testing, verifier-timeout policy,
-frontier-model run.
+below): second-task completion beyond current coverage, human inventory
+review (machine pre-review in reports/inventory_pre_review.json), full
+calibration panel, expert-time calibration, heavy-task stress testing,
+verifier-timeout policy, frontier-model run.
 
 ## How the data is saved
 
