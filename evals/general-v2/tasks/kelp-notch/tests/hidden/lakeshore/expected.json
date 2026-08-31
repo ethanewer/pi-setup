@@ -1,0 +1,13 @@
+{
+  "domain": "lists.lakeshore.internal",
+  "canonical_config": "/etc/postfix/virtual",
+  "lists": [
+    {"address": "bulletin@lists.lakeshore.internal", "recipient": "steward"},
+    {"address": "welders@lists.lakeshore.internal", "recipient": "warden"}
+  ],
+  "stale": [
+    "announce@lists.thornway.internal",
+    "builders@lists.thornway.internal",
+    "toolswap@lists.thornway.internal"
+  ]
+}

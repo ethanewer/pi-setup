@@ -1,0 +1,11 @@
+# Moor Atlas hidden scenario stack (compose-style).
+services:
+  fellwatch:
+    image: postgres:16
+    hostname: fellwatch
+    environment:
+      POSTGRES_DB: brackenmoor
+      POSTGRES_USER: brackwarden
+      POSTGRES_PASSWORD: "Brack-Moor-4488"
+    ports:
+      - "5581:5432"

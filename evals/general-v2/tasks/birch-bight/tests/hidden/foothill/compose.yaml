@@ -1,0 +1,10 @@
+# hidden case foothill: double-quoted values; zero verified rows
+services:
+  telemetry:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: "foothill"
+      POSTGRES_USER: "fhwatch"
+      POSTGRES_PASSWORD: "Fern-Hollow-3310"
+    ports:
+      - "5433:5432"

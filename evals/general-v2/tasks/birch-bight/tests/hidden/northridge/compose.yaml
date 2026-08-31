@@ -1,0 +1,10 @@
+# hidden case northridge: unquoted env values, standard port notation
+services:
+  telemetry:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: northridge
+      POSTGRES_USER: nrreader
+      POSTGRES_PASSWORD: Ridge-Mist-2201
+    ports:
+      - "5433:5432"
