@@ -1,0 +1,11 @@
+BATCH_DONE batch_019 attempt=1 rc=0
+ clean (only pre-existing errors in unrelated incomplete task dirs), oracle runs pass, and hidden cases executed (cello-harbor verifier reported `verify failures: []`; spume-ferry's verifier prints nothing on success and only fails on hidden-case violations — reward=1 confirms all 3 hidden cases passed).
+
+**Summary of authored tasks:**
+
+1. **`cello-harbor`** (C-1ca974ef, hard, data_processing) — live-audio relay scheduler: bundle an arrival-ordered chunk stream into sector-aligned segments grouped into capped broadcast windows under segment/window caps, a window budget, and per-chunk deadlines. Verifier executes `/app/solve.py` on the visible fixture + 5 hidden cases (empty, single, deadline-pressure, cap-bound, odd-granularity) and programmatically validates all six structural constraints (exact-once order-preserving ids, alignment multiples, caps, window count, deadlines) plus a no-modify guard on `/app/stream.json`.
+2. **`spume-ferry`** (C-9316fd7f, easy, web) — stdlib kiosk service in-container: discover routes/receipts, compute a sha256 rendezvous payload for a dock id, POST to `/api/v1/claim`, deliver the pier-pass string, receipt JSON, and message file. Verifier re-runs `/app/claim_pass.py` live against the service on hidden dock ids (open id 7, closed id 999, non-integer arg) and checks deliverables for dock 21.
+
+RESULT {"cid":"C-1ca974ef","task_id":"cello-harbor","lint":true,"oracle_reward":1.0}
+RESULT {"cid":"C-9316fd7f","task_id":"spume-ferry","lint":true,"oracle_reward":1.0}
+n","lint":true,"oracle_reward":1.0}

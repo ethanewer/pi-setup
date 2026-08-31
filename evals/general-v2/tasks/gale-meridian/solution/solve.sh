@@ -77,6 +77,8 @@ def dead(name, spec):
 
 
 for name, spec in list(specs().items()):
+    if name == "python3":
+        continue  # stock ipykernel spec shipped with the image
     if dead(name, spec):
         subprocess.run(["jupyter", "kernelspec", "remove", "-y", name],
                        capture_output=True, text=True)

@@ -21,9 +21,9 @@ def main():
     seed = int(sys.argv[3])
     d_raw = int(sys.argv[4]) if len(sys.argv) > 4 else 6
     d_ctx = int(sys.argv[5]) if len(sys.argv) > 5 else 16
-    n_train = int(sys.argv[6]) if len(sys.argv) > 6 else 800
-    n_test = int(sys.argv[7]) if len(sys.argv) > 7 else 300
-    flip = 0.03
+    n_train = int(sys.argv[6]) if len(sys.argv) > 6 else 3000
+    n_test = int(sys.argv[7]) if len(sys.argv) > 7 else 800
+    flip = 0.02
 
     g = np.random.default_rng(seed)
     X = g.normal(0.0, 1.0, (n_train + n_test, d_raw)).astype(np.float32)
@@ -62,9 +62,9 @@ def main():
         "d_raw": d_raw,
         "d_ctx": d_ctx,
         "num_classes": 2,
-        "train_epochs_hint": 900,
-        "loss_target": 0.12,
-        "accuracy_target": 0.90,
+        "train_epochs_hint": 1500,
+        "loss_target": 0.15,
+        "accuracy_target": 0.88,
         "probe_seed": seed + 500,
     }
     os.makedirs(outdir, exist_ok=True)

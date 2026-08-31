@@ -1,0 +1,145 @@
+```json
+{
+  "flags": [
+    {
+      "id": "C-96dac2ec",
+      "issue_type": "duplicate",
+      "explanation": "Describes the same competency as C-f64f4486: making a bucket publicly readable. The only difference is mechanism (ACL vs bucket policy), and both entries state the verifier accepts the resulting public-read outcome, so a single verifier covers both.",
+      "suggested_fix": "Merge C-96dac2ec and C-f64f4486 into one entry: 'make the bucket publicly readable (via ACL or access policy)' with a single public-read verifier."
+    },
+    {
+      "id": "C-f64f4486",
+      "issue_type": "duplicate",
+      "explanation": "Same competency as C-96dac2ec (public bucket access); only the ACL-vs-policy mechanism differs, which does not change the checkable behavior.",
+      "suggested_fix": "Merge with C-96dac2ec into a single entry covering either mechanism."
+    },
+    {
+      "id": "C-9ab030ab",
+      "issue_type": "duplicate",
+      "explanation": "Essentially the same competency as C-90dc4ed7: run a script from scratch, require exit 0, and require an observable output (non-empty file vs completion message). Both are verified by executing the script and checking exit code plus output presence.",
+      "suggested_fix": "Merge C-9ab030ab and C-90dc4ed7 into one 'script runs cleanly from scratch and produces expected output' entry, or differentiate by requiring one to cover incremental/no-stale-output regeneration explicitly."
+    },
+    {
+      "id": "C-90dc4ed7",
+      "issue_type": "duplicate",
+      "explanation": "Duplicates C-9ab030ab (successful script execution with verifiable output); the artifact differs only in message-vs-file form.",
+      "suggested_fix": "Merge with C-9ab030ab."
+    },
+    {
+      "id": "C-56dccd5f",
+      "issue_type": "duplicate",
+      "explanation": "Same competency as C-3fb1fd1b: all changes confined to designated file(s), everything else byte-identical, verified by checksums. Both describe the generic 'no edits outside the sanctioned file' constraint.",
+      "suggested_fix": "Merge C-56dccd5f and C-3fb1fd1b into one 'changes confined to sanctioned files, rest byte-identical' entry."
+    },
+    {
+      "id": "C-3fb1fd1b",
+      "issue_type": "duplicate",
+      "explanation": "Duplicate of C-56dccd5f (identical constraint expressed as 'single sanctioned file' vs 'rest of repository unmodified'); also its definition is a verbatim copy of its name.",
+      "suggested_fix": "Merge with C-56dccd5f."
+    },
+    {
+      "id": "C-6c59d7c0",
+      "issue_type": "duplicate",
+      "explanation": "Overlaps C-03964903/C-03964901-style model size budgeting: 'keep produced model/image artifacts under a size ceiling' is the same competency as 'keep the serialized model within a tight size budget' (C-03964901); both verify by checking artifact byte size against a stated limit.",
+      "suggested_fix": "Merge with C-03964901 into one 'output artifacts within stated size bound' entry, or scope this one strictly to image files and the other strictly to model directories."
+    },
+    {
+      "id": "C-03964901",
+      "issue_type": "duplicate",
+      "explanation": "Same competency as C-6c59d7c0 (artifact under a byte-size ceiling, verified by a size check); only the concrete threshold (100KB) differs.",
+      "suggested_fix": "Merge with C-6c59d7c0."
+    },
+    {
+      "id": "C-04b6cb45",
+      "issue_type": "wrong_difficulty",
+      "explanation": "Resolving member references against an employee set within a department is a standard join/referential-integrity check, not a hard competency.",
+      "suggested_fix": "Lower min_required_difficulty from 'hard' to 'medium'."
+    },
+    {
+      "id": "C-0d649404",
+      "issue_type": "wrong_difficulty",
+      "explanation": "Reading a local JSON and filtering names case-insensitively with a result limit is a basic task; 'hard' is clearly too high.",
+      "suggested_fix": "Lower min_required_difficulty from 'hard' to 'easy' (or 'medium' at most)."
+    },
+    {
+      "id": "C-4b7949d3",
+      "issue_type": "wrong_difficulty",
+      "explanation": "Ensuring numpy is installed and importable system-wide is a routine package-install step, not hard.",
+      "suggested_fix": "Lower min_required_difficulty from 'hard' to 'easy'."
+    },
+    {
+      "id": "C-69755486",
+      "issue_type": "wrong_difficulty",
+      "explanation": "Setting an executable bit while not touching a file is a trivial operation; 'medium' overstates it.",
+      "suggested_fix": "Lower min_required_difficulty from 'medium' to 'easy'."
+    },
+    {
+      "id": "C-c8c8a093",
+      "issue_type": "wrong_difficulty",
+      "explanation": "The competency as scoped is only 'total sequence length does not exceed a stated ceiling' — a single trivial length check, not hard.",
+      "suggested_fix": "Lower min_required_difficulty from 'hard' to 'easy', or re-scope the entry to include the functional constraints that make staying under the ceiling nontrivial."
+    },
+    {
+      "id": "C-ae9e103e",
+      "issue_type": "vague_definition",
+      "explanation": "The definition is a verbatim repeat of the name with no concrete model, dataset, or metric spec, and the required_artifacts mix deliverables from unrelated task types (classification JSON with predicted id/confidence, MSE regression figures, test-accuracy thresholds), so no single concrete verifier can be written.",
+      "suggested_fix": "Split into separate entries (e.g., classification inference with accuracy floor vs. regression MSE reporting) and give each a concrete definition naming the model, data, and metric thresholds."
+    },
+    {
+      "id": "C-9552d473",
+      "issue_type": "overlapping_scope",
+      "explanation": "This single entry bundles many unrelated performance skills: caching with measured improvement, cProfile relative-window comparisons, parallel-vs-sequential speedup gating, matrix-multiply speedup thresholds, and independent re-measurement of reported metrics — eight heterogeneous artifacts spanning different tasks.",
+      "suggested_fix": "Split into separate entries per measurable claim (e.g., 'cache speedup demonstrated', 'cProfile time within relative window', 'parallel time <= 0.70x sequential', 'reported metrics reproduce within tolerance')."
+    }
+  ],
+  "clean": [
+    "C-fdb58e16",
+    "C-9bce32b8",
+    "C-def44ba3",
+    "C-9c4bf0c8",
+    "C-388b62d1",
+    "C-7cc75c6c",
+    "C-a6729997",
+    "C-904a2d2d",
+    "C-6debc742",
+    "C-be23093b",
+    "C-41c8fb57",
+    "C-aded17a5",
+    "C-8312502d",
+    "C-ac8fda94",
+    "C-03964901x",
+    "C-f701fcff",
+    "C-50c8398f",
+    "C-3654b094",
+    "C-d4da1acc",
+    "C-e38afac1",
+    "C-a745c785",
+    "C-23652fc5",
+    "C-870563a3",
+    "C-304a65fb",
+    "C-4eaa6622",
+    "C-0d9d7ee5",
+    "C-e77e58c8",
+    "C-19c9cfba",
+    "C-0fd5c4eb",
+    "C-4c743935",
+    "C-787a6a13",
+    "C-68660f66",
+    "C-7db66fb7",
+    "C-e1db57ca",
+    "C-c44b85f8",
+    "C-66174de0",
+    "C-8589c559",
+    "C-6ac73f27",
+    "C-162592ad",
+    "C-a49933a5",
+    "C-1d220ecf",
+    "C-c3516408",
+    "C-8d6b9acc",
+    "C-5c7fbe9f",
+    "C-6e802aa3",
+    "C-7210274e",
+    "C-be23093b"
+  ]
+}
+```

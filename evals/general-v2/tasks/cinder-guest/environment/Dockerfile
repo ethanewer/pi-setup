@@ -1,15 +1,16 @@
-# cinder-guest — boot & drive a tiny QEMU guest over a monitor console and a
-# serial TCP redirect (software TCG only, no KVM).
+# cinder-guest — boot & drive a tiny x86_64 QEMU guest over a monitor console
+# and a serial TCP redirect (software TCG only, no KVM).
 FROM bench-base:ubuntu-24.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# qemu (software TCG), a Linux kernel for the guest, busybox for the tiny guest
-# rootfs, and cpio/gzip to assemble the initramfs — see build_guest.sh.
+# qemu (software TCG), cpio/gzip to assemble the initramfs, python3 + coreutils
+# for the pinned-deb fetch in build_guest.sh. The guest kernel and busybox come
+# from sha256-pinned amd64 .deb archives fetched during build (the host may be
+# arm64, whose distro kernel qemu-system-x86_64 cannot boot) — see build_guest.sh.
 RUN apt-get update >/dev/null 2>&1 && \
     apt-get install -y --no-install-recommends \
-      qemu-system-x86 busybox-static cpio gzip \
-      linux-image-generic coreutils procps >/dev/null 2>&1 && \
+      qemu-system-x86 cpio gzip python3 coreutils procps >/dev/null 2>&1 && \
     rm -rf /var/lib/apt/lists/* && \
     echo "cinder: apt install complete"
 

@@ -1,0 +1,17 @@
+BATCH_DONE batch_017 attempt=1 rc=0
+ (other sessions' work); both of my tasks lint clean and pass their oracles.
+
+**Summary of authored tasks:**
+
+**`/Users/ethanewer/pi-setup/evals/general-v2/tasks/quartz-relic/`** (C-f451b7de — Python package exposing `dot` from its root module, medium)
+- Scenario differs from gray-market (no wheel/pyproject/metadata): author a **self-contained importable package** `/app/dotkit` whose root module exposes `dot(a, b)` — scalar product of two numeric sequences (empty → 0, length mismatch → `ValueError`, no input mutation, lists/tuples, int/float).
+- Verifier enforces the frozen `/app/dotlib.py`, copies **only** `/app/dotkit` to an isolated dir (kills "import from the loose module" workarounds), imports it in fresh `-I` interpreters, and runs 12 hidden cases (ints, floats, negatives, tuples, empty, two mismatch cases, big ints, precision, immutability).
+- Fixed one verifier bug during validation (string → exception class lookup); oracle reward = 1.0.
+
+**`/Users/ethanewer/pi-setup/evals/general-v2/tasks/cobalt-marlin/`** (C-2f09fe3b — no leak-suppression workarounds, medium)
+- Scenario differs from hollow-keystone (no early-return-leak, no git merge): a C metric tool whose **too-many-errors abort path calls `_exit(2)`**, short-circuiting the `atexit`-registered `cleanup_registry` — so the report's audit line is missing and the registry stays on the heap at exit.
+- Fix must route both exit paths through the registered lifecycle (return/`exit`), keeping `atexit` intact; verifier rebuilds from the delivered source, runs under Valgrind `--errors-for-leak-kinds=all` + requires `in use at exit: 0 bytes in 0 blocks` on 5 hidden inputs (abort with populated/empty registry, boundary-at-limit success, CRLF/no-newline), byte-compares stdout/exit-code/report, checks protected files against `/opt/frozen`, and rejects `_exit`/`_Exit`/`quick_exit`/`abort`/`VALGRIND_` tokens in source.
+- Fixed one Dockerfile bug during validation (missing `mkdir -p /opt/frozen`); oracle reward = 1.0.
+
+RESULT {"cid":"C-f451b7de","task_id":"quartz-relic","lint":true,"oracle_reward":1.0}
+RESULT {"cid":"C-2f09fe3b","task_id":"cobalt-marlin","lint":true,"oracle_reward":1.0}

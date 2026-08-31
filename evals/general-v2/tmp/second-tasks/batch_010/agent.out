@@ -1,0 +1,19 @@
+All four competencies are covered with new, verified tasks:
+
+## Summary
+
+| Competency | New task | Scenario (distinct from existing covering task) |
+|---|---|---|
+| C-04cd9bdd — speculative draft-and-verify loop | `kestrel-loop` | Draft-and-verify over a JSON dual-logits model (draft argmax, positional verification up to first mismatch, corrected-token extension); hidden cases probe K=1, K-overrun, all-accepted targets, tie-broken rows, empty target — exact counters + per-block records |
+| C-b2fceb71 — feature matching + robust geometric fits | `marlin-rig` | From-scratch normalized-patch descriptor matching (ratio test + mutual-best with exact tie-breaks) over intensity rasters, exhaustive 2-point RANSAC similarity fit with closed-form refinement; hidden scenarios include heavy outliers, a no-consensus case requiring a degenerate-status soft failure, duplicate/zero-norm patch traps, and a minimal 4-correspondence scene |
+| C-01d6c7ae — tuning knobs reproducing reference physics state | `basalt-dial` | Two-body orbital propagator: select integrator method/step count under a 3000-acceleration-eval budget so the final state matches the engine's reference mode to 1e-6 across 5 hidden randomized orbits (perigee/eccentricity/horizon ranges), with physics-changing knobs (drag/softening/renormalize) as traps |
+| C-d6a03666 — top leaderboard model → org/model line | `copper-mesa` | Sharded per-model results directories: mean over finite-numeric task shards, duplicate-identifier merging, lexicographic tie-break, whitespace/bool/NaN/malformed traps; emits a single trimmed line, re-run on 3 hidden datasets |
+
+Each task: lint-clean (0 problems repo-wide), oracle reward = 1.0, verifiers execute the deliverable on hidden cases and write `/logs/verifier/reward.txt`, never crash on malformed output (negative tests confirmed reward 0 with graceful failure), deterministic, stdlib-only, no network.
+
+Notes on fixes during verification: kestrel-loop required dropping numpy (absent from bench-base); marlin-rig required fixing two reference-math bugs (complex-multiply sign, Umeyama `b` sign) found during fixture generation and a verifier tolerance-bug treating `rms_inlier` as a list.
+
+RESULT {"cid":"C-04cd9bdd","task_id":"kestrel-loop","lint":true,"oracle_reward":1.0}
+RESULT {"cid":"C-b2fceb71","task_id":"marlin-rig","lint":true,"oracle_reward":1.0}
+RESULT {"cid":"C-01d6c7ae","task_id":"basalt-dial","lint":true,"oracle_reward":1.0}
+RESULT {"cid":"C-d6a03666","task_id":"copper-mesa","lint":true,"oracle_reward":1.0}

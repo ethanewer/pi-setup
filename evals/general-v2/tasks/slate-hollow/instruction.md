@@ -38,7 +38,7 @@ prove the login works end to end.
    `-append "console=ttyS0 rdinit=/init panic=-1"` and
    `-display none -monitor none -serial stdio -no-reboot`), waits for the
    `login:` prompt, logs in as `<USERNAME>` **with no password**, sends
-   `echo RESCUE_LOGIN_OK`, and captures the **entire** session (boot through
+   `echo RESCUELOGINOK`, and captures the **entire** session (boot through
    the post-login command) into `<OUTDIR>/console.log`. Exit 0 iff the login
    succeeded. It must terminate the emulator before exiting and must work for
    any valid `<USERNAME>`/appliance pair.
@@ -64,7 +64,7 @@ Your `/init` (inside every appliance you build) must:
 - Checks the deliverables exist (scripts executable) and that `/app/vmlinuz`
   and `/app/base.cpio.gz` are unmodified.
 - Checks `/app/console.log` contains `RESCUE_APPLIANCE_READY`, a `login:`
-  prompt and `RESCUE_LOGIN_OK`.
+  prompt and `RESCUELOGINOK`.
 - **Independently boots** `/app/appliance.cpio.gz` with its own serial driver,
   logs in as `rescue`, and inside the guest verifies: the pseudo-filesystems
   are mounted (`cat /proc/mounts` shows `proc`, `sysfs`, `devtmpfs`), and

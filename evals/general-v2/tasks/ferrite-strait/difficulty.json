@@ -1,17 +1,17 @@
 {
   "rubric": {
-    "dependent_stages": 3,
+    "dependent_stages": 2,
     "tool_breadth": 3,
     "reasoning_depth": 2,
     "debugging_ambiguity": 2,
     "adversarial_inputs": 1,
     "hidden_case_generalization": 2,
     "quantitative_correctness": 2,
-    "resource_pressure": 2,
+    "resource_pressure": 1,
     "interaction_statefulness": 3,
     "unsafe_action_penalty": 1
   },
-  "expected_expert_time_min": 70,
+  "expected_expert_time_min": 60,
   "documented_probe": null,
-  "notes": "Hard. Dependent_stages=3: the initrd must be assembled from the kiosk descriptor before it can ever boot, then booted, then kept alive and exposed (VNC display :1 + web monitor on port 80) — each earlier stage is a hard prerequisite for the next and a boot failure is only diagnosable by re-inspecting the archive. tool_breadth=3 spans qemu-system (TCG flags incl. -vnc :N), cpio/gzip newc archive construction with exact char device nodes (incl. framebuffer 29:0), busybox applet symlinks, daemonised background process management (pidfiles/sockets, idempotent restart) and an HTTP host on the standard web port. interaction_statefulness=3: the kiosk must stay alive in the background with coherent pid/port/socket state; hidden configs re-drive launch.sh with different (vnc_display, web_port, marker, socket/pid paths). hidden_case_generalization=2: launch.sh must boot arbitrary hidden configs and the initrd must satisfy the descriptor generally. resource_pressure=2: TCG boot must fit the verifier window. quantitative_correctness=2: exact device major/minor, exact gzipped-newc plausibility, exact banner/marker console behaviour. Covers C-d7f631d3 (VNC on display one + web server on standard port) via listener-table (ss/netstat) plus connect/HTTP/shell asserts."
+  "notes": "Hard. Dependent_stages=2: the emulated machine must actually be running before the pidfile/cmdline/live-status chain is coherent, and teardown must precede every (re)boot — a broken earlier stage is only diagnosable by inspecting process/listener state. tool_breadth=3 spans qemu-system process management (TCG, -vnc :N display arithmetic 5900+N, -display none/-nic none, no -kernel firmware stage), daemonised background services with pidfiles, idempotent config-driven restart, busybox httpd with a CGI live-status endpoint, and listener-table (ss/netstat) + RFB protocol level verification. reasoning_depth=2: keeping VNC reachable under -display none without a guest kernel, and wiring a CGI endpoint that reflects the live qemu pid at request time rather than a canned answer. interaction_statefulness=3: background VM/web coherence must survive idempotent re-runs across the default and hidden configs (different display/port/paths/titles/markers/mem). hidden_case_generalization=2: three hidden configs re-drive launch.sh and every assertion follows the config. quantitative_correctness=2: exact ports, exact cmdline flags, exact live fields. Covers C-d7f631d3 (VNC on display one + web server on standard port) via netstat/ss listener asserts plus RFB/HTTP/live-status probes."
 }

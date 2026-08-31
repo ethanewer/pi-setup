@@ -47,7 +47,9 @@ start_cluster() { # start_cluster DATA PORT
   [ -d "$data" ] || return 1
   if ! is_ready "$port"; then
     chown -R postgres:postgres "$data" 2>/dev/null || true
-    su postgres -c "$PGBIN/pg_ctl -D '$data' -l '$data/pg.log' -o '-p $port' start" >/dev/null 2>&1 || true
+    # 9>&-: do NOT let the server inherit the init-lock fd, or the postmaster
+    # would hold the flock forever and deadlock every later `dbctl.sh up`.
+    su postgres -c "$PGBIN/pg_ctl -D '$data' -l '$data/pg.log' -o '-p $port' start" 9>&- >/dev/null 2>&1 || true
   fi
   wait_ready "$port"
 }
@@ -150,6 +152,12 @@ seed_decoy() {
 }
 
 init_all() {
+  # Serialize concurrent invocations: harbor starts the entrypoint and may run
+  # commands in parallel, and a second `up` that races the first would see
+  # PG_VERSION before the auth file is finalized and start a cluster with
+  # trust auth. The lock makes init+start atomic.
+  exec 9>/opt/moorctl/.init.lock
+  flock 9
   if [ -f "$SEED_FLAG" ]; then
     start_cluster "$DATA_MAIN" "$PORT_MAIN"
     start_cluster "$DATA_DECOY" "$PORT_DECOY"
@@ -159,6 +167,9 @@ init_all() {
   init_cluster "$DATA_DECOY" "$PORT_DECOY"
   seed_main
   seed_decoy
+  # Belt and braces: ensure the auth file on disk is what the server has loaded.
+  "$PGBIN/psql" -U postgres -p "$PORT_MAIN" -d postgres -tA -c "SELECT pg_reload_conf();" 9>&- >/dev/null 2>&1 || true
+  "$PGBIN/psql" -U postgres -p "$PORT_DECOY" -d postgres -tA -c "SELECT pg_reload_conf();" 9>&- >/dev/null 2>&1 || true
   touch "$SEED_FLAG"
   echo "dbctl: moor atlas postgres ready (main :$PORT_MAIN, decoy :$PORT_DECOY)" >&2
 }

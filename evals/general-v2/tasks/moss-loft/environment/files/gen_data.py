@@ -17,9 +17,9 @@ N_EVAL = 240
 NOISE_STD = 0.55
 
 
-def make_split(rng, n, dim, classes, tag, start_id):
-    # Gaussian class centers, well separated in `dim` dimensions.
-    centers = [[rng.gauss(0.0, 2.0) for _ in range(dim)] for _ in range(classes)]
+def make_split(rng, n, dim, classes, centers, start_id):
+    # Sample points around the SHARED class centers so train/eval share one
+    # consistent feature->label mapping.
     rows = []
     for i in range(n):
         c = rng.randrange(classes)
@@ -42,8 +42,11 @@ def write_csv(path, rows, dim):
 def main():
     rng = random.Random(SEED)
     os.makedirs("/app/data", exist_ok=True)
-    train = make_split(rng, N_TRAIN, INPUT_DIM, NUM_CLASSES, "train", 1)
-    ev = make_split(rng, N_EVAL, INPUT_DIM, NUM_CLASSES, "eval", 500001)
+    # One shared set of well-separated Gaussian class centers for both splits.
+    centers = [[rng.gauss(0.0, 2.0) for _ in range(INPUT_DIM)]
+               for _ in range(NUM_CLASSES)]
+    train = make_split(rng, N_TRAIN, INPUT_DIM, NUM_CLASSES, centers, 1)
+    ev = make_split(rng, N_EVAL, INPUT_DIM, NUM_CLASSES, centers, 500001)
     write_csv("/app/data/train.csv", train, INPUT_DIM)
     write_csv("/app/data/eval.csv", ev, INPUT_DIM)
     config = {

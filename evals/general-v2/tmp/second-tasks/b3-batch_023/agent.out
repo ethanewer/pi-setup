@@ -1,0 +1,21 @@
+Both tasks complete. Summary:
+
+**quiet-loom**BATCH_DONE batch_023 attempt=2 rc=0
+ig via config file): `/app/jupyter_notebook_config.py` derives its listen port from `/app/deploy_profile.json` (strict int validation, default 9318 fallback), binds `0.0.0.0`, disables token/password auth. Verifier does a config-loader file-content check plus 5 hidden profile rotations with live server binds (incl. non-loopback reachability) and tokenless `200` from `/api/status`.
+
+**sorrel-quay** (C-e37bcb4d — single-node cluster site config): agent fills `/app/conf/core-site.xml` (`fs.defaultFS` = `hdfs://127.0.0.1:9000`, tmp dir) and `/app/conf/hdfs-site.xml` (replication, web UI, datanode address, storage dirs). Verifier does exact-value XML checks, boots the shipped daemons against the agent's config, and runs 3 hidden live probes. Debugged two issues (eager `stderr.read()` deadlock → verifier timeout; one probe expected-output mismatch) within the attempt budget.
+
+```
+RESULT {"cid":"C-9feab250","task_id":"quiet-loom","lint":true,"oracle_reward":1.0}
+RESULT {"cid":"C-e37bcb4d","task_id":"sorrel-quay","lint":true,"oracle_reward":1.0}
+```
+-op sequences on freshly started clusters.
+
+One verifier bug was found and fixed during bring-up (block-file count now counts distinct PUT names, not raw PUTs). Lint: both tasks contribute zero problems (the 20 reported errors are pre-existing in unrelated incomplete tasks). Both oracle runs: reward = 1.0.
+
+RESULT {"cid":"C-9feab250","task_id":"wick-lantern","lint":true,"oracle_reward":1.0}
+RESULT {"cid":"C-e37bcb4d","task_id":"brume-delta","lint":true,"oracle_reward":1.0}
+ng capturing pipes held open by backgrounded daemons; fixed by redirecting boot output to files and clearing stale run markers).
+
+RESULT {"cid":"C-9feab250","task_id":"pale-heron","lint":true,"oracle_reward":1.0}
+RESULT {"cid":"C-e37bcb4d","task_id":"drift-marsh","lint":true,"oracle_reward":1.0}

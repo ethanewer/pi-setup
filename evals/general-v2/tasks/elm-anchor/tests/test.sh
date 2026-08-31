@@ -61,7 +61,7 @@ def load_with_shipped_loader(vocab_path, merges_path):
         return "loader rejected files: %s" % e
 
 
-def check_case(outdir, exp_dir, label):
+def check_case(outdir, exp_dir, label, want_v_name, want_m_name):
     vp = os.path.join(outdir, "vocab.txt")
     mp = os.path.join(outdir, "merges.txt")
     for p in (vp, mp):
@@ -72,9 +72,9 @@ def check_case(outdir, exp_dir, label):
             got_v = fh.read()
         with open(mp, "rb") as fh:
             got_m = fh.read()
-        with open(os.path.join(exp_dir, "expected_vocab.txt"), "rb") as fh:
+        with open(os.path.join(exp_dir, want_v_name), "rb") as fh:
             want_v = fh.read()
-        with open(os.path.join(exp_dir, "expected_merges.txt"), "rb") as fh:
+        with open(os.path.join(exp_dir, want_m_name), "rb") as fh:
             want_m = fh.read()
     except Exception as e:
         return "unreadable files (%s)" % e
@@ -105,12 +105,14 @@ else:
         failures.append("visible run failed (rc=%s)"
                         % (getattr(r, "returncode", None)))
     else:
-        err = check_case("/tmp/ea_vis", "/tests/expected_visible", "visible")
+        err = check_case("/tmp/ea_vis", "/tests/expected_visible", "visible",
+                         "vocab.txt", "merges.txt")
         if err:
             failures.append("visible: " + err)
     # ---- visible deliverable files in /app ---------------------------------
     if os.path.isfile("/app/vocab.txt") and os.path.isfile("/app/merges.txt"):
-        err = check_case("/app", "/tests/expected_visible", "visible-in-app")
+        err = check_case("/app", "/tests/expected_visible", "visible-in-app",
+                         "vocab.txt", "merges.txt")
         if err:
             failures.append("/app files: " + err)
     else:
@@ -134,7 +136,8 @@ else:
             failures.append("hidden '%s': run failed (rc=%s)"
                             % (c, getattr(r, "returncode", None)))
             continue
-        err = check_case("/tmp/ea_h_" + c, base, "hidden/" + c)
+        err = check_case("/tmp/ea_h_" + c, base, "hidden/" + c,
+                         "expected_vocab.txt", "expected_merges.txt")
         if err:
             failures.append("hidden '%s': %s" % (c, err))
 

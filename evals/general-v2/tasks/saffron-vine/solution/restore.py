@@ -20,6 +20,8 @@ import safetensors.torch as st
 import torch
 import torch.nn as nn
 
+torch.set_num_threads(1)
+
 
 class Net(nn.Module):
     def __init__(self, vocab, embed, hidden, out, pad_id):

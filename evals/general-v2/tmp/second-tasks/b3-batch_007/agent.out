@@ -1,0 +1,9 @@
+BATCH_DONE batch_007 attempt=1 rc=0
+in either) and their oracles achieve reward=1.0. Summary of what was authored:
+
+**`tasks/marl-haven`** (C-4ecd45f2, hard, binary-re): reverse-engineer an SBT-1 sonar-buoy binary capture (16-byte header, XOR-obfuscated int16 frame payloads, optional delta decoding over valid frames only), and package the decode+query logic into an executable `/app/extract.py` whose CLI saves the recovered `(frames × channels)` float64 matrix to `.npy` (deliverable `/app/payload.npy` from the visible fixtures). Verifier executes the script unchanged on 3 hidden captures (delta+invalid frames with duplicate/reversed query indices, plain capture with out-of-range indices, all-invalid capture → `(0, C)` matrix), re-derives expected matrices independently, and checks orientation, dtype, exact values, exec bit, shebang, and a no-modify sha guard.
+
+**`tasks/dunlin-key`** (C-798c54e6, medium, binary-re): author a deterministic firmware-release packer `/app/pack_index.py` (`index`/`pack` subcommands) plus visible artifacts `/app/index.json` and `/app/bundle.zip`. Members are ordered by plain UTF-8 byte sort (unicode/case/prefix-tie probes) with zero host-identity fields (fresh `ZipInfo`, fixed 1980 timestamps, STORED, no extra/comment). Verifier enforces schema purity, byte-identity across repeated runs, across mtime-shifted/re-ordered tree copies, on 2 hidden trees plus a synthesized empty tree — a negative control using `ZipFile.write()` fails on every axis.
+
+RESULT {"cid":"C-4ecd45f2","task_id":"marl-haven","lint":true,"oracle_reward":1.0}
+RESULT {"cid":"C-798c54e6","task_id":"dunlin-key","lint":true,"oracle_reward":1.0}

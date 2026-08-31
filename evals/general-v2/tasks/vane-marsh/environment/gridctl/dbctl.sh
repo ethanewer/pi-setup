@@ -39,6 +39,22 @@ start_pg() {
   wait_ready
 }
 
+# Serialize concurrent `up` invocations (entrypoint + agent/verifier phases).
+# Without the lock, a second up racing a first initdb can corrupt the cluster
+# or fail with 'tuple concurrently updated'.
+locked_up() {
+  if command -v flock >/dev/null 2>&1; then
+    (
+      flock -w 240 9 || true
+      init_db
+      start_pg
+    ) 9>/var/lock/gridctl.lock
+  else
+    init_db
+    start_pg
+  fi
+}
+
 init_db() {
   if [ ! -d "$DATA" ]; then
     install -d -o postgres -g postgres "$DATA"
@@ -112,8 +128,7 @@ SQL
 }
 
 up() {
-  init_db
-  start_pg
+  locked_up
 }
 
 cmd="${1:-up}"

@@ -22,7 +22,7 @@ node - <<'JS'
 const { choose } = require('/app/drone.js');
 if (typeof choose !== 'function') { process.exit(1); }
 if (choose({ grid: [[3,7,1],[8,0,4],[2,9,6]], row: 1, col: 1 }) !== 'south') { process.exit(1); }
-if (choose({ grid: [[3,7,1],[8,0,4],[2,9,6]], row: 1, col: 1, visited: [[2,1]] }) !== 'north') { process.exit(1); }
+if (choose({ grid: [[3,7,1],[8,0,4],[2,9,6]], row: 1, col: 1, visited: [[2,1]] }) !== 'west') { process.exit(1); }
 if (choose({ row: 0, col: 0 }) !== 'hold') { process.exit(1); }
 JS
 

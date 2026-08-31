@@ -1,0 +1,34 @@
+```json
+{
+  "flags": [
+    {
+      "id": "C-d3c284ae",
+      "issue_type": "wrong_difficulty",
+      "explanation": "The competency is producing a TOML file with two integer fields in a fixed layout — a trivial serialization task verifiable with any TOML parser. 'hard' is clearly miscalibrated for this.",
+      "suggested_fix": "Change min_required_difficulty to 'easy'."
+    },
+    {
+      "id": "C-03cf877e",
+      "issue_type": "duplicate",
+      "explanation": "C-03cf877e and C-7be363e9 describe the same competency: emitting the final computed integer as plain base-10 text so the output/results file passes the verifier's match check. Both have near-identical definitions, failure modes (wrong digits/serialization fails the check), and artifacts (a file containing the correct number).",
+      "suggested_fix": "Merge into a single entry (e.g., keep C-03cf877e), noting whether the target is a fixed output path or embedded in a results file, and drop the other."
+    },
+    {
+      "id": "C-7be363e9",
+      "issue_type": "duplicate",
+      "explanation": "Same as C-03cf877e: both entries are 'write the final integer in a parseable/matchable form' with functionally identical verifiers. Additionally, its definition is mildly circular ('emit the integer such that the verifier's match succeeds'), which adds no independent requirement beyond the duplicate.",
+      "suggested_fix": "Merge with C-03cf877e and remove this entry, or reword to remove verifier-circular phrasing if kept separately."
+    },
+    {
+      "id": "C-f4c1e942",
+      "issue_type": "overlapping_scope",
+      "explanation": "The entry bundles two distinct filtering skills behind an 'or'/'and': (a) selecting individuals by role/type property and (b) filtering membership in a closed country-code set. The required_artifacts confirm both are demanded (one artifact per skill), so a single competency is covering two separately verifiable SPARQL filtering techniques. The definition also adds nothing beyond the name, offering no elaboration of which properties or code set.",
+      "suggested_fix": "Split into two entries — one for role/type-property filtering, one for closed-set country-code filtering — and write a definition that names the concrete properties/code set rather than restating the name."
+    }
+  ],
+  "clean": [
+    "C-8853a08b",
+    "C-7f8aa502"
+  ]
+}
+```

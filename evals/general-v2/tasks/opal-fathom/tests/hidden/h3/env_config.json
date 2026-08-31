@@ -1,13 +1,13 @@
 {
-  "case_id": "corridor-h3-z",
+  "case_id": "route-h3-z",
   "seed": 90210,
-  "corridor_len": 16,
-  "n_coins": 10,
-  "horizon": 48,
-  "episodes": 10,
-  "obs_dim": 16,
-  "hidden_dim": 16,
+  "n_states": 7,
   "n_actions": 2,
+  "horizon": 40,
+  "episodes": 5,
+  "obs_dim": 7,
+  "hidden_dim": 7,
+  "transition": "s_next = (s + a + 1) mod n_states",
   "policy_file": "policy.npz",
-  "min_mean_reward": 3.69
+  "min_mean_reward": 0.58
 }

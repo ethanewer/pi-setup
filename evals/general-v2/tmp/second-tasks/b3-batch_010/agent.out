@@ -1,0 +1,14 @@
+BATCH_DONE batch_010 attempt=1 rc=0
+fresh reward runs. Summary of what was authored:
+
+**`tasks/sable-ray`** (C-41513365, hard, binary-re) — A compiled, source-free C target `/app/target/raycaster` (built at image build time, source removed) renders a two-stage scene operation on a heightmap: a horizontal median-of-3 despike with clamped windows, then a west→east raycast shadow pass with slope-1 falloff and strict tie comparison, emitting `LIT <count>` + a `#`/`.` mask. Agent must recover all semantics via probing/objdump and deliver a pure-Python `/app/reimpl.py` (byte-identical to the native binary, no native invocation allowed) plus `/app/notes.md`. Verifier executes the deliverable against the pristine native binary on the visible fixture and 4 hidden grids (ties/descending ramps, edge spikes, 0/255 extremes, 512-wide terrain), also checking the binary reproduces recorded expecteds (tamper detection). Distinct from calm-hearth's blur-convolution subtask.
+
+**`tasks/opal-latch`** (C-e95fc87a, medium, binary-re) — Round-trip a resharded chunk-vault directory back to the exact original tree in place: `/app/restore.py` validates the index, reassembles files from deduplicated content-addressed 96-byte blobs (short final chunks, empty files), creates implied nested dirs, and deletes vault artifacts only after full success. Verifier enforces no-modify on `/app/data`, then executes the deliverable on scratch copies of the visible vault and 3 hidden vaults (heavy cross-file dedup, empties/deep nesting, chunk-boundary binary sizes) requiring `diff -r` exactness. Distinct from jade-shard's 3-way JSON tensor sharding.
+
+Lint: both tasks clean (`tasks=367 problems=21` — all 21 pre-existing in other authors' incomplete tasks).
+
+RESULT {"cid":"C-41513365","task_id":"sable-ray","lint":true,"oracle_reward":1.0}
+RESULT {"cid":"C-e95fc87a","task_id":"opal-latch","lint":true,"oracle_reward":1.0}
+:"C-41513365","task_id":"onyx-mural","lint":true,"oracle_reward":1.0}
+RESULT {"cid":"C-e95fc87a","task_id":"maple-vellum","lint":true,"oracle_reward":1.0}
+```

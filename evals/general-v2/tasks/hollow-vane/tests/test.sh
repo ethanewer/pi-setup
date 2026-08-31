@@ -105,8 +105,10 @@ else:
             failures.append("no hidden cases present")
         for c in cases:
             base = os.path.join(hidden_dir, c)
-            clues = os.path.join(base, "clues")
             exp = os.path.join(base, "expected.json")
+            clues = os.path.join(base, "clues")
+            if not os.path.isdir(clues):
+                clues = base  # clue artifacts live directly in the case dir
             if not (os.path.isdir(clues) and os.path.isfile(exp)):
                 failures.append("hidden '%s' malformed" % c)
                 continue

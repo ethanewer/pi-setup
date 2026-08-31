@@ -1,0 +1,17 @@
+BATCH_DONE batch_013 attempt=1 rc=0
+ean (the 20 pre-existing errors belong to unrelated empty task dirs; zero for my tasks), and their oracles score reward=1.0.
+
+**Summary of authored tasks:**
+
+1. **`tasks/mica-mural/`** (C-2e1c650a — compressed source-size ceiling, hard, programming)
+   - Loomsign signboard firmware: a spec-driven parametric mural renderer (`/app/mural.py`) whose **gzip-compressed source must be ≤ 320 bytes** (raw ≤ 800), must report its **real measured sizes** in `/app/mural-sizes.json`, and must **not embed pixel rows or palette literals** — output comes from arithmetic on a 6-coefficient modular formula.
+   - Verifier re-executes the renderer on 4 hidden specs (1×1, single-row, P=1 palette, Unicode palette with negative coefficients), compares output byte-for-byte against an independently recomputed contract, and re-checks both size gates, the sizes report, and the anti-embedding rule per case.
+   - Oracle measured: 432 raw / 283 gzip — under the caps with real tension.
+
+2. **`tasks/iris-crate/`** (C-3a4d0dcd — fasttext classifier to accuracy and size targets, hard, data_science)
+   - Relayline freight-depot ticket triage: author a **fasttext-style hashed-n-gram softmax trainer** (`/app/train.py`, pure stdlib — no sklearn provided) with a **pinned pickle model contract** the verifier re-implements for scoring.
+   - Twin hard gates: **≥ 0.88 accuracy** on the sealed holdout (≥ 0.85 / 0.80 on hidden fresh/edge corpora) and **serialized model ≤ 2 MiB**, plus metrics consistency (`model_bytes` must equal the real file size) and malformed-row robustness. Corpus has class pools + cross-class confusers + filler; calibrated so full training hits 0.90–0.96 while underfit (3 epochs / low lr) lands at 0.86 and lazy 1-epoch at 0.24.
+   - Verifier executes the trainer on the visible corpus and 2 hidden corpora, scoring each produced model with the documented inference rule. One fix during bring-up: the model must be fit on **all** rows (an internal-split-trained model dropped to 0.71 on the 1600-row hidden corpus).
+
+RESULT {"cid":"C-2e1c650a","task_id":"mica-mural","lint":true,"oracle_reward":1.0}
+RESULT {"cid":"C-3a4d0dcd","task_id":"iris-crate","lint":true,"oracle_reward":1.0}

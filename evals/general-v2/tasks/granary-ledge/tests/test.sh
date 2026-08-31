@@ -28,7 +28,7 @@ failures = []
 def psql(db, sql):
     """Run SQL over the unix socket as the bootstrap superuser (trust)."""
     return subprocess.run(
-        [PSQL, "-U", "postgres", "-d", db, "-tA", "-v", "ON_ERROR_STOP=1", "-q", "-c", sql],
+        [PSQL, "-U", "postgres", "-p", "5544", "-d", db, "-tA", "-v", "ON_ERROR_STOP=1", "-q", "-c", sql],
         capture_output=True, text=True, timeout=60,
     )
 
@@ -156,7 +156,7 @@ try:
                       "DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '%s') "
                       "THEN CREATE ROLE %s LOGIN PASSWORD '%s'; ELSE ALTER ROLE %s LOGIN PASSWORD '%s'; "
                       "END IF; END $$;" % (user, user, password, user, password))
-            r2 = subprocess.run([os.path.join(PGBIN, "createdb"), "-U", "postgres",
+            r2 = subprocess.run([os.path.join(PGBIN, "createdb"), "-U", "postgres", "-p", "5544",
                                  "-O", user, dbname], capture_output=True, text=True, timeout=60)
             if r1.returncode == 0 and r2.returncode == 0:
                 created = True
@@ -169,7 +169,7 @@ try:
 
         seeded = False
         for _ in range(4):
-            r = subprocess.run([PSQL, "-U", "postgres", "-d", dbname,
+            r = subprocess.run([PSQL, "-U", "postgres", "-p", "5544", "-d", dbname,
                                 "-v", "ON_ERROR_STOP=1", "-q", "-f", seed],
                                capture_output=True, text=True, timeout=60)
             if r.returncode == 0:
@@ -188,7 +188,7 @@ try:
         if not run_case(case_compose, exp, "hidden:%s" % name):
             ok = False
 
-        subprocess.run([os.path.join(PGBIN, "dropdb"), "--if-exists", "-U", "postgres",
+        subprocess.run([os.path.join(PGBIN, "dropdb"), "--if-exists", "-U", "postgres", "-p", "5544",
                         dbname], capture_output=True, text=True, timeout=60)
 
     if cases < 1:

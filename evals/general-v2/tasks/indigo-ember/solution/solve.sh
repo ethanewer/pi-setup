@@ -60,8 +60,8 @@ def decode_cryptogram(text, clue):
     plain = clue["plain_alphabet"]
     cipher = clue["cipher_alphabet"]
     lut = {}
-    for i, p in enumerate(plain):
-        lut[p.lower()] = cipher[i].lower()
+    for i, c in enumerate(cipher):
+        lut[c.lower()] = plain[i].lower()
     out = []
     for ch in text:
         low = ch.lower()

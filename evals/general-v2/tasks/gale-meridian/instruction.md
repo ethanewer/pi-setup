@@ -43,7 +43,8 @@ a machine-readable report.
      ```
      Its `kernel.json` `argv[0]` must be an existing, **executable** binary.
    * `jupyter kernelspec list` must show `rcw`, and **every** kernelspec it
-     lists must have a `kernel.json` whose `argv[0]` exists and is executable.
+     lists (other than the stock `python3` one shipped with the image) must
+     have a `kernel.json` whose `argv[0]` exists and is executable.
      The stale kernelspec `legacy-r` shipped in the image has a dead `argv[0]`;
      remove or repair it so the integrity condition holds.
    * `/app/workbench_report.json` is (re)written with exactly these keys:

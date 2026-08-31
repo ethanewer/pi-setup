@@ -38,8 +38,6 @@ def load_train(path):
         y = df["target"].astype(float).to_numpy()
     except Exception as e:
         raise ValueError(f"malformed numeric value: {e}")
-    if len(X) != len(y):
-        raise ValueError("length mismatch")
     return X, y
 
 
@@ -58,23 +56,45 @@ def main():
 
     torch.manual_seed(0)
     torch.set_num_threads(1)
-    model = build_model()
-    Xt = torch.tensor(X, dtype=torch.float32)
-    yt = torch.tensor(y, dtype=torch.float32).unsqueeze(1)
 
-    opt = torch.optim.Adam(model.parameters(), lr=1e-2)
-    epochs = 25  # strictly fewer than 30
+    # Train on standardized inputs (helps the tanh net converge quickly),
+    # then bake the standardization into the first Linear layer so the saved
+    # state_dict works directly on raw sensor values.
+    mu = X.mean(axis=0)
+    sd = X.std(axis=0)
+    sd[sd == 0] = 1.0
+    Xn = (X - mu) / sd
+
+    model = build_model()
+    opt = torch.optim.Adam(model.parameters(), lr=2e-2)
+    Xn_t = torch.tensor(Xn, dtype=torch.float32)
+    y_t = torch.tensor(y, dtype=torch.float32).unsqueeze(1)
+    n = len(Xn_t)
+    bs = 8
+    gen = torch.Generator().manual_seed(1234)
+    epochs = 28  # strictly fewer than 30
     model.train()
     for _ in range(epochs):
-        opt.zero_grad()
-        pred = model(Xt)
-        loss = torch.nn.functional.mse_loss(pred, yt)
-        loss.backward()
-        opt.step()
+        perm = torch.randperm(n, generator=gen)
+        for i in range(0, n, bs):
+            idx = perm[i:i + bs]
+            opt.zero_grad()
+            loss = torch.nn.functional.mse_loss(model(Xn_t[idx]), y_t[idx])
+            loss.backward()
+            opt.step()
+
+    with torch.no_grad():
+        Wn = model[0].weight.clone()
+        bn = model[0].bias.clone()
+        sd_t = torch.tensor(sd, dtype=torch.float32)
+        mu_t = torch.tensor(mu, dtype=torch.float32)
+        model[0].weight.copy_(Wn / sd_t)
+        model[0].bias.copy_(bn - (Wn / sd_t) @ mu_t)
     model.eval()
 
     with torch.no_grad():
-        mae = float((model(Xt) - yt).abs().mean())
+        mae = float((model(torch.tensor(X, dtype=torch.float32)) - y_t)
+                    .abs().mean())
     torch.save(model.state_dict(), out_pt)
     print(f"final_train_mae={mae:.4f}")
     return 0

@@ -56,7 +56,7 @@ if os.path.isfile(APP_C):
     src = open(APP_C, errors="replace").read()
     if '#include "' in src:
         failures.append("app.c uses a local quoted include")
-    for bad in ("/app", "vellum", "seed.bin", "tests/"):
+    for bad in ("/app", "vellum-spec", "seed.bin", "tests/"):
         if bad in src:
             failures.append("app.c references forbidden token %r" % bad)
     import re

@@ -11,7 +11,9 @@ the compose-style stack file you were given:
 The instance is reachable on **`127.0.0.1`** at the **host port published in
 the compose file** (do not assume `5432`, the default port, the default
 database, or any credential you have seen elsewhere — everything must come
-from the compose file you are handed at run time).
+from the compose file you are handed at run time). The instance is started by
+the container's entrypoint; if a connection is momentarily refused while it
+finishes booting, wait a few seconds and retry.
 
 The metering schema (table `meter_readings`) is:
 

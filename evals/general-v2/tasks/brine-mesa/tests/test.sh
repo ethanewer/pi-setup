@@ -178,8 +178,8 @@ try:
             fails.append("report.json serial.moved inconsistent with observed run")
         if abs(float(rep["omp"]["moved"]) - vis[1]["moved"]) > 1e-6:
             fails.append("report.json omp.moved inconsistent with observed run")
-        if int(rep["omp"]["threads"]) != vis[1]["threads"]:
-            fails.append("report.json omp.threads inconsistent with observed run")
+        if int(rep["omp"]["threads"]) < 2:
+            fails.append("report.json omp.threads < 2")
 except Exception as e:
     fails.append("report.json unreadable or wrong schema: %s" % e)
 

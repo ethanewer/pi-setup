@@ -5,8 +5,8 @@ Produces a degraded on-device intent-classifier scenario:
 
   * a small token-sequence classifier  emb -> mean-pool -> fc1 (tanh) ->
     fc2 (tanh) -> head  is trained to its label-noise ceiling,
-  * a post-training "weight quantization" step rounds the fc2 weight onto a
-    coarse grid (quant_step), which measurably drops holdout accuracy,
+  * a failed checkpoint-restore step zeroes fc2.weight, which collapses
+    holdout accuracy to chance,
   * the shipped base_state.pt contains the QUANTIZED model; signals.json
     records the pristine and degraded holdout accuracies.
 
@@ -20,6 +20,8 @@ import sys
 import numpy as np
 import torch
 import torch.nn as nn
+
+torch.set_num_threads(1)
 
 
 def build_model(vocab, embed, hidden, out):
@@ -46,6 +48,7 @@ def keys_of(m):
 
 
 def main():
+    qstep = 0.0
     outdir = sys.argv[1]
     case_id = sys.argv[2]
     seed = int(sys.argv[3])
@@ -53,7 +56,7 @@ def main():
     embed = int(sys.argv[5]) if len(sys.argv) > 5 else 16
     hidden = int(sys.argv[6]) if len(sys.argv) > 6 else 24
     seq_len = int(sys.argv[7]) if len(sys.argv) > 7 else 8
-    qstep = float(sys.argv[8]) if len(sys.argv) > 8 else 0.05
+
     n_train, n_test, flip = 900, 400, 0.06
     out_dim = 2
 
@@ -119,10 +122,9 @@ def main():
 
     pristine_test = acc(model, X_te, y_te)
 
-    # ---- quantize fc2.weight onto the coarse grid --------------------------
+    # ---- corrupt fc2.weight (the failed checkpoint restore) -----------------
     sd = {k: v.detach().clone() for k, v in model.state_dict().items()}
-    w = sd["4.weight"]
-    sd["4.weight"] = torch.round(w / qstep) * qstep
+    sd["4.weight"] = torch.zeros_like(sd["4.weight"])
     model.load_state_dict(sd)
     degraded_test = acc(model, X_te, y_te)
 
@@ -156,10 +158,10 @@ def main():
     }
     signals = {
         "pristine_holdout_accuracy": round(pristine_test, 4),
-        "after_quantization_holdout_accuracy": round(degraded_test, 4),
-        "note": ("post-training quantization of fc2.weight onto a %.2f grid "
-                 "degraded the holdout accuracy; recover it with a low-rank "
-                 "adapter trained on fc2 only" % qstep),
+        "degraded_holdout_accuracy": round(degraded_test, 4),
+        "note": ("a failed checkpoint restore zeroed fc2.weight and degraded "
+                 "the holdout accuracy; recover it with a low-rank adapter "
+                 "trained on fc2 only"),
     }
 
     np.save(os.path.join(outdir, "train_ids.npy"), X_tr)

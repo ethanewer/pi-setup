@@ -1,0 +1,15 @@
+All four covering tasks are authored, lint-clean, and oracle-verified at reward 1.0:
+
+| competency | task | scenario (distinct from existing covering task) |
+|---|---|---|
+| C-b9c4c8e7 | `quartz-rune` | isqrt→Fib mod 2³² as a topological operator network in a *different op language* (SUM/DIF/PRD/PICK/LESS, 520-node cap) + self-checking validator + JSON report; verifier uses its own independent evaluator on 3 hidden input sets |
+| C-ceaa9075 | `gale-quarry` | torus drifting-mote sim: single C source → serial + `-fopenmp` builds, O(n) cell-centre-of-mass binning, bit-identical HASH/MOVE; verifier re-runs both binaries, checks GOMP_parallel/libgomp, genuine MOVE, degenerate N=4 case |
+| C-4e83076b | `cinder-hearth` | QEMU TCG guest with trivial base initramfs (x86_64 cross-arch kernel fetch); agent injects an init that mounts proc/sys/devtmpfs, embeds a seed token, creates empty-password accounts, and hands ttyS0 to login; serial session driven over loopback TCP, emulator left running |
+| C-fdb58e16 | `basalt-tide` | substitution-cipher oracle with secret 16-bit seed held by an ephemeral-keyfile daemon (key unreachable from the agent process); chosen-plaintext recovery (2 queries) + incrementally-pruned 65536-seed sweep inside 60s/64-query budgets |
+
+Each task: `task.toml` (schema 1.4, executes-deliverable, competency-id tag), self-contained `instruction.md`, deterministic Dockerfile, oracle `solve.sh` from pristine container, guarded `tests/test.sh` writing `/logs/verifier/reward.txt`, ≥2 hidden generalization cases, and a difficulty.json rubric.
+
+RESULT {"cid":"C-b9c4c8e7","task_id":"quartz-rune","lint":true,"oracle_reward":1.0}
+RESULT {"cid":"C-ceaa9075","task_id":"gale-quarry","lint":true,"oracle_reward":1.0}
+RESULT {"cid":"C-4e83076b","task_id":"cinder-hearth","lint":true,"oracle_reward":1.0}
+RESULT {"cid":"C-fdb58e16","task_id":"basalt-tide","lint":true,"oracle_reward":1.0}

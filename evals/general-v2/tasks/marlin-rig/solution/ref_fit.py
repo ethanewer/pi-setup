@@ -170,7 +170,7 @@ def fit_similarity(points):
         return (1.0, 0.0, tx, ty)
     sxu = sum((p[0] - mx) * (q[0] - mu) + (p[1] - my) * (q[1] - mv)
               for p, q in points)
-    syu = sum((p[1] - my) * (q[0] - mu) - (p[0] - mx) * (q[1] - mv)
+    syu = sum((p[0] - mx) * (q[1] - mv) - (p[1] - my) * (q[0] - mu)
               for p, q in points)
     a = sxu / sxx
     b = syu / sxx

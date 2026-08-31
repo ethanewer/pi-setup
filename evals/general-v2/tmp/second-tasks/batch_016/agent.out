@@ -1,0 +1,11 @@
+All four tasks complete and verified. Final lint shows `problems=0` across the repo, and each task's oracle run scored 1.0:
+
+- **poppy-kiln** (C-5c0f5e7a): sha256sum-style catalog → zero-byte leaf skeleton restorer with strict pre-validation (malformed/absolute/`..`/file-dir conflict refusals), 7 hidden cases.
+- **lunar-dial** (C-d6eae9b8): tide-gauge prefix oracle (`wet`/`core` endpoints), 28-call budget, verifier recomputes true depth and replays every logged probe; 3 hidden station contexts (L=12/1444/2991).
+- **moss-forge** (C-7991a29a): `-O2` first-fit pool allocator whose split path leaves the remainder's free-list link uninitialized → SIGSEGV; fix confined to `/app/forge.c` (protected `main.c`/`Makefile` hash-checked), verifier rebuilds and compares checksums vs an independent sim on visible + 3 hidden workloads (each confirmed to crash the shipped binary).
+- **hazel-quill** (C-fa0e8ff2): standard-base64 (padded, validated) `.qtn` quarantine filename decode with decoy skipping, byte-identical restore, sorted manifest; 3 hidden quarantines (mixed / mostly-decoy / all-decoy).
+
+RESULT {"cid":"C-5c0f5e7a","task_id":"poppy-kiln","lint":true,"oracle_reward":1.0}
+RESULT {"cid":"C-d6eae9b8","task_id":"lunar-dial","lint":true,"oracle_reward":1.0}
+RESULT {"cid":"C-7991a29a","task_id":"moss-forge","lint":true,"oracle_reward":1.0}
+RESULT {"cid":"C-fa0e8ff2","task_id":"hazel-quill","lint":true,"oracle_reward":1.0}

@@ -1,0 +1,123 @@
+```json
+{
+  "flags": [
+    {
+      "id": "C-9cd66aab",
+      "issue_type": "duplicate",
+      "explanation": "Essentially the same competency as C-04c92bb6: both cover diagnosing a stalled/non-converging neural-network training run and applying a single-change fix verified by re-running to convergence (loss/accuracy).",
+      "suggested_fix": "Merge with C-04c92bb6 into one 'debug non-converging NN training' entry, or narrow one to a specific bug class (e.g. gradient scale only)."
+    },
+    {
+      "id": "C-04c92bb6",
+      "issue_type": "duplicate",
+      "explanation": "Duplicates C-9cd66aab: same competency of diagnosing a non-converging/stalled training loop from training signals and applying one fix that makes training converge on re-run.",
+      "suggested_fix": "Merge with C-9cd66aab, keeping one entry with a single set of convergence-based artifacts."
+    },
+    {
+      "id": "C-96b1223d",
+      "issue_type": "duplicate",
+      "explanation": "Overlaps C-daf5acc4 almost entirely: both decode a legacy binary 3D model into JSON with per-vertex attributes (position/normal/texcoord/weights/bones) and skeleton bind-pose/parent arrays checked by array-length assertions, producing one JSON per input fixture.",
+      "suggested_fix": "Merge with C-daf5acc4 into a single 'decode proprietary binary 3D model to schema-exact JSON' competency, or restrict this one to non-skinned geometry/textures only."
+    },
+    {
+      "id": "C-daf5acc4",
+      "issue_type": "duplicate",
+      "explanation": "Duplicates C-96b1223d: same competency of faithfully extracting skinned-mesh vertex attributes and skeleton bind-pose/parent arrays into converted JSON verified by array lengths and skin-field presence.",
+      "suggested_fix": "Merge into C-96b1223d (or keep this one and drop the broader duplicate)."
+    },
+    {
+      "id": "C-9d0d1eb3",
+      "issue_type": "duplicate",
+      "explanation": "Describes the same competency as C-90ebfb0a: detecting takeoff and landing frame instants of an airborne subject in monocular video from vertical-motion/displacement heuristics, verified by frames falling in accepted ranges.",
+      "suggested_fix": "Merge with C-90ebfb0a into one 'detect takeoff/landing frame events in jump video' entry."
+    },
+    {
+      "id": "C-90ebfb0a",
+      "issue_type": "duplicate",
+      "explanation": "Duplicates C-9d0d1eb3: same takeoff/landing frame detection from video motion cues with the same verifier (two frame numbers per video within accepted range).",
+      "suggested_fix": "Merge with C-9d0d1eb3, keeping one entry and one artifact (script emitting two frame numbers)."
+    },
+    {
+      "id": "C-c0ce736e",
+      "issue_type": "misscoped_failure_mode",
+      "explanation": "failure_mode is empty, so there is no stated condition that would make the verifier fail (e.g. missing files, wrong per-person schedule content).",
+      "suggested_fix": "Add a concrete failure mode, e.g. 'Missing any of the four per-person files, or content not matching the helper's stdout, fails the check.'"
+    },
+    {
+      "id": "C-d6eae9b8",
+      "issue_type": "wrong_difficulty",
+      "explanation": "min_required_difficulty 'easy' is too low: strategy-based debugging against an oracle with a strict call budget (including probing the oracle's size) requires careful planning, not an easy lookup.",
+      "suggested_fix": "Raise min_required_difficulty to 'medium' (or 'hard' if the call budget is very tight)."
+    },
+    {
+      "id": "C-8277c765",
+      "issue_type": "wrong_difficulty",
+      "explanation": "min_required_difficulty 'hard' is too high for authoring/repairing a CMakeLists that configures and builds a library plus executable — a standard, well-documented task.",
+      "suggested_fix": "Lower min_required_difficulty to 'medium'."
+    },
+    {
+      "id": "C-09ed3880",
+      "issue_type": "wrong_difficulty",
+      "explanation": "min_required_difficulty 'easy' is too low: lowering react-family versions while fixing cascading peer conflicts to yield a solvable dependency projection requires real package-manager reasoning, not a trivial manifest edit.",
+      "suggested_fix": "Raise min_required_difficulty to 'medium'."
+    },
+    {
+      "id": "C-90ecb9a0",
+      "issue_type": "wrong_difficulty",
+      "explanation": "min_required_difficulty 'hard' is too high: downloading parquet dataset files/splits from an S3-style endpoint into local storage is a routine retrieval task, not a hard one.",
+      "suggested_fix": "Lower min_required_difficulty to 'easy' or 'medium', and make the artifact concrete (e.g. 'all split files present at expected local paths')."
+    }
+  ],
+  "clean": [
+    "C-2e5970a5",
+    "C-5be4245f",
+    "C-f1903618",
+    "C-59821aed",
+    "C-73100411",
+    "C-f08e5a26",
+    "C-5c0f5e7a",
+    "C-b598d4ac",
+    "C-97af96ef",
+    "C-7991a29a",
+    "C-ce872852",
+    "C-3e369d95",
+    "C-ac4a9918",
+    "C-fa0e8ff2",
+    "C-03818c40",
+    "C-14b0632d",
+    "C-5c8704c8",
+    "C-c4087001",
+    "C-9e5ae912",
+    "C-7c6ed468",
+    "C-7ca0f750",
+    "C-e0468bc5",
+    "C-005aa305",
+    "C-76528fef",
+    "C-507caea0",
+    "C-214e9f7a",
+    "C-00ebe165",
+    "C-24da5a66",
+    "C-be3e6bdd",
+    "C-8285a7cd",
+    "C-9a3e925b",
+    "C-14adebc2",
+    "C-c1058e7d",
+    "C-5e35b27e",
+    "C-20878051",
+    "C-dce10a92",
+    "C-4de31ffa",
+    "C-a9bdbcbc",
+    "C-7b60e82b",
+    "C-a533a375",
+    "C-bd05019a",
+    "C-94c506a3",
+    "C-01d72cd3",
+    "C-4c157aa5",
+    "C-2a9b3845",
+    "C-15878c3b",
+    "C-f7d4374f",
+    "C-12915cee",
+    "C-a13c3ba1"
+  ]
+}
+```

@@ -6,6 +6,11 @@ set -eu
 SOLVER="/app/export.py"
 OUT="/app/report.json"
 
+# Make sure the scenario is up (idempotent, blocks until Postgres accepts
+# connections; the entrypoint may still be initializing when the agent phase
+# starts).
+/opt/gridctl/dbctl.sh up
+
 # ---- 1. Write the deliverable program (this IS the work, not a canned answer).
 cat > "$SOLVER" <<'PY'
 #!/usr/bin/env python3

@@ -71,6 +71,8 @@ expr = {"add": "%d + %d" % (a, b),
         "sub": "%d - %d" % (a, b),
         "mul": "%d * %d" % (a, b)}[op]
 
+DSR = b"\x1b[6n"  # busybox ash line editing asks the cursor position
+
 
 def connect(port, timeout=120):
     end = time.time() + timeout
@@ -86,67 +88,88 @@ def connect(port, timeout=120):
     raise RuntimeError("cannot connect to 127.0.0.1:%d (%s)" % (port, last))
 
 
+class Channel:
+    """Reads fresh bytes only: wait() matches data after the last wait."""
+
+    def __init__(self, sock):
+        self.sock = sock
+        self.buf = bytearray()
+        self.pos = 0
+
+    def _drain_dsr(self):
+        while True:
+            view = bytes(self.buf[self.pos:])
+            i = view.find(DSR)
+            if i < 0:
+                return
+            self.buf[self.pos + i:self.pos + i + len(DSR)] = b""
+            try:
+                self.sock.sendall(b"\x1b[1;1R")
+            except OSError:
+                pass
+
+    def wait(self, pat, timeout):
+        end = time.time() + timeout
+        while time.time() < end:
+            self._drain_dsr()
+            if re.search(pat, bytes(self.buf[self.pos:])):
+                self.pos = len(self.buf)
+                return True
+            try:
+                chunk = self.sock.recv(4096)
+            except socket.timeout:
+                continue
+            except OSError:
+                time.sleep(0.1)
+                continue
+            if chunk:
+                self.buf.extend(chunk)
+        self._drain_dsr()
+        return bool(re.search(pat, bytes(self.buf[self.pos:])))
+
+    def send(self, cmd):
+        self.sock.sendall(cmd.encode() + b"\n")
+
+    def send_cmd(self, cmd, timeout=60):
+        self.send(cmd)
+        return self.wait(rb"CG> ", timeout)
+
+    def text(self):
+        return bytes(self.buf).replace(DSR, b"").decode("latin-1")
+
+
 # ---------- serial console: drive the guest shell --------------------------
-ser = connect(sp)
-tr = bytearray()
+ser = Channel(connect(sp))
 serial_ok = True
 
-
-def read_until(sock, buf, pat, timeout):
-    end = time.time() + timeout
-    while time.time() < end:
-        if re.search(pat, bytes(buf)):
-            return True
-        try:
-            chunk = sock.recv(4096)
-        except socket.timeout:
-            continue
-        except OSError:
-            time.sleep(0.1)
-            continue
-        if chunk:
-            buf.extend(chunk)
-    return bool(re.search(pat, bytes(buf)))
-
-
-def send_cmd(sock, buf, cmd, timeout=60):
-    sock.sendall(cmd.encode() + b"\n")
-    return read_until(sock, buf, rb"CG> ", timeout)
-
-
-if not read_until(ser, tr, rb"CINDER_GUEST_READY", 150):
+if not ser.wait(rb"CINDER_GUEST_READY", 150):
     serial_ok = False
-# nudge a fresh prompt, then drive the guest
-ser.sendall(b"\n")
-read_until(ser, tr, rb"CG> ", 30)
-send_cmd(ser, tr, "mkdir -p /ramwork")
-send_cmd(ser, tr, "mount -t tmpfs tmpfs /ramwork && echo CG_MOUNT_OK")
-if b"CG_MOUNT_OK" not in bytes(tr):
+ser.send("")           # nudge a fresh prompt
+ser.wait(rb"CG> ", 30)
+ser.send_cmd("mkdir -p /ramwork")
+ser.send_cmd("mount -t tmpfs tmpfs /ramwork && echo CG_MOUNT_OK")
+if b"CG_MOUNT_OK" not in ser.buf:
     serial_ok = False
-send_cmd(ser, tr,
-         'R=$((%s)); echo "%s|$R" > /ramwork/answer.txt; cat /ramwork/answer.txt'
-         % (expr, token))
+ser.send_cmd(
+    'R=$((%s)); echo "%s|$R" > /ramwork/answer.txt; cat /ramwork/answer.txt'
+    % (expr, token), 60)
 
-text = bytes(tr).decode("latin-1")
-m = re.search(r"^%s\|(\d+)\s*$" % re.escape(token), text, re.M)
+m = re.search(r"^%s\|(\d+)\s*$" % re.escape(token), ser.text(), re.M)
 guest_answer = int(m.group(1)) if m else None
 if m is None:
     serial_ok = False
 
 # ---------- monitor console: HMP verification ------------------------------
-mon = connect(mp)
-mtr = bytearray()
-mon_ok = read_until(mon, mtr, rb"\(qemu\)", 60)
-mon.sendall(b"\n")
-mon_ok = read_until(mon, mtr, rb"\(qemu\)", 30) and mon_ok
-mon.sendall(b"info status\n")
-mon_ok = read_until(mon, mtr, rb"\(qemu\)", 60) and mon_ok
-mon_ok = mon_ok and (b"running" in bytes(mtr))
+mon = Channel(connect(mp))
+mon_ok = mon.wait(rb"\(qemu\)", 60)
+mon.send("info status")
+mon_ok = mon.wait(rb"VM status", 60) and mon_ok
+mon_ok = mon_ok and (b"running" in bytes(mon.buf))
 
 with open(os.path.join(out_dir, "serial.txt"), "w", encoding="latin-1") as fh:
-    fh.write(text)
+    fh.write(ser.text())
 with open(os.path.join(out_dir, "monitor.txt"), "w", encoding="latin-1") as fh:
-    fh.write(bytes(mtr).decode("latin-1"))
+    fh.write(mon.text())
 
 qpid = int(qpid_raw) if str(qpid_raw).strip().isdigit() else -1
 qemu_alive = False

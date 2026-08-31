@@ -6,6 +6,11 @@
 # and seeds the visible scenario exactly once (idempotent). Deliberately NOT
 # a deliverable and never reads /tests.
 #
+# Race safety: the container entrypoint and the agent/verifier may invoke
+# this script concurrently, so every invocation serializes on an flock and
+# the port setting is (re-)asserted before any server start. This makes the
+# scenario deterministic no matter who invokes it first or in parallel.
+#
 # Connection model:
 #   - superuser "postgres" is trusted on the unix socket (infra only)
 #   - every TCP connection (127.0.0.1) requires SCRAM password auth, so a
@@ -24,6 +29,7 @@ LOGF="$DATA/pg.log"
 SEED_FLAG=/opt/obsctl/.seeded
 PORT=5433
 SOCKDIR=/var/run/postgresql
+LOCKF=/var/lock/obsctl.lock
 
 sup() { # sup [psql args...]  -- run psql as superuser over the unix socket
   su postgres -c "$PGBIN/psql -h $SOCKDIR -p $PORT -U postgres -v ON_ERROR_STOP=1 -q $*"
@@ -34,7 +40,7 @@ is_ready() {
 }
 
 wait_ready() {
-  for _ in $(seq 1 60); do
+  for _ in $(seq 1 90); do
     if is_ready; then return 0; fi
     sleep 1
   done
@@ -46,14 +52,19 @@ start_pg() {
   [ -d "$DATA" ] || return 1
   if ! is_ready; then
     chown -R postgres:postgres "$DATA" 2>/dev/null || true
-    su postgres -c "$PGBIN/pg_ctl -D '$DATA' -l '$LOGF' start" >/dev/null 2>&1 || true
+    # 9>&- : do NOT leak the flock fd into pg_ctl/postmaster, or the lock
+    # would stay held by the long-running server forever.
+    if ! su postgres -c "$PGBIN/pg_ctl -D '$DATA' -l '$LOGF' start" 9>&- >/dev/null 2>&1; then
+      echo "dbctl: pg_ctl start failed" >&2
+      tail -10 "$LOGF" >&2 2>/dev/null || true
+    fi
   fi
   wait_ready
 }
 
 stop_pg() {
   if is_ready; then
-    su postgres -c "$PGBIN/pg_ctl -D '$DATA' -m fast stop" >/dev/null 2>&1 || true
+    su postgres -c "$PGBIN/pg_ctl -D '$DATA' -m fast stop" 9>&- >/dev/null 2>&1 || true
   fi
 }
 
@@ -95,39 +106,46 @@ INSERT INTO telemetry_readings (reading_id, sensor_id, reading, quality) VALUES
   (2, 'seq-beta',  388, 'nominal'),
   (3, 'seq-alpha', 501, 'drift'),
   (4, 'seq-gamma',  95, 'nominal');
+GRANT SELECT ON telemetry_readings TO obs_ro;
 SQL
 }
 
 init_db() {
-  if [ -f "$SEED_FLAG" ]; then
-    return 0
-  fi
   if [ ! -d "$DATA" ]; then
     install -d -o postgres -g postgres "$DATA" "$SOCKDIR"
   fi
   if [ ! -f "$DATA/PG_VERSION" ]; then
     su postgres -c "$PGBIN/initdb -D '$DATA' -U postgres \
-        --auth-local=trust --auth-host=scram-sha-256 --no-locale -E UTF8" >/dev/null
-    # Server port: 5433 (the compose file publishes host 5433 -> container 5432).
+        --auth-local=trust --auth-host=scram-sha-256 --no-locale -E UTF8" 9>&- >/dev/null
+  fi
+  # Assert the server port on every invocation, before any start, so a
+  # concurrent invocation can never start the server on the wrong port.
+  if ! grep -q "^port[[:space:]]*=" "$DATA/postgresql.conf" 2>/dev/null; then
     su postgres -c "echo \"port = $PORT\" >> '$DATA/postgresql.conf'"
   fi
   start_pg
+  if [ -f "$SEED_FLAG" ]; then
+    return 0
+  fi
   seed_main
   touch "$SEED_FLAG"
   echo "dbctl: fernvale postgres ready (seeded)" >&2
 }
 
 up() {
+  # Serialize concurrent invocations (entrypoint vs agent vs verifier).
+  # Bounded wait: never block longer than 300s on the lock.
+  exec 9>"$LOCKF"
+  flock -w 300 9 || { echo "dbctl: could not acquire lock" >&2; exit 1; }
   init_db
-  start_pg
 }
 
 cmd="${1:-up}"
 case "$cmd" in
   up)      up ;;
   ready)   is_ready ;;
-  stop)    stop_pg ;;
-  restart) stop_pg; start_pg ;;
+  stop)    exec 9>"$LOCKF"; flock -w 300 9 || exit 1; stop_pg ;;
+  restart) exec 9>"$LOCKF"; flock -w 300 9 || exit 1; stop_pg; start_pg ;;
   *) echo "unknown dbctl subcommand: $cmd" >&2; exit 2 ;;
 esac
 exit 0

@@ -34,8 +34,8 @@ echo "slate build_appliance: vmlinuz -> /app/vmlinuz ($(basename "$KV"))"
 
 # --- x86_64 static busybox ------------------------------------------
 dpkg-deb -x "$TMP/busybox.deb" "$TMP/busybox"
-BB="$(ls "$TMP/busybox/bin/busybox" "$TMP/busybox/usr/bin/busybox" 2>/dev/null | head -1)"
-[ -n "$BB" ] || { echo "no busybox found in deb"; exit 1; }
+BB="$(find "$TMP/busybox" -type f -name busybox | head -1)"
+if [ -z "$BB" ]; then echo "no busybox found in deb"; exit 1; fi
 
 # --- trivial base initramfs ----------------------------------------
 ROOT="$(mktemp -d)"

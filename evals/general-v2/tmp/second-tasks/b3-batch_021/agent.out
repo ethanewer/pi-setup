@@ -1,0 +1,15 @@
+BATCH_DONE batch_021 attempt=1 rc=0
+: lint clean, oracle reward = 1.0, and the verifiers report `verify failures: []` (all visible + hidden cases executed and matched).
+
+Summary of what was authored:
+
+**`cobalt-fjord`** (C-5b5e6c73 — derived statistics fields, hard): parse a dual-format HTTP access log (strict space-format A / pipe-format B, near-miss malformed lines), then compute derived stats over parsed records: status-class counts, error-rate %, mean latency, interpolated p95, byte totals, unique clients, per-endpoint aggregates, and a threshold-derived `health` verdict. 5 hidden cases (empty, all-malformed, single-request, percentile interpolation, healthy).
+- `tasks/cobalt-fjord/{task.toml, instruction.md, difficulty.json, environment/Dockerfile + files/access.log, solution/solve.sh, tests/test.sh, tests/expected.json, tests/hidden/*}`
+
+**`hazel-quay`** (C-b0268a38 — grouped/aggregated summaries over CSVs, hard): join a line-items ledger with a returns ledger on `(order_id, product_id)`, filter to an inclusive date period, aggregate per-product gross/returned/net revenue and units, tally malformed rows, and rank top-3 products by net with exact tie-breaking. 4 hidden cases (period-boundary returns, empty range, exact revenue tie, repeated-pair first-match).
+- `tasks/hazel-quay/{task.toml, instruction.md, difficulty.json, environment/Dockerfile + files/{lineitems.csv,returns.csv,period.txt}, solution/solve.sh, tests/test.sh, tests/expected.json, tests/hidden/*}`
+
+Both verifiers enforce no-modify sha256 guards on shipped inputs, execute `/app/solve.py` on the visible case plus every hidden case, check `/app/answer.json`, and write `/logs/verifier/reward.txt`.
+
+RESULT {"cid":"C-5b5e6c73","task_id":"cobalt-fjord","lint":true,"oracle_reward":1.0}
+RESULT {"cid":"C-b0268a38","task_id":"hazel-quay","lint":true,"oracle_reward":1.0}

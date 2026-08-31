@@ -165,6 +165,8 @@ int main(int argc, char **argv) {
 }
 CEOF
 
+SRC=/app/drift_sim_src.c
+
 # serial deliverable: no OpenMP
 gcc -O2 -o /app/drift_serial "$SRC" -lm
 
@@ -175,7 +177,7 @@ gcc -O2 -fopenmp -o /app/drift_omp "$SRC" -lm
 OUT_S=$(mktemp /tmp/serial_pos_XXXX.txt)
 OUT_O=$(mktemp /tmp/omp_pos_XXXX.txt)
 S_LINE=$(/app/drift_serial /app/fixture_main.txt "$OUT_S")
-O_LINE=$(OMP_NUM_THREADS=4 OMP_THREAD_LIMIT=4 /app/drift_omp /app/fixture_main.txt "$OUT_O")
+O_LINE=$(/app/drift_omp /app/fixture_main.txt "$OUT_O")
 echo "serial: $S_LINE"
 echo "omp:    $O_LINE"
 

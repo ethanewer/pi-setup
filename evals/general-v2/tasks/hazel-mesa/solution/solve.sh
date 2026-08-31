@@ -8,6 +8,10 @@ set -euo pipefail
 SOLVER="/app/warehouse_dump.py"
 OUT="/app/telemetry.csv"
 
+# ---- 0. Bring the scenario up (idempotent, in the image infrastructure).
+/opt/obsctl/dbctl.sh up
+
+
 # ---- 1. Write the deliverable program (this IS the work, not a canned answer).
 cat > "$SOLVER" <<'PY'
 #!/usr/bin/env python3

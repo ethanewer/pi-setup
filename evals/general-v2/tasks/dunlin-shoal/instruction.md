@@ -11,7 +11,9 @@ reach it is described **only** by the compose-style stack file:
 Derive your connection settings **from that file**. The instance listens on
 `127.0.0.1` at the published port declared in the compose file. Do not assume
 different values — the credentials are not the well-known defaults, and the
-published port is **not** 5432.
+published port is **not** 5432. (If the instance is not answering, an
+idempotent control script `/opt/dunctl/dbctl.sh up` brings it up; treat it as
+image infrastructure.)
 
 The schema of the archive database is:
 

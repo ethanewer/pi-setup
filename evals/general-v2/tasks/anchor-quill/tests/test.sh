@@ -144,7 +144,7 @@ for case in cases:
     run_case(spec, exp, "hidden %s" % case)
 
 if failures or not overall:
-    print("anchor-quill verifier FAIL: %s" % "; ".join(failures + [msgs]),
+    print("anchor-quill verifier FAIL: %s" % "; ".join(failures),
           file=sys.stderr)
     sys.exit(1)
 sys.exit(0)

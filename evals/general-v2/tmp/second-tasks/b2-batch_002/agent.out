@@ -1,0 +1,13 @@
+All four competencies are covered with verified tasks. Summary of what was authored:
+
+1. **`saffron-vine`** (C-4c743935, LoRA lifecycle, hard) — a corrupted on-device intent classifier (zeroed `fc2.weight`) recovered via a full LoRA train→save→reload→merge lifecycle; the verifier re-executes `restore.py` on 3 hidden fixtures, checks the merge equation tensor-exactly, adapter-directory reloadability, and the ≥0.86 holdout bar.
+2. **`coral-fjord`** (C-787a6a13, gradient flow, medium) — a torch `SensorFusionModel` whose `context` stage is `.detach()`ed and whose `gate` runs under `no_grad`; the agent must restore graph connectivity (API unchanged), prove per-parameter gradient flow on a fixed probe batch, and retrain to loss/accuracy targets on hidden fixtures.
+3. **`amber-quarry`** (C-8d6b9acc, reference parity under tolerance, hard) — a pure-numpy mirror of an ONNX calibration graph (Gelu-erf, LayerNorm, Softmax) matching onnxruntime references within atol 1e-4 on fixed and seeded-random inputs, with onnxruntime imports blocked + source-scanned; hidden cases vary shapes/seeds.
+4. **`juniper-gasket`** (C-7210274e, held-out accuracy threshold, easy) — data-driven sklearn fit on greenhouse-batch CSVs meeting a stated accuracy floor; the verifier unpickles the model, recomputes holdout accuracy, and re-runs the deliverable on hidden cases.
+
+Note: the two remaining lint `ERROR`s belong to `coral-forge`, another author's concurrent in-progress task (its directories appeared mid-session with empty files) — I did not touch it. Also note `amber-quarry`'s directory contained stale leftovers from an abandoned same-named task created at 18:29 (SAT-log hidden cases); I removed those before verification since they broke my verifier's hidden-case loop.
+
+RESULT {"cid":"C-4c743935","task_id":"saffron-vine","lint":true,"oracle_reward":1.0}
+RESULT {"cid":"C-787a6a13","task_id":"coral-fjord","lint":true,"oracle_reward":1.0}
+RESULT {"cid":"C-8d6b9acc","task_id":"amber-quarry","lint":true,"oracle_reward":1.0}
+RESULT {"cid":"C-7210274e","task_id":"juniper-gasket","lint":true,"oracle_reward":1.0}

@@ -1,0 +1,16 @@
+BATCH_DONE batch_033 attempt=1 rc=0
+verifier with reward 1.0:
+
+- **cinder-reef** (C-71a2c135): FRET donor/acceptor selection against a localhost spectra API — client manages server lifecycle, enumerates via `/api/proteins`, skips retired-404 proteins, applies inclusive emission/excitation bands plus a spectral-gap constraint (band-only selection picks a wrong acceptor on every seeded db), and must reproduce `/api/spectra` payloads exactly. 1 visible + 2 hidden dbs.
+- **moor-latch** (C-05017dfa): structure-archive sequence retrieval by identifier — two-stage fetch (entry metadata deliberately carries no sequences, then per-chain `/api/sequence/<eid>/<cid>`), sequences recorded verbatim, per-entry chain keying (chain "A" repeats across entries), spec order ≠ archive order, exact `total_chains`/`total_residues`. 1 visible + 3 hidden archives.
+
+Both: `schema_version=1.4`, difficulty `hard`, `verifier_kind=executes-deliverable`, no-modify sha256 guards on fixtures, verifier writes `/logs/verifier/reward.txt`, ≤300s verifier timeout, deterministic, no network beyond 127.0.0.1.
+
+RESULT {"cid":"C-71a2c135","task_id":"cinder-reef","lint":true,"oracle_reward":1.0}
+RESULT {"cid":"C-05017dfa","task_id":"moor-latch","lint":true,"oracle_reward":1.0}
+
+
+Both: `schema_version=1.4`, difficulty `hard`, `verifier_kind=executes-deliverable`, deterministic Dockerfiles from `bench-base:python-3.12`, sha256 no-modify guards on visible fixtures, verifier writes `/logs/verifier/reward.txt`, no network beyond the agent-started 127.0.0.1 fixture server.
+
+RESULT {"cid":"C-71a2c135","task_id":"glacier-vane","lint":true,"oracle_reward":1.0}
+RESULT {"cid":"C-05017dfa","task_id":"harbor-loom","lint":true,"oracle_reward":1.0}

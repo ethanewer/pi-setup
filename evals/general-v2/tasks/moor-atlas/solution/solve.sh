@@ -122,31 +122,6 @@ chmod +x /app/audit.py
 
 python3 /app/audit.py /app/deploy/services.yml /app/audit.json
 
-# TEMP DEBUG PROBE (remove before final)
-python3 - <<'EOF' > /tmp/probe.txt 2>&1
-import subprocess, glob, psycopg2
-PGBIN = sorted(glob.glob('/usr/lib/postgresql/*/bin'))[-1]
-for port in (5581, 5591):
-    out = subprocess.run([PGBIN + '/psql', '-U', 'postgres', '-p', str(port), '-d', 'postgres', '-tA', '-F', '|', '-c',
-                          'select pg_postmaster_start_time(), current_setting(\'data_directory\'), current_setting(\'hba_file\'), current_setting(\'port\')'], capture_output=True, text=True)
-    print('SOCKET p%d ->' % port, out.stdout.strip(), out.stderr.strip())
-for f in ('/var/lib/moordb/postmaster.opts', '/var/lib/moordecoy/postmaster.opts'):
-    try:
-        print(f, '->', open(f).read().strip())
-    except Exception as e:
-        print(f, 'ERR', e)
-print(subprocess.run(['pgrep', '-a', 'postgres'], capture_output=True, text=True).stdout)
-for pw in ('WRONG-Creed-0000', 'Torren-Feil-3319'):
-    try:
-        c = psycopg2.connect(host='127.0.0.1', port=5581, dbname='moorside', user='surveyor', password=pw, connect_timeout=5)
-        cur = c.cursor(); cur.execute('select current_user, current_setting(\'data_directory\')')
-        print('TCP CONNECTED with pw=%s ->' % pw[:6], cur.fetchone())
-        c.close()
-    except Exception as e:
-        print('TCP FAILED with pw=%s ->' % pw[:6], str(e)[:200])
-EOF
-# END TEMP DEBUG PROBE
-
 echo "moor-atlas oracle complete"
 ls -l /app/audit.py /app/audit.json
 exit 0

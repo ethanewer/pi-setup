@@ -1,0 +1,14 @@
+BATCH_DONE batch_018 attempt=1 rc=0
+my tasks (the remaining problems belong to other pre-existing/concurrently-authored tasks). Both oracle runs confirmed:
+
+- `/tmp/genv2-b3-batch_018-gull-radar/**/verifier/reward.txt` → `1`
+- `/tmp/genv2-b3-batch_018-quay-ledger/**/verifier/reward.txt` → `1`
+
+**Summary of authored tasks:**
+
+1. **`tasks/gull-radar/`** (C-f3890ab9 — normalized 2D histogram binning): seabird radar fixes are binned via `python3 /app/solve.py <fixes> <grid> <out.json>` into a configurable `ny×nx` histogram over a bounding box with entries summing to 1.0. Deliverables `/app/solve.py` + `/app/answer.json`; 4 hidden cases (bin-edge closure, just-outside points, scientific notation, 1×1 grid, empty file, thirds-fractions, malformed/blank lines); verifier enforces shape, exact normalization, bounds exclusion, and counts.
+
+2. **`tasks/quay-ledger/`** (C-349c1e3e — bulk CSV load via client copy): `python3 /app/solve.py <in_dir> <out_dir>` must bulk-load `stations.csv` into a prescribed `readings` table using the `sqlite3` CLI `.import` client-side copy. Deliverables `/app/solve.py`, `/app/loaded.db`, `/app/load_report.json`, `/app/import_log.txt`; 4 hidden scenarios (quoted commas, escaped quotes, embedded newlines, CRLF, header-only, single-row); verifier checks DB schema+rows, report counts/regions, **and** the `.import` statement evidence so loads by any other method fail.
+
+RESULT {"cid":"C-f3890ab9","task_id":"gull-radar","lint":true,"oracle_reward":1.0}
+RESULT {"cid":"C-349c1e3e","task_id":"quay-ledger","lint":true,"oracle_reward":1.0}

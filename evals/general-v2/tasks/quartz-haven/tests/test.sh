@@ -63,6 +63,7 @@ if not hasattr(mod, "application"):
     fail("/app/api.py does not expose WSGI callable 'application'")
 
 _counter = [0]
+_CUR = {"mod": None}
 
 
 def fresh_mod():
@@ -72,11 +73,12 @@ def fresh_mod():
         "qh_api_%d" % _counter[0], "/app/api.py")
     m = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(m)
+    _CUR["mod"] = m
     return m
 
 
 def call(method, path, body=None):
-    mod = fresh_mod()
+    mod = _CUR["mod"]
     raw = json.dumps(body).encode() if body is not None else b""
     env = {
         "REQUEST_METHOD": method, "PATH_INFO": path, "QUERY_STRING": "",
@@ -136,6 +138,7 @@ def check_summary(expected, label):
 
 
 def run_hidden_case(cdir):
+    fresh_mod()
     case = read_json(os.path.join(cdir, "case.json"))
     exp = read_json(os.path.join(cdir, "expected.json"))
     if case is None or exp is None:
@@ -172,6 +175,7 @@ def run_hidden_case(cdir):
 HALL = "/tests/hidden"
 try:
     # ---- visible case: ingest the shipped fixture, check summary ----
+    fresh_mod()
     vis = read_json("/app/visible_portfolio.json")
     vexp = read_json("/tests/expected.json")
     if vis and vexp:

@@ -1,0 +1,18 @@
+BATCH_DONE batch_035 attempt=1 rc=0
+:"moss-latch","lint":true,"oracle_reward":1.0}
+RESULT {"cid":"C-2d0e9195","task_id":"kelp-quill","lint":true,"oracle_reward":1.0}
+hon/numpy 2.x API compat, medium, programming)
+   - `/app/src/gridops/` ships a vendored Cython package with `setup.py` using removed `numpy.distutils` and `gridcore.pyx` calling removed C-API `PyArray_FromDims` (both breakages empirically confirmed against numpy 2.5.2 in the base image).
+   - Agent must port `setup.py` (setuptools + `cythonize` + `numpy.get_include()`), port the `.pyx` without changing `rms`/`scale` semantics, and leave an idempotent offline `/app/port.sh`.
+   - Verifier executes `port.sh`, independently re-runs the `setup.py` build, guards that removed APIs are gone, and probes the compiled module on 6 hidden numeric cases (zero-entry grid, negatives, empty vector, zero/fractional factors, input immutability).
+
+2. **`sorrel-hasp`** (C-2d0e9195 — 2048-bit RSA key + private mode, medium, security)
+   - Deliverables: executable `/app/keygen.sh <bits> <output>` (policy gate 2048–8192 with exit code 2, unencrypted PEM, explicit `0600` regardless of umask, overwrite semantics) plus `/app/deploy_key.pem` produced by actually running it at 2048 bits.
+   - Verifier validates the visible key (openssl parse, `-check`, exact bit length, mode, not encrypted) and executes the script on 9 hidden cases (accepted 2048/3072/4096 incl. umask 000, rejected 1024/0/negative/non-numeric/16384 with no file created, overwrite of a 0644 junk file).
+
+Verification artifacts:
+- `/tmp/genv2-b3-batch_035-gale-latch/.../verifier/reward.txt` → 1.0
+- `/tmp/genv2-b3-batch_035-sorrel-hasp/.../verifier/reward.txt` → 1.0
+
+RESULT {"cid":"C-8034934c","task_id":"gale-latch","lint":true,"oracle_reward":1.0}
+RESULT {"cid":"C-2d0e9195","task_id":"sorrel-hasp","lint":true,"oracle_reward":1.0}

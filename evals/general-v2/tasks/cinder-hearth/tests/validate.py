@@ -53,10 +53,11 @@ def main():
     try:
         tree = os.path.join(work, "tree")
         os.makedirs(tree)
-        with open(initrd, "rb") as f:
-            r = subprocess.run("cpio -idm", shell=True, cwd=tree, input=f.read(),
-                               capture_output=True)
-        if r.returncode != 0:
+        import gzip
+        raw = gzip.open(initrd, "rb").read()
+        r = subprocess.run("cpio -idm", shell=True, cwd=tree, input=raw,
+                           capture_output=True)
+        if r.returncode != 0 or not os.path.isfile(os.path.join(tree, "init")):
             fail("cannot unpack initramfs: %s" % r.stderr[-200:])
 
         init_path = os.path.join(tree, "init")

@@ -1,0 +1,9 @@
+Lint is fully clean (problems=0) and the oracle scored 1.0. 
+
+**Task authored: `slate-fjord`** — "Password-SSH mirror sync automation" (system_administration, hard, C-a9d4f82b)
+
+- **Scenario** (deliberately distinct from umber-yonder's forensics): a field station needs an unattended nightly mirror script. The agent must author `/app/sync.sh <remote-url> <target-dir> <message>` that automates the interactive password prompt (`sshpass` against a password-only sshd), pins the server host key port-aware into its own known-hosts with **strict checking** (relaxing it is penalized), works under a pristine `HOME` with stdin at EOF, and completes clone → commit → push for scp-like and `ssh://` URLs on ports 22/2222. `/app/clone` proves the documented bootstrap run.
+- **Verifier** (`executes-deliverable`): enforces server integrity (password-only sshd untouched), greps out host-key-check relaxations, then *executes* `sync.sh` on the visible remote and on 3 hidden cases — empty repo (unborn branch → exactly one commit), a `master`-branch remote with a stale manifest and byte-preservation checks, and a port-2222 `ssh://` endpoint — plus a re-runnability probe, all with fresh HOME and stdin at EOF so a hang/interactive prompt fails.
+- **Debug iterations**: (1) re-runs hit "nothing to commit" → `--allow-empty` sync commits; (2) git 2.47 clones empty repos onto the client-default branch and `ls-remote --symref` is silent over SSH → made the fixture's unborn HEAD deterministic (`master`); (3) OpenSSH 10 `PerSourcePenalties` reset rapid keyscan connections → `PerSourcePenalties no` in sshd config.
+
+RESULT {"cid":"C-a9d4f82b","task_id":"slate-fjord","lint":true,"oracle_reward":1.0}

@@ -1,0 +1,44 @@
+```json
+{
+  "flags": [
+    {
+      "id": "C-4c42e6d1",
+      "issue_type": "duplicate",
+      "explanation": "Essentially the same competency as C-d2b6ec24: both are 'install/keep tooling without disturbing pre-existing pinned library versions in the environment'. C-4c42e6d1 (preserve numpy during a system install) and C-d2b6ec24 (preserve pinned transformers/torch installs) describe the same skill — not altering preinstalled pinned packages during an install — differing only in which packages are named.",
+      "suggested_fix": "Merge into one entry, e.g. 'preserve preinstalled pinned dependency versions during an install', keeping the concrete failure mode (installer de-pins/bumps/replaces a preexisting package) and listing the specific packages in the task, not in the competency."
+    },
+    {
+      "id": "C-d2b6ec24",
+      "issue_type": "duplicate",
+      "explanation": "Duplicate of C-4c42e6d1: both entries capture the single competency of leaving already-installed, pinned libraries (numpy / transformers+torch) intact while performing an install, with the same verifier shape (check installed versions unchanged).",
+      "suggested_fix": "Merge with C-4c42e6d1 into a single 'preserve preinstalled pinned dependency versions' competency; keep concrete package names in required_artifacts of the task instance."
+    },
+    {
+      "id": "C-b36fff35",
+      "issue_type": "misscoped_failure_mode",
+      "explanation": "failure_mode is empty, so there is no stated way in which an attempt should fail the verifier; the entry has no failure condition to validate against.",
+      "suggested_fix": "Add a concrete failure mode, e.g. 'the executed command does not create the three marker files (missing, wrong paths, or pre-created without execution), so the harness endpoint observes fewer than three new files on the worker'."
+    },
+    {
+      "id": "C-5cf8ae41",
+      "issue_type": "wrong_difficulty",
+      "explanation": "min_required_difficulty is 'hard', but writing a makefile whose default target builds three binaries (serial/openmp/mpi) with correct link flags is a routine build-system task — clearly easy-to-medium, not hard.",
+      "suggested_fix": "Lower min_required_difficulty to 'easy' (or at most 'medium' if the MPI/OpenMP link-flag setup is unusually intricate)."
+    }
+  ],
+  "clean": [
+    "C-3f0b41e8", "C-e4a54497", "C-85e1b197", "C-9dad3ba6", "C-13d6ca37",
+    "C-95dbc133", "C-0a2b5a73", "C-43338aff", "C-4e13e47a", "C-fe057254",
+    "C-7f33c4ae", "C-5ede2c22", "C-e392c72b", "C-388741b1", "C-3e518190",
+    "C-ac61837f", "C-621e52cd", "C-a4cd6f01", "C-c07a78cd", "C-271f36bb",
+    "C-4ecd45f2", "C-7f9fa1ae", "C-40dd3b94", "C-f9215470", "C-69210d19",
+    "C-13d03a72", "C-1fbdb2f6", "C-798c54e6", "C-457ed453", "C-2e082c47",
+    "C-aef47c31", "C-a41d1964", "C-6b12d22b", "C-8b10891b", "C-a74eff68",
+    "C-d228b384", "C-19c43363", "C-5dfe03bb", "C-f1b4dc5f", "C-93491d5e",
+    "C-b79f9c36", "C-3958443e", "C-9341f502", "C-58b99c97", "C-526ce758",
+    "C-0804cad1", "C-f9ae04c3", "C-c76545ce", "C-759b7225", "C-f08bda19",
+    "C-215490eb", "C-31e6f8e2", "C-162982d2", "C-ce192866", "C-fd68813c",
+    "C-821e76fc"
+  ]
+}
+```

@@ -163,7 +163,6 @@ try:
     rng = np.random.default_rng(31337)
     per = STRESS_ROWS // STRESS_BAGS
     with open(stress, "w") as fh:
-        fh.write("bag_id," + ",".join(FEATS) + "\n")
         for b in range(STRESS_BAGS):
             X = rng.uniform(-1.0, 1.0, (per, DIM))
             body = pd.DataFrame(X, columns=FEATS)

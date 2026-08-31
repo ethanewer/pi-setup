@@ -1,0 +1,11 @@
+BATCH_DONE batch_002 attempt=1 rc=0
+rd 1.0. Summary of what was authored:
+
+**`tasks/opal-wave`** (C-57fdc30e, medium, scientific_computing) — hearing-aid calibration bench: `/app/tonegen.py` synthesizes a sum-of-sines signal from a JSON spec, adds seeded uniform dither, RMS-normalizes to a dBFS target, quantizes to int16 and writes a 44-byte-header WAV; `/app/calibration.wav` produced from the shipped spec. The verifier re-executes the deliverable on 3 hidden specs and applies property checks (header/frame-count, RMS ±0.02 band, windowed per-tone amplitude ratios, spur-free notch frequency). 3 local sanity runs passed before harbor.
+
+**`tasks/kite-mesa`** (C-f49d1fc8, hard, data_science) — cold-storage warehouse robot: `/app/rl_lab.py` implements a wall-aware gridworld with asymmetric transition semantics (boundary bounce −1, wall bump −5, inclusive dock disc +10), finite-horizon value-iteration `train_policy`, and a seeded `evaluate_policy`; `/app/policy.json` produced via the no-arg CLI. Verifier re-checks env semantics against an independent reference on `edge_spec`, runs its own seeded episode simulation, and requires mean return ≥ threshold (501/599/207, each ~3–5% under the exact DP optimum) on the visible layout plus 2 hidden layouts, re-executing the CLI deliverable on each. Thresholds were derived from a reference DP solver with ample margin over the oracle's seeded sample mean.
+
+`python3.12 tools/lint_tasks.py`: no errors or notes for either new task (the 10 pre-existing errors belong to unrelated broken tasks, untouched).
+
+RESULT {"cid":"C-57fdc30e","task_id":"opal-wave","lint":true,"oracle_reward":1.0}
+RESULT {"cid":"C-f49d1fc8","task_id":"kite-mesa","lint":true,"oracle_reward":1.0}

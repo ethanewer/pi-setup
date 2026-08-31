@@ -1,17 +1,17 @@
 {
   "rubric": {
-    "dependent_stages": 0,
-    "tool_breadth": 0,
-    "reasoning_depth": 1,
-    "debugging_ambiguity": 0,
+    "dependent_stages": 1,
+    "tool_breadth": 1,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
     "adversarial_inputs": 1,
-    "hidden_case_generalization": 1,
-    "quantitative_correctness": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
     "resource_pressure": 0,
     "interaction_statefulness": 0,
     "unsafe_action_penalty": 0
   },
-  "expected_expert_time_min": 20,
-  "documented_probe": "",
-  "notes": "Single CLI plus its visible-run artifact: read solver transcripts and classify each as SAT/UNSAT/NOVERDICT by locating the last verdict-prefixed line, normalizing separators and trailing punctuation, and mapping the value; decoy noise lines mention unsat/satisfiable but must be ignored. Hidden sets probe case variants, punctuation, last-verdict-wins, unrecognized values, and an empty directory. Rubric: reasoning_depth (structured verdict parsing vs substring traps), adversarial_inputs/hidden_case_generalization (3 hidden sets), quantitative_correctness (exact tokens)."
+  "expected_expert_time_min": 40,
+  "documented_probe": "C-8d6b9acc (match a reference behavior under a numeric tolerance): second independent covering task. The agent must reproduce an onnxruntime reference output on fixed and seeded-random inputs within atol=1e-4/rtol=1e-3 by mirroring an ONNX calibration graph (Gelu-erf, LayerNormalization, Softmax) in pure numpy, with onnxruntime imports blocked at verify time and source-scanned, and shapes/weights varying across hidden cases.",
+  "notes": "Distinct from elm-keystone (deterministic artifact pack for a combinatorial plan): here parity is numeric against a runtime reference under a tight tolerance. Difficulty comes from graph parsing with onnx, faithful op semantics (erf-based Gelu, LayerNorm epsilon/axis, stable softmax), double-precision internal computation, and the blocked-execution constraint. The verifier recomputes references with onnxruntime on both fixed and seeded random inputs for the visible case and three hidden cases."
 }

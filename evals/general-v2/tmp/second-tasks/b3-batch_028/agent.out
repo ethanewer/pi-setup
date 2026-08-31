@@ -1,0 +1,21 @@
+BATCH_DONE batch_028 attempt=1 rc=0
+mary of what was authored:
+
+**Task 1: `amber-cistern`** (C-670b820b — socket request-response protocol, medium/web)
+- Scenario: a depot "slotd" raw TCP registry service with a strict one-request-per-connection text protocol; agent must boot the service and write a probe client (`/app/probe.py`) that classifies manifest lines, queries slot coordinates, and aggregates qty/token/max-with-tie-break into `/app/summary.json`.
+- Verifier boots **fresh slotd instances** on hidden tables (max-qty tie, empty probe set, duplicates/unknowns/qty-0) and executes `/app/probe.py` on hidden manifests, comparing against recomputed expecteds; also guards the no-modify fixtures.
+- Oracle reward: `1` in `/tmp/genv2-b3-batch_028-amber-cistern/**/verifier/reward.txt`.
+
+**Task 2: `kiln-cipher`** (C-16147090 — combined key+certificate PEM, medium/security)
+- Scenario: provisioning tool `/app/mkcert.py` generates an RSA key, matching self-signed cert, a **combined `bundle.pem` (private-key block first, certificate second)**, and a DER-sha256 fingerprint, with `0600` modes; agent stages the visible identity per `/app/staging/identity-spec.toml`.
+- Verifier executes `/app/mkcert.py` on 3 hidden (CN, bits, fresh out-dir) cases and validates every bundle with openssl: exact 2-block PEM order/count, standalone block parses, key↔cert public-key match, CN, key size, modes, fingerprint — all parses guarded.
+- Oracle reward: `1` in `/tmp/genv2-b3-batch_028-kiln-cipher/**/verifier/reward.txt`.
+
+Both differ from their competency's existing tasks (juniper-notch's MQTT+survey relay; willow-hearth's cipher/zip forensic bundle) in scenario, protocol, and verifier mechanics, and lint reports no problems for either task.
+
+RESULT {"cid":"C-670b820b","task_id":"amber-cistern","lint":true,"oracle_reward":1.0}
+RESULT {"cid":"C-16147090","task_id":"kiln-cipher","lint":true,"oracle_reward":1.0}
+-existing task dirs), deterministic, no network, verifier well under 300s.
+
+RESULT {"cid":"C-670b820b","task_id":"coral-meridian","lint":true,"oracle_reward":1.0}
+RESULT {"cid":"C-16147090","task_id":"amber-braid","lint":true,"oracle_reward":1.0}

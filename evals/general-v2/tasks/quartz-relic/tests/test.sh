@@ -70,6 +70,8 @@ def build(spec):
     data = spec["data"]
     return tuple(data) if seq == "tuple" else list(data)
 
+ERRS = {"ValueError": ValueError, "TypeError": TypeError}
+
 a_spec, b_spec = case["a"], case["b"]
 a, b = build(a_spec), build(b_spec)
 a_snapshot, b_snapshot = (tuple(a), tuple(b))
@@ -77,7 +79,7 @@ a_snapshot, b_snapshot = (tuple(a), tuple(b))
 if "error" in case:
     try:
         dotkit.dot(a, b)
-    except case["error"]:
+    except ERRS[case["error"]]:
         pass
     except Exception as e:
         raise SystemExit("expected %s, got %r" % (case["error"], e))

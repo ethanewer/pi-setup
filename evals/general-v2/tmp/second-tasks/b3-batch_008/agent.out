@@ -1,0 +1,11 @@
+BATCH_DONE batch_008 attempt=1 rc=0
+
+
+**Task 1 — `coral-trellis`** (C-f1ee3a04, hard, data_science): BeaconGrid mesh forensics. The agent builds `/app/solver.py`, which recovers a directed tree DAG from telemetry using the documented heuristic stack — max-|Pearson| Prim spanning tree (fixed edge count, deterministic tie-breaks), unique-root BFS orientation, and the sibling conditional-independence ambiguity rule — writing `/app/recovered_edges.csv`. Distinct from `tundra-jetty` (R/causal-harness with Stan + notebooks vs. a focused stdlib Python structure-learning CLI). The verifier re-executes the solver on 3 hidden topologies (chain, 7-node star with mid-list root, two-level tree with misleading grandparent correlations — all validated to recover with ≥0.03 margin) with exact directed-edge-set equality, plus a no-modify sha256 gate on the fixtures.
+
+**Task 2 — `brine-latch`** (C-9aedbe64, easy, system_administration): ColdBrine relay whose daemon unlinks its snapshot at startup while holding the fd open (pidfile `/tmp/brine-vault/relay.pid`, still-linked decoy fds as traps). The agent writes `/app/reclaim.py [PIDFILE] [OUTFILE]` that scans `/proc/<pid>/fd` for the `(deleted)` target and copies the bytes to `/app/recovered.bin`. Distinct from `juniper-quill` (no XOR/SQLite/CSV/tuning pipeline — a single focused fd-recovery capability). The verifier executes the deliverable against 3 freshly spawned hidden relay processes (different payload sizes including a 38-byte edge case), checks byte-exactness via sha256, and gates on vault no-modify.
+
+Verification results: lint clean for both (all 20 pre-existing errors belong to other incomplete tasks), oracle rewards both 1.0, verifier failures empty.
+
+RESULT {"cid":"C-f1ee3a04","task_id":"coral-trellis","lint":true,"oracle_reward":1.0}
+RESULT {"cid":"C-9aedbe64","task_id":"brine-latch","lint":true,"oracle_reward":1.0}

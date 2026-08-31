@@ -1,0 +1,88 @@
+```json
+{
+  "flags": [
+    {
+      "id": "C-471a3d5c",
+      "issue_type": "misscoped_failure_mode",
+      "explanation": "The failure_mode field is an empty string, so the entry specifies no failure signal at all; a verifier has no stated condition tied to failure of this competency.",
+      "suggested_fix": "Populate failure_mode, e.g. 'Leaving secret values in any tracked file, or modifying files that did not contain secrets, fails the residue-absence and diff-scope checks.'"
+    },
+    {
+      "id": "C-c18fff1c",
+      "issue_type": "wrong_difficulty",
+      "explanation": "min_required_difficulty is 'hard', but the competency is a serialization task (write directed edge records as a two-column CSV with correct header and orientation), comparable to other serialization entries rated medium; hard is clearly too high for saving CSV rows.",
+      "suggested_fix": "Set min_required_difficulty to 'medium' (or 'easy' if the edge list is provided)."
+    },
+    {
+      "id": "C-0fcde739",
+      "issue_type": "wrong_difficulty",
+      "explanation": "min_required_difficulty is 'easy', but the competency requires bringing up a listening cluster service with live datanodes and a configured-capacity status report — a multi-daemon service bring-up that is risk:high and clearly beyond easy.",
+      "suggested_fix": "Set min_required_difficulty to 'hard' (or at least 'medium')."
+    },
+    {
+      "id": "C-961a7c37",
+      "issue_type": "wrong_difficulty",
+      "explanation": "min_required_difficulty is 'easy', but the definition explicitly requires number-theoretic/discrete reasoning over three distinct cycle lengths to find a maximal gap, with a stated risk of off-by-one/covering-argument errors; this is not an easy-tier competency.",
+      "suggested_fix": "Set min_required_difficulty to 'medium'."
+    }
+  ],
+  "clean": [
+    "C-e41d6ebb",
+    "C-28e0bdd9",
+    "C-4c363ca6",
+    "C-ee02e8ca",
+    "C-e95fc87a",
+    "C-1382c0a1",
+    "C-ed60d55a",
+    "C-9e42c705",
+    "C-799768c6",
+    "C-a9b1a06b",
+    "C-ab35f97b",
+    "C-b448d803",
+    "C-4b78df73",
+    "C-492bd8a3",
+    "C-cc03cbff",
+    "C-04cd9bdd",
+    "C-3ef98183",
+    "C-c40653fb",
+    "C-b2fceb71",
+    "C-ac2f7570",
+    "C-09f9153a",
+    "C-cb07fa86",
+    "C-d6f30fa3",
+    "C-1f4f846b",
+    "C-296eda4b",
+    "C-af6454bc",
+    "C-2c6cd65e",
+    "C-7f187cc7",
+    "C-101e183a",
+    "C-3b580690",
+    "C-48f7a33a",
+    "C-51021b37",
+    "C-2a5821eb",
+    "C-2d6e424f",
+    "C-01d6c7ae",
+    "C-350de84a",
+    "C-d6a03666",
+    "C-4a3a4fa1",
+    "C-e063ef8a",
+    "C-3e2a7f21",
+    "C-5bf90775",
+    "C-15759d2a",
+    "C-07b38d34",
+    "C-6916a9d1",
+    "C-04ab03df",
+    "C-01852c4e",
+    "C-502e0dd1",
+    "C-9a6e7959",
+    "C-ebf841c9",
+    "C-36981f96",
+    "C-494accea",
+    "C-6fcd47f5",
+    "C-e87edf52",
+    "C-90061c28",
+    "C-857c8f99",
+    "C-8bec045f"
+  ]
+}
+```

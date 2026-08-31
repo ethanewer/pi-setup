@@ -128,7 +128,11 @@ PY
 
 chmod +x "$SOLVER"
 
-# ---- 2. Run the produced program on the visible stack to generate the report.
+# ---- 2. Ensure the scenario DB is up (idempotent; blocks until ready), then
+# run the produced program on the visible stack to generate the report.
+if [ -x /opt/tidectl/dbctl.sh ]; then
+  /opt/tidectl/dbctl.sh up >/dev/null 2>&1 || true
+fi
 python3 "$SOLVER" "$COMPOSE" "$OUT"
 
 echo "solve.sh done -> $SOLVER and $OUT"

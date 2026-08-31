@@ -109,8 +109,8 @@ try:
         time.sleep(0.5)
         send(user + "\n")
         time.sleep(2.0)
-        send("echo RESCUE_LOGIN_OK\n")
-        if not pump(deadline_total, r"RESCUE_LOGIN_OK"):
+        send("echo RESCUELOGIN\"OK\"\n")
+        if not pump(deadline_total, r"RESCUELOGINOK"):
             ok = False
     sys.exit(0 if ok else 1)
 finally:
@@ -127,5 +127,5 @@ chmod +x /app/drive.sh
 bash /app/mkinit.sh rescue /app
 bash /app/drive.sh /app/appliance.cpio.gz rescue /app
 echo "console.log bytes: $(stat -c%s /app/console.log)"
-grep -a "RESCUE_LOGIN_OK" /app/console.log >/dev/null && echo "login marker present"
+grep -a "RESCUELOGINOK" /app/console.log >/dev/null && echo "login marker present"
 echo "slate-hollow oracle: done"

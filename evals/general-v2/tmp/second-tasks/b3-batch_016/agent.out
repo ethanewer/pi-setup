@@ -1,0 +1,16 @@
+BATCH_DONE batch_016 attempt=1 rc=0
+:
+
+- **`sable-vellum`** (C-1b5c9f63): wires a 3-way classification task (`card_sortis`) into an installed micro lm-eval harness (`vellum_eval`), with a generic HTTP dataset driver; gold indices come from the declared `choices` order, so a wrong order/gold mapping collapses accuracy to ~0.3, far outside the graded 0.60–0.95 window (true accuracy 0.882). Verifier re-runs the driver on 3 hidden corpora served over loopback HTTP and recomputes every metric independently.
+- **`fume-latch`** (C-e797cde5): per-line defect repair against an HTTP fix desk with a budget equal to the work-order size; any extra fix request flips the session to `budget-exceeded` and fails the run. Verifier re-runs the delivered client on 3 fresh hidden sessions (shuffled order, double-space byte-exact repair, redundant no-op entry, no trailing newline) and independently checks plate bytes, receipt sha256, and session status.
+
+Debug iterations used: 2 fixes for sable-vellum (inverted `if !` verifier logic), 2 for fume-latch (off-by-one line numbers in hidden work orders + same verifier logic bug) — within the 3-attempt budget.
+
+RESULT {"cid":"C-1b5c9f63","task_id":"sable-vellum","lint":true,"oracle_reward":1.0}
+RESULT {"cid":"C-e797cde5","task_id":"fume-latch","lint":true,"oracle_reward":1.0}
+e-tests all five functions on 3 hidden vector sets. Negative controls: a typo'd excerpt or a pre-edited file both burn the budget → run fails.
+
+Lint: `tasks=395 problems=23` (all 23 pre-existing in other tasks; zero for these two). Oracle runs: both `reward=1.0`.
+
+RESULT {"cid":"C-1b5c9f63","task_id":"fen-lantern","lint":true,"oracle_reward":1.0}
+RESULT {"cid":"C-e797cde5","task_id":"sable-wicket","lint":true,"oracle_reward":1.0}

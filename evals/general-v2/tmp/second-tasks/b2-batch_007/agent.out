@@ -1,0 +1,13 @@
+All four tasks verified: lint clean for each of my tasks (the only repo errors are `coral-forge`, another author's incomplete task — untouched by me), and the final oracle run for each scored 1.0. Summary of what was authored:
+
+| Competency | Task | Scenario (distinct from exemplar) | Key differences from covering task |
+|---|---|---|---|
+| C-b37daad9 (transformer engine under byte budget) | `onyx-relay` | Relay-7 next-token logits engine | stdlib-only pure Python; fused-QKV, pre-LN ×2, causal mask, SiLU, vocab-projection head; 5000-byte cap + `py_compile` enforced; 3 hidden fixture sets |
+| C-bb7cec38 (parametric Bayesian net over discovered structure) | `juniper-mesh` | Hydronet gauge network | Python (vs R/rstan); correlation-threshold discovery over a declared topological order, exact multiple-OLS CPD fit, seeded ancestral sampling; verifier enforces edges/coefficients, KS ≤ 0.04 vs truth, correlation survival, byte-identical reruns; 3 hidden datasets |
+| C-409f50fe (gpg-encrypt archive, no plaintext intermediates) | `wren-cipher` | Evidence chain-of-custody sealing | `seal.sh` is argument-driven (hidden source dirs + passphrases, both invocation styles); verifier checks OpenPGP cipher 9 / S2K hash 10, wrong-passphrase rejection, and sweeps `/app` + `/tmp` for surviving plaintext archives |
+| C-4f1f7a1d (runnable MIPS ELF interpreter) | `pumice-core` | Big-endian MIPS firmware VM in JavaScript | Node (vs C), big-endian ELF32, two PT_LOAD segments, **live branch delay slots**, hi/lo mult/div, custom syscall ABI (343/344/93), precise error exit codes (2/7/8/9); 6 hidden images + graceful-failure probes |
+
+RESULT {"cid":"C-b37daad9","task_id":"onyx-relay","lint":true,"oracle_reward":1.0}
+RESULT {"cid":"C-bb7cec38","task_id":"juniper-mesh","lint":true,"oracle_reward":1.0}
+RESULT {"cid":"C-409f50fe","task_id":"wren-cipher","lint":true,"oracle_reward":1.0}
+RESULT {"cid":"C-4f1f7a1d","task_id":"pumice-core","lint":true,"oracle_reward":1.0}

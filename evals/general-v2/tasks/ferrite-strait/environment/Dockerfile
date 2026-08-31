@@ -2,20 +2,13 @@ FROM bench-base:ubuntu-24.04
 
 WORKDIR /app
 
-# Toolchain needed to build + boot a tiny guest initrd under QEMU (TCG
-# emulation, no KVM, no hardware accel). `linux-image-generic` provides
-# /boot/vmlinuz for the guest kernel; busybox-static provides the static
-# binary copied into the initrd and doubles as the tiny HTTP host server for
-# the monitoring web port.
+# Toolchain for the firmware-stage kiosk appliance: qemu (TCG, no KVM) for the
+# emulated machine and its VNC display, busybox-static as the tiny HTTP/CGI
+# host for the monitoring web plane, iproute2 for listener inspection.
 RUN apt-get update -qq \
  && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends \
         qemu-system-x86 \
         busybox-static \
-        cpio \
-        file \
         iproute2 \
-        linux-image-generic \
+        file \
  && apt-get clean
-
-# Fixtures: the kiosk descriptor the agent must honour.
-COPY files/ /app/files/

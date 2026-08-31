@@ -1,0 +1,17 @@
+BATCH_DONE batch_014 attempt=1 rc=0
+ean, and pass the oracle run with reward=1.0.
+
+**Summary:**
+
+**`ivory-kiln`** (C-a3b20c21 — transcribe an algorithm from a photograph of code)
+- A rotated, noisy whiteboard photograph (`/app/code.png`) of a 7-line `compute(n)` routine whose integer constants (`L`, `U`, `F`, `S`, `K`) vary per photo; OCR demonstrably garbles the key lines (`range`→`Fange`, `n * 11`→`ne*® 11`), so constants must be read visually and the sum-of-squares routine evaluated exactly.
+- Deliverables `/app/solve.py` + `/app/answer.json`; verifier enforces no-modify sha guards and re-executes solve.py on 3 hidden photos with different constants/arguments, comparing `code_value` exactly.
+- Oracle attempts: 2 (fixed fragile OCR parsing with structure-anchored patterns + deskew/upscale variants; added pillow/pytesseract install to Dockerfile after discovering bench-base lacks them).
+
+**`quartz-relay`** (C-3c94d62d — transform plain-text files via vim macros)
+- Headless vim script `/app/apply_relabel.vim` rewrites shapeable telemetry rows `YYYY-MM-DD;CODE;LABEL` → `LABEL [CODE] DD.MM.YYYY` (whole-line anchored shape: 4/2/2-digit date, 3 uppercase letters, non-empty `;`-free label) leaving every other row byte-for-byte unchanged; supports explicit file args for hidden replay.
+- 4 visible fixtures + 2 hidden cases (incl. missing trailing newline, malformed dates, padded/empty labels); verifier byte-compares against an independent Python reference and re-runs the script on hidden feeds.
+- Oracle attempts: 3 (fixed `E13: File exists` on replay via `write!`, replaced bash assoc-array with `case` for portability, and worked around the base image's doctored `sys.environ` by passing flags via argv).
+
+RESULT {"cid":"C-a3b20c21","task_id":"ivory-kiln","lint":true,"oracle_reward":1.0}
+RESULT {"cid":"C-3c94d62d","task_id":"quartz-relay","lint":true,"oracle_reward":1.0}

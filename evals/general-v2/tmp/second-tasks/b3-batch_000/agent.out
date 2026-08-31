@@ -1,0 +1,10 @@
+BATCH_DONE batch_000 attempt=1 rc=0
+fied:
+
+- **`tasks/basalt-ember`** (C-51e2d3fd, medium): implement `/app/classify.py` executing the forward pass of a two-layer MLP with JSON-serialized learned weights — optional standardization (zero-std guard), tanh hidden layer, linear output, argmax with lowest-index tie-break, numerically stable softmax per-class scores. Verifier executes the deliverable on the visible case + 5 hidden cases (no-standardize tie, zero-std, overflow-scale logits, single class, empty input). Oracle reward = 1.0.
+- **`tasks/clover-anchor`** (C-ceab1759, easy): fit a nearest-centroid model from CSV via `/app/fit.py` and persist it to `/app/model.pkl`; verifier reloads the pickle, checks exact key set/classes/centroids against an independent reference, and re-runs the deliverable on 3 hidden CSVs. Oracle reward = 1.0 (after fixing the fixture path to `/app/data/`).
+
+Both pass `lint_tasks.py` cleanly (remaining lint ERRORs are pre-existing in unrelated tasks ashen-cache/coral-forge/slate-gauge; my tasks produce no errors or notes).
+
+RESULT {"cid":"C-51e2d3fd","task_id":"basalt-ember","lint":true,"oracle_reward":1.0}
+RESULT {"cid":"C-ceab1759","task_id":"clover-anchor","lint":true,"oracle_reward":1.0}

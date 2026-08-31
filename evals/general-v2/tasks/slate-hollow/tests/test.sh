@@ -20,14 +20,14 @@ done
 # console.log content (guarded)
 grep -aq "RESCUE_APPLIANCE_READY" /app/console.log || fail "console.log lacks RESCUE_APPLIANCE_READY"
 grep -aq "login:" /app/console.log || fail "console.log lacks a login prompt"
-grep -aq "RESCUE_LOGIN_OK" /app/console.log || fail "console.log lacks RESCUE_LOGIN_OK"
+grep -aq "RESCUELOGINOK" /app/console.log || fail "console.log lacks RESCUELOGINOK"
 
 # the agent's own driver must work on the visible appliance
 rm -rf /tmp/slate_vdrive && mkdir -p /tmp/slate_vdrive
 bash /app/drive.sh /app/appliance.cpio.gz rescue /tmp/slate_vdrive \
   || fail "drive.sh failed on the visible appliance"
-grep -aq "RESCUE_LOGIN_OK" /tmp/slate_vdrive/console.log \
-  || fail "drive.sh console.log lacks RESCUE_LOGIN_OK"
+grep -aq "RESCUELOGINOK" /tmp/slate_vdrive/console.log \
+  || fail "drive.sh console.log lacks RESCUELOGINOK"
 
 python3 - <<'PY'
 import os, re, select, subprocess, sys, tempfile, time
@@ -85,36 +85,36 @@ def boot_and_login(appliance, user, boot_timeout=150):
         time.sleep(0.5)
         send(user + "\n")
         time.sleep(2.0)
-        send("echo RESCUE_LOGIN_OK\n")
-        if not pump(r"RESCUE_LOGIN_OK"):
-            problems.append("login as %r did not yield a shell (RESCUE_LOGIN_OK missing)"
+        send("echo LOGINOK\"MARK\"\n")
+        if not pump(r"LOGINOKMARK"):
+            problems.append("login as %r did not yield a shell (LOGINOKMARK missing)"
                             % user)
             return False, problems
+        state["pos"] = len(state["buf"])  # segments start after the login
         # pseudo-fs mounts inside the guest (cat /proc/mounts only works if
         # proc was mounted by the injected init)
-        send("echo M_BEGIN; cat /proc/mounts; echo M_END\n")
-        if not pump(r"M_END"):
-            problems.append("could not read /proc/mounts inside guest")
+        send("cat /proc/mounts; echo MOUNTSDONE\"MARK\"\n")
+        if not pump(r"MOUNTSDONEMARK"):
+            problems.append("could not read /proc/mounts inside guest "
+                            "(MOUNTSDONEMARK missing; is proc mounted?)")
             return False, problems
         seg = state["buf"][state["pos"]:]
         state["pos"] = len(state["buf"])
         seg_s = seg.decode("utf-8", "replace")
         for fsname in ("proc", "sysfs", "devtmpfs"):
-            if not re.search(r"(?m)^\s*%s[ /]" % re.escape(fsname), seg_s) and \
-               fsname not in seg_s:
+            if fsname not in seg_s:
                 problems.append("pseudo-fs %s not mounted" % fsname)
         # identity checks
-        send("echo I_BEGIN; id -u; id -un; echo I_END\n")
-        if not pump(r"I_END"):
-            problems.append("could not read id output inside guest")
-            return False, problems
-        seg = state["buf"][state["pos"]:]
-        state["pos"] = len(state["buf"])
-        seg_s = seg.decode("utf-8", "replace")
-        if not re.search(r"(?m)^1000\r?$", seg_s):
+        send("echo UID$(( $(id -u) ))\n")
+        if not pump(r"UID1000"):
             problems.append("id -u is not 1000 (unauthenticated account missing)")
-        if not re.search(r"(?m)^%s\r?$" % re.escape(user), seg_s):
+            return False, problems
+        state["pos"] = len(state["buf"])
+        send("echo NAMEWAS=$(id -un)\n")
+        if not pump(r"NAMEWAS=%s" % re.escape(user)):
             problems.append("id -un is not %r" % user)
+            return False, problems
+        state["pos"] = len(state["buf"])
         return not problems, problems
     finally:
         try:

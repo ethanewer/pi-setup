@@ -1,18 +1,21 @@
 # cinder-hearth — emulated-guest runtime for injected-init serial login.
 #
 # Boots a tiny busybox Linux guest under QEMU software emulation (TCG, no KVM)
-# with a prebuilt kernel and a deliberately TRIVIAL base initramfs: the base
-# init does NOT mount the pseudo-filesystems, does NOT set up /etc/passwd, and
-# does NOT start any getty/login on the serial console. Injecting a real init
-# that does all of that is the agent's task.
-FROM bench-base:ubuntu-24.04
+# with a prebuilt x86_64 kernel and a deliberately TRIVIAL base initramfs: the
+# base init does NOT mount the pseudo-filesystems, does NOT set up
+# /etc/passwd, and does NOT start any getty/login on the serial console.
+# Injecting a real init that does all of that is the agent's task.
+#
+# NOTE: the build host architecture may differ from the guest: the guest needs
+# an x86_64 kernel and an x86_64 static busybox, so build_guest.sh downloads
+# the amd64 packages (download-only + dpkg -x) regardless of the host arch.
+FROM bench-base:python-3.12
 
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update >/dev/null 2>&1 && \
     apt-get install -y --no-install-recommends \
-      qemu-system-x86 busybox-static cpio gzip coreutils python3 \
-      linux-image-generic >/dev/null 2>&1 && \
+      qemu-system-x86 busybox-static cpio gzip python3 >/dev/null 2>&1 && \
     rm -rf /var/lib/apt/lists/* && \
     echo "cinder: apt install complete"
 

@@ -22,5 +22,7 @@ COPY files/ /app/
 COPY obsctl/ /opt/obsctl/
 RUN chmod +x /opt/obsctl/dbctl.sh /opt/obsctl/entry.sh
 
+WORKDIR /app
+
 ENTRYPOINT ["/opt/obsctl/entry.sh"]
 CMD ["bash"]

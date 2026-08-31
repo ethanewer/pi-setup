@@ -9,7 +9,7 @@ FROM bench-base:python-3.12
 WORKDIR /app
 
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-        gcc make binutils file \
+        build-essential gcc make binutils file \
         ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 

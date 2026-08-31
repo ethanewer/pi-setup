@@ -10,8 +10,15 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-        postgresql postgresql-client python3-yaml python3-psycopg2 ca-certificates && \
+        postgresql postgresql-client ca-certificates && \
     rm -rf /var/lib/apt/lists/*
+
+# Python driver + YAML for the deliverable program (pinned, installed at build
+# time only; no network is needed at run/verify time).
+RUN pip install --no-cache-dir --no-input \
+        "psycopg2-binary==2.9.10" "PyYAML==6.0.2"
+
+WORKDIR /app
 
 # Scenario fixture: the compose-style stack description (NOT the answer).
 COPY files/ /app/

@@ -168,11 +168,11 @@ for case in cases:
         continue
     # provision the hidden instance as a distinct db + role
     try:
-        psql_superuser("postgres", "DROP DATABASE IF EXISTS %s;" % db)
+        psql_superuser("postgres", 'DROP DATABASE IF EXISTS "%s";' % db)
         psql_superuser("postgres", "DROP ROLE IF EXISTS %s;" % user)
         psql_superuser("postgres",
                        "CREATE ROLE %s LOGIN PASSWORD '%s';" % (user, pw))
-        psql_superuser("postgres", "CREATE DATABASE %s;" % db)
+        psql_superuser("postgres", 'CREATE DATABASE "%s";' % db)
         psql_superuser(db, open(seed, encoding="utf-8").read())
     except Exception as exc:
         failures.append("hidden %s: provisioning failed (%s)" % (case, exc))
@@ -197,13 +197,13 @@ for case in cases:
             failures.append("hidden %s: reference build failed (%s)"
                             % (case, exc))
     try:
-        psql_superuser("postgres", "DROP DATABASE IF EXISTS %s;" % db)
+        psql_superuser("postgres", 'DROP DATABASE IF EXISTS "%s";' % db)
         psql_superuser("postgres", "DROP ROLE IF EXISTS %s;" % user)
     except Exception:
         pass
 
 if failures or not overall:
-    print("vane-marsh verifier FAIL: %s" % "; ".join(failures + [msgs]),
+    print("vane-marsh verifier FAIL: %s" % "; ".join(failures),
           file=sys.stderr)
     sys.exit(1)
 sys.exit(0)

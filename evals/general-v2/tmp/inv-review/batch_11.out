@@ -1,0 +1,125 @@
+```json
+{
+  "flags": [
+    {
+      "id": "C-22ec61ea",
+      "issue_type": "misscoped_failure_mode",
+      "explanation": "The competency is about launching a server, waiting for readiness, and keeping it reachable, but the failure mode ('Client incompatible with the server's actual protocol times out') describes a client-side protocol mismatch, which is a different skill and not a failure of the launch/readiness behavior itself. The required artifact ('a client compatible with the running server') is likewise mismatched — the deliverable of this competency is the server, not a client.",
+      "suggested_fix": "Change failure_mode to 'the server never emits a readiness signal, crashes at startup, or is unreachable when the client connects', and change required_artifacts to 'a running, reachable server process that accepts client connections'."
+    },
+    {
+      "id": "C-283a8475",
+      "issue_type": "wrong_difficulty",
+      "explanation": "min_required_difficulty 'easy' is clearly wrong: correctly launching three distinct JVM daemons (primary/data/secondary) for a distributed filesystem involves role-specific configuration, formatting, and crash-loop debugging, as the failure mode itself acknowledges.",
+      "suggested_fix": "Raise min_required_difficulty to 'medium'."
+    },
+    {
+      "id": "C-eed5fa75",
+      "issue_type": "wrong_difficulty",
+      "explanation": "min_required_difficulty 'hard' is too high: starting SSH and HTTP daemons so they survive the setup shell exiting is a standard daemonization task (nohup/backgrounding/service manager), not a hard competency.",
+      "suggested_fix": "Lower min_required_difficulty to 'easy' (or 'medium' if the target services require non-trivial configuration)."
+    },
+    {
+      "id": "C-072b1aaf",
+      "issue_type": "wrong_difficulty",
+      "explanation": "min_required_difficulty 'easy' is wrong: systematically exploring an unknown maze with cycles and dead ends, backtracking without revisits, and collating wall/open boundaries from feedback into an exact layout is a genuine algorithmic task, not easy.",
+      "suggested_fix": "Raise min_required_difficulty to 'medium'."
+    },
+    {
+      "id": "C-b57e3de3",
+      "issue_type": "wrong_difficulty",
+      "explanation": "min_required_difficulty 'hard' is too high: ingesting three CSVs and assembling a nested JSON object with departments/employees/projects arrays is a routine data-transformation task (medium at most).",
+      "suggested_fix": "Lower min_required_difficulty to 'medium'."
+    },
+    {
+      "id": "C-e15286f4",
+      "issue_type": "wrong_difficulty",
+      "explanation": "min_required_difficulty 'hard' is clearly wrong: case-insensitively normalizing sentinel null markers ('NULL'/'null'/'N/A') to masked values during parsing is a small, localized fix (easy).",
+      "suggested_fix": "Lower min_required_difficulty to 'easy'."
+    },
+    {
+      "id": "C-e822926a",
+      "issue_type": "wrong_difficulty",
+      "explanation": "min_required_difficulty 'hard' is too high: authoring a makefile with serial and parallel build targets is basic build-tooling competence (easy/medium), despite the entry's 'hard' label.",
+      "suggested_fix": "Lower min_required_difficulty to 'easy' (or 'medium' if the parallel build requires nontrivial flags/dependencies)."
+    },
+    {
+      "id": "C-c89e8bce",
+      "issue_type": "wrong_difficulty",
+      "explanation": "min_required_difficulty 'hard' is clearly wrong: emitting an ordered list of commands as one-per-line plain text at a required path is a trivial formatting task.",
+      "suggested_fix": "Lower min_required_difficulty to 'easy'."
+    },
+    {
+      "id": "C-d01e7f65",
+      "issue_type": "missing_artifact",
+      "explanation": "required_artifacts contains only 'the artifact this competency yields', which is a placeholder naming no concrete, checkable deliverable.",
+      "suggested_fix": "Replace with concrete artifacts, e.g. 'a shell orchestrator script whose subset mode writes the peak CSV using the awk resolved via PATH with no python invocation, and otherwise runs the python synthesis/STFT stages'."
+    },
+    {
+      "id": "C-cc366c45",
+      "issue_type": "overlapping_scope",
+      "explanation": "This entry bundles output-format requirements from many unrelated tasks (meeting scheduling with Monday/morning tie-breakers, per-person availability JSON, interval-overlap checking, date-range validation, digits-only files, canonical-order arrays) into a single competency; the definition, failure_mode, and the 12-item required_artifacts list each draw from different, unrelated deliverables.",
+      "suggested_fix": "Split into per-task-family entries (e.g. 'exact-format single-value output file', 'meeting scheduling output with tie-breakers', 'availability JSON output'), each with its own failure mode and artifacts."
+    },
+    {
+      "id": "C-e8ce0b20",
+      "issue_type": "duplicate",
+      "explanation": "Substantially the same competency as C-cc366c45: writing a standalone computed value (a bare number) to an output file is exactly the 'output file containing exactly the computed value' / 'file holding digits only' instance already covered by C-cc366c45's definition ('exact bare/single-line/no-delimiter form') and artifact list.",
+      "suggested_fix": "Merge C-e8ce0b20 into C-cc366c45 (or vice versa: keep C-e8ce0b20 as the narrowly-scoped numeric-output competency and remove the numeric instances from C-cc366c45 when splitting it)."
+    }
+  ],
+  "clean": [
+    "C-b6c42509",
+    "C-b18a585c",
+    "C-6ce588b8",
+    "C-72fb3c19",
+    "C-dfc452f0",
+    "C-2e1c650a",
+    "C-8e8854c9",
+    "C-c808d59d",
+    "C-e6e54354",
+    "C-57fdc30e",
+    "C-cbe4d8c6",
+    "C-5ce284f7",
+    "C-440b0d41",
+    "C-3a4d0dcd",
+    "C-f49d1fc8",
+    "C-a0748618",
+    "C-a3b20c21",
+    "C-ecca992e",
+    "C-3c94d62d",
+    "C-4e219f04",
+    "C-299441f7",
+    "C-0f675877",
+    "C-361f3946",
+    "C-6f5a7578",
+    "C-636aeacd",
+    "C-7aaa36a2",
+    "C-26787398",
+    "C-cda183ed",
+    "C-478b43ae",
+    "C-82c53914",
+    "C-2dc20425",
+    "C-440349c1",
+    "C-a2521d7a",
+    "C-1a1251a2",
+    "C-c3e1ca17",
+    "C-68113118",
+    "C-1ef80084",
+    "C-a7754d75",
+    "C-6edb0a94",
+    "C-52e8efcf",
+    "C-5fe739fc",
+    "C-cddf0e93",
+    "C-90e3d7da",
+    "C-64710cb8",
+    "C-37699688",
+    "C-1a84e913",
+    "C-d01e7f65",
+    "C-a3a07184",
+    "C-d1d1b8cb",
+    "C-ac59b3ce",
+    "C-64710cb8"
+  ]
+}
+```

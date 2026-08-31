@@ -1,0 +1,102 @@
+```json
+{
+  "flags": [
+    {
+      "id": "C-44a9126c",
+      "issue_type": "overlapping_scope",
+      "explanation": "The definition is a verbatim restatement of the name with no concrete criteria, and the required_artifacts appear to come from multiple unrelated deliverables (valid neighbor pairs for a 'focus person', a sequence of legal board strings, and a fixed-point phrase), while the failure_mode only covers the phrase/digest aspect. The entry spans several distinct skills rather than one verifiable competency.",
+      "suggested_fix": "Split into separate entries, one per concrete artifact (neighbor-pair extraction, board-string generation, fixed-point phrase construction), each with its own definition and matching failure_mode; replace the tautological definition with specifics of the actual arrangement problem."
+    },
+    {
+      "id": "C-7e2ac892",
+      "issue_type": "duplicate",
+      "explanation": "Essentially the same competency as C-6d3807fe: parallelize CPU-bound work across a process pool (as opposed to threads) so multiple workers actually execute concurrently, verified by process evidence/timing checks.",
+      "suggested_fix": "Merge with C-6d3807fe into a single 'parallelize CPU-bound work across a process pool' entry, keeping one artifact set and one failure_mode."
+    },
+    {
+      "id": "C-6d3807fe",
+      "issue_type": "duplicate",
+      "explanation": "Essentially the same competency as C-7e2ac892: dispatch jobs to a process pool (not threads) so CPU-bound work runs in parallel workers, with a failure mode of running on a single process/threads.",
+      "suggested_fix": "Merge with C-7e2ac892 into a single 'parallelize CPU-bound work across a process pool' entry."
+    },
+    {
+      "id": "C-f9865e4b",
+      "issue_type": "wrong_difficulty",
+      "explanation": "Normalizing URL equality for trailing slashes and query-parameter ordering is a straightforward string/URL canonicalization task (parse, sort query params, strip trailing slash); 'hard' clearly overstates it.",
+      "suggested_fix": "Lower min_required_difficulty to 'medium' (or 'easy')."
+    },
+    {
+      "id": "C-92802487",
+      "issue_type": "wrong_difficulty",
+      "explanation": "Converting SMILES to a toolkit object and returning None for invalid input is a single standard call in common chemistry toolkits (e.g., RDKit's MolFromSMILES already returns None on failure); 'hard' is clearly wrong.",
+      "suggested_fix": "Lower min_required_difficulty to 'easy'."
+    },
+    {
+      "id": "C-abbd9846",
+      "issue_type": "wrong_difficulty",
+      "explanation": "Writing a single JSON object with the exact nesting keys expected by a provided schema file is basic JSON serialization; 'hard' is clearly wrong for this competency.",
+      "suggested_fix": "Lower min_required_difficulty to 'easy'."
+    },
+    {
+      "id": "C-85b852db",
+      "issue_type": "misscoped_failure_mode",
+      "explanation": "failure_mode is an empty string, so the entry specifies nothing about what should cause a verifier failure; the failure mode is trivially absent rather than describing a concrete failure condition.",
+      "suggested_fix": "Add a concrete failure mode, e.g., 'missing file or file content not exactly matching the recovered numeric sequences fails equality checks'."
+    }
+  ],
+  "clean": [
+    "C-05192aec",
+    "C-6e84794c",
+    "C-7ec7207a",
+    "C-7d4d2b03",
+    "C-b0e2bdc0",
+    "C-2ab9c6fc",
+    "C-11a6985e",
+    "C-72ed7f2c",
+    "C-8a264a9b",
+    "C-9f4ec664",
+    "C-6d89c915",
+    "C-2d23b87e",
+    "C-21a3fd6a",
+    "C-e40bd45e",
+    "C-c28e02f4",
+    "C-a35a7a56",
+    "C-3721d7f8",
+    "C-ef14a022",
+    "C-0a3be828",
+    "C-4eb47892",
+    "C-681ef912",
+    "C-c9a67064",
+    "C-5525aa2f",
+    "C-fa91dd8c",
+    "C-fdda0949",
+    "C-e1e3902d",
+    "C-50a576ef",
+    "C-b87a0f1b",
+    "C-13b2f824",
+    "C-d6db4c62",
+    "C-10d5eba8",
+    "C-7714b0bf",
+    "C-b41cf713",
+    "C-c676c714",
+    "C-7ac74a24",
+    "C-fa0f70c5",
+    "C-dac7f784",
+    "C-51e2d3fd",
+    "C-ceab1759",
+    "C-53c64dab",
+    "C-5108aa14",
+    "C-429cc62e",
+    "C-a708220b",
+    "C-f5ee7735",
+    "C-db11a5b3",
+    "C-8eef0232",
+    "C-b159f57d",
+    "C-94d4d415",
+    "C-1a4b2841",
+    "C-29408d6f",
+    "C-903b2913",
+    "C-e784be56"
+  ]
+}
+```

@@ -14,6 +14,7 @@ pkill -f "kelp_daemon.py" 2>/dev/null || true
 sleep 0.2
 
 python3 - <<'PY'
+import glob
 import json
 import os
 import re
@@ -74,6 +75,39 @@ def alive(pid):
         return False
 
 
+def boot(out_path, err_path, env=None, timeout=150):
+    """Run start_cluster.sh WITHOUT captured pipes: the long-lived daemons
+    inherit the script's stdout/stderr, so pipes would never reach EOF and
+    subprocess.run(capture_output=True) would hang. Redirect to files instead
+    and return (returncode, stdout_text, stderr_text, timed_out)."""
+    with open(out_path, "wb") as fo, open(err_path, "wb") as fe:
+        try:
+            r = subprocess.run(["bash", START], stdout=fo, stderr=fe,
+                               timeout=timeout, env=env)
+            timed_out = False
+        except subprocess.TimeoutExpired:
+            r = None
+            timed_out = True
+    with open(out_path, errors="replace") as fh:
+        out = fh.read()
+    with open(err_path, errors="replace") as fh:
+        err = fh.read()
+    rc = r.returncode if r is not None else -9
+    return rc, out, err, timed_out
+
+
+def clear_run_state():
+    """Kill stray daemons and drop stale markers so boots can't be masked."""
+    subprocess.run(["pkill", "-f", "kelp_daemon.py"], capture_output=True)
+    time.sleep(0.3)
+    for pat in ("*.ready", "*.pid"):
+        for f in glob.glob(os.path.join("/app/run", pat)):
+            try:
+                os.remove(f)
+            except OSError:
+                pass
+
+
 # ------------------------------------------------------------ deliverable gate
 for path in (CORE, SITE, START):
     check(os.path.isfile(path), "missing deliverable %s" % path)
@@ -110,11 +144,12 @@ if failures:
     sys.exit(0)
 
 # --------------------------------------------------- visible boot + listening
-r = subprocess.run(["bash", START], capture_output=True, text=True, timeout=150)
-check(r.returncode == 0, "start_cluster.sh rc=%s stderr=%s"
-      % (r.returncode, (r.stderr or "")[-300:]))
-check("KELP_CLUSTER_UP" in (r.stdout or ""),
-      "start_cluster.sh did not print KELP_CLUSTER_UP (stdout=%r)" % (r.stdout or "")[-200:])
+clear_run_state()
+rc, out, err, timed_out = boot("/tmp/kelp_vis.out", "/tmp/kelp_vis.err")
+check(not timed_out, "start_cluster.sh timed out (150s) during visible boot")
+check(rc == 0, "start_cluster.sh rc=%s stderr=%s" % (rc, (err or "")[-300:]))
+check("KELP_CLUSTER_UP" in (out or ""),
+      "start_cluster.sh did not print KELP_CLUSTER_UP (stdout=%r)" % (out or "")[-200:])
 
 run_dir = "/app/run"
 for role, port in (("namenode", 24418), ("datanode", 24419)):
@@ -155,12 +190,14 @@ for case in cases:
     env["KELP_CONF_DIR"] = base
     env["KELP_RUN_DIR"] = run_dir_h
     try:
-        r = subprocess.run(["bash", START], capture_output=True, text=True,
-                           timeout=120, env=env)
+        rc, out, err, timed_out = boot("/tmp/kelp_h_%s.out" % case,
+                                       "/tmp/kelp_h_%s.err" % case,
+                                       env=env, timeout=90)
         if must_boot:
-            check(r.returncode == 0, "[%s] boot rc=%s stderr=%s"
-                  % (case, r.returncode, (r.stderr or "")[-300:]))
-            check("KELP_CLUSTER_UP" in (r.stdout or ""),
+            check(not timed_out, "[%s] boot timed out (90s)" % case)
+            check(rc == 0, "[%s] boot rc=%s stderr=%s"
+                  % (case, rc, (err or "")[-300:]))
+            check("KELP_CLUSTER_UP" in (out or ""),
                   "[%s] no KELP_CLUSTER_UP banner" % case)
             check(listening("127.0.0.1", exp_port),
                   "[%s] namenode port %d not listening" % (case, exp_port))
@@ -170,12 +207,14 @@ for case in cases:
                 check(os.path.isfile(os.path.join(run_dir_h, role + ".ready")),
                       "[%s] no ready marker for %s" % (case, role))
         else:
-            check(r.returncode != 0,
-                  "[%s] broken config must make start_cluster.sh exit "
-                  "non-zero (rc=0, stdout=%r)" % (case, (r.stdout or "")[:120]))
-    except subprocess.TimeoutExpired:
-        if must_boot:
-            failures.append("[%s] boot timed out" % case)
+            if timed_out:
+                # a hung boot on a broken config is NOT a bounded, loud failure
+                failures.append("[%s] start_cluster.sh hung past its bounded "
+                                "wait on the broken config" % case)
+            else:
+                check(rc != 0,
+                      "[%s] broken config must make start_cluster.sh exit "
+                      "non-zero (rc=0, stdout=%r)" % (case, (out or "")[:120]))
     finally:
         subprocess.run(["pkill", "-f", "kelp_daemon.py"], capture_output=True)
         time.sleep(0.3)

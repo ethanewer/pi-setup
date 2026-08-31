@@ -88,14 +88,17 @@ def main():
         sys.exit(2)
 
     # ---- train the FULL model ----------------------------------------------
-    opt = torch.optim.Adam(model.parameters(), lr=5e-3)
+    epochs = int(meta.get("train_epochs_hint", 1500))
+    opt = torch.optim.Adam(model.parameters(), lr=8e-3)
+    sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=epochs)
     model.train()
     final_loss = None
-    for ep in range(int(meta.get("train_epochs_hint", 900))):
+    for ep in range(epochs):
         opt.zero_grad()
         loss = nn.functional.cross_entropy(model(Xtr), ytr)
         loss.backward()
         opt.step()
+        sched.step()
         final_loss = float(loss.item())
         if ep % 200 == 0:
             print("[train] epoch %d loss %.4f" % (ep, final_loss))

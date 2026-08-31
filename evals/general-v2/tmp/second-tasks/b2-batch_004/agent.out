@@ -1,0 +1,11 @@
+All four tasks are complete: lint-clean (remaining lint errors are pre-existing unrelated tasks, saffron-vine) and every oracle run scored reward 1.0.
+
+- **dust-tape** (C-a1a5f09e): PDP-11 tape-archive triage — header-based classifier for PDP-11 a.out (4 magic variants, 8-word header, truncated-header nulls), ELF (both endiannesses/classes/machines), MZ/text/junk/empty; 2 hidden artifact sets + cross-checked inventory.
+- **wren-link** (C-0c70052d): Skerry plugin SDK — generic `link.sh` driving `llvm-link` over per-module IR into `/app/plugin.bc` (nm-checked for resolved cross-module refs) and a native demo; 2 hidden module sets rebuilt and executed.
+- **crane-anvil** (C-9afc9d99): Torrigan snow survey — authored Makefile driving gfortran (module-before-program) into `/app/avalanche_report`, executed on visible + 2 hidden station datasets after forced `make -B` rebuild.
+- **tern-delta** (C-dec53bef): estuary telemetry calibration — `calibrate(p, r_forward, r_backward)` returning a positive, normalized numpy distribution within both KL budgets (halving mix method, zero-budget exactness), validated on 7 hidden cases plus the visible `/app/calibrated.json`.
+
+RESULT {"cid":"C-a1a5f09e","task_id":"dust-tape","lint":true,"oracle_reward":1.0}
+RESULT {"cid":"C-0c70052d","task_id":"wren-link","lint":true,"oracle_reward":1.0}
+RESULT {"cid":"C-9afc9d99","task_id":"crane-anvil","lint":true,"oracle_reward":1.0}
+RESULT {"cid":"C-dec53bef","task_id":"tern-delta","lint":true,"oracle_reward":1.0}

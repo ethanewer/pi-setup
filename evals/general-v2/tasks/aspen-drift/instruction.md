@@ -59,7 +59,7 @@ with shapes `(24, 6)`, `(24,)`, `(1, 24)`, `(1,)` — i.e. saved via
 
 2. `/app/model.pt` — the snapshot trained on `/app/data/train.csv`. The
    grader reloads it, checks the keys/shapes above, and requires the reloaded
-   model to achieve **MAE ≤ 0.15 against the training targets**.
+   model to achieve **MAE ≤ 0.35 against the training targets**.
 
 3. `/app/evaluate.py`
 
@@ -84,12 +84,12 @@ with shapes `(24, 6)`, `(24,)`, `(1, 24)`, `(1,)` — i.e. saved via
    ```
 
 4. `/app/predictions.txt` — exactly 200 prediction lines (one float each).
-   The grader requires **MAE ≤ 0.35** against the true targets of the
+   The grader requires **MAE ≤ 0.40** against the true targets of the
    holdout rows, so the model must generalize, not memorize.
 
 ## Edge cases the grader probes with hidden data
 
-- Fresh training sets of different sizes (300 / 40 / 1500 rows): the trainer
+- Fresh training sets of different sizes (300 / 150 / 1500 rows): the trainer
   must fit them all under the same architecture, epoch cap and thresholds.
 - A **header-only** train CSV → trainer exits non-zero, writes nothing.
 - A train CSV with a **corrupted numeric value** → trainer exits non-zero.

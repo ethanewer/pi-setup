@@ -1,0 +1,15 @@
+All four competencies are covered by newly authored, independently verified tasks:
+
+| Competency | Task | Scenario (differs from existing cover) | Verification approach |
+|---|---|---|---|
+| C-14f6efb2 MIL forward | `ember-quarry` | Seismic-sensor bag classifier (encoder→gate→classifier), CLI on hidden `.npz` bags incl. T=0/T=1 | In-container deterministic reference (fixed seed, fixed layer order) + invariants (attention Σ=1, pred=argmax) |
+| C-2035e4ee asyncio concurrency | `hazel-forge` | Render-farm `RunGate` over job *factories*; failure propagation + cancellation + measured peak | Hidden batches probe peak≤limit, ordered results, no factory calls after failure/cancel, ValueError guard |
+| C-f254b292 attention pooling module | `glass-mantle` | LiDAR `GatedSetPooling` (proj/score/head), rank-2 *and* rank-3 batched mode, empty/single sets | Named nn.Linear attr checks + exact numeric match to in-container reference under hidden dims/seeds |
+| C-8c746cc6 column-parallel linear | `coral-dial` | Marrowwave `ColumnParallelLinear`: sharded forward with all-gather, exact per-rank grad slices, validation CLI | Direct contract checks + machine-precision equality vs dense layer/grads on hidden configs incl. nondivisible |
+
+Each task: `schema_version=1.4`, tags include the competency id, `verifier_kind=executes-deliverable`, ≥2 (actually 3–4) hidden cases, guarded verifier writing `/logs/verifier/reward.txt`, deterministic offline oracle, and lint-clean with oracle reward 1.0.
+
+RESULT {"cid":"C-14f6efb2","task_id":"ember-quarry","lint":true,"oracle_reward":1.0}
+RESULT {"cid":"C-2035e4ee","task_id":"hazel-forge","lint":true,"oracle_reward":1.0}
+RESULT {"cid":"C-f254b292","task_id":"glass-mantle","lint":true,"oracle_reward":1.0}
+RESULT {"cid":"C-8c746cc6","task_id":"coral-dial","lint":true,"oracle_reward":1.0}

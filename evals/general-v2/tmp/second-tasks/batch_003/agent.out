@@ -1,0 +1,15 @@
+All four competencies are covered, verified (lint clean, oracle reward = 1.0 each):
+
+| Competency | New task | Scenario (distinct from existing covering task) |
+|---|---|---|
+| C-7a6b9df2 (CPU SAM from rectangular prompts → per-cell masks) | `tasks/lichen-mesa/` | Per-tile distilled-SAM segmentation of ecological survey tiles: torch CPU inference per tile, per-rectangle prompt masks in cell-local frames, npz/csv/json artifacts; 3 hidden tiles |
+| C-92a7a9c8 (revision-pinned embed → cosine rank → selected doc) | `tasks/silk-meridian/` | Newsroom retrieval responder with pinned-revision hashed-trigram embedder, stale-cache trap, revision-mismatch probe (nonzero-exit requirement), 4 hidden bundles incl. fresh-cache and no-cache cases |
+| C-488f50fd (vocab + merges in a loader's exact format) | `tasks/elm-anchor/` | BPE learner emitting `vocab.txt`/`merges.txt` for the shipped strict `merm_loader.py` (chain validation rejects malformed/misordered rules); byte-exact hidden corpora (deep-chain, unicode, mixed) + probe tokenizations |
+| C-500da2a9 (ATE to tight tolerance) | `tasks/umber-larch/` | Observational studies with instrument/mediator/collider/noise columns: backdoor set derived from DAG (delete-treatment reachability), g-computation with squares+interactions, ±0.06 tolerance, strict 6-decimal format; 3 hidden studies with different topologies/names/params |
+
+Notes: determinism enforced via seeded generators (no network at run/verify; builds pin torch CPU wheel / numpy); verifier runtimes all well under 300 s; every verifier guards malformed/missing agent output and always writes `/logs/verifier/reward.txt`; no existing task or shared tool was modified. Discrimination was empirically checked for umber-larch (naive diff-in-means off by 0.4–0.9, wrong adjustment sets off by 1.4–2.0, square/interaction omission off by ~0.15–0.23 vs. tolerance 0.06) and for silk-meridian (stale cache provably changes the ranking).
+
+RESULT {"cid":"C-7a6b9df2","task_id":"lichen-mesa","lint":true,"oracle_reward":1.0}
+RESULT {"cid":"C-92a7a9c8","task_id":"silk-meridian","lint":true,"oracle_reward":1.0}
+RESULT {"cid":"C-488f50fd","task_id":"elm-anchor","lint":true,"oracle_reward":1.0}
+RESULT {"cid":"C-500da2a9","task_id":"umber-larch","lint":true,"oracle_reward":1.0}

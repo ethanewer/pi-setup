@@ -39,7 +39,9 @@ POLICY = "/app/shell_policy.json"
 no_modify_broken = int(sys.argv[1])
 
 failures = []
-if no_modify_broken:
+if no_modify_broken == 1:
+    pass
+else:
     failures.append("visible policy modified or missing (no-modify rule)")
 
 
@@ -64,7 +66,8 @@ def apply_case(policy_src, expected_path, label):
     try:
         expected = load_json(expected_path)
         assert isinstance(expected, dict) and expected, "bad expected"
-        shutil.copyfile(policy_src, POLICY)
+        if os.path.abspath(policy_src) != os.path.abspath(POLICY):
+            shutil.copyfile(policy_src, POLICY)
     except Exception as exc:
         return ["%s: bad case fixtures (%s)" % (label, exc)]
 

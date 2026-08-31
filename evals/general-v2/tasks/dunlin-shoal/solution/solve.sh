@@ -6,6 +6,9 @@ set -eu
 EXPORTER="/app/export.py"
 OUT="/app/snapshot.json"
 
+# Ensure the scenario instance is live (idempotent image infrastructure).
+/opt/dunctl/dbctl.sh up
+
 # ---- 1. Write the deliverable program (this IS the work, not a canned answer).
 cat > "$EXPORTER" <<'PY'
 #!/usr/bin/env python3

@@ -1,0 +1,17 @@
+BATCH_DONE batch_037 attempt=1 rc=0
+ clean (0 problems/notes for both ids) and harbor oracle runs show `"mean": 1.0` with reward=1 written to `/logs/verifier/reward.txt`.
+
+**Summary of authored tasks:**
+
+1. **`gale-slate`** (C-45ccc851, hard, security) — `/Users/ethanewer/pi-setup/evals/general-v2/tasks/gale-slate/`
+   - Agent builds a reusable AST-based static analyzer (`/app/solve.py`) that recognizes 8 vulnerability patterns in Python web-service source (dynamic SQL → CWE-89, command injection → CWE-78, `eval`/`exec` → CWE-95, unsafe deserialization → CWE-502, broken hash → CWE-327, hardcoded credentials → CWE-798, open redirect → CWE-601, SSRF → CWE-918) and emits exact CWE ids per function/module scope, with safe look-alike distractors (parameterized SQL, `shell=False`, literal args, sha256, `json.load`).
+   - Verifier executes the deliverable on the visible fixture plus 3 hidden modules (billing/portal/archive covering all 8 rules, methods, nested functions); negative control (missing CWEs) correctly scores 0.
+
+2. **`onyx-caravan`** (C-02cd42ad, medium, programming) — `/Users/ethanewer/pi-setup/evals/general-v2/tasks/onyx-caravan/`
+   - Agent writes a stdlib HTTP client (`/app/solve.py`) that completes a full session: single-use challenge nonce with deployment-varying hash algorithm (sha256/sha1/sha512), challenge-response token, cookie-name-agnostic session jar, optional `X-Nonce` header, then a CSRF-protected `POST /logout`, saving `/app/answer.json`.
+   - Verifier launches fresh origins (visible config + 3 hidden deployments), executes the client, checks the exact issued `sid`/`csrf` computed independently from the config, and confirms server-side session termination; negative control (skipped logout) correctly scores 0.
+
+Both differ from the existing tasks (`amber-orchid`, `drift-dial`) in scenario, protocol, and fixtures.
+
+RESULT {"cid":"C-45ccc851","task_id":"gale-slate","lint":true,"oracle_reward":1.0}
+RESULT {"cid":"C-02cd42ad","task_id":"onyx-caravan","lint":true,"oracle_reward":1.0}

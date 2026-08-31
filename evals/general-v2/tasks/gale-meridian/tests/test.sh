@@ -75,13 +75,20 @@ except Exception as exc:
     check('kernelspec_list_json', False, str(exc))
 check('kernel_registered', KERNEL in specs, sorted(specs))
 for name, spec in specs.items():
+    if name == 'python3':
+        continue  # stock ipykernel spec shipped with the image
+    argv0, resolved, err = None, None, ''
     try:
         kj = os.path.join(spec['resource_dir'], 'kernel.json')
         argv0 = json.load(open(kj))['argv'][0]
-        ok = os.path.isfile(argv0) and os.access(argv0, os.X_OK)
-    except Exception:
-        ok = False
-    check('kernelspec_integrity_%s' % name, ok, name)
+        resolved = argv0 if os.path.isabs(argv0) else shutil.which(argv0)
+        ok = bool(resolved) and os.path.isfile(resolved) \
+            and os.access(resolved, os.X_OK)
+    except Exception as exc:
+        ok, err = False, ' exc=%r' % exc
+    check('kernelspec_integrity_%s' % name, ok,
+          'dir=%r argv0=%r -> %r%s' % (spec.get('resource_dir'), argv0,
+                                        resolved, err))
 
 # ---- execute deliverable /app/workbench_report.json ----
 rver = subprocess.run(
@@ -99,10 +106,15 @@ if os.path.isfile(REPORT):
                     specs[KERNEL]['resource_dir'], 'kernel.json')))['argv'][0]
             except Exception:
                 rcw_arg = None
-        check('report_r_binary', rep.get('r_binary') == rcw_arg
-              and os.path.isfile(str(rep.get('r_binary')))
-              and os.access(str(rep.get('r_binary')), os.X_OK),
-              rep.get('r_binary'))
+        rep_bin = str(rep.get('r_binary', ''))
+        rep_resolved = shutil.which(rep_bin) if rep_bin and \
+            not os.path.isabs(rep_bin) else rep_bin
+        rcw_resolved = shutil.which(rcw_arg) if rcw_arg and \
+            not os.path.isabs(rcw_arg) else rcw_arg
+        check('report_r_binary',
+              bool(rcw_resolved) and os.path.realpath(rep_resolved or '') ==
+              os.path.realpath(rcw_resolved),
+              (rep.get('r_binary'), rcw_arg))
         check('report_packages',
               set(REQ_PKGS) <= set(rep.get('packages', [])),
               rep.get('packages'))
@@ -130,10 +142,18 @@ def run_notebook(path, required_markers):
             capture_output=True, text=True, timeout=180)
         if r.returncode != 0 or not os.path.isfile(out_ipynb):
             return 'nbconvert_failed: %s' % (r.stderr or r.stdout)[-300:]
-        text = open(out_ipynb).read()
+        nb_out = json.load(open(out_ipynb))
+        texts = []
+        for cell in nb_out.get('cells', []):
+            for out in cell.get('outputs', []):
+                if out.get('output_type') == 'stream':
+                    t = out.get('text')
+                    texts.append(''.join(t) if isinstance(t, list)
+                                 else str(t))
+        text = '\n'.join(texts)
         for m in required_markers:
             if not re.search(re.escape(m), text):
-                return 'missing marker %r' % m
+                return 'missing marker %r in %r' % (m, text[-400:])
         return None
     except Exception as exc:
         return 'exception: %s' % exc

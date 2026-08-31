@@ -39,7 +39,7 @@ start_pg() {
 }
 
 psql_sock() { # psql_sock DB "SQL"  -- via unix socket (trust), as postgres
-  "$PGBIN/psql" -U postgres -d "$1" -tA -v ON_ERROR_STOP=1 -q -c "$2"
+  "$PGBIN/psql" -U postgres -p "$PORT" -d "$1" -tA -v ON_ERROR_STOP=1 -q -c "$2"
 }
 
 seed_main() {
@@ -53,7 +53,7 @@ seed_main() {
   local dbexists
   dbexists=$(psql_sock postgres "SELECT 1 FROM pg_database WHERE datname = 'provisions'" | tr -d '[:space:]')
   if [ "${dbexists:-0}" != "1" ]; then
-    "$PGBIN/createdb" -U postgres -O stocker provisions
+    "$PGBIN/createdb" -U postgres -p "$PORT" -O stocker provisions
   fi
 
   local tblexists

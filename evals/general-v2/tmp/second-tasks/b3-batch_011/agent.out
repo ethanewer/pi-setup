@@ -1,0 +1,13 @@
+BATCH_DONE batch_011 attempt=1 rc=0
+(only pre-existing notes/errors in unrelated tasks), and both oracle runs confirm `reward=1`.
+
+**Summary**
+
+- **`tasks/sable-hook`** (C-1f4f846b, hard, security/binary-re): a stripped ELF `gatekeeper` compiled (and de-sourced) at image build; the agent reverse-engineers two XOR-obfuscated `.rodata` tables to recover the access passphrase, runs the binary to derive the deploy secret, and must **actually run** `/app/vault_service.py` with it via `/app/unseal.py` so `/app/vault_out/unsealed.txt` is emitted. The verifier deletes the side-effect file and re-executes the runner, cross-checks the output against the pristine app's genuine body, verifies the binary/app still reject wrong inputs, and replays 3 hidden probes (self-sufficient runner without the passphrase file, fresh output dir, wrong-secret rejection).
+- **`tasks/vellum-notch`** (C-4a3a4fa1, easy, file_operations): a forensic archive sits next to a large live `audit.log`; full extraction would clobber the log (same-named stale member) and scatter `creds/`+`heap/` payloads. Deliverables are an executable `/app/extract_member.sh` that streams one member to stdout with zero disk writes and `/app/out/build.id`. The verifier re-executes the script on 3 hidden archives (nested/top-level/deep members) in scratch dirs, requiring byte-exact stdout, untouched sentinel log, unmodified archive, and no leaked files.
+
+```
+RESULT {"cid":"C-1f4f846b","task_id":"sable-hook","lint":true,"oracle_reward":1.0}
+RESULT {"cid":"C-4a3a4fa1","task_id":"vellum-notch","lint":true,"oracle_reward":1.0}
+```
+e_reward":1.0}

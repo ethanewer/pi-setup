@@ -1,0 +1,11 @@
+All four covering tasks are authored, lint-clean, and their final oracle runs score reward=1.0 (the earlier `0` directories are superseded first attempts that were fixed and re-run):
+
+- **orchid-model** (C-f1b4dc5f): integer-MLP classifier whose untouched `selftest.py` constructs the model, runs real forwards against KAT probes, prints `SELFTEST_OK`/returns truthy; verifier re-runs it on fresh valid nets (different dims) and corrupted nets where faking success or broad `except` swallowing fails it.
+- **kiln-journal** (C-fd68813c): restored WAL must be placed as `<db>-wal` beside a writable copy so SQLite auto-replays the journal on open; verifier re-executes the solver on 4 hidden scenarios (appends-only, update+delete+append, no-journal, many appends) with input no-modify hashing.
+- **cinder-dump (C-646ce03c)**: reassemble canonical `hexdump -C` fragments (`*` repeat runs, shuffled manifest, decoys, overlaps, partial final rows) into a byte-exact, hand-built x86-64 ELF that must actually execute and print its sentinel line.
+- **teal-macro (C-7fa604fa)**: record Vim macros under a hard 40-keystroke `getreg` budget; verifier sources `macros.vim` headlessly, checks no buffer edits at source time and no forbidden constructs, then applies `:%g/^/normal @a` to visible + 3 hidden sources.
+
+RESULT {"cid":"C-f1b4dc5f","task_id":"orchid-model","lint":true,"oracle_reward":1.0}
+RESULT {"cid":"C-fd68813c","task_id":"kiln-journal","lint":true,"oracle_reward":1.0}
+RESULT {"cid":"C-646ce03c","task_id":"cinder-dump","lint":true,"oracle_reward":1.0}
+RESULT {"cid":"C-7fa604fa","task_id":"teal-macro","lint":true,"oracle_reward":1.0}

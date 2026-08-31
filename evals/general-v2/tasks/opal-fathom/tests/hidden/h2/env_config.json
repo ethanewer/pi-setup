@@ -1,13 +1,13 @@
 {
-  "case_id": "corridor-h2-y",
+  "case_id": "route-h2-y",
   "seed": 5150,
-  "corridor_len": 40,
-  "n_coins": 0,
-  "horizon": 120,
-  "episodes": 5,
-  "obs_dim": 40,
-  "hidden_dim": 40,
-  "n_actions": 2,
+  "n_states": 16,
+  "n_actions": 4,
+  "horizon": 30,
+  "episodes": 12,
+  "obs_dim": 16,
+  "hidden_dim": 16,
+  "transition": "s_next = (s + a + 1) mod n_states",
   "policy_file": "policy.npz",
-  "min_mean_reward": 0.0
+  "min_mean_reward": 0.947593
 }

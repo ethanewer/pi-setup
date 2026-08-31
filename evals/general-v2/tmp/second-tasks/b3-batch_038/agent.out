@@ -1,0 +1,17 @@
+BATCH_DONE batch_038 attempt=1 rc=0
+ Summary:
+
+**Task 1 — `saffron-quay`** (C-e1811563, Flask POST endpoint, medium, web)
+- `/app/server.py`: Flask service with `POST /score` returning `{"label", "confidence"}` (lexicon classifier with positive/negative/mixed/neutral tie-breaks and add-one-smoothed rounded confidences), `GET /health`, 400 error contracts, plus a `score` batch CLI mode; visible fixture `/app/reviews.txt` → `/app/answer.json`.
+- Verifier enforces the no-modify sha guard, executes the score mode on the visible case, checks `/app/answer.json`, then launches the server and replays 9 hidden HTTP cases (empty/whitespace text, ties, clear positive/negative, punctuation/case, bad content-type, missing/non-string text).
+- Differs from amber-dial's `/classify` (different path, lexicons, tie-break rules incl. `mixed` label, smoothing, CLI shape).
+
+**Task 2 — `tundra-quill`** (C-2f15053d, pure-JS game function, medium, programming)
+- `/app/pilot.js`: plain function `step(cell)` via `module.exports = { step: step }`, no imports/classes; Coldstore grid-robot decision: min-cost neighbour selection with north>south>east>west tie-break, `blocked` exclusion, battery ≤ 0 → hold, layered malformed-state fallbacks.
+- Verifier loads the module with `require`, rejects sources with `require(`/`import`/`class`, and executes `step` on 10 hidden cell states (all validated against the oracle).
+- Differs from amber-ledge's `game.js` (2D grid + cost/battery vs 1D line + tile comparison).
+
+Both tasks lint clean (no errors/notes), and the harbor oracle runs confirmed reward 1.0 at `/tmp/genv2-b3-batch_038-saffron-quay/**/verifier/reward.txt` and `/tmp/genv2-b3-batch_038-tundra-quill/**/verifier/reward.txt`. The 33 pre-existing lint errors are in other tasks (e.g. `ashen-cache`) and were left untouched.
+
+RESULT {"cid":"C-e1811563","task_id":"saffron-quay","lint":true,"oracle_reward":1.0}
+RESULT {"cid":"C-2f15053d","task_id":"tundra-quill","lint":true,"oracle_reward":1.0}

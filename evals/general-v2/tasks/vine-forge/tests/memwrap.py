@@ -17,8 +17,7 @@ def main():
         print("PEAK_KB -1")
         return 2
     cmd = [sys.executable] + sys.argv[1:]
-    proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL,
-                            stderr=subprocess.DEVNULL)
+    proc = subprocess.Popen(cmd)
     peak = 0
     while proc.poll() is None:
         try:

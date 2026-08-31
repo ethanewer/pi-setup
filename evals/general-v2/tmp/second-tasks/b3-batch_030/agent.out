@@ -1,0 +1,15 @@
+BATCH_DONE batch_030 attempt=1 rc=0
+:
+
+- **`cinder-vale`** (C-a4cb7c45, hard, programming): LumenPrint admission planner — emits `/app/plans.jsonl` plan records with exact schema (`id`, `batch`, `shape{volume_cm3,layers,duration}`, key order + compact separators byte-checked), plus DP-based deadline-scheduling optimum (`answer.json`, `schedule.csv`). Verifier executes `/app/solve.py` on the visible basket and 4 hidden workdirs (tie-break, greedy trap, infeasible/zero-profit mix, exact-fit single job).
+- **`mist-quay`** (C-759c32c0, easy, system_administration): MistQuay tide-relay provisioning — `/app/configure.sh` (idempotently enables `[auth] enabled = true`, registers operator `marlow`) and `/app/adduser.sh` (SHA-512 crypt `$6$` hashes into `users.htpasswd`). Verifier re-runs configure.sh, crypt-verifies hashes, rejects plaintext storage, and probes the live service over loopback HTTP for `marlow` plus two hidden accounts (incl. punctuation-laden password) through the agent's own adduser.sh.
+
+Lint: `tasks=476 problems=33` (all pre-existing in other tasks; zero for the new ones). Oracle rewards confirmed at 1.0 in `/tmp/genv2-b3-batch_030-<id>/**/verifier/reward.txt`.
+
+RESULT {"cid":"C-a4cb7c45","task_id":"cinder-vale","lint":true,"oracle_reward":1.0}
+RESULT {"cid":"C-759c32c0","task_id":"mist-quay","lint":true,"oracle_reward":1.0}
+erifier crypt-verifies hashes on the visible secret **plus two hidden secrets**, re-runs provisioning, and live-probes the gateway (`/health` 200, unauthenticated 401, wrong password 401, unknown user 401, configured secret 200). Negative control (DES-crypt hash) correctly fails.
+- Differs from vine-helix (node repair with sshd/perms/cProfile/Node trials) in scenario, scope, and verification style.
+
+RESULT {"cid":"C-a4cb7c45","task_id":"keel-bight","lint":true,"oracle_reward":1.0}
+RESULT {"cid":"C-759c32c0","task_id":"skiff-berth","lint":true,"oracle_reward":1.0}

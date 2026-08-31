@@ -84,12 +84,6 @@ else:
                        "/tmp/quill_vis_report.json"):
         failures.append("visible recovery run failed")
     elif not dir_matches("/tmp/quill_vis_out", "/tests/expected"):
-        import subprocess as sp
-        sp.run(["bash", "-c",
-                "ls -la /tests/expected /tmp/quill_vis_out; "
-                "sha256sum /tests/expected/* /tmp/quill_vis_out/*; "
-                "cmp /tests/expected/runbook.md /tmp/quill_vis_out/runbook.md"],
-               stderr=subprocess.STDOUT)
         failures.append("visible recovery bytes mismatch")
     elif load_report("/tmp/quill_vis_report.json") != \
             load_report("/tests/expected_report.json"):

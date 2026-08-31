@@ -1,0 +1,20 @@
+All four tasks are complete and verified. Final lint across the repo: `tasks=293 problems=0`.
+
+Summary of the batch:
+
+| Competency | Task | What it exercises | Oracle |
+|---|---|---|---|
+| C-05d7fbec | `slate-quarry` | Verifier executes `/app/ops.sh` **as user dana** — privileged seal-minting via sudo-allowed `snapshotctl` and ledger destruction via sudo-allowed `shred`, idempotent across 3 hidden degraded states, pristine-hash tamper guards | 1.0 |
+| C-f01d36d3 | `sable-quill` | R module `/app/tidekit.R` with line-start regex-checked entry points `tide_estimate`/`tide_selftest`, re-run in fresh R processes on hidden (n, rate) cases, error edge, reproducibility, PASS/FAIL self-test | 1.0 |
+| C-1ea268be | `garnet-shard` | `gull` 3-round byte-Feistel cipher (rotation round function kills key twins), subkey recovered from pairs, exposed via `uint32_t recover_gull_key(const char*)` (ctypes-checked exact equality, 0 on malformed, never crashes), CLI + creds.txt cross-checked on 5 hidden scenarios | 1.0 |
+| C-cec73e0d | `mica-marsh` | ReLU MLP row recovery (`v_i·w_i`) through the scalar query channel only — axis-scan kink localization + gradient-difference row recovery, dedup, under a hard query budget, on visible + 2 hidden fixtures with different in_dim/unit counts | 1.0 |
+
+Notable issues caught and fixed during verification:
+- `slate-quarry`: as `dana`, `[ -e ]` fails on a 0700 root-only dir, silently skipping the shred step → vault dir changed to mode 0711 (searchable, not listable) so the operator can stat but still needs sudo.
+- `garnet-shard`: initial round function had key twins (k ≡ k^0x8080) making the subkey non-unique → added a rotl-1 step; verified all 65536 keys now have distinct round-function vectors and every fixture pair-set determines a unique key.
+- `mica-marsh`: fixture template bug (module-level arrays referenced via `self.`) → regenerated.
+
+RESULT {"cid":"C-05d7fbec","task_id":"slate-quarry","lint":true,"oracle_reward":1.0}
+RESULT {"cid":"C-f01d36d3","task_id":"sable-quill","lint":true,"oracle_reward":1.0}
+RESULT {"cid":"C-1ea268be","task_id":"garnet-shard","lint":true,"oracle_reward":1.0}
+RESULT {"cid":"C-cec73e0d","task_id":"mica-marsh","lint":true,"oracle_reward":1.0}

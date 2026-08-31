@@ -84,9 +84,10 @@ Running
 cd /app && ./agen 4 37
 ```
 
-must exit 0 and leave `/app/worker_0.dat`, `/app/worker_1.dat`,
-`/app/worker_2.dat`, `/app/worker_3.dat` in place. These files are
-deliverables and are byte-checked.
+must exit 0 and leave the four `/app/worker_*.dat` files —
+`/app/worker_0.dat`, `/app/worker_1.dat`, `/app/worker_2.dat`,
+`/app/worker_3.dat` — in place. These files are deliverables and are
+byte-checked.
 
 ## Edge cases the hidden verify probes
 

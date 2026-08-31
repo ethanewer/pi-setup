@@ -56,10 +56,10 @@ run_case() {
     local vlog=/tmp/briar_valgrind.txt
 
     rm -f "$out" "$vlog"
-    # -k 100: keep going after errors; leak-check=full; error exit code 97.
+    # leak-check=full; definite/indirect leaks count as errors (exit code 97).
     if ! valgrind --leak-check=full --show-leak-kinds=definite,indirect \
          --errors-for-leak-kinds=definite,indirect --error-exitcode=97 \
-         -q /app/src/memledger "$input" > "$out" 2> "$vlog"; then
+         /app/src/memledger "$input" > "$out" 2> "$vlog"; then
         echo "case '$input': nonzero/valgrind-error exit status" >&2
         cat "$vlog" >&2 || true
         return 1
