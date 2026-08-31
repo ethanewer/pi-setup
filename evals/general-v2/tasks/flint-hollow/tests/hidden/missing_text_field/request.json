@@ -1,0 +1,7 @@
+{
+  "raw_body": "{\"note\": \"hi\"}",
+  "expect_status": 400,
+  "expect_body": {
+    "error": "field 'text' must be a string"
+  }
+}

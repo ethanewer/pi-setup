@@ -1,0 +1,16 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 0,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 0,
+    "resource_pressure": 0,
+    "interaction_statefulness": 1,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "notes": "Hard: patch header-name normalization so CR/LF/NUL (and all non-token) characters are rejected while benign token names keep their exact canonical title forms; the documented failure mode is over-broad validation that mangles or rejects valid headers. Also wire it into a WSGI relay with structured 400s (invalid_header/duplicate_header/bad_request) and a CLI mapping deliverable. adversarial_inputs=2 and hidden_case_generalization=2 (control-char matrix plus benign edge families: empty tokens, digits, dots, unicode, non-strings), debugging_ambiguity=1 (precise token-set boundary), interaction_statefulness=1 (live gateway sequence with duplicate-collision detection), dependent_stages=1 (canonical_map.json derived from running the CLI)."
+}

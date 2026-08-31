@@ -1,0 +1,137 @@
+{
+ "steps": [
+  {
+   "method": "GET",
+   "path": "/relay/health",
+   "expect_status": 200,
+   "expect_body": {
+    "status": "ok"
+   }
+  },
+  {
+   "method": "POST",
+   "path": "/relay/headers",
+   "body": {
+    "content-type": "application/json",
+    "X-REQUEST-ID": "abc-123"
+   },
+   "expect_status": 200,
+   "expect_body": {
+    "headers": {
+     "Content-Type": "application/json",
+     "X-Request-Id": "abc-123"
+    }
+   }
+  },
+  {
+   "method": "POST",
+   "path": "/relay/headers",
+   "body": {
+    "a--b": "keep",
+    "x-": "tail",
+    "1x": "num"
+   },
+   "expect_status": 200,
+   "expect_body": {
+    "headers": {
+     "A--B": "keep",
+     "X-": "tail",
+     "1x": "num"
+    }
+   }
+  },
+  {
+   "method": "POST",
+   "path": "/relay/headers",
+   "body": {},
+   "expect_status": 200,
+   "expect_body": {
+    "headers": {}
+   }
+  },
+  {
+   "method": "POST",
+   "path": "/relay/headers",
+   "body": {
+    "x\ny": "v"
+   },
+   "expect_status": 400,
+   "expect_error_code": "invalid_header"
+  },
+  {
+   "method": "POST",
+   "path": "/relay/headers",
+   "body": {
+    "x\ty": "v"
+   },
+   "expect_status": 400,
+   "expect_error_code": "invalid_header"
+  },
+  {
+   "method": "POST",
+   "path": "/relay/headers",
+   "body": {
+    "xy": "v"
+   },
+   "expect_status": 400,
+   "expect_error_code": "invalid_header"
+  },
+  {
+   "method": "POST",
+   "path": "/relay/headers",
+   "body": {
+    "x-a": "1",
+    "X-A": "2"
+   },
+   "expect_status": 400,
+   "expect_error_code": "duplicate_header"
+  },
+  {
+   "method": "POST",
+   "path": "/relay/headers",
+   "body": {
+    "etag": "1",
+    "ETAG": "2",
+    "ok-x": "3"
+   },
+   "expect_status": 400,
+   "expect_error_code": "duplicate_header"
+  },
+  {
+   "method": "POST",
+   "path": "/relay/headers",
+   "raw_body": "hello world",
+   "expect_status": 400,
+   "expect_error_code": "bad_request"
+  },
+  {
+   "method": "POST",
+   "path": "/relay/headers",
+   "body": [
+    1,
+    2
+   ],
+   "expect_status": 400,
+   "expect_error_code": "bad_request"
+  },
+  {
+   "method": "POST",
+   "path": "/relay/headers",
+   "body": {
+    "ok-x": "v",
+    "num": 5
+   },
+   "expect_status": 400,
+   "expect_error_code": "bad_request"
+  },
+  {
+   "method": "POST",
+   "path": "/relay/headers",
+   "body": {
+    "": "v"
+   },
+   "expect_status": 400,
+   "expect_error_code": "invalid_header"
+  }
+ ]
+}

@@ -1,0 +1,16 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 0,
+    "adversarial_inputs": 0,
+    "hidden_case_generalization": 1,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 2,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 30,
+  "notes": "Session-lifecycle competency: drive a challenge/response login, an authenticated bearer-token work call, and an explicit logout against a live local origin, writing the report artifact only after a clean session. Hidden deployments vary credentials, iteration counts (1 and 3), task lists (including empty), and ports; the verifier cross-checks the report's session token and challenge against the origin's audit log and requires exactly one login_ok, zero failures/rejections, and logout as the final event. Differs from the drift-dial covering task: JSON bodies instead of HTML forms, header bearer token instead of a cookie jar, iterated-digest proof, no npm component. Rubric nonzero for interaction_statefulness (multi-step stateful session), dependent_stages (login gates later calls), tool_breadth (HTTP client + hashing), reasoning_depth (iteration derivation), hidden_case_generalization and quantitative_correctness (exact report fields)."
+}
