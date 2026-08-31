@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 0,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 0,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 1,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 55,
+  "documented_probe": "C-b9c4c8e7 (design a finite gate network computing integer sqrt then Fibonacci mod 2^32): the covering task glass-quill exercises it at hard with a distinct DSL (NLV2: CMP/SEL/K ops, := syntax, DRIVE header, 768-node budget), a distinct deliverable set (netlist + evaluator + build report) and distinct fixtures versus the exemplar. Verifier evaluates the shipped netlist with an independent interpreter on hidden vectors.",
+  "notes": "Single deliverable chain: synthesize a combinational netlist for y = F_isqrt(x) mod 2^32 under a 768-node budget, plus a working evaluator and a consistent build report. Rubric weight on reasoning_depth (isqrt digit recurrence + fast-doubling Fibonacci must both be mapped onto a loop-free DAG with wrap-safe arithmetic), quantitative_correctness (exact 32-bit semantics, wraparound, boundary squares, Fibonacci wrap indices), adversarial_inputs/hidden_case_generalization (three hidden vector files: structural edges, uniform random coverage, Fibonacci-wrap boundaries), dependent_stages (netlist must agree with the evaluator and the report). No tool breadth, no environment pressure."
+}

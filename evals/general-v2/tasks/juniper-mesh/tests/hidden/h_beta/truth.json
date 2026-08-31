@@ -1,0 +1,38 @@
+{
+ "columns": [
+  "w0",
+  "w1",
+  "w2",
+  "w3"
+ ],
+ "ref_seed": 31004,
+ "model": {
+  "w0": {
+   "intercept": -1.0,
+   "coefficients": {},
+   "resid_std": 1.2
+  },
+  "w1": {
+   "intercept": 0.4,
+   "coefficients": {
+    "w0": 1.3
+   },
+   "resid_std": 0.8
+  },
+  "w2": {
+   "intercept": 0.0,
+   "coefficients": {
+    "w1": -0.9
+   },
+   "resid_std": 0.7
+  },
+  "w3": {
+   "intercept": 0.6,
+   "coefficients": {
+    "w1": 0.6,
+    "w2": 0.8
+   },
+   "resid_std": 0.9
+  }
+ }
+}
