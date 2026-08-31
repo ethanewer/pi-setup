@@ -1,0 +1,19 @@
+# edge cases
+TKT-|BERTH GATE|OPEN
+TKT-0012|BERTH  GATE|OPEN
+load=1.234|dock
+load=1.2345|dock
+load=00.5|dock
+load=5.5|dock2
+load=5.5|Dock
+LOAD=5.5|dock
+load=5.5|
+|load=5.5|dock
+load=1.5|dock extra
+   load=1.5|dock
+load=1.5|dock   
+TKT-77|PIER NINE|OPEN
+   
+TKT-77|PIER NINE|OPEN 
+load=-0.001|dock
+ticket TKT-77|PIER NINE|OPEN

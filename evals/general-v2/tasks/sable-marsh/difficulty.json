@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 0,
+    "tool_breadth": 0,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 0,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 1,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 25,
+  "documented_probe": "C-2dc20425 (verify registered model serialization and parameter shape): reference floor is easy; the covering task exercises it at easy. The verifier loads the persisted model with joblib, checks it is a genuine sklearn linear model, and checks the coefficient vector length equals the input feature count on visible and hidden cases, including a malformed input that must fail cleanly. Documented probe waiver.\nC-4d2f3c04 (hit a documented held-out accuracy floor): exercised at easy with a recomputed independent accuracy check at 0.80. Documented probe waiver.",
+  "notes": "Single-stage: schema-driven LogisticRegression fit, serialize with joblib, register a JSON manifest. The agent must generalize to hidden datasets with different feature counts (3/4/6) and column names, keep the persisted object a genuine sklearn linear model with coefficient length equal to the feature count, match the manifest, clear a 0.80 holdout floor recomputed by the verifier, and fail cleanly on a missing-target column. Small rubric nonzero for reasoning_depth (header-driven feature discovery), adversarial_inputs (malformed case), hidden_case_generalization (4 hidden cases), quantitative_correctness (exact shape/accuracy checks). No tool breadth, no dependency chain, no environment pressure; totals bucket to easy."
+}

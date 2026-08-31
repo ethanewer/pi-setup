@@ -1,0 +1,21 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "medium"
+category = "programming"
+verifier_kind = "executes-deliverable"
+deliverables = ["/app/eval_funcs.py", "/app/answer.json"]
+tags = ["quill-vane", "programming", "C-a3b20c21", "code-photo-transcription",
+        "behavioral-equivalence"]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 1200.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096

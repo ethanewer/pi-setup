@@ -1,0 +1,16 @@
+{
+  "rubric": {
+    "dependent_stages": 0,
+    "tool_breadth": 0,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 0,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 1,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 20,
+  "notes": "Single-stage: fit a sklearn linear classifier on a CSV whose last column is the target, serialize with joblib, and emit a manifest. The competency C-2dc20425 (verify registered model serialization and parameter shape) is the core: the verifier reloads each persisted model and requires an sklearn.linear_model class whose coefficient vector length equals the dataset feature count, across hidden datasets with 1/3/7 features, plus a malformed-input negative case. Small nonzero rubric for reasoning_depth (shape bookkeeping), adversarial_inputs (bad-cell rejection), hidden_case_generalization (varying feature counts), quantitative_correctness (exact manifest/shape agreement). No tool breadth, dependency chain, or environment pressure; totals bucket to easy."
+}

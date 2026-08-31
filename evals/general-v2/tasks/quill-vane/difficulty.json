@@ -1,0 +1,16 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 0,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 0,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 30,
+  "notes": "Core difficulty is reading three photographed snippets with exact fidelity (small, low-contrast, speckled images where OCR mangles operators/underscores/digits) and re-implementing them; a single misread character changes the computed value. Three different function shapes (loop+arithmetic, string scanning with modular char arithmetic, weighted list fold with normalization) exercise reasoning_depth; hidden probes re-run the same program with fresh arguments so hard-coded answers fail. Deterministic, no tool breadth, no resource pressure."
+}
