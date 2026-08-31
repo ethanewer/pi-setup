@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 0,
+    "tool_breadth": 0,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 0,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 1,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 35,
+  "documented_probe": "C-27dd85fb (emit alert and report json with the required schemas): covering task at medium difficulty; the verifier fully checks the capability on hidden cases (schema-key assertions, level-boundary scanning, defaults for malformed rules, zero-threshold firing, multi-client lines, garbage rule sets, empty logs).",
+  "notes": "Single-stage: build a general log-triage program applying literal-keyword + min-level rules to multiple log files and emitting an alert.json (timestamp + id/severity/matches/ips) and a report.json (events + per-rule statistics map). Differs from umber-summit Stage 1: literal substring keywords instead of regex patterns, severity-ordered level gate instead of unconditional matching, client= tokens instead of src=, explicit output-path arguments instead of fixed paths, and a schema-asserting verifier. Nonzero rubric for reasoning_depth (level ordering + defaults), adversarial_inputs/hidden_case_generalization (malformed lines/rules, multiple hidden cases), quantitative_correctness (exact counts and sorted ip lists). No tool breadth, no dependency chain; totals bucket to medium."
+}

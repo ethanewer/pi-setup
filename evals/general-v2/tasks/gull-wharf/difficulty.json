@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 0,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 1,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 25,
+  "documented_probe": "C-92072676 (connect to a postgres service using compose-provided credentials): covering task at the documented medium floor; the verifier fully exercises the capability (derive host/port/db/user/password from arbitrary compose files, connect over scram-authenticated TCP, fail safely on bad credentials).",
+  "notes": "Single-stage: parse a compose-style stack file, derive all connection facts, connect over password-authenticated TCP, run a fixed aggregation, emit a strict report shape. Hidden cases generalize across credentials, database names, and a second cluster on a different published port; a wrong-password case enforces fail-safe behavior and proves the password is actually used. Small rubric nonzero for tool breadth (psql/compose parsing), reasoning depth (host-side port extraction, quoted scalars), debugging ambiguity (connection failure paths), adversarial inputs (badpass), hidden generalization, and quantitative correctness. No dependency chain, no environment pressure; totals bucket to medium."
+}

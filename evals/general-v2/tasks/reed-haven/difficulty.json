@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 0,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 1,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 25,
+  "documented_probe": "C-ac4a9918 (declare the mailing-list configuration in the canonical file): covering task at the documented medium floor; the verifier fully exercises the capability (config must live at the fixed /etc/listd/config.toml path and actually drive the list manager on hidden command streams; a config anywhere else is refused).",
+  "notes": "Two-stage: author an idempotent provisioning script that installs the canonical listd config (normalized roster from a messy sign-up sheet, closed/open flags, member caps) and replays the visible stream to produce the roster report. Hidden cases replay unseen administrative streams through the daemon with the agent's canonical config (closed-list refusal, cap enforcement, duplicates, moderator posting, case normalization, malformed commands) plus a wrong-path refusal proof. Small rubric nonzero for the provision->report dependency, reasoning depth (normalization + check-order rules), debugging ambiguity (idempotency + daemon exit codes), adversarial inputs (malformed stream lines), hidden generalization, and quantitative correctness. Totals bucket to medium."
+}

@@ -1,0 +1,17 @@
+# Hidden scenario: a second gauge database on the SAME instance/port, with
+# DIFFERENT role, password, and data. The program must derive all connection
+# facts from this compose file.
+services:
+  gaugetwo:
+    image: postgres:16
+    hostname: gaugetwo
+    environment:
+      POSTGRES_DB: gullwell
+      POSTGRES_USER: well_reader
+      POSTGRES_PASSWORD: "Well-Water-7712"
+    ports:
+      - "127.0.0.1:5544:5432"
+    networks:
+      default: {}
+networks:
+  default: {}

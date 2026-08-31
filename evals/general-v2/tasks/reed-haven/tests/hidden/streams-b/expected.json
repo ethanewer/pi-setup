@@ -1,0 +1,44 @@
+{
+  "actions": [
+    {
+      "cmd": "unsubscribe tide-chat keeper@reedhaven.example",
+      "result": "not-member"
+    },
+    {
+      "cmd": "subscribe tide-chat TIDE-FAN42@stream.example",
+      "result": "duplicate"
+    },
+    {
+      "cmd": "post tide-chat tide-fan42@stream.example",
+      "result": "accepted"
+    },
+    {
+      "cmd": "subscribe heron-announce someone@somewhere.example",
+      "result": "closed"
+    },
+    {
+      "cmd": "unsubscribe heron-announce keeper@Reedhaven.EXAMPLE",
+      "result": "ok"
+    },
+    {
+      "cmd": "unsubscribe heron-announce keeper@reedhaven.example",
+      "result": "not-member"
+    }
+  ],
+  "rosters": {
+    "heron-announce": [
+      "ada.l@example.net",
+      "grace@hopper.example",
+      "linm@pond.example",
+      "tide-fan42@stream.example"
+    ],
+    "tide-chat": [
+      "grace@hopper.example",
+      "tide-fan42@stream.example"
+    ]
+  },
+  "site": {
+    "domain": "reedhaven.example",
+    "owner": "keeper@reedhaven.example"
+  }
+}

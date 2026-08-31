@@ -1,0 +1,13 @@
+{
+  "rules": [
+    { "id": "no_thr", "metric": "temp", "max": 50.0 },
+    { "id": "no_sev", "metric": "temp", "max": 50.0, "threshold": 99, "severity": "warn" },
+    { "metric": "temp", "max": 50.0, "threshold": 1 },
+    { "id": "", "metric": "temp", "max": 50.0, "threshold": 1 },
+    { "id": "no_metric", "max": 10.0, "threshold": 1 },
+    { "id": "bad_max", "metric": "temp", "max": "hot", "threshold": 1 },
+    { "id": "eq_max", "metric": "temp", "max": 40.0, "threshold": 1, "severity": "low" },
+    "bogus",
+    { "id": "press", "metric": "pressure", "max": 900, "threshold": 2, "severity": "medium" }
+  ]
+}
