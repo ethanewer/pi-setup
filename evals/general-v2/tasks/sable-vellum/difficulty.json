@@ -1,0 +1,16 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 0,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 1,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 1,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 30,
+  "notes": "Wire a 3-way multiple-choice classification task into an installed micro lm-eval harness: author the YAML config (choice order defines gold indices, so a wrong order or gold mapping collapses accuracy far below the graded 0.60-0.95 window), write a generic HTTP dataset driver, and produce the visible result over loopback HTTP. The verifier re-runs the driver on hidden corpora served over HTTP and recomputes every metric independently. Rubric marks: dependency chain (config -> driver -> served run), tool breadth (YAML + HTTP + harness import), reasoning depth (argmax/tie/skip semantics), adversarial inputs (skipped labels, empty text, decoy columns, case folding), hidden generalization and quantitative correctness (exact recomputed metrics), statefulness (loopback server lifecycle)."
+}

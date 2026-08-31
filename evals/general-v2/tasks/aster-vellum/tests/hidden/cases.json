@@ -1,0 +1,20 @@
+[
+  {"name": "ints_basic", "a": [1, 2, 3], "b": [4, 5, 6], "expect": 32},
+  {"name": "ints_negative", "a": [-2, 5, 7], "b": [3, 4, -1], "expect": 7},
+  {"name": "empty", "a": [], "b": [], "expect": 0},
+  {"name": "single", "a": [7], "b": [6], "expect": 42},
+  {"name": "floats", "a": [1.5, 2.5], "b": [2.0, 4.0], "expect": 13.0},
+  {"name": "mixed_int_float", "a": [1, 2.5], "b": [4, 2], "expect": 9.0},
+  {"name": "float_precision", "a": [0.1, 0.2, 0.3], "b": [0.1, 0.2, 0.3], "expect": 0.14},
+  {"name": "big_ints", "a": [1000000000000000, 2], "b": [3, 1000000000000000], "expect": 5000000000000000},
+  {"name": "bool_elements", "a": [true, false], "b": [4, 9], "expect": 4},
+  {"name": "tuples", "wrap": "tuple", "a": [2, 3], "b": [10, 20], "expect": 80},
+  {"name": "generators", "wrap": "gen", "a": [1, 2, 3], "b": [5, 5, 5], "expect": 30},
+  {"name": "mismatch", "a": [1, 2], "b": [1], "error": "ValueError"},
+  {"name": "mismatch_longer_b", "a": [1], "b": [1, 2, 3], "error": "ValueError"},
+  {"name": "gen_mismatch", "wrap": "gen", "a": [1, 2, 3], "b": [1, 2], "error": "ValueError"},
+  {"name": "type_error_str", "a": [1, "x"], "b": [1, 2], "error": "TypeError"},
+  {"name": "type_error_none", "a": [null], "b": [1], "error": "TypeError"},
+  {"name": "type_error_list", "a": [[1], [2]], "b": [1, 2], "error": "TypeError"},
+  {"name": "type_error_dict", "a": [{"x": 1}], "b": [1], "error": "TypeError"}
+]

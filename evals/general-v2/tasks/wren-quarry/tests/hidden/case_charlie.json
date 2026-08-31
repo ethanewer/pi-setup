@@ -1,0 +1,11 @@
+{
+  "comment": "hidden behavioural probe: chunk stride and short tails",
+  "cases": [
+    {"func": "chunked", "args": [[1, 2, 3, 4], 2], "expect": [[1, 2], [3, 4]]},
+    {"func": "chunked", "args": [[1, 2, 3, 4, 5], 2], "expect": [[1, 2], [3, 4], [5]]},
+    {"func": "chunked", "args": [[], 3], "expect": []},
+    {"func": "chunked", "args": [[42], 4], "expect": [[42]]},
+    {"func": "chunked", "args": [["a", "b", "c", "d", "e", "f"], 3], "expect": [["a", "b", "c"], ["d", "e", "f"]]},
+    {"func": "chunked", "args": [[1, 2], 0], "raises": "ValueError"}
+  ]
+}

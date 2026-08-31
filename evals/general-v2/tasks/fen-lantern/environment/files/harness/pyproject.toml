@@ -1,0 +1,11 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fen-eval"
+version = "0.2.0"
+description = "fen-lantern micro multiple-choice eval harness"
+
+[tool.setuptools]
+packages = ["fen_eval"]

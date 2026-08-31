@@ -1,0 +1,25 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "easy"
+category = "debugging"
+verifier_kind = "executes-deliverable"
+deliverables = ["/app/apply_fixes.py", "/app/receipt.json"]
+tags = [
+  "fume-latch",
+  "debugging",
+  "http-fix-budget",
+  "C-e797cde5",
+]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 900.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096
