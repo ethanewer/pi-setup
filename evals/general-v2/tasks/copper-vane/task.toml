@@ -1,0 +1,28 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "medium"
+category = "data_processing"
+verifier_kind = "executes-deliverable"
+deliverables = ["/app/salvage.py", "/app/salvaged.json"]
+tags = [
+  "copper-vane",
+  "C-94c506a3",
+  "data_processing",
+  "truncated-sqlite-salvage",
+  "btree-byte-parsing",
+  "corruption-diagnosis",
+  "json-serialization",
+]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 1200.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096

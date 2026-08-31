@@ -1,0 +1,16 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 0,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 1,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 35,
+  "notes": "Single-stage but multi-step: parse a compose-style stack file for db/user/password/published port, connect over TCP with md5 auth (wrong credentials genuinely fail), export a sorted table snapshot to JSON, and fail cleanly (non-zero, no output) on an unreachable port. Hidden scenarios reuse the deliverable against differently-configured live clusters (different db/user/password/port), so hard-coding the visible credentials fails. Small nonzero rubric for the dependency chain, psql tooling, parse/connect logic, adversarial unreachable-port input, hidden generalization and exact JSON correctness; no environment pressure or statefulness; totals bucket to medium."
+}

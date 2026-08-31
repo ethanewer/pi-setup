@@ -1,0 +1,21 @@
+# Larkspur Field Station -- telemetry archive stack description (compose-style).
+# The `archive` service is a PostgreSQL instance provisioned for this exercise.
+services:
+  archive:
+    image: postgres:16
+    hostname: store
+    environment:
+      POSTGRES_DB: fieldlog
+      POSTGRES_USER: fieldbot
+      POSTGRES_PASSWORD: "Kestrel-Run-4417"
+    ports:
+      - "5533:5432"
+    networks:
+      default: {}
+    healthcheck:
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-p", "5533"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+networks:
+  default: {}

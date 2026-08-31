@@ -1,0 +1,16 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 1,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 1,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 40,
+  "notes": "Agent must read the SQLite header fields, classify the truncation mode (intact / page_aligned / mid_page), and implement a salvage strategy (zero-pad to the header-declared size, open read-only, probe rowids individually tolerating malformed-image errors) that recovers rows on complete pages AND rows on a partial page whose cells lie within the surviving bytes. Nonzero reasoning_depth (header decoding + three-way mode classification + partial-page subtlety), debugging_ambiguity (must empirically discover which rows of the partial page survive; wrong strategy silently loses rows), quantitative_correctness (exact ints/floats in the report), hidden_case_generalization (4 hidden DBs covering all three modes and different sizes)."
+}
