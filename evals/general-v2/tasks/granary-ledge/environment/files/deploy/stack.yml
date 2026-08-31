@@ -1,0 +1,16 @@
+# Granary Ledge -- provisioned service stack (compose-style).
+# The `storehouse` service is the PostgreSQL instance provisioned for this
+# exercise; it listens on 127.0.0.1 at the HOST port published below.
+services:
+  storehouse:
+    image: postgres:17
+    hostname: storehouse
+    environment:
+      POSTGRES_DB: provisions
+      POSTGRES_USER: stocker
+      POSTGRES_PASSWORD: "Granary-Vest-8841"
+    ports:
+      - "5544:5432"
+  sidecar:
+    image: busybox:1.36
+    command: ["sleep", "infinity"]

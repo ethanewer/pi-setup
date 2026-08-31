@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 0,
+    "tool_breadth": 0,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 0,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 1,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 30,
+  "documented_probe": "Covering task for C-92072676 (connect to a postgres service using compose-provided credentials) at medium difficulty; verifier fully checks the capability on hidden stack/database scenarios.",
+  "notes": "Single-stage: parse a compose-style stack file (mapping or list-style environment, decoy services), derive host port from the published mapping (non-default port), connect with the file-provided credentials (scram enforced on TCP so wrong passwords fail), and produce an exact low-stock report. Hidden scenarios vary service name, credentials, database, data, and include a zero-low-stock edge. Nonzero rubric for reasoning_depth (compose parsing + port mapping direction), adversarial_inputs/hidden_case_generalization (three hidden stacks), quantitative_correctness (exact rows, units, rounded value)."
+}

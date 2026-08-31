@@ -1,0 +1,14 @@
+<configuration>
+  <!--
+    ShoreDFS cluster-level site configuration (Brume Delta hydrology lab).
+
+    UNCONFIGURED: fill in the required value before the cluster can start.
+
+      - fs.defaultFS : hdfs://HOST:PORT where the namenode serves metadata
+                       (also the address the datanode registers at)
+  -->
+  <property>
+    <name>fs.defaultFS</name>
+    <value></value>
+  </property>
+</configuration>
