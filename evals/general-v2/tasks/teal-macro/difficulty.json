@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 1,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 30,
+  "documented_probe": "",
+  "notes": "Single-stage: record a Vim macro register set whose combined getreg length stays at or under a fixed 40-keystroke ceiling while performing a field-reordering rewrite (WORD,NUMBER,WORD -> WORD3 WORD1 (NUMBER)) that must generalize to hidden source files with different values and field widths. The verifier sources /app/macros.vim in a clean headless Vim, checks the buffer was not modified by sourcing, measures the budget via getreg over registers a-z, applies :%g/^/normal @a itself, and compares byte-for-byte against the expected target; a static scan forbids functions/autocmds/maps/interpreter bridges so the work is genuinely done by the recorded keystrokes. Rubric nonzero for quantitative_correctness (exact output bytes and hard budget), hidden_case_generalization (three distinct hidden sources), reasoning_depth (very-magic regex economy), interaction_statefulness and tool_breadth (headless vim sourcing mechanics), adversarial_inputs (no buffer edits at source time, no-modify on source.txt)."
+}
