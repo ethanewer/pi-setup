@@ -1,0 +1,16 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 0,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 1,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 1
+  },
+  "expected_expert_time_min": 40,
+  "notes": "Two-stage CPU regression pipeline (trainer -> evaluator) with a chained artifact. Core competency C-40dd3b94 (produce a trained-model snapshot file): the grader rejects missing/dummy/oversized weights files — it requires torch.save(model.state_dict()) at exactly the Sequential node keys 0.weight/0.bias/2.weight/2.bias with shapes (24,6)/(24,)/(1,24)/(1,), finite non-degenerate values, bounded file size, and a reloaded-model MAE <= 0.15 against each case's own training targets, plus a rerun of train_model.py that must reproduce a valid snapshot. Generalization is checked by evaluating the produced snapshots on genuinely distinct hidden holdouts (MAE <= 0.35). Rubric marks adversarial_inputs/hidden_case_generalization (header-only, corrupted-numeric, differently sized and labeled-holdout hidden cases), quantitative_correctness (MAE thresholds and exact prediction line counts), dependent_stages/tool_breadth (snapshot produced by one deliverable must load into another), reasoning_depth (capped training loop under a fixed architecture), and unsafe_action_penalty (modifying the read-only fixtures fails)."
+}
