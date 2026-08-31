@@ -1,0 +1,16 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 0,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 0,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 1,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 2,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 35,
+  "notes": "Single-stage socket client: open a session, fan out one-request-per-turn reads across the station list, reduce to the peak station with a documented tie-break, and capture the EXTREME reply. Rubric nonzero for interaction_statefulness (session + strict turn discipline; blocking misuse hangs), dependent_stages (HELLO list feeds per-station reads feed the choice), reasoning_depth (tie-breaks at two levels), adversarial_inputs (unknown-station fetch must return the error reply without hanging), hidden_case_generalization (fresh station sets incl. a cross-station tie), quantitative_correctness (exact sample/peak fields). No tool breadth or environment pressure; totals bucket to medium."
+}

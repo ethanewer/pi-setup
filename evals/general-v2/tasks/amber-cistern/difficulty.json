@@ -1,0 +1,16 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 1,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 1,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 35,
+  "notes": "Agent must run a live TCP service and write a probe client that drives its strict single-request-per-turn text protocol (one request per connection, one JSON line back), classifying manifest lines (probe/comment/blank/malformed), deduplicating, and aggregating qty/token/max-with-tie-break. Verifier boots fresh slotd instances on hidden tables and executes /app/probe.py on hidden manifests. Nonzero rubric for reasoning_depth (protocol + tie-break), tool_breadth (socket + process management), interaction_statefulness (live service conversation), adversarial_inputs/hidden_case_generalization (hidden tables/manifests incl. ties, qty 0, unknown slots), quantitative_correctness (exact ints/tokens), debugging_ambiguity (pipelining pitfall), dependent_stages (start service, then probe)."
+}

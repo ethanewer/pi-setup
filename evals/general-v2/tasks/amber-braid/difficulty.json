@@ -1,0 +1,16 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 0,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 1,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 30,
+  "notes": "Single-stage PKI provisioning: parse a key=value spec, drive the openssl CLI to mint a matching key + self-signed certificate for both RSA and EC key types, emit a combined key-then-cert PEM with mode 0600, and record DER fingerprints. Rubric nonzero for tool_breadth (openssl genpkey/req/pkey/x509 plumbing), dependent_stages (key -> cert -> bundle -> fingerprints), reasoning_depth (key-type branching, block ordering), adversarial_inputs (specs with comments/blank lines, differing curves/bits), hidden_case_generalization (unseen specs), quantitative_correctness (bit sizes, validity span, fingerprint equality). No interaction statefulness or pressure; totals bucket to medium."
+}
