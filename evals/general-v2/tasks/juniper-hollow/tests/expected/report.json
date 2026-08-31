@@ -1,0 +1,126 @@
+{
+  "timestamp": "2026-08-31T16:51:23Z",
+  "events": [
+    {
+      "rule": "auth_fail",
+      "ip": "10.20.0.5",
+      "line": "2026-03-14T09:12:03Z level=warning ip=10.20.0.5 msg=\"authentication failed for user root\""
+    },
+    {
+      "rule": "auth_fail",
+      "ip": "10.20.0.5",
+      "line": "2026-03-14T09:12:41Z level=warning ip=10.20.0.5 msg=\"authentication failed for user admin\""
+    },
+    {
+      "rule": "auth_fail",
+      "ip": "203.0.113.7",
+      "line": "2026-03-14T09:13:02Z level=warning ip=203.0.113.7 msg=\"authentication failed for user root\""
+    },
+    {
+      "rule": "auth_fail",
+      "ip": null,
+      "line": "2026-03-14T09:13:44Z level=warning msg=\"authentication failed for user postgres\""
+    },
+    {
+      "rule": "port_scan",
+      "ip": "10.20.0.9",
+      "line": "2026-03-14T09:14:10Z level=info ip=10.20.0.9 msg=\"port sweep detected across the edge range\""
+    },
+    {
+      "rule": "port_scan",
+      "ip": "198.51.100.3",
+      "line": "2026-03-14T09:15:00Z level=info ip=198.51.100.3 msg=\"port sweep pattern continued\""
+    },
+    {
+      "rule": "c2_beacon",
+      "ip": "198.51.100.3",
+      "line": "2026-03-14T09:16:30Z level=notice ip=198.51.100.3 msg=\"beacon heartbeat to upstream relay\""
+    },
+    {
+      "rule": "config_drift",
+      "ip": "172.16.4.8",
+      "line": "2026-03-14T09:18:12Z level=notice ip=172.16.4.8 msg=\"drift detected on edge-gw-2\""
+    },
+    {
+      "rule": "auth_fail",
+      "ip": "10.20.0.5",
+      "line": "2026-03-14T09:12:55Z level=warning ip=10.20.0.5 msg=\"authentication failed for user root (retry)\""
+    },
+    {
+      "rule": "port_scan",
+      "ip": "203.0.113.7",
+      "line": "2026-03-14T09:14:35Z level=info ip=203.0.113.7 msg=\"port sweep probe of dns edge\""
+    },
+    {
+      "rule": "dns_tunnel",
+      "ip": "198.51.100.3",
+      "line": "2026-03-14T09:15:20Z level=notice ip=198.51.100.3 msg=\"TXT query len=240 to tunnel host\""
+    },
+    {
+      "rule": "dns_tunnel",
+      "ip": "198.51.100.9",
+      "line": "2026-03-14T09:15:50Z level=notice ip=198.51.100.9 msg=\"TXT query len=188 to tunnel host\""
+    },
+    {
+      "rule": "c2_beacon",
+      "ip": null,
+      "line": "2026-03-14T09:16:45Z level=notice msg=\"beacon heartbeat without ip token\""
+    }
+  ],
+  "statistics": {
+    "auth_fail": {
+      "id": "auth_fail",
+      "pattern": "authentication failed",
+      "threshold": 4,
+      "severity": "high",
+      "matches": 5,
+      "ips": [
+        "10.20.0.5",
+        "203.0.113.7"
+      ]
+    },
+    "port_scan": {
+      "id": "port_scan",
+      "pattern": "port sweep",
+      "threshold": 3,
+      "severity": "medium",
+      "matches": 3,
+      "ips": [
+        "10.20.0.9",
+        "198.51.100.3",
+        "203.0.113.7"
+      ]
+    },
+    "dns_tunnel": {
+      "id": "dns_tunnel",
+      "pattern": "TXT query",
+      "threshold": 2,
+      "severity": "high",
+      "matches": 2,
+      "ips": [
+        "198.51.100.3",
+        "198.51.100.9"
+      ]
+    },
+    "c2_beacon": {
+      "id": "c2_beacon",
+      "pattern": "beacon heartbeat",
+      "threshold": 5,
+      "severity": "medium",
+      "matches": 2,
+      "ips": [
+        "198.51.100.3"
+      ]
+    },
+    "config_drift": {
+      "id": "config_drift",
+      "pattern": "drift detected",
+      "threshold": 1,
+      "severity": "low",
+      "matches": 1,
+      "ips": [
+        "172.16.4.8"
+      ]
+    }
+  }
+}

@@ -1,0 +1,65 @@
+{
+  "total_conflicts": 6,
+  "conflicts": [
+    {
+      "user": "u-100",
+      "field": "title",
+      "values": [
+        {"system": "crm", "value": "Engineer"},
+        {"system": "billing", "value": "Senior Engineer"}
+      ],
+      "winner": "Engineer",
+      "winner_source": "crm"
+    },
+    {
+      "user": "u-200",
+      "field": "department",
+      "values": [
+        {"system": "crm", "value": "Design"},
+        {"system": "billing", "value": "Product Design"}
+      ],
+      "winner": "Design",
+      "winner_source": "crm"
+    },
+    {
+      "user": "u-300",
+      "field": "email",
+      "values": [
+        {"system": "crm", "value": "cy@meridian.example"},
+        {"system": "billing", "value": "cyrus@meridian.example"}
+      ],
+      "winner": "cyrus@meridian.example",
+      "winner_source": "billing"
+    },
+    {
+      "user": "u-300",
+      "field": "department",
+      "values": [
+        {"system": "crm", "value": "Platform"},
+        {"system": "billing", "value": "Reliability"}
+      ],
+      "winner": "Platform",
+      "winner_source": "crm"
+    },
+    {
+      "user": "u-300",
+      "field": "manager",
+      "values": [
+        {"system": "crm", "value": "mgr-001"},
+        {"system": "billing", "value": "mgr-004"}
+      ],
+      "winner": "mgr-001",
+      "winner_source": "crm"
+    },
+    {
+      "user": "u-700",
+      "field": "title",
+      "values": [
+        {"system": "crm", "value": "Support"},
+        {"system": "billing", "value": "Support Lead"}
+      ],
+      "winner": "Support",
+      "winner_source": "crm"
+    }
+  ]
+}

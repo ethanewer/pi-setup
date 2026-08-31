@@ -1,0 +1,114 @@
+{
+  "alerts": [
+    {
+      "id": "secret_exfil",
+      "severity": "high",
+      "matches": 3,
+      "ips": [
+        "10.44.2.19",
+        "10.44.2.20",
+        "10.44.7.5"
+      ]
+    },
+    {
+      "id": "artifact_tamper",
+      "severity": "high",
+      "matches": 2,
+      "ips": [
+        "10.44.2.20",
+        "10.44.7.5"
+      ]
+    },
+    {
+      "id": "fork_bomb",
+      "severity": "medium",
+      "matches": 1,
+      "ips": [
+        "10.44.2.31"
+      ]
+    },
+    {
+      "id": "stale_cache",
+      "severity": "low",
+      "matches": 2,
+      "ips": [
+        "10.44.2.31",
+        "10.44.7.6"
+      ]
+    }
+  ],
+  "statistics": {
+    "secret_exfil": {
+      "matches": 3,
+      "unique_ips": 3
+    },
+    "artifact_tamper": {
+      "matches": 2,
+      "unique_ips": 2
+    },
+    "fork_bomb": {
+      "matches": 1,
+      "unique_ips": 1
+    },
+    "stale_cache": {
+      "matches": 2,
+      "unique_ips": 2
+    },
+    "telemetry_ping": {
+      "matches": 2,
+      "unique_ips": 2
+    }
+  },
+  "events": [
+    {
+      "rule": "secret_exfil",
+      "ip": "10.44.2.19",
+      "line": "2026-04-02T09:00:04Z runner=r7 stage=lint msg=\"credential prompt blocked\" ip=10.44.2.19"
+    },
+    {
+      "rule": "secret_exfil",
+      "ip": "10.44.2.20",
+      "line": "2026-04-02T09:00:09Z runner=r3 stage=lint msg=\"credential prompt blocked\" ip=10.44.2.20"
+    },
+    {
+      "rule": "secret_exfil",
+      "ip": "10.44.7.5",
+      "line": "2026-04-02T10:00:01Z runner=r4 stage=canary msg=\"credential prompt blocked\" ip=10.44.7.5"
+    },
+    {
+      "rule": "artifact_tamper",
+      "ip": "10.44.2.20",
+      "line": "2026-04-02T09:01:12Z runner=r3 stage=package msg=\"checksum mismatch on artifact build-881\" ip=10.44.2.20"
+    },
+    {
+      "rule": "artifact_tamper",
+      "ip": "10.44.7.5",
+      "line": "2026-04-02T10:00:22Z runner=r4 stage=canary msg=\"checksum mismatch on artifact build-879\" ip=10.44.7.5"
+    },
+    {
+      "rule": "fork_bomb",
+      "ip": "10.44.2.31",
+      "line": "2026-04-02T09:02:44Z runner=r9 stage=test msg=\"OOM; process spike on worker 2\" ip=10.44.2.31"
+    },
+    {
+      "rule": "stale_cache",
+      "ip": "10.44.2.31",
+      "line": "2026-04-02T09:02:03Z runner=r9 stage=test msg=\"cache miss for key pytest-9\" ip=10.44.2.31"
+    },
+    {
+      "rule": "stale_cache",
+      "ip": "10.44.7.6",
+      "line": "2026-04-02T10:02:10Z runner=r2 stage=rollout msg=\"cache miss for key img-eu\" ip=10.44.7.6"
+    },
+    {
+      "rule": "telemetry_ping",
+      "ip": "10.44.2.19",
+      "line": "2026-04-02T09:01:40Z runner=r7 stage=deploy msg=\"heartbeat sent\" ip=10.44.2.19"
+    },
+    {
+      "rule": "telemetry_ping",
+      "ip": "10.44.7.6",
+      "line": "2026-04-02T10:01:00Z runner=r4 stage=rollout msg=\"heartbeat sent\" ip=10.44.7.6"
+    }
+  ]
+}

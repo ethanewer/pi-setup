@@ -1,0 +1,57 @@
+{
+  "timestamp": "2026-08-31T16:51:23Z",
+  "events": [
+    {
+      "rule": "zulu",
+      "ip": "9.9.9.9",
+      "line": "2026-04-03T07:00:00Z level=warning ip=9.9.9.9 msg=\"packet drop rule hit\""
+    },
+    {
+      "rule": "alpha",
+      "ip": "9.9.9.9",
+      "line": "2026-04-03T07:00:00Z level=warning ip=9.9.9.9 msg=\"packet drop rule hit\""
+    },
+    {
+      "rule": "zulu",
+      "ip": "9.9.9.9",
+      "line": "2026-04-03T07:01:00Z level=warning ip=9.9.9.9 msg=\"packet drop rule hit again\""
+    },
+    {
+      "rule": "alpha",
+      "ip": "9.9.9.9",
+      "line": "2026-04-03T07:01:00Z level=warning ip=9.9.9.9 msg=\"packet drop rule hit again\""
+    },
+    {
+      "rule": "zulu",
+      "ip": null,
+      "line": "2026-04-03T07:02:00Z level=warning msg=\"packet drop without ip\""
+    },
+    {
+      "rule": "alpha",
+      "ip": null,
+      "line": "2026-04-03T07:02:00Z level=warning msg=\"packet drop without ip\""
+    }
+  ],
+  "statistics": {
+    "zulu": {
+      "id": "zulu",
+      "pattern": "drop",
+      "threshold": 2,
+      "severity": "high",
+      "matches": 3,
+      "ips": [
+        "9.9.9.9"
+      ]
+    },
+    "alpha": {
+      "id": "alpha",
+      "pattern": "drop",
+      "threshold": 1,
+      "severity": "low",
+      "matches": 3,
+      "ips": [
+        "9.9.9.9"
+      ]
+    }
+  }
+}

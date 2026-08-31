@@ -1,0 +1,63 @@
+{
+  "alerts": [
+    {
+      "id": "secret_exfil",
+      "severity": "high",
+      "matches": 3,
+      "ips": [
+        "10.77.0.1",
+        "10.77.0.2",
+        "10.77.0.3"
+      ]
+    }
+  ],
+  "statistics": {
+    "secret_exfil": {
+      "matches": 3,
+      "unique_ips": 3
+    },
+    "artifact_tamper": {
+      "matches": 1,
+      "unique_ips": 1
+    },
+    "fork_bomb": {
+      "matches": 0,
+      "unique_ips": 0
+    },
+    "stale_cache": {
+      "matches": 0,
+      "unique_ips": 0
+    },
+    "telemetry_ping": {
+      "matches": 1,
+      "unique_ips": 1
+    }
+  },
+  "events": [
+    {
+      "rule": "secret_exfil",
+      "ip": "10.77.0.1",
+      "line": "2026-04-02T13:00:00Z runner=r1 stage=lint msg=\"credential prompt blocked\" ip=10.77.0.1"
+    },
+    {
+      "rule": "secret_exfil",
+      "ip": "10.77.0.2",
+      "line": "2026-04-02T13:00:10Z runner=r1 stage=lint msg=\"credential prompt blocked\" ip=10.77.0.2"
+    },
+    {
+      "rule": "secret_exfil",
+      "ip": "10.77.0.3",
+      "line": "2026-04-02T13:00:40Z runner=r2 stage=lint msg=\"credential prompt blocked\" ip=10.77.0.3"
+    },
+    {
+      "rule": "artifact_tamper",
+      "ip": "10.77.0.2",
+      "line": "2026-04-02T13:00:20Z runner=r1 stage=package msg=\"checksum mismatch on artifact b-2\" ip=10.77.0.2"
+    },
+    {
+      "rule": "telemetry_ping",
+      "ip": "10.77.0.1",
+      "line": "2026-04-02T13:00:30Z runner=r1 stage=deploy msg=\"heartbeat sent\" ip=10.77.0.1"
+    }
+  ]
+}

@@ -1,0 +1,51 @@
+{
+  "timestamp": "2026-08-31T16:51:23Z",
+  "events": [
+    {
+      "rule": "r_ok",
+      "ip": "192.0.2.10",
+      "line": "2026-04-01T08:00:00Z level=error ip=192.0.2.10 msg=\"connection denied by policy\""
+    },
+    {
+      "rule": "r_ok",
+      "ip": null,
+      "line": "2026-04-01T08:02:00Z level=error msg=\"connection denied again (no ip token)\""
+    }
+  ],
+  "statistics": {
+    "r_ok": {
+      "id": "r_ok",
+      "pattern": "denied",
+      "threshold": 1,
+      "severity": "medium",
+      "matches": 2,
+      "ips": [
+        "192.0.2.10"
+      ]
+    },
+    "r_zero": {
+      "id": "r_zero",
+      "pattern": "nevermatch",
+      "threshold": 0,
+      "severity": "info",
+      "matches": 0,
+      "ips": []
+    },
+    "r_badpat": {
+      "id": "r_badpat",
+      "pattern": "",
+      "threshold": 3,
+      "severity": "high",
+      "matches": 0,
+      "ips": []
+    },
+    "r_badre": {
+      "id": "r_badre",
+      "pattern": "[unclosed",
+      "threshold": 2,
+      "severity": "low",
+      "matches": 0,
+      "ips": []
+    }
+  }
+}
