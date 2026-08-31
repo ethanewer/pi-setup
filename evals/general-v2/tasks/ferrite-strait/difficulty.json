@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 3,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 2,
+    "interaction_statefulness": 3,
+    "unsafe_action_penalty": 1
+  },
+  "expected_expert_time_min": 70,
+  "documented_probe": null,
+  "notes": "Hard. Dependent_stages=3: the initrd must be assembled from the kiosk descriptor before it can ever boot, then booted, then kept alive and exposed (VNC display :1 + web monitor on port 80) — each earlier stage is a hard prerequisite for the next and a boot failure is only diagnosable by re-inspecting the archive. tool_breadth=3 spans qemu-system (TCG flags incl. -vnc :N), cpio/gzip newc archive construction with exact char device nodes (incl. framebuffer 29:0), busybox applet symlinks, daemonised background process management (pidfiles/sockets, idempotent restart) and an HTTP host on the standard web port. interaction_statefulness=3: the kiosk must stay alive in the background with coherent pid/port/socket state; hidden configs re-drive launch.sh with different (vnc_display, web_port, marker, socket/pid paths). hidden_case_generalization=2: launch.sh must boot arbitrary hidden configs and the initrd must satisfy the descriptor generally. resource_pressure=2: TCG boot must fit the verifier window. quantitative_correctness=2: exact device major/minor, exact gzipped-newc plausibility, exact banner/marker console behaviour. Covers C-d7f631d3 (VNC on display one + web server on standard port) via listener-table (ss/netstat) plus connect/HTTP/shell asserts."
+}

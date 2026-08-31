@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 0,
+    "reasoning_depth": 0,
+    "debugging_ambiguity": 0,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 1,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 15,
+  "documented_probe": "C-759c32c0 (enable password-based authentication): reference floor is easy and this covering task exercises it at easy — generate a PBKDF2-HMAC-SHA256 hash of the configured secret in the exact documented format, wire it into the gateway auth config, and the verifier confirms a fresh service accepts the secret and rejects everything else.",
+  "notes": "HTTP-services covering task for C-759c32c0 (vine-helix is the reference, where the same capability appears inside a much larger sysadmin bundle). Easy: a single hash-generation + config-wiring script plus a captured hash file, with idempotency and per-config iteration counts as the only mild traps. Hidden cases use different iterations/enabled flags/ports and check wrong-secret rejection."
+}

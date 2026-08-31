@@ -1,0 +1,22 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "hard"
+category = "system_administration"
+verifier_kind = "executes-deliverable"
+deliverables = ["/app/kiosk.gz", "/app/launch.sh", "/app/kiosk.conf"]
+tags = ["ferrite-strait", "system_administration", "C-d7f631d3", "kiosk-vm-provisioning", "vnc-web-exposure"]
+
+[verifier]
+# test.sh self-terminates (writes 0) at its own internal deadline well below
+# this window, so slow/hanging deliverables record 0 instead of being killed.
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 1800.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096
