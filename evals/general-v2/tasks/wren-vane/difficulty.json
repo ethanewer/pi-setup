@@ -1,0 +1,16 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 0,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 3,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "notes": "Covering task for C-b9c4c8e7 (implement an integer mathematical function as a finite logic-gate network): compile y = F(isqrt(x)) mod 2^32 into a straight-line 32-bit operator network (isqrt by 16 restoring subtraction steps, Fibonacci by 32 unconditional fast-doubling steps with SEL/MUX on bits), plus a general evaluator for the documented format. Rubric: reasoning_depth/quantitative_correctness high (loop unrolling to a DAG, exact modular arithmetic, edge cases 0/2^32-1/perfect squares), hidden_case_generalization (3 hidden vector files checked both by an independent format evaluator and by the agent's evaluator), dependent_stages (netlist must be authored then simulated then probe output produced), debugging_ambiguity moderate (off-by-one in isqrt steps or fib bit order fails specific vectors), adversarial_inputs (format rules enforced: node ordering, arity, shift ranges, constant ranges, 1200-node cap)."
+}

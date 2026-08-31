@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 0,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 25,
+  "documented_probe": "",
+  "notes": "Single-stage: restore a recovered SQLite WAL under the expected -wal name beside a writable copy of the database and let SQLite auto-replay the committed journal on open, yielding the full merged record set (baseline plus appended/updated/deleted rows). The verifier re-executes the solver on four hidden scenarios (appends-only, mixed update+delete+append, no-journal, many appends) and enforces the no-modify rule on inputs. Rubric nonzero for hidden_case_generalization (four distinct scenarios), reasoning_depth/debugging_ambiguity (WAL placement mechanics: journal must be renamed to <db>-wal, replay needs a writable scratch area, closing checkpoints), adversarial_inputs (no-modify hashing, missing-journal edge), quantitative_correctness (exact merged rows), dependent_stages (solve.py -> merged.db/merged.json)."
+}
