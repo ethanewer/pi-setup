@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": null,
+  "notes": "Author a reproducible-archive packer: sort members by raw UTF-8 bytes (never locale collation) and normalize all owner/group identity out of the archive (uid/gid 0, uname/gname empty, mtime 0, fixed modes, ustar format) so identical input trees yield byte-identical tar output and a stable sha256 identity digest. Medium floor: deliverable is a runnable packer (/app/pack.py) plus the two artifacts from the shipped tree (/app/bundle.tar, /app/bundle.sha256); the verifier executes the packer on hidden trees whose names break locale collation (uppercase-before-lowercase, non-ASCII UTF-8), with empty files/dirs and deep nesting, and byte-compares archives and digests. Nonzero rubric for adversarial_inputs (collation traps), hidden_case_generalization (two distinct hidden trees), and quantitative_correctness (exact byte equality)."
+}
