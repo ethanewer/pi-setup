@@ -1,0 +1,87 @@
+{
+  "version": "1.0",
+  "truncation": null,
+  "padding": null,
+  "added_tokens": [
+    {
+      "id": 0,
+      "content": "[UNK]",
+      "single_word": false,
+      "lstrip": false,
+      "rstrip": false,
+      "normalized": false,
+      "special": true
+    }
+  ],
+  "normalizer": null,
+  "pre_tokenizer": {
+    "type": "Whitespace"
+  },
+  "post_processor": {
+    "type": "TemplateProcessing",
+    "single": [
+      {
+        "Sequence": {
+          "id": "A",
+          "type_id": 0
+        }
+      }
+    ],
+    "pair": [
+      {
+        "Sequence": {
+          "id": "A",
+          "type_id": 0
+        }
+      },
+      {
+        "Sequence": {
+          "id": "B",
+          "type_id": 1
+        }
+      }
+    ],
+    "special_tokens": {}
+  },
+  "decoder": null,
+  "model": {
+    "type": "WordLevel",
+    "vocab": {
+      "[UNK]": 0,
+      "[PAD]": 1,
+      "ember": 2,
+      "forge": 3,
+      "hearth": 4,
+      "kindling": 5,
+      "bellows": 6,
+      "ashcoal": 7,
+      "spark": 8,
+      "flint": 9,
+      "tinder": 10,
+      "kiln": 11,
+      "pine": 12,
+      "birch": 13,
+      "cedar": 14,
+      "smoke": 15,
+      "warmth": 16,
+      "morning": 17,
+      "evening": 18,
+      "winter": 19,
+      "frost": 20,
+      "storm": 21,
+      "lantern": 22,
+      "shadow": 23,
+      "timber": 24,
+      "maple": 25,
+      "river": 26,
+      "stone": 27,
+      "meadow": 28,
+      "thicket": 29,
+      "bramble": 30,
+      "canopy": 31,
+      "horizon": 32,
+      "gully": 33
+    },
+    "unk_token": "[UNK]"
+  }
+}

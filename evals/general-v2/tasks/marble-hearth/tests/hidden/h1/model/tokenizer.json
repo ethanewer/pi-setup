@@ -1,0 +1,78 @@
+{
+  "version": "1.0",
+  "truncation": null,
+  "padding": null,
+  "added_tokens": [
+    {
+      "id": 0,
+      "content": "[UNK]",
+      "single_word": false,
+      "lstrip": false,
+      "rstrip": false,
+      "normalized": false,
+      "special": true
+    }
+  ],
+  "normalizer": null,
+  "pre_tokenizer": {
+    "type": "Whitespace"
+  },
+  "post_processor": {
+    "type": "TemplateProcessing",
+    "single": [
+      {
+        "Sequence": {
+          "id": "A",
+          "type_id": 0
+        }
+      }
+    ],
+    "pair": [
+      {
+        "Sequence": {
+          "id": "A",
+          "type_id": 0
+        }
+      },
+      {
+        "Sequence": {
+          "id": "B",
+          "type_id": 1
+        }
+      }
+    ],
+    "special_tokens": {}
+  },
+  "decoder": null,
+  "model": {
+    "type": "WordLevel",
+    "vocab": {
+      "[UNK]": 0,
+      "[PAD]": 1,
+      "delta": 2,
+      "basin": 3,
+      "channel": 4,
+      "current": 5,
+      "estuary": 6,
+      "fjord": 7,
+      "gully": 8,
+      "harbor": 9,
+      "inlet": 10,
+      "jetty": 11,
+      "kelp": 12,
+      "lagoon": 13,
+      "marsh": 14,
+      "nautical": 15,
+      "oyster": 16,
+      "pier": 17,
+      "quay": 18,
+      "reef": 19,
+      "shoal": 20,
+      "tide": 21,
+      "umber": 22,
+      "vessel": 23,
+      "wharf": 24
+    },
+    "unk_token": "[UNK]"
+  }
+}

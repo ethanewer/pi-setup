@@ -1,0 +1,16 @@
+{
+  "rubric": {
+    "dependent_stages": 0,
+    "tool_breadth": 0,
+    "reasoning_depth": 0,
+    "debugging_ambiguity": 0,
+    "adversarial_inputs": 0,
+    "hidden_case_generalization": 1,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 15,
+  "notes": "Single-stage: fit per-class feature means (nearest-centroid) from a small CSV and pickle a fixed-shape dict to a given path. The verifier reloads the pickle and checks the exact key set, the sorted classes list, and centroid values against an independently recomputed reference, then re-runs the program on hidden CSVs (single class, negative values, different zones). Rubric weight on hidden_case_generalization (hidden CSVs) and quantitative_correctness (exact means). No tool breadth, no dependency chain, no resource pressure; totals bucket to easy."
+}
