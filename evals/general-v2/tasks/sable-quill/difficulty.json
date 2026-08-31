@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 0,
+    "tool_breadth": 0,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 0,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 1,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 25,
+  "documented_probe": "C-f01d36d3 (expose required entry-point functions under required names): the verifier regex-checks the obliged definitions at line start in the R source and re-runs both entry points (numeric hidden cases, error edge, reproducibility, self-test exit/PASS) in fresh R processes. Verifier fully checks the capability.",
+  "notes": "Single-stage data_science task: author an R module exposing tide_estimate/tide_selftest under exact names (line-start regex), a seeded exponential Monte-Carlo estimator with argument validation, and a recorded PASS/FAIL self-test log. Nonzero rubric for reasoning_depth (seeding/validation contract), adversarial_inputs (error edge cases), hidden_case_generalization (fresh n/rate combos in fresh R processes), quantitative_correctness (estimate vs 1/rate); buckets to medium."
+}
