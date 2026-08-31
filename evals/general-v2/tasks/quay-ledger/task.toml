@@ -1,0 +1,20 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "medium"
+category = "data_processing"
+verifier_kind = "executes-deliverable"
+deliverables = ["/app/solve.py", "/app/loaded.db", "/app/load_report.json", "/app/import_log.txt"]
+tags = ["quay-ledger", "data_processing", "C-349c1e3e", "client-copy-load", "sqlite-import", "csv-bulk-load", "prescribed-schema"]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 900.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096

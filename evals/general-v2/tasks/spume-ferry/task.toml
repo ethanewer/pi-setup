@@ -1,0 +1,30 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "easy"
+category = "web"
+verifier_kind = "executes-deliverable"
+deliverables = [
+  "/app/claim_pass.py",
+  "/app/final_message.txt",
+  "/app/claim_receipt.json",
+]
+tags = [
+  "spume-ferry",
+  "web",
+  "C-9316fd7f",
+  "http-payload-rendezvous",
+  "computed-payload",
+]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 600.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096

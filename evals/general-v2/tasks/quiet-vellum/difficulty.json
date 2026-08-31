@@ -1,0 +1,16 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 0,
+    "reasoning_depth": 0,
+    "debugging_ambiguity": 0,
+    "adversarial_inputs": 0,
+    "hidden_case_generalization": 1,
+    "quantitative_correctness": 0,
+    "resource_pressure": 0,
+    "interaction_statefulness": 1,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 10,
+  "notes": "Single-stage sysadmin change: flip an account's default login shell and make sure it lands in the persistent account database (failure mode: shell installed but never recorded as default). Generalization probe: the provisioner is re-executed on hidden user/shell pairs, and idempotency is exercised by running it twice. Small nonzero for dependent_stages (provision then consistent report), hidden_case_generalization, and interaction_statefulness (persistent /etc/passwd state). No tool breadth, pressure, or unsafe actions; buckets to easy."
+}
