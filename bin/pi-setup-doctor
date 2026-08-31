@@ -62,15 +62,17 @@ bad() { PROBLEMS=$((PROBLEMS + 1)); printf '  PROBLEM  %s\n' "$*"; }
 
 # The installer guarantees bun, not node: a clean machine that never had Node.js still has
 # to be able to run this. bun -e takes the same code-then-argv shape as node -e, so either
-# works for the small scripts below.
-if command -v node >/dev/null 2>&1; then
-  JS="node"
-elif command -v bun >/dev/null 2>&1; then
+# works for the small scripts below — but bun must be preferred: node <20 cannot execute
+# bin/verify-pi-ai-reasoning-fix (top-level ESM import in a .js file), so a machine that
+# has both would otherwise fail the behavior check it actually passes.
+if command -v bun >/dev/null 2>&1; then
   JS="$(command -v bun)"
 elif [[ -x "${BUN_INSTALL:-$HOME/.bun}/bin/bun" ]]; then
   JS="${BUN_INSTALL:-$HOME/.bun}/bin/bun"
 elif [[ -x "${BUN_INSTALL:-$HOME/.bun}/bin/bun.exe" ]]; then
   JS="${BUN_INSTALL:-$HOME/.bun}/bin/bun.exe"
+elif command -v node >/dev/null 2>&1; then
+  JS="node"
 else
   printf '%s: needs node or bun on PATH\n' "$(basename "$0")" >&2
   exit 2
