@@ -1,0 +1,16 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 0,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 1,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 30,
+  "notes": "Single focused competency: place the mailing-list manager configuration in the canonical file (/etc/postfix/virtual_lists), make postfix honor it (postconf virtual_alias_maps + postmap), manage a delimited alias block with postalias, provision local accounts, and emit a report. The deliverable is a general idempotent installer reused verbatim against hidden list files (different domains/targets/accounts), and the verifier proves the canonical path is honored via postfix's own lookup tooling after a full state reset. Small nonzero rubric for the dependency chain, postfix tooling breadth, local-vs-external logic, adversarial reset/idempotency probing, hidden generalization and exact mapping correctness; totals bucket to medium."
+}

@@ -1,0 +1,10 @@
+# Northridge relay downlink stack
+services:
+  telemetry-store:
+    image: "postgres:16.4"
+    environment:
+      POSTGRES_DB: "telemetry_north"
+      POSTGRES_USER: "north_ro"
+      POSTGRES_PASSWORD: "N0rth-Pass-9"
+    ports:
+      - "5433:5432"

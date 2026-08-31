@@ -1,0 +1,15 @@
+# Halden Grid -- hidden metering stack C (multi-row, duplicates, fractions).
+services:
+  meters:
+    image: postgres:17
+    hostname: meters
+    environment:
+      POSTGRES_DB: gridstore-weir
+      POSTGRES_USER: weirbot
+      POSTGRES_PASSWORD: "Sluice-Weir-3308"
+    ports:
+      - "5433:5432"
+    networks:
+      default: {}
+networks:
+  default: {}
