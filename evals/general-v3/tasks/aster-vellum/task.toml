@@ -1,0 +1,20 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "medium"
+category = "programming"
+verifier_kind = "executes-deliverable"
+deliverables = ["/app/pkg/src/dotkit/__init__.py"]
+tags = ["aster-vellum", "programming", "python-packaging", "package-root-api", "C-f451b7de", "scalar-product", "src-layout", "offline-install"]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 600.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096

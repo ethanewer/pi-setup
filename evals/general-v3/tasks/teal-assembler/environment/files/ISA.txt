@@ -1,0 +1,67 @@
+====================================================================
+ TAL-3: a tiny "Teal" machine-code target
+====================================================================
+
+All opcodes are packed as 8-bit bytes. Each instruction is fixed in
+length; its length depends only on the mnemonic, never on its operands.
+
+Register operands are written r0 .. r15 (exactly the form r<N> with
+0 <= N <= 15). Anything strictly above r15 is rejected.
+
+Immediate operands are unsigned 8-bit values, valid range 0..255,
+written in decimal (e.g. 7, 255) or C-style hex (e.g. 0x0A, 0xff).
+Anything outside 0..255 is rejected.
+
+Address operands are 16-bit big-endian and must reference a label
+defined somewhere in the same source file (forward references are
+allowed).
+
+---- Instruction encodings (byte order as written) ----
+
+  mnemonic        bytes                           meaning / encoding
+  ----------------------------------------------  ------------------
+  NOP             00                              no operation
+  LOAD r,imm      10 rr ii                        rr = register byte (0..15),
+                                                  ii = imm8 (0..255)
+  ADD r1,r2       20 nb                           nb = ((r1 << 4) | r2): the two
+                                                  register numbers packed into the
+                                                  high and low nibbles of one byte
+  JMP label       30 ah al                        big-endian 16-bit address of `label`
+  HALT            ff                              stop
+
+==== Source grammar ====
+
+A source file is processed as plain UTF-8 text, one logical instruction
+per line:
+
+  * Everything after the first '#' on a line is a comment and is ignored.
+  * Blank lines are ignored.
+  * Leading/trailing whitespace is ignored.
+  * A line may begin with zero or more label definitions of the form
+        name:
+    where name matches [A-Za-z_][A-Za-z0-9_]* and `name:` is separated
+    from any following instruction by whitespace.
+  * After any labels, a line carries exactly one instruction:
+        MNEMONIC operand1, operand2, ...
+    Operands are comma-separated (spaces around commas are fine).
+
+A label records the byte address of the instruction that immediately
+follows it. A label sitting on its own line points at the start of the
+next instruction. Labels may be referenced before they are defined
+(forward references), e.g. a `JMP` at the top of a program may target a
+label defined later.
+
+==== Required error behavior -------------------------------------------------
+
+Abort the whole assembly with a nonzero exit status, print a diagnostic
+to stderr that always includes the offending physical line number, and
+write no output file when any of these occurs:
+
+  * an unknown mnemonic;
+  * a duplicate label definition;
+  * the wrong number of operands for a mnemonic;
+  * a register operand that is not r0..r15 (including a bare number or
+    an identifier that is not a register name);
+  * an immediate that is not a number, or that is outside 0..255;
+  * a `JMP` operand that is not a defined label;
+  * any token that does not fit the grammar (e.g. a malformed label).

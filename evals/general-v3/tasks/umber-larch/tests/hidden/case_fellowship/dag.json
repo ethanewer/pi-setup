@@ -1,0 +1,64 @@
+{
+  "nodes": [
+    "union",
+    "tenure",
+    "draft_lottery",
+    "region_code",
+    "enrolled",
+    "hours",
+    "earn",
+    "eval_score"
+  ],
+  "edges": [
+    [
+      "draft_lottery",
+      "enrolled"
+    ],
+    [
+      "union",
+      "enrolled"
+    ],
+    [
+      "tenure",
+      "enrolled"
+    ],
+    [
+      "union",
+      "earn"
+    ],
+    [
+      "tenure",
+      "earn"
+    ],
+    [
+      "enrolled",
+      "earn"
+    ],
+    [
+      "hours",
+      "earn"
+    ],
+    [
+      "enrolled",
+      "hours"
+    ],
+    [
+      "union",
+      "hours"
+    ],
+    [
+      "tenure",
+      "hours"
+    ],
+    [
+      "enrolled",
+      "eval_score"
+    ],
+    [
+      "earn",
+      "eval_score"
+    ]
+  ],
+  "treatment_column": "enrolled",
+  "outcome_column": "earn"
+}

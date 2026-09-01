@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 0,
+    "tool_breadth": 0,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 40,
+  "documented_probe": null,
+  "notes": "Write a general binary framed-stream decoder (magic marker, little-endian uint16 length, sequence byte, payload, modulo-256 checksum) that must work on any conforming input. Solid at medium: byte-level parsing and endianness demand exact quantitative correctness; the checksum-validated error-recovery (corrupt/truncated/declared-length-mismatched frames must be discarded while garbage is ignored) adds debugging ambiguity about what counts as discarded; the verifier exercises 4 fresh hidden inputs (reordering, corruption, truncation, zero-length payloads, whitespace/dup seq) forcing generalization beyond the sample. No multi-stage pipeline, breadth, resource, statefulness, or unsafe-action pressure."
+}

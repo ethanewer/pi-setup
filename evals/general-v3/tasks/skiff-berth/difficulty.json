@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 0,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 0,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 1,
+    "quantitative_correctness": 0,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 15,
+  "documented_probe": "C-759c32c0 (enable password-based authentication): the covering task is authored at easy, matching the reference floor; the verifier fully checks the capability (hash generation on hidden secrets, crypt verification of the wired credentials, idempotent re-provisioning, and live HTTP probes of the gateway).",
+  "notes": "Easy: generate a sha512-crypt hash and wire it into the gateway's credential file so the configured secret is accepted. The wrong-scheme/mismatch failure mode is covered: the verifier crypt-verifies every hash (visible plus two hidden secrets run through the agent's generator), rejects locked/malformed entries and plaintext leakage, and probes the live server for 401/403/200 behavior. Nonzero rubric: dependent_stages (hash generator must be written, then provisioning run, then credentials consumed by the server), reasoning_depth (correct crypt scheme and idempotent provisioning), adversarial_inputs (hidden secrets, wrong-password/unknown-user probes), hidden_case_generalization (fresh secrets and a re-run). No tool breadth, quantitative, resource, or unsafe-action pressure; totals bucket to easy."
+}

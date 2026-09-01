@@ -1,0 +1,8 @@
+{
+  "rules": [
+    { "id": "watch_all", "keyword": "scan", "threshold": 2 },
+    { "id": "bad_keyword", "keyword": 42, "threshold": 1, "severity": "high" },
+    { "id": "odd_level", "keyword": "rollback", "min_level": "FATAL", "threshold": 1, "severity": "medium" },
+    { "id": "regex_lit", "keyword": "a.c", "min_level": "INFO", "threshold": 1, "severity": "low" }
+  ]
+}

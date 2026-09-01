@@ -1,0 +1,26 @@
+#!/bin/bash
+mkdir -p /logs/verifier
+reward=0
+if [ -f /app/ea.txt ] && [ -f /app/answer.json ]; then
+  if python3 - <<'EOF'
+import json, re, sys
+exp={}
+for line in open('/app/ea.txt'):
+    line=line.split('#')[0].strip()
+    m=re.match(r'^ea(\d+)\s+base=(\d+)\s+index=(\d+)\s+scale=(\d+)\s+disp=(\d+)$', line)
+    if not m: continue
+    n=int(m.group(1)); b=int(m.group(2)); i=int(m.group(3)); s=int(m.group(4)); d=int(m.group(5))
+    exp['ea%d'%n]= b + i*s + d
+got=json.load(open('/app/answer.json'))
+ok=True
+for k,v in exp.items():
+    if int(got.get(k))!=v:
+        ok=False; break
+if not ok:
+    sys.exit("mismatch got %r expected %r" % (got,exp))
+sys.exit(0)
+EOF
+  then
+    reward=1
+  fi
+echo "$reward" > /logs/verifier/reward.txt

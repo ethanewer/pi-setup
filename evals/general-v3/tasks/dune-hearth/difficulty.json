@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 3,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 1,
+    "interaction_statefulness": 1,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": null,
+  "notes": "Multi-stage C build pipeline (author a CMake project, drive three executables with one Makefile using distinct toolchains/link flags, install a bare-invocable binary on PATH, bundle a zstd GNU tar) plus a strict two-file CLI with documented edge semantics exercised across hidden malformed/mismatched inputs. Every deliverable is executed by the verifier. Rubric total 18 -> hard, and >=2 in dependent_stages, tool_breadth, reasoning_depth, debugging_ambiguity, adversarial_inputs, hidden_case_generalization, quantitative_correctness."
+}

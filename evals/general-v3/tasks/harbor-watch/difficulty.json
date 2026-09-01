@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 2,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 2,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 30,
+  "documented_probe": null,
+  "notes": "Medium (sum 14): the agent must fetch both crew members' calendars over HTTP from a live roster service using bearer-token auth so the saved .ics files are fresh (per-process session id byte-check), then parse the fetched ICS and compute exact per-person watch stats and a pairwise cross-crew overlap in minutes. Hidden cases (different tokens/terminals/keys/base dates, an empty-watch crew member, touching vs overlapping intervals) force generalized, not hard-coded behavior. Difficulty comes from the two dependent stages (live fetch -> summary derived from the fetched bytes), stateful HTTP interaction with token auth, and exact quantitative semantics."
+}

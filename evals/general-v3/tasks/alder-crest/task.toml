@@ -1,0 +1,20 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "easy"
+category = "data_processing"
+verifier_kind = "executes-deliverable"
+deliverables = ["/app/solve.py", "/app/compiled.tex", "/app/answer.json"]
+tags = ["alder-crest", "data_processing", "C-f0fe0218", "synonym-rewrite", "tex-include-edit", "protected-file-immutability"]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 900.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096

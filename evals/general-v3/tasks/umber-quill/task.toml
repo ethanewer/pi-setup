@@ -1,0 +1,37 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "medium"
+category = "data_processing"
+verifier_kind = "executes-deliverable"
+deliverables = [
+    "/app/logproc.py",
+    "/app/respond.py",
+    "/app/logs/round1.out",
+    "/app/logs/round2.out",
+    "/app/logs/round3.out",
+    "/app/logs/frames.json",
+    "/app/logs/dates.tsv",
+    "/app/incident.json",
+]
+tags = [
+    "umber-quill",
+    "data_processing",
+    "parse-jsonl-sort-by-microsecond-timestamp",
+    "partition-per-key-series-into-rounds",
+    "split-stack-traces-into-call-site-frames",
+    "pick-last-date-on-ip-bearing-lines",
+    "incident-response-script-with-ip-validation",
+]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 1200.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096

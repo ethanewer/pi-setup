@@ -1,0 +1,66 @@
+{
+  "dataset": "moorings-r2",
+  "version": 2,
+  "columns": [
+    "segment_id",
+    "node",
+    "seq",
+    "depth_m",
+    "temp_c",
+    "salinity_psu",
+    "flag",
+    "heat",
+    "valid"
+  ],
+  "files": [
+    {
+      "key": "test/test_part000.parquet",
+      "role": "test",
+      "rows": 95,
+      "sha256": "9750b433a320a6df317ad8814f33a0232fe724edc199223260460fc50fd9c177"
+    },
+    {
+      "key": "train/train_part000.parquet",
+      "role": "train",
+      "rows": 280,
+      "sha256": "25375071681a7d3b78f3b179ac5767561cc29b31e1c66e1b8360b5c464a789cd"
+    },
+    {
+      "key": "train/train_part001.parquet",
+      "role": "train",
+      "rows": 280,
+      "sha256": "2cfb6170d0617ee7599776af959839615f2e903a95a5e09230033a7d6b40bd46"
+    },
+    {
+      "key": "train/train_part002.parquet",
+      "role": "train",
+      "rows": 280,
+      "sha256": "1c6d5577b9eb1256ba21d5b49be3538882d63619523eaee9790c4060389429f2"
+    },
+    {
+      "key": "train/train_part003.parquet",
+      "role": "train",
+      "rows": 280,
+      "sha256": "b0926af20bfd373c60d4d593e7a37a737f09af22b2b0c4c9c369b3138ba1da26"
+    },
+    {
+      "key": "train/train_part004.parquet",
+      "role": "train",
+      "rows": 280,
+      "sha256": "8c677c943afbfc97ed8d5b312052682b624a39812f36b835274ae734e99e90ba"
+    },
+    {
+      "key": "val/val_part000.parquet",
+      "role": "val",
+      "rows": 130,
+      "sha256": "085de4d4da40cec771af8908f6d152e1cb38e92503ba63791fb326b856905420"
+    },
+    {
+      "key": "val/val_part001.parquet",
+      "role": "val",
+      "rows": 130,
+      "sha256": "d4bfc6cd22a37cd11d46b0d6ded74c00b9ba1dc516c0ec902ae1d10d57a4f1ce"
+    }
+  ],
+  "host": "revetment-object-store"
+}

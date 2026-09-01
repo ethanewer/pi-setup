@@ -1,0 +1,29 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "medium"
+category = "system_administration"
+verifier_kind = "executes-deliverable"
+deliverables = [
+  "/app/pipeline/publish.sh",
+  "/app/deployment-report.json",
+]
+tags = [
+  "larch-vane",
+  "system_administration",
+  "executable-bit-restoration",
+  "byte-identical-listing-preservation",
+  "C-69755486",
+]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 900.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096

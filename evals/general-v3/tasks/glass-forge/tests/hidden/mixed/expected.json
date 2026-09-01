@@ -1,0 +1,69 @@
+{
+  "total_conflicts": 4,
+  "conflicts": [
+    {
+      "user": "emp-7",
+      "field": "cost_center",
+      "sources": [
+        {
+          "source": "payroll",
+          "value": "CC-11"
+        },
+        {
+          "source": "directory",
+          "value": "CC-04"
+        }
+      ],
+      "winner": "CC-04"
+    },
+    {
+      "user": "emp-8",
+      "field": "email",
+      "sources": [
+        {
+          "source": "directory",
+          "value": "ana.reyes@fl.io"
+        },
+        {
+          "source": "payroll",
+          "value": "ana.reyes@fl.io"
+        },
+        {
+          "source": "badge",
+          "value": "ana.badge@fl.io"
+        }
+      ],
+      "winner": "ana.reyes@fl.io"
+    },
+    {
+      "user": "emp-9",
+      "field": "desk",
+      "sources": [
+        {
+          "source": "badge",
+          "value": "B2-14"
+        },
+        {
+          "source": "badge",
+          "value": "B2-09"
+        }
+      ],
+      "winner": "B2-14"
+    },
+    {
+      "user": "emp-12",
+      "field": "clearance",
+      "sources": [
+        {
+          "source": "directory",
+          "value": "L2"
+        },
+        {
+          "source": "payroll",
+          "value": "L3"
+        }
+      ],
+      "winner": "L2"
+    }
+  ]
+}

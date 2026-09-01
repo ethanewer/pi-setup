@@ -1,0 +1,20 @@
+{
+  "paths": {
+    "dataset": "/app/data/orchard.csv",
+    "experiment": "/app/experiments/frost-29/seed-5",
+    "model": "/app/model.json"
+  },
+  "data": {
+    "target": "frost",
+    "features": [
+      "chill_hours",
+      "rainfall_mm",
+      "soil_ph"
+    ]
+  },
+  "training": {
+    "epochs": 120,
+    "learning_rate": 0.05,
+    "seed": 5
+  }
+}

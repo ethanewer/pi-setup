@@ -1,0 +1,39 @@
+#!/bin/bash
+reward=0
+if [ -f /app/fbox.py ] && [ -f /app/answers.json ]; then
+  if python3 - <<'PYEOF'
+import json, sys, importlib.util
+
+def ref_fbox(r, k):
+    return [((((r[i] + k[i]) & 0xFF) << 2) | (((r[i] + k[i]) & 0xFF) >> 6)) & 0xFF for i in range(4)]
+
+# import agent's fbox
+spec = importlib.util.spec_from_file_location('agentfbox', '/app/fbox.py')
+mod = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(mod)
+assert hasattr(mod, 'fbox'), 'fbox not defined'
+fbox = mod.fbox
+
+# check answers.json on the provided vector
+v = json.load(open('/app/vectors.json'))
+exp_out = ref_fbox(v['r'], v['k'])
+ans = json.load(open('/app/answers.json'))
+assert ans['input'] == v, ans
+assert ans['output'] == exp_out, (ans['output'], exp_out)
+
+# check fbox on extra fixtures
+extra = [
+    ([0,0,0,0], [0,0,0,0]),
+    ([255,255,255,255], [1,2,3,4]),
+    ([0x12,0x34,0x56,0x78], [0xAB,0xCD,0xEF,0x01]),
+    ([0x55,0xAA,0xFF,0x00], [0x10,0x20,0x30,0x40]),
+]
+for r, k in extra:
+    assert fbox(r, k) == ref_fbox(r, k), (r, k, fbox(r, k), ref_fbox(r, k))
+PYEOF
+  then
+    reward=1
+  fi
+  then reward=1; else reward=0; fi
+else reward=0; fi
+echo "$reward" > /logs/verifier/reward.txt

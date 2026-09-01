@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 1,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 1,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": null,
+  "notes": "Train a fasttext-style linear bag-of-ngrams triage classifier on a 3-class synthetic ticket corpus under two binding constraints: holdout accuracy >= floor on a documented deterministic sha-keyed split, and serialized model size <= 262144 bytes. The tension is real: an unbounded full-vocabulary bigram pipeline pickles to ~350 KB (blows the budget) while a heavily truncated ~150-feature unigram model drifts to ~0.90 (under the floor); the oracle lands at ~0.93 accuracy / ~190 KB via min_df + max_features + bigram tf-idf + logistic regression. The verifier re-executes the trainer on hidden corpora (fresh domain mix with a higher floor, and an edge corpus with blank/no-TAB/punctuation-only/duplicate rows) and recomputes split, accuracy, size and every report field. Rubric weights reasoning_depth (hyperparameter/size tradeoff), quantitative_correctness (exact split/report agreement), hidden_case_generalization and adversarial_inputs (edge corpus), resource_pressure (size budget). Totals bucket to hard."
+}

@@ -1,0 +1,20 @@
+# fact.smp - register loop: factorial of 6. R0 = n, R1 = accumulator.
+# Result 720 is printed by OUT after the loop terminates.
+0x0000 PUSH 6
+0x0001 STORE 0
+0x0002 PUSH 1
+0x0003 STORE 1
+0x0004 LOAD 0
+0x0005 JZ 0x000f
+0x0006 LOAD 1
+0x0007 LOAD 0
+0x0008 MUL
+0x0009 STORE 1
+0x000a LOAD 0
+0x000b PUSH 1
+0x000c SUB
+0x000d STORE 0
+0x000e JMP 0x0004
+0x000f LOAD 1
+0x0010 OUT
+0x0011 HALT

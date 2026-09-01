@@ -1,0 +1,14 @@
+# large fixture binaries (>20MB) — fetch from HF dataset v2/assets/ per specs/large_assets.json
+tasks/prism-bridge/environment/hadoop-3.3.6.tar.gz
+tasks/harbor-gasket/environment/files/releases/node-v20.19.3-linux-x64.tar.xz
+tasks/zephyr-orchid/environment/files/model/vosk_model.zip
+tasks/raven-orchid/environment/files/vosk-model/graph/Gr.fst
+tasks/raven-orchid/environment/files/vosk-model/graph/HCLr.fst
+# audit artifacts (generated, not source)
+specs/independence_report.json
+specs/similarity_report.json
+specs/oracle_report.json
+specs/oracle_times.json
+# private audit records
+private-audit/
+__pycache__/

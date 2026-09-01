@@ -1,0 +1,186 @@
+[
+ {
+  "id": "right_higher",
+  "cell": {
+   "line": [
+    {
+     "tile": 1,
+     "open": true
+    },
+    {
+     "tile": 5,
+     "open": true
+    },
+    {
+     "tile": 9,
+     "open": true
+    }
+   ],
+   "cursor": 1
+  },
+  "expect": "right"
+ },
+ {
+  "id": "left_higher",
+  "cell": {
+   "line": [
+    {
+     "tile": 3,
+     "open": true
+    },
+    {
+     "tile": 5,
+     "open": true
+    },
+    {
+     "tile": 1,
+     "open": true
+    }
+   ],
+   "cursor": 1
+  },
+  "expect": "left"
+ },
+ {
+  "id": "tie_prefers_right",
+  "cell": {
+   "line": [
+    {
+     "tile": 7,
+     "open": true
+    },
+    {
+     "tile": 4,
+     "open": true
+    },
+    {
+     "tile": 7,
+     "open": true
+    }
+   ],
+   "cursor": 1
+  },
+  "expect": "right"
+ },
+ {
+  "id": "right_blocked",
+  "cell": {
+   "line": [
+    {
+     "tile": 2,
+     "open": true
+    },
+    {
+     "tile": 9,
+     "open": false
+    },
+    {
+     "tile": 6,
+     "open": true
+    }
+   ],
+   "cursor": 0
+  },
+  "expect": "stay"
+ },
+ {
+  "id": "left_boundary",
+  "cell": {
+   "line": [
+    {
+     "tile": 0,
+     "open": true
+    },
+    {
+     "tile": 8,
+     "open": true
+    },
+    {
+     "tile": 8,
+     "open": true
+    }
+   ],
+   "cursor": 1
+  },
+  "expect": "right"
+ },
+ {
+  "id": "only_left",
+  "cell": {
+   "line": [
+    {
+     "tile": 2,
+     "open": true
+    },
+    {
+     "tile": 8,
+     "open": true
+    },
+    {
+     "tile": 8,
+     "open": false
+    }
+   ],
+   "cursor": 2
+  },
+  "expect": "left"
+ },
+ {
+  "id": "empty_line",
+  "cell": {
+   "line": [],
+   "cursor": 0
+  },
+  "expect": "stay"
+ },
+ {
+  "id": "cursor_oob",
+  "cell": {
+   "line": [
+    {
+     "tile": 1,
+     "open": true
+    }
+   ],
+   "cursor": 9
+  },
+  "expect": "stay"
+ },
+ {
+  "id": "both_closed",
+  "cell": {
+   "line": [
+    {
+     "tile": 9,
+     "open": false
+    },
+    {
+     "tile": 5,
+     "open": false
+    }
+   ],
+   "cursor": 1
+  },
+  "expect": "stay"
+ },
+ {
+  "id": "no_open_field_defaults_open",
+  "cell": {
+   "line": [
+    {
+     "tile": 1,
+     "open": true
+    },
+    {
+     "tile": 3
+    },
+    {
+     "tile": 8,
+     "open": true
+    }
+   ],
+   "cursor": 1
+  },
+  "expect": "right"
+ }
+]

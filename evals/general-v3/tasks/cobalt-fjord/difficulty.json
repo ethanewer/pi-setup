@@ -1,0 +1,16 @@
+{
+  "rubric": {
+    "dependent_stages": 0,
+    "tool_breadth": 0,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 1,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 40,
+  "notes": "Single-stage: parse a two-format HTTP access log (strict validation, near-miss malformed lines) and compute a battery of derived statistics over the parsed records: status-class counts, error rate percentage, mean latency, interpolated p95, byte totals, unique-client cardinality, per-endpoint aggregates, and a threshold-derived health verdict. Hard floor: strict dual-format parsing plus a precisely specified interpolation percentile and derived-threshold field. Rubric nonzero for reasoning_depth (two formats + percentile interpolation), debugging_ambiguity (near-miss lines), adversarial_inputs/hidden_case_generalization (five hidden cases incl. empty/all-malformed/single), quantitative_correctness (exact floats and derived aggregates)."
+}

@@ -1,0 +1,15 @@
+{
+  "linker_options": [
+    {
+      "id": "L1",
+      "sequence": "GGGGSGGGGSGGGGS",
+      "description": "flexible (GGGGS)x3, neutral"
+    },
+    {
+      "id": "L2",
+      "sequence": "GGRGGSGRGGSGGRG",
+      "description": "arginine-rich"
+    }
+  ],
+  "rule": "choose the linker with <=1 charged residue (R,K,D,E per seq)"
+}

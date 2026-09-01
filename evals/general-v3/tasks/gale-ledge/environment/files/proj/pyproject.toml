@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gale"
+version = "0.3.1"
+description = "gale computing toolbox for the gale-ledge benchmark"
+requires-python = ">=3.9"
+dependencies = ["ipython>=8", "pytest>=7"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+gale = ["py.typed"]

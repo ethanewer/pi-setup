@@ -1,0 +1,31 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "medium"
+category = "web"
+verifier_kind = "executes-deliverable"
+deliverables = [
+    "/app/q.py",
+    "/app/job.json",
+    "/app/roundtrip.out",
+]
+tags = [
+    "juniper-notch",
+    "web",
+    "C-8dfb1620",
+    "C-bc9fd958",
+    "C-5bf90775",
+    "C-670b820b",
+]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 1100.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096

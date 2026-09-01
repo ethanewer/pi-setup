@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 0,
+    "tool_breadth": 0,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 0,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 1,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 20,
+  "documented_probe": null,
+  "notes": "Single-stage: enumerate a generator's seed range, hash each code with SHA-1, count hex letters (a-f) in the lowercase digest, and select codes whose letter-count equals a pinned target. Covers C-6a371a59 (sha1 digest structural count) at easy depth: the count derivation is a single structural predicate over the digest. Generalization is genuine (hidden_case_generalization=1): the verifier runs /app/solve.py unchanged against fresh generator modules with different prefixes, suffixes, seed ranges, derivation arithmetic, and targets, including a zero-match target. quantitative_correctness=1 because the answer is an exact integer count over the digest. Small reasoning_depth for the digest-to-count rule; adversarial_inputs for the zero-match and blank-line target parsing edges. No tool breadth, no dependencies, no resource pressure; totals bucket to easy."
+}

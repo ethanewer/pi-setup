@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 30,
+  "documented_probe": null,
+  "notes": "Medium: the agent must locate a single off-by-stride defect in a small C extension, rebuild it as a CPython module, and drive a data-driven harness. Exact 8-hex checksums across empty/single/boundary/duplicate vectors require genuinely repairing the fold loop rather than hardcoding the visible report; hidden inputs (empty vectors, length-2/3 vectors that lay bare which indices are folded, values near the 32-bit ceiling) force generalization. Mixing constants are fixed and documented, so the core reasoning is contained but non-trivial."
+}

@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 2,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 2,
+    "resource_pressure": 2,
+    "interaction_statefulness": 3,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 90,
+  "documented_probe": null,
+  "notes": "Hard bucket (sum=21): brings up a full guest OS under software-emulated QEMU (no /dev/kvm) with a custom assembly-less initramfs, wired hostfwd networking, and leaves the emulator alive as a background service (C-3654b094, floor hard); recovers a marker from a legacy raw disk image by parsing the partition table at a non-trivial byte offset with e2fs tools (C-31e6f8e2, floor hard); and establishes password-based root SSH from the host into the running guest with a successful remote command (C-90061c28, floor medium). The same builder must generalize over hidden profiles/disks of differing offsets, hosts and tokens, so hidden_case_generalization and dependent_stages are high; TCG boot latency and sequential stage ordering drive resource_pressure/interaction_statefulness. Medium floor for C-90061c28 is satisfied; the two hard floors push the bucket to hard."
+}

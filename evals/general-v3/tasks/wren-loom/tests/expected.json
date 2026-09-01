@@ -1,0 +1,27 @@
+{
+  "config": {
+    "announce": {"address": "announce@lists.foundrycommons.org", "members": ["wren@foundrycommons.org", "opal@foundrycommons.org", "kestrel@foundrycommons.org"], "enabled": true},
+    "tools": {"address": "tools@lists.foundrycommons.org", "members": ["mica@foundrycommons.org", "fume@foundrycommons.org"], "enabled": true},
+    "wishlists": {"address": "wishlists@lists.foundrycommons.org", "members": [], "enabled": true},
+    "archive": {"address": "archive@lists.foundrycommons.org", "members": ["bracken@foundrycommons.org"], "enabled": false}
+  },
+  "daemon": {
+    "lists": ["announce", "tools", "wishlists"],
+    "members": {
+      "announce": ["wren@foundrycommons.org", "opal@foundrycommons.org", "kestrel@foundrycommons.org"],
+      "tools": ["mica@foundrycommons.org", "fume@foundrycommons.org"],
+      "wishlists": []
+    },
+    "counts": {"announce": 3, "tools": 2, "wishlists": 0}
+  },
+  "report": {
+    "daemon_port": 7871,
+    "config_path": "/etc/loopd/lists.conf",
+    "enabled": ["announce", "tools", "wishlists"],
+    "lists": {
+      "announce": {"address": "announce@lists.foundrycommons.org", "members": ["wren@foundrycommons.org", "opal@foundrycommons.org", "kestrel@foundrycommons.org"], "count": 3},
+      "tools": {"address": "tools@lists.foundrycommons.org", "members": ["mica@foundrycommons.org", "fume@foundrycommons.org"], "count": 2},
+      "wishlists": {"address": "wishlists@lists.foundrycommons.org", "members": [], "count": 0}
+    }
+  }
+}

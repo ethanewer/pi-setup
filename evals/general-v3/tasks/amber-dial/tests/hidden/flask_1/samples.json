@@ -1,0 +1,25 @@
+{
+  "samples": [
+    {
+      "text": "the new release is fast and stable",
+      "label": "positive"
+    },
+    {
+      "text": "slow buggy clunky",
+      "label": "negative"
+    },
+    {
+      "text": "fine average same",
+      "label": "neutral"
+    },
+    {
+      "text": "",
+      "label": "neutral"
+    }
+  ],
+  "malformed": [
+    "not-json",
+    "{}",
+    "{\"foo\":1}"
+  ]
+}

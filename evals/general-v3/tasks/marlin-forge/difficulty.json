@@ -1,0 +1,16 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 35,
+  "notes": "UPC-style shared-heap realization: one malloc'd shared array filled in parallel by pthreads, contiguous even split with empty/zero-item edge cases, per-rank worker_<r>.dat files with exact prefix/suffix and five-line format, global grand-total check, and strict malformed-argv handling (exit 3, nothing written). Verifier recompiles the source, executes the binary on hidden thread/item combinations plus bad argv, and byte-checks the /app/worker_*.dat deliverables from the visible run. Nonzero dependent_stages (source -> build -> run -> per-rank files), reasoning_depth (slice math, empty slices), adversarial_inputs/hidden_case_generalization, quantitative_correctness (exact sums/maxima)."
+}

@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 0,
+    "tool_breadth": 0,
+    "reasoning_depth": 0,
+    "debugging_ambiguity": 0,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 1,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 15,
+  "documented_probe": null,
+  "notes": "Single-stage: isolate objective.reported among decoy fields and persist its integer part (floor) as exactly the digits plus one newline; byte-exact match punishes float formatting or stray whitespace. Hidden cases probe fractional floor-down, exponent notation, already-integral values, and sub-unit values. Small rubric nonzero for adversarial_inputs/hidden_case_generalization (four hidden reports) and quantitative_correctness (exact byte match). No tool breadth, dependency chain, or environment pressure; totals bucket to easy."
+}

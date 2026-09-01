@@ -1,0 +1,14 @@
+{
+  "type": "render",
+  "route": "/render",
+  "cases": [
+    {"params": {"text": "{{7*7}}"}, "text": "{{7*7}}"},
+    {"params": {"text": "{{ config }}"}, "text": "{{ config }}"},
+    {"params": {"text": "{% set x = 1 %}"}, "text": "{% set x = 1 %}"},
+    {"params": {"text": "<b>bold</b>"}, "text": "<b>bold</b>"},
+    {"params": {"text": "{{''.__class__}}"}, "text": "{{''.__class__}}"},
+    {"params": {"text": "plain fathom"}, "text": "plain fathom"},
+    {"params": {"text": ""}, "text": ""},
+    {"params": {}, "text": ""}
+  ]
+}

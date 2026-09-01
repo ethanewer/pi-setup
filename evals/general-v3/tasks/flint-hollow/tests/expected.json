@@ -1,0 +1,40 @@
+{
+  "cases": [
+    {
+      "text": "Please review the draft update before the sprint ends.",
+      "label": "normal",
+      "confidence": {
+        "urgent": 0.1111,
+        "normal": 0.7778,
+        "backlog": 0.1111
+      }
+    },
+    {
+      "text": "Major outage in production - we are blocked, respond ASAP.",
+      "label": "urgent",
+      "confidence": {
+        "urgent": 0.7778,
+        "normal": 0.1111,
+        "backlog": 0.1111
+      }
+    },
+    {
+      "text": "Whenever you get a chance, file this under backlog for later review.",
+      "label": "backlog",
+      "confidence": {
+        "urgent": 0.0909,
+        "normal": 0.2727,
+        "backlog": 0.6364
+      }
+    },
+    {
+      "text": "A quiet question about the roadmap; no urgency at all, just curious.",
+      "label": "normal",
+      "confidence": {
+        "urgent": 0.2,
+        "normal": 0.6,
+        "backlog": 0.2
+      }
+    }
+  ]
+}

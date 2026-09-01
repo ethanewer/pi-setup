@@ -1,0 +1,14 @@
+# Legacy Fortran makefile written for the PG/Intel-style frontend.
+# The task is to author a /app/Makefile that retargets this build to gfortran
+# WITHOUT touching the two .f90 sources. This file is provided only as the
+# "before" reference; the deliverable is the new /app/Makefile.
+FC      = ifort
+FFLAGS  = -r8 -heap-arrays -O2
+LDFLAGS = -static-intel
+SRCS    = src/fseries/series_mod.f90 src/fseries/main_series.f90
+
+main: $(SRCS)
+	$(FC) $(FFLAGS) -o $@ $(SRCS) $(LDFLAGS)
+
+clean:
+	rm -f main *.mod

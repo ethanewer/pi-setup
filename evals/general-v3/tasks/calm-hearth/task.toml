@@ -1,0 +1,31 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "hard"
+category = "debugging"
+verifier_kind = "executes-deliverable"
+deliverables = [
+    "/app/fixedheap",
+    "/app/callffi.py",
+    "/app/notes.md",
+    "/app/reimpl.py",
+]
+tags = [
+    "calm-hearth",
+    "debugging",
+    "C-7991a29a",
+    "C-304a65fb",
+    "C-41513365",
+]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 2400.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096

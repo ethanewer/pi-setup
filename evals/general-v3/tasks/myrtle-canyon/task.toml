@@ -1,0 +1,30 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "medium"
+category = "scientific_computing"
+verifier_kind = "executes-deliverable"
+deliverables = [
+  "/app/tuned-model.xml",
+  "/app/sim-report.txt",
+]
+tags = [
+  "myrtle-canyon",
+  "scientific_computing",
+  "offline-wheel-install",
+  "mujoco-plugin-free-tuning",
+  "reference-model-preservation",
+  "C-5ede2c22",
+]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 1200.0
+
+[environment]
+build_timeout_sec = 900.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096

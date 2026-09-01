@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": null,
+  "notes": "Hard. The agent must reverse the exact behavior of a stripped-source compiled binary: probe black-box with crafted grids and/or disassemble to discover that the operation is serpentine (alternating-direction) Floyd-Steinberg error diffusion to two levels with threshold 128, weights 7/3/5/1 over 16 with C-truncating division, in-place error accumulation, border-clamped (dropped) propagation, and an exact '#'/'.', newline-terminated output format. The verifier relocates the native binary before running the deliverable and compares stdout byte-for-byte against an independent reference on hidden grids (boundary values 0/127/128/255, tiny shapes, constant fields, random photo-like fields), so partial models or wrong rounding/scan-order fail. Rubric nonzero for tool_breadth (objdump/gdb/probing), reasoning_depth and debugging_ambiguity (stateful two-pass sequential dependence is not guessable from one probe), hidden_case_generalization and quantitative_correctness (exact byte equality on unseen grids), adversarial_inputs (boundary threshold values), dependent_stages (observe -> model -> implement -> cross-check). No resource or interaction pressure."
+}

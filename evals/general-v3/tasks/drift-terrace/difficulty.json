@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 2,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 3,
+    "resource_pressure": 1,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": null,
+  "notes": "Hard config-driven ML-artifact task. The agent must (a) build a logistic fit that enforces a STRICTLY negative coefficient on a designated feature using a box-constrained optimizer (custom gradient against the bound), (b) wire every path and tuning knob incl. a one-epoch debug override to a YAML config so the same program runs unchanged on hidden datasets mounted at verify time, (c) persist model.joblib (coef vector, shape, feature order) and a plain numeric vector.out, (d) write config/progress under the experiment-data dir, and (e) emit a self-test with per-check pass/fail tokens plus a MEAN_ACC statistic. Reasoning depth (3): deriving correct logistic NLL/gradients and making the sign constraint bind without sinking accuracy. Debugging ambiguity (2): the accuracy-vs-constraint tradeoff and the one-epoch debug semantics are only specified at a high level. Hidden-case generalization (3): three hidden datasets with different columns, folds, floors, junk columns and a one-epoch debug config must run unchanged. Quantitative correctness (3): held-out accuracy must independently meet the floor and vector.out must match the model to tight tolerance. Difficulty floor is hard per competencies C-85b852db and C-d06efab8."
+}

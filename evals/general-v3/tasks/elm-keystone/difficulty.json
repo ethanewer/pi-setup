@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 1,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 35,
+  "documented_probe": "The 'match a reference behavior under a numeric tolerance' competency (C-8d6b9acc) has a hard floor in its reference form (onnx-style float drift on fixed+random inputs); here the numeric parity is a deterministic integer knapsack objective that must be reconstructed by the same reference algorithm on both fixed and hidden inputs and compared exactly (an error bound of 0, subsuming 'within tolerance'). That specific dimension is simpler than its reference floor, while the sibling exact-format and spreadsheet-cell competencies carry the task to medium.",
+  "notes": "Medium. A byte-exact artifact-pack pipeline: the agent must internally solve per-zone 0/1 knapsacks (capacity = 15 + len(zone)) with a documented lexicographic tie-break, compute an integer objective, and emit seven exact artifacts (plan_records.csv, decisions.txt, objective.txt, final_report.csv with exact column set/order, transformed/<zone>.csv files, schema-exact answer.json, and a schedule.xlsx built via the openpyxl cell API at exact addresses). quantitative_correctness=2 (optimal knapsack value + set must match the reference exactly). adversarial_inputs=2 (hidden cases mix malformed/invalid rows, duplicates, boundary slots 0/47 vs 48/-1, and optimizer-value ties that force the tie-break). hidden_case_generalization=2 (verifier re-runs solve.py on three fresh hidden inputs and diffs every artifact). reasoning_depth=2 (knapsack + tie-break + exact formats). Bucket total = 11 -> medium."
+}

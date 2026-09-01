@@ -1,0 +1,18 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "medium"
+category = "scientific_computing"
+tags = ["item-007", "caffe-1.0", "cpp", "cuda-free-cpu-build", "cifar-10", "protobuf-opencv-blas", "solver-configuration"]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 2400.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096

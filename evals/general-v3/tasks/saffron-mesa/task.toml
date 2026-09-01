@@ -1,0 +1,20 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "easy"
+category = "data_science"
+verifier_kind = "executes-deliverable"
+deliverables = ["/app/fit.py", "/app/model_store/nb_model.pkl"]
+tags = ["saffron-mesa", "data_science", "C-ceab1759", "pickle-model-persist", "naive-bayes-fitting"]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 600.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096

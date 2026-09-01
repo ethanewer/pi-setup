@@ -1,0 +1,136 @@
+[
+ {
+  "label": "rewrite valid",
+  "method": "POST",
+  "path": "/api/v1/rewrite",
+  "body": {
+   "headers": {
+    "content-type": "application/json",
+    "X-TRACE-TOKEN": "abc",
+    "x_custom": "keep"
+   }
+  },
+  "expect_status": 200,
+  "expect_rewritten": {
+   "Content-Type": "application/json",
+   "X-Trace-Token": "abc",
+   "X_custom": "keep"
+  }
+ },
+ {
+  "label": "rewrite rejects CR/LF injection",
+  "method": "POST",
+  "path": "/api/v1/rewrite",
+  "body": {
+   "headers": {
+    "x-ok": "1",
+    "x-bad\r\nX-Injected: 1": "pwn"
+   }
+  },
+  "expect_status": 400,
+  "expect_rewritten": null
+ },
+ {
+  "label": "rewrite rejects NUL",
+  "method": "POST",
+  "path": "/api/v1/rewrite",
+  "body": {
+   "headers": {
+    "nu\u0000l": "v"
+   }
+  },
+  "expect_status": 400,
+  "expect_rewritten": null
+ },
+ {
+  "label": "rewrite rejects DEL",
+  "method": "POST",
+  "path": "/api/v1/rewrite",
+  "body": {
+   "headers": {
+    "x-del\u007f": "v"
+   }
+  },
+  "expect_status": 400,
+  "expect_rewritten": null
+ },
+ {
+  "label": "rewrite rejects non-dict headers",
+  "method": "POST",
+  "path": "/api/v1/rewrite",
+  "body": {
+   "headers": [
+    "content-type"
+   ]
+  },
+  "expect_status": 400,
+  "expect_rewritten": null
+ },
+ {
+  "label": "rewrite empty headers ok",
+  "method": "POST",
+  "path": "/api/v1/rewrite",
+  "body": {
+   "headers": {}
+  },
+  "expect_status": 200,
+  "expect_rewritten": {}
+ },
+ {
+  "label": "validate mixed names",
+  "method": "POST",
+  "path": "/api/v1/validate",
+  "body": {
+   "names": [
+    "content-type",
+    "a\nb",
+    "x--y",
+    "",
+    "a b",
+    9
+   ]
+  },
+  "expect_status": 200,
+  "expect_results": [
+   {
+    "name": "content-type",
+    "ok": true,
+    "canonical": "Content-Type"
+   },
+   {
+    "name": "a\nb",
+    "ok": false,
+    "canonical": null
+   },
+   {
+    "name": "x--y",
+    "ok": true,
+    "canonical": "X--Y"
+   },
+   {
+    "name": "",
+    "ok": false,
+    "canonical": null
+   },
+   {
+    "name": "a b",
+    "ok": true,
+    "canonical": "A b"
+   },
+   {
+    "name": 9,
+    "ok": false,
+    "canonical": null
+   }
+  ]
+ },
+ {
+  "label": "validate rejects non-list",
+  "method": "POST",
+  "path": "/api/v1/validate",
+  "body": {
+   "names": "content-type"
+  },
+  "expect_status": 400
+ }
+]

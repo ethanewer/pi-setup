@@ -1,0 +1,16 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 40,
+  "notes": "Chained recovery: decode a letter-substitution cryptogram with a clued alphabet mapping (C-03818c40), extract the passcode with end-of-note/punctuation edge cases, unlock an openssl key box, then decrypt EVERY ciphertext block with an ARX cipher and write one plaintext per line in order (C-9e5ae912). Reusable tool re-run on hidden scenarios with different notes, mappings, passcodes, keys, and bundle lengths; exported helpers are unit-probed. Nonzero dependent_stages (note -> passcode -> key -> plaintexts), reasoning_depth (ARX inverse + substitution semantics), adversarial_inputs/hidden_case_generalization, quantitative_correctness (byte-exact lines)."
+}

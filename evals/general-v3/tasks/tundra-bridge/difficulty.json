@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 3,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 3,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 1,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 100,
+  "documented_probe": null,
+  "notes": "Bringing up and operating an nginx static site end-to-end drives the hard bucket (19). Many dependent stages must compose before anything works: generate a self-signed cert named by domain, write an nginx server config (non-default HTTP port, TLS:443, named log format, per-IP rate limit, custom 404 page), install it under /etc/nginx/conf.d while deactivating the distro default site, run a syntax-clean nginx that is actually listening, and leave a resolvable /etc/hosts + nsswitch setup so localhost and the site domain (and arbitrary hidden aliases via a parameterised network_fix helper) resolve. debugging_ambiguity is high because a leftover default site, a cert/key mismatch, a rate-limit pitfall and a silent access-log failure each look 'working' from partial views. Tool breadth spans nginx config + TLS/openssl + curl + hosts/nsswitch editing + a statistics-producing self-check program. Hidden cases probe generalization (generic register/apply resolution helper, varied HTTP status paths incl. deep 404s, malformed/blank host lines) and exact output formats for the access log and the self-check (per-test CHK lines plus numeric MEAN/STD). Quantitative difficulty is modest because the stats have to be numeric but not precise."
+}

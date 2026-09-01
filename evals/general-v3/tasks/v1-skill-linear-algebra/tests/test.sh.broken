@@ -1,0 +1,19 @@
+#!/bin/bash
+mkdir -p /logs/verifier
+reward=0
+if [ -f /app/answer.json ]; then
+  if python3 - <<'EOF'
+import json, sys, math
+exp={"x":3.0,"y":0.0}
+got=json.load(open('/app/answer.json'))
+for k,v in exp.items():
+    if not isinstance(got.get(k),(int,float)):
+        sys.exit("bad type %s" % k)
+    if abs(float(got[k]) - v) > 1e-6:
+        sys.exit("bad value %s" % k)
+sys.exit(0)
+EOF
+  then
+    reward=1
+  fi
+echo "$reward" > /logs/verifier/reward.txt

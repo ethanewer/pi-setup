@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 0,
+    "tool_breadth": 0,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 0,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 1,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 20,
+  "documented_probe": "Covering task for C-97ca5dea (compute round accuracy excluding invalid and unmatched pairs). Distinct from cedar-jetty: file-based CLI reconciliation of two JSON round files with exact numeric matching and a cross-round totals block, instead of an in-module function with tolerance comparison.",
+  "notes": "Single-stage: reconcile two JSON files per round, drop invalid/unmatched pairs, half-up rounding to 3 decimals, null accuracy when no valid pairs. Rubric nonzero for reasoning_depth (pair/validity/boundary logic), adversarial_inputs/hidden_case_generalization (hidden cases probe ties, invalid markers, empty inputs), quantitative_correctness (exact ints and half-up-rounded ratios)."
+}

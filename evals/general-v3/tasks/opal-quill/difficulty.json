@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 0,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 30,
+  "documented_probe": "C-57fdc30e (synthesize and normalize a multitone audio and write a 16-bit wav): reference floor is medium; this covering task exercises the full capability — exact synthesis formula with per-tone phases, seeded dither, exact RMS normalization, 16-bit PCM quantization, standard 44-byte-header wav writing, plus a measurement report. The verifier re-executes the deliverable on three distinct hidden tone specs (single tone, near-Nyquist tone, five tones) and two degenerate specs, checking the header, the ±0.015 RMS band, per-frequency spectral peaks, report agreement, and byte-level determinism.",
+  "notes": "Single-stage DSP synthesis: multitone sine sum with phases, optional seeded dither, RMS normalization to target, int16 quantization into a stdlib-wave mono 16 kHz wav, plus a consistency report. quantitative_correctness=2 (exact sample count, RMS band, peak presence at every requested frequency), adversarial_inputs=2 (degenerate specs must exit non-zero: missing key, all-zero amplitudes), hidden_case_generalization=2 (fresh unseen specs, determinism re-run), modest reasoning_depth/tool_breadth; no dependency chain, no resource pressure."
+}

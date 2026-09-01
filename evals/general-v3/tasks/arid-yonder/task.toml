@@ -1,0 +1,33 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "hard"
+category = "data_processing"
+verifier_kind = "executes-deliverable"
+deliverables = [
+    "/app/parse.py",
+    "/app/out.tsv",
+    "/app/tree.json",
+    "/app/qdp.tsv",
+]
+tags = [
+    "arid-yonder",
+    "data_processing",
+    "derive-extract-a-field-from-tabular-records",
+    "decode-serialized-preference-fixtures-in-multiple-encodings",
+    "extract-city-name-after-the-street-number-line-break",
+    "parse-a-tree-f-directory-listing-into-a-nested-structure-with-named-leaves-and-special-characters",
+    "make-a-qdp-ascii-table-parser-accept-lowercase-command-and-header-lines",
+]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 2400.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096

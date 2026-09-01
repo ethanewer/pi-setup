@@ -1,0 +1,123 @@
+{
+  "timestamp": "TIMESTAMP",
+  "events": [
+    {
+      "rule": "no_thr",
+      "device": "172.20.1.5",
+      "value": 51.0,
+      "line": "2026-04-01T08:00:00Z device=172.20.1.5 metric=temp value=51.0"
+    },
+    {
+      "rule": "no_sev",
+      "device": "172.20.1.5",
+      "value": 51.0,
+      "line": "2026-04-01T08:00:00Z device=172.20.1.5 metric=temp value=51.0"
+    },
+    {
+      "rule": "eq_max",
+      "device": "172.20.1.5",
+      "value": 51.0,
+      "line": "2026-04-01T08:00:00Z device=172.20.1.5 metric=temp value=51.0"
+    },
+    {
+      "rule": "press",
+      "device": "172.20.1.7",
+      "value": 905.25,
+      "line": "2026-04-01T08:02:00Z device=172.20.1.7 metric=pressure value=905.25"
+    },
+    {
+      "rule": "no_thr",
+      "device": "172.20.1.5",
+      "value": 60.5,
+      "line": "2026-04-01T08:03:00Z device=172.20.1.5 metric=temp value=60.5"
+    },
+    {
+      "rule": "no_sev",
+      "device": "172.20.1.5",
+      "value": 60.5,
+      "line": "2026-04-01T08:03:00Z device=172.20.1.5 metric=temp value=60.5"
+    },
+    {
+      "rule": "eq_max",
+      "device": "172.20.1.5",
+      "value": 60.5,
+      "line": "2026-04-01T08:03:00Z device=172.20.1.5 metric=temp value=60.5"
+    },
+    {
+      "rule": "eq_max",
+      "device": "172.20.1.5",
+      "value": 49.9,
+      "line": "2026-04-01T08:04:00Z device=172.20.1.5 metric=temp value=49.9"
+    }
+  ],
+  "statistics": {
+    "no_thr": {
+      "id": "no_thr",
+      "metric": "temp",
+      "max": 50.0,
+      "threshold": 0,
+      "severity": "info",
+      "matches": 2,
+      "unique_ips": 1,
+      "ips": [
+        "172.20.1.5"
+      ]
+    },
+    "no_sev": {
+      "id": "no_sev",
+      "metric": "temp",
+      "max": 50.0,
+      "threshold": 99,
+      "severity": "warn",
+      "matches": 2,
+      "unique_ips": 1,
+      "ips": [
+        "172.20.1.5"
+      ]
+    },
+    "no_metric": {
+      "id": "no_metric",
+      "metric": null,
+      "max": 10.0,
+      "threshold": 1,
+      "severity": "info",
+      "matches": 0,
+      "unique_ips": 0,
+      "ips": []
+    },
+    "bad_max": {
+      "id": "bad_max",
+      "metric": "temp",
+      "max": null,
+      "threshold": 1,
+      "severity": "info",
+      "matches": 0,
+      "unique_ips": 0,
+      "ips": []
+    },
+    "eq_max": {
+      "id": "eq_max",
+      "metric": "temp",
+      "max": 40.0,
+      "threshold": 1,
+      "severity": "low",
+      "matches": 3,
+      "unique_ips": 1,
+      "ips": [
+        "172.20.1.5"
+      ]
+    },
+    "press": {
+      "id": "press",
+      "metric": "pressure",
+      "max": 900,
+      "threshold": 2,
+      "severity": "medium",
+      "matches": 1,
+      "unique_ips": 1,
+      "ips": [
+        "172.20.1.7"
+      ]
+    }
+  }
+}

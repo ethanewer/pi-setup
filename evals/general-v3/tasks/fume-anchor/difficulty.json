@@ -1,0 +1,16 @@
+{
+  "rubric": {
+    "dependent_stages": 0,
+    "tool_breadth": 0,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 0,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 1,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 15,
+  "notes": "Single-stage: combine four scattered artifacts (KEY=VALUE env with comment/last-wins rules, a slot table with exact-name matching, a markdown note hiding the prime, a roster whose active lines are counted) into one integer payload via exact modular arithmetic. Nonzero rubric for reasoning_depth (four interacting rules), adversarial_inputs (comment decoys, near-miss names, duplicated keys/slots), hidden_case_generalization (verifier runs the program on hidden state dirs), and quantitative_correctness (exact payload). No tool breadth, dependency chain, or pressure; buckets to easy."
+}

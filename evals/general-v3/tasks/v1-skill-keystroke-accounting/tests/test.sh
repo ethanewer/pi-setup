@@ -1,0 +1,19 @@
+#!/bin/bash
+mkdir -p /logs/verifier
+reward=0
+if [ -f /app/keylog.json ] && [ -f /app/keylog_summary.json ]; then
+  if python3 - <<'EOF'
+import json, sys
+d = json.load(open('/app/keylog.json'))
+exp = {"total_keystrokes": sum(e['press'] for e in d['events']),
+       "distinct_keys": len({e['key'] for e in d['events']})}
+got = json.load(open('/app/keylog_summary.json'))
+if got != exp:
+    sys.exit('mismatch')
+sys.exit(0)
+EOF
+  then
+    reward=1
+  fi
+fi
+echo "$reward" > /logs/verifier/reward.txt

@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 3,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": null,
+  "notes": "Medium. Three independent reusable file-tree CLIs must each be authored and then RUN on the shipped fixtures to produce the visible output trees (dependent_stages=2 reflects 'write tool -> run it on the tree'). tool_breadth=3 because three distinct contracts each stand on their own (zero-byte leaf instantiation w/ listing parsing + rejection; item-count/cap byte-budget repackaging with split arithmetic and a reassemblable manifest; LF normalization with independent text/binary detection). reasoning_depth=2 from the split-ceil arithmetics, shard packing, and LF/CR normalization rewrite. hidden_case_generalization=3: the verifier dispatches each tool against separate fresh hidden scenarios (deep/ spaced/ dir-flag listings, parent-collision and ..  rejections, multi-shard packs, a >byte-budget file split and exact-boundary, an empty tree, CRLF/lone-CR text, NUL binaries both below and above the 4096 boundary) plus the visible /app fixtures. quantitative_correctness=2 from per-directory item caps, per-file byte caps, part-budget ceilings, and byte-for-byte reassembly/LF checks. Medium floors of all three competencies match the medium bucket."
+}

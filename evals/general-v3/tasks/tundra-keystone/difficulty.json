@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 3,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 3,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": null,
+  "notes": "Three-independent gapped competencies rolled into one workload. dependent_stages=3: the pipeline's gradient-exchange correctness depends on the partition being sound and the per-rank layer assignment contiguous+zero-bias; the async scheduler's cancellation contract depends on a correct started/queued split; the mp entry depends on guarded spawn. adversarial_inputs=3: hidden probes cover world_size > num_layers (empty stages), zero-layer pipelines, cancel-all and run-all triggers, a negative (malformed) trigger, and a conversation with cap larger than the job set. hidden_case_generalization=3: the verifier re-invokes pipeline_parallel.py over fresh (world,layers,d,batch) tuples, re-invokes async_pool.py over fresh (jobs,cap,trigger), and re-executes mp_entry.py with a different pool size; all must be rerunnable from the deliverable scripts. quantitative_correctness=3: the forward must be recomputed from the archived per-layer weights and match the archived output to <1e-4, and the layer coverage of the partition must be exact. reasoning_depth is held at 2 because no single stage is conceptually deep on its own; the difficulty is the breadth of getting all three contracts independently right."
+}

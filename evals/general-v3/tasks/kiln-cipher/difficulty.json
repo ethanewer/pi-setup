@@ -1,0 +1,16 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 1,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 30,
+  "notes": "Agent must build a reusable provisioning tool that generates an RSA key + matching self-signed certificate and emits a combined PEM bundle (key block first, certificate second) plus a DER-sha256 fingerprint, with correct file modes, then run it for the visible identity. Verifier executes /app/mkcert.py on hidden (cn, bits, out-dir) cases and validates every bundle with openssl: block order/count, standalone parse of each block, key/cert public-key match, CN match, key size, 0600 modes, fingerprint. Nonzero rubric for reasoning_depth (PEM concatenation order + armor), tool_breadth (openssl subprocess plumbing), debugging_ambiguity (bundle parse pitfalls), adversarial_inputs/hidden_case_generalization (unseen CNs, both key sizes, missing out-dir), quantitative_correctness (exact fingerprint digest, mode bits), dependent_stages (key -> cert -> bundle -> fingerprint)."
+}

@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 3,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 30,
+  "documented_probe": null,
+  "notes": "Single-stage DSP synthesis pipeline: build a sum-of-sines signal from a spec, optional seeded uniform dither, exact RMS normalization to a dBFS target, int16 quantization and a standards-compliant 44-byte-header wav. Medium floor of C-57fdc30e exercised end to end: the verifier re-executes the deliverable on hidden specs and applies property checks (header fields, exact frame count, RMS inside a 0.02 band, per-tone windowed amplitude consistent with relative amplitudes, spur-free notch frequency), so a wrong level or a missing/extra spectral component fails. Quantitative correctness dominates (3); hidden specs vary sample rate, tone count, dither/seed, level and notch. No tool breadth beyond numpy/wave, no resource pressure; totals bucket to medium."
+}

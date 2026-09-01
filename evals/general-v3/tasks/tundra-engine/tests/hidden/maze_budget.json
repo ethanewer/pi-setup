@@ -1,0 +1,131 @@
+{
+  "cases": [
+    {
+      "id": "hh-ok",
+      "type": "maze",
+      "grid": [
+        "S..",
+        ".#.",
+        "..G"
+      ],
+      "max_turns": 5
+    },
+    {
+      "id": "hh-ok2",
+      "type": "maze",
+      "grid": [
+        ".....",
+        "S...G",
+        "....."
+      ],
+      "max_turns": 4
+    },
+    {
+      "id": "hh-over",
+      "type": "maze",
+      "grid": [
+        "S....G",
+        "######",
+        "......"
+      ],
+      "max_turns": 2
+    },
+    {
+      "id": "hh-tight",
+      "type": "maze",
+      "grid": [
+        "S..",
+        "...",
+        "..G"
+      ],
+      "max_turns": 3
+    },
+    {
+      "id": "hh-unreach",
+      "type": "maze",
+      "grid": [
+        "S..",
+        "###",
+        "..G"
+      ],
+      "max_turns": 50
+    },
+    {
+      "id": "hh-noS",
+      "type": "maze",
+      "grid": [
+        ".G...",
+        "....."
+      ],
+      "max_turns": 5
+    },
+    {
+      "id": "hh-budget-none",
+      "type": "maze",
+      "grid": [
+        "S..",
+        ".#.",
+        "..G"
+      ],
+      "max_turns": 600
+    }
+  ],
+  "expected": {
+    "hh-ok": {
+      "id": "hh-ok",
+      "type": "maze",
+      "reachable": true,
+      "min_turns": 4,
+      "within_budget": true,
+      "moves": "DDRR"
+    },
+    "hh-ok2": {
+      "id": "hh-ok2",
+      "type": "maze",
+      "reachable": true,
+      "min_turns": 4,
+      "within_budget": true,
+      "moves": "RRRR"
+    },
+    "hh-over": {
+      "id": "hh-over",
+      "type": "maze",
+      "reachable": true,
+      "min_turns": 5,
+      "within_budget": false,
+      "moves": "RRRRR"
+    },
+    "hh-tight": {
+      "id": "hh-tight",
+      "type": "maze",
+      "reachable": true,
+      "min_turns": 4,
+      "within_budget": false,
+      "moves": "DDRR"
+    },
+    "hh-unreach": {
+      "id": "hh-unreach",
+      "type": "maze",
+      "reachable": false,
+      "min_turns": -1,
+      "within_budget": false,
+      "moves": ""
+    },
+    "hh-noS": {
+      "id": "hh-noS",
+      "type": "maze",
+      "reachable": false,
+      "min_turns": -1,
+      "within_budget": false,
+      "moves": ""
+    },
+    "hh-budget-none": {
+      "id": "hh-budget-none",
+      "type": "maze",
+      "reachable": true,
+      "min_turns": 4,
+      "within_budget": true,
+      "moves": "DDRR"
+    }
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 3,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 3,
+    "adversarial_inputs": 3,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 3,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 100,
+  "documented_probe": null,
+  "notes": "Five from-scratch board/engine primitives whose hidden checks are exact-answer. reasoning_depth=3: the chess.py deliverable is a full legal-move engine (castling rights with through/into-check restrictions, both-colour en passant, four promotion variants, pin handling) plus mate-in-one detection (the returned subset must be exactly the moves that leave the opponent without a legal reply); this is an genuine interior-stage correctness problem with many interacting rules. quantitative_correctness=3: every deliverable is graded on exact equality -- the chess move set (order-insensitive set), the planner's aligned cumulative rewards, the mahjong per-hand label, and the canonical zero-padded serialization must each match the reference on unseen hidden inputs, so any off-by-one or missing variant fails. adversarial_inputs=3: hidden cases probe castling blocked by a rook-free file, en passant when blocked/unavailable, two-colour promotions, empty/malformed hands (not 14 tiles or bad tile codes), ragged/non-rectangular boards and out-of-range values, malformed (non-list) planner plans, unknown actions, and out-of-bounds/empty game.cell inputs. hidden_case_generalization=3: the same five executables are re-run over hidden inputs (fresh FENs, plan batches, hand files/directories, board lists, cell states) the agent never sees, including per-file aggregation over a whole directory. dependent_stages=2: the mahjong deliverable must both classify and aggregate per-file over a directory; the chess 'mate' path depends on the 'legal' generator being correct. tool_breadth=3: the suite spans plain JavaScript (game.js) with a from-scratch move-gen in Python plus three further Python I/O programs, so a single coherent cross-language implementation is required."
+}

@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 1,
+    "reasoning_depth": 0,
+    "debugging_ambiguity": 0,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 1,
+    "quantitative_correctness": 0,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 15,
+  "documented_probe": "C-06ebb4a9 (change the default login shell of a user and persist it): second independent covering task. The verifier executes the reusable deliverable script on hidden (user, shell) cases and checks the getent passwd lookup reports the new shell with all other account fields untouched, plus clean-failure cases.",
+  "notes": "Small chain: write a validating, idempotent set-shell script, apply the runbook entry persistently, record the outcome. Rubric nonzero for dependent_stages (apply then record), tool_breadth (usermod/getent), adversarial_inputs (nonexistent user, non-executable shell must fail cleanly), hidden_case_generalization (hidden user/shell pairs). Buckets to easy."
+}

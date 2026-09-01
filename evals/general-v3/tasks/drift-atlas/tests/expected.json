@@ -1,0 +1,15 @@
+{
+  "default_spike_trace": {
+    "input": ["/app/morphology.json", "/app/stimulus.json"],
+    "output": "/app/spike-trace.json",
+    "expect": {
+      "dt": 0.01,
+      "tmax": 40.0,
+      "steps": 4000,
+      "soma_spikes": 1,
+      "spike_time_ms": 4.4,
+      "peak_mv_approx": 43.2,
+      "note": "Soma membrane potential crosses +20 mV once; the full trajectory and exact spike list are recomputed by the independent reference and compared within 0.05 mV / 0.15 ms."
+    }
+  }
+}

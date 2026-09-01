@@ -1,0 +1,5 @@
+{"vars":{"x":[0,5],"w":[0,5]},
+ "ops":[{"op":"set","dst":"a","val":20},
+        {"op":"add","dst":"u","a":"x","b":"w"},
+        {"op":"ite","dst":"out","cond":["u","LE",4],"a":"a","b":"u"}],
+ "goal":{"var":"out","eq":9}}

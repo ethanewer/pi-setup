@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 2,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 1,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 1
+  },
+  "expected_expert_time_min": 55,
+  "documented_probe": null,
+  "notes": "Three independent competencies must all be met for full reward. (1) A git post-receive hook must deploy pushed branch trees to /app/deployed/<branch> (mirroring file trees byte-for-byte, updating in place, removing on branch delete, and safely ignoring non-branch refs while never writing outside the served root). (2) A URL normalizer must convert trailing-slash, query-ordering, default-port and case variants to one canonical form and stay idempotent over malformed/blank lines. (3) Each paper in the bundled index must be enumerated from the HTML and its author-maintained repository resolved by cross-referencing the affiliation org against candidate repo URLs; the mapping is validated by re-parsing all papers, including missing-detail and missing-affiliation edge cases. Reasoning depth is high because the deployed tree must exactly mirror the pushed branch trees (byte-equality), and the paper mapping must be derived from parsing + cross-referencing, not from a visible list."
+}

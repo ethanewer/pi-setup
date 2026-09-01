@@ -1,0 +1,42 @@
+#!/usr/bin/env python3
+"""
+sinfo - a lightweight stand-in for a SLURM-cluster node state query.
+
+Reads the current cluster state from /opt/mdsl/state/nodes.json and prints a
+single flexible line summarizing the TOTAL and IDLE node counts, e.g.:
+
+    TOTAL=8 IDLE=3
+
+The MDS operator's /app/monitor_gen.sh parses this line to build the cluster
+monitoring log. The verifier rotates nodes.json between scenarios so the
+operator's log reflects genuinely different clusters.
+"""
+import json
+import os
+import sys
+
+STATE = "/opt/mdsl/state/nodes.json"
+
+
+def main():
+    if not os.path.isfile(STATE):
+        print("TOTAL=0 IDLE=0", flush=True)
+        return
+    try:
+        with open(STATE) as fh:
+            d = json.load(fh)
+        total = int(d.get("total", 0))
+        idle = int(d.get("idle", 0))
+    except Exception as exc:
+        print("TOTAL=0 IDLE=0", flush=True)
+        print("warning: bad state: %r" % exc, file=sys.stderr)
+        return
+    if idle < 0:
+        idle = 0
+    if idle > total:
+        total = idle
+    print("TOTAL=%d IDLE=%d" % (total, idle))
+
+
+if __name__ == "__main__":
+    main()

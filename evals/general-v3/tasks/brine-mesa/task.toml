@@ -1,0 +1,27 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "hard"
+category = "scientific_computing"
+verifier_kind = "executes-deliverable"
+deliverables = ["/app/drift_serial", "/app/drift_omp", "/app/report.json"]
+tags = [
+  "brine-mesa",
+  "C-ceaa9075",
+  "scientific_computing",
+  "particle-simulation-serial-openmp",
+  "spatial-binning-on-logn",
+  "bitwise-deterministic-parallelism",
+]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 2400.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 4
+memory_mb = 2048
+storage_mb = 4096

@@ -1,0 +1,42 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "hard"
+category = "programming"
+verifier_kind = "executes-deliverable"
+deliverables = [
+    "/app/opt.py",
+    "/app/maxsat.py",
+    "/app/quartic.py",
+    "/app/corners.py",
+    "/app/verdicts.py",
+    "/app/compress.py",
+    "/app/model.mps.optimized.txt",
+    "/app/maxsat_solution.json",
+    "/app/quartic_solution.json",
+    "/app/corners.txt",
+    "/app/sat_verdicts.txt",
+    "/app/encode.bin",
+]
+tags = [
+    "zephyr-forge",
+    "programming",
+    "C-93491d5e",
+    "C-a53822b2",
+    "C-e5af363a",
+    "C-51aba888",
+    "C-bfb33430",
+    "C-2d6e424f",
+]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 1800.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096

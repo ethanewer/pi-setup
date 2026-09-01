@@ -1,0 +1,12 @@
+{
+  "raw_body": "{\"text\": \"Please review the draft update\"}",
+  "expect_status": 200,
+  "expect_body": {
+    "label": "normal",
+    "confidence": {
+      "urgent": 0.1111,
+      "normal": 0.7778,
+      "backlog": 0.1111
+    }
+  }
+}

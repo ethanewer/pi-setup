@@ -1,0 +1,9 @@
+[Unit]
+Description=Watcher process monitor
+
+[Service]
+ExecStart=/app/missing_watcher.sh
+Restart=on-failure
+
+[Install]
+WantedBy=default

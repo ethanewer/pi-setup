@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 40,
+  "documented_probe": null,
+  "notes": "Medium. Round-trip a deduplicated content-addressed chunk store back to the exact original tree: parse the manifest, verify every blob against its own SHA-256 digest name, reassemble each file's chunk sequence (honoring repeated digests, shared prefixes, whole-file duplicates and zero-chunk empty files), recreate every declared directory including empty ones, write files at their exact relative paths (unicode/space names), and fail loudly (non-zero, stderr) on missing/mismatched blobs, size mismatches, invalid manifests or unsafe paths. Hidden cases cover multi-chunk binaries, many-to-one chunk sharing, empty files/dirs at depth, and a deliberately corrupted blob that must abort the restore. Exactness is checked by full file-set + per-file SHA-256 comparison, so any name or byte deviation fails the reconstruction assertion. Rubric nonzero for dependent_stages (verify-then-write pipeline), adversarial_inputs/hidden_case_generalization (corrupted store, edge shapes), quantitative_correctness (exact hashes). No resource or interaction pressure."
+}

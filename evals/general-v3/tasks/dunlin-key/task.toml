@@ -1,0 +1,26 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "medium"
+category = "file_operations"
+verifier_kind = "executes-deliverable"
+deliverables = ["/app/pack_index.py", "/app/index.json", "/app/bundle.zip"]
+tags = [
+  "dunlin-key",
+  "file_operations",
+  "binary-re",
+  "deterministic-archive-identity",
+  "C-798c54e6",
+]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 1200.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096

@@ -1,0 +1,28 @@
+#!/bin/bash
+reward=0
+if [ -f /app/outputs.json ]; then
+  if python3 - <<'PYEOF'
+import json
+circ = json.load(open('/app/circuit.json'))
+assigns = json.load(open('/app/assignments.json'))
+def evalnode(op, v):
+    if op=='AND': return 1 if all(v) else 0
+    if op=='OR': return 1 if any(v) else 0
+    if op=='XOR': return v[0]^v[1]
+    if op=='NOT': return 1-v[0]
+exp=[]
+for asg in assigns:
+    vals={}
+    for n in circ['nodes']:
+        a=[(vals[x] if x in vals else asg[x]) for x in n['in']]
+        vals[n['id']]=evalnode(n['op'], a)
+    exp.append([vals[o] for o in circ['outputs']])
+got=json.load(open('/app/outputs.json'))
+assert got==exp, (got, exp)
+PYEOF
+  then
+    reward=1
+  fi
+  then reward=1; fi
+else reward=0; fi
+echo "$reward" > /logs/verifier/reward.txt

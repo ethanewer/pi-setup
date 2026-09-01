@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 0,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 0,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 1,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 35,
+  "documented_probe": "C-446b41c3 (compute the sqrt wasserstein distance from the transport cost): covering task; the reference implementation is the same rooted metric but the scenario and interface differ from the existing task (single-file freight-analytics CLI with dual module/CLI contract and exit-code handling vs a function inside a multi-part modeling task). The verifier fully checks the capability on hidden cases.",
+  "notes": "Two-stage: implement a dual-interface (importable function + CLI) rooted transport-distance module, then run the CLI on the visible fixture to commit its output. Nonzero rubric for dependent_stages (the committed JSON comes from running the module), reasoning_depth (root-clamp and unrooted-bug subtlety), adversarial_inputs/hidden_case_generalization (8 hidden cases: rectangular, larger, all-zero plan, negative dot clamp, int/float cells, 1x1, shape mismatch with exit code 2), and quantitative_correctness (exact rooted distance vs unrooted squared cost). Totals bucket to medium."
+}

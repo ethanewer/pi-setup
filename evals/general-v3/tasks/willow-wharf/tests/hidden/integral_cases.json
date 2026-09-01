@@ -1,0 +1,10 @@
+{
+  "cases": [
+    {"expr": "x**5", "expect": "1/6"},
+    {"expr": "sqrt(x)", "expect": "2/3"},
+    {"expr": "x**4 + x", "expect": "7/10"},
+    {"expr": "x**3 - 2*x + 5", "expect": "17/4"},
+    {"kind": "error", "expr": "%invalid expression!!"}
+  ],
+  "note": "hidden definite integrals over [0,1]; the final case is a malformed expression that must be rejected with exit status 2."
+}

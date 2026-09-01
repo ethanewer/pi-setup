@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 0,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 0,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 1,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 35,
+  "documented_probe": "C-349c1e3e (bulk-load a csv file into the database through the client copy command): this task directly covers the competency on the required second independent scenario; the verifier fully checks the capability (client-copy statement evidence plus loaded rows) on hidden cases.",
+  "notes": "Single-stage: drive the sqlite3 CLI client-side copy (.import) to bulk-load a header-bearing CSV into a prescribed table, handling quoted commas, escaped quotes, embedded newlines, CRLF, negative values, header-only and single-row CSVs, and separate read-only input / writable output directories. The verifier enforces both the resulting database contents and the .import statement evidence, so loads by any other method fail. Rubric is nonzero for tool_breadth (subprocess + sqlite3 CLI), reasoning_depth (header handling and CLI fallback), adversarial_inputs/hidden_case_generalization (four hidden scenarios), and quantitative_correctness (exact rows/counts). Totals bucket to medium."
+}

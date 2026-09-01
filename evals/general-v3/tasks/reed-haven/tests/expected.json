@@ -1,0 +1,77 @@
+{
+  "actions": [
+    {
+      "cmd": "post tide-chat keeper@reedhaven.example",
+      "result": "accepted"
+    },
+    {
+      "cmd": "post tide-chat stranger@elsewhere.example",
+      "result": "rejected"
+    },
+    {
+      "cmd": "subscribe tide-chat NEWFACE@Example.org",
+      "result": "ok"
+    },
+    {
+      "cmd": "subscribe tide-chat newface@example.org",
+      "result": "duplicate"
+    },
+    {
+      "cmd": "subscribe tide-chat a1@x.example",
+      "result": "full"
+    },
+    {
+      "cmd": "subscribe tide-chat a2@x.example",
+      "result": "full"
+    },
+    {
+      "cmd": "unsubscribe tide-chat nobody@x.example",
+      "result": "not-member"
+    },
+    {
+      "cmd": "subscribe heron-announce wanderer@x.example",
+      "result": "closed"
+    },
+    {
+      "cmd": "unsubscribe heron-announce ada.l@example.net",
+      "result": "ok"
+    },
+    {
+      "cmd": "unsubscribe heron-announce ada.l@example.net",
+      "result": "not-member"
+    },
+    {
+      "cmd": "post heron-announce keeper@reedhaven.example",
+      "result": "accepted"
+    },
+    {
+      "cmd": "subscribe pond-unknown x@y.example",
+      "result": "unknown-list"
+    },
+    {
+      "cmd": "post no-such a@b.example",
+      "result": "unknown-list"
+    },
+    {
+      "cmd": "unsubscribe no-such a@b.example",
+      "result": "unknown-list"
+    }
+  ],
+  "rosters": {
+    "heron-announce": [
+      "grace@hopper.example",
+      "keeper@reedhaven.example",
+      "linm@pond.example",
+      "tide-fan42@stream.example"
+    ],
+    "tide-chat": [
+      "grace@hopper.example",
+      "newface@example.org",
+      "tide-fan42@stream.example"
+    ]
+  },
+  "site": {
+    "domain": "reedhaven.example",
+    "owner": "keeper@reedhaven.example"
+  }
+}

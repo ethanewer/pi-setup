@@ -1,0 +1,24 @@
+#!/bin/bash
+mkdir -p /logs/verifier
+reward=0
+if [ -f /app/doubles.json ]; then
+  if python3 - <<'EOF'
+import re,json,sys
+words=[w.strip() for w in open('/app/words.txt') if w.strip()]
+pat=re.compile(r'(\w)\1')
+matched=[]; letters={}
+for w in words:
+    m=pat.search(w)
+    if m: matched.append(w); letters[w]=m.group(1)
+exp={"matched":matched,"letters":letters}
+got=json.load(open('/app/doubles.json'))
+if got.get('matched')!=exp['matched']: sys.exit("matched mismatch")
+lt=got.get('letters',{})
+for k,v in exp['letters'].items():
+    if lt.get(k)!=v: sys.exit("letter mismatch %s"%k)
+sys.exit(0)
+EOF
+  then
+    reward=1
+  fi
+echo "$reward" > /logs/verifier/reward.txt

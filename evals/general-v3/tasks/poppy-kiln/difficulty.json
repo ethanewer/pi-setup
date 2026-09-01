@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 0,
+    "tool_breadth": 0,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 0,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 1,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 25,
+  "documented_probe": "",
+  "notes": "Single-stage: parse a sha256sum-style catalog (hex + two-space + path with spaces), validate strictly (malformed, absolute, '..', file/dir conflicts), then materialize every leaf as a zero-byte file with implied directories, idempotently. Exercises C-5c0f5e7a (create zero-byte files for all leaf entries in the listing) at medium via strict pre-validation and truncate-to-zero semantics; hidden cases cover deep nesting, duplicates, comments-only catalogs, and four fatal refusals where nothing may be written. Small nonzero rubric for reasoning_depth, adversarial_inputs, hidden_case_generalization, quantitative_correctness (exact leaf-set equality incl. size 0)."
+}

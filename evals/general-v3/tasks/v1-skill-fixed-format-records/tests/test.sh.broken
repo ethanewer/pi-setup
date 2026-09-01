@@ -1,0 +1,30 @@
+#!/bin/bash
+mkdir -p /logs/verifier
+
+reward=0
+if [ -f /app/records.json ]; then
+  if python3 - <<'EOF'
+import json
+with open('/app/people.dat') as f:
+    lines = f.read().split('\n')
+lines = [l for l in lines if l]
+
+with open('/app/records.json') as f:
+    got = json.load(f)
+
+assert len(got) == 3, got
+expected = []
+for line in lines:
+    expected.append({
+        "id": int(line[0:4]),
+        "name": line[4:16].strip(),
+        "age": int(line[16:19].strip()),
+        "city": line[19:29].strip(),
+    })
+for g, e in zip(got, expected):
+    assert g == e, (g, e)
+EOF
+  then
+    reward=1
+  fi
+echo "$reward" > /logs/verifier/reward.txt

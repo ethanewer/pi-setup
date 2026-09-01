@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 1,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 30,
+  "documented_probe": null,
+  "notes": "Medium (total 8). Single-stage with a short dependency chain: the CSV must be bulk-loaded through the SQLite client-side COPY facility (sqlite3 CLI `.import` into a staging table), staged rows cast into the typed target table, and the aggregates in summary.json computed from the loaded database. tool_breadth=1 (driving the sqlite3 CLI client from Python), dependent_stages=1 (load -> typed transfer -> SQL aggregates), reasoning_depth=1 / debugging_ambiguity=1 for the staging+cast step and header handling, adversarial_inputs=1 / hidden_case_generalization=1 (three hidden scenario directories with different data), quantitative_correctness=2 (exact row sets, typed columns, per-metric counts/averages, and the loaded_rows evidence all compared). Totals bucket to medium."
+}

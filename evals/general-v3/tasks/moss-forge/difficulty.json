@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 0,
+    "tool_breadth": 1,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 0,
+    "hidden_case_generalization": 1,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 30,
+  "documented_probe": "",
+  "notes": "Single-stage debugging: a release (-O2) build of a custom first-fit free-list pool allocator segfaults because the split path leaves the remainder block's free-list link unwritten, so it inherits stale payload bytes; the next allocation that walks past it dereferences garbage. The agent must diagnose with gdb/objdump/repro workloads, fix only /app/forge.c (main.c and Makefile are hash-protected), rebuild, and satisfy an independent reference simulation of the driver checksum on the visible workload plus three hidden workloads (reuse-heavy, shrink-split, churn) that all reproduce the crash on the shipped binary. Exercises C-7991a29a at medium. Rubric nonzero for tool_breadth (debuggers/build), reasoning_depth and debugging_ambiguity (heap bookkeeping corruption), hidden_case_generalization, quantitative_correctness (exact checksum)."
+}

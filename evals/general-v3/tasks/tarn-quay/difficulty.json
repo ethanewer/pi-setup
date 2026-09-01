@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 0,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 30,
+  "documented_probe": null,
+  "notes": "Medium. Single-stage: merge three snapshot export formats (CSV with RFC quoting, JSONL, JSON array), normalize types (zero-padded id/value strings -> int, whitespace-padded names stripped), skip malformed rows, resolve duplicate ids by min (value, name), and serialize one complete JSON array sorted ascending by id. Adversarial_inputs=2 (quoted/comma names, malformed rows, zero-padding, negatives, empty dir); hidden_case_generalization=2 (four distinct hidden snapshot sets incl. empty dir and reverse-ordered sources); quantitative_correctness=1 (exact content/order match); tool_breadth=1 (csv/json parsing); reasoning_depth=1 and debugging_ambiguity=1 (dedup tie-breaking). No dependency chain, environment pressure, or statefulness; totals bucket to medium. Covers C-5df6a315 (JSON list export sorted by primary key) via distinct asserts on types, order, duplicates, and completeness."
+}

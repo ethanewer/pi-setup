@@ -1,0 +1,16 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 3,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 50,
+  "notes": "Covering task for C-fdb58e16 (invoke the cipher on chosen plaintext within a strict time budget): recover the preimage of a Pearl32 ciphertext under an unknown-at-authoring key by enumerating the full 30-bit block space with a bulk reimplementation of the public round function (numpy-vectorized or compiled C) within 90 seconds per case. Rubric: resource_pressure high (strict per-case wall-clock budget; naive per-query or pure-python enumeration times out), reasoning_depth (translating the Feistel spec into array ops with correct modular arithmetic), adversarial_inputs (hidden keys/targets never seen by the agent; modified reference cipher is rejected by hash; preimage verified with an embedded authoritative implementation), tool_breadth (numpy/gcc, hex I/O, JSON schema), hidden_case_generalization (2 unseen key/target pairs)."
+}

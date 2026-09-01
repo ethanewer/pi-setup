@@ -1,0 +1,13 @@
+#!/bin/bash
+# cluster_probe - refreshes a cluster-state file with the current total and idle
+# node counts. The state file is two plain "key=value" lines:
+#     total=<n>
+#     idle=<n>
+# Each call advances a counter so successive samples drift (a live cluster).
+state="${1:-/app/data/cluster_state}"
+n="$(cat /app/data/probe_count 2>/dev/null || echo 0)"
+n=$((n + 1))
+echo "$n" > /app/data/probe_count
+total=$((24 + n))
+idle=$((total - 3 - (n % 5)))
+printf 'total=%d\nidle=%d\n' "$total" "$idle" > "$state"

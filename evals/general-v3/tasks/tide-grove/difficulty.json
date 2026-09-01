@@ -1,0 +1,16 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 0,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 1,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 30,
+  "notes": "Single pipeline stage with coupled artifacts: a config-driven, deterministic trainer that must save a REAL trained state_dict at <ckpt_root>/iter-<N>/model.pt where N (and hidden width, lr, seed) come from the config file and the feature dimension from the CSV header — hidden cases vary all four plus the dims (10/24/6), so any hard-coded count/shape/path fails. The verifier executes the deliverable on visible + 3 hidden cases and checks: snapshot existence at the configured iteration node, loadability with weights_only=True, exactly the four tensors of the two Linear layers by shape, finiteness/non-degeneracy/size bounds (no dummy or oversized weights), meta.json consistency, holdout + train accuracy >= 0.85, printed final_accuracy, and tensor-for-tensor determinism across two fresh runs plus equality with the delivered visible snapshot. Nonzero rubric for dependent_stages (train -> save -> reload), reasoning_depth (shape-driven state-dict contract, seeded full-batch SGD), debugging_ambiguity (determinism + exact iteration count), adversarial_inputs (unseen configs/dims), hidden_case_generalization, quantitative_correctness (accuracy thresholds)."
+}

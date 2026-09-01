@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 0,
+    "tool_breadth": 0,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 0,
+    "hidden_case_generalization": 1,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 1,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 20,
+  "documented_probe": "",
+  "notes": "Single-stage: debug an unknown quantity (sediment depth) reachable only through a monotone prefix oracle with two endpoints, under a hard 28-call budget, so exponential bracketing plus binary search is required and a linear scan fails. Exercises C-d6eae9b8 (binary-search a prefix oracle under a strict call budget) at easy: the verifier independently recomputes the true depth, replays every logged probe against the instrument for consistency, enforces calls<=budget and both-endpoint usage. Small nonzero rubric for reasoning_depth (bracketing+search), debugging_ambiguity (unknown L, derived property), interaction_statefulness (probe transcript must match reality), hidden_case_generalization and quantitative_correctness."
+}

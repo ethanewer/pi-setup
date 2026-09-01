@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 1,
+    "quantitative_correctness": 0,
+    "resource_pressure": 0,
+    "interaction_statefulness": 1,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 35,
+  "documented_probe": "C-ac4a9918 (declare the mailing-list configuration in the canonical file): the second covering task; the verifier fully checks the capability — the canonical config path, its documented semantics, and the live daemon honoring it after an idempotent provision script runs on visible and hidden specs.",
+  "notes": "Medium: write an idempotent provisioner that renders a spec CSV into the canonical /etc/loopd/lists.conf (documented INI-like semantics: last-section-wins, enabled only on exact 'true', members in config order), signal the already-running daemon (SIGHUP via pidfile, no restart), and emit a live-state report. Hidden cases re-execute the provisioner on other specs (reordered lists, tagged member addresses, disabled lists, an empty spec), so hard-coded lists fail. Rubric nonzero for dependent stages (config -> reload -> verify), tool breadth (signals/sockets), reasoning depth, debugging ambiguity (canonical path + reload semantics), adversarial inputs (empty spec, disabled lists, verbatim tagged addresses), hidden-case generalization, and interaction statefulness (live daemon)."
+}

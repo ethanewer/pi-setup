@@ -1,0 +1,6 @@
+{
+  "case": "sample.conf",
+  "input": "/app/sample.conf",
+  "stdout": "sum:alpha=15\nsum:beta=4\nsum:gamma=7\nerrors:0\n",
+  "notes": "Visible-case expectation. Malformed-line, CRLF/no-trailing-newline, uppercase-vs-lowercase + leading-digit/malformed-value, and all-malformed scenarios are covered by hidden cases in tests/hidden/."
+}

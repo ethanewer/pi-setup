@@ -1,0 +1,10 @@
+{
+  "rules": [
+    {"id": "r_ok", "pattern": "denied"},
+    {"id": "r_zero", "pattern": "nevermatch", "threshold": 0, "severity": "info"},
+    {"id": "r_badpat", "pattern": 42, "threshold": 3, "severity": "high"},
+    {"id": "r_badre", "pattern": "[unclosed", "threshold": 2, "severity": "low"},
+    {"pattern": "no id rule", "threshold": 1},
+    "not-an-object"
+  ]
+}

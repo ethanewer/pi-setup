@@ -1,0 +1,32 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "hard"
+category = "system_administration"
+verifier_kind = "executes-deliverable"
+deliverables = [
+  "/app/run.sh",
+  "/app/guest.iso",
+  "/app/serial.log",
+]
+tags = [
+  "larch-hearth",
+  "system_administration",
+  "C-cfacc70b",
+  "C-6bcbc027",
+  "C-01fe75ac",
+  "C-9e0d7397",
+  "C-4e83076b",
+]
+
+[verifier]
+timeout_sec = 700.0
+
+[agent]
+timeout_sec = 1800.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 2
+memory_mb = 3072
+storage_mb = 8192

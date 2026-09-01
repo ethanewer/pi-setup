@@ -1,0 +1,16 @@
+{
+  "rubric": {
+    "dependent_stages": 0,
+    "tool_breadth": 0,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 0,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 1,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 20,
+  "notes": "Single-stage: author a self-contained importable package /app/dotkit whose root module exposes dot() (scalar product of two numeric sequences) with a documented contract (empty sequences, length mismatch ValueError, no input mutation). The isolation-copy import check rules out depending on the frozen loose module /app/dotlib.py. Nonzero rubric for reasoning_depth (package structure + self-containment), adversarial_inputs and hidden_case_generalization (12 hidden numeric/edge/error cases run in fresh interpreters), and quantitative_correctness (exact numeric results). No tool breadth, dependency chain, environment pressure, or statefulness; totals bucket to medium."
+}

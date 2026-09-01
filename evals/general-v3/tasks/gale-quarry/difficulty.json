@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 2,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 50,
+  "documented_probe": "None.",
+  "notes": "Hard: author a single-source O(n) spatial-binned particle update (counting/COM binning then O(1) per-particle motion with a live scalar recurrence), compile it into serial and genuinely OpenMP builds, and ship a two-mode driver whose report is cross-checked by re-running the binaries. The verifier inspects the OpenMP binary for GOMP_parallel/libgomp (an unthreaded or stub binary fails inspection), demands bit-identical HASH/MOVE across builds, positive MOVE on MOTION=1 scenarios (genuine motion), a 16*N-byte positions file, and schema-exact result.json across hidden scenarios including a degenerate N=4 case."
+}

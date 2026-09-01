@@ -1,0 +1,11 @@
+{
+  "comment": "Numerical-stability hidden scenarios for framework.attention_softmax (fp64). Each 'case' is a bag of raw attention scores; weights over `axis` must stay finite, sum to 1, and be strongly normalized.",
+  "cases": [
+    {"logits": [[1e4, 2e4, 3e4]], "axis": 1},
+    {"logits": [[-1e4, -5e3, 0.0, 5e3, 1e4]], "axis": 1},
+    {"logits": [[1e-300, 1e-300, 1e-300, 1e-300]], "axis": 1},
+    {"logits": [[5.0]], "axis": 1},
+    {"logits": [[3.0, -3.0, 0.1], [-120.0, 88.0, 0.0], [1e-9, -1e-9, 1e-9]], "axis": 1},
+    {"logits": [[7e3, -7e3], [-7e3, 7e3], [0.0, 0.0]], "axis": 1}
+  ]
+}

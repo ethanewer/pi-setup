@@ -1,0 +1,27 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "medium"
+category = "debugging"
+verifier_kind = "executes-deliverable"
+deliverables = ["/app/sigdeck/windowing.py"]
+tags = [
+  "juniper-latch",
+  "debugging",
+  "binary-re",
+  "C-56dccd5f",
+  "single-sanctioned-file",
+  "repo-integrity",
+]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 1200.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096

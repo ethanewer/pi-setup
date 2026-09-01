@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "chunk_size": 96,
+  "digest": "sha256",
+  "entries": [
+    {
+      "path": "a/b/c/d/deep.txt",
+      "size": 97,
+      "chunks": [
+        "f2f8fa01720b1cf91cc7291d82ab674f25a048ff9e6bf8573eeda15ba3c5538a",
+        "2017ff3461395672aa0aa4f64894fd2f95a4b120e2690e8951656d79adc2eed2"
+      ]
+    },
+    {
+      "path": "empty1.dat",
+      "size": 0,
+      "chunks": []
+    },
+    {
+      "path": "empty2.dat",
+      "size": 0,
+      "chunks": []
+    },
+    {
+      "path": "one.dat",
+      "size": 1,
+      "chunks": [
+        "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d"
+      ]
+    },
+    {
+      "path": "sub/short.cfg",
+      "size": 10,
+      "chunks": [
+        "d5c5f09b69f25bf5059606bc891a4bdaac96e4ba058fc001cab9a8a4b9ee7c39"
+      ]
+    },
+    {
+      "path": "sub/two-byte.dat",
+      "size": 2,
+      "chunks": [
+        "2689367b205c16ce32ed4200942b8b8b1e262dfc70d9bc9fbc77c49699a4f1df"
+      ]
+    },
+    {
+      "path": "z-last/exactly-one-chunk.bin",
+      "size": 96,
+      "chunks": [
+        "f0839fe47c5dbc1c73911567993df207f84d51f4f7c7281401d4d5f7ab772cef"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "scenario": "gale-jetty visible close-out",
+  "expected_mart": [
+    [500.0, 20.0, 11960.0],
+    [900.0, 30.0, 21390.0],
+    [700.0, 25.0, 16675.0],
+    [1500.0, 99.0, 36777.0],
+    [300.0, 11.0, 7153.0]
+  ],
+  "expected_mismatch": "404",
+  "expected_ranked": [
+    {"id": "C5", "metric": 50.0, "target": 50.0, "distance": 0.0, "score": 1.0},
+    {"id": "C1", "metric": 45.0, "target": 50.0, "distance": 5.0, "score": 0.166667},
+    {"id": "C3", "metric": 75.0, "target": 50.0, "distance": 25.0, "score": 0.038462}
+  ],
+  "expected_ledger_invoice": [
+    "inv_alpha.txt", "inv_beta.txt", "inv_gamma.txt", "inv_delta.txt", "inv_omega.txt"
+  ],
+  "expected_ledger_other": ["memo_zeta.txt", "memo_theta.txt"],
+  "prompt_count": 5
+}

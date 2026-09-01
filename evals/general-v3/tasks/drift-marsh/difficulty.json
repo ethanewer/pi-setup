@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 1,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 25,
+  "documented_probe": null,
+  "notes": "Covers C-e37bcb4d (configure a single-node cluster to listen on a designated port, floor easy) independently of brisk-grove: a Java-properties core+site pair instead of a single XML file, a Python store daemon instead of a JVM jar, two roles (namenode/datanode, rpc.port and rpc.port+1) instead of three-plus-gateway, different designated port (24418 vs 18021), and replication-factor/datanode validation baked into the daemon so an empty or miswritten binding string means the role never binds. hidden_case_generalization=2 from genuinely different hidden config directories (alternative designated port, comment/whitespace-heavy formatting, and a deliberately broken config that must make start_cluster.sh fail loudly within its bounded wait); interaction_statefulness=1 from booting long-lived daemon processes and polling ready markers; dependent_stages=1 because the boot only succeeds after both config files are right."
+}

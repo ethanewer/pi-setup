@@ -1,0 +1,21 @@
+# Gullhaven Tide Observatory -- service stack description (compose-style).
+# The `tidedb` service is a PostgreSQL instance provisioned for this exercise.
+services:
+  tidedb:
+    image: postgres:16
+    hostname: tidedb
+    environment:
+      POSTGRES_DB: tidehouse
+      POSTGRES_USER: gauge_reader
+      POSTGRES_PASSWORD: "Tide-Gauge-9143"
+    ports:
+      - "127.0.0.1:5544:5432"
+    networks:
+      default: {}
+    healthcheck:
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-p", "5544"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+networks:
+  default: {}

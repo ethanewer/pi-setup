@@ -1,0 +1,21 @@
+{
+  "kind": "closure",
+  "id": "h1-closure-edges",
+  "cases": [
+    {
+      "start": -64,
+      "steps": [["inc", 5], ["dec", 120], ["inc", 1000], ["dec", -7]],
+      "expected": [-59, -179, 821, 828]
+    },
+    {
+      "start": 0,
+      "steps": [["inc", 0], ["dec", 0]],
+      "expected": [0, 0]
+    },
+    {
+      "start": 3,
+      "curry": {"a": 4, "b": -2, "expect": 2},
+      "recursion": [["even", 12, true], ["odd", 11, true], ["even", -6, true], ["odd", -7, true], ["odd", 0, false]]
+    }
+  ]
+}

@@ -1,0 +1,76 @@
+{
+ "capacity": 4,
+ "rate": 1,
+ "shapes": [
+  {
+   "id": 0,
+   "compatible": [
+    1
+   ]
+  },
+  {
+   "id": 1,
+   "compatible": [
+    0,
+    2
+   ]
+  },
+  {
+   "id": 2,
+   "compatible": [
+    1
+   ]
+  }
+ ],
+ "requests": [
+  {
+   "id": 0,
+   "arrival": 0,
+   "shape": 0,
+   "tokens": 1,
+   "deadline": 3
+  },
+  {
+   "id": 1,
+   "arrival": 0,
+   "shape": 0,
+   "tokens": 2,
+   "deadline": 4
+  },
+  {
+   "id": 2,
+   "arrival": 0,
+   "shape": 1,
+   "tokens": 3,
+   "deadline": 3
+  },
+  {
+   "id": 3,
+   "arrival": 2,
+   "shape": 2,
+   "tokens": 1,
+   "deadline": 5
+  },
+  {
+   "id": 4,
+   "arrival": 2,
+   "shape": 2,
+   "tokens": 2,
+   "deadline": 6
+  },
+  {
+   "id": 5,
+   "arrival": 3,
+   "shape": 0,
+   "tokens": 1,
+   "deadline": 7
+  },
+  {
+   "id": 6,
+   "arrival": 4,
+   "shape": 1,
+   "tokens": 2,
+   "deadline": 8
+  }
+ ]
+}

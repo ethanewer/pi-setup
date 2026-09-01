@@ -1,0 +1,28 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "hard"
+category = "programming"
+verifier_kind = "executes-deliverable"
+deliverables = ["/app/fit.py", "/app/fit_result.json"]
+tags = [
+  "marlin-rig",
+  "C-b2fceb71",
+  "programming",
+  "ml-inference",
+  "feature-matching",
+  "ransac-geometric-fit",
+  "degenerate-fallback",
+]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 1800.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096

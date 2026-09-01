@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 1,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 30,
+  "documented_probe": null,
+  "notes": "Medium: author a C program from a precise spec (PGM P2 token parsing with comments, kernel header format, clamped-border convolution with floor-center offset), compile it to a native ELF binary at a fixed path, and honor a fixed positional argument order (weights then image) with strict usage(2)/error(1) handling. The verifier executes the binary on hidden kernels/images including swapped-order, wrong-arg-count, and malformed-input cases. Rubric total 11 -> medium."
+}

@@ -1,0 +1,9 @@
+task: cedar_mcq
+runner: mcq
+dataset: /tests/hidden/mcq_h.json
+query_column: query
+title_column: title
+gold_column: gold
+metric: acc_mcq
+labels: [celadon, travertine, porphyry, obsidian]
+template: "UseCedarMCQ query context={query} title={title} gold={c0}|{c1}|{c2}|{c3} ?"

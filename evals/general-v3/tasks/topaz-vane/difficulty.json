@@ -1,0 +1,16 @@
+{
+  "rubric": {
+    "dependent_stages": 0,
+    "tool_breadth": 0,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 0,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 1,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 30,
+  "notes": "Single-stage: keyword-token rule matching across multiple logs, per-rule match counts and sorted deduped from= IPs, threshold firing, and emission of two exact-schema JSON artifacts (alert.json with timestamp+alerts, report.json with events+statistics). Rubric nonzero for reasoning_depth (schema assembly + event ordering), adversarial_inputs (malformed rules files, missing fields, empty logs), hidden_case_generalization (three hidden cases), and quantitative_correctness (counts recomputed independently by the verifier)."
+}

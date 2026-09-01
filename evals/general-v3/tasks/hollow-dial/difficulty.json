@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 3,
+    "resource_pressure": 1,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 95,
+  "documented_probe": null,
+  "notes": "Hard bucket (18/30). Three machine/binary-level competencies bundled in one container, each with its own deliverable that the verifier independently re-executes. (1) C-a1a5f09e: classify a binary's kernel/format by reading header fields alone -- the hidden set spans a legacy PDP-11 a.out, a native x86-64 ELF, a foreign MIPS ELF, a truncated ELF (must not crash) and a plain-text file (must return unknown), so the classifier must generalise and degrade gracefully. (2) C-4f1f7a1d: author a faithful MIPS32 ELF interpreter in C (load segments, decode the instruction stream, emulate registers/memory, guest syscall ABI); the verifier recompiles /app/mips_interp.c from scratch and runs it on the visible sample plus four distinct hidden ELF programs (arithmetic+byte stores, data+counted loop, immediate exit, byte-load reverse loop) comparing stdout byte-for-byte, and on a hidden ELF containing an unsupported opcode that must be rejected (exit 3 + stderr) -- misemulated instructions fail. (3) C-90fab5c1: eval.py is an interpreter for the 'Liz' Lisp; the verifier runs each hidden target directly AND wired through a one-extra-level self-interpreter harness and requires byte-identical output, so the evaluator must implement closures/define/lambda/if/quote/begin/primitives and self-interpretation correctly. reasoning_depth 3 (two instruction emulators: MIPS decode/execute bus and a meta-circular Lisp evaluator), hidden_case_generalization 3 (three independent hidden suites), adversarial_inputs 2 (malformed/truncated/unsupported/div-by-zero cases), quantitative_correctness 3 (byte-exact output)."
+}

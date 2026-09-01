@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 1,
+    "quantitative_correctness": 1,
+    "resource_pressure": 2,
+    "interaction_statefulness": 1,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 30,
+  "documented_probe": null,
+  "notes": "Medium web task covering C-84b8017c (inputs scaling to thousands of assets): the verifier replays a 6,000-asset hidden portfolio plus a 1,500-asset visible fixture against the delivered Flask service, requiring linear-time ingest, exact per-file-order float aggregation, deterministic top-10 tie-breaking, zero-total and empty-portfolio edge cases, strict 400/404 validation (bools and non-finite numbers rejected), and a generated /app/summary.json deliverable. resource_pressure=2 for the scale dimension; remaining rubric is intentionally light so the total buckets to medium."
+}

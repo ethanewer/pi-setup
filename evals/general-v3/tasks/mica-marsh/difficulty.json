@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 0,
+    "tool_breadth": 0,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 1,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 1,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 50,
+  "documented_probe": "C-cec73e0d (extract the weight matrix of a relu mlp from forward queries): the verifier re-runs the delivered extract_rows under a hard query budget against the visible fixture plus two hidden fixtures with different in_dim/unit counts/signs, checking every row v_i*w_i up to permutation and nonzero per-row scaling with exactly n_units rows. Verifier fully checks the capability.",
+  "notes": "Single-stage scientific_computing task: recover the scaled input rows of a one-hidden-layer ReLU network through the scalar query channel only. Requires piecewise-linear reasoning (axis scans, kink localization, gradient-difference row recovery, sign/permutation ambiguity, dedup) within a query budget that rules out brute force. Nonzero rubric for reasoning_depth, debugging_ambiguity, adversarial_inputs, hidden_case_generalization (two fresh fixtures), quantitative_correctness (row matching to tolerance), interaction_statefulness (query budget); buckets to hard."
+}

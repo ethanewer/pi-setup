@@ -1,0 +1,1 @@
+# pure theme for the framework.

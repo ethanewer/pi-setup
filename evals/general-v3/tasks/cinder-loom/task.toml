@@ -1,0 +1,29 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "hard"
+category = "security"
+verifier_kind = "executes-deliverable"
+deliverables = [
+  "/app/carve.py",
+  "/app/recovered",
+]
+tags = [
+  "cinder-loom", "security",
+  "C-38bb2e3e",
+  "deleted-file-recovery",
+  "binary-directory-carving",
+  "clean-dir-materialization",
+]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 1800.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096

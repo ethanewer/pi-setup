@@ -1,0 +1,16 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "notes": "Reduced-seed subkey recovery: implement the 3-round cobalt SPN, rank the 4096 candidate seeds by a linear-approximation bias statistic over the known plaintext/ciphertext pairs, confirm by re-encryption, then decrypt every target block. The tool is imported (recover_seed must handle comments/mixed-case hex and return -1 on malformed/missing input) and re-executed on hidden scenarios with different seeds (including 0 and 4095) and payloads. Nonzero dependent_stages (pairs -> bias ranking -> confirmation -> decryption -> record files), reasoning_depth (linear cryptanalysis + SPN inversion), adversarial_inputs/hidden_case_generalization, quantitative_correctness (exact seed, exact plaintext hex and ASCII record)."
+}

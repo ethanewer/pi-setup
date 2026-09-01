@@ -1,0 +1,20 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "hard"
+category = "programming"
+verifier_kind = "executes-deliverable"
+deliverables = ["/app/eval.py", "/app/moves.fen.rules", "/app/gate_net.txt", "/app/simulate.py"]
+tags = ["umber-gasket", "programming", "C-90fab5c1", "C-927aa2ec", "C-fef928b0", "C-26787398"]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 1800.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096

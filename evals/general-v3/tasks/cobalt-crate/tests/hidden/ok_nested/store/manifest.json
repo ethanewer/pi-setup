@@ -1,0 +1,135 @@
+{
+  "format": "crate-v1",
+  "chunk_size": 1024,
+  "buckets": 8,
+  "files": [
+    {
+      "path": "a/b/c/three.dat",
+      "size": 942,
+      "sha256": "f498719882d5cd438e164d87451dd05bcaf9d03e49164f433dcc24817509589d",
+      "chunks": [
+        {
+          "bucket": 5,
+          "offset": 0,
+          "length": 942
+        }
+      ]
+    },
+    {
+      "path": "a/b/two.txt",
+      "size": 2048,
+      "sha256": "ebdf6e5999be272c66881adf12358e341385ec8f291cecaf293af9fb8b166c54",
+      "chunks": [
+        {
+          "bucket": 4,
+          "offset": 0,
+          "length": 1024
+        },
+        {
+          "bucket": 7,
+          "offset": 0,
+          "length": 1024
+        }
+      ]
+    },
+    {
+      "path": "a/one.bin",
+      "size": 1967,
+      "sha256": "d3c0f7d8dc413be89e08416c4ad64db63a2968b79c05d69d23730754e36aee48",
+      "chunks": [
+        {
+          "bucket": 3,
+          "offset": 0,
+          "length": 1024
+        },
+        {
+          "bucket": 6,
+          "offset": 0,
+          "length": 943
+        }
+      ]
+    },
+    {
+      "path": "deep/1/2/3/4/leaf.txt",
+      "size": 7615,
+      "sha256": "8a717b545efaf5b426b5db85c2d893640046f408b5eb366768c56a82ddc2206c",
+      "chunks": [
+        {
+          "bucket": 2,
+          "offset": 0,
+          "length": 1024
+        },
+        {
+          "bucket": 5,
+          "offset": 942,
+          "length": 1024
+        },
+        {
+          "bucket": 0,
+          "offset": 0,
+          "length": 1024
+        },
+        {
+          "bucket": 3,
+          "offset": 1024,
+          "length": 1024
+        },
+        {
+          "bucket": 6,
+          "offset": 943,
+          "length": 1024
+        },
+        {
+          "bucket": 1,
+          "offset": 0,
+          "length": 1024
+        },
+        {
+          "bucket": 4,
+          "offset": 1024,
+          "length": 1024
+        },
+        {
+          "bucket": 7,
+          "offset": 1024,
+          "length": 447
+        }
+      ]
+    },
+    {
+      "path": "empty2.bin",
+      "size": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "chunks": []
+    },
+    {
+      "path": "single.b",
+      "size": 1,
+      "sha256": "e7cf46a078fed4fafd0b5e3aff144802b853f8ae459a4f0c14add3314b7cc3a6",
+      "chunks": [
+        {
+          "bucket": 0,
+          "offset": 1024,
+          "length": 1
+        }
+      ]
+    },
+    {
+      "path": "z-last.txt",
+      "size": 1169,
+      "sha256": "2c24605f60c903110f89ed1da28cb031eb487d07a11393e3298ccfad3222d876",
+      "chunks": [
+        {
+          "bucket": 7,
+          "offset": 1471,
+          "length": 1024
+        },
+        {
+          "bucket": 2,
+          "offset": 1024,
+          "length": 145
+        }
+      ]
+    }
+  ]
+}

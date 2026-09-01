@@ -1,0 +1,35 @@
+{
+ "session": "hidden-tiny-8901",
+ "requests": [
+  {
+   "id": "t-01",
+   "batch": "BX-01",
+   "tier": "basic",
+   "replicas": 1,
+   "storage_gb": 0
+  },
+  {
+   "id": "t-02",
+   "batch": "BX-01",
+   "tier": "performance",
+   "replicas": 2,
+   "storage_gb": 1,
+   "gpu": true
+  },
+  {
+   "id": "t-03",
+   "batch": "BX-02",
+   "tier": "standard",
+   "replicas": 4,
+   "storage_gb": 16,
+   "gpu": false
+  },
+  {
+   "id": "t-04",
+   "batch": "BX-02",
+   "tier": "basic",
+   "replicas": 7,
+   "storage_gb": 15
+  }
+ ]
+}

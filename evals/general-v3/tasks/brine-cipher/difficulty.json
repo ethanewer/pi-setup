@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 0,
+    "tool_breadth": 0,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 1,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 25,
+  "documented_probe": "C-ce46ee62 (reverse a single-key byte transform to recover the valid WAL): covered at medium by the Brine gauge — the WAL is wrapped in a 16-byte envelope so the obfuscated payload does not start at offset 0, the key must be pinned via the 37 7f 06 8x SQLite WAL magic, and the restored WAL must be genuinely accepted by SQLite with the peak row reachable only from WAL frames; the verifier executes the deliverable on hidden envelopes and runs integrity_check + row queries.",
+  "notes": "Chain: envelope parse -> single-byte XOR key derivation from WAL magic -> full decode -> isolated sqlite recovery to extract the peak. Deliverables: general tool (hidden re-runs), restored WAL, extracted answer. Medium: magic-pinned key search, WAL-only row dependency, careful copy-before-open semantics."
+}

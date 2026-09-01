@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 1,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 35,
+  "documented_probe": "C-d1d1b8cb (write and save a reusable fine-tuning script): the competency's reference floor is hard and this task exercises it at hard — the verifier fully checks the capability (base-snapshot reuse by shape, capped CPU fine-tune, changed loadable snapshot, fold accuracy >= 0.90 on unseen hidden folds, graceful non-zero exits).",
+  "notes": "Single deliverable pair: a reusable fine-tuning script plus the artifact from one visible run. The script must (1) load a pretrained Linear(24->48)/ReLU/Linear(48->3) state_dict identified by tensor shape regardless of parameter naming, (2) fine-tune on CPU within a capped schedule (<60 epochs), (3) emit a new loadable snapshot that differs from the base, (4) generalize to hidden folds whose labeling rules are independent of the base rule and of each other, each reaching accuracy >= 0.90, and (5) exit non-zero with a stderr diagnostic on missing columns, zero-row folds, or non-finite features. Rubric: hidden_case_generalization=3 (three hidden folds with independent rules), adversarial_inputs=2 (malformed/empty/unbalanced-schema folds), quantitative_correctness=2 (accuracy bar plus snapshot validity/differs checks), reasoning_depth=2 (shape-based loading + adaptation), dependent_stages=1 (script -> artifact chain), debugging_ambiguity=1. No resource pressure, interaction, or unsafe surface."
+}

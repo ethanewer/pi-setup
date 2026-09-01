@@ -1,0 +1,32 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "medium"
+category = "programming"
+verifier_kind = "executes-deliverable"
+deliverables = [
+  "/app/tasks/wetland_calls.yaml",
+  "/app/run_task.py",
+  "/app/results/wetland_calls/baseline.json",
+]
+tags = [
+  "fen-lantern",
+  "programming",
+  "C-1b5c9f63",
+  "eval-harness-wiring",
+  "multiple-choice-classification",
+  "gold-label-mapping",
+  "accuracy-window",
+]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 900.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096

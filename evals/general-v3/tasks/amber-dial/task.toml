@@ -1,0 +1,30 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "hard"
+category = "programming"
+verifier_kind = "executes-deliverable"
+deliverables = [
+  "/app/solve.py",
+  "/app/answer.json",
+]
+tags = [
+  "amber-dial",
+  "programming",
+  "C-dc8c9187",
+  "C-ab7d03b8",
+  "C-8c746cc6",
+  "C-e1811563",
+]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 1800.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096

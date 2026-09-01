@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 1,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 3,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 50,
+  "documented_probe": "C-500da2a9 (estimate an average treatment effect to high accuracy): this task exercises the full capability — derive the backdoor adjustment set from a supplied DAG (excluding the instrument, mediator and collider), fit an outcome model flexible enough for a nonlinear/interactive DGP, compute the ATE by g-computation, and land within ±0.06 of the true effect on hidden studies.",
+  "notes": "Failure modes probed directly: adjusting for the mediator/collider or failing to exclude the instrument dilutes or biases the estimate (far outside tolerance); an additive-linear outcome model misses the squared terms and treatment interactions (bias > tolerance); wrong number formatting/scale is rejected by the strict 6-decimal single-number format check. Hidden studies vary n, sigma, effect signs/strengths, column names and DAG topology (instrument-only-parent, confounder chain, binary/continuous confounder mixes), so hard-coding the visible estimate fails."
+}

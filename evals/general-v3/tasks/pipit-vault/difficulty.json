@@ -1,0 +1,16 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 0,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 0,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 1,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 30,
+  "notes": "Multi-stage recovery: decode base32 shards in manifest order (ignoring decoys), concatenate byte chunks, optionally reverse, normalize (strip + lowercase), verify against a SHA-256 checksum, then persist byte-exactly. Competency C-7f8aa502 (write the recovered value with the expected normalization) is the core: the verifier byte-compares the output against the expected string, rejecting any trailing/leading whitespace beyond a single newline. Hidden cases vary secrets, shard/decoy counts, and the reverse flag, plus a corrupted-checksum negative case that must exit non-zero without writing output. Nonzero rubric for dependent_stages (decode->assemble->reverse->verify->write), reasoning_depth, adversarial_inputs (decoys + corrupt vault), hidden_case_generalization, and quantitative_correctness (exact byte match). Totals bucket to medium."
+}

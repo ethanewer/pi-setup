@@ -1,0 +1,30 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "medium"
+category = "system_administration"
+verifier_kind = "executes-deliverable"
+deliverables = ["/app/fix.sh", "/app/audit.txt"]
+tags = [
+  "brisk-atlas",
+  "system_administration",
+  "C-042f51ef",
+  "C-05d7fbec",
+  "C-76528fef",
+  "C-96dac2ec",
+  "C-9f4ec664",
+  "C-bbde01c6",
+  "C-db11a5b3",
+]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 1200.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096

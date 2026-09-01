@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 3,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 1,
+    "interaction_statefulness": 3,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 55,
+  "documented_probe": null,
+  "notes": "Hard bucket (19/30). Five concurrent work threads must all land: (1) detached daemons (sshd:2222, http.server:8080) that must still be alive and answering at verify time; (2) a monitor process governed inside a specific tmux pane whose output must keep growing; (3) an interactive instruction-level debugger driven by a piped sequence of line commands on stdin, with the executed-address trace compared against an independent reference executor, including on hidden programs; (4) exact marker-record detection (case-insensitive error/fault/timeout substrings in message/status fields, field-scoped decoys, mixed case) with counts and preserved-record order matched to an independent reference; (5) sudo-grant enumeration for user ops matched exactly against the sudoers config, plus using the granted elevated command to read a root-only file. Difficulty comes from dependent_stages+interaction_statefulness (persistent cross-phase state that must survive the agent shell) and the exactness of hidden generalization checks."
+}

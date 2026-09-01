@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 0,
+    "tool_breadth": 0,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 1,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": "C-3f9a7c11 (reverse-complement / strand-orientation reasoning on nucleotide sequences): the covering task exercises it at hard — a misoriented or misordered reverse primer fails every hidden case. Documented probe waiver.",
+  "notes": "Single-stage hard task: QuikChange-style centered mutagenic primer design over a possibly multi-record FASTA template with variable-length inserts (substitution/insertion/deletion), whole-primer Wallace Tm and GC windows, a three-level tie-break, and a strict ordered error taxonomy. Rubric nonzero for reasoning_depth (strand orientation, 2-D flank search), debugging_ambiguity (tie-break precision), adversarial_inputs/hidden_case_generalization (six hidden scenes incl. error tokens), and quantitative_correctness (exact sequences, integral Tm, rounded GC). No tool breadth, no dependency chain, no environment pressure."
+}

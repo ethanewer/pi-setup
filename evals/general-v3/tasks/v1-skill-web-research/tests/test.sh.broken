@@ -1,0 +1,20 @@
+#!/bin/bash
+
+reward=0
+if [ -f /app/research.json ]; then
+  if python3 - <<'EOF'
+import json
+with open("/app/research.json") as f:
+    r = json.load(f)
+assert isinstance(r, dict), "must be an object"
+assert r.get("title") == "Harbor Annual Report", r
+assert r.get("revenue") == "1250", r
+assert r.get("founded") == "1998", r
+assert r.get("headquarters") == "Austin", r
+# all values strings
+assert all(isinstance(v, str) for v in r.values()), r
+EOF
+  then
+    reward=1
+  fi
+echo "$reward" > /logs/verifier/reward.txt

@@ -1,0 +1,12 @@
+{
+  "user": "relay-op",
+  "passphrase": "traverse-kettle-9",
+  "iterations": 3,
+  "tasks": [
+    {"id": "T-201", "queue": "relay", "priority": 1},
+    {"id": "T-202", "queue": "relay", "priority": 2},
+    {"id": "T-203", "queue": "sync", "priority": 3},
+    {"id": "T-204", "queue": "archival", "priority": 1},
+    {"id": "T-205", "queue": "sync", "priority": 2}
+  ]
+}

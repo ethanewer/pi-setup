@@ -1,0 +1,32 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "medium"
+category = "system_administration"
+verifier_kind = "executes-deliverable"
+deliverables = [
+  "/app/mkinit.sh",
+  "/app/console_drive.py",
+  "/app/guest-initrd.cpio.gz",
+  "/app/session.log",
+]
+tags = [
+  "cinder-hearth",
+  "system_administration",
+  "C-4e83076b",
+  "qemu-tcg",
+  "serial-login",
+  "initramfs-injection",
+]
+
+[verifier]
+timeout_sec = 900.0
+
+[agent]
+timeout_sec = 1800.0
+
+[environment]
+build_timeout_sec = 900.0
+cpus = 2
+memory_mb = 3072
+storage_mb = 8192

@@ -1,0 +1,34 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "medium"
+category = "data_processing"
+verifier_kind = "executes-deliverable"
+deliverables = [
+  "/app/solve.py",
+  "/app/report.txt",
+  "/app/out.jpg",
+  "/app/result.csv",
+  "/app/result.txt",
+  "/app/value.txt",
+]
+tags = [
+  "drift-mantle",
+  "data-processing",
+  "write-standalone-numeric-value-to-file",
+  "write-results-in-exact-label-per-line-format",
+  "emit-exact-final-column-set-and-order",
+  "match-ipv4-octet-pattern-without-leading-zeros",
+]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 1200.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096

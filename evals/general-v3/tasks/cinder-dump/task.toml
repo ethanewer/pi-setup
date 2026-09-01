@@ -1,0 +1,30 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "hard"
+category = "security"
+verifier_kind = "executes-deliverable"
+deliverables = [
+    "/app/solve.py",
+    "/app/recovered.bin",
+    "/app/recovered_out.txt",
+]
+tags = [
+    "cinder-dump",
+    "security",
+    "C-646ce03c",
+    "binary-re",
+    "hexdump-reassembly",
+]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 1800.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096

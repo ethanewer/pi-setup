@@ -1,0 +1,23 @@
+#!/bin/bash
+mkdir -p /logs/verifier
+reward=0
+if [ -f /app/answer.json ]; then
+  if python3 - <<'EOF'
+import json, sys
+arrays={"array1":[2,4,8,16,32],"array2":[1,5,6,10]}
+def is_lc(a):
+    for k in range(1,len(a)-1):
+        if a[k]**2 < a[k-1]*a[k+1]:
+            return False
+    return True
+exp={f"{name}_log_concave": is_lc(a) for name,a in arrays.items()}
+got=json.load(open('/app/answer.json'))
+for k,v in exp.items():
+    if str(got.get(k)).strip().lower() != str(v).lower():
+        sys.exit("bad %s" % k)
+sys.exit(0)
+EOF
+  then
+    reward=1
+  fi
+echo "$reward" > /logs/verifier/reward.txt

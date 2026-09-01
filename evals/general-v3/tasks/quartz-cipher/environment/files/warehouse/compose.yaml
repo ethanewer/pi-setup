@@ -1,0 +1,21 @@
+# Wardhaven Harbor -- component stack description (compose-style).
+# The `store` service is a PostgreSQL instance provisioned for this exercise.
+services:
+  store:
+    image: postgres:16
+    hostname: store
+    environment:
+      POSTGRES_DB: shipping
+      POSTGRES_USER: durable
+      POSTGRES_PASSWORD: "Devlet-Kora-5572"
+    ports:
+      - "5432:5432"
+    networks:
+      default: {}
+    healthcheck:
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-p", "5432"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+networks:
+  default: {}

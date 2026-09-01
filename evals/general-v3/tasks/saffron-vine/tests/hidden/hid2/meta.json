@@ -1,0 +1,16 @@
+{
+  "case_id": "hid2",
+  "seed": 202,
+  "vocab_size": 50,
+  "embed_dim": 20,
+  "hidden_dim": 28,
+  "num_classes": 2,
+  "seq_len": 10,
+  "pad_id": 0,
+  "lora_rank": 12,
+  "lora_alpha": 24,
+  "target_accuracy": 0.86,
+  "degradation": "fc2.weight zeroed by a failed checkpoint restore",
+  "architecture": "emb->meanpool->fc1(tanh)->fc2(tanh)->head",
+  "lora_target_module": "fc2"
+}

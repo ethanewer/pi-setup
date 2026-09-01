@@ -1,0 +1,20 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "hard"
+category = "security"
+verifier_kind = "executes-deliverable"
+deliverables = ["/app/derive.py", "/app/releases/commit.token"]
+tags = ["quartz-hollow", "security", "binary-re", "C-1f4f846b"]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 1800.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096

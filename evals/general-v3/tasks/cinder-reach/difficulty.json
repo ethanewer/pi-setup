@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 0,
+    "tool_breadth": 0,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": "C-5b5e6c73 (compute and include derived statistics fields): reference floor is hard and this covering task exercises it at hard — the program must parse a strict access-log grammar, skip vs. count malformed lines correctly, and derive seven aggregate fields (per-class status tallies, error rate, mean, interpolated p95, byte total, tie-broken argmax client) that all must be present in the designated JSON output.",
+  "notes": "Single-stage generalizable program: strict-grammar HTTP access-log parsing plus derived statistics (counts, ratio, mean, interpolated percentile, argmax with deterministic tie-break, null propagation on empty input). Hidden cases cover empty logs, malformed variants, '-' byte fields, ties, odd/even percentile interpolation. Rubric nonzero for reasoning_depth, debugging_ambiguity, adversarial_inputs, hidden_case_generalization, quantitative_correctness."
+}

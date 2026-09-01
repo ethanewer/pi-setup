@@ -1,0 +1,9 @@
+// Caffe-style CPU solver configuration (mini-cafe), hard variant.
+// A larger CIFAR-style budget: 2000 records, 500 iterations.
+base_lr: 0.01
+max_iter: 500
+batch_size: 32
+seed: 2024
+net: "/app/model/net.prototxt"
+data_dir: "/app/data"
+log: "/app/run/train.log"

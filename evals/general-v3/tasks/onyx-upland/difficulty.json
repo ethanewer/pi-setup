@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 3,
+    "adversarial_inputs": 3,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 3,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": null,
+  "notes": "Five independent serialize/aggregate deliverables must ALL hold simultaneously (grouped CSV summaries with a totals row, ordered CSV result sets, status tallies with exactly-once label lines, TOML with an exact two-integer schema, and byte-identical fixed-width records). The verifier independently recomputes every artifact on visible fixtures AND four hidden scenarios (header-only inputs, unsorted frame params, zero-match tallies, whitespace-padded statuses, negative counts, boundary-width records), so a single off-by-one, stray space, missed trim, or misused alignment fails. Difficulty reaches the hard bucket (18) via reasoning_depth 3 (byte-exact widths/alignment/padding plus sort-key chains and range normalization), debugging_ambiguity 3 (failures surface only as byte-level diffs with no locator), adversarial_inputs 3 (empty/edge/malformed variants), and quantitative_correctness 3 (every sum, count, and label must match exactly)."
+}

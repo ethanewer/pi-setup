@@ -1,0 +1,20 @@
+{
+  "target_abi": {
+    "architecture": "MIPS",
+    "endianness": "big-endian",
+    "elf_class": 32,
+    "elf_machine": 8,
+    "abi": "o32",
+    "toolchain_prefix": "mips-linux-gnu-",
+    "linkage": "static"
+  },
+  "notes": [
+    "ELF identification bytes the runner checks: byte 4 (EI_CLASS) must be 1 (ELF32); byte 5 (EI_DATA) must be 2 (big-endian); e_machine (bytes 18-19 of the ELF header) must be 8 (EM_MIPS).",
+    "The runner rejects binaries whose identification bytes do not match this manifest.",
+    "o32 MIPS Linux syscall convention: arguments in $a0-$a2, syscall number in $v0; syscall 4004 is write(2), syscall 4001 is exit(2). The renderer only uses write on fd 1."
+  ],
+  "how_to_check_a_binary": [
+    "python3 - <<'PY'\nimport struct; d=open('out.elf','rb').read(20)\nprint('EI_CLASS', d[4], 'EI_DATA', d[5], 'e_machine', struct.unpack('>H', d[18:20])[0])\nPY",
+    "The faked frame header is 2+4 bytes: (0xE1B0) (0x444F4F4D 'DOOM')."
+  ]
+}

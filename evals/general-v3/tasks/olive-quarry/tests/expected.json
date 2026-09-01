@@ -1,0 +1,21 @@
+{
+  "kernel": {
+    "name": "rkbench",
+    "display": "R Causal Bench"
+  },
+  "packages": {
+    "graphloom": [
+      {"expr": "gl_topo_order(c('treat','conf','out'), c('conf>treat','conf>out','treat>out'))", "expected": ["conf", "treat", "out"]},
+      {"expr": "gl_topo_order(c('A'), character(0))", "expected": ["A"]},
+      {"expr": "gl_reachable(c('A>B','B>C','A>C','C>D'), 'A')", "expected": ["A", "B", "C", "D"]},
+      {"expr": "gl_reachable(c('A>B'), 'C')", "expected": ["C"]},
+      {"expr": "gl_reachable(character(0), 'z')", "expected": ["z"]}
+    ],
+    "frameforge": [
+      {"expr": "as.character(ff_group_means(data.frame(g=c('x','y','x'), v=c(1,2,4)), 'g', 'v')$mean)", "expected": ["2.5", "2"]},
+      {"expr": "ff_group_means(data.frame(g=c('x','y','x'), v=c(1,2,4)), 'g', 'v')$group", "expected": ["x", "y"]},
+      {"expr": "as.character(ff_dims(data.frame(a=1:3, b=4:6, c=7:9)))", "expected": ["3", "3"]},
+      {"expr": "ff_sorted_unique(c('b','a','b','c'))", "expected": ["a", "b", "c"]}
+    ]
+  }
+}

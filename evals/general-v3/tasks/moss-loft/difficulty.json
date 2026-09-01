@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 0,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 30,
+  "documented_probe": null,
+  "notes": "Config-driven snapshot trainer (medium, total 9): the agent authors /app/train.py (CSV+config -> trained state-dict snapshot) and produces /app/model_snapshot.pt on the visible fixture. The verifier reloads the snapshot with torch.load(weights_only=True) and enforces that it is a REAL weights file at exactly the configured layer/width node counts (key set + shapes vs /app/config.json), finite and non-degenerate (catches dummy/zero/all-equal files), modestly sized (catches oversized dumps), and >=0.85 held-out accuracy (catches untrained snapshots) -- the full missing/dummy/oversized failure surface of the artifact competency. It then RE-EXECUTES the deliverable trainer on three hidden cases that vary input_dim (5/6/10), hidden_units (8/16/32), num_classes (2/3/4), epochs, lr, batch size, and seed, applying the same checks to each freshly produced snapshot (hidden_case_generalization=2, quantitative_correctness=2). Single-stage pipeline on a small dataset keeps resource_pressure=0 and no statefulness."
+}

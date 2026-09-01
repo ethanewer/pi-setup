@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 0,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 1,
+    "quantitative_correctness": 0,
+    "resource_pressure": 0,
+    "interaction_statefulness": 1,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 25,
+  "documented_probe": "C-ac4a9918 (declare the mailing-list configuration in the canonical file): the covering task requires the mailing-list map to be written to the fixed canonical path /etc/postfix/virtual; config placed at a wrong path is not inspected and the lists are not honored. Verifier executes the deliverable on hidden specs and inspects only the canonical path, the rebuilt .db map, and the main.cf declaration.",
+  "notes": "Medium: a reusable idempotent applier (spec parsing incl. comments and malformed lines, replace-semantics on the canonical map, postconf -e main.cf declaration, postmap .db rebuild) whose behavior is checked on hidden specs (multi-list, single-dest, messy/empty). Rubric nonzero for tooling (postmap/postconf), spec-parsing reasoning, adversarial inputs, hidden generalization, and persistent system-config statefulness."
+}

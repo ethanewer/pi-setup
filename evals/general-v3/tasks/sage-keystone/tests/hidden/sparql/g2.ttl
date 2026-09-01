@@ -1,0 +1,12 @@
+@prefix ex: <http://keystone.sage.example/seed/> .
+@prefix kbs: <http://keystone.sage.example/schema#> .
+
+
+# second hidden dataset: a recruit seconded twice to the SAME firm (must dedupe)
+ex:s-1 a kbs:Recruit ; kbs:name "Lina Kor" ; kbs:secondedTo ex:f-metro .
+ex:s-1 kbs:secondedTo ex:f-metro .
+ex:s-2 a kbs:Recruit ; kbs:name "Hein Arlen" ; kbs:secondedTo ex:f-metro , ex:f-brocken .
+ex:s-3 a kbs:Recruit ; kbs:name "Orale Stimes" ; kbs:secondedTo ex:f-brocken .
+ex:f-metro a kbs:Studio ; kbs:name "Metro Basin" .
+ex:f-brocken a kbs:Studio ; kbs:name "Brocken Mill" .
+

@@ -1,0 +1,12 @@
+{
+  "interface": "numpy",
+  "candidates": ["1.19.5", "1.23.3"],
+  "catalogue": {
+    "pandas": [{"numpy": ">=1.18.0", "version": "1.5.3"}],
+    "scipy": [{"numpy": ">=1.18.0", "version": "1.10.0"}]
+  },
+  "modules": [
+    {"name": "swift", "package": "pandas", "numpy": ">=1.25.0"},
+    {"name": "slow", "package": "scipy", "numpy": "<1.20.0"}
+  ]
+}

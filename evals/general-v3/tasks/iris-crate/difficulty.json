@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 1,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 1,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 40,
+  "documented_probe": "C-3a4d0dcd (train a fasttext classifier to accuracy and size targets): covering task exercises the capability at hard difficulty - a fasttext-style hashed-n-gram linear classifier must be trained from scratch (pure stdlib, no sklearn) to clear a 0.88 sealed-holdout accuracy floor (0.85/0.80 on hidden corpora) while the serialized pickled model stays under a 2 MiB budget, with a pinned inference contract the verifier re-implements. Unlike the zephyr-bridge probe, there is no provided loader/embedding pipeline: the trainer, feature extractor, training loop, pruning to the size budget, malformed-row robustness and the pinned pickle model format are all authored by the agent, and the trainer is re-executed on hidden corpora with per-case floors.",
+  "notes": "Hard capability: fitting a real text classifier that generalizes across four noisy classes (class pools + cross-class confusers + filler) under twin quantitative gates (accuracy floor on a sealed holdout, hard serialized-size cap). Nonzero rubric for quantitative_correctness (twin accuracy/size gates, metrics consistency with real file size), reasoning_depth (designing the training loop so it converges above the floor - underfit models measurably fail), adversarial_inputs (malformed rows must be skipped without crashing), hidden_case_generalization (fresh-seed and edge corpora re-run end to end), resource_pressure (2 MiB model budget), dependent_stages (trainer must exist and run before model.bin/metrics.json exist), debugging_ambiguity (stale or faked metrics/model_bytes fail), tool_breadth (pickle/zlib/json plumbing)."
+}

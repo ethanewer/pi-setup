@@ -1,0 +1,10 @@
+# Hidden scenario: different role AND database (cross-institution audit).
+services:
+  specimen-db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: herbarium_cross
+      POSTGRES_USER: auditor
+      POSTGRES_PASSWORD: "Kelp-Birch-728"
+    ports:
+      - "5541:5432"

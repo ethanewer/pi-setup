@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 3,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 3,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 3,
+    "resource_pressure": 2,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 120,
+  "documented_probe": null,
+  "notes": "Hard: four independent numeric-solver deliverables (MPS MIP solver, LP corner enumeration, composite quartic+quadratic+coupling minimization, entropic Sinkhorn OT), each of which must run on unseen hidden inputs. Reasoning depth 3: correct convex/nonconvex stationary-point termination and exact vertex enumeration from square subsystems. Debugging ambiguity 2: a premature/divergent optimizer or wrong coupling scaling yields wrong numbers with no obvious error. Adversarial 3: hidden MPS includes an integer MIP (offset ambiguity, dedicated dense columns), a degenerate corner LP with duplicate corners, large-scale (n=120) quartic and (45x65) OT. Quantitative 3: objective / MIP value / transport cost must match independent reference within tight tolerances. Resource pressure 2: all four runs must stay inside the time budget. Task difficulty (22) >= competency floor (hard)."
+}

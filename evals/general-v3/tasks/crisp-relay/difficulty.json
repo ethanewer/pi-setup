@@ -1,0 +1,16 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 1,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 1,
+    "unsafe_action_penalty": 1
+  },
+  "expected_expert_time_min": 35,
+  "notes": "Two-stage deliverable chain: a selective, idempotent offline installer plus an offline inference program whose output becomes a third artifact. Core competency C-d2b6ec24 (preserve the installed pinned library versions): the image pins torch 2.13.0+cpu / transformers 5.16.1 and a stale legacy requirements.txt in /app/vendor lists torch==2.5.1 / transformers==4.46.2 alongside the two needed vendor wheels, so a naive 'pip install -r' destroys the toolchain and every hidden scoring case fails; the installer must bring in only toksplit/textnorm from the local wheelhouse with --no-index and must be idempotent. Rubric marks reasoning_depth (load-path contract: normalize -> tokenize -> join -> truncate at 16 -> argmax), adversarial_inputs (empty/blank-line/noisy/duplicate/truncated hidden inputs), hidden_case_generalization (scorer must work on any conforming input), quantitative_correctness (exact labels/count), interaction_statefulness (installer must be re-runnable by the verifier), unsafe_action_penalty (touching the pinned toolchain or modifying supplied fixtures fails), and tool_breadth/dependent_stages/debugging_ambiguity at minimum for the pip-offline mechanics and installer->scorer ordering."
+}

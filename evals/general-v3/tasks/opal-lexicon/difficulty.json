@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 0,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": null,
+  "notes": "Single-pipeline competency (C-15759d2a): persist a vocabulary object whose parallel word-to-index / index-to-word maps are exact inverses and whose size equals the embedding row count. The agent authors a Vocab dataclass module (the pickle module path must survive unpickling inside the checker), a reusable CLI builder, and the three artifacts. Hidden corpora probe the frequency-then-lexicographic ordering rule, an all-blank (zero-token) corpus, all-tie frequencies, and byte-level determinism of re-runs. difficulty hard is the competency's stated floor; adversarial/hidden at 2 for the edge corpora, quantitative at 1 (exact ordering + size agreement, no floats in the objective)."
+}

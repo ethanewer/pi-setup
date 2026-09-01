@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 2,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 2
+  },
+  "expected_expert_time_min": 25,
+  "documented_probe": null,
+  "notes": "Three chained stages: (1) author a reusable secure eraser that overwrites each file in place before unlinking and finally removes the whole directory tree, then run it on /app/vault to produce /app/erased_ok.txt; (2) consult `man openssl-enc` to identify the exact -aes-256-ctr option and decrypt /app/handoff/msg.enc, documenting the option in capability_notes.md; (3) persist the exact recovered plaintext to /app/results.txt. dependent_stages=3 because the marker emission depends on the eraser succeeding, the decryption depends on the man-page-derived option, and the results file depends on that decryption. tool_breadth=2 for shred/find (erase), man + openssl enc -K/-iv (crypto), bash scripting. adversarial_inputs=2 because the hidden erase trees include dot-files, names with spaces, a read-only file, an empty tree, a broken symlink, and a missing target, and hidden crypto re-runs the documented option on fresh ciphertexts including an empty plaintext. hidden_case_generalization=2 because both deliverable programs are re-executed on unseen hidden material. quantitative_correctness=2 because the final message and the cipher option must match byte-for-byte. unsafe_action_penalty=2: the eraser must never walk out of its target (blast-radius checks fail a wildcard rm), matching the secure-erasure competency's requirement to destroy only the designated tree. Medium floor from competency C-51021b37."
+}

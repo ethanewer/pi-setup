@@ -1,0 +1,16 @@
+{
+  "rubric": {
+    "dependent_stages": 0,
+    "tool_breadth": 0,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 0,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 1,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 20,
+  "notes": "Single-stage: read a combined predictions/truth record, keep only question ids present on both sides, drop pairs where either side is not a JSON number (ERR, null, booleans, quoted numbers), score exact numeric matches, report per-round correct/total with half-up rounding to 3 decimals (null when no valid pairs) plus an overall aggregate, and order rounds numerically. Nonzero rubric for reasoning_depth (pair semantics + half-up + numeric sort), adversarial_inputs/hidden_case_generalization (multiple hidden cases: ties, empty, type traps), and quantitative_correctness (exact ints and rounded floats). No tool breadth, no dependency chain, no environment pressure; totals bucket to easy."
+}

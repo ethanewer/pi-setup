@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 3,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 2,
+    "resource_pressure": 2,
+    "interaction_statefulness": 1,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": null,
+  "notes": "Four chained security operations builds: (1) a rule engine that applies a JSON rule set to log files — counting matches and unique source IPs per rule and emitting alert.json/report.json with exact schemas, which must survive hidden rule/log sets including empty logs, missing rule keys, and regexes that raise re.error; (2) deterministic tar.gz snapshot sealed with gpg --symmetric --cipher-algo AES256 discovered from man gpg, with no plaintext archive left anywhere; (3) recovering an unknown 8-byte key from the cipher oracle via chosen zero-plaintext within a strict 25s wall-clock budget; (4) a pickle __reduce__ gadget whose load runs os.system and produces /app/pwn-proof.txt. reasoning_depth=3 from implementing the gpg option discovery (strongest of AES-128/192/256), the chosen-plaintext key fold, and robust defaulting for malformed rules; adversarial_inputs=2 from hidden edge/malformed rule+log sets and the oracle hidden re-key; hidden_case_generalization=3 because /app/detect.sh must run on brand-new rule/log sets and oracle.py must recover a fresh hidden key; resource_pressure=2 from the hard-time oracle budget."
+}

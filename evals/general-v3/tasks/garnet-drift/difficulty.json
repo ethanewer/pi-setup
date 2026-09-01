@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 2,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 30,
+  "documented_probe": null,
+  "notes": "Medium. The agent must build a reusable combined key+certificate PEM bundler that tolerates PKCS#8, traditional RSA and SEC1 EC key formats, skips non-PEM noise, verifies key/cert public-key equality via the openssl CLI (refusing mismatched pairs without creating output), emits key-block-then-cert-block with clean newline separation and mode 0600; and must provision the provided edge service by choosing the key that actually matches edge.crt (a retired decoy key is present to punish blind concatenation) plus a sha256 provenance record. The verifier re-runs the tool on 3 fresh hidden scenarios (PKCS#8 RSA, EC, noisy CRLF input) and a mismatched refusal case, recomputing all expectations with openssl. Rubric nonzero for tool_breadth (openssl CLI), adversarial_inputs (decoy key, noisy/CRLF input, mismatch refusal), hidden_case_generalization and reasoning_depth (public-key matching logic)."
+}

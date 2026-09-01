@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 0,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 0,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 30,
+  "documented_probe": "C-3c94d62d (transform plain-text files via scripted editor (vim) macros): covering task. Different scenario and row grammar than prism-atlas (two distinct row dialects with zero-padded numeric reformatting plus stricter malformed-row taxonomy), and the verifier independently recomputes expected bytes and re-runs the macro script on hidden corpora in both invocation modes.",
+  "notes": "Single-stage: author one headless vim script that rewrites ticket rows and metric rows to an exact layout while passing every other byte through, in two invocation modes (default directory scan, explicit file args). Nonzero rubric for tool_breadth (headless vim tooling), reasoning_depth (regex + zero-padding logic in ex mode), debugging_ambiguity (silent ex-mode failures), adversarial_inputs/hidden_case_generalization (malformed near-miss rows; hidden corpora re-run the script fresh), and byte-for-byte equality. No dependency chain, no numeric aggregation, no environment pressure; totals bucket to medium."
+}

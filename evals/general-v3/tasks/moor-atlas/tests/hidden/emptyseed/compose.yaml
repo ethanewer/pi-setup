@@ -1,0 +1,11 @@
+# Moor Atlas hidden scenario stack (compose-style).
+services:
+  clifftop:
+    image: postgres:16
+    hostname: clifftop
+    environment:
+      POSTGRES_DB: emptymoor
+      POSTGRES_USER: clifflark
+      POSTGRES_PASSWORD: "Cliff-Lark-2050"
+    ports:
+      - "5581:5432"

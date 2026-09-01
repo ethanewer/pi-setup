@@ -1,0 +1,9 @@
+{
+  "rules": [
+    {"id": "auth_fail", "pattern": "authentication failed", "threshold": 4, "severity": "high"},
+    {"id": "port_scan", "pattern": "port sweep", "threshold": 3, "severity": "medium"},
+    {"id": "dns_tunnel", "pattern": "TXT query", "threshold": 2, "severity": "high"},
+    {"id": "c2_beacon", "pattern": "beacon heartbeat", "threshold": 5, "severity": "medium"},
+    {"id": "config_drift", "pattern": "drift detected", "threshold": 1, "severity": "low"}
+  ]
+}

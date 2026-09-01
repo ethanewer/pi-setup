@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 3,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 3,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 35,
+  "documented_probe": null,
+  "notes": "Hard bucket (rubric total 18). One scenario bundles seven distinct competencies the agent must satisfy simultaneously: an idempotent, LF-only, allowlist-constrained bash script that recreates the /app/out/{records,summary} tree, scans /app/logs/*.log into a TOKEN=n severity table whose counts must match `grep -iw` word-boundary ground truth exactly (mixed-case tokens count, but overlapping words such as INFO inside information or WARN inside WARNING must NOT), cleans /app/stage back to the allowed {*.proof, MANIFEST} plus-preserved scratch subtree, regenerates its own output cleanly on every invocation, and a Makefile that compiles both serial and pgen executables from src/*.c into /app/bin (including rebuild-from-clean and -j2). reasoning_depth=3: the allowlist contract (no command substitution, no backticks, only a whitelist of utilities such as mkdir/grep/wc/printf) conflicts with the requirement to emit exact severity totals without eval or command substitution, so the correct solution must count lines via pipelines. debugging_ambiguity=2: word-boundary semantics of mixed-case/overlapping/filename-token cases are easy to get subtly wrong (WARNING vs WARN, INFORMATION vs INFO, INFORMATIONx). adversarial_inputs=3: hidden empty-logs dir (glob with no matches must yield all-zero counts), mixed/overlap log sets, an unrelated cleanup file set, and a pre-existing tree + sentinel that must survive two runs. hidden_case_generalization=3: test.sh seeds each hidden fixture into /app and re-runs bash /app/fix.sh, and re-runs make across clean/parallel states; a solver overfit to the visible fixtures fails. dependent_staging=2: both the idempotent fix run and the make build must land and interlock."
+}

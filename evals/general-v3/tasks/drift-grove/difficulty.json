@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 3,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 3,
+    "resource_pressure": 2,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 90,
+  "documented_probe": null,
+  "notes": "Six independent competencies, each with a separate CLI tool that the verifier re-runs on fresh hidden inputs. Hard floors (gate line-cap, table size-caps, gzip byte-cap) force genuine size engineering; tile BFS must exactly reproduce per-depth frontier layers under a recomputation check; the oracle part demands binary-search-with-size-probing under a 40-call budget using both control endpoints; adversarial cases (over-cap nets, impossible table caps, degenerate start==goal, exact rational equality) must be refused or handled exactly. Total = 19 -> hard bucket."
+}

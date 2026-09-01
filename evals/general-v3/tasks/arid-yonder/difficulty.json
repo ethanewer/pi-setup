@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 2,
+    "resource_pressure": 1,
+    "interaction_statefulness": 1,
+    "unsafe_action_penalty": 1
+  },
+  "expected_expert_time_min": 170,
+  "documented_probe": null,
+  "notes": "Bucket total 18 (hard). Five competencies must all be satisfied in one program. C-7db66fb7 (QDP lowercase command recognition) is a hard floor and drives two rubric bands: adversarial_inputs (lowercase/mixed-case command lines, skip semantics, masked/null markers, malformed non-numeric rows) and reasoning_depth (one must infer case-insensitive keyword recognition and the depth-from-connector rule for tree listings). hidden_case_generalization is high because the verifier re-runs parse.py on three unrelated input dirs (edges: masked address, single-line address with no postal, missing pref encodings, deeper trees with special characters, lowercase QDP plus SKIP, and non-numeric rows) and compares regenerated out.tsv / tree.json / qdp.tsv byte/JSON-exactly. quantitative_correctness covers postal-code/city derivation and date normalization. tool_breadth spans JSON, pickle, base64, csv, regex, and box-drawing text."
+}

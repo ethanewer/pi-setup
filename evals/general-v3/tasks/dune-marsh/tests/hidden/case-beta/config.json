@@ -1,0 +1,14 @@
+{
+  "service": "lantern-gateway",
+  "region": "ap-marsh-3",
+  "listen_host": "127.0.0.1",
+  "auth": {
+    "enabled": true,
+    "scheme": "pbkdf2_sha256",
+    "iterations": 4409,
+    "password_hash": null
+  },
+  "routes": [
+    {"prefix": "/api/", "upstream": "billing"}
+  ]
+}

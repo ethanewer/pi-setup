@@ -1,0 +1,20 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "easy"
+category = "system_administration"
+verifier_kind = "executes-deliverable"
+deliverables = ["/app/configure.sh", "/app/adduser.sh"]
+tags = ["mist-quay", "system_administration", "C-759c32c0", "password-auth", "sha512-crypt-htpasswd", "basic-auth-enable", "idempotent-configure"]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 900.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096

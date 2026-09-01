@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 2,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 3,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 3,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": null,
+  "notes": "Hard multi-stage data-pipeline task. dependent_stages=3: BPE training must produce bpe_model.json AND be re-serialized into /app/offline_assets/tokenizer.json which tokenize.py must then load offline to sum counts, plus the locale filter output feeds tokenize.py and is cross-validated, and a separate mcq harness reads a dataset + YAML config to emit per-doc gold. reasoning_depth=3: the crux is a deterministic BPE whose merge order, tie-breaking (most-frequent, then lexicographically smaller pair) and vocab bound must EXACTLY match an independent reference on both the delivered corpus and a hidden corpus; the byte-ish encoding and the offline loader's complete-artifact semantics (partial mirror must fail) both demand careful implementation. adversarial_inputs=3 + hidden_case_generalization=3: hidden cases cover empty datasets, rows lacking the locale column (dropped) vs a requested export column (rendered as empty string), a BPE cap below the single-character distinct count (must stay bounded, zero merges), an empty documents dir, an empty/tie-heavy leaderboard, and token rows with empty text columns. quantitative_correctness=3: every artifact is compared exactly against an independent re-derivation (row counts, exact token totals per column, exact merge lists, exact english/other filename sets, exact top-identifier with lexicographic tie-break). Bucket total 18 => hard, >= the medium floor of every claimed competency and matching difficulty_target."
+}

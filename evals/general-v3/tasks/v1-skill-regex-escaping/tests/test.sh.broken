@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+mkdir -p /logs/verifier
+reward=0
+if [ -f /app/result.json ]; then
+  if python3 - <<'PY'
+import json, re, sys
+data = json.load(open('/app/data.json'))
+text = data['text']
+exp = {tok: len(re.findall(re.escape(tok), text)) for tok in data['tokens']}
+got = json.load(open('/app/result.json'))
+ok = got.get('counts') == exp
+sys.exit(0 if ok else 1)
+PY && reward=1
+fi
+fi
+echo "$reward" > /logs/verifier/reward.txt

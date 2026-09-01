@@ -1,0 +1,17 @@
+{
+ "rubric": {
+  "dependent_stages": 1,
+  "tool_breadth": 2,
+  "reasoning_depth": 2,
+  "debugging_ambiguity": 1,
+  "adversarial_inputs": 0,
+  "hidden_case_generalization": 1,
+  "quantitative_correctness": 0,
+  "resource_pressure": 0,
+  "interaction_statefulness": 1,
+  "unsafe_action_penalty": 0
+ },
+ "expected_expert_time_min": 30,
+ "documented_probe": "C-e87edf52 (set up an R Jupyter kernel plus the R analysis packages for causal work): reference floor is hard and this task is hard; the verifier fully checks the capability on hidden cases (unseen kernel names via a temp HOME and unseen R package tarballs via a temp library).",
+ "notes": "Environment-commissioning task focused on the R Jupyter kernel (IRkernel registration, kernelspec detection by name) plus R CMD INSTALL of vendored causal-analysis R packages. Hidden generalization is exercised through the reusable registrar (unseen kernel names/display strings into a temp HOME, detected via jupyter kernelspec list) and the reusable installer (unseen package tarballs into a temp library with function-result checks). Rubric weights tool_breadth (Rscript/jupyter/bash interop), dependent_stages and interaction_statefulness (live state must be left commissioned), hidden_case_generalization; totals bucket to hard."
+}

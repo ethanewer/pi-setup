@@ -1,0 +1,28 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "hard"
+category = "programming"
+verifier_kind = "executes-deliverable"
+deliverables = [
+  "/app/kernels.py",
+  "/app/check.py",
+]
+tags = [
+  "harbor-mantle",
+  "programming",
+  "C-3376e488",
+  "C-90ef6364",
+]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 1800.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096

@@ -1,0 +1,118 @@
+[
+ {
+  "label": "missing id",
+  "body": {
+   "assets": []
+  },
+  "expect_status": 400
+ },
+ {
+  "label": "empty id",
+  "body": {
+   "id": "",
+   "assets": []
+  },
+  "expect_status": 400
+ },
+ {
+  "label": "assets not list",
+  "body": {
+   "id": "e1",
+   "assets": {
+    "a": 1
+   }
+  },
+  "expect_status": 400
+ },
+ {
+  "label": "asset missing unit_price",
+  "body": {
+   "id": "e2",
+   "assets": [
+    {
+     "id": "x",
+     "sector": "tech",
+     "quantity": 1
+    }
+   ]
+  },
+  "expect_status": 400
+ },
+ {
+  "label": "quantity is string",
+  "body": {
+   "id": "e3",
+   "assets": [
+    {
+     "id": "x",
+     "sector": "tech",
+     "quantity": "3",
+     "unit_price": 1.0
+    }
+   ]
+  },
+  "expect_status": 400
+ },
+ {
+  "label": "bool quantity",
+  "body": {
+   "id": "e4",
+   "assets": [
+    {
+     "id": "x",
+     "sector": "tech",
+     "quantity": true,
+     "unit_price": 1.0
+    }
+   ]
+  },
+  "expect_status": 400
+ },
+ {
+  "label": "sector not string",
+  "body": {
+   "id": "e5",
+   "assets": [
+    {
+     "id": "x",
+     "sector": 7,
+     "quantity": 1,
+     "unit_price": 1.0
+    }
+   ]
+  },
+  "expect_status": 400
+ },
+ {
+  "label": "duplicate asset ids",
+  "body": {
+   "id": "e6",
+   "assets": [
+    {
+     "id": "dup",
+     "sector": "tech",
+     "quantity": 1,
+     "unit_price": 1.0
+    },
+    {
+     "id": "dup",
+     "sector": "tech",
+     "quantity": 2,
+     "unit_price": 1.0
+    }
+   ]
+  },
+  "expect_status": 400
+ },
+ {
+  "label": "infinite price (json Infinity)",
+  "raw": "{\"id\": \"e7\", \"assets\": [{\"id\": \"x\", \"sector\": \"tech\", \"quantity\": 1, \"unit_price\": Infinity}]}",
+  "expect_status": 400
+ },
+ {
+  "label": "summary of unknown portfolio",
+  "path": "/api/v1/portfolios/nope/summary",
+  "expect_status": 404,
+  "method": "GET"
+ }
+]

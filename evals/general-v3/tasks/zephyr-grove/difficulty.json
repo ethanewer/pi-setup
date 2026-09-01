@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 3,
+    "adversarial_inputs": 3,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 3,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": null,
+  "notes": "A single reusable scheduling engine must jointly solve three independent deterministic problems from one config: an exact subset-sum counting objective (one-use-only + allowed-number semantics, duplicates handled as distinct elements, negative/zero target gates), a 9x9 Latin-square arrangement serialized to strict two-digit zero-padded row-major tiles, and an availability overlap finder that enforces the weekday business-hours window with a lunch exclusion across every person simultaneously and emits only windows that reach the required duration. Reasoning depth (hard): designing the exact-count DP so duplicates and off-by-one sum handling are right, plus interval semantics (lunch slice, inverted/ignored intervals, exact-boundary inclusion) are easy to get subtly wrong. Adversarial_inputs: hidden cases force a zero-count answer, an all-busy empty plans list, a lunch-gap split at the exact == duration boundary, and malformed busy/multipce entries plus duplicate and non-positive numbers (all of which our daemon must tolerate). Debugging_ambiguity: three outputs must all be correct at once; a wrong assumption in any sub-problem fails an independent gold. Hidden generalization: the grader re-runs the executable on four fresh configs and compares to independent recomputation. Sum 18 => hard, meeting and exceeding the max floor (medium) among the five competencies."
+}

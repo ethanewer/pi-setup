@@ -1,0 +1,7 @@
+{"vars":{"x":[-3,3],"y":[-3,3]},
+ "ops":[{"op":"set","dst":"t0","val":2},
+        {"op":"mul","dst":"t1","a":"x","b":"t0"},
+        {"op":"add","dst":"t2","a":"t1","b":"x"},
+        {"op":"sub","dst":"t3","a":"y","b":1},
+        {"op":"ite","dst":"out","cond":["t3","GE",0],"a":"t2","b":"t3"}],
+ "goal":{"var":"out","eq":6}}

@@ -1,0 +1,16 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 0,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 35,
+  "notes": "Temporal-validity probe: every fact in the ledger is qualified by dates, and all classification is evaluated against a fixed reference date read from the audit file. The agent must (1) replay amendments onto base fields with latest-effective_on<=as_of wins (later-list-position tie-break), value-null clears the field, non-amendable/malformed amendments ignored; (2) classify charters with mixed inclusive/exclusive boundary semantics (end_on inclusive, terminated_on exclusive, start_on as-of-amended, signed_on existence check) into active/pending/excluded; (3) count malformed lines; (4) emit exactly-sorted ids and vessel aggregates. Hard: the amendment replay plus asymmetric boundary rules is easy to get subtly wrong, and the verifier re-runs the deliverable on hidden ledgers with different as-of dates, amendment patterns (retro-active, future, clearing, double amendments) and junk lines, so an incomplete date predicate keeps outdated facts in the results and fails."
+}

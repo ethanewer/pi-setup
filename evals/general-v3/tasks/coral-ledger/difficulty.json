@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 0,
+    "tool_breadth": 0,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 0,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 1,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 30,
+  "documented_probe": "C-50c8398f (leave the data files unmodified): this task is the covering exercise at medium difficulty; the verifier sha256-fingerprints the ledger before and after running the agent program and rejects WAL/journal sidecars, so any data mutation or index engineering fails the integrity check.",
+  "notes": "Five read-only analytics questions over a SQLite ledger whose answer window lives in the database itself (params table), so the program must generalize rather than hard-code. The integrity rule forces read-only access discipline (URI mode=ro, no temp-table spillover, no pragma rewrites). Rubric nonzero for reasoning_depth (multi-join aggregation with NULL/in-progress calls and inclusive window edges), adversarial_inputs (immutability fingerprinting + sidecar check), hidden_case_generalization (two hidden ledgers with different data), quantitative_correctness (rounded floats, tie-broken top commodity, sorted outputs)."
+}

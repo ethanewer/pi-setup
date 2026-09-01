@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 2,
+    "resource_pressure": 3,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 75,
+  "documented_probe": null,
+  "notes": "Chained reproducible-CPU-training pipeline: (1) split.py must emit fixed, seed-deterministic, non-overlapping train/val/test CSVs that the verifier re-derives byte-for-byte with the documented algorithm on fresh and tiny hidden datasets; (2) train.py must define the solver (SGD/CPU/iteration caps) and the documented 48->64->2 network and train /app/model_snapshot.pt that re-fits to train accuracy >= 0.90; (3) finetune.py reuses the base snapshot and must adapt to a previously-unseen hidden fold, yielding a new loadable checkpoint scoring >= 0.90 on that fold; (4) predict.py emits exactly one digit per row to stdout AND a result file, and the verifier cross-checks both against a reload of the model snapshot on hidden holdout rows; (5) the bag scorer must stream per-patch scores with bounded RAM and near-linear time — the verifier feeds a generated 1.2M-patch bag under a hard RSS cap and wall-clock deadline and verifies the per-bag majority labels against an independent snapshot recompute. dependent_stages=3 because split -> trained snapshot -> fine-tune -> predict -> bag scoring is one chain where each stage feeds the next and a failure anywhere cascades. hidden_case_generalization=3 because split, prediction, fine-tuning and the large-bag iterator all run on fresh hidden inputs the agent never sees. resource_pressure=3 from the strict memory bound plus deadline on the bag path; an agent that materializes the whole bag (numpy/torch full-tensor or eager pandas read) exceeds the RSS cap. quantitative_correctness=2: partition CSVs must be byte-identical to a reference rebuild and bag labels must match an independent snapshot recompute exactly (tie handled deterministically). The problem has zero interaction/unsafe surface, so those dimensions stay 0; adversarial_inputs=2 covers tiny-split rounding, ragged bag sizes and empty-bag/edge shapes."
+}

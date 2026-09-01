@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 1,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 30,
+  "documented_probe": "C-5ede2c22 (preserve the reference model file and simulate with a fresh MuJoCo installation without plugins; min difficulty medium): the box ships without MuJoCo and with a pinned offline wheelhouse; the agent must pip-install mujoco==3.2.4 with --no-index, tune a slider feed-stage model into a second self-contained file (no plugins/assets/includes, one joint + one actuator, zero loaded plugins), keep the reference byte-identical to the pristine copy, and survive the acceptance sweep (tuned > 0.35 m, reference < 0.10 m at 2 s) on the visible drive and on hidden positive/negative drive sets.",
+  "notes": "Medium: three dependent stages (offline install, model tuning, proof-of-run), an immutability constraint on the reference fixture, self-containment traps (plugins/assets/includes rejected by scan and by mjModel.nplugin), and hidden generalization over drive values. No resource pressure; simulation is deterministic and fast."
+}

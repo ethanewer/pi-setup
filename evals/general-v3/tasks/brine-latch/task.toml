@@ -1,0 +1,26 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "easy"
+category = "system_administration"
+verifier_kind = "executes-deliverable"
+deliverables = ["/app/reclaim.py", "/app/recovered.bin"]
+tags = [
+    "brine-latch",
+    "system_administration",
+    "C-9aedbe64",
+    "unlinked-fd-recovery",
+    "proc-filesystem",
+]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 600.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096

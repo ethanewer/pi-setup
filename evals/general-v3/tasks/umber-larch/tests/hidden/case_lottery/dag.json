@@ -1,0 +1,60 @@
+{
+  "nodes": [
+    "ability",
+    "urban",
+    "invitation",
+    "block_noise",
+    "treated",
+    "participation",
+    "wage",
+    "manager_score"
+  ],
+  "edges": [
+    [
+      "invitation",
+      "treated"
+    ],
+    [
+      "ability",
+      "treated"
+    ],
+    [
+      "urban",
+      "treated"
+    ],
+    [
+      "ability",
+      "wage"
+    ],
+    [
+      "urban",
+      "wage"
+    ],
+    [
+      "treated",
+      "wage"
+    ],
+    [
+      "participation",
+      "wage"
+    ],
+    [
+      "treated",
+      "participation"
+    ],
+    [
+      "ability",
+      "participation"
+    ],
+    [
+      "treated",
+      "manager_score"
+    ],
+    [
+      "wage",
+      "manager_score"
+    ]
+  ],
+  "treatment_column": "treated",
+  "outcome_column": "wage"
+}

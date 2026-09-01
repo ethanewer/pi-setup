@@ -1,0 +1,14 @@
+{
+  "service": "lantern-gateway",
+  "region": "us-basalt-1",
+  "listen_host": "127.0.0.1",
+  "auth": {
+    "enabled": false,
+    "scheme": "pbkdf2_sha256",
+    "iterations": 30000,
+    "password_hash": null
+  },
+  "routes": [
+    {"prefix": "/api/", "upstream": "internal-metrics"}
+  ]
+}

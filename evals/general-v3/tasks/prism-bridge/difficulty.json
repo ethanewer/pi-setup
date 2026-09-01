@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 3,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 2,
+    "resource_pressure": 2,
+    "interaction_statefulness": 2,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 75,
+  "documented_probe": null,
+  "notes": "Hard. One distributed-service-cluster lab with three deliverables tied together: an MPI contig assembler (/app/mpi_main.c) that the verifier compiles fresh with mpicc and runs at np=1 and np=4 over the visible sample and three hidden fragment datasets, asserting the parallel contig union equals the serial union and that all four ranks produced non-empty output (a parallelization/split bug or a rank that never writes fails cases); /app/serve.py, a PBKDF2-HMAC file-hash service that must use a ProcessPoolExecutor (real processes; a ThreadPoolExecutor variant fails the static check and the >=2 distinct-worker-PID marker check) and create exactly three markers (STARTED/WORKERS/COMPLETED); and a pinned hadoop 3.3.6 + java 11 pillar under /opt/hadoop whose exact versions are verified on disk and via serve.py --status. Difficulty comes from hidden_case_generalization (the MPI and hashing paths re-run on 3+2 genuinely different hidden scenarios and must be byte/vhash exact and process-parallel), dependent_stages (install java -> hadoop -> status probe; author source -> compile -> run MPI), tool_breadth (mpicc/MPI launcher, apt + curl tar install, ProcessPoolExecutor hashing, marker-file lifecycle, service status reporting), and resource_pressure (large hadoop tar + JVM install under memory limits)."
+}

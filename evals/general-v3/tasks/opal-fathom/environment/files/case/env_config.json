@@ -1,0 +1,13 @@
+{
+  "case_id": "route-vis-07",
+  "seed": 20240,
+  "n_states": 12,
+  "n_actions": 3,
+  "horizon": 25,
+  "episodes": 10,
+  "obs_dim": 12,
+  "hidden_dim": 12,
+  "transition": "s_next = (s + a + 1) mod n_states",
+  "policy_file": "policy.npz",
+  "min_mean_reward": 0.792
+}

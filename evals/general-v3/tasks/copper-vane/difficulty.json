@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 0,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 35,
+  "documented_probe": null,
+  "notes": "Medium (total 11). Single deliverable program /app/salvage.py plus its serialized output. dependent_stages=1: diagnosis and salvage are two coupled stages of one byte-level walk (mode drives nothing downstream, but diagnosis fields and salvaged rows both come from the same header/B-tree decode). reasoning_depth=2: must know that page 1 is sqlite_schema (not the data table), decode varints/serial types/leaf cells, and apply the ordered mode-classification rules. debugging_ambiguity=2 / adversarial_inputs=2: cut points fall inside cell payloads and the schema page itself can be absent; a wrong truncation-mode strategy (e.g. trying to open the file with sqlite3, or assuming the table root is page 1) salvages nothing. hidden_case_generalization=2: four hidden cases probe page-aligned truncation, a 5-row mid-page cut, a headerless 'empty' stub, and an intact file. quantitative_correctness=2: diagnosis ints and all row fields compared exactly (floats rounded to 6). No tool breadth (stdlib byte parsing only), no environment pressure, no statefulness; totals bucket to medium, matching the competency floor."
+}

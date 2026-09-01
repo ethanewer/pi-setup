@@ -1,0 +1,30 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "hard"
+category = "security"
+verifier_kind = "executes-deliverable"
+deliverables = [
+  "/app/scan.py",
+  "/app/findings.json",
+]
+tags = [
+  "cinder-forge",
+  "security",
+  "C-45ccc851",
+  "static-analysis",
+  "cwe-mapping",
+  "python-source-audit",
+]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 900.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096

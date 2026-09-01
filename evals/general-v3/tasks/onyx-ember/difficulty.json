@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 2,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 3,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 2,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": null,
+  "notes": "Scoped HARD because the maximum competency floor is hard: C-4b7949d3 (leave numpy importable system-wide) has floor=hard, and per contract the bucket must be >= the max floor even though the waveform prototype suggested medium. It is also a genuinely multi-stage repair: restore pip from the official get-pip.py bootstrap, use the restored pip to install numpy, rebuild+editable-install the Cython extension so the default interpreter loads the native backend, run the async-fs unit suite, and instantiate a named conda env from a spec file (dependent_stages=3, tool_breadth=2). The repair is driven by five interdependent failure signatures (broken import, removed pip, absent numpy, missing conda env, missing rebuilt artifact) rather than a single shared signal (debugging_ambiguity=2, reasoning_depth=3). The checksum equality is exact (quantitative_correctness=2). Hidden cases are two-fold: adversarial digest inputs (empty/single-char/long-repeat/non-ASCII UTF-8) AND re-running repair.sh from several genuinely different degraded filesystem/package states (extension+prism stubbed again, numpy wiped, pip removed again, conda env gone, /app/rebuilt deleted), forcing real idempotent repair generalization (hidden_case_generalization=3, interaction_statefulness=2). conda solve, numpy wheels and the get-pip bootstrap all run over the corporate proxy; no GPU/X/service; agent timeout 1800s and verifier 600s cover the repeated conda creates in the verifier."
+}

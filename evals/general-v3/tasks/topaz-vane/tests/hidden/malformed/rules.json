@@ -1,0 +1,6 @@
+{"rules": [
+  {"id": "r_broken", "threshold": 2, "severity": "low"},
+  {"id": "r_nothresh", "keyword": "dropped", "severity": "low"},
+  {"id": "r_nosev", "keyword": "overflow", "threshold": 1},
+  {"id": "r_valid", "keyword": "authfail", "threshold": 2, "severity": "high"}
+]}

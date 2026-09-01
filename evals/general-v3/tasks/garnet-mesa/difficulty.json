@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 0,
+    "tool_breadth": 0,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 0,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 1,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 20,
+  "documented_probe": "C-6a19e2d4 (merge duplicate keys with first/last occurrence semantics): the covering task exercises it at easy via the almanac first-occurrence rule and the source priority order; the verifier fully checks the capability on hidden cases. Documented probe waiver.",
+  "notes": "Single-stage: decode preference/constraint fixtures stored as pickle, base64-wrapped JSON, and plain text; merge them over a TSV roster with a priority rule and resilience to corrupt/missing fixtures. Rubric nonzero for reasoning_depth (three encodings + fall-through semantics), adversarial_inputs/hidden_case_generalization (corrupt base64, bad pickle entries, duplicate lines, missing files; multiple hidden trees), and quantitative_correctness (exact structured report). No tool breadth, no dependency chain, no environment pressure; totals bucket to easy."
+}

@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+mkdir -p /logs/verifier
+reward=0
+if [ -f /app/result.json ]; then
+  if python3 - <<'PY'
+import json, math, sys
+got = json.load(open("/app/result.json"))["hits"]
+scene = json.load(open("/app/scene.json"))
+O = scene["origin"]; D = scene["direction"]
+def intersect(c, r):
+    # L = C - O ; b = D . L ; c2 = |L|^2 - r^2 ; disc = b^2 - c2 ; t = b - sqrt(disc) (near root, t>0)
+    lx,ly,lz = c[0]-O[0], c[1]-O[1], c[2]-O[2]
+    b = lx*D[0] + ly*D[1] + lz*D[2]
+    c2 = lx*lx+ly*ly+lz*lz - r*r
+    disc = b*b - c2
+    if disc < 0:
+        return (False, None)
+    t = b - math.sqrt(disc)
+    if t <= 0:
+        return (False, None)
+    return (True, t)
+ok = True
+for s in scene["spheres"]:
+    pass
+for g in got:
+    i = g["index"]
+    hit, t = intersect(scene["spheres"][i]["center"], scene["spheres"][i]["radius"])
+    g_hit = bool(g["hit"])
+    g_t = None if g.get("t") is None else round(float(g["t"]), 6)
+    g_pt = None if g.get("point") is None else [round(float(x),6) for x in g["point"]]
+    if g_hit != hit:
+        ok = False; continue
+    if hit:
+        exp_t = round(t, 6)
+        exp_pt = [round(O[k]+t*D[k], 6) for k in range(3)]
+        if g_t != exp_t or g_pt != exp_pt:
+            ok = False
+    else:
+        if g_t is not None or g_pt is not None:
+            ok = False
+sys.exit(0 if ok else 1)
+PY && reward=1
+fi
+fi
+echo "$reward" > /logs/verifier/reward.txt

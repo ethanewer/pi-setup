@@ -1,0 +1,30 @@
+#!/bin/bash
+reward=0
+if [ -f /app/frames.json ] && [ -d /app/frames ]; then
+  # expected frame count from ffprobe
+  expected=$(ffprobe -v error -count_frames -select_streams v:0 \
+    -show_entries stream=nb_read_frames -of csv=p=0 /app/sample.mp4 2>/dev/null | head -1)
+  nfiles=$(ls -1 /app/frames/frame_*.png 2>/dev/null | wc -l)
+  if python3 - <<PYEOF
+import json, struct, os, glob
+got = json.load(open('/app/frames.json'))
+exp = int('$expected'.strip() or 0)
+nfiles = '$nfiles'.strip()
+assert got['frames'] == exp, (got['frames'], exp)
+assert str(got['frames']) == nfiles, (got['frames'], nfiles)
+assert got['width'] == 160 and got['height'] == 120
+pngs = sorted(glob.glob('/app/frames/frame_*.png'))
+assert len(pngs) == exp
+with open(pngs[0], 'rb') as f:
+    hdr = f.read(26)
+assert hdr[:8] == b'\x89PNG\r\n\x1a\n'
+w = int.from_bytes(hdr[16:20], 'big')
+h = int.from_bytes(hdr[20:24], 'big')
+assert w == 160 and h == 120, (w, h)
+PYEOF
+  then
+    reward=1
+  fi
+  then reward=1; else reward=0; fi
+else reward=0; fi
+echo "$reward" > /logs/verifier/reward.txt

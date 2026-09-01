@@ -1,0 +1,24 @@
+#!/bin/bash
+mkdir -p /logs/verifier
+reward=0
+if [ -f /app/mask.json ]; then
+  if python3 - <<'EOF'
+import json,sys
+rle=json.load(open('/app/rle.json'))
+h,w=rle['size']; counts=rle['counts']
+flat=[0]*(h*w); pos=0; bit=0
+for c in counts:
+    for _ in range(c):
+        flat[pos]=bit; pos+=1
+    bit=1-bit
+exp_mask=[flat[r*w:(r+1)*w] for r in range(h)]
+exp_area=sum(flat)
+got=json.load(open('/app/mask.json'))
+if got.get('mask')!=exp_mask: sys.exit("mask mismatch")
+if got.get('area')!=exp_area: sys.exit("area mismatch")
+sys.exit(0)
+EOF
+  then
+    reward=1
+  fi
+echo "$reward" > /logs/verifier/reward.txt

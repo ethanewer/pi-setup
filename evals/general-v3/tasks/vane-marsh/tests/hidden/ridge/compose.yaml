@@ -1,0 +1,15 @@
+# Halden Grid -- hidden metering stack B (single reading, different creds).
+services:
+  meters:
+    image: postgres:17
+    hostname: meters
+    environment:
+      POSTGRES_DB: gridstore_ridge
+      POSTGRES_USER: ridgeline
+      POSTGRES_PASSWORD: Ember-Knot-6602
+    ports:
+      - "5433:5432"
+    networks:
+      default: {}
+networks:
+  default: {}

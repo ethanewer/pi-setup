@@ -1,0 +1,9 @@
+# helpers for the three harvest stages. Restore me to pipeline_helpers.py to run.
+def header(name):
+    return "## %s processed" % name
+
+def transform(line):
+    return line.upper().replace(" ", "_")
+
+def finalize(a, b):
+    return "%s|%s" % (a, b)

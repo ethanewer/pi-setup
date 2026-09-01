@@ -1,0 +1,16 @@
+[
+  {"name": "content-type", "expect": "Content-Type"},
+  {"name": "Accept", "expect": "Accept"},
+  {"name": "x-note-id", "expect": "X-Note-Id"},
+  {"name": "cache-control", "expect": "Cache-Control"},
+  {"name": "x-Custom-Header", "expect": "X-Custom-Header"},
+  {"name": "X-Vault-Secret", "expect": "X-Vault-Secret"},
+  {"name": "header", "expect": "Header"},
+  {"name": "a-1st-thing", "expect": "A-1st-Thing"},
+  {"name": "", "expect": "error"},
+  {"name": "a\r\nb", "expect": "error"},
+  {"name": "x\nSet-Cookie", "expect": "error"},
+  {"name": "x\u0000ull", "expect": "error"},
+  {"name": "carriage\rreturn", "expect": "error"},
+  {"name": "\u007f", "expect": "error"}
+]

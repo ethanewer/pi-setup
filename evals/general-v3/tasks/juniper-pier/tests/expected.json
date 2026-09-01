@@ -1,0 +1,12 @@
+{
+  "task_id": "juniper-pier",
+  "visible": {
+    "posterior_alpha": -0.4,
+    "posterior_beta": 1.5,
+    "posterior_tol": 0.25,
+    "rstan": {"chains": 4, "iter": 2400, "warmup": 800, "seed": 20260727},
+    "penalty_corroboration_max_ratio": 10.0,
+    "penalty_band": [0.6, 1.6]
+  },
+  "note": "Verifier runs every deliverable: re-runs the Stan posterior sampler (determinism + accuracy on visible and hidden data), validates the rstan->pystan hyperparameter map, and re-derives the lasso penalty corroborated by CV and corrected-AIC with a distinct ridge variant."
+}

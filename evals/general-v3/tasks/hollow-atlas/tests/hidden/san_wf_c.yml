@@ -1,0 +1,9 @@
+name: edge-upper
+on: [push]
+jobs:
+  j:
+    runs-on: ubuntu-latest
+    steps:
+      - name: slurp
+        run: bash -c 'echo NIGHTFALL-OPS.EXAMPLE bare'
+      - run: echo still-builds

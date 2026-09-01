@@ -1,0 +1,136 @@
+#!/bin/bash
+mkdir -p /logs/verifier
+
+reward=0
+
+if [ -f /app/edges2.json ] && [ -f /app/model2.json ] && [ -f /app/intervention2.json ] && [ -f /app/score2.json ]; then
+  if python3 - <<'EOF'
+import json
+import sys
+
+import numpy as np
+import pandas as pd
+
+TRAIN = "/workspace/data/graph2_train.csv"
+TEST = "/workspace/data/graph2_test.csv"
+ORDER = ["X", "Y", "Z", "W"]
+tr = pd.read_csv(TRAIN)
+te = pd.read_csv(TEST)
+
+
+def discover(df, order):
+    parents = {}
+    for node in order:
+        cands = [p for p in order if order.index(p) < order.index(node)]
+        if not cands:
+            parents[node] = []
+            continue
+        Xm = np.column_stack([df[p].to_numpy() for p in cands])
+        X1 = np.column_stack([np.ones(len(df)), Xm])
+        beta, *_ = np.linalg.lstsq(X1, df[node].to_numpy(), rcond=None)
+        parents[node] = [c for c, cf in zip(cands, beta[1:]) if abs(cf) > 0.3]
+    return parents
+
+
+def fit(df, parents, order):
+    model = {}
+    for node in order:
+        par = parents[node]
+        if not par:
+            model[node] = {"intercept": float(df[node].mean()), "coefs": {}}
+        else:
+            X1 = np.column_stack([np.ones(len(df))] + [df[p].to_numpy() for p in par])
+            beta, *_ = np.linalg.lstsq(X1, df[node].to_numpy(), rcond=None)
+            model[node] = {"intercept": float(beta[0]),
+                           "coefs": {p: float(c) for p, c in zip(par, beta[1:])}}
+    return model
+
+
+def do_effect(df, parents, model, order, cause, target):
+    means = {c: float(df[c].mean()) for c in order}
+
+    def ev(n, fixed):
+        if n in fixed:
+            return fixed[n]
+        m = model[n]
+        if not m["coefs"]:
+            return means[n]
+        val = m["intercept"]
+        for p, cf in m["coefs"].items():
+            val += cf * ev(p, fixed)
+        return val
+
+    low = ev(target, {})
+    high = ev(target, {cause: means[cause] + 1.0})
+    return {"cause": cause, "target": target, "effect": float(high - low),
+            "E_low": float(low), "E_high": float(high)}
+
+
+def combined_rmse(train_df, test_df, parents, model, order):
+    terms = []
+    for node in order:
+        if not parents[node]:
+            continue
+        m = model[node]
+        pred = np.ones(len(test_df)) * m["intercept"]
+        for p, cf in m["coefs"].items():
+            pred = pred + cf * test_df[p].to_numpy()
+        terms.append((pred - test_df[node].to_numpy()) ** 2)
+    return float(np.sqrt(np.mean(np.concatenate(terms))))
+
+
+par = discover(tr, ORDER)
+mod = fit(tr, par, ORDER)
+exp = {c: do_effect(tr, par, mod, ORDER, c, "W") for c in ["X", "Y", "Z"]}
+exp_score = combined_rmse(tr, te, par, mod, ORDER)
+
+ok = True
+
+edges = json.load(open("/app/edges2.json"))
+sg = set(edges.keys()) == set(ORDER) and all(
+    sorted(str(x) for x in edges.get(n, [])) == sorted(str(x) for x in par.get(n, []))
+    for n in ORDER
+)
+if not sg:
+    ok = False
+
+model = json.load(open("/app/model2.json"))
+mg = set(model.keys()) == set(ORDER)
+for node in ORDER:
+    m = model.get(node, {})
+    em = mod[node]
+    if set(m.get("coefs", {}).keys()) != set(em["coefs"].keys()):
+        mg = False
+    if abs(float(m.get("intercept", 0.0)) - em["intercept"]) > 0.3:
+        mg = False
+    for p, c in em["coefs"].items():
+        if abs(float(m.get("coefs", {}).get(p, 1e9)) - c) > 0.3:
+            mg = False
+if not mg:
+    ok = False
+
+inter = json.load(open("/app/intervention2.json"))
+effs = inter.get("effects", []) if isinstance(inter, dict) else []
+by = {e.get("cause"): e for e in effs if isinstance(e, dict)}
+for c in ["X", "Y", "Z"]:
+    e = by.get(c)
+    if e is None or not isinstance(e, dict):
+        ok = False
+    elif abs(float(e.get("effect", 1e9)) - exp[c]["effect"]) > 0.5:
+        ok = False
+
+score = json.load(open("/app/score2.json"))
+if not isinstance(score, dict):
+    ok = False
+else:
+    got = float(score.get("rmse", -1.0))
+    if abs(got - exp_score) > 0.03:
+        ok = False
+
+sys.exit(0 if ok else 1)
+EOF
+  then
+    reward=1
+  fi
+
+echo "$reward" > /logs/verifier/reward.txt

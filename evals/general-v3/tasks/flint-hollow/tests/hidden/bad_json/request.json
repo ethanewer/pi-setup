@@ -1,0 +1,7 @@
+{
+  "raw_body": "{\"text\": \"oops,,",
+  "expect_status": 400,
+  "expect_body": {
+    "error": "body must be valid JSON"
+  }
+}

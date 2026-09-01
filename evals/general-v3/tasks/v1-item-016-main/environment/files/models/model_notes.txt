@@ -1,0 +1,13 @@
+# Tokenizer snapshots used in this task
+
+Both tokenizer files were fetched from the Hugging Face Hub and snapshotted into this image.
+No network is needed at runtime — load them directly with `tokenizers.Tokenizer.from_file`.
+
+| purpose | snapshot source | revision |
+|---------|-----------------|----------|
+| Qwen2.5 tokenizer   | `Qwen/Qwen2.5-0.5B`          | `Qwen2.5-0.5B` (pinned at build) |
+| DeepSeek tokenizer  | `deepseek-ai/DeepSeek-V3`    | `main` snapshot (pinned at build) |
+
+Load Qwen from `/app/models/qwen/tokenizer.json` and DeepSeek from
+`/app/models/deepseek/tokenizer.json`. Always tokenize with
+`add_special_tokens=False` when counting corpus tokens.

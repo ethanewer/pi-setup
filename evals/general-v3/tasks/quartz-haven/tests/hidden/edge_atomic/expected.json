@@ -1,0 +1,88 @@
+{
+ "batches": [
+  {
+   "accepted": 4,
+   "status": 201,
+   "total": 4
+  }
+ ],
+ "invalid_batches": [
+  {
+   "status": 400
+  },
+  {
+   "status": 400
+  },
+  {
+   "status": 400
+  },
+  {
+   "status": 400
+  },
+  {
+   "status": 400
+  },
+  {
+   "status": 400
+  }
+ ],
+ "lookups": {
+  "EDG-000001": {
+   "asset": {
+    "asset_id": "EDG-000001",
+    "price": 33.71,
+    "quantity": 734,
+    "ticker": "TK31"
+   },
+   "status": 200
+  },
+  "EDG-000002": {
+   "asset": {
+    "asset_id": "EDG-000002",
+    "price": 56.42,
+    "quantity": 112,
+    "ticker": "TK31"
+   },
+   "status": 200
+  },
+  "EDG-000003": {
+   "asset": {
+    "asset_id": "EDG-000003",
+    "price": 24.84,
+    "quantity": 826,
+    "ticker": "TK44"
+   },
+   "status": 200
+  },
+  "EDG-000004": {
+   "asset": {
+    "asset_id": "EDG-000004",
+    "price": 25.07,
+    "quantity": 202,
+    "ticker": "TK42"
+   },
+   "status": 200
+  },
+  "EDG-000005": {
+   "status": 404
+  }
+ },
+ "summary": {
+  "by_ticker": {
+   "TK31": {
+    "count": 2,
+    "value": 31062.18
+   },
+   "TK42": {
+    "count": 1,
+    "value": 5064.14
+   },
+   "TK44": {
+    "count": 1,
+    "value": 20517.84
+   }
+  },
+  "count": 4,
+  "total_value": 56644.16
+ }
+}

@@ -1,0 +1,16 @@
+{
+  "rubric": {
+    "dependent_stages": 0,
+    "tool_breadth": 0,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 0,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 1,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 35,
+  "notes": "Single-stage: implement the exact forward-pass arithmetic of a two-layer MLP (optional standardization with a zero-std guard, tanh hidden activation, linear output, argmax with lowest-index tie-break, numerically stable softmax) over JSON-serialized learned weights. Hidden cases vary D/H/C, drop the standardize key, include a zero std entry, exact logit ties, overflow-scale logits, and an empty sample list; labels are checked exactly and probabilities to a tight tolerance. Rubric weight on quantitative_correctness (exact per-class scores), reasoning_depth (multi-step math with edge rules), adversarial_inputs/hidden_case_generalization (five distinct hidden pairs). No tool breadth, no dependency chain, no resource pressure; totals bucket to medium."
+}

@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 0,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 25,
+  "documented_probe": null,
+  "notes": "Single-stage: wire the public scalar-product API into the package root module per a written contract (int/float result typing, ValueError on length mismatch including one-shot iterators, TypeError on non-numeric elements, __module__ == 'dotkit'), then confirm the package still installs offline and exposes the same API installed. Hidden cases probe empty/single/mismatch/tuple/generator/large-int/precision inputs in both import modes; the root-module-definition requirement (no submodule re-export) is the packaging-structure core of the competency."
+}

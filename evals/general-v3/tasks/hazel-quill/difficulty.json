@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 0,
+    "tool_breadth": 0,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 0,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 1,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 20,
+  "documented_probe": "",
+  "notes": "Single-stage: recover original filenames from standard-base64 (padded, validated) obfuscated .qtn quarantine names, skip a battery of decoys (invalid alphabet/length/padding, NUL and '/' decodes, non-UTF-8 decodes, missing suffix, empty segment), restore file bytes byte-identically, and emit a sorted manifest. Exercises C-fa0e8ff2 (decode a base64 filename back to the original name) at easy; the verifier embeds an independent reference decoder and checks the manifest, byte-equality and exit status on the visible run plus three hidden quarantines (mixed, mostly-decoy, all-decoy). Small nonzero rubric for reasoning_depth, adversarial_inputs, hidden_case_generalization, quantitative_correctness."
+}

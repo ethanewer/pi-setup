@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 0,
+    "tool_breadth": 1,
+    "reasoning_depth": 0,
+    "debugging_ambiguity": 0,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 1,
+    "quantitative_correctness": 0,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 15,
+  "documented_probe": "C-9316fd7f (call an http endpoint carrying a computed payload): reference floor is easy and this covering task is authored at easy; the verifier re-runs the deliverable script against the live in-container service on hidden dock ids (open, closed, non-integer) and checks the printed final message against the documented formula.",
+  "notes": "Single flow: start a shipped local kiosk service, discover the claim route and receipt list, compute a sha256-based rendezvous payload for a dock id, POST it, and deliver the returned pier-pass string plus receipt JSON. Hidden cases re-execute the script with unseen open ids (catches hard-coded outputs), a closed id (409 -> non-zero exit, no pierpass on stdout), and a non-integer arg. Easy: no multi-step auth, no auditing, straightforward documented formula."
+}

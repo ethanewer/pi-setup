@@ -1,0 +1,11 @@
+# Larkfield Airshed telemetry service (compose-style description).
+# The running instance inside this container matches this description.
+services:
+  telemetry:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: airshed
+      POSTGRES_USER: airanalyst
+      POSTGRES_PASSWORD: "Larkfield-Brume-9417"
+    ports:
+      - "5433:5432"

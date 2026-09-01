@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 0,
+    "tool_breadth": 0,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 0,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 1,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 30,
+  "documented_probe": null,
+  "notes": "Medium. Single-stage: parse a job spec (locale + ordered column list), stream a large JSONL manifest, keep only the requested locale subset (exact match, rows missing 'locale' dropped), skip blank/malformed/non-object lines without crashing, and emit the requested columns in requested order with JSON null for absent columns. The verifier executes the deliverable program on the visible manifest (4200+ lines) and on three hidden scenarios (mixed adversarial lines with missing columns, a zero-match locale, an all-match case with a never-present column and unicode values). Rubric nonzero for reasoning_depth (ordered emission + null semantics), adversarial_inputs/hidden_case_generalization (hidden cases), and quantitative_correctness (exact row set and column values). No tool breadth, no dependency chain, no environment pressure; totals bucket to medium given the large dataset and strict column-order contract."
+}

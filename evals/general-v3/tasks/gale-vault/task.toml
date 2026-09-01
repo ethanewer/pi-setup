@@ -1,0 +1,32 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "hard"
+category = "security"
+verifier_kind = "executes-deliverable"
+deliverables = [
+    "/app/api.py",
+    "/app/schema.json",
+    "/app/xss.html",
+]
+tags = [
+    "gale-vault",
+    "security",
+    "C-fb731872",
+    "C-4dc5280f",
+    "C-c808d59d",
+    "C-15878c3b",
+    "C-1d626fbd",
+]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 1800.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096

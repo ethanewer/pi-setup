@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 0,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 1,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 20,
+  "documented_probe": "Documented probe waiver: C-2d0e9195 (generate and protect a 2048-bit rsa private key) reference floor is medium; this task exercises the capability directly at medium via policy-driven provisioning plus a reusable key-inspection tool, rather than plum-seal's certificate-centric scenario.",
+  "notes": "Medium security provisioning: generate a fresh 2048-bit unencrypted RSA key to a written policy (exact file/dir modes 0600/0700/0644), emit the matching SPKI public key, and author a reusable PEM key-inspection tool. Dependent stage: key must exist before the report can be produced. Hidden cases generalize the tool across RSA 1024/4096, an encrypted (passphrase-protected) key (algorithm/bits/fingerprint null), EC P-256, Ed25519, and an unparseable file (non-zero exit). Quantitative correctness: exact bit sizes, exact fingerprint hex, exact modes. Freshness guard ensures the deployed key is genuinely generated, not copied."
+}

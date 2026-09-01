@@ -1,0 +1,23 @@
+Captured Vim layout you must reproduce (recreate it exactly with canonical
+Vimscript in /app/layout.vim that gets SOURCED in a clean headless Vim):
+
+  Number of tabs: 2
+  Tab 1  -> 2 windows split vertically, left and right.
+     left window  shows a buffer named "deck.vim"
+     right window shows a buffer named "cargo.txt"
+     (also "deck.vim" is the buffer of the right and left; order above is a
+      row scan from the window in the upper-left: deck.vim, then cargo.txt)
+  Tab 2  -> 3 windows: a tall left window and a vertical split of two windows
+     on its right (top and bottom).
+     left window buffer: "sail.vim"
+     top-right window buffer: "rudder.vim"
+     bottom-right window buffer: "galley.txt"
+
+The exact expected signature for a correct reproduction is:
+
+  tabs=2 tab1:wins=2:deck.vim,cargo.txt tab2:wins=3:sail.vim,rudder.vim,galley.txt
+
+Using canonical Vimscript only (e.g. :tabnew, :vnew/:vs, :split, :buffer/:edit,
+:s+split direction options, with :splitbelow/:splitright as needed).  Keep it
+non-interactive: after it is sourced the layout must be exactly that topology
+and Vim must still be running (do not quit Vim yourself).

@@ -1,0 +1,21 @@
+{
+  "map_path": "/etc/postfix/virtual_lists",
+  "map": {
+    "crew-brief@lists.harborside.net": "bulletin",
+    "dockside-alerts@lists.harborside.net": "pierwatch",
+    "partners@lists.harborside.net": "logistics@quayline.example"
+  },
+  "aliases": {
+    "crew-brief": "bulletin",
+    "dockside-alerts": "pierwatch"
+  },
+  "accounts": ["bulletin", "pierwatch"],
+  "report": {
+    "map_path": "/etc/postfix/virtual_lists",
+    "lists": [
+      {"address": "crew-brief@lists.harborside.net", "target": "bulletin", "kind": "local"},
+      {"address": "dockside-alerts@lists.harborside.net", "target": "pierwatch", "kind": "local"},
+      {"address": "partners@lists.harborside.net", "target": "logistics@quayline.example", "kind": "external"}
+    ]
+  }
+}

@@ -1,0 +1,57 @@
+RELEASE KEY TAPE FORMAT
+=======================
+
+A key tape is a little binary container the release team uses to transport
+the release credential. The credential is NEVER stored in cleartext; it is
+split into shards, each shard XOR-masked with a pad, and the pads themselves
+are stored in tamper-evident encodings.
+
+This document describes format **v1** ("CRMT1") exactly. The tape in this
+store was written by a newer writer; the deltas are listed at the bottom and
+mirror what the shipped `legacy_unpack.py` does NOT yet handle.
+
+--- v1 layout (all multi-byte integers are BIG-ENDIAN) ----------------------
+
+  offset  size  field
+       0     5  magic, ASCII "CRMT1"
+       5     2  npads          (u16) number of pad records that follow
+       7     2  nshards        (u16) number of shard records that follow
+
+  pad record (repeated npads times, in pad-id order):
+              1  pad_enc        (u8)  always 0 in v1
+              2  pad_len        (u16)
+    pad_len      pad_bytes      the pad, stored RAW (v1 has only raw pads)
+
+  shard record (repeated nshards times, in shard-id order):
+              2  shard_id       (u16)
+              2  pad_id         (u16) which pad masks this shard
+              2  shard_len      (u16)
+    shard_len     shard_bytes    shard XOR pad_bytes (pad cycled to length)
+
+  manifest:
+              2  order_len      (u16)
+    order_len     order_bytes    shard ids (u8 each) in the order the
+                                 plaintext shards must be concatenated
+
+The v1 reassembly rule: decode every pad as raw bytes, un-XOR each shard
+with its selected pad, then concatenate the plaintext shards following
+`order_bytes`.
+
+--- deltas in the CURRENT tape writer (v2, magic "CRMT2") -------------------
+
+  * the magic changes to "CRMT2".
+  * pads are no longer all raw. Each pad record carries its own one-byte
+    `pad_enc` selector; 0 still means raw, but the writer now also emits
+    tamper-evident encodings: the stored byte string is either the
+    bit-wise complement of the pad or the ASCII hex text of the pad
+    (lowercase, two characters per byte). Which selector maps to which
+    encoding is the writer's choice; the tape itself shows the stored
+    lengths, and the selector byte is the only in-band hint.
+  * every shard names its pad explicitly via `pad_id` (v1 writers always
+    used pad_id == shard_id; the current writer does not).
+  * the reassembly manifest is authoritative: shard file order on the tape
+    is NOT the plaintext order.
+
+`legacy_unpack.py` in this directory is the v1 reader. Running it on a v2
+tape is expected to fail loudly at the magic check; use it as the reference
+for the record framing, then account for the deltas above.

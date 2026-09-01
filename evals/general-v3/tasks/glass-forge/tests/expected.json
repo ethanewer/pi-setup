@@ -1,0 +1,88 @@
+{
+  "total_conflicts": 5,
+  "conflicts": [
+    {
+      "user": "u-1001",
+      "field": "email",
+      "sources": [
+        {
+          "source": "directory",
+          "value": "kim.tanaka@fernwave.io"
+        },
+        {
+          "source": "payroll",
+          "value": "kim.k@fernwave.io"
+        }
+      ],
+      "winner": "kim.tanaka@fernwave.io"
+    },
+    {
+      "user": "u-1002",
+      "field": "title",
+      "sources": [
+        {
+          "source": "payroll",
+          "value": "Tech II"
+        },
+        {
+          "source": "badge",
+          "value": "Tech II"
+        },
+        {
+          "source": "directory",
+          "value": "Technician II"
+        }
+      ],
+      "winner": "Technician II"
+    },
+    {
+      "user": "u-1004",
+      "field": "dept",
+      "sources": [
+        {
+          "source": "payroll",
+          "value": "ops"
+        },
+        {
+          "source": "payroll",
+          "value": "operations"
+        }
+      ],
+      "winner": "operations"
+    },
+    {
+      "user": "u-1006",
+      "field": "site",
+      "sources": [
+        {
+          "source": "directory",
+          "value": "HKQ"
+        },
+        {
+          "source": "payroll",
+          "value": "HKQ"
+        },
+        {
+          "source": "badge",
+          "value": "hkg"
+        }
+      ],
+      "winner": "HKQ"
+    },
+    {
+      "user": "u-1007",
+      "field": "manager",
+      "sources": [
+        {
+          "source": "payroll",
+          "value": "a.osei"
+        },
+        {
+          "source": "directory",
+          "value": "amara.osei"
+        }
+      ],
+      "winner": "amara.osei"
+    }
+  ]
+}

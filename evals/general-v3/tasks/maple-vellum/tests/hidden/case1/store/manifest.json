@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "chunk_size": 512,
+  "hash": "sha256",
+  "dirs": [
+    "etc",
+    "etc/nested",
+    "etc/nested/deeper",
+    "var empty dir"
+  ],
+  "files": {
+    "donn\u00e9es/rapport fran\u00e7ais.txt": {
+      "size": 444,
+      "chunks": [
+        "8ffffe7238d76f0fee2ddb93116e141b0f7d5aeada625f37f70001c69b12a8b6"
+      ]
+    },
+    "etc/config.ini": {
+      "size": 880,
+      "chunks": [
+        "491aed586946b9637a893c87e3c4263bd60cb49994193bebb8b6a9eedfe46abe",
+        "0d5d480c3221cd3f76ce40785a091c18801d020eba1fff4335b60e34f23a3328"
+      ]
+    },
+    "etc/nested/deeper/empty.dat": {
+      "size": 0,
+      "chunks": []
+    },
+    "etc/nested/deeper/leaf.txt": {
+      "size": 390,
+      "chunks": [
+        "b3d2fe29aa2bc35f75f4259e4377c511c7edbdabcfd77712ef5c56054ca2dc66"
+      ]
+    },
+    "etc/nested/dupe of leaf.txt": {
+      "size": 390,
+      "chunks": [
+        "b3d2fe29aa2bc35f75f4259e4377c511c7edbdabcfd77712ef5c56054ca2dc66"
+      ]
+    },
+    "top.txt": {
+      "size": 45,
+      "chunks": [
+        "fb363d34214f220819c7dc937e51033e04f7ace238a6dd6f1d2c4f9f667de5f5"
+      ]
+    }
+  }
+}

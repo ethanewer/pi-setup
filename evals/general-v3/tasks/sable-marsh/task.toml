@@ -1,0 +1,20 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "easy"
+category = "data_science"
+verifier_kind = "executes-deliverable"
+deliverables = ["/app/fit_model.py", "/app/artifacts/model.joblib", "/app/artifacts/manifest.json"]
+tags = ["sable-marsh", "data_science", "binary-re", "C-2dc20425"]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 900.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096

@@ -1,0 +1,11 @@
+{
+  "comment": "hidden behavioural probe: clamping boundaries",
+  "cases": [
+    {"func": "clip_values", "args": [[-10, -3, 0, 3, 10], -3, 3], "expect": [-3, -3, 0, 3, 3]},
+    {"func": "clip_values", "args": [[5, 5, 5], 5, 5], "expect": [5, 5, 5]},
+    {"func": "clip_values", "args": [[100, 200], 0, 1], "expect": [1, 1]},
+    {"func": "clip_values", "args": [[-100, -200], -1, 0], "expect": [-1, -1]},
+    {"func": "clip_values", "args": [[0.25, 0.75, 1.25], 0.5, 1.0], "expect": [0.5, 0.75, 1.0]},
+    {"func": "clip_values", "args": [[], 0, 10], "expect": []}
+  ]
+}

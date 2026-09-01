@@ -1,0 +1,28 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "medium"
+category = "programming"
+verifier_kind = "executes-deliverable"
+deliverables = [
+    "/app/fetch_model.py",
+    "/app/hf_cache",
+]
+tags = [
+    "ember-atlas",
+    "programming",
+    "C-12915cee",
+    "download-a-pretrained-model-and-tokenizer-into-a-local-cache-for-offline-reuse",
+]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 1200.0
+
+[environment]
+build_timeout_sec = 1200.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096

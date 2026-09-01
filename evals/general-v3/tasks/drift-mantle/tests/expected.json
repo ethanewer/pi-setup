@@ -1,0 +1,40 @@
+{
+  "basename": "access.log",
+  "busiest_count": 3,
+  "busiest_ip": "192.168.1.10",
+  "busiest_risk": 1,
+  "distinct": 5,
+  "flag": "LEADING_ZERO",
+  "jpg_h": 480,
+  "jpg_w": 640,
+  "rows": [
+    {
+      "count": 3,
+      "ip": "192.168.1.10",
+      "risk": 1
+    },
+    {
+      "count": 2,
+      "ip": "10.0.0.1",
+      "risk": 1
+    },
+    {
+      "count": 1,
+      "ip": "172.16.0.5",
+      "risk": 3
+    },
+    {
+      "count": 1,
+      "ip": "8.8.8.8",
+      "risk": 2
+    },
+    {
+      "count": 1,
+      "ip": "9.9.9.9",
+      "risk": 6
+    }
+  ],
+  "total_hits": 8,
+  "total_lines": 12,
+  "verdict": "GO"
+}

@@ -1,0 +1,31 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "hard"
+category = "programming"
+verifier_kind = "executes-deliverable"
+deliverables = [
+  "/app/dusk/app.c",
+  "/app/dusk/Makefile",
+  "/app/dusk/app",
+  "/app/proof.txt",
+]
+tags = [
+  "dusk-anchor",
+  "programming",
+  "C-b45b6939",
+  "binary-re",
+  "standalone-c-reimplementation",
+]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 900.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096

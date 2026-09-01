@@ -1,0 +1,16 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 1,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "notes": "The agent must fetch and read the hosted /contract.json before calling anything (competency C-15878c3b): the archive key, the /api/v2/ prefix, the cursor parameter name, the 202-then-poll job lifecycle and the campaign constants are all only in the doc, and the wrong guesses (unversioned or /api/v1/ paths, missing auth header) fail with 404/410/403. The chain contract->paginated listing->filtered selection->POST->poll->serialize is stateful and multi-stage. Hidden instances vary contract version, archive key, select_status, metric, window, page counts and data (including a zero-reading result with null stats), so any hard-coded doc value or data fails. Tool breadth limited to HTTP via stdlib; no resource pressure."
+}

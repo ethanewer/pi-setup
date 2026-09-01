@@ -1,0 +1,106 @@
+{
+ "results": [
+  {
+   "name": "content-type",
+   "ok": true,
+   "canonical": "Content-Type"
+  },
+  {
+   "name": "ACCEPT",
+   "ok": true,
+   "canonical": "Accept"
+  },
+  {
+   "name": "x-CuStOm-HeAdEr",
+   "ok": true,
+   "canonical": "X-Custom-Header"
+  },
+  {
+   "name": "host",
+   "ok": true,
+   "canonical": "Host"
+  },
+  {
+   "name": "cache-control",
+   "ok": true,
+   "canonical": "Cache-Control"
+  },
+  {
+   "name": "x-request-id",
+   "ok": true,
+   "canonical": "X-Request-Id"
+  },
+  {
+   "name": "X-TRACE-TOKEN",
+   "ok": true,
+   "canonical": "X-Trace-Token"
+  },
+  {
+   "name": "etag",
+   "ok": true,
+   "canonical": "Etag"
+  },
+  {
+   "name": "x\r-inject",
+   "ok": false,
+   "canonical": null
+  },
+  {
+   "name": "bad\nname",
+   "ok": false,
+   "canonical": null
+  },
+  {
+   "name": "nul\u0000byte",
+   "ok": false,
+   "canonical": null
+  },
+  {
+   "name": "del\u007fchar",
+   "ok": false,
+   "canonical": null
+  },
+  {
+   "name": "tab\there",
+   "ok": false,
+   "canonical": null
+  },
+  {
+   "name": "",
+   "ok": false,
+   "canonical": null
+  },
+  {
+   "name": 42,
+   "ok": false,
+   "canonical": null
+  },
+  {
+   "name": null,
+   "ok": false,
+   "canonical": null
+  },
+  {
+   "name": [
+    "x"
+   ],
+   "ok": false,
+   "canonical": null
+  },
+  {
+   "name": "x-forwarded-For",
+   "ok": true,
+   "canonical": "X-Forwarded-For"
+  },
+  {
+   "name": "retry-after",
+   "ok": true,
+   "canonical": "Retry-After"
+  },
+  {
+   "name": "x_custom_header",
+   "ok": true,
+   "canonical": "X_custom_header"
+  }
+ ]
+}

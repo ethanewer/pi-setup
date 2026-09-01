@@ -1,0 +1,39 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "hard"
+category = "data_processing"
+verifier_kind = "executes-deliverable"
+deliverables = [
+  "/app/filter_locale.py",
+  "/app/locale.jsonl",
+  "/app/offline_assets/",
+  "/app/tokenize.py",
+  "/app/token_counts.json",
+  "/app/bpe.py",
+  "/app/bpe_model.json",
+  "/app/detect_lang.py",
+  "/app/lang_flags.json",
+  "/app/tasks.yaml",
+  "/app/fetch_leaderboard.py",
+  "/app/leaderboard_top.txt",
+]
+tags = [
+  "quartz-dial",
+  "data_processing",
+  "C-23cd5707",
+  "C-c76545ce",
+  "C-f9ae04c3",
+]
+
+[verifier]
+timeout_sec = 720.0
+
+[agent]
+timeout_sec = 1800.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096

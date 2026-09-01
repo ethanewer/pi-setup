@@ -1,0 +1,82 @@
+[
+ {
+  "input": "content-type",
+  "ok": true,
+  "canonical": "Content-Type"
+ },
+ {
+  "input": "X-EMPLOYEE-ID",
+  "ok": true,
+  "canonical": "X-Employee-Id"
+ },
+ {
+  "input": "etag",
+  "ok": true,
+  "canonical": "Etag"
+ },
+ {
+  "input": "a--b",
+  "ok": true,
+  "canonical": "A--B"
+ },
+ {
+  "input": "x-",
+  "ok": true,
+  "canonical": "X-"
+ },
+ {
+  "input": "-lead",
+  "ok": true,
+  "canonical": "-Lead"
+ },
+ {
+  "input": "1x",
+  "ok": true,
+  "canonical": "1x"
+ },
+ {
+  "input": "MiMe-TyPe",
+  "ok": true,
+  "canonical": "Mime-Type"
+ },
+ {
+  "input": "x.mime-type.v2",
+  "ok": true,
+  "canonical": "X.mime-Type.v2"
+ },
+ {
+  "input": "x\ny",
+  "ok": false,
+  "canonical": null
+ },
+ {
+  "input": "x\u0000y",
+  "ok": false,
+  "canonical": null
+ },
+ {
+  "input": "bad name",
+  "ok": false,
+  "canonical": null
+ },
+ {
+  "input": "café",
+  "ok": false,
+  "canonical": null
+ },
+ {
+  "input": "",
+  "ok": false,
+  "canonical": null
+ },
+ {
+  "input": 5,
+  "ok": false,
+  "canonical": null
+ },
+ {
+  "input": null,
+  "ok": false,
+  "canonical": null
+ }
+]

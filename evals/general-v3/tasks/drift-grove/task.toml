@@ -1,0 +1,43 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "hard"
+category = "programming"
+verifier_kind = "executes-deliverable"
+deliverables = [
+    "/app/search.py",
+    "/app/tile-solution.json",
+    "/app/expr.py",
+    "/app/expr.txt",
+    "/app/oracle-debug.py",
+    "/app/probe-log.json",
+    "/app/lines.txt",
+    "/app/gen-gate.py",
+    "/app/gate.def",
+    "/app/gen-table.py",
+    "/app/table.csv",
+    "/app/tiny-source.py",
+    "/app/compressed-sizes.json",
+]
+tags = [
+    "drift-grove",
+    "programming",
+    "C-8c278ff5",
+    "C-48f7a33a",
+    "C-d6eae9b8",
+    "C-7cc75c6c",
+    "C-8312502d",
+    "C-2e1c650a",
+]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 1800.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096

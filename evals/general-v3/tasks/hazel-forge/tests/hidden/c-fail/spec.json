@@ -1,0 +1,37 @@
+{
+  "limit": 1,
+  "jobs": [
+    {
+      "dur_ms": 0,
+      "fail": true
+    },
+    {
+      "dur_ms": 300,
+      "fail": false
+    },
+    {
+      "dur_ms": 300,
+      "fail": false
+    },
+    {
+      "dur_ms": 300,
+      "fail": false
+    },
+    {
+      "dur_ms": 300,
+      "fail": false
+    },
+    {
+      "dur_ms": 300,
+      "fail": false
+    }
+  ],
+  "expected": {
+    "mode": "raises",
+    "exc": "ValueError",
+    "max_factories_called": 2,
+    "must_call_index": [
+      0
+    ]
+  }
+}

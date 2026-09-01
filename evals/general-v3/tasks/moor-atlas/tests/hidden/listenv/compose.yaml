@@ -1,0 +1,14 @@
+# Moor Atlas hidden scenario stack (compose-style).
+services:
+  fenreckon:
+    image: postgres:16
+    hostname: fenreckon
+    environment:
+      - POSTGRES_DB=fenlist
+      - POSTGRES_USER=fenreckoner
+      - POSTGRES_PASSWORD=Fen-Tally-9192
+    ports:
+      - "5581:5432"
+  ledger:
+    image: busybox:1.36
+    command: ["sleep", "infinity"]

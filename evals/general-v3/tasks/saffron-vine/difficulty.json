@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 1,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": "C-4c743935 (LoRA adapter train/save/merge lifecycle): second independent covering task. A corrupted (zeroed) fc2 weight must be recovered by training a rank-constrained LoRA adapter to a holdout accuracy target, persisting a self-sufficient reloadable adapter directory (weights/config/tokenizer feature spec), and merging the adapter into the base weight per an exact equation that the verifier checks numerically. Hard: multi-stage lifecycle, exact merge-equation + freeze constraints, hidden-fixture generalization.",
+  "notes": "Distinct from larch-cipher (stalled-head scenario): here the base model's fc2.weight is zeroed by a failed checkpoint restore and the agent must run the full LoRA lifecycle. The verifier executes /app/restore.py on the visible case and three hidden fixtures with different vocab/embed/hidden/seq-len/seed, validates the adapter directory reloads onto the base and reproduces merged outputs, checks the merge equation tensor-exactly, enforces that non-fc2 tensors are untouched, and enforces the >=0.86 holdout accuracy bar. Rubric: dependent stages (train->save->merge->eval), reasoning depth (LoRA math + freeze discipline), hidden generalization + quantitative correctness (accuracy bar and exact merge), moderate resource pressure (CPU torch training)."
+}

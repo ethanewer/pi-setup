@@ -1,0 +1,26 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "medium"
+category = "web"
+verifier_kind = "executes-deliverable"
+deliverables = ["/app/app.py", "/app/answer.json"]
+tags = [
+  "flint-hollow",
+  "web",
+  "C-e1811563",
+  "flask-post-classification-endpoint",
+  "structured-confidence-schema",
+]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 600.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096

@@ -1,0 +1,40 @@
+SUBKEY STRUCTURAL COUNT AND ARCHIVE PROBING
+============================================
+
+A candidate C = "morn-NNN" is on the acceptance shortlist for the operator
+vault if and only if the following structural-count condition holds:
+
+    the UNITS digit of C (the last decimal digit of NNN) equals
+    the number of "letter" glyphs among the hexadecimal digits of
+    SHA-1(UTF-8 of C).
+
+Here "letter glyphs" are exactly the six hex letters: a, b, c, d, e, f. Both
+cases are covered because the digest text is lowercase; count every occurrence
+of any of those six characters anywhere in the 40-character hex text. Digits
+0-9 are not letter glyphs and are not counted.
+
+Formally, with hex(C) = the 40 lowercase hex chars of the SHA-1 digest:
+
+    shortlist(C)  <=>  units(C) == len([ ch for ch in hex(C) if ch in "abcdef" ])
+
+Shortlist members are then probed against the live archive (the decisive step):
+
+Probe every shortlist candidate in ASCENDING numeric order of NNN using p7zip's
+test verb on the archive header:
+
+    7z t -y -p'<candidate>' /app/vault/box.7z
+                            (also works for any other same-scheme archive
+                             passed in the same position)
+
+The command's exit code is 0 if and only if the passphrase is correct
+(decryption of the header succeeds); any incorrect candidate exits non-zero.
+
+The true vault passphrase is therefore THE FIRST shortlist candidate, in
+ascending numeric order, for which `7z t -y -p'<candidate>' <archive>` returns
+exit code 0. That passphrase, and only that one, will decrypt the archive with
+`7z x -y -o<dest> -p'<passphrase>' <archive>` and let you read the member file
+`member.txt` containing the recovered account credentials.
+
+Summary of the whole pipeline:
+    enumerate (900 candidates) -> SHA-1 subkey -> structural-count filter
+    -> ascending probe -> decrypt+extract -> parse member creds.

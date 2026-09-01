@@ -1,0 +1,32 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "hard"
+category = "system_administration"
+verifier_kind = "executes-deliverable"
+deliverables = [
+  "/app/solve.py",
+  "/app/answer.json",
+]
+tags = [
+  "drift-canyon",
+  "system_administration",
+  "C-2867a8c3",
+  "C-a280ae57",
+  "C-e589f42d",
+  "C-9a6e7959",
+  "C-72fb3c19",
+  "C-69755486",
+]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 1800.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096

@@ -1,0 +1,69 @@
+{
+  "vocab_size": 9,
+  "prefix": [
+    4,
+    4
+  ],
+  "target": [
+    7,
+    2,
+    5,
+    7,
+    8
+  ],
+  "draft_len": 1,
+  "result": [
+    4,
+    4,
+    7,
+    2,
+    5,
+    7,
+    8
+  ],
+  "n_drafted": 5,
+  "n_accepted": 1,
+  "n_corrected": 4,
+  "blocks": [
+    {
+      "start": 2,
+      "draft": [
+        6
+      ],
+      "accepted": 0,
+      "rejected": true
+    },
+    {
+      "start": 3,
+      "draft": [
+        5
+      ],
+      "accepted": 0,
+      "rejected": true
+    },
+    {
+      "start": 4,
+      "draft": [
+        5
+      ],
+      "accepted": 1,
+      "rejected": false
+    },
+    {
+      "start": 5,
+      "draft": [
+        3
+      ],
+      "accepted": 0,
+      "rejected": true
+    },
+    {
+      "start": 6,
+      "draft": [
+        3
+      ],
+      "accepted": 0,
+      "rejected": true
+    }
+  ]
+}

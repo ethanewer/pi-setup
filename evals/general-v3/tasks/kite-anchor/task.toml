@@ -1,0 +1,38 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "hard"
+category = "programming"
+verifier_kind = "executes-deliverable"
+deliverables = [
+  "/app/game.mips",
+  "/app/main",
+  "/app/Makefile",
+  "/app/poly.c",
+  "/app/app",
+  "/app/key.txt",
+  "/app/scheme.py",
+]
+tags = [
+  "kite-anchor",
+  "programming",
+  "cross-compile-a-small-c-game-engine-to-a-mips-elf-binary",
+  "compile-and-link-a-fortran-library-module-with-a-main-program",
+  "produce-a-binary-whose-output-convention-matches-an-external-launcher",
+  "keep-the-answer-independent-of-a-recompiled-binary",
+  "parse-cli-args-and-write-documented-output-formats",
+  "implement-the-metacircular-evaluator-of-a-scheme-like-interpreter",
+  "build-and-install-software-from-source",
+]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 1800.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096

@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 0,
+    "tool_breadth": 0,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 0,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 1,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 25,
+  "documented_probe": "C-5ef2ad28 (combine values from reference clues to produce an expected payload): the covering task exercises the capability at easy; the verifier executes the deliverable on hidden clue sets and compares the derived integer to a reference derivation, fully checking the capability.",
+  "notes": "Single-stage: reassemble a numeric recipe scattered across an env-style seed file, an inclusive date cutoff, and a journal of keyed operation entries; wrong arithmetic or wrong filtering yields a wrong payload. Generalization is probed by hidden clue sets (all-entries-filtered, malformed/junk files, missing seed/cutoff, numeric filename ordering, large and negative xor operands). Small rubric nonzero for reasoning_depth (multi-artifact merge + date filter), adversarial_inputs, hidden_case_generalization, and quantitative_correctness (exact integer). Totals bucket to easy."
+}

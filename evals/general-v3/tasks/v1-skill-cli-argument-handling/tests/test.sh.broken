@@ -1,0 +1,25 @@
+#!/bin/bash
+mkdir -p /logs/verifier
+reward=0
+if [ -f /app/args.py ]; then
+  if python3 - <<'EOF'
+import subprocess,sys,json
+cases=[
+ (["--mode","fast","-c","7","--label=two words","/tmp/file1.txt"],
+  {"mode":"fast","count":7,"label":"two words","file":"/tmp/file1.txt"}),
+ (["-m","slow","--count","3","--label","no-spaces","other.txt"],
+  {"mode":"slow","count":3,"label":"no-spaces","file":"other.txt"}),
+]
+for argv,exp in cases:
+    r=subprocess.run(["python3","/app/args.py"]+argv,capture_output=True,text=True)
+    if r.returncode!=0:
+        sys.exit("args.py exited %d: %s"%(r.returncode,r.stderr))
+    got=json.load(open("/app/parsed.json"))
+    if got!=exp:
+        sys.exit("parsed mismatch: %r vs %r"%(got,exp))
+sys.exit(0)
+EOF
+  then
+    reward=1
+  fi
+echo "$reward" > /logs/verifier/reward.txt

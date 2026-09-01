@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 2,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 30,
+  "documented_probe": "C-71a2c135 (fetch fluorescent-protein spectral data from an external spectra api): covering task exercises it at full hard fidelity — the client must page a capped per_page catalog, query per-id spectra and status endpoints, and select proteins whose excitation/emission match laser/band windows, with a withdrawn decoy that spectrally dominates until the status filter is applied. Independent cover for zephyr-anchor in a different scenario (multi-channel microscope calibration with pagination + status endpoint vs. single-page donor/acceptor FRET pair selection).",
+  "notes": "Single-deliverable HTTP-client stage: start the localhost fixture server, poll /health, page through /api/spectra (per_page hard-capped at 5 so naive single-page clients fail), map /api/status per protein, apply inclusive laser-tolerance/emission-band/brightness filters per channel, and break ties by brightness then id. reasoning_depth=2: multi-constraint filtering plus a deterministic tie-break; interaction_statefulness=2: subprocess server lifecycle with readiness poll on a fresh free port per run; tool_breadth=2: HTTP client + subprocess + JSON I/O. quantitative_correctness=2: payloads must equal the /api/spectra response exactly. hidden_case_generalization=2: verifier re-runs the unchanged client on fresh hidden databases and channel specs. Totals bucket to hard."
+}

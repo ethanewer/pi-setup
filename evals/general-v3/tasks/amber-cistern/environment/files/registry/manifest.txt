@@ -1,0 +1,18 @@
+# Valid queries (all in the table)
+SLOT A/1/01
+SLOT A/2/05
+SLOT C/5/20
+
+# Unknown but well-formed -> goes to "unknown"
+SLOT D/9/99
+
+# Malformed manifest lines -> skipped, never sent to the service
+FETCH A/1/02
+SLOT b/3/11
+SLOT A/1
+SLOT
+random noise
+
+# Duplicate query of an already-queried slot is idempotent
+SLOT A/1/01
+# comment line

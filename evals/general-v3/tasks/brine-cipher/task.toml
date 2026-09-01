@@ -1,0 +1,30 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "medium"
+category = "security"
+verifier_kind = "executes-deliverable"
+deliverables = [
+  "/app/dewal.py",
+  "/app/gauge.db-wal",
+  "/app/answer.txt",
+]
+tags = [
+  "brine-cipher", "security",
+  "C-ce46ee62",
+  "single-byte-xor-wal-recovery",
+  "sqlite-wal-magic",
+  "committed-wal-rows",
+]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 900.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096

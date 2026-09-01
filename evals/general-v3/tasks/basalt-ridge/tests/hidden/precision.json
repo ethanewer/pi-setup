@@ -1,0 +1,10 @@
+{
+  "comment": "Precision hidden scenarios. (1) attention_softmax must produce weights in the exact configured dtype with a sum error below that dtype's tolerance. (2) a BagModel in fp32 fed fp16 input must still produce a finite in-(0,1) prediction and finite non-zero gradients for every parameter.",
+  "logits": [[-12.0, 0.0, 7.5, 3.2, -4.4]],
+  "dtypes": ["fp16", "fp32", "fp64"],
+  "mixed_input": {
+    "model_dtype": "fp32",
+    "input_dtype": "fp16",
+    "items": [[0.25, -1.5, 3.0], [-0.75, 2.25, -3.5], [1.0, 1.0, 1.0], [-2.0, 0.5, 4.0]]
+  }
+}

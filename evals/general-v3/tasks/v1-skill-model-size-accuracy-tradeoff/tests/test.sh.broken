@@ -1,0 +1,38 @@
+#!/bin/bash
+
+mkdir -p /logs/verifier
+reward=0
+if [ -f /app/analysis.json ]; then
+  if python3 - <<'EOF'
+import csv, json
+
+rows = []
+with open('/app/models.csv') as f:
+    for r in csv.DictReader(f):
+        rows.append((r['model'], float(r['accuracy_pct'])))
+
+small_to_large_delta = round(rows[-1][1] - rows[0][1], 2)
+best = max(rows, key=lambda x: x[1])
+
+max_gain = None; max_row = None
+for i in range(len(rows) - 1):
+    gain = round(rows[i+1][1] - rows[i][1], 2)
+    if max_gain is None or gain > max_gain:
+        max_gain = gain
+        max_row = f"{rows[i][0]}->{rows[i+1][0]}"
+
+expected = {
+    "best_model": best[0],
+    "best_acc": best[1],
+    "max_gain_row": max_row,
+    "max_gain_value": max_gain,
+    "small_to_large_delta": small_to_large_delta,
+}
+with open('/app/analysis.json') as f:
+    got = json.load(f)
+assert got == expected, (got, expected)
+EOF
+  then
+    reward=1
+  fi
+echo "$reward" > /logs/verifier/reward.txt

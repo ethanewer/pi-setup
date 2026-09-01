@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 1,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 1,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 40,
+  "documented_probe": null,
+  "notes": "Eight interlocking deliverables: an HTTP service whose reservation endpoint must reject malformed bodies with 400+message while a deliberately picky management control path only answers a crafted request carrying the exact media type and admin header; a reservation CLI that must call the live API and persist venue+company; a solver that floors the reported objective to an exact single integer; and a value object whose hash must be re-derived from the value without breaking equality or the instance cache. The picky endpoint, the hidden malformed-body matrix, the hidden reservation re-run, and the value invariants (dedup-by-equality, hash==hash(key), distinct values distinct) are each enforced by independent checks, so a task missing any competency fails the verifier. Difficulty is driven by endpoint-discovery ambiguity, multi-stage orchestration, and invariant preservation, not by prompt length."
+}

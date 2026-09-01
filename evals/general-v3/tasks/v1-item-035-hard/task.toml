@@ -1,0 +1,18 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "hard"
+category = "programming"
+tags = ["item-035", "python", "grpc", "protocol-buffers", "grpcio-grpcio-tools", "concurrent-server-state", "define-the-wire-contract-first", "test-a-live-server-with-a-real-client", "handle-lifecycle-and-repeat-requests"]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 2400.0
+
+[environment]
+build_timeout_sec = 900.0
+cpus = 2
+memory_mb = 2048
+storage_mb = 4096
