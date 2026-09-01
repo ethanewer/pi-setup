@@ -2,7 +2,7 @@
   "version": 3,
   "policy": "Task-to-competency matrix. Competency IDs are opaque; the private mapping to reference evidence lives in private-audit/competency_map.json.",
   "competency_count": 726,
-  "task_count": 500,
+  "task_count": 494,
   "matrix": {
     "C-f0fe0218": [
       {
@@ -1941,17 +1941,6 @@
         "difficulty": "hard"
       },
       {
-        "task_id": "kestrel-marsh",
-        "evidence": "verifier executes deliverable on hidden cases; oracle verified reward=1.0 during authoring",
-        "verifier_kind": "executes-deliverable",
-        "deliverables": [
-          "/app/setup_r_env.sh",
-          "/app/analysis/causal_probe.executed.ipynb"
-        ],
-        "hidden_cases": true,
-        "difficulty": "hard"
-      },
-      {
         "task_id": "olive-quarry",
         "evidence": "verifier executes deliverable on hidden cases (lint-enforced); oracle-verified",
         "verifier_kind": "executes-deliverable",
@@ -2814,53 +2803,6 @@
           "/app/model/adapter_config.json",
           "/app/model/state_dict.pt",
           "/app/model/arch.json"
-        ],
-        "hidden_cases": true,
-        "difficulty": "hard"
-      }
-    ],
-    "C-2f09fe3b": [
-      {
-        "task_id": "briar-anvil",
-        "evidence": "verifier executes deliverable on hidden cases (lint-enforced); oracle-verified",
-        "verifier_kind": "executes-deliverable",
-        "deliverables": [
-          "/app/src/ledger.c",
-          "/app/src/memledger"
-        ],
-        "hidden_cases": true,
-        "difficulty": "medium"
-      },
-      {
-        "task_id": "cobalt-marlin",
-        "evidence": "verifier executes deliverable on hidden cases; oracle verified reward=1.0 during authoring",
-        "verifier_kind": "executes-deliverable",
-        "deliverables": [
-          "/app/src/batchstat.c"
-        ],
-        "hidden_cases": true,
-        "difficulty": "medium"
-      },
-      {
-        "task_id": "harbor-notch",
-        "evidence": "verifier executes deliverable on hidden cases (lint-enforced); oracle-verified",
-        "verifier_kind": "executes-deliverable",
-        "deliverables": [
-          "/app/src/mtally.c",
-          "/app/src/mtally"
-        ],
-        "hidden_cases": true,
-        "difficulty": "medium"
-      },
-      {
-        "task_id": "hollow-keystone",
-        "evidence": "The verifier rebuilds /app/src/kvcat from the delivered fixed.c and runs it under `valgrind --leak-check=full --error-exitcode=42 --errors-for-leak-kinds=definite,possible` on the visible sample and four hidden token files; any definite/possible leak trips error-exitcode and fails the case. The shipped bug short-circuits on the first malformed line and leaks the accumulated records, so on every malformed-input case a leak-suppression hack (exit-without-cleanup, a suppression file, or an env shim) cannot pass: the verifier runs valgrind itself without suppressions, so only genuine in-source cleanup yields zero definite leaks. The negative control (pristine container) fails hidden0/1/2/3 on leak/exit rc=42/255.",
-        "verifier_kind": "executes-deliverable",
-        "deliverables": [
-          "/app/src/fixed.c",
-          "/app/src/kvcat",
-          "/app/merged.diff",
-          "/app/deps.lock"
         ],
         "hidden_cases": true,
         "difficulty": "hard"
@@ -5023,6 +4965,42 @@
         "difficulty": "medium"
       }
     ],
+    "C-2f09fe3b": [
+      {
+        "task_id": "cobalt-marlin",
+        "evidence": "verifier executes deliverable on hidden cases; oracle verified reward=1.0 during authoring",
+        "verifier_kind": "executes-deliverable",
+        "deliverables": [
+          "/app/src/batchstat.c"
+        ],
+        "hidden_cases": true,
+        "difficulty": "medium"
+      },
+      {
+        "task_id": "harbor-notch",
+        "evidence": "verifier executes deliverable on hidden cases (lint-enforced); oracle-verified",
+        "verifier_kind": "executes-deliverable",
+        "deliverables": [
+          "/app/src/mtally.c",
+          "/app/src/mtally"
+        ],
+        "hidden_cases": true,
+        "difficulty": "medium"
+      },
+      {
+        "task_id": "hollow-keystone",
+        "evidence": "The verifier rebuilds /app/src/kvcat from the delivered fixed.c and runs it under `valgrind --leak-check=full --error-exitcode=42 --errors-for-leak-kinds=definite,possible` on the visible sample and four hidden token files; any definite/possible leak trips error-exitcode and fails the case. The shipped bug short-circuits on the first malformed line and leaks the accumulated records, so on every malformed-input case a leak-suppression hack (exit-without-cleanup, a suppression file, or an env shim) cannot pass: the verifier runs valgrind itself without suppressions, so only genuine in-source cleanup yields zero definite leaks. The negative control (pristine container) fails hidden0/1/2/3 on leak/exit rc=42/255.",
+        "verifier_kind": "executes-deliverable",
+        "deliverables": [
+          "/app/src/fixed.c",
+          "/app/src/kvcat",
+          "/app/merged.diff",
+          "/app/deps.lock"
+        ],
+        "hidden_cases": true,
+        "difficulty": "hard"
+      }
+    ],
     "C-1ea268be": [
       {
         "task_id": "cobalt-quill",
@@ -5030,18 +5008,6 @@
         "verifier_kind": "executes-deliverable",
         "deliverables": [
           "/app/keyfind.c",
-          "/app/creds.txt"
-        ],
-        "hidden_cases": true,
-        "difficulty": "hard"
-      },
-      {
-        "task_id": "garnet-shard",
-        "evidence": "verifier executes deliverable on hidden cases; oracle verified reward=1.0 during authoring",
-        "verifier_kind": "executes-deliverable",
-        "deliverables": [
-          "/app/gullbreak.c",
-          "/app/gullbreak",
           "/app/creds.txt"
         ],
         "hidden_cases": true,
@@ -7541,36 +7507,6 @@
         ],
         "hidden_cases": true,
         "difficulty": "easy"
-      }
-    ],
-    "C-488f50fd": [
-      {
-        "task_id": "elm-anchor",
-        "evidence": "verifier executes deliverable on hidden cases; oracle verified reward=1.0 during authoring",
-        "verifier_kind": "executes-deliverable",
-        "deliverables": [
-          "/app/emit.py",
-          "/app/vocab.txt",
-          "/app/merges.txt"
-        ],
-        "hidden_cases": true,
-        "difficulty": "medium"
-      },
-      {
-        "task_id": "zephyr-bridge",
-        "evidence": "The verifier drives the exact loading convention through zeph_loader.load_vocab (one token per line, no internal whitespace) and load_merges (two space-separated symbols per line) and validates that the emitted merge rules form a consistent character-level BPE chain (each rule's symbols are single characters or earlier-introduced symbols). Malformed or misordered merge lines break loading/chaining and fail on the shipped corpus and on both hidden corpora.",
-        "verifier_kind": "executes-deliverable",
-        "deliverables": [
-          "/app/run.sh",
-          "/app/vocab.txt",
-          "/app/merges.txt",
-          "/app/embeddings.npy",
-          "/app/metrics.csv",
-          "/app/vocab.pkl",
-          "/app/model.pkl"
-        ],
-        "hidden_cases": true,
-        "difficulty": "hard"
       }
     ],
     "C-d228b384": [
@@ -12479,18 +12415,6 @@
         "difficulty": "medium"
       },
       {
-        "task_id": "opal-framer",
-        "evidence": "verifier executes deliverable on hidden cases (lint-enforced); oracle-verified",
-        "verifier_kind": "executes-deliverable",
-        "deliverables": [
-          "/app/framer.py",
-          "/app/payload/index.json",
-          "/app/reassembled.bin"
-        ],
-        "hidden_cases": true,
-        "difficulty": "medium"
-      },
-      {
         "task_id": "pewter-hull",
         "evidence": "verifier executes deliverable on hidden cases (lint-enforced); oracle-verified",
         "verifier_kind": "executes-deliverable",
@@ -14572,38 +14496,6 @@
         "difficulty": "hard"
       }
     ],
-    "C-92a7a9c8": [
-      {
-        "task_id": "silk-meridian",
-        "evidence": "verifier executes deliverable on hidden cases; oracle verified reward=1.0 during authoring",
-        "verifier_kind": "executes-deliverable",
-        "deliverables": [
-          "/app/solve.py",
-          "/app/answer.json"
-        ],
-        "hidden_cases": true,
-        "difficulty": "medium"
-      },
-      {
-        "task_id": "vine-pier",
-        "evidence": "The verifier re-runs /app/retrieve.py on fresh corpora (duplicate doc, an empty token doc, >5 docs) and asserts the cosine ranking/positions, selected (rank 1), 5th document, embedding dim, and the pinned checkpoint revision exactly match the reference. A revision mismatch, stale cache, or a different injection changes the ordering and fails.",
-        "verifier_kind": "executes-deliverable",
-        "deliverables": [
-          "/app/ckpt_reader.c",
-          "/app/ckpt_reader",
-          "/app/generate.py",
-          "/app/greedy_out.json",
-          "/app/speculative.py",
-          "/app/spec_out.json",
-          "/app/retrieve.py",
-          "/app/ranks.json",
-          "/app/model.pkl",
-          "/app/params.json"
-        ],
-        "hidden_cases": true,
-        "difficulty": "hard"
-      }
-    ],
     "C-4a3a4fa1": [
       {
         "task_id": "silt-barrow",
@@ -16035,6 +15927,27 @@
         "difficulty": "hard"
       }
     ],
+    "C-92a7a9c8": [
+      {
+        "task_id": "vine-pier",
+        "evidence": "The verifier re-runs /app/retrieve.py on fresh corpora (duplicate doc, an empty token doc, >5 docs) and asserts the cosine ranking/positions, selected (rank 1), 5th document, embedding dim, and the pinned checkpoint revision exactly match the reference. A revision mismatch, stale cache, or a different injection changes the ordering and fails.",
+        "verifier_kind": "executes-deliverable",
+        "deliverables": [
+          "/app/ckpt_reader.c",
+          "/app/ckpt_reader",
+          "/app/generate.py",
+          "/app/greedy_out.json",
+          "/app/speculative.py",
+          "/app/spec_out.json",
+          "/app/retrieve.py",
+          "/app/ranks.json",
+          "/app/model.pkl",
+          "/app/params.json"
+        ],
+        "hidden_cases": true,
+        "difficulty": "hard"
+      }
+    ],
     "C-5fe739fc": [
       {
         "task_id": "vine-pier",
@@ -16475,6 +16388,24 @@
           "/app/smiles_report.json",
           "/app/api_client.py",
           "/app/api_report.json"
+        ],
+        "hidden_cases": true,
+        "difficulty": "hard"
+      }
+    ],
+    "C-488f50fd": [
+      {
+        "task_id": "zephyr-bridge",
+        "evidence": "The verifier drives the exact loading convention through zeph_loader.load_vocab (one token per line, no internal whitespace) and load_merges (two space-separated symbols per line) and validates that the emitted merge rules form a consistent character-level BPE chain (each rule's symbols are single characters or earlier-introduced symbols). Malformed or misordered merge lines break loading/chaining and fail on the shipped corpus and on both hidden corpora.",
+        "verifier_kind": "executes-deliverable",
+        "deliverables": [
+          "/app/run.sh",
+          "/app/vocab.txt",
+          "/app/merges.txt",
+          "/app/embeddings.npy",
+          "/app/metrics.csv",
+          "/app/vocab.pkl",
+          "/app/model.pkl"
         ],
         "hidden_cases": true,
         "difficulty": "hard"
@@ -16931,9 +16862,6 @@
     "brass-lantern": [
       "C-228815c1"
     ],
-    "briar-anvil": [
-      "C-2f09fe3b"
-    ],
     "brine-cipher": [
       "C-ce46ee62"
     ],
@@ -17354,9 +17282,6 @@
       "C-90cc2aa9",
       "C-06ebb4a9"
     ],
-    "elm-anchor": [
-      "C-488f50fd"
-    ],
     "elm-keystone": [
       "C-d228b384",
       "C-ac59b3ce",
@@ -17577,9 +17502,6 @@
     ],
     "garnet-mesa": [
       "C-5c8704c8"
-    ],
-    "garnet-shard": [
-      "C-1ea268be"
     ],
     "glacier-vane": [
       "C-71a2c135"
@@ -17864,9 +17786,6 @@
     "kestrel-loop": [
       "C-04cd9bdd"
     ],
-    "kestrel-marsh": [
-      "C-e87edf52"
-    ],
     "kestrel-vault": [
       "C-cdad201d"
     ],
@@ -18131,9 +18050,6 @@
     ],
     "opal-fathom": [
       "C-07c78691"
-    ],
-    "opal-framer": [
-      "C-b18a585c"
     ],
     "opal-grove": [
       "C-6fcd47f5"
@@ -18473,9 +18389,6 @@
     ],
     "sedge-vault": [
       "C-92072676"
-    ],
-    "silk-meridian": [
-      "C-92a7a9c8"
     ],
     "silt-barrow": [
       "C-4a3a4fa1"
