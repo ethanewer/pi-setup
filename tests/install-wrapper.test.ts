@@ -122,7 +122,10 @@ test("patch-pi-bundle rewrites the pinned bundle chunk, idempotently", () => {
 test("doctor uses the independent Pi AI pin and behavior verifier", () => {
 	expect(doctor).toContain('PINNED_PI_AI="$("$JS"');
 	expect(doctor).toContain('"Pi AI|$PINNED_PI_AI|$INSTALLED_PI_AI"');
-	expect(doctor).toContain('"$JS" "$PI_AI_VERIFIER" "$PI_AI_ROOT"');
+	// The verifier is ESM with a bun shebang; node cannot load it as .js, so the doctor
+	// must resolve a bun binary explicitly even when its $JS fallback chain found node.
+	expect(doctor).toContain('"$BUN_BIN" "$PI_AI_VERIFIER" "$PI_AI_ROOT"');
+	expect(doctor).toContain('BUN_BIN="$(command -v bun)"');
 	expect(doctor).not.toContain("appendOpenAIReasoningDetail(preservedDetails, detail)");
 });
 

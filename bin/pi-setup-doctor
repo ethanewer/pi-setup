@@ -518,10 +518,25 @@ done
 PI_AI_ROOT="$BUN_GLOBAL/@earendil-works/pi-ai"
 PI_AI_VERIFIER="$REPO_DIR/bin/verify-pi-ai-reasoning-fix"
 PI_AI_VERIFY_REPORT=""
-if [[ -f "$PI_AI_VERIFIER" ]] \
-  && PI_AI_VERIFY_REPORT="$("$JS" "$PI_AI_VERIFIER" "$PI_AI_ROOT" 2>&1)"; then
+# The verifier is an ESM script with top-level await and a bun shebang. $JS may have
+# resolved to node (it is preferred above because a machine can have Node.js without
+# this setup), and node cannot load it as .js without "type": "module", so it must
+# run under bun. The installer guarantees bun, so look for it explicitly.
+BUN_BIN=""
+if command -v bun >/dev/null 2>&1; then
+  BUN_BIN="$(command -v bun)"
+elif [[ -x "${BUN_INSTALL:-$HOME/.bun}/bin/bun" ]]; then
+  BUN_BIN="${BUN_INSTALL:-$HOME/.bun}/bin/bun"
+elif [[ -x "${BUN_INSTALL:-$HOME/.bun}/bin/bun.exe" ]]; then
+  BUN_BIN="${BUN_INSTALL:-$HOME/.bun}/bin/bun.exe"
+fi
+if [[ -n "$BUN_BIN" && -f "$PI_AI_VERIFIER" ]] \
+  && PI_AI_VERIFY_REPORT="$("$BUN_BIN" "$PI_AI_VERIFIER" "$PI_AI_ROOT" 2>&1)"; then
   ok "Pi AI reasoning-details stream concatenation and historical replay normalization are installed"
 else
+  if [[ -z "$BUN_BIN" ]]; then
+    PI_AI_VERIFY_REPORT="bun is not on PATH or under BUN_INSTALL, so the verifier could not run"
+  fi
   bad "Pi AI $PINNED_PI_AI failed the reasoning-details behavior check${PI_AI_VERIFY_REPORT:+: $PI_AI_VERIFY_REPORT} (run ./install.sh)"
   fixable install
 fi

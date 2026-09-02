@@ -71,4 +71,15 @@ echo "=== [4] doctor, on a machine with no node at all"
 su - tester -c 'command -v node >/dev/null && echo "node present (not the case being tested)" || echo "(no node installed)"'
 su - tester -c 'export PATH=$HOME/.local/bin:$HOME/.bun/bin:$PATH; bash ~/.pi/agent/setup-src/bin/pi-setup-doctor --offline'
 echo "doctor exit=$?"
+
+echo
+echo "=== [5] doctor, with node also installed"
+# The doctor's JS fallback chain prefers node when it is on PATH, and the Pi AI
+# reasoning verifier is an ESM script with a bun shebang that node cannot load as .js.
+# A machine with both runtimes must still pass the behavior check; running the
+# verifier under node shipped as a false PROBLEM on every such Linux box.
+apt-get install -y -qq nodejs >/dev/null 2>&1
+su - tester -c 'command -v node && node --version'
+su - tester -c 'export PATH=$HOME/.local/bin:$HOME/.bun/bin:$PATH; bash ~/.pi/agent/setup-src/bin/pi-setup-doctor --offline'
+echo "doctor exit=$?"
 IN
