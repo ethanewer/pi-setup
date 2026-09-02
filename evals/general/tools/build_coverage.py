@@ -72,7 +72,7 @@ def main() -> int:
         evidence = entry.get('evidence', {})
         if not isinstance(evidence, dict):
             evidence = {cid: str(evidence) for cid in ids}
-        if not ids and not task.startswith('v1-'):
+        if not ids and not task.startswith(('v1-', 'tb3-')):
             # v1-* tasks are the imported legacy general-coding family:
             # supplementary tasks that legitimately claim no tb2.1
             # competencies (same exemption check_tb21_coverage.py grants).

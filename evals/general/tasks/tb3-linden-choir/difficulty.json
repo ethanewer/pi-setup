@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 0,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 40,
+  "documented_probe": "Media/Music skill, symbolic music-theory analysis (no audio): the agent authors /app/analyze.py, a pure-stdlib CLI that reads a JSON chorale score (key + chords with beats, durations, unvoiced note lists) and writes a deterministic functional analysis — diatonic roman numerals with quality and inversion over major and minor keys, phrase-final cadence labels (PAC/IAC/HC/PLAGAL), and rank-pair parallel perfect-interval detection — plus the /app/analysis.json deliverable for the visible C-major fixture. Hidden probes execute /app/analyze.py twice per score on G-major (planted parallel fifths), D-minor (planted parallel octave, deceptive V->VI), E-flat-major (plagal IV->I), all-diminished, duplicated-note, and empty progressions, and compare exact parsed-JSON equality against the probe's own independent recomputation (harness/refanalyze.py) of the documented ruleset; malformed inputs (bad note, off-key chord, bad key, missing fields, invalid JSON, missing file) must be rejected with a non-zero exit and no output file.",
+  "notes": "Medium (sum 10): the core is a precise theory-ruleset implementation — triad matching over spelled major/harmonic-minor pools, bass-determined inversion, nested cadence rules with a documented phrase-final definition, and a rank-pair parallel-fifths/octaves algorithm — so reasoning_depth is 2 and correctness is exact (parsed-JSON equality against the verifier's independent recompute, so a hardcoded visible analysis fails). debugging_ambiguity is mild (edge behaviors like identical-note unisons, tiered tie-breaks, and the degree-sign character must match the docs exactly). adversarial_inputs and hidden_case_generalization are both 2: six hidden scores spanning four keys plus planted-parallel, deceptive, plagal, all-diminished, duplicated-note, empty, and malformed cases. Zero tool breadth (stdlib only) and zero resource pressure."
+}

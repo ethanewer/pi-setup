@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 0,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 40,
+  "documented_probe": "Media/Design skill exercised as verifiable SVG: the agent authors a deterministic parametric poster renderer (/app/render_poster.py) whose output is a pure function of a JSON layout spec, and renders the visible poster (/app/poster.svg). The verifier executes the renderer on the visible spec and on hidden specs (different canvases incl. odd widths, palettes, float layout constants, section counts incl. zero sections, empty/trailing-newline bodies, text with &/<) and independently recomputes the full expected element tree from each spec with its own implementation of the documented r1/fmt/line-count formulas, comparing every tag, attribute value, and text exactly; it also validates /app/poster.svg against the visible spec and re-runs one case for byte-identical determinism.",
+  "notes": "Medium: the layout contract is expressed entirely in prose and tables; the agent must transcribe it into exact deterministic arithmetic (Python round(x,1) half-to-even, format(x,'g') shortest-form output, documented body line-splitting). Correctness is quantitative and exact — every coordinate, size, color and font attribute must match the verifier's independent recompute as strings — so hidden-case generalization (2) and adversarial inputs (2) carry the difficulty: zero-section, empty-body and float-constant hidden specs defeat any hardcoded or spec-ignoring renderer, and a byte-determinism re-run rejects time/randomness-dependent output. Two dependent stages (script plus its rendered artifact, both graded). No tool breadth, resource pressure, or interaction state."
+}

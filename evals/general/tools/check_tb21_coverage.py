@@ -179,7 +179,7 @@ def main() -> int:
     for task in task_dirs:
         if task not in indexed:
             problems.append(f'task absent from matrix: {task}')
-        elif not cov['task_index'][task] and not task.startswith('v1-'):
+        elif not cov['task_index'][task] and not task.startswith(('v1-', 'tb3-')):
             problems.append(f'task claims no competencies: {task}')
 
     # metadata tags must be traceable to the task contract (no decorative

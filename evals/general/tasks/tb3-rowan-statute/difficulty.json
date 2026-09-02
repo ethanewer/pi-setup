@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 30,
+  "documented_probe": "Data-processing declaration building: the agent writes a CLI generator (/app/build_declaration.py) that validates raw transaction rows into an exact-reason validation report, aggregates valid rows by (direction, partner_country, commodity_code) with integer cents / milli-kg arithmetic, applies per-direction exemption thresholds (exactly-at-threshold included), and emits a byte-order-sorted declaration CSV. The verifier independently recomputes both outputs from the raw inputs and compares; it also executes the deliverable on a copy of the visible workdir and on three hidden workdirs (boundary aggregates exactly at and one cent below the threshold, duplicated txn_ids incl. rejected duplicates and an empty-unit commodity entry, an all-invalid file with a blank line and a multi-reason row, and an all-valid-but-exempt file yielding an empty declaration), so any hardcoded visible output fails.",
+  "notes": "Medium: five pipeline stages are load-bearing (validate with six documented reason codes plus MALFORMED_ROW, aggregate with exact integer arithmetic, threshold-exempt with an explicit >= boundary, C-locale sort, stable txn_id sort of the report), the visible fixture demos every reason and an exactly-at-threshold inclusion, and the hidden cases push the boundary to the cent, duplicates, degenerate all-invalid and empty-result shapes. The verifier recomputes expected output itself from the hidden fixtures rather than storing answers. Resources are trivial; no tool breadth or pressure."
+}

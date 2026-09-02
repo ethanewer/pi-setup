@@ -1,10 +1,11 @@
 # General Eval — Build & Verification Workflow
 
-767 Harbor tasks for training and evaluating coding agents. Covers the full
+774 Harbor tasks for training and evaluating coding agents. Covers the full
 Terminal-Bench 2.1 competency space (726 atomic competencies, 725 covered,
 1 waived as environmentally infeasible) plus 271 supplementary general-coding
-tasks. Zero contamination with Terminal-Bench 2.1 — verified by byte-level
-audit.
+tasks (v1 family) and 7 clean-room tasks exercising Terminal-Bench 3.0 skill
+domains not already covered (tb3 family). Zero contamination with
+Terminal-Bench 2.1 — verified by byte-level audit.
 
 ## Dataset composition
 
@@ -12,7 +13,8 @@ audit.
 |---|---|---|
 | v2/v3 clean-room | 496 | Authored to cover tb2.1 competencies without containing any tb2.1 content |
 | v1 filtered | 271 | General coding tasks (Nemotron/TMax seeds); filtered for verifier quality |
-| **Total** | **767** | |
+| tb3 skill tasks | 7 | Clean-room tasks for Terminal-Bench 3.0 skill domains (taxonomy metadata only) not exercised by the rest of the suite |
+| **Total** | **774** | |
 
 v1 filtering removed 245 tasks with weak verifiers (no deliverable execution)
 and 8 tasks with tb2.1 contamination (block/n-gram overlap). The v1 family is
@@ -74,7 +76,7 @@ All gates run via `tools/rebuild_and_audit.sh` or individually:
 
 | Gate | Tool | Result |
 |---|---|---|
-| Layout & contract lint | `tools/lint_tasks.py` | 496 clean-room tasks, 0 problems (271 legacy v1 skipped by design) |
+| Layout & contract lint | `tools/lint_tasks.py` | 503 clean-room tasks (496 tb2.1 + 7 tb3), 0 problems (271 legacy v1 skipped by design) |
 | Competency coverage | `tools/check_tb21_coverage.py` | 725/726 covered, 1 waived-infeasible, 0 errors |
 | Difficulty calibration | `tools/check_difficulty.py` | 0 problems (--allow-unmeasured) |
 | Provenance | `tools/update_provenance.py` + `check_reproducibility.py` | 12,128 files, 0 drift |
@@ -127,6 +129,33 @@ Also completed the two in-flight tasks **kiln-anchor** and **larch-vane**
 (their verifiers required `tests/hidden` fixtures that had never been
 committed; fixtures added, oracles re-verified). All four oracles pass
 reward=1.0 from pristine containers (`specs/oracle_report.json`).
+
+## 2026-09-02 addition — the tb3 family (Terminal-Bench 3.0 skill domains)
+
+Terminal-Bench 3.0 (`harbor-framework/terminal-bench`) classifies its tasks
+into seven domains and ~30 subdomains (Science, Software, ML, Operations,
+Security, Hardware, Media). The TB3 taxonomy was compared against the tb2.1
+competency inventory and the v1 skill tasks; every subdomain whose skills are
+already exercised was skipped, and one clean-room task was authored per
+remaining skill domain (`specs/tb3_skill_domains.json` records the full
+mapping):
+
+| Task | TB3 domain / subdomain | Skill exercised |
+|---|---|---|
+| `tb3-brass-caliper` | Hardware / CAD | parametric spacer/flange geometry engine (centers, clearances, area, volume, mass, design-rule validation) |
+| `tb3-agate-latch` | Hardware / RTL | synchronous FIFO in Verilog; three hidden golden-model testbenches under Icarus Verilog incl. parameter overrides |
+| `tb3-linden-choir` | Media / Music | symbolic music-theory analysis: roman numerals/inversions, cadence classification, parallel P5/P8 detection |
+| `tb3-vellum-poster` | Media / Design | deterministic parametric SVG layout reconstruction, structure/attribute recompute |
+| `tb3-birch-lemma` | Science / Linguistics | ordered sound-change derivation engine (feeding/bleeding, insertion, edge conditioning) |
+| `tb3-harbor-ledger` | Operations / Claims | claims adjudication pipeline: deductible, coinsurance floor, per-claim and aggregate caps, reason codes |
+| `tb3-rowan-statute` | Operations / Compliance | regulatory declaration builder: validation report, threshold exemption, C-locale sorted aggregate CSV |
+
+The tb3 family is supplementary like v1 (claims no tb2.1 competencies), but
+unlike v1 it satisfies the full clean-room contract lint. Authoring agents
+had no access to any Terminal-Bench (2.1 or 3.0) task content; each task was
+authored and then independently re-verified by a second agent (fresh docker
+builds, oracle reward=1, multiple cheat/negative tests all reward=0), and all
+seven oracles were re-run through harbor's oracle agent.
 
 ## Oracle verification
 

@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 0,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 3,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 35,
+  "documented_probe": "Claims-adjudication engine: the agent implements /app/adjudicate.py (a stdlib CLI) plus the visible report /app/adjudication.json. The verifier first executes the CLI on the visible fixtures, then runs an independent recomputation inside /tests/hidden/adjudicate_probe.py that replays the CLI on hidden (policy, claims) bundles — a single-day leap-day window (2024-02-29) with day-before/day-after denials, aggregate exhaustion mid-id-sort with truncated partial payment then aggregate_exhausted zeros, duplicate ids resolved by stable original-line order (mixed approved/denied same-id rows), zero-amount claims mapping to ['eligible'], a two-cent claim where the documented coinsurance floor (1.5 cents -> 1) differs from any rounding scheme, exclusion precedence over the window check, and an all-denied set — comparing exact decisions, payable_cents, full reason-code lists including order, and aggregate totals. Any deviation, including a hardcoded visible answer, fails.",
+  "notes": "Medium: the pipeline has five dependent stages in a documented order (eligibility with exclusion-over-window precedence, deductible, explicit floor at the coinsurance step, per-claim cap, annual aggregate applied in stable ascending-id order with mid-sort truncation), producing exact integer outputs and machine-readable reason codes whose ordering is graded. Quantitative correctness is the dominant dimension (exact cent arithmetic, floor vs round-half-up trap on the two-cent claims, exact-boundary truncation); hidden bundles add adversarial shapes (leap-day, duplicates, zeros, all-denied) so a hardcoded visible output fails, yet the task is pure stdlib with no resource pressure or tool breadth."
+}

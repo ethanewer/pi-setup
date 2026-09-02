@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 0,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 1,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": "Hardware authoring + simulation with Icarus Verilog: the agent writes a parametrized synchronous FIFO (sync_fifo) with registered count, combinational show-ahead dout, and read-before-write head visibility, documented cycle-by-cycle and validated against the visible sanity testbench. The hidden testbenches each embed an independent golden array/pointer/counter model and compare dout/full/empty/count after every rising edge over fixed-seed randomized and scripted sequences (LFSR-driven, no $urandom), covering write-when-full, read-when-empty, simultaneous read+write at full, empty, and count==1, deep wrap-around across the pointer boundary, mid-sequence synchronous resets, and non-default parameters (DATA_WIDTH=12, DEPTH=64 via parameter override). The verifier compiles and simulates the agent's RTL against each hidden testbench and requires its PASS sentinel.",
+  "notes": "Medium: author clean synthesizable RTL to an exact protocol. Nonzero rubric for tool_breadth (iverilog/vvp compile-simulate-debug loop), reasoning_depth (registered vs combinational outputs, full/empty legality on pre-edge state, read-before-write visibility at count==1, circular pointer arithmetic with parameterized depths), debugging_ambiguity (observable timing is subtle; the visible fixture only nudges, the hidden goldens are strict), adversarial_inputs (simultaneous ops at the full/empty boundaries and mid-stream reset pulses), hidden_case_generalization (three independent hidden TBs plus non-default geometry via parameter override, so hardcoded or default-geometry stubs fail), quantitative_correctness (count/full/empty/dout exact every cycle)."
+}

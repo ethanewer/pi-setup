@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 0,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": "Parametric mechanical-part geometry engine (bolt-circle spacer/flange): the agent authors an importable pure-Python cadmodel module (bolt-hole centers, edge clearances, annular area, volume, mass, validate_spec, build_report) and a rounded JSON report for a visible spec. The verifier imports /app/cadmodel.py and re-runs every function on hidden specs (bolt counts 1/2/12/24, tiny margins, planted multi-code violations, boundary-touch cases, malformed values, float-vs-int bolt counts, missing keys) under three limits variants, plus an independent recompute of /app/spacer_report.json.",
+  "notes": "Medium: quantitative_correctness 2 because every reported number must match an independent recompute to 4 decimals under exact documented conventions (angles, overlap handling, rounding, sort order); hidden_case_generalization 2 because hidden specs span edge shapes and limits variants so hardcoding the visible report fails; adversarial_inputs 2 from malformed-field specs (strings, bools, negative/zero values, float bolt count, missing keys); dependent_stages 2 because the module and the JSON report must agree with each other and with the verifier. No tool breadth or resource pressure: pure stdlib math, single-digit-second runtime."
+}

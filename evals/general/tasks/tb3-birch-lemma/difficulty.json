@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 0,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 40,
+  "documented_probe": "tb3-birch-lemma exercises the Science/Linguistics competency of historical/computational linguistics: implementing a strictly ordered sound-change derivation engine with exact positional matching semantics. The verifier executes /app/derive.py on the visible pair and on five hidden (rules.json, lexicon.txt) pairs covering feeding chains (rule 1 creates rule 2's environment), bleeding chains (rule 1 destroys rule 2's environment), pre-pass single-pass matching traps (adjacent matches on one rule), initial/final/medial insertion rules, edge-conditioned changes at both word edges, a fully deleted word, words where nothing applies, and interior spacing preservation in the input column; each output is compared byte-for-byte against the verifier's own independent recomputation, so hardcoding the visible output fails.",
+  "notes": "Medium: the semantics are fully documented (single pre-pass match pass per rule, rightmost-first application, edge and empty-context matching, deletion/insertion position shifts), so the programming task is mechanical once the spec is read, but the hidden cases make any shortcut fail: ordering traps (feeding and bleeding) distinguish implementations that respect list order from naive ones, and five orthogonal hidden rule sets (deletion chains, insertion rules, dual-edge-conditioned changes, inert lexicons) force true generalization rather than visible-shape matching. Reasoning depth comes from getting the pre-pass semantics and boundary insertion indices exactly right; byte-exact TSV comparison (including a zero-length derived field and preserved interior whitespace) removes grading ambiguity. No tool breadth, resource pressure, or interaction state beyond a single CLI invocation."
+}
