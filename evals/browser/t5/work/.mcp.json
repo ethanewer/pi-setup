@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "playwright": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@playwright/mcp@0.0.79",
+        "--headless",
+        "--no-sandbox",
+        "--user-data-dir",
+        "/Users/ethanewer/pi-setup-browser-eval/evals/browser/t5/browser-profile"
+      ],
+      "trace": true
+    }
+  }
+}

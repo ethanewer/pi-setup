@@ -273,8 +273,7 @@ the live web: read a bot check or CAPTCHA and complete it instead of retrying
 blindly, wait out "checking your browser" interstitials instead of refreshing, and
 honor `Retry-After` on HTTP 429.
 
-This default comes from **browser-bench** (`evals/browser/` on the `browser-eval`
-branch): six surfaces — the native `agent_browser` tool, the same tool plus prompt
+This default comes from **browser-bench** ([`evals/browser/`](evals/browser/README.md)): six surfaces — the native `agent_browser` tool, the same tool plus prompt
 guidance, `@playwright/mcp` and `chrome-devtools-mcp` behind a shared bridge, and
 CLI+skill arms for `agent-browser` and `@playwright/cli` — run across two models,
 three seeds, and five tasks on a seeded fixture site with deterministic,
@@ -282,8 +281,8 @@ server-instrumented friction (human gates that escalate to a code captcha, a tim
 browser-check interstitial, a rate limiter with `Retry-After`, runtime-bound login,
 JS-only content). The CLI+skill arms matched or beat every extension arm on task
 outcome for both models at roughly half the browser calls and tokens; `agent-browser`
-was the most robust single choice. See `evals/browser/REPORT.md` on the
-`browser-eval` branch for the full writeup, caveats, and raw results.
+was the most robust single choice. See
+[`evals/browser/REPORT.md`](evals/browser/REPORT.md) for the full writeup, caveats, and raw results.
 
 Two deliberate alternatives:
 
@@ -532,14 +531,14 @@ See [`evals/monitor/README.md`](evals/monitor/README.md) for task design, metric
 8–11/12; the eval also drove a simplification of the monitor extension's model surface
 from 4 tools/10 params/3 guidelines to 3/6/1, which improved trust for every model).
 
-The second is **browser-bench** (`evals/browser/` on the `browser-eval` branch): six
+The second is **browser-bench** ([`evals/browser/`](evals/browser/README.md)): six
 browser surfaces x two models x three seeds x five tasks on a seeded fixture site
 whose request log is the ground truth for every friction metric. It found the CLI+skill
 surface (the `agent-browser` CLI plus one SKILL.md, no tool) matched or beat every
 extension arm on outcome at roughly half the calls and tokens, and it is why this
 setup's default browser is a CLI and a skill rather than the `agent_browser` tool. See
-the [Browser automation](#browser-automation) section and the branch's
-`evals/browser/REPORT.md`.
+the [Browser automation](#browser-automation) section and
+[`evals/browser/REPORT.md`](evals/browser/REPORT.md).
 
 ## Performance
 

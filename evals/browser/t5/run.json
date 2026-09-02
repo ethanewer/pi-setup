@@ -1,0 +1,82 @@
+{
+  "task": "t5",
+  "arm": "playwright",
+  "model": "openrouter/~deepseek/deepseek-v4-flash-latest",
+  "seed": "303",
+  "nonce": "90bd6832bc80",
+  "baseUrl": "http://127.0.0.1:63584",
+  "budgetSeconds": 300,
+  "startedAt": "2026-08-29T11:24:45.575Z",
+  "endedAt": "2026-08-29T11:25:25.642Z",
+  "durationMs": 40068,
+  "exitReason": "settled",
+  "assistantTurns": 6,
+  "toolCounts": {
+    "mcp": 4,
+    "mcp__playwright": 2
+  },
+  "toolCalls": [
+    {
+      "tool": "mcp",
+      "args": {
+        "search": "navigate"
+      }
+    },
+    {
+      "tool": "mcp",
+      "args": {
+        "search": "content"
+      }
+    },
+    {
+      "tool": "mcp",
+      "args": {
+        "server": "playwright"
+      }
+    },
+    {
+      "tool": "mcp",
+      "args": {
+        "connect": "playwright"
+      }
+    },
+    {
+      "tool": "mcp__playwright",
+      "args": {
+        "tool": "playwright_browser_navigate",
+        "args": {
+          "url": "http://127.0.0.1:63584"
+        }
+      }
+    },
+    {
+      "tool": "mcp__playwright",
+      "args": {
+        "args": {},
+        "tool": "playwright_browser_snapshot"
+      }
+    }
+  ],
+  "packages": [
+    "local/pi-mcp-adapter"
+  ],
+  "usage": {
+    "input": 15860,
+    "output": 502,
+    "cacheRead": 5888
+  },
+  "siteSummary": {
+    "challengesServed": 0,
+    "challengeCheckboxServed": 0,
+    "challengeCodeServed": 0,
+    "challengesSolved": 0,
+    "challengeFailed": 0,
+    "interstitials": 0,
+    "interstitialsCleared": 0,
+    "rateLimited": 0,
+    "authOk": 0,
+    "authFailed": 0
+  },
+  "finalText": "Here's what the demo store's homepage shows:\n\n- **Opening hours:** Mon–Sat, 9:00–18:00\n- **Support email:** `support@demo-90bd6.example`\n\nBoth are listed directly on the homepage under \"Opening hours\" and \"Support\" headings.",
+  "mcpCleanupKills": 1
+}
