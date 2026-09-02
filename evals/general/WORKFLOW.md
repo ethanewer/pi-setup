@@ -1,20 +1,24 @@
 # General Eval — Build & Verification Workflow
 
-765 Harbor tasks for training and evaluating coding agents. Covers the full
-Terminal-Bench 2.1 competency space (726 atomic competencies, 722 covered)
-plus 271 supplementary general-coding tasks. Zero contamination with
-Terminal-Bench 2.1 — verified by byte-level audit.
+767 Harbor tasks for training and evaluating coding agents. Covers the full
+Terminal-Bench 2.1 competency space (726 atomic competencies, 725 covered,
+1 waived as environmentally infeasible) plus 271 supplementary general-coding
+tasks. Zero contamination with Terminal-Bench 2.1 — verified by byte-level
+audit.
 
 ## Dataset composition
 
 | Source | Tasks | Description |
 |---|---|---|
-| v2 clean-room | 494 | Authored to cover tb2.1 competencies without containing any tb2.1 content |
+| v2/v3 clean-room | 496 | Authored to cover tb2.1 competencies without containing any tb2.1 content |
 | v1 filtered | 271 | General coding tasks (Nemotron/TMax seeds); filtered for verifier quality |
-| **Total** | **765** | |
+| **Total** | **767** | |
 
 v1 filtering removed 245 tasks with weak verifiers (no deliverable execution)
-and 8 tasks with tb2.1 contamination (block/n-gram overlap).
+and 8 tasks with tb2.1 contamination (block/n-gram overlap). The v1 family is
+supplementary: it claims no tb2.1 competencies and is exempt from the
+clean-room contract lint and competency-claim gates by design (same exemption
+`check_tb21_coverage.py` applies).
 
 ## How it was built
 
@@ -35,8 +39,9 @@ mapping to reference evidence is in `private-audit/competency_map.json`
 
 ### 3. Clean-room task authoring (v2 tasks)
 
-494 tasks were authored to exercise the 726 competencies without copying any
-tb2.1 content. Each task:
+496 tasks were authored to exercise the 726 competencies without copying any
+tb2.1 content (the first 494 in fleet waves; cedar-summit and flint-gate
+added 2026-09-02 to close the last feasible gaps). Each task:
 
 - Has a self-contained instruction with exact paths, formats, edge cases
 - Uses an approved base image (`bench-base:*`) or documented CA-patched image
@@ -69,11 +74,12 @@ All gates run via `tools/rebuild_and_audit.sh` or individually:
 
 | Gate | Tool | Result |
 |---|---|---|
-| Layout & contract lint | `tools/lint_tasks.py` | 765 tasks, 0 problems |
-| Competency coverage | `tools/check_tb21_coverage.py` | 722/726 covered, 0 errors |
-| Difficulty calibration | `tools/check_difficulty.py` | 0 problems |
-| Provenance | `tools/update_provenance.py` + `check_reproducibility.py` | 10,334 files, 0 drift |
-| Independence audit | `tools/audit_independence_stream.py` | **Clean**: 37,700 payloads, exact=0, block=0, ngram=0, canary=0, repo=0 |
+| Layout & contract lint | `tools/lint_tasks.py` | 496 clean-room tasks, 0 problems (271 legacy v1 skipped by design) |
+| Competency coverage | `tools/check_tb21_coverage.py` | 725/726 covered, 1 waived-infeasible, 0 errors |
+| Difficulty calibration | `tools/check_difficulty.py` | 0 problems (--allow-unmeasured) |
+| Provenance | `tools/update_provenance.py` + `check_reproducibility.py` | 12,128 files, 0 drift |
+| Independence audit | `tools/audit_independence_stream.py` | **Clean**: 13,237 payloads, exact=0, block=0, ngram=0, canary=0, repo=0 |
+| Similarity triage | `tools/check_task_similarity.py` | 14 flagged pairs, all cleared by two-reviewer blind triage (boilerplate/API-signature overlaps; no direct recipes) |
 | Suite report | `tools/suite_report.py` | **SUITE PASS** |
 
 ### Independence audit detail
@@ -91,7 +97,36 @@ reference checkout and requires zero overlap:
 The audit never silently skips files. Exclusions are path+hash-based,
 documented in the tool source, and narrowly scoped (e.g., x264 encoder
 signature in self-authored video fixtures, Node.js LICENSE files in official
-distributions).
+distributions). Exclusion matching resolves labels relative to the suite
+ROOT, so it survives directory renames.
+
+## 2026-09-02 addition — closing the last feasible coverage gaps
+
+Two tasks were authored for the three remaining uncovered competencies
+(the fourth, C-c65bea8a kernel rebuild + QEMU/KVM boot, is environmentally
+infeasible on Docker-on-macOS and carries a documented waiver in
+`private-audit/infeasible/kernel-rebuild.json`):
+
+- **cedar-summit** (C-6f29d769): multi-service interactive negotiation.
+  Four Flask microservices (coordinator desk + three colleague phones),
+  interactive bash dialers that POST each typed line to the services, an
+  authentication phrase issued by the coordinator and required by every
+  phone (wrong/stale phrase hangs up with no data), and a unique optimal
+  offsite plan derived from hidden availability/preference/constraint
+  state. Verifier executes the plan against the booking desk, checks it
+  against the hidden optimum, and proves the authenticated conversations
+  happened via the services' call journal.
+- **flint-gate** (C-2e082c47 + C-c34cf87e): an optionally gated LayerNorm
+  as a single `@triton.jit` kernel under `TRITON_INTERPRET=1`. Hidden
+  battery of shapes in both gate and no-gate modes (B=1, S=1, D=1, odd
+  non-power-of-two D) at rtol=1e-4/atol=1e-6, plus static inspection that
+  fails on any `tl.sum`/`.sum(`/built-in `sum` or torch/numpy/math inside
+  kernel bodies — reductions must be explicit `tl` ops.
+
+Also completed the two in-flight tasks **kiln-anchor** and **larch-vane**
+(their verifiers required `tests/hidden` fixtures that had never been
+committed; fixtures added, oracles re-verified). All four oracles pass
+reward=1.0 from pristine containers (`specs/oracle_report.json`).
 
 ## Oracle verification
 

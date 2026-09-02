@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 1,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": "C-2e082c47 (shape-robust kernel across both gate modes) + C-c34cf87e (kernel bodies restricted to triton.language ops with explicit reductions): one task covers both. The agent implements an optionally gated LayerNorm as a @triton.jit kernel under TRITON_INTERPRET=1; hidden probes execute it against a pure-torch reference on a matrix of shapes (B=1, S=1, D=1, odd non-power-of-two D) in both the gated and no-gate branches, at rtol=1e-4/atol=1e-6, and an AST/text inspection fails the task if tl.sum / .sum( / the built-in sum or any torch/numpy/math call appears inside the kernel bodies.",
+  "notes": "Medium: author a shape-robust Triton kernel in CPU interpreter mode with two reduction passes (mean, variance) expressed without the tl.sum helper, an optional-gate branch, and masked handling of non-power-of-two D. Nonzero rubric for reasoning_depth (reduction without the sum helper; padding/masking), debugging_ambiguity (interpreter-mode semantics differ from GPU Triton), adversarial_inputs (edge shapes and the None-gate branch), hidden_case_generalization (hidden shape/mode matrix), quantitative_correctness (tight float32 tolerance)."
+}

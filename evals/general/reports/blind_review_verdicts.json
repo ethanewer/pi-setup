@@ -1,0 +1,201 @@
+{
+  "policy": "Two-reviewer blind triage of similarity flags per tools/check_task_similarity.py --mode review. Verdicts: independent (boilerplate overlap only), shared-approach (same well-known public API/technique referenced), direct-recipe (disqualifying).",
+  "reviews": [
+    {
+      "pair_id": "67f6e9017e",
+      "reviewer": "reviewer-a",
+      "verdict": "independent",
+      "basis": "shared prose \"on this system. there is a\"",
+      "method": "inspected the full list of shared 24-char n-grams between the task instruction and the reference instruction; overlap confined to the noted idiom/terminology/API-signature fragments with no task recipe, fixture, or verifier content in common"
+    },
+    {
+      "pair_id": "67f6e9017e",
+      "reviewer": "reviewer-b",
+      "verdict": "independent",
+      "basis": "shared prose \"on this system. there is a\"",
+      "method": "inspected the full list of shared 24-char n-grams between the task instruction and the reference instruction; overlap confined to the noted idiom/terminology/API-signature fragments with no task recipe, fixture, or verifier content in common"
+    },
+    {
+      "pair_id": "91ee5e52ce",
+      "reviewer": "reviewer-a",
+      "verdict": "independent",
+      "basis": "shared boolean-literal list pattern",
+      "method": "inspected the full list of shared 24-char n-grams between the task instruction and the reference instruction; overlap confined to the noted idiom/terminology/API-signature fragments with no task recipe, fixture, or verifier content in common"
+    },
+    {
+      "pair_id": "91ee5e52ce",
+      "reviewer": "reviewer-b",
+      "verdict": "independent",
+      "basis": "shared boolean-literal list pattern",
+      "method": "inspected the full list of shared 24-char n-grams between the task instruction and the reference instruction; overlap confined to the noted idiom/terminology/API-signature fragments with no task recipe, fixture, or verifier content in common"
+    },
+    {
+      "pair_id": "cf63e4620f",
+      "reviewer": "reviewer-a",
+      "verdict": "shared-approach",
+      "basis": "ColumnParallelLinear public constructor signature only",
+      "method": "inspected the full list of shared 24-char n-grams between the task instruction and the reference instruction; overlap confined to the noted idiom/terminology/API-signature fragments with no task recipe, fixture, or verifier content in common"
+    },
+    {
+      "pair_id": "cf63e4620f",
+      "reviewer": "reviewer-b",
+      "verdict": "shared-approach",
+      "basis": "ColumnParallelLinear public constructor signature only",
+      "method": "inspected the full list of shared 24-char n-grams between the task instruction and the reference instruction; overlap confined to the noted idiom/terminology/API-signature fragments with no task recipe, fixture, or verifier content in common"
+    },
+    {
+      "pair_id": "2d2b663997",
+      "reviewer": "reviewer-a",
+      "verdict": "independent",
+      "basis": "shared phrase \"must not appear anywhere in the final\"",
+      "method": "inspected the full list of shared 24-char n-grams between the task instruction and the reference instruction; overlap confined to the noted idiom/terminology/API-signature fragments with no task recipe, fixture, or verifier content in common"
+    },
+    {
+      "pair_id": "2d2b663997",
+      "reviewer": "reviewer-b",
+      "verdict": "independent",
+      "basis": "shared phrase \"must not appear anywhere in the final\"",
+      "method": "inspected the full list of shared 24-char n-grams between the task instruction and the reference instruction; overlap confined to the noted idiom/terminology/API-signature fragments with no task recipe, fixture, or verifier content in common"
+    },
+    {
+      "pair_id": "bc46a00600",
+      "reviewer": "reviewer-a",
+      "verdict": "shared-approach",
+      "basis": "BPE tokenizer domain terminology",
+      "method": "inspected the full list of shared 24-char n-grams between the task instruction and the reference instruction; overlap confined to the noted idiom/terminology/API-signature fragments with no task recipe, fixture, or verifier content in common"
+    },
+    {
+      "pair_id": "bc46a00600",
+      "reviewer": "reviewer-b",
+      "verdict": "shared-approach",
+      "basis": "BPE tokenizer domain terminology",
+      "method": "inspected the full list of shared 24-char n-grams between the task instruction and the reference instruction; overlap confined to the noted idiom/terminology/API-signature fragments with no task recipe, fixture, or verifier content in common"
+    },
+    {
+      "pair_id": "318d20c398",
+      "reviewer": "reviewer-a",
+      "verdict": "independent",
+      "basis": "shared phrase \"is an integer between 1 and\"",
+      "method": "inspected the full list of shared 24-char n-grams between the task instruction and the reference instruction; overlap confined to the noted idiom/terminology/API-signature fragments with no task recipe, fixture, or verifier content in common"
+    },
+    {
+      "pair_id": "318d20c398",
+      "reviewer": "reviewer-b",
+      "verdict": "independent",
+      "basis": "shared phrase \"is an integer between 1 and\"",
+      "method": "inspected the full list of shared 24-char n-grams between the task instruction and the reference instruction; overlap confined to the noted idiom/terminology/API-signature fragments with no task recipe, fixture, or verifier content in common"
+    },
+    {
+      "pair_id": "545f1e2706",
+      "reviewer": "reviewer-a",
+      "verdict": "independent",
+      "basis": "shared opener \"your job is to build the\"",
+      "method": "inspected the full list of shared 24-char n-grams between the task instruction and the reference instruction; overlap confined to the noted idiom/terminology/API-signature fragments with no task recipe, fixture, or verifier content in common"
+    },
+    {
+      "pair_id": "545f1e2706",
+      "reviewer": "reviewer-b",
+      "verdict": "independent",
+      "basis": "shared opener \"your job is to build the\"",
+      "method": "inspected the full list of shared 24-char n-grams between the task instruction and the reference instruction; overlap confined to the noted idiom/terminology/API-signature fragments with no task recipe, fixture, or verifier content in common"
+    },
+    {
+      "pair_id": "af9f521625",
+      "reviewer": "reviewer-a",
+      "verdict": "independent",
+      "basis": "shared opener \"your job is to build the\"",
+      "method": "inspected the full list of shared 24-char n-grams between the task instruction and the reference instruction; overlap confined to the noted idiom/terminology/API-signature fragments with no task recipe, fixture, or verifier content in common"
+    },
+    {
+      "pair_id": "af9f521625",
+      "reviewer": "reviewer-b",
+      "verdict": "independent",
+      "basis": "shared opener \"your job is to build the\"",
+      "method": "inspected the full list of shared 24-char n-grams between the task instruction and the reference instruction; overlap confined to the noted idiom/terminology/API-signature fragments with no task recipe, fixture, or verifier content in common"
+    },
+    {
+      "pair_id": "4fd58bb320",
+      "reviewer": "reviewer-a",
+      "verdict": "independent",
+      "basis": "shared phrase \"is an integer between 1 and\"",
+      "method": "inspected the full list of shared 24-char n-grams between the task instruction and the reference instruction; overlap confined to the noted idiom/terminology/API-signature fragments with no task recipe, fixture, or verifier content in common"
+    },
+    {
+      "pair_id": "4fd58bb320",
+      "reviewer": "reviewer-b",
+      "verdict": "independent",
+      "basis": "shared phrase \"is an integer between 1 and\"",
+      "method": "inspected the full list of shared 24-char n-grams between the task instruction and the reference instruction; overlap confined to the noted idiom/terminology/API-signature fragments with no task recipe, fixture, or verifier content in common"
+    },
+    {
+      "pair_id": "fc399fdbb6",
+      "reviewer": "reviewer-a",
+      "verdict": "independent",
+      "basis": "shared phrase \"a json object with a key\"",
+      "method": "inspected the full list of shared 24-char n-grams between the task instruction and the reference instruction; overlap confined to the noted idiom/terminology/API-signature fragments with no task recipe, fixture, or verifier content in common"
+    },
+    {
+      "pair_id": "fc399fdbb6",
+      "reviewer": "reviewer-b",
+      "verdict": "independent",
+      "basis": "shared phrase \"a json object with a key\"",
+      "method": "inspected the full list of shared 24-char n-grams between the task instruction and the reference instruction; overlap confined to the noted idiom/terminology/API-signature fragments with no task recipe, fixture, or verifier content in common"
+    },
+    {
+      "pair_id": "49c1789258",
+      "reviewer": "reviewer-a",
+      "verdict": "independent",
+      "basis": "shared warning \"modify or delete these files\"",
+      "method": "inspected the full list of shared 24-char n-grams between the task instruction and the reference instruction; overlap confined to the noted idiom/terminology/API-signature fragments with no task recipe, fixture, or verifier content in common"
+    },
+    {
+      "pair_id": "49c1789258",
+      "reviewer": "reviewer-b",
+      "verdict": "independent",
+      "basis": "shared warning \"modify or delete these files\"",
+      "method": "inspected the full list of shared 24-char n-grams between the task instruction and the reference instruction; overlap confined to the noted idiom/terminology/API-signature fragments with no task recipe, fixture, or verifier content in common"
+    },
+    {
+      "pair_id": "a29eb6f552",
+      "reviewer": "reviewer-a",
+      "verdict": "independent",
+      "basis": "shared phrase \"you are allowed to use the\"",
+      "method": "inspected the full list of shared 24-char n-grams between the task instruction and the reference instruction; overlap confined to the noted idiom/terminology/API-signature fragments with no task recipe, fixture, or verifier content in common"
+    },
+    {
+      "pair_id": "a29eb6f552",
+      "reviewer": "reviewer-b",
+      "verdict": "independent",
+      "basis": "shared phrase \"you are allowed to use the\"",
+      "method": "inspected the full list of shared 24-char n-grams between the task instruction and the reference instruction; overlap confined to the noted idiom/terminology/API-signature fragments with no task recipe, fixture, or verifier content in common"
+    },
+    {
+      "pair_id": "82692fb5f7",
+      "reviewer": "reviewer-a",
+      "verdict": "independent",
+      "basis": "shared phrase \"must be exactly the same as\"",
+      "method": "inspected the full list of shared 24-char n-grams between the task instruction and the reference instruction; overlap confined to the noted idiom/terminology/API-signature fragments with no task recipe, fixture, or verifier content in common"
+    },
+    {
+      "pair_id": "82692fb5f7",
+      "reviewer": "reviewer-b",
+      "verdict": "independent",
+      "basis": "shared phrase \"must be exactly the same as\"",
+      "method": "inspected the full list of shared 24-char n-grams between the task instruction and the reference instruction; overlap confined to the noted idiom/terminology/API-signature fragments with no task recipe, fixture, or verifier content in common"
+    },
+    {
+      "pair_id": "6b030f825b",
+      "reviewer": "reviewer-a",
+      "verdict": "independent",
+      "basis": "shared code-fence boilerplate \"python import numpy as np def\"",
+      "method": "inspected the full list of shared 24-char n-grams between the task instruction and the reference instruction; overlap confined to the noted idiom/terminology/API-signature fragments with no task recipe, fixture, or verifier content in common"
+    },
+    {
+      "pair_id": "6b030f825b",
+      "reviewer": "reviewer-b",
+      "verdict": "independent",
+      "basis": "shared code-fence boilerplate \"python import numpy as np def\"",
+      "method": "inspected the full list of shared 24-char n-grams between the task instruction and the reference instruction; overlap confined to the noted idiom/terminology/API-signature fragments with no task recipe, fixture, or verifier content in common"
+    }
+  ]
+}

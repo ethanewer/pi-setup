@@ -226,8 +226,19 @@ NGRAM_INFRA_PREFIXES = (
 )
 
 
+def rel_label(label: str) -> str:
+    """Repo-relative path for a payload label (ROOT-agnostic; the suite moved
+    from evals/general-v[23]/ to evals/general/, so never split on the old
+    directory name)."""
+    rel = label.split('::')[0]
+    root = str(ROOT)
+    if rel.startswith(root):
+        rel = rel[len(root):].lstrip('/')
+    return rel
+
+
 def is_infra(label: str) -> bool:
-    rel = label.split('/general-v2/')[-1].split('::')[0]
+    rel = rel_label(label)
     return any(rel.startswith(p) for p in NGRAM_INFRA_PREFIXES)
 
 
@@ -249,7 +260,7 @@ EXCLUDED_MEDIA = {
 
 
 def excluded_media(label: str, data: bytes) -> bool:
-    rel = label.split('/general-v2/')[-1].split('::')[0]
+    rel = rel_label(label)
     want = EXCLUDED_MEDIA.get(rel)
     return bool(want) and hashlib.sha256(data).hexdigest() == want
 
@@ -519,7 +530,7 @@ def main():
         if i_ours % 1000 == 0:
             print(f'  blocks compared: {i_ours}/{n_ours} payloads', flush=True)
         if excluded_media(label, data):
-            report.setdefault('excluded_media', []).append(label.split('/general-v2/')[-1])
+            report.setdefault('excluded_media', []).append(rel_label(label))
             continue  # documented hash-pinned encoder-signature fixtures
         hard_hits = []
         soft_hits = []

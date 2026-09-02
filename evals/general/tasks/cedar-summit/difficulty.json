@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 3,
+    "unsafe_action_penalty": 1
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": "C-6f29d769 (complete an authenticated interactive conversation with each person's phone tool): the agent must bring up four Flask microservices, obtain the planning phrase from the coordinator desk as the registered planner, then hold phrase-authenticated multi-turn conversations with three colleague phone services via interactive bash dialers (read + respond), gathering availability, preferences and constraints, and aggregate them into the unique optimal plan written to /app/offsite_plan.json. Hidden probes re-validate the plan against the group's hidden state, read the services' call journal to confirm every authenticated conversation actually happened (phrase issued, all three questions asked per colleague, calls completed), and confirm a wrong phrase still ends a call with no data. A stale/missing phrase ends the call early and no data is gathered — the documented failure mode.",
+  "notes": "Medium-to-hard interactive task: stack bring-up, multi-service HTTP conversation protocol, authentication phrase flow (coordinator issues, colleagues require), and preference/constraint aggregation with a unique optimum. High interaction_statefulness (server-side session state across turns), dependent_stages (up -> phrase -> calls -> aggregate -> plan), adversarial_inputs (wrong-phrase hang-up, feasible-but-suboptimal plans), unsafe_action_penalty (weakening the services' auth or editing /opt/offsite is detected). Kept in the medium bucket: the protocol is fully documented and the decision space is small."
+}

@@ -46,7 +46,13 @@ def sha(b: bytes) -> str:
 def main() -> int:
     problems = []
     notes = []
-    tasks = sorted(p for p in (ROOT / 'tasks').iterdir() if p.is_dir())
+    all_tasks = sorted(p for p in (ROOT / 'tasks').iterdir() if p.is_dir())
+    # The v1-* directories are the imported legacy general-coding family:
+    # filtered for verifier quality, but authored to the pre-v3 layout and
+    # therefore not subject to the clean-room contract lint — the same
+    # special case check_tb21_coverage.py grants them for competency claims.
+    legacy = [p for p in all_tasks if p.name.startswith('v1-')]
+    tasks = [p for p in all_tasks if not p.name.startswith('v1-')]
     for d in tasks:
         name = d.name
 
@@ -193,7 +199,8 @@ def main() -> int:
             if not isinstance(dd.get('expected_expert_time_min'), int):
                 err('difficulty.json needs integer expected_expert_time_min')
 
-    print(f'tasks={len(tasks)} problems={len(problems)} notes={len(notes)}')
+    print(f'tasks={len(tasks)} legacy_v1_skipped={len(legacy)} '
+          f'problems={len(problems)} notes={len(notes)}')
     for p in problems:
         print('ERROR', p)
     for n in notes:

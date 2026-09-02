@@ -2,7 +2,7 @@
   "version": 3,
   "policy": "Task-to-competency matrix. Competency IDs are opaque; the private mapping to reference evidence lives in private-audit/competency_map.json.",
   "competency_count": 726,
-  "task_count": 765,
+  "task_count": 767,
   "matrix": {
     "C-f0fe0218": [
       {
@@ -4440,6 +4440,18 @@
         "difficulty": "easy"
       }
     ],
+    "C-6f29d769": [
+      {
+        "task_id": "cedar-summit",
+        "evidence": "The agent must bring up four Flask microservices (/opt/offsite/up.sh), identify itself to the coordinator desk as planner PLN-47 to receive the offsite authentication phrase, then feed the interactive bash dialer scripts (which POST each typed line to the colleague phone services) with the phrase and the AVAILABILITY/PREFERENCES/CONSTRAINTS questions for all three colleagues, and aggregate the gathered state into the unique optimal plan at /app/offsite_plan.json. A wrong or stale phrase ends each call immediately and no data is gathered. The verifier executes the deliverable against the coordinator's booking desk, compares it to the exact hidden optimum, reads the services' call journal to prove every authenticated conversation happened (phrase issued, all three questions per colleague, completed calls), and re-probes that wrong phrases still hang up.",
+        "verifier_kind": "executes-deliverable",
+        "deliverables": [
+          "/app/offsite_plan.json"
+        ],
+        "hidden_cases": true,
+        "difficulty": "medium"
+      }
+    ],
     "C-da39d7eb": [
       {
         "task_id": "cedar-vault",
@@ -8643,6 +8655,30 @@
         ],
         "hidden_cases": true,
         "difficulty": "hard"
+      }
+    ],
+    "C-2e082c47": [
+      {
+        "task_id": "flint-gate",
+        "evidence": "The verifier imports /app/gated_norm.py under TRITON_INTERPRET=1 and runs gated_layernorm on a hidden battery of shapes in BOTH modes \u2014 gate tensor and gate=None \u2014 including B=1, S=1, D=1 and odd non-power-of-two D values (7, 17, 33, 100), comparing each output against a pure-torch reference at rtol=1e-4/atol=1e-6 and requiring a fresh float32 tensor of the input shape. An edge shape or the no-gate branch diverging from the reference fails the corresponding case.",
+        "verifier_kind": "executes-deliverable",
+        "deliverables": [
+          "/app/gated_norm.py"
+        ],
+        "hidden_cases": true,
+        "difficulty": "medium"
+      }
+    ],
+    "C-c34cf87e": [
+      {
+        "task_id": "flint-gate",
+        "evidence": "The verifier statically inspects the deliverable: textually it fails on any tl.sum / triton.language.sum / .sum( occurrence anywhere in the file, and via AST it fails when any @triton.jit body calls the built-in sum(), imports or references torch/numpy/np/math \u2014 forcing reductions to be written out explicitly with other triton.language ops. The same kernel bodies are then executed on the hidden shape battery, so disallowed-op workarounds that break numerics fail execution as well.",
+        "verifier_kind": "executes-deliverable",
+        "deliverables": [
+          "/app/gated_norm.py"
+        ],
+        "hidden_cases": true,
+        "difficulty": "medium"
       }
     ],
     "C-28e0bdd9": [
@@ -16983,6 +17019,9 @@
       "C-4d2f3c04",
       "C-7210274e"
     ],
+    "cedar-summit": [
+      "C-6f29d769"
+    ],
     "cedar-vault": [
       "C-da39d7eb"
     ],
@@ -17382,6 +17421,10 @@
       "C-90ebfb0a",
       "C-1ddf7eff",
       "C-c89e8bce"
+    ],
+    "flint-gate": [
+      "C-2e082c47",
+      "C-c34cf87e"
     ],
     "flint-hollow": [
       "C-e1811563"
