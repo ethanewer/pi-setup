@@ -1,5 +1,0 @@
-SELECT site AS site
-FROM catalog
-WHERE recorded_on >= '2010-01-01'
-ORDER BY reading DESC
-OFFSET 1 ROWS FETCH NEXT 3 ROWS ONLY;

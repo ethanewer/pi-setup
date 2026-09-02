@@ -1,7 +1,0 @@
-pool.cpp: In member function 'void* Pool::alloc(std::size_t)':
-pool.cpp:29:31: warning: unused parameter 'n' [-Wunused-parameter]
-   29 | void* Pool::alloc(std::size_t n) {
-      |                   ~~~~~~~~~~~~^
-solution build OK
-debug:   12 31 7 00000000000000000000000000000000 20 7 0 LIVE 0/16 
-release: 12 31 7 00000000000000000000000000000000 20 7 0 LIVE 0/16 

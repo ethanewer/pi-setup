@@ -1,1 +1,0 @@
-# github plugin: git-PR helpers for zsh.

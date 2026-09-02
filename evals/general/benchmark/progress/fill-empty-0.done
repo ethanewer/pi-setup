@@ -1,5 +1,0 @@
-item-025-main	completed missing solution/solve.sh + tests/test.sh: OCR/PDF batch triage pipeline (pypdf+pytesseract), solve builds classify.py & routes 12 docs; verifier independently reclassifies each inbox file and confirms exactly-once routing. bash -n OK, python heredocs compile+expected values verified locally. reward=1
-item-057-hard	authored full trivial probe (data_processing,int-arithmetic): sum/count integers in numbers.txt -> answer.json; solve emits count=5,sum=14; test recomputes from file & compares. reward=1
-item-068-main	authored full trivial probe (file_operations): find largest file by bytes in filedir (c.txt); test recomputes size from actual dir. reward=1
-skill-serial-console	authored full trivial probe: parse UART RX hex frames -> num_frames=4,max=31,last=13; test recomputes via regex. reward=1
-skill-text-extraction	authored full trivial probe: extract numeric tokens -> count=8,largest=129.98; test recomputes max/token-count. reward=1

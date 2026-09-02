@@ -1,9 +1,0 @@
-# Hidden causal model.
-p -> x
-p -> q
-q -> y
-r -> x
-s -> x
-s -> y
-forbid: r, q
-effect: x -> y

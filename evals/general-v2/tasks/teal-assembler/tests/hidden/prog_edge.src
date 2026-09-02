@@ -1,9 +1,0 @@
-# boundary immediates, r15, hex literals, forward jump ref
-main:   LOAD r15, 0x0a
-        LOAD r9, 0xff
-        LOAD r0, 0
-        ADD r15, r9
-        JMP main
-exit:
-        ADD r0, r0
-        HALT

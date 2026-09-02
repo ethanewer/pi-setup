@@ -1,9 +1,0 @@
-{
-  "rules": [
-    { "id": "auth_failure", "keyword": "auth failure", "min_level": "WARN", "threshold": 4, "severity": "high" },
-    { "id": "config_drift", "keyword": "config drift", "min_level": "INFO", "threshold": 3, "severity": "medium" },
-    { "id": "bgp_flap", "keyword": "bgp flap", "min_level": "ERROR", "threshold": 1, "severity": "high" },
-    { "id": "legacy_probe", "keyword": "legacy probe", "min_level": "DEBUG", "threshold": 3, "severity": "low" },
-    { "id": "disk_pressure", "keyword": "disk usage", "min_level": "WARN", "threshold": 5, "severity": "notice" }
-  ]
-}

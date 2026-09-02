@@ -1,9 +1,0 @@
-[
-  {"method": "GET", "path": "/api/v1/blocks/a3b20a8d57005a44a8d4a14a3bc6ca6a3d7151c51d7902e1a9a1bad0c7bc63be", "expect": 200},
-  {"method": "GET", "path": "/api/v1/blocks/37a73ec46f558f430425e557bc51f7e424e7e02698bf2b8c359f6dc8f093a7ee", "expect": 200},
-  {"method": "GET", "path": "/api/v1/blocks/cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc", "expect": 404, "code": "not_found"},
-  {"method": "GET", "path": "/api/v1/blocks/not-a-hex-hash", "expect": 404, "code": "not_found"},
-  {"method": "GET", "path": "/api/v1/txs/bd9737ed8f4c28100933919ba2008a6070119c2a051331bd3af15ceb09b2e0b1", "expect": 200},
-  {"method": "GET", "path": "/api/v1/txs/dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd", "expect": 404, "code": "not_found"},
-  {"method": "GET", "path": "/api/v1/txs/short", "expect": 404, "code": "not_found"}
-]

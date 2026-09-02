@@ -1,1 +1,0 @@
-scp barge.log depot:/logs/

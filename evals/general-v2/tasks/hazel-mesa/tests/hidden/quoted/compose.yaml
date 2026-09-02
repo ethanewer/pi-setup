@@ -1,9 +1,0 @@
-services:
-  telemetry-store:
-    image: 'postgres:16'
-    environment:
-      POSTGRES_DB: 'telemetry_q'
-      POSTGRES_USER: 'q_ro'
-      POSTGRES_PASSWORD: "S#cret 'quoted' 42"
-    ports:
-      - "127.0.0.1:5541:5432"

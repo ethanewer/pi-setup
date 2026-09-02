@@ -1,8 +1,0 @@
-FROM bench-base:python-3.12
-
-WORKDIR /app
-
-RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
-
-COPY files/policy.pt /app/policy.pt
-COPY files/model.py /app/model.py

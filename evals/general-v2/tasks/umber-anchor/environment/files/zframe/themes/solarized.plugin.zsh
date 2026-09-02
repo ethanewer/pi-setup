@@ -1,1 +1,0 @@
-# solarized theme for the framework.

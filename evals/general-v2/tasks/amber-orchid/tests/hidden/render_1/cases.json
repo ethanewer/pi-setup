@@ -1,6 +1,0 @@
-[
-  {"path": "/api/v1/comments/abc/render", "expect": 400, "code": "bad_request"},
-  {"path": "/api/v1/comments/0/render", "expect": 400, "code": "bad_request"},
-  {"path": "/api/v1/comments/-1/render", "expect": 400, "code": "bad_request"},
-  {"path": "/api/v1/comments/99999/render", "expect": 404, "code": "not_found"}
-]

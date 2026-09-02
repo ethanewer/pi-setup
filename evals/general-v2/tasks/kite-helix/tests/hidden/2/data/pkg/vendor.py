@@ -1,1 +1,0 @@
-def ok(): pass

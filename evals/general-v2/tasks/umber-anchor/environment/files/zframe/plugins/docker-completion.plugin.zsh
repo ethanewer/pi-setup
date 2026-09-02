@@ -1,1 +1,0 @@
-# docker-completion plugin for zsh.

@@ -1,1 +1,0 @@
-Halvard firmware release tree.

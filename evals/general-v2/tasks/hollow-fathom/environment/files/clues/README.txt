@@ -1,1 +1,0 @@
-hollow fathom clue cache - informational file, ignored by the solver.

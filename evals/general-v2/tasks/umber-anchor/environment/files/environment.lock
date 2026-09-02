@@ -1,9 +1,0 @@
-# /app/environment.lock — numeric solver environment spec (pip-requirements format)
-#
-# WARNING: this spec does NOT currently resolve. The base numerical library
-# (numpy) is pinned to a version that clashes with the solver library (scipy),
-# so the resolver cannot build one consistent set. Edit this file so that a
-# `pip install -r /app/environment.lock` succeeds.
-#
-numpy==2.5.0
-scipy==1.12.0

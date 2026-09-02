@@ -1,8 +1,0 @@
-Compiling legacy_vec/_core.pyx because it changed.
-[1/1] Cythonizing legacy_vec/_core.pyx
-running build_ext
-building 'legacy_vec._core' extension
-gcc -fno-strict-overflow -Wsign-compare -DNDEBUG -g -O3 -Wall -fPIC -I/usr/local/lib/python3.12/site-packages/numpy/_core/include -Ilegacy_vec -I/usr/local/include/python3.12 -c legacy_vec/_core.c -o build/temp.linux-x86_64-cpython-312/legacy_vec/_core.o -O2
-gcc -shared build/temp.linux-x86_64-cpython-312/legacy_vec/_core.o -L/usr/local/lib -o build/lib.linux-x86_64-cpython-312/legacy_vec/_core.cpython-312-x86_64-linux-gnu.so
-copying build/lib.linux-x86_64-cpython-312/legacy_vec/_core.cpython-312-x86_64-linux-gnu.so -> legacy_vec
-smoke fails: 0

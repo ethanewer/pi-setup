@@ -1,6 +1,0 @@
-{"probe": "sample", "cases": [
-  {"kind": "concave", "count": 80, "bounds": [-5.0, 5.0], "density": "gauss", "mu": 0.4, "sig": 1.5, "expect": "value"},
-  {"kind": "bimodal", "count": 100, "bounds": [-6.0, 6.0], "density": "bimodal", "expect": "error"},
-  {"kind": "invalid_count", "count": 0, "bounds": [-1.0, 1.0], "density": "gauss", "expect": "error"},
-  {"kind": "noncallable", "count": 5, "bounds": [-1.0, 1.0], "expect": "error"}
-]}

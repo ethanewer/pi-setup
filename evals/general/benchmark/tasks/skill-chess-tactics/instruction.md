@@ -1,5 +1,0 @@
-/app/position.txt contains a chess position in FEN format. White is to move. In this position there is an immediate **mate in one**: a single legal move (or possibly more than one) that gives checkmate on the very next move — that is, after White plays it, Black has no legal moves and is in check.
-
-Write `/app/tactic.py` that reads the FEN, and finds any legal move for the side to move that produces checkmate. It writes `/app/mating.txt` containing exactly the UCI form of **one** such mating move (e.g. `h5e2`; use from-square + to-square, with promotion suffix for promotions, castling as the king double-step). Do not include any other text.
-
-Then run your script so `/app/mating.txt` only contains that single move. The `python-chess` library is installed; it can check checkmate (`board.is_checkmate()` after a move), or you may reason manually.

@@ -1,6 +1,0 @@
-item-073-main	medium MuJoCo optimization: hoist model compile, N=2000 double pendulum; verifier re-derives reference + times; local mujoco-3.12 run: residual=0, speedup~300x, reward=1
-item-073-hard	hard MuJoCo: adversarial baseline with per-step recompile + NaN-by-division bug; fix+speed>=4x+finite; local run reward=1
-item-074-main	medium OpenCV kinematic crossing detection on synthetic MP4 (generated via ffmpeg, decoded identically by agent+verifier); local end-to-end reward=1
-item-074-hard	hard OpenCV: same-color static decoy + slow ball + noise; motion-based isolation + trajectory validation; local end-to-end reward=1
-item-075-main	medium ret2win stack overflow; static non-PIE no-canary binary compiled in Dockerfile; oracle finds win/ret-gadget/frame offset dynamically and tests candidates; static validation only (no x86-64 docker run possible on host)
-item-075-hard	hard ROP pop-rdi chain with 0xC0FFEE11 argument gate + planted gadgets; oracle scans ELF .text for 5f c3 and c3; static validation only (no x86-64 docker run possible on host)
