@@ -1,0 +1,38 @@
+# h_suppress.mpy - chained/overlapping suppression directives.
+def one():
+    system("a")
+    system("b")  # nolint(forbid-call)
+    system("c")
+    # nolint:next(forbid-call)
+    system("d")
+    system("e")
+
+def two():
+    # nolint-begin(forbid-call)
+    system("f")
+    system("g")
+    # nolint-end(forbid-call)
+    system("h")
+
+def three():
+    # nolint-begin(shadow-var)
+    x = 1
+    # nolint-end(shadow-var)
+    x = 2
+    return x
+
+x = 1
+
+def four():
+    # nolint-begin(forbid-call)
+    system("i")
+    # nolint-begin(forbid-call)
+    system("j")
+    # nolint-end(forbid-call)
+    system("k")
+    # nolint-end(forbid-call)
+    system("l")
+
+def five():
+    v = []  # nolint(mut-default)  (not a def, keep it valid: expression stmt)
+    return v

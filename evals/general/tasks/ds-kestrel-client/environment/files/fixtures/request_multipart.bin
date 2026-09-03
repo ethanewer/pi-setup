@@ -1,0 +1,29 @@
+POST /upload HTTP/1.1
+Host: fixture.test
+Content-Type: multipart/form-data; boundary=----hkit0000000000000001
+Content-Length: 550
+
+------hkit0000000000000001
+Content-Disposition: form-data; name="username"
+
+kestrel_fan
+------hkit0000000000000001
+Content-Disposition: form-data; name="comment"
+
+hello ünïcode ☃
+------hkit0000000000000001
+Content-Disposition: form-data; name="avatar"; filename="head shot.png"
+Content-Type: image/png
+
+�PNG
+
+
+------hkit0000000000000001
+Content-Disposition: form-data; name="empty"
+
+
+------hkit0000000000000001
+Content-Disposition: form-data; name="manifest"; filename="m.txt"
+
+hello manifest
+------hkit0000000000000001--

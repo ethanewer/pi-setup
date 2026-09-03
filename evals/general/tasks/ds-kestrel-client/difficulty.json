@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 0,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 1,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": "Three hidden probes exercise the three protocol skills. Probe 1 (multipart): hidden part lists (quotes/backslashes in names and filenames, empty values, binary file content, empty content types, special-char boundaries, unicode, many parts) are re-encoded by an independent reference encoder in the probe and byte-compared against /app/httpkit/multipart.py's multipart_encode output, plus make_boundary determinism and the full build_request bytes. Probe 2 (chunked): hidden chunked streams (multi-chunk, chunk extensions with quoted semicolons, final chunk with extensions, duplicate trailers, no trailers, unicode bodies, malformed sizes, truncation, bad terminators, unterminated trailers, trailing garbage, max_body overflow) are decoded by an independent reference parser and compared field-for-field, with ChunkedError cases asserted. Probe 3 (cookies): a scripted exchange log with an injected clock (default-path computation, domain/path scoping conflicts, Max-Age and Expires expiry, rejection rules, capacity eviction order, cookie_header assembly order) is replayed against an independent reference cookie model; snapshots and Cookie headers are compared at every step. Probes also re-run the visible byte fixtures through the deliverables and compare to independently recomputed expected parses, so hardcoded visible outputs fail hidden cases.",
+  "notes": "Medium: the agent implements three documented protocol contracts (exact-byte multipart builder with CRLF discipline and quoting rules; chunked-transfer decoder with extension skipping, trailer surfacing and malformed-stream errors; deterministic cookie store with scoping, eviction and header-ordering rules) plus wiring into the shipped request builder/parser. Nonzero rubric for reasoning_depth (RFC-derived edge rules must be implemented exactly as documented), adversarial_inputs (malformed chunk streams, scoping conflicts, capacity eviction, bad attribute values), hidden_case_generalization (hidden fixtures re-encoded/decoded by independent reference implementations in the probes, exact bytes and exact state), quantitative_correctness (byte-for-byte and state-equality comparisons), interaction_statefulness (the cookie store is a stateful model driven by scripted exchanges with an injected clock). Low tool_breadth (single python toolchain), no resource pressure, low ambiguity because every rule is spelled out."
+}

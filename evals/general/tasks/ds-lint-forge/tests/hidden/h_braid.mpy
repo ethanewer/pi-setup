@@ -1,0 +1,33 @@
+# h_braid.mpy - deep nesting, block model, attribute calls, forbid scope.
+module_val = 10
+
+def outer(p=module_val, cache=[]):
+    a = 1
+    for item in values:
+        b = item
+        if item > 0:
+            c = item
+        else:
+            c = 0
+        while a < 5:
+            a = a + 1
+    def inner(q, cfg={}):
+        d = q
+        return d
+    return inner
+
+result = outer(3)
+module_val = module_val + 1
+
+def probe():
+    c = socket.network_open("h")
+    command = c.shell("ls")
+    terminal = host.send_wire(command)
+    return terminal
+
+def nested():
+    if module_val > 0:
+        for k in items:
+            def make():
+                return k
+    return make

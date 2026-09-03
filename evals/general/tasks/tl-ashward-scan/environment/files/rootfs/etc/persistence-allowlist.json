@@ -1,0 +1,9 @@
+{
+  "cron.d": ["/opt/ashward/mux-agent", "/usr/local/bin/warden-daemon"],
+  "crontab": ["/opt/ashward/mux-agent"],
+  "systemd_unit": ["safe-house.service", "sysmon-fan.service"],
+  "rc_local": ["/opt/ashward/beacon start"],
+  "shell_rc": ["nohup /opt/ashward/engage >/dev/null 2>&1 &"],
+  "ld_preload": ["/usr/lib/ashward/libsandbox.so"],
+  "at_job": ["d3ad8001f2a3"]
+}

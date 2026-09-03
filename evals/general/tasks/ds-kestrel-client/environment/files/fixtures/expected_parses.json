@@ -1,0 +1,122 @@
+{
+  "request_get.bin": {
+    "kind": "request",
+    "request": {
+      "body_b64": "",
+      "header_block": "GET /health HTTP/1.1\r\nHost: fixture.test\r\nAccept: */*\r\n",
+      "headers": [
+        [
+          "Host",
+          "fixture.test"
+        ],
+        [
+          "Accept",
+          "*/*"
+        ]
+      ],
+      "method": "GET",
+      "path": "/health"
+    }
+  },
+  "request_multipart.bin": {
+    "kind": "request",
+    "request": {
+      "body_b64": "LS0tLS0taGtpdDAwMDAwMDAwMDAwMDAwMDENCkNvbnRlbnQtRGlzcG9zaXRpb246IGZvcm0tZGF0YTsgbmFtZT0idXNlcm5hbWUiDQoNCmtlc3RyZWxfZmFuDQotLS0tLS1oa2l0MDAwMDAwMDAwMDAwMDAwMQ0KQ29udGVudC1EaXNwb3NpdGlvbjogZm9ybS1kYXRhOyBuYW1lPSJjb21tZW50Ig0KDQpoZWxsbyDDvG7Dr2NvZGUg4piDDQotLS0tLS1oa2l0MDAwMDAwMDAwMDAwMDAwMQ0KQ29udGVudC1EaXNwb3NpdGlvbjogZm9ybS1kYXRhOyBuYW1lPSJhdmF0YXIiOyBmaWxlbmFtZT0iaGVhZCBzaG90LnBuZyINCkNvbnRlbnQtVHlwZTogaW1hZ2UvcG5nDQoNColQTkcNChoKDQotLS0tLS1oa2l0MDAwMDAwMDAwMDAwMDAwMQ0KQ29udGVudC1EaXNwb3NpdGlvbjogZm9ybS1kYXRhOyBuYW1lPSJlbXB0eSINCg0KDQotLS0tLS1oa2l0MDAwMDAwMDAwMDAwMDAwMQ0KQ29udGVudC1EaXNwb3NpdGlvbjogZm9ybS1kYXRhOyBuYW1lPSJtYW5pZmVzdCI7IGZpbGVuYW1lPSJtLnR4dCINCg0KaGVsbG8gbWFuaWZlc3QNCi0tLS0tLWhraXQwMDAwMDAwMDAwMDAwMDAxLS0NCg==",
+      "boundary": "----hkit0000000000000001",
+      "headers": [
+        [
+          "Host",
+          "fixture.test"
+        ],
+        [
+          "Content-Type",
+          "multipart/form-data; boundary=----hkit0000000000000001"
+        ],
+        [
+          "Content-Length",
+          "550"
+        ]
+      ],
+      "method": "POST",
+      "multipart_parts": [
+        {
+          "kind": "field",
+          "name": "username",
+          "value_b64": "a2VzdHJlbF9mYW4="
+        },
+        {
+          "kind": "field",
+          "name": "comment",
+          "value_b64": "aGVsbG8gw7xuw69jb2RlIOKYgw=="
+        },
+        {
+          "content_b64": "iVBORw0KGgo=",
+          "content_type": "image/png",
+          "filename": "head shot.png",
+          "kind": "file",
+          "name": "avatar"
+        },
+        {
+          "kind": "field",
+          "name": "empty",
+          "value_b64": ""
+        },
+        {
+          "content_b64": "aGVsbG8gbWFuaWZlc3Q=",
+          "content_type": "",
+          "filename": "m.txt",
+          "kind": "file",
+          "name": "manifest"
+        },
+        {
+          "boundary": "----hkit0000000000000001",
+          "kind": "closing"
+        }
+      ],
+      "path": "/upload"
+    }
+  },
+  "response_chunked.bin": {
+    "body_b64": "aGVsbG8gd29ybGQ=",
+    "headers": [
+      [
+        "Transfer-Encoding",
+        "chunked"
+      ],
+      [
+        "Content-Type",
+        "text/plain"
+      ]
+    ],
+    "kind": "response",
+    "reason": "OK",
+    "status": 200,
+    "trailers": [
+      [
+        "X-Trailer",
+        "first"
+      ],
+      [
+        "X-Trailer",
+        "second"
+      ]
+    ]
+  },
+  "response_simple.txt": {
+    "body_b64": "eyJvayI6IHRydWV9",
+    "headers": [
+      [
+        "Content-Type",
+        "application/json"
+      ],
+      [
+        "Content-Length",
+        "12"
+      ]
+    ],
+    "kind": "response",
+    "reason": "OK",
+    "status": 200,
+    "trailers": []
+  }
+}

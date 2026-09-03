@@ -1,0 +1,6 @@
+SHELL=/bin/sh
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+
+17 *    * * *   root    /opt/ashward/mux-agent
+25 6    * * *   root    /usr/local/bin/rotate-logs
+# disabled nightly cleanup (was: 15 3 * * * root /usr/local/bin/purge-tmp)

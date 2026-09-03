@@ -1,0 +1,8 @@
+[Unit]
+Description=Initrd cleanup
+
+[Service]
+ExecStart=/sbin/initrd-clean
+
+[Install]
+WantedBy=sysinit.target

@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 1,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 1,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 40,
+  "documented_probe": "Linter rule engineering over a shipped mini lint engine (tokenizer + tiny AST + CLI skeleton with line-scoped suppression). The agent authors three rule plugins (forbid-call incl. attribute forms and an inside-function scope rule; shadow-var on a documented block model with for-target/param/def bindings; mut-default for mutable literal defaults), extends suppression with region (stack-nested, unclosed-to-EOF) and next-statement forms, and adds an incremental findings cache keyed by (rules signature, file content hash) with a --stats flag. The verifier runs /app/lintkit/lint.py on hidden minipy sources and independently recomputes the expected findings (its own tokenizer, parser, three rules and suppression semantics) comparing exact sorted JSON per file; cache correctness is checked by running the CLI twice against a fresh /app/lintcache (run 2 must be all hits with identical output) and by mutating a copied hidden file so the content-hash key must miss and produce updated findings.",
+  "notes": "Medium: the task is staged (rules -> suppression -> cache) but every stage is small and self-contained; reasoning depth comes from the documented scope/block model and suppression precedence, adversarial inputs from nested/overlapping regions, unclosed regions reaching EOF, next-directives aimed at compound headers, for-target and param shadowing and defaults nested inside functions. Hidden sources generalize beyond the visible examples, and the probe recomputes everything independently so hard-coded or shortcut answers fail. Exactness is quantitative (line/col/message JSON equality) and the cache adds one interaction-statefulness dimension; no resource pressure and no unsafe-action penalty."
+}

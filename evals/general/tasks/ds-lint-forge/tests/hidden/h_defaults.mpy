@@ -1,0 +1,23 @@
+# h_defaults.mpy - mutable literal defaults and non-mutable defaults.
+def a(x=[]):
+    return x
+
+def b(y={}):
+    return y
+
+def c(z={1, 2}):
+    return z
+
+def d(w="ok", n=3, f=None, flag=True, ref=other):
+    return w
+
+def e(empty=[], nested=[[1], 2], deep={"k": []}):
+    return empty
+
+def g(mix=[1], other=2, again={"a": 1}):
+    return mix
+
+def h():
+    def local(q=[]):
+        return q
+    return local

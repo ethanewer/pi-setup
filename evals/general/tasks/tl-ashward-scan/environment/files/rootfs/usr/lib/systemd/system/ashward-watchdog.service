@@ -1,0 +1,8 @@
+[Unit]
+Description=Ashward watchdog
+
+[Service]
+ExecStart=/opt/ashward/watchdog
+
+[Install]
+WantedBy=multi-user.target

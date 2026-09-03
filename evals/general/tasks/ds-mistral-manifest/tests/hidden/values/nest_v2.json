@@ -1,0 +1,31 @@
+{
+  "gateway": {
+    "namespace": "staging",
+    "name": "gw-blue"
+  },
+  "listeners": {
+    "extra": [
+      {
+        "name": "metrics",
+        "port": 9123
+      }
+    ]
+  },
+  "routes": {
+    "overlay": [
+      {
+        "id": "r1",
+        "weight": null,
+        "notes": {
+          "tier": "z",
+          "slack": "#r1"
+        }
+      },
+      {
+        "id": "r2",
+        "weight": 80
+      }
+    ]
+  },
+  "backends": null
+}

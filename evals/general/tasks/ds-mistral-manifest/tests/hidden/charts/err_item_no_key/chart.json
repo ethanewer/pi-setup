@@ -1,0 +1,18 @@
+{
+  "values": {
+    "q": [
+      {
+        "x": 1
+      }
+    ]
+  },
+  "strategy": {
+    "x": {
+      "spec.p": {
+        "policy": "merge-by-key",
+        "key": "name",
+        "from": "q"
+      }
+    }
+  }
+}

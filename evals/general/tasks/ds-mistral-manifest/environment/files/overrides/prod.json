@@ -1,0 +1,15 @@
+{
+  "app": {
+    "name": "acme-prod",
+    "replicas": 6
+  },
+  "log": {"level": "warn"},
+  "features": {"x": false},
+  "env": [
+    {"name": "REGION", "value": "us-east-1"},
+    {"name": "MAX_CONNS", "value": "2048"}
+  ],
+  "extraMounts": [
+    {"path": "/var/run/secrets", "secret": "prod-token"}
+  ]
+}

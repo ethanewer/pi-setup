@@ -1,0 +1,20 @@
+[
+  {
+    "kind": "Endpoint",
+    "metadata": {"name": "{{ .endpoints.web.name }}"},
+    "spec": {
+      "host": "{{ .endpoints.web.host }}",
+      "port": "{{ .endpoints.web.port }}",
+      "tags": "{{ .endpoints.web.tags }}"
+    }
+  },
+  {
+    "kind": "Endpoint",
+    "metadata": {"name": "{{ .endpoints.api.name }}"},
+    "spec": {
+      "host": "{{ .endpoints.api.host }}",
+      "port": "{{ .endpoints.api.port }}",
+      "tags": "{{ .endpoints.api.tags }}"
+    }
+  }
+]

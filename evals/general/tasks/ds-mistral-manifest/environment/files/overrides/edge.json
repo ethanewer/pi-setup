@@ -1,0 +1,13 @@
+{
+  "tier": "edge",
+  "owner": {"team": "edge-platform"},
+  "features": {"x": true, "z": null},
+  "app": {"replicas": 9},
+  "endpoints": {
+    "api": {"tags": ["private", "lb", "cached"]}
+  },
+  "env": [
+    {"name": "REGION", "value": "us-gov-west-1", "tuning": {"burst": 500}},
+    {"name": "FEATURE_X", "value": "enabled"}
+  ]
+}

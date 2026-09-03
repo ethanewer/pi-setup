@@ -1,0 +1,8 @@
+[Unit]
+Description=Safe house unit
+
+[Service]
+ExecStart=/usr/local/bin/safe-house
+
+[Install]
+WantedBy=multi-user.target

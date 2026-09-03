@@ -1,0 +1,27 @@
+# h_regions.mpy - unclosed regions, next toward compound statements, defaults.
+def alpha():
+    # nolint-begin(forbid-call)
+    system("1")
+    system("2")
+    # nolint-end(forbid-call)
+
+def beta():
+    # nolint:next(forbid-call)
+    if ready:
+        system("3")
+    return 0
+
+def gamma(vals=system("4")):
+    return vals
+
+def delta():
+    def inner(vals=system("5")):
+        return vals
+    return inner
+
+def epsilon():
+    # nolint-begin(forbid-call)
+    system("6")
+
+def zeta():
+    system("7")

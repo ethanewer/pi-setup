@@ -1,0 +1,24 @@
+# h_scopes.mpy - scope model: same-scope redef, siblings, params, for-targets.
+counter = 0
+
+def bump(step, total=0):
+    for item in seq:
+        counter = counter + 1
+    while counter < 10:
+        counter = counter + 1
+    return counter
+
+def wrap():
+    data = []
+    data = data + [1]
+    if data:
+        inner = 1
+    else:
+        inner = 2
+    return inner
+
+def shadow_param(count):
+    count = count + 1
+    return count
+
+counter = counter + 5

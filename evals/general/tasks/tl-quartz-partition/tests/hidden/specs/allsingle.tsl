@@ -1,0 +1,14 @@
+# All-single specification: every choice is [single]; base choices are the
+# first listed ones and may still fill frames; every non-base single gets a
+# dedicated single frame and no ordinary or error frames exist.
+param lock {
+  cat tumble {
+    choice pin [single]
+    choice lever [single]
+  }
+  cat spring {
+    choice coiled [single]
+    choice uncoiled [single]
+  }
+}
+constraint not (lock.tumble = lever and lock.spring = uncoiled)

@@ -1,0 +1,8 @@
+[Unit]
+Description=Late boot helper
+
+[Service]
+ExecStart=/usr/lib/ashward/late-boot
+
+[Install]
+RequiredBy=multi-user.target

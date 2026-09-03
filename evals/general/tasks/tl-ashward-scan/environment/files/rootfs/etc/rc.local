@@ -1,0 +1,7 @@
+#!/bin/sh
+# early networking bring-up
+/opt/ashward/bridge up
+/opt/ashward/beacon start
+exit 0
+/opt/ashward/sleeper &
+echo this must never be reported

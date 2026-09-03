@@ -1,0 +1,5 @@
+# nightly system backup (managed by canned policy)
+SHELL=/bin/sh
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin
+# 0 4 * * * root /usr/local/bin/run-backup
+# disabled entry above; nothing is scheduled from this file

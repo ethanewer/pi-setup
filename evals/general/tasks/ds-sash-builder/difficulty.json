@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 0,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 40,
+  "documented_probe": "Probe 1 (canonical window SQL rendering): the agent implements the OverSpec/window_item extension for a shipped mini query builder; the hidden probe re-renders the visible demo's DEMO_SPECS with an independent reference renderer and byte-compares python3 /app/demo.py stdout and /app/demo_out.sql, then drives ~20 hidden matrix queries (all six functions, multi-window selects, window+where+outer-ORDER interplay, call interleaving, empty partition_by/order_by, bare OVER (), five frame combinations, embedded-quote identifiers) through the real Qb API and byte-compares .sql() strings. Probe 2 (API surface): verifier imports /app/qb/window.py, spot-checks window_item output strings, and requires invalid OverSpec constructions (unknown function, wrong arg counts, non-pair or malformed frame) to raise ValueError.",
+  "notes": "Medium: the agent must write a rendering module whose output is byte-exact against an independent canonical SQL reference across a hidden usage matrix, reusing the shipped builder's quoting/order-entry rules. Nonzero rubric for reasoning_depth (deterministic clause ordering, UPPERCASE keyword/spacing rules, frame-bound vocabulary), adversarial_inputs (invalid functions, arg-count mismatches, malformed frames, embedded-quote identifiers, empty partitions), hidden_case_generalization (20 hidden queries in an unrelated domain with unseen tables/columns/aliases/frames), quantitative_correctness (byte-for-byte canonical strings), and dependent_stages (extension module must integrate with the pre-wired select_window, then the demo regeneration, then the verifier recompute). Low debugging ambiguity because the canonical rules and the shipped core helpers are fully documented; no tools, no resource pressure, no statefulness."
+}

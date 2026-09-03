@@ -1,0 +1,18 @@
+# Unsatisfiable specification: flood requires both fast and slow; ebb
+# requires both slow and fast.  No full assignment can satisfy all four
+# constraints, so the base frame cannot be repaired and the generator must
+# emit the documented empty-with-reason result.
+param tide {
+  cat phase {
+    choice flood [default]
+    choice ebb
+  }
+  cat speed {
+    choice slow
+    choice fast [single]
+  }
+}
+constraint if tide.phase = flood then tide.speed = fast
+constraint if tide.phase = flood then tide.speed = slow
+constraint if tide.phase = ebb then tide.speed = slow
+constraint if tide.phase = ebb then tide.speed = fast

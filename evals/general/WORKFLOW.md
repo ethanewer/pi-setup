@@ -1,11 +1,12 @@
 # General Eval — Build & Verification Workflow
 
-774 Harbor tasks for training and evaluating coding agents. Covers the full
+788 Harbor tasks for training and evaluating coding agents. Covers the full
 Terminal-Bench 2.1 competency space (726 atomic competencies, 725 covered,
 1 waived as environmentally infeasible) plus 271 supplementary general-coding
-tasks (v1 family) and 7 clean-room tasks exercising Terminal-Bench 3.0 skill
-domains not already covered (tb3 family). Zero contamination with
-Terminal-Bench 2.1 — verified by byte-level audit.
+tasks (v1 family), 7 clean-room tasks exercising Terminal-Bench 3.0 skill
+domains not already covered (tb3 family), and 14 clean-room tasks covering
+skill gaps identified in OpenThoughts-TBLite and DeepSWE (tl- / ds- families).
+Zero contamination with Terminal-Bench 2.1 — verified by byte-level audit.
 
 ## Dataset composition
 
@@ -14,7 +15,8 @@ Terminal-Bench 2.1 — verified by byte-level audit.
 | v2/v3 clean-room | 496 | Authored to cover tb2.1 competencies without containing any tb2.1 content |
 | v1 filtered | 271 | General coding tasks (Nemotron/TMax seeds); filtered for verifier quality |
 | tb3 skill tasks | 7 | Clean-room tasks for Terminal-Bench 3.0 skill domains (taxonomy metadata only) not exercised by the rest of the suite |
-| **Total** | **774** | |
+| tl-/ds- skill tasks | 14 | Clean-room tasks for skill gaps found in OpenThoughts-TBLite (tl-, 9) and DeepSWE (ds-, 5); see `specs/external_skill_coverage.json` |
+| **Total** | **788** | |
 
 v1 filtering removed 245 tasks with weak verifiers (no deliverable execution)
 and 8 tasks with tb2.1 contamination (block/n-gram overlap). The v1 family is
@@ -76,7 +78,7 @@ All gates run via `tools/rebuild_and_audit.sh` or individually:
 
 | Gate | Tool | Result |
 |---|---|---|
-| Layout & contract lint | `tools/lint_tasks.py` | 503 clean-room tasks (496 tb2.1 + 7 tb3), 0 problems (271 legacy v1 skipped by design) |
+| Layout & contract lint | `tools/lint_tasks.py` | 517 clean-room tasks (496 tb2.1 + 7 tb3 + 14 tl/ds), 0 problems (271 legacy v1 skipped by design) |
 | Competency coverage | `tools/check_tb21_coverage.py` | 725/726 covered, 1 waived-infeasible, 0 errors |
 | Difficulty calibration | `tools/check_difficulty.py` | 0 problems (--allow-unmeasured) |
 | Provenance | `tools/update_provenance.py` + `check_reproducibility.py` | 12,128 files, 0 drift |
@@ -156,6 +158,38 @@ had no access to any Terminal-Bench (2.1 or 3.0) task content; each task was
 authored and then independently re-verified by a second agent (fresh docker
 builds, oracle reward=1, multiple cheat/negative tests all reward=0), and all
 seven oracles were re-run through harbor's oracle agent.
+
+## 2026-09-02 addition — the tl- / ds- families (TBLite & DeepSWE skill gaps)
+
+Two external skill spaces were inventoried and mapped against the suite
+(`specs/external_skill_coverage.json` records the full mapping):
+
+- **OpenThoughts-TBLite** (100 tasks): 11 are tb2.1 tasks themselves; of the
+  other 89, the skills are overwhelmingly exercised by existing coverage.
+  Nine genuinely uncovered skills became tasks: race-condition repair
+  (`tl-ember-tangle`), bandits/online learning with delayed feedback and
+  drift (`tl-gilded-bandit`), NSGA-II multi-objective optimization
+  (`tl-crown-pareto`), conventional-commit semver/changelog tooling
+  (`tl-scroll-changelog`), JWT-style token lifecycle service
+  (`tl-onyx-token`), Linux persistence-artifact scanning
+  (`tl-ashward-scan`), Category-Partition test-case generation
+  (`tl-quartz-partition`), XXE analysis & remediation (`tl-briar-entity`),
+  WebSocket handshake/frame protocol server (`tl-wire-socket`).
+- **DeepSWE** (113 long-horizon tasks in real OSS repos): most skills are
+  instances of covered SWE competencies; five uncovered tooling families
+  became tasks: linter rule engineering (`ds-lint-forge`), query-builder
+  window-function internals (`ds-sash-builder`), test-harness internals
+  (`ds-runner-shard`), HTTP client protocol internals (`ds-kestrel-client`),
+  helm-style manifest merge strategies (`ds-mistral-manifest`).
+
+Family markers distinguish provenance: `tblite-skill` / `deepswe-skill` tags
+plus `tl-` / `ds-` directory prefixes. Per policy, no upstream source
+repositories are vendored — every task ships small self-authored fixture
+codebases; authoring agents had no access to TBLite or DeepSWE task content
+(only neutral skill descriptions from inventory analysis). Each task was
+independently re-verified by a second agent (several genuine
+instruction/verifier mismatches were found and fixed during this phase), and
+all fourteen oracles pass reward=1.0 through harbor's oracle agent.
 
 ## Oracle verification
 

@@ -1,0 +1,14 @@
+{"hash": "9f3a1c2b4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a", "message": "feat(core): add coalescing reader\n\nImplements fallback reads so callers see a single API.", "files": ["packages/core/read.py", "packages/core/__init__.py"]}
+{"hash": "1a2b3c4d5e6f708192a3b4c5d6e7f8091a2b3c4d5e", "message": "fix(core): handle empty input rows", "files": ["packages/core/read.py"]}
+{"hash": "2b3c4d5e6f708192a3b4c5d6e7f8091a2b3c4d5e6f", "message": "feat(app): expose health endpoint\n\nAdds a liveness route.\n\nBREAKING CHANGE: /health replaces the old /ping route", "files": ["packages/app/server.py"]}
+{"hash": "3c4d5e6f708192a3b4c5d6e7f8091a2b3c4d5e6f70", "message": "fix!: correct timezone offset handling", "files": ["packages/app/server.py", "packages/app/util.py"]}
+{"hash": "4d5e6f708192a3b4c5d6e7f8091a2b3c4d5e6f7081", "message": "docs(core): update readme examples", "files": ["packages/core/README.md"]}
+{"hash": "5e6f708192a3b4c5d6e7f8091a2b3c4d5e6f70819", "message": "chore: bump toolchain image", "files": [".github/workflows/ci.yml"]}
+{"hash": "6f708192a3b4c5d6e7f8091a2b3c4d5e6f708192a3", "message": "refactor(tools): split bundler into modules", "files": ["tools/bundler.py"]}
+{"hash": "708192a3b4c5d6e7f8091a2b3c4d5e6f708192a3b4", "message": "feat!: replace config schema\n\nBREAKING CHANGE: env var names are renamed", "files": ["packages/core/config.py"]}
+{"hash": "8192a3b4c5d6e7f8091a2b3c4d5e6f708192a3b4c5", "message": "bump version numbers across repo", "files": ["packages/core/read.py", "tools/bundler.py"]}
+{"hash": "92a3b4c5d6e7f8091a2b3c4d5e6f708192a3b4c5d6", "message": "fix(ghost-scope): silent retry on lock contention", "files": ["packages/core/read.py"]}
+{"hash": "a3b4c5d6e7f8091a2b3c4d5e6f708192a3b4c5d6e7", "message": "perf(app): cache parsed headers", "files": ["packages/app/server.py"]}
+{"hash": "b4c5d6e7f8091a2b3c4d5e6f708192a3b4c5d6e7f", "message": "feat: add metrics collector", "files": ["packages/app/metrics.py", "packages/core/metrics.py"]}
+{"hash": "c5d6e7f8091a2b3c4d5e6f708192a3b4c5d6e7f80", "message": "test(app): cover auth subprocess", "files": ["packages/app/tests/test_auth.py"]}
+{"hash": "d6e7f8091a2b3c4d5e6f708192a3b4c5d6e7f809", "message": "docs(tools): document flag semantics", "files": ["tools/README.md"]}

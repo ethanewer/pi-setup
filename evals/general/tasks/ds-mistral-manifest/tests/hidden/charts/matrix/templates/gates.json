@@ -1,0 +1,50 @@
+[
+  {
+    "kind": "Gate",
+    "metadata": {
+      "name": "{{ .meta.alpha.name }}"
+    },
+    "spec": {
+      "entries": [
+        {
+          "metadata": {
+            "name": "gold"
+          },
+          "policy": "base-allow",
+          "ttl": 60
+        },
+        {
+          "metadata": {
+            "name": "free"
+          },
+          "policy": "base-free"
+        }
+      ],
+      "ingress": [
+        {
+          "route": "/",
+          "to": "root"
+        }
+      ],
+      "side": []
+    }
+  },
+  {
+    "kind": "Gate",
+    "metadata": {
+      "name": "{{ .meta.beta.name }}"
+    },
+    "spec": {
+      "entries": [
+        {
+          "metadata": {
+            "name": "silver"
+          },
+          "policy": "base-deny"
+        }
+      ],
+      "ingress": [],
+      "side": []
+    }
+  }
+]

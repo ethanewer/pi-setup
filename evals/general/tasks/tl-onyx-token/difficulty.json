@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 1,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 2,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 40,
+  "documented_probe": "Token-based auth service skill: HMAC-signed JWT-style tokens with claims, expiry, rotation and a revocation blacklist. The deliverable /app/token_service.py is a loopback auth service (login/refresh/logout/me) that must mint tokens byte-identical to an independent recomputation of header.payload.signature (HMAC-SHA256 over the config secret, exact compact claim JSON, per-process jti counter), enforce iat/exp windows with a documented X-Onyx-Now time header and clock skew, rotate refresh tokens (old refresh blacklisted), and persist revocations in /app/state/blacklist.json across process restarts. A hidden flow harness drives the running service over loopback, crafts its own valid/expired/future/tampered/wrong-key/wrong-issuer/missing-claim/wrong-typ/malformed tokens, replays rotated refresh tokens, restarts the process mid-test, and re-runs the whole battery against three generated hidden configs (different secrets, lifetimes, clock skews, users, ports). A hardcoded-response stub fails the recomputed signatures; an in-memory-only blacklist fails the restart probe.",
+  "notes": "Medium (rubric 13): the security contract is exact and checkable (byte-exact token strings, claim order, HMAC recomputation, jti counter), which drives quantitative_correctness=2; adversarial_inputs=2 from the crafted-token matrix and tamper/replay tests; interaction_statefulness=2 because rotation+logout mutate a persisted blacklist that must survive a mid-test restart; hidden_case_generalization=2 because three hidden configs re-run the identical flow battery through the same deliverable, so any config-hardcoding or visible-only shortcut fails. Moderate reasoning_depth for the claim/clock/blacklist check ordering, moderate debugging_ambiguity for boundary tolerance semantics. No resource pressure."
+}

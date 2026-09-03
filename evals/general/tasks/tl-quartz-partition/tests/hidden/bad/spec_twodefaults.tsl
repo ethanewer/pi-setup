@@ -1,0 +1,7 @@
+param x {
+  cat c {
+    choice a [default]
+    choice b [default]
+  }
+}
+constraint x.c = a

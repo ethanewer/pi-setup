@@ -1,0 +1,13 @@
+{
+  "name": "visible",
+  "cases": [
+    {"id": "auth-basic", "launcher": "unit", "duration_ms": 340, "deps": []},
+    {"id": "auth-token", "launcher": "unit", "duration_ms": 180, "deps": ["auth-basic"]},
+    {"id": "store-write", "launcher": "unit", "duration_ms": 520, "deps": []},
+    {"id": "store-failover", "launcher": "integ", "duration_ms": 260, "deps": ["store-write"], "fail": true},
+    {"id": "api-put", "launcher": "api", "duration_ms": 410, "deps": ["auth-token", "store-write"]},
+    {"id": "api-get", "launcher": "api", "duration_ms": 150, "deps": ["api-put"]},
+    {"id": "api-delete", "launcher": "api", "duration_ms": 90, "deps": ["store-write"], "fail": true},
+    {"id": "e2e-sync", "launcher": "e2e", "duration_ms": 610, "deps": ["api-get", "store-failover"]}
+  ]
+}

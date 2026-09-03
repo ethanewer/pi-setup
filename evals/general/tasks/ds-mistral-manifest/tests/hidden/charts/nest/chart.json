@@ -1,0 +1,71 @@
+{
+  "values": {
+    "gateway": {
+      "name": "gw",
+      "namespace": "prod",
+      "zone": "a"
+    },
+    "routes": {
+      "r1": {
+        "target": "sink-a",
+        "weight": 10
+      },
+      "overlay": [
+        {
+          "id": "r1",
+          "weight": 60,
+          "notes": {
+            "tier": "b",
+            "owner": "pa"
+          }
+        }
+      ]
+    },
+    "listeners": {
+      "main": {
+        "port": 8080
+      },
+      "extra": [
+        {
+          "name": "admin",
+          "port": 9000
+        },
+        {
+          "name": "debug",
+          "port": 4000
+        }
+      ]
+    },
+    "backends": [
+      {
+        "name": "a",
+        "url": "http://a.internal"
+      },
+      {
+        "name": "b",
+        "url": "http://b.internal"
+      }
+    ],
+    "scaling": {
+      "min": 2,
+      "max": 10
+    }
+  },
+  "strategy": {
+    "mesh": {
+      "spec.routes": {
+        "policy": "merge-by-key",
+        "key": "id",
+        "from": "routes.overlay"
+      },
+      "spec.listeners": {
+        "policy": "append",
+        "from": "listeners.extra"
+      },
+      "spec.backends": {
+        "policy": "replace",
+        "from": "backends"
+      }
+    }
+  }
+}

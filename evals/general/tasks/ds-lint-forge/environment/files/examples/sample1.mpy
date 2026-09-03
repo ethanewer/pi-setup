@@ -1,0 +1,18 @@
+# sample1.mpy - guides the three rules on the shipped engine.
+# Run:  python3 /app/lintkit/lint.py /app/examples/sample1.mpy
+
+cache = {}                      # mut-default: mutable dict default
+def make(name="plain", items=[], meta={}, flags={1, 2}):
+    count = 0
+    return count
+
+def client():
+    # nolint:next(forbid-call)
+    exec("command")             # supressed by next-statement form
+    net = host.network_open("x")  # forbid-call: attribute form, in a function
+    return net
+
+value = 1
+def convert():
+    value = 2                   # shadow-var: shadows module-level 'value'
+    return value

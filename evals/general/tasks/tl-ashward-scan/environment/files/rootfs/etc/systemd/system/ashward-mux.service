@@ -1,0 +1,9 @@
+[Unit]
+Description=Ashward mux relay
+
+[Service]
+ExecStart=/opt/ashward/mux-agent --daemon
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

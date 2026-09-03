@@ -1,0 +1,35 @@
+{
+  "values": {
+    "app": {
+      "name": "acme-web",
+      "replicas": 2,
+      "image": "registry.example/acme/web:1.4.2",
+      "ports": {"http": 8080, "metrics": 9090}
+    },
+    "tier": "web",
+    "owner": {"team": "platform", "pager": "oncall"},
+    "region": "us-east-1",
+    "log": {"level": "info", "sinks": ["stdout", "loki"]},
+    "features": {"x": true, "y": false, "z": "soon"},
+    "endpoints": {
+      "web": {"name": "web", "host": "web.acme.internal", "port": 8080, "tags": ["public", "lb"]},
+      "api": {"name": "api", "host": "api.acme.internal", "port": 8443, "tags": ["private"]}
+    },
+    "env": [
+      {"name": "LOG_LEVEL", "value": "info"},
+      {"name": "REGION", "value": "us-east-1"}
+    ],
+    "extraMounts": [],
+    "ports": [
+      {"name": "http", "port": 80},
+      {"name": "metrics", "port": 9090}
+    ]
+  },
+  "strategy": {
+    "site": {
+      "spec.env": {"policy": "merge-by-key", "key": "name", "from": "env"},
+      "spec.mounts": {"policy": "append", "from": "extraMounts"},
+      "spec.ports": {"policy": "replace", "from": "ports"}
+    }
+  }
+}

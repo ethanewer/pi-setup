@@ -1,0 +1,22 @@
+# sample2.mpy - suppression forms on the shipped engine.
+
+def first():
+    runcmd = 0
+    system("clean")             # line-scoped suppression below
+    # nolint(forbid-call)
+
+def second():
+    # nolint-begin(forbid-call)
+    system("a")
+    system("b")
+    # nolint-end(forbid-call)
+    system("c")
+
+def third():
+    # nolint-begin(shadow-var)
+    x = 1
+    # nolint-end(shadow-var)
+    y = 1
+    return x
+
+x = 1

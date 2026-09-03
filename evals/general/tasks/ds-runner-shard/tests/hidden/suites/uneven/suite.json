@@ -1,0 +1,17 @@
+{
+  "name": "uneven",
+  "cases": [
+    {"id": "heavy", "launcher": "load", "duration_ms": 900, "deps": []},
+    {"id": "a1", "launcher": "unit", "duration_ms": 100, "deps": []},
+    {"id": "a2", "launcher": "unit", "duration_ms": 100, "deps": []},
+    {"id": "a3", "launcher": "unit", "duration_ms": 100, "deps": [], "fail": true},
+    {"id": "a4", "launcher": "unit", "duration_ms": 100, "deps": []},
+    {"id": "a5", "launcher": "unit", "duration_ms": 100, "deps": []},
+    {"id": "a6", "launcher": "unit", "duration_ms": 100, "deps": []},
+    {"id": "a7", "launcher": "unit", "duration_ms": 100, "deps": []},
+    {"id": "a8", "launcher": "unit", "duration_ms": 100, "deps": []},
+    {"id": "a9", "launcher": "unit", "duration_ms": 100, "deps": []},
+    {"id": "t1", "launcher": "unit", "duration_ms": 250, "deps": []},
+    {"id": "t2", "launcher": "unit", "duration_ms": 250, "deps": []}
+  ]
+}

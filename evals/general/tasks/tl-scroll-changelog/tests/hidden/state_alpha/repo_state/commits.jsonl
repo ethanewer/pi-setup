@@ -1,0 +1,14 @@
+{"hash": "aa11111111111111111111111111111111111111", "message": "feat(auth): support refresh tokens", "files": ["services/auth/tokens.py"]}
+{"hash": "bb22222222222222222222222222222222222222", "message": "fix(auth): use constant-time compare", "files": ["services/auth/sign.py"]}
+{"hash": "cc33333333333333333333333333333333333333", "message": "fix!(db): reject zero-length keys", "files": ["services/db/keys.py"]}
+{"hash": "dd44444444444444444444444444444444444444", "message": "feat(db): enable write-ahead logging\n\nSets the WAL journal.\n\nBREAKING CHANGE: journal files are removed", "files": ["services/db/engine.py"]}
+{"hash": "ee55555555555555555555555555555555555555", "message": "feat(db)!: window functions\n\nBREAKING CHANGE: requires v4 runtime\n", "files": ["services/db/engine.py"]}
+{"hash": "ff66666666666666666666666666666666666666", "message": "feat: job queue", "files": ["services/auth/queue.py", "services/ui/cards.py"]}
+{"hash": "0011111111111111111111111111111111111111", "message": "docs(ui): theme notes", "files": ["services/ui/styles.md"]}
+{"hash": "1122222222222222222222222222222222222222", "message": "fix(ui): align grid on narrow screens", "files": ["services/ui/grid.py"]}
+{"hash": "2233333333333333333333333333333333333333", "message": "perf(auth): cache token lookups", "files": ["services/auth/tokens.py"]}
+{"hash": "3344444444444444444444444444444444444444", "message": "chore: tidy repo", "files": ["README.md"]}
+{"hash": "4455555555555555555555555555555555555555", "message": "revert(ui): drop sticky header", "files": ["services/ui/header.py"]}
+{"hash": "5566666666666666666666666666666666666666", "message": "refactor(ghost): rename internals", "files": ["services/db/schema.py"]}
+{"hash": "6677777777777777777777777777777777777777", "message": "feat(auth)!: rotate signing keys", "files": ["services/auth/keys.py"]}
+{"hash": "7788888888888888888888888888888888888888", "message": "this is not conventional", "files": ["services/auth/api.py"]}

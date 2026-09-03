@@ -1,0 +1,65 @@
+{
+  "values": {
+    "meta": {
+      "alpha": {
+        "name": "alpha-gate"
+      },
+      "beta": {
+        "name": "beta-gate"
+      }
+    },
+    "entries": [
+      {
+        "metadata": {
+          "name": "gold"
+        },
+        "policy": "allow",
+        "ttl": 120
+      },
+      {
+        "metadata": {
+          "name": "silver"
+        },
+        "policy": "deny",
+        "tags": [
+          "s"
+        ]
+      },
+      {
+        "metadata": {
+          "name": "free"
+        },
+        "policy": "open"
+      }
+    ],
+    "ingressA": [
+      {
+        "route": "/a",
+        "to": "svc-a"
+      }
+    ]
+  },
+  "strategy": {
+    "gates": {
+      "spec.entries": {
+        "policy": "merge-by-key",
+        "key": "metadata.name",
+        "from": "entries"
+      },
+      "spec.ingress": {
+        "policy": "append",
+        "from": "nowhere"
+      },
+      "spec.side": {
+        "policy": "append",
+        "from": "nowhere"
+      }
+    },
+    "rules": {
+      "spec.quota": {
+        "policy": "append",
+        "from": "moreQuota"
+      }
+    }
+  }
+}

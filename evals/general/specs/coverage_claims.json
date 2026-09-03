@@ -7251,5 +7251,75 @@
     "competencies": [],
     "evidence": {},
     "note": "TB3-skill supplementary task: claims no tb2.1 competencies. TB3 Operations/Compliance skill. Verifier executes the deliverable CLI /app/build_declaration.py on the visible workdir and four hidden workdirs (threshold boundary, duplicate txn ids, all-invalid, below-threshold-empty), comparing declaration.csv and validation_report.json against the probe's independent recompute; checks the visible deliverables."
+  },
+  "tl-ember-tangle": {
+    "competencies": [],
+    "evidence": {},
+    "note": "TBLite-skill supplementary task (family marker in tags): claims no tb2.1 competencies. TBLite skill: race-condition diagnosis & repair. Verifier executes the repaired /app/svc/wordcount_service.py under the pristine load generator on visible + hidden corpora, recomputing exact expected counts independently; also re-runs the pristine buggy service to confirm the bug reproduces (anti-shortcut), and checks /app/diagnosis.md root-cause claims against the code."
+  },
+  "tl-gilded-bandit": {
+    "competencies": [],
+    "evidence": {},
+    "note": "TBLite-skill supplementary task (family marker in tags): claims no tb2.1 competencies. TBLite skill: online learning under delayed feedback and abrupt drift. Verifier runs the agent's /app/policy.py in the deterministic seeded harness on visible + hidden param sets (no-drift, 3-way swap, long delays), independently recomputing the oracle-best schedule and enforcing a derived regret threshold per case; checks /app/eval_report.json recomputes."
+  },
+  "tl-crown-pareto": {
+    "competencies": [],
+    "evidence": {},
+    "note": "TBLite-skill supplementary task (family marker in tags): claims no tb2.1 competencies. TBLite skill: NSGA-II multi-objective optimization. Verifier executes /app/nsga.py on visible + hidden param sets and validates fronts with an independent implementation: feasibility, objective recompute, true non-domination, independent hypervolume within tolerance, and analytic-front proximity beating a random-search baseline."
+  },
+  "tl-scroll-changelog": {
+    "competencies": [],
+    "evidence": {},
+    "note": "TBLite-skill supplementary task (family marker in tags): claims no tb2.1 competencies. TBLite skill: conventional-commit parsing, per-package semver bumps, changelog generation. Verifier executes /app/changelogger.py on visible + hidden repo states and byte-compares changelogs and bumps.json against its own independent implementation (breaking-marker stacking, scope precedence, no-bump omission, tie ordering)."
+  },
+  "tl-onyx-token": {
+    "competencies": [],
+    "evidence": {},
+    "note": "TBLite-skill supplementary task (family marker in tags): claims no tb2.1 competencies. TBLite skill: JWT-style token service lifecycle. Verifier drives /app/token_service.py over loopback: login/refresh rotation/logout flows, expiry enforcement, tampered-signature rejection, rotated-refresh replay rejection, blacklist persistence across restart \u2014 recomputing HMACs and claims independently \u2014 on visible + hidden configs."
+  },
+  "tl-ashward-scan": {
+    "competencies": [],
+    "evidence": {},
+    "note": "TBLite-skill supplementary task (family marker in tags): claims no tb2.1 competencies. TBLite skill: Linux persistence-artifact scanning. Verifier executes /app/scan_persistence.py on the visible rootfs and hidden rootfs trees (symlinked cron dirs, allowlisted hits, empty tree) and compares parsed findings against an independent reference scanner; checks idempotent byte-identical re-runs."
+  },
+  "tl-quartz-partition": {
+    "competencies": [],
+    "evidence": {},
+    "note": "TBLite-skill supplementary task (family marker in tags): claims no tb2.1 competencies. TBLite skill: Category-Partition Method test generation. Verifier executes /app/generate_cases.py on visible + hidden TSL specs (conflicting constraints, all-single params, unsatisfiable combinations) and compares exact frame JSON against an independent generator implementation."
+  },
+  "tl-briar-entity": {
+    "competencies": [],
+    "evidence": {},
+    "note": "TBLite-skill supplementary task (family marker in tags): claims no tb2.1 competencies. TBLite skill: XXE analysis and remediation. Verifier behaviorally probes each parser with hidden crafted payloads (file-read, recursive-entity, benign), requiring pristine copies were genuinely exploitable pre-patch, patched parsers neutralize all probes while passing hidden benign inputs, and /app/xxe_audit.json verdicts match the probe's independent verdicts."
+  },
+  "tl-wire-socket": {
+    "competencies": [],
+    "evidence": {},
+    "note": "TBLite-skill supplementary task (family marker in tags): claims no tb2.1 competencies. TBLite skill: WebSocket protocol server implementation. Verifier speaks the documented protocol over loopback with a raw-socket client: recomputed handshake accept value, masked echo incl. 16/64-bit lengths, fragmentation reassembly, ping/pong, close codes, malformed-mask rejection \u2014 on visible + hidden configs."
+  },
+  "ds-lint-forge": {
+    "competencies": [],
+    "evidence": {},
+    "note": "DeepSWE-skill supplementary task (family marker in tags): claims no tb2.1 competencies. DeepSWE skill: linter rule engineering. Verifier runs the extended lint engine on hidden minipy sources (nested scopes, chained/region suppressions, cache hit and invalidation scenarios) and compares findings JSON against an independent implementation of the three rules + suppression semantics; cache stats verified via double runs."
+  },
+  "ds-sash-builder": {
+    "competencies": [],
+    "evidence": {},
+    "note": "DeepSWE-skill supplementary task (family marker in tags): claims no tb2.1 competencies. DeepSWE skill: SQL query-builder window-function internals. Verifier imports the extended library and renders SQL for hidden usage matrices (five functions, multiple windows, frames, interplay with where/order) comparing canonical strings against an independent generator; checks visible demo output."
+  },
+  "ds-runner-shard": {
+    "competencies": [],
+    "evidence": {},
+    "note": "DeepSWE-skill supplementary task (family marker in tags): claims no tb2.1 competencies. DeepSWE skill: test-harness internals. Verifier executes the extended runner on visible + hidden suites (uneven durations, cross-shard dep chains, all-fail/all-pass, K > cases) and compares shard assignments, bail cascades and CTRF-like reports against an independent LPT/cascade recompute."
+  },
+  "ds-kestrel-client": {
+    "competencies": [],
+    "evidence": {},
+    "note": "DeepSWE-skill supplementary task (family marker in tags): claims no tb2.1 competencies. DeepSWE skill: HTTP client protocol internals. Verifier exercises the extended library on hidden byte fixtures: exact multipart body bytes, chunked decoding incl. trailers and malformed-chunk errors, cookie-store scoping/eviction/ordering across scripted exchanges \u2014 compared against an independent reference implementation."
+  },
+  "ds-mistral-manifest": {
+    "competencies": [],
+    "evidence": {},
+    "note": "DeepSWE-skill supplementary task (family marker in tags): claims no tb2.1 competencies. DeepSWE skill: helm-like manifest merge strategies. Verifier executes /app/render_chart.py on visible + hidden charts (conflicting overrides, null deletion, merge-by-key nested conflicts, unknown-policy error behavior, empty values) and compares canonical JSON against an independent merge engine."
   }
 }

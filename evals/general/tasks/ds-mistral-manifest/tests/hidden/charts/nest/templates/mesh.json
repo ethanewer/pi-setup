@@ -1,0 +1,33 @@
+{
+  "kind": "Mesh",
+  "metadata": {
+    "name": "{{ .gateway.name }}",
+    "namespace": "{{ .gateway.namespace }}",
+    "zone": "{{ .gateway.zone }}"
+  },
+  "spec": {
+    "routes": [
+      {
+        "id": "r1",
+        "target": "{{ .routes.r1.target }}",
+        "weight": "{{ .routes.r1.weight }}",
+        "notes": {
+          "team": "core",
+          "tier": "a"
+        }
+      },
+      {
+        "id": "r2",
+        "target": "sink-a",
+        "weight": 100
+      }
+    ],
+    "listeners": [
+      {
+        "name": "main",
+        "port": "{{ .listeners.main.port }}"
+      }
+    ],
+    "backends": []
+  }
+}

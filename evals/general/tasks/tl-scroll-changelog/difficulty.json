@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 0,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": "tblite-skill (parse conventional commits, compute per-package semver bumps, emit canonical per-package CHANGELOG.md files for a monorepo): the agent authors a stdlib-only CLI that reads a repo-state snapshot (commits.jsonl / packages.json / last_tag.json) and writes bumps.json + byte-exact changelogs; the verifier executes /app/changelogger.py on the visible state and on 3+ hidden repo states, recomputing bumps and changelog bytes with an independent reference implementation and comparing byte-for-byte, plus error-path probes (missing packages.json, malformed last_tag.json, bad --date must exit nonzero). Hidden states cover multi-package commits, unknown scopes, '!' and BREAKING CHANGE footer stacking, breaking docs/chore, scope-vs-path precedence with nested prefixes, version tie ordering (strongest class wins), no-bump packages omitted, and an empty commit log.",
+  "notes": "Medium: the task is a single self-contained parser/emitter with an exact documented grammar (header forms, footer, scope-vs-path mapping with longest-prefix precedence), semver bump classes with tie ordering, and a byte-canonical changelog format whose whitespace/section-order/entry ordering must match exactly. Rubric: reasoning_depth 2 (grammar + precedence + tie rules), adversarial_inputs 2 (unknown scopes, non-conventional commits, empty messages, breaking docs, malformed JSONL lines, error exits), hidden_case_generalization 2 (three varied hidden states + empty log), quantitative_correctness 2 (byte-exact changelog, version arithmetic, exact hash prefixes). No tool breadth, no resource pressure, no statefulness (each run is stateless)."
+}

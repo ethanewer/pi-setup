@@ -1,0 +1,15 @@
+{
+  "name": "chains",
+  "cases": [
+    {"id": "p0", "launcher": "unit", "duration_ms": 350, "deps": []},
+    {"id": "p1", "launcher": "unit", "duration_ms": 90, "deps": ["p0"], "fail": true},
+    {"id": "p2", "launcher": "unit", "duration_ms": 90, "deps": ["p1"]},
+    {"id": "p3", "launcher": "unit", "duration_ms": 90, "deps": ["p2"]},
+    {"id": "p4", "launcher": "unit", "duration_ms": 90, "deps": ["p3"]},
+    {"id": "q0", "launcher": "integ", "duration_ms": 480, "deps": []},
+    {"id": "q1", "launcher": "integ", "duration_ms": 120, "deps": ["q0"], "fail": true},
+    {"id": "q2", "launcher": "integ", "duration_ms": 120, "deps": ["q1"]},
+    {"id": "q3", "launcher": "integ", "duration_ms": 120, "deps": ["q2"]},
+    {"id": "r0", "launcher": "e2e", "duration_ms": 620, "deps": ["p4", "q3"]}
+  ]
+}

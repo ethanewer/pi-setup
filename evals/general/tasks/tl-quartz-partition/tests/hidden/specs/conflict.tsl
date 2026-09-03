@@ -1,0 +1,20 @@
+# Conflicting-constraint specification: the base fill violates a constraint
+# and repair must restore validity with minimal deviation.
+param router {
+  cat band {
+    choice giga [default]
+    choice mega
+  }
+  cat channel {
+    choice uni
+    choice dual [single]
+  }
+}
+param port {
+  cat duplex {
+    choice half
+    choice full [default]
+  }
+}
+constraint if router.band = giga then port.duplex = full
+constraint if router.band = mega then port.duplex = half

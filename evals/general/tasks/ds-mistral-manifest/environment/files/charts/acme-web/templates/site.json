@@ -1,0 +1,27 @@
+{
+  "kind": "App",
+  "metadata": {
+    "name": "{{ .app.name }}",
+    "labels": {
+      "tier": "{{ .tier }}",
+      "owner": "{{ .owner.team }}"
+    }
+  },
+  "spec": {
+    "replicas": "{{ .app.replicas }}",
+    "image": "{{ .app.image }}",
+    "ports": [
+      {"name": "http", "port": "{{ .app.ports.http }}"},
+      {"name": "metrics", "port": "{{ .app.ports.metrics }}"}
+    ],
+    "env": [
+      {"name": "LOG_LEVEL", "value": "{{ .log.level }}"},
+      {"name": "REGION", "value": "{{ .region }}"},
+      {"name": "FEATURE_X", "value": "{{ .features.x }}"}
+    ],
+    "mounts": [
+      {"path": "/etc/certs", "secret": "tls-certs"},
+      {"path": "/var/run/keys", "secret": "deploy-keys"}
+    ]
+  }
+}

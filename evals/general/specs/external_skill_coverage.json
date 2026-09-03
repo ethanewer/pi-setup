@@ -1,0 +1,85 @@
+{
+  "description": "Coverage mapping of external benchmark skill spaces against this suite. For each source benchmark: which skills are already exercised by existing tasks (tb2.1 competencies / v1 / tb3) and which gaps were closed by newly authored clean-room tasks. Source task CONTENT was never used in authoring \u2014 only neutral skill descriptions derived during inventory analysis; new tasks ship self-authored mini codebases (no upstream repos).",
+  "sources": {
+    "openthoughts-tblite": {
+      "reference": "https://github.com/open-thoughts/OpenThoughts-TBLite",
+      "tasks_total": 100,
+      "tasks_identical_to_tb21": [
+        "acl-permissions-inheritance",
+        "amuse-install",
+        "broken-python",
+        "hydra-debug-slurm-mode",
+        "jq-data-processing",
+        "jsonl-aggregator",
+        "log-summary",
+        "mlflow-register",
+        "pandas-etl",
+        "schedule-vacation",
+        "vimscript-vim-quine"
+      ],
+      "tasks_identical_note": "11 of 100 TBLite tasks are tb2.1 tasks themselves \u2014 covered by the tb2.1 competency inventory.",
+      "tasks_analyzed": 89,
+      "family_marker": "tblite-skill (tag) + tl- (directory prefix)"
+    },
+    "deepswe": {
+      "reference": "https://github.com/datacurve-ai/deep-swe (arXiv 2607.07946)",
+      "tasks_total": 113,
+      "tasks_analyzed": 108,
+      "profile": "long-horizon feature implementations in real OSS repos (Go/Python/TS/Rust/JS); skills concentrated in language tooling (interpreters, linters, parsers/formatters, CLI/TUI frameworks), ORMs, HTTP internals, test harnesses, k8s manifest processing",
+      "family_marker": "deepswe-skill (tag) + ds- (directory prefix)"
+    }
+  },
+  "covered_by_existing_suite_examples": {
+    "tblite": [
+      "log parsing/access-log analytics -> tb2.1 log/server-log competencies + v1-skill-access-log-formats",
+      "sklearn classification/regression pipelines -> tb2.1 ML training/inference competencies",
+      "SQLite schema + SQL query authoring -> v1-skill-sqlite + tb2.1 SQL competencies",
+      "nginx reverse-proxy configuration -> v1-skill-nginx + nginx configuration competencies",
+      "systemd service deployment -> v1-skill-systemd-processes + daemonize competencies",
+      "X.509/PKI/certificate lifecycle -> v1-skill-x-509, v1-skill-tls",
+      "git forensics/dangling objects -> tb2.1 git-history competencies",
+      "SMILES cheminformatics -> tb2.1 'featurize SMILES strings' competency",
+      "FASTA/protein cleaning -> v1-skill-fasta + biology competencies",
+      "chess move legality -> tb2.1 chess-best-move-derived competencies",
+      "Maven/conda dependency-conflict resolution -> tb2.1 conda-env-conflict-resolution competencies",
+      "library-internals bug fixing (sympy/okhttp style) -> tb2.1 astropy/separability-matrix competencies",
+      "combinatorial construction/derangement/permutation problems -> v1 algorithm family + combinatorial-subset-search competency",
+      "constrained assignment/scheduling (supply chain, wave planning) -> v1-skill-afab-scheduling, v1-skill-queue-scheduling, assign-seats competencies",
+      "data structure implementation (bloom filter class) -> v1-skill-b-tree-records + hash competencies",
+      "filesystem traversal/symlinks/superblock repair -> raw-disk-image + filesystem competencies",
+      "interpreter authoring -> v1-skill-metacircular-interpreter, v1-skill-eval-apply, v1-skill-scheme + self-interpretation competency",
+      "code formatters/canonicalizers -> canonical Vimscript + header canonicalization competencies",
+      "CLI argument handling -> parse-cli-args competency + v1-skill-cli-argument-handling",
+      "terminal/ANSI rendering -> v1-skill-terminal-escape-sequences"
+    ],
+    "deepswe": [
+      "interpreter feature development (parser/AST/evaluator) -> v1 metacircular/eval-apply/scheme/redcode families",
+      "parser & format-library work -> broad parsing competencies (fixed-width, ICS, HTML/CSS selectors, binary 3D decode)",
+      "CLI/TUI feature work -> CLI contract competencies + terminal-escape-sequences",
+      "ORM/DB feature work -> tb2.1 SQL/database competencies (usage-level)",
+      "web-framework feature work -> tb2.1 web/API competencies",
+      "async runtime feature work -> v1-skill-asyncio-task-cancellation, v1-skill-async-process-i-o",
+      "long-horizon modification of existing codebases -> fix/modernize competencies (cython compat, legacy C++ modernization)"
+    ]
+  },
+  "gaps_closed": {
+    "tblite_skills": {
+      "tl-ember-tangle": "race-condition diagnosis and repair in a concurrent async service",
+      "tl-gilded-bandit": "online learning: multi-armed bandit with delayed feedback and abrupt drift",
+      "tl-crown-pareto": "multi-objective evolutionary optimization (NSGA-II, crowding distance, hypervolume)",
+      "tl-scroll-changelog": "conventional-commit parsing -> per-package semver bumps + changelog generation",
+      "tl-onyx-token": "HMAC-signed JWT-style token service: claims, expiry, rotation, revocation blacklist",
+      "tl-ashward-scan": "Linux persistence-artifact scanner (cron/systemd/rc/ld.so.preload) with allowlist discrimination",
+      "tl-quartz-partition": "systematic test-case generation via the Category-Partition Method over a TSL-like spec",
+      "tl-briar-entity": "XXE vulnerability analysis (behavioral probing) and parser remediation",
+      "tl-wire-socket": "WebSocket protocol server: handshake accept computation, frame codec, fragmentation, control frames"
+    },
+    "deepswe_skills": {
+      "ds-lint-forge": "linter rule engineering: new AST rules, region/next-statement suppressions, incremental results cache",
+      "ds-sash-builder": "SQL query-builder internals: window-function generation (rank/sum/frames) with canonical SQL rendering",
+      "ds-runner-shard": "test-harness internals: LPT duration sharding, bail-on-failure cascades, per-launcher CTRF-like reports",
+      "ds-kestrel-client": "HTTP client protocol internals: multipart body building, chunked decoding with trailers, deterministic cookie store",
+      "ds-mistral-manifest": "helm-like manifest merge engine: values precedence, null-deletion, array merge policies (replace/append/merge-by-key)"
+    }
+  }
+}

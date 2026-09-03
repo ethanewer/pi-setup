@@ -1,0 +1,21 @@
+# h_forvars.mpy - for-target shadows, param shadows, sibling redefs.
+count = 0
+
+def go():
+    for count in items:
+        pass
+    return count
+
+def loop():
+    for key in mapping:
+        for key in nested:
+            pass
+
+def param_shadow(limit):
+    limit = limit + 1
+    return limit
+
+def redefine():
+    total = 1
+    total = 2
+    return total

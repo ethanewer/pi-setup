@@ -1,0 +1,110 @@
+# ============================================================================
+#  printer.tsl -- visible specification for the quartz-partition task.
+#
+#  TSL GRAMMAR (a test-specification language).  Whitespace and newlines are
+#  insignificant between tokens; a '#' starts a comment running to end-of-line.
+#
+#      spec        := item*
+#      item        := 'param' NAME '{' category+ '}' | 'constraint' expr
+#      category    := 'cat' NAME '{' choice+ '}'
+#      choice      := 'choice' NAME (':=' INT)? prop*
+#      prop        := '[' NAME ']'          -- NAME in { default, single, error }
+#      expr        := imp
+#      imp         := 'if'? or_expr ('then' or_expr)?
+#      or_expr     := and_expr ('or' and_expr)*
+#      and_expr    := not_expr ('and' not_expr)*
+#      not_expr    := 'not' not_expr | primary
+#      primary     := '(' expr ')' | atom
+#      atom        := NAME '.' NAME '=' NAME
+#                   | NAME '.' NAME 'in' INT '..' INT
+#
+#  Names are [A-Za-z_][A-Za-z0-9_]*.  A choice may carry at most one property.
+#  A category may have at most one [default] and must have at least one choice
+#  without [error].  Choice names must be unique inside their own category.
+#
+#  SEMANTICS (exact rules used by the generator):
+#
+#  * base(category) : with params.json strategy "first" it is the first listed
+#    choice; with "default" it is the category's [default] choice if any, else
+#    the first listed choice.
+#  * fill(category) : the category's [default] choice if it has one, else
+#    base(category).  Unspecified frame slots are filled with fill().
+#  * Choice classes:  [error] -> error ; else [single] -> single ; else
+#    ordinary.  A choice equal to base() gets no dedicated frame.
+#  * Property rules: an [error] choice may only be selected in an error frame
+#    focused on it.  A non-base [single] choice may only be selected in a
+#    single frame focused on it; a [single] choice that is the category's base
+#    may be selected anywhere.
+#  * Constraints: every emitted frame must satisfy every constraint.  'A then
+#    B' means (not A) or B; 'if' is optional sugar.  'p.c in lo..hi' is true
+#    iff the choice selected in category p.c carries an integer value v with
+#    lo <= v <= hi (a valueless choice makes it false).  'p.c = ch' is true
+#    iff the selected choice of p.c is named ch.
+#  * Frame order: base frame, then single frames, then ordinary frames, then
+#    error frames (each group iterating parameters/categories/choices in spec
+#    order, skipping base choices).  A dedicated frame fixes its focus choice
+#    and fills every other category with fill().
+#  * Repair: if a candidate frame violates a constraint, the generator walks
+#    the free categories (those not fixed by the frame's focus) over all
+#    permitted combinations -- a free category may take any of its choices
+#    that is not [error] and not a non-base [single] -- and keeps the valid
+#    assignment that (1) changes the fewest free categories away from fill(),
+#    then (2) is lexicographically smallest over the choice list positions of
+#    the free categories in spec order.  If the base frame cannot be repaired,
+#    the whole spec is reported unsatisfiable.  If a dedicated frame cannot be
+#    repaired it is simply omitted.
+#  * frame_limit > 0 keeps only that many frames (in emitted order) and ids
+#    are renumbered; 0 keeps everything.  Frame ids are "F" plus the 1-based
+#    index zero-padded to a width of at least 2 (wider if needed).
+#
+#  OUTPUT SCHEMA (frames.json)
+#    {"status":"ok"|"unsatisfiable", "strategy":..., "limit":...,
+#     "reason": "no valid base frame exists" (unsatisfiable only),
+#     "frames":[ {"id":..., "type":"base"|"single"|"ordinary"|"error",
+#                 "focus":{"param":...,"category":...,"choice":...}|null,
+#                 "selections": { "<param>": {"<cat>": "<choice>", ...}, ...}},
+#                ... ]}
+#
+# ============================================================================
+
+param raster {
+  cat resolution {
+    choice dpi300
+    choice dpi600 [default]
+    choice dpi1200 [single]
+  }
+  cat dithering {
+    choice off
+    choice halftone [single]
+    choice diffusion
+  }
+}
+
+param ink {
+  cat pigment {
+    choice mono [default]
+    choice color
+    choice photo [error]
+  }
+}
+
+param copies {
+  cat count {
+    choice one := 1
+    choice two := 2
+    choice many := 10
+  }
+}
+
+param sheets {
+  cat order {
+    choice ascending [default]
+    choice descending
+  }
+}
+
+constraint if ink.pigment = photo then raster.resolution = dpi300
+constraint if raster.resolution = dpi1200 then ink.pigment = mono
+constraint if raster.dithering = halftone then raster.resolution = dpi300
+constraint copies.count in 1..2
+constraint if ink.pigment = color then (sheets.order = descending or raster.dithering = diffusion)

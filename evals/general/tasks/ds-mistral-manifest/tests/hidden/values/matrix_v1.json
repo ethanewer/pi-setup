@@ -1,0 +1,58 @@
+{
+  "meta": {
+    "alpha": {
+      "name": "alpha-live"
+    }
+  },
+  "entries": [
+    {
+      "metadata": {
+        "name": "gold"
+      },
+      "ttl": 300
+    },
+    {
+      "metadata": {
+        "name": "gold"
+      },
+      "port": 90
+    },
+    {
+      "metadata": {
+        "name": "ruby"
+      },
+      "policy": "audit"
+    },
+    {
+      "metadata": {
+        "name": "free"
+      },
+      "policy": "closed",
+      "tags": [
+        "x"
+      ]
+    }
+  ],
+  "ingressA": [
+    {
+      "route": "/live",
+      "to": "svc-live"
+    },
+    {
+      "route": "/dup",
+      "to": "s1"
+    }
+  ],
+  "quota": [
+    {
+      "per": "h",
+      "n": 200
+    }
+  ],
+  "moreQuota": [
+    {
+      "per": "sec",
+      "n": 10
+    }
+  ]
+}

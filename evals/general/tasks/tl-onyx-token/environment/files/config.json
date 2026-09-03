@@ -1,0 +1,25 @@
+{
+  "host": "127.0.0.1",
+  "port": 8711,
+  "secret": "9c41f7a2e8d35b1067f4c29a8e51d3b7",
+  "issuer": "onyx-gate",
+  "clock_skew_sec": 2,
+  "lifetimes": {
+    "access_sec": 300,
+    "refresh_sec": 3600
+  },
+  "users": {
+    "alice": {
+      "password": "orbit-sunrise",
+      "display": "Alice Mayberry"
+    },
+    "bob": {
+      "password": "harbor-seal",
+      "display": "Bob Caldwell"
+    },
+    "carol": {
+      "password": "quill-hustle",
+      "display": "Carol Dane"
+    }
+  }
+}

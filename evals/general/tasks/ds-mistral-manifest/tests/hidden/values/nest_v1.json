@@ -1,0 +1,28 @@
+{
+  "gateway": {
+    "name": "gw-west",
+    "zone": "b"
+  },
+  "routes": {
+    "overlay": [
+      {
+        "id": "r1",
+        "weight": 70
+      },
+      {
+        "id": "r3",
+        "target": "sink-c",
+        "weight": 30
+      }
+    ]
+  },
+  "scaling": {
+    "max": 40
+  },
+  "backends": [
+    {
+      "name": "aa",
+      "url": "http://aa.internal"
+    }
+  ]
+}

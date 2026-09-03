@@ -1,0 +1,8 @@
+{
+  "name": "sparse",
+  "cases": [
+    {"id": "x", "launcher": "unit", "duration_ms": 77, "deps": []},
+    {"id": "y", "launcher": "unit", "duration_ms": 55, "deps": ["x"]},
+    {"id": "z", "launcher": "unit", "duration_ms": 33, "deps": [], "fail": true}
+  ]
+}

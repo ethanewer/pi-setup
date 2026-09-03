@@ -1,0 +1,12 @@
+{
+  "name": "allpass",
+  "cases": [
+    {"id": "s0", "launcher": "unit", "duration_ms": 300, "deps": []},
+    {"id": "s1", "launcher": "unit", "duration_ms": 120, "deps": ["s0"]},
+    {"id": "s2", "launcher": "unit", "duration_ms": 120, "deps": ["s1"]},
+    {"id": "s3", "launcher": "unit", "duration_ms": 120, "deps": ["s2"]},
+    {"id": "m0", "launcher": "mid", "duration_ms": 200, "deps": []},
+    {"id": "m1", "launcher": "mid", "duration_ms": 90, "deps": ["m0"]},
+    {"id": "f0", "launcher": "front", "duration_ms": 60, "deps": ["s3", "m1"]}
+  ]
+}
