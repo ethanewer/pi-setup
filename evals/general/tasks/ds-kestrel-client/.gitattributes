@@ -1,0 +1,4 @@
+# HTTP wire-format fixtures: CRLF bytes are protocol-significant. The root
+# .gitattributes normalizes text to LF, which would corrupt these fixtures on
+# checkout; treat everything under fixtures/ as binary (preserve exact bytes).
+environment/files/fixtures/** -text
