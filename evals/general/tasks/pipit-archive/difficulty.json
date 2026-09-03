@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 1,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 40,
+  "documented_probe": " gap: idempotent persistence-artifact scanner over a forensic rootfs tree. The agent authors /app/scan_persistence.py (stdlib-only CLI over documented locations: cron.d, crontab files, systemd units incl. an unusual dir, rc.local, shell rc snippets, ld.so.preload, at-job spools) plus /app/findings.json. Hidden probes execute the deliverable against three unseen trees built in the probe — a symlinked-cron.d mix, an allowlisted-hit trap with a differing allowlist and lookalike decoys, and an empty tree — and compare the parsed JSON exactly against an independent reference scanner implementing the documented rules; byte-for-byte idempotency (two runs) and the exit-code contract (0 readable / 2 missing root / 3 write failure) are also enforced.",
+  "notes": "Medium: one deliverable CLI must implement seven per-kind artifact grammars with status semantics (active/disabled/allowlisted), a per-root allowlist consulted first, comment/disabled/environment lookalikes that must stay unflagged, exact sort order and JSON types, and byte-level idempotency. Hidden trees force genuine generalization: the reference recomputes expectations from fixtures rather than storing answers, and the allowlisted-hit trap plus a symlinked cron directory penalize hardcoded visible output, embedded visible allowlists, and location-blind scanners. No runtime network, no GPU, pure stdlib, whole oracle+verifier cycle under a minute."
+}

@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 2
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": "XXE vulnerability analysis and remediation across five XML parsing scripts. The agent runs /app/analyze_xxe.py to produce /app/xxe_audit.json (verdicts per parser with canonical reason strings), then patches every vulnerable parser under /app/parsers/ (rejecting external entity declarations and entity chains deeper than the documented max_entity_depth 6) while preserving documented benign extraction on visible and hidden inputs. The verifier independently probes pristine copies at /opt/pristine/parsers with hidden payloads (a file:// file-read probe referencing a hidden secret, recursive-entity probes at depths 12 and 14), requires the audit verdicts and exact reason sets to match those independent verdicts, requires patched parsers to leak no secret bytes and never expand past depth 6 while reproducing the reference extraction byte-for-byte on four hidden benign documents (nested/unicode, CDATA+char refs, flat declared entity, empty root) and the visible samples, and re-runs the analyzer against pristine copies requiring byte-identical regeneration of the audit.",
+  "notes": "Medium: run a stdlib-only analyzer that sandbox-probes five SAX/minidom parsers to classify two documented XXE classes (file:// external entity resolution only achievable when a SAX driver enables external GES plus an entity resolver; recursive internal entity expansion) and then patch each vulnerable parser so probes are rejected/neutralized without disturbing benign extraction. Rubric: unsafe_action_penalty 2 (missed leaks must be caught by hidden probes; verify-then-patch staging), dependent_stages 2 (analyze first, patch after; verifier stage order), hidden_case_generalization 2 (different hidden secrets, two recursion depths, four hidden benign shapes), adversarial_inputs 2 (empty-root, CDATA-with-markup, predefined/char refs, flat entity preserved), reasoning_depth 2 (independent reference extractor, chain-depth policy, defeating hardcoded verdicts), resource_pressure 0, interaction_statefulness 0, quantitative_correctness 1 (byte-exact benign output)."
+}

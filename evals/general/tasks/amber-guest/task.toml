@@ -1,0 +1,31 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "medium"
+category = "programming"
+verifier_kind = "executes-deliverable"
+deliverables = [
+    "/app/httpkit/multipart.py",
+    "/app/httpkit/chunked.py",
+    "/app/httpkit/cookies.py",
+    "/app/httpkit/request.py",
+]
+tags = [
+    "amber-guest",
+    "programming",
+    "multipart-builder",
+    "chunked-decoder",
+    "cookie-store",
+]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 1800.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096

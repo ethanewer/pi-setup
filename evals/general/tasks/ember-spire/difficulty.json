@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 1,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 40,
+  "documented_probe": "ember-spire evaluates a helm-like manifest-merge engine: values precedence (defaults merged with --values layers in order, later overrides earlier, CLI files last), null-deletes-a-key, typed {{ .path }} placeholder substitution, and a per-template array-merge policy table (replace | append | merge-by-key with dotted key paths and deep merge of matching items, including null deletion inside items). The verifier ships an independent reference engine that recomputes canonical outputs from hidden charts and drives /app/render_chart.py through subprocess: the visible case (files re-run into a fresh dir plus the /app/rendered deliverable), hidden charts with 3-layer conflicting overrides, nested merge-by-key conflicts, dotted-key array templates, append-to-absent-path, empty overlays, and a battery of documented error cases (unknown policy, missing from/key/policy, unknown template, missing value path, malformed placeholder, non-list from value, non-list merge target, item missing key, bad values file shape/JSON, bad chart.json, template shape, missing chart.json/templates dir). Every successful case compares the exact emitted file set and canonical JSON bytes; every error case asserts the exact exit code (0/2/3/4) and a stderr token.",
+  "notes": "Medium. The agent authors a single deterministic Python CLI implementing precisely-documented merge semantics. reasoning_depth captures the interplay of layered precedence, null-deletion, structural substitution and the three array policies including deep item merges with dotted key paths; adversarial_inputs covers empty values, empty overlays, null deletion at multiple levels, and ~15 documented error/edge cases; hidden_case_generalization is high because every output is recomputed by an independent reference engine over structurally different hidden charts, so a hardcoded visible render fails; quantitative_correctness is strict exact canonical-JSON and file-set equality. Low tool_breadth (single stdlib CLI), no resource pressure, low ambiguity because every rule and exit code is spelled out."
+}

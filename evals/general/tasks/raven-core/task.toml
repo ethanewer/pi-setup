@@ -1,0 +1,33 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "medium"
+category = "security"
+verifier_kind = "executes-deliverable"
+deliverables = [
+    "/app/analyze_xxe.py",
+    "/app/xxe_audit.json",
+    "/app/parsers/snippet_extract.py",
+    "/app/parsers/catalog_fetch.py",
+    "/app/parsers/plain_text.py",
+    "/app/parsers/directive_loader.py",
+    "/app/parsers/report_sieve.py",
+]
+tags = [
+    "raven-core",
+    "security",
+    "xxe",
+    "xml-sax",
+]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 1800.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096

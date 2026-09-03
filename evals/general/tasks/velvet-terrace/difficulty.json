@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 2,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 40,
+  "documented_probe": " (implement the WebSocket protocol server side: opening handshake + frame codec): the agent hand-builds the RFC-style handshake (SHA-1 + magic GUID -> base64 Sec-WebSocket-Accept, status 101) and frame codec (FIN/opcode/mask/7-16-64-bit lengths, masking XOR, text/binary echo, ping->pong, close echo, fragmentation reassembly, documented close codes) from stdlib only. The verifier's raw-socket probe recomputes the accept value from each presented key, runs masked echo round-trips including 126-byte and 65536-byte payloads (16-bit and 64-bit length fields), fragmentation with interleaved control frames, ping/pong, close-code echo, and a malformed-frame battery (unmasked frames, RSV bits, reserved opcodes, non-minimal lengths, 64-bit MSB, invalid UTF-8), asserting close code + TCP close; it repeats the full battery under 3 hidden configs with different ports and paths, so a canned-response server or hardcoded visible behavior fails.",
+  "notes": "Medium: implementing a wire protocol from a documented but partial spec is squarely in the  family. WebSocket parsing requires byte-level reasoning (length encodings, minimal-encoding rule, mask XOR, control-frame limits), a stateful fragmentation reassembly loop with interleaved control frames, and a defined error model (1002/1007) - hence nonzero reasoning_depth and interaction_statefulness. Adversarial_inputs reflects the malformed-frame battery (unmasked, RSV, non-minimal and MSB-set lengths, invalid UTF-8 in whole and reassembled text). Hidden_case_generalization comes from 3 hidden configs (different port/path) plus randomized payload batteries, so no visible-only shortcut survives; quantitative_correctness is the exact accept recomputation and byte-for-byte echoes. No resource pressure; single tool (python3 + raw sockets)."
+}

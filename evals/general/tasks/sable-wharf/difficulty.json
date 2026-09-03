@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 0,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 1,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 40,
+  "documented_probe": ": online learning for a nonstationary multi-armed bandit with delayed feedback and abrupt drift. The agent writes /app/policy.py (a Policy class with choose(t, history) and change_point_estimate()) plus /app/eval_report.json. The verifier re-implements the documented seeded bandit simulation independently, re-runs the policy on the visible fixture and three hidden parameter sets (no-drift, three-way rotation, long per-pull delays, different K/seeds/drift steps) and requires regret <= max(0.50 * static_baseline_regret, 0.10 * T) per case, where the static baseline always pulls argmax(pre_probs) and the oracle best-arm schedule is recomputed from the reward matrix. The report must recompute exactly (cumulative/oracle/regret) against the visible re-run and its change-point estimate must match the policy hook and lie within 250 steps of the true drift_step; hardcoded visible fixtures crash or overshoot on the hidden sets.",
+  "notes": "Medium: the core skill is delayed, out-of-order reward attribution plus drift adaptation (restart/sliding-window reasoning) with a quantitative regret bar that discounts the naive always-initial-best baseline by half and floor-budgets the no-drift trap. Delayed feedback makes local debugging genuinely ambiguous (evidence about past pulls arrives late and reordered), and the hidden sets are adversarial (no drift at all, three-way rotation, 30-70-step delays, varying K). A plain UCB1 policy passes the drifting cases but not the long-delay one; an over-explorer fails the no-drift floor; the visible-overfit shortcut fails hidden K/drift checks. Stdlib-only, deterministic seeded runs, cheap CPU loop (T<=3000)."
+}

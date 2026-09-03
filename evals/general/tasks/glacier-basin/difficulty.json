@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 0,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": "the agent extends the bundled mini runner /app/harness/runner.py to (1) shard a suite into K launcher bins via documented LPT (longest-processing-time-first) scheduling with deterministic duration-descending/id-ascending and load/lowest-index tie-breaks, (2) implement bail mode with dependency-driven skip cascades (dep-precedence over bail, transitive blocking, deps-before-dependents manifest order), and (3) emit CTRF-like aggregate + per-launcher reports with exact counts, durations, statuses, shard assignment and skip reasons, then deliver /app/run_report for the visible suite with params.json. The verifier executes /app/harness/runner.py on the visible suite (k/bail taken from the delivered params.json, delivered reports must equal regeneration and the independent recompute) and on six hidden suites (uneven durations, cross-shard dep chains, all-fail, all-pass, K > cases, duration ties) under eleven k/bail combinations, independently recomputing every report file and requiring exact JSON equality.",
+  "notes": "Medium: three coupled sub-deliverables (sharding, bail cascade, reports) with an exact-output contract; the correct LPT ordering (duration desc, id asc) and tie-break rules, the dep-vs-bail skip precedence, transitive dependency blocking across shards, and per-launcher/aggregate arithmetic must all be right at once. Hidden generalization is strong: six suites plus eleven parameter combinations, including degenerate shapes (K larger than the case count producing empty launcher reports, every-case-fails with bail, pure-tie durations that bind on id order, a K=1 whole-suite run). Deterministic simulation only; no wall-clock, randomness, network, or resource pressure."
+}

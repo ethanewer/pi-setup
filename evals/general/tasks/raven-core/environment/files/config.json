@@ -1,0 +1,17 @@
+{
+  "schema": "raven-core/config/v1",
+  "parsers_dir": "/app/parsers",
+  "samples_dir": "/app/samples",
+  "entry_interface": "python3 <parser> <input.xml>",
+  "output_protocol": {
+    "success": "single line on stdout: the literal prefix 'OK ' followed by the document text; process exits 0",
+    "rejection": "process exits non-zero and stdout does not begin with 'OK '"
+  },
+  "extraction": "concatenate, in document order, every character-data node's data (text nodes, CDATA sections, and the character data produced by general-entity expansion). Comments, processing instructions, the XML declaration, the DOCTYPE / DTD-subset text, and attribute values are excluded. Character data is only the content within the root element: whitespace in the prolog (before the root element) and epilog (after the root element) is not character data and is not extracted. Whitespace inside the root element is preserved exactly. Character and entity references decode to their characters: &amp; &lt; &gt; &apos; &quot; and numeric references &#N; / &#xH;.",
+  "max_entity_depth": 6,
+  "expanded_run_threshold": "a contiguous run of a single repeated marker character longer than 2 ** max_entity_depth (64) indicates entity expansion past the documented depth",
+  "vulnerability_classes": {
+    "external entity resolution": "resolving an external general entity whose SYSTEM system identifier is a file:// URI, causing the referenced local file's bytes to be read into the parsed document text",
+    "recursive entity expansion": "expanding nested general-entity references to a nesting depth greater than max_entity_depth"
+  }
+}
