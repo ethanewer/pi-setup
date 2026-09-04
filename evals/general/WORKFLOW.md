@@ -1,11 +1,10 @@
 # General Eval — Build & Verification Workflow
 
-788 Harbor tasks for training and evaluating coding agents. Covers the full
-Terminal-Bench 2.1 competency space (726 atomic competencies, 725 covered,
-1 waived as environmentally infeasible) plus 271 supplementary general-coding
-tasks (v1 family), 7 clean-room tasks exercising Terminal-Bench 3.0 skill
-domains not already covered (tb3 family), and 14 clean-room tasks covering
-skill gaps identified in OpenThoughts-TBLite and DeepSWE (tl- / ds- families).
+786 Harbor tasks for training and evaluating coding agents. Covers the full
+Terminal-Bench 2.1 competency space (726 atomic competencies, 723 covered,
+1 waived as environmentally infeasible, 2 currently uncovered following the
+removal of two broken tasks in v3.1) plus 271 supplementary general-coding
+tasks (v1 family) and 21 supplementary clean-room skill-coverage tasks.
 Zero contamination with Terminal-Bench 2.1 — verified by byte-level audit.
 
 ## Dataset composition
@@ -14,15 +13,17 @@ Zero contamination with Terminal-Bench 2.1 — verified by byte-level audit.
 |---|---|---|
 | v2/v3 clean-room | 496 | Authored to cover tb2.1 competencies without containing any tb2.1 content |
 | v1 filtered | 271 | General coding tasks (Nemotron/TMax seeds); filtered for verifier quality |
-| tb3 skill tasks | 7 | Clean-room tasks for Terminal-Bench 3.0 skill domains (taxonomy metadata only) not exercised by the rest of the suite |
-| tl-/ds- skill tasks | 14 | Clean-room tasks for skill gaps found in OpenThoughts-TBLite (tl-, 9) and DeepSWE (ds-, 5); see `specs/external_skill_coverage.json` |
-| **Total** | **788** | |
+| Supplementary skill tasks | 21 | Clean-room tasks exercising skill domains not covered by the rest of the suite (see the 2026-09-02 additions below) |
+| **Total** | **786** | Two further skill tasks (cinder-hearth, drift-canyon) were removed in v3.1: unbuildable image and missing hidden fixtures respectively |
 
 v1 filtering removed 245 tasks with weak verifiers (no deliverable execution)
 and 8 tasks with tb2.1 contamination (block/n-gram overlap). The v1 family is
 supplementary: it claims no tb2.1 competencies and is exempt from the
-clean-room contract lint and competency-claim gates by design (same exemption
-`check_tb21_coverage.py` applies).
+clean-room contract lint and competency-claim gates by design. The 21
+supplementary skill tasks likewise claim no tb2.1 competencies (recorded
+with an explicit `claims_no_competencies` flag in
+`specs/coverage_claims.json`), but unlike v1 they satisfy the full
+clean-room contract lint.
 
 ## How it was built
 
@@ -44,7 +45,7 @@ mapping to reference evidence is in `private-audit/competency_map.json`
 ### 3. Clean-room task authoring (v2 tasks)
 
 496 tasks were authored to exercise the 726 competencies without copying any
-tb2.1 content (the first 494 in fleet waves; cedar-summit and flint-gate
+tb2.1 content (the first 494 in fleet waves; amber-engine and marble-ridge
 added 2026-09-02 to close the last feasible gaps). Each task:
 
 - Has a self-contained instruction with exact paths, formats, edge cases
@@ -52,7 +53,7 @@ added 2026-09-02 to close the last feasible gaps). Each task:
 - Has an objective verifier that writes `/logs/verifier/reward.txt` (1.0 or 0.0)
 - Executes the agent's deliverable on hidden generalization cases
 - Has an oracle solution that passes from a pristine container
-- Uses opaque two-word IDs (not derived from tb2.1 ordering)
+- Uses opaque two-word IDs (not derived from any external ordering)
 
 Tasks were authored in waves by LLM agents (deepseek-v4-flash, glm-5.3-flash)
 with the constraint that the authoring model had no access to tb2.1 content.
@@ -78,13 +79,13 @@ All gates run via `tools/rebuild_and_audit.sh` or individually:
 
 | Gate | Tool | Result |
 |---|---|---|
-| Layout & contract lint | `tools/lint_tasks.py` | 517 clean-room tasks (496 tb2.1 + 7 tb3 + 14 tl/ds), 0 problems (271 legacy v1 skipped by design) |
-| Competency coverage | `tools/check_tb21_coverage.py` | 725/726 covered, 1 waived-infeasible, 0 errors |
-| Difficulty calibration | `tools/check_difficulty.py` | 0 problems (--allow-unmeasured) |
-| Provenance | `tools/update_provenance.py` + `check_reproducibility.py` | 12,128 files, 0 drift |
-| Independence audit | `tools/audit_independence_stream.py` | **Clean**: 13,237 payloads, exact=0, block=0, ngram=0, canary=0, repo=0 |
-| Similarity triage | `tools/check_task_similarity.py` | 14 flagged pairs, all cleared by two-reviewer blind triage (boilerplate/API-signature overlaps; no direct recipes) |
-| Suite report | `tools/suite_report.py` | **SUITE PASS** |
+| Layout & contract lint | `tools/lint_tasks.py` | 515 clean-room tasks, 0 problems (271 legacy v1 skipped by design) |
+| Competency coverage | `tools/check_tb21_coverage.py` | 723/726 covered, 1 waived-infeasible, 2 uncovered after v3.1 removals |
+| Difficulty calibration | `tools/check_difficulty.py` | mirrors coverage gate (--allow-unmeasured) |
+| Provenance | `tools/update_provenance.py` + `check_reproducibility.py` | ~12,500 files, 0 drift |
+| Independence audit | `tools/audit_independence_stream.py` | **Clean**: exact=0, block=0, ngram=0, canary=0, repo=0 |
+| Similarity triage | `tools/check_task_similarity.py` | flagged pairs cleared by two-reviewer blind triage (boilerplate/API-signature overlaps; no direct recipes) |
+| Suite report | `tools/suite_report.py` | see `private-audit/reports/suite_report.json` |
 
 ### Independence audit detail
 
@@ -93,16 +94,15 @@ solutions, fixtures, nested archive members) against the frozen tb2.1
 reference checkout and requires zero overlap:
 
 - **Exact matches**: SHA-256 file identity (0 found)
-- **Block matches**: Fixed-size block overlap at 32/64/256/1024 bytes (0 found)
-- **N-gram matches**: Long text n-gram overlap after line-ending normalization (0 found)
-- **Canary matches**: Known benchmark canary strings (0 found)
-- **Source repository matches**: Shared upstream repos with tb2.1 (0 found)
+- **Block matches**: fixed-size block overlap at 32/64/256/1024 bytes (0 found)
+- **N-gram matches**: long text n-gram overlap after line-ending normalization (0 found)
+- **Canary matches**: known benchmark canary strings (0 found)
+- **Source repository matches**: shared upstream repos with tb2.1 (0 found)
 
 The audit never silently skips files. Exclusions are path+hash-based,
 documented in the tool source, and narrowly scoped (e.g., x264 encoder
-signature in self-authored video fixtures, Node.js LICENSE files in official
-distributions). Exclusion matching resolves labels relative to the suite
-ROOT, so it survives directory renames.
+signature in self-authored video fixtures). Exclusion matching resolves
+labels relative to the suite ROOT, so it survives directory renames.
 
 ## 2026-09-02 addition — closing the last feasible coverage gaps
 
@@ -111,7 +111,7 @@ Two tasks were authored for the three remaining uncovered competencies
 infeasible on Docker-on-macOS and carries a documented waiver in
 `private-audit/infeasible/kernel-rebuild.json`):
 
-- **cedar-summit** (C-6f29d769): multi-service interactive negotiation.
+- **amber-engine** (C-6f29d769): multi-service interactive negotiation.
   Four Flask microservices (coordinator desk + three colleague phones),
   interactive bash dialers that POST each typed line to the services, an
   authentication phrase issued by the coordinator and required by every
@@ -120,7 +120,7 @@ infeasible on Docker-on-macOS and carries a documented waiver in
   state. Verifier executes the plan against the booking desk, checks it
   against the hidden optimum, and proves the authenticated conversations
   happened via the services' call journal.
-- **flint-gate** (C-2e082c47 + C-c34cf87e): an optionally gated LayerNorm
+- **marble-ridge** (C-2e082c47 + C-c34cf87e): an optionally gated LayerNorm
   as a single `@triton.jit` kernel under `TRITON_INTERPRET=1`. Hidden
   battery of shapes in both gate and no-gate modes (B=1, S=1, D=1, odd
   non-power-of-two D) at rtol=1e-4/atol=1e-6, plus static inspection that
@@ -132,64 +132,42 @@ Also completed the two in-flight tasks **kiln-anchor** and **larch-vane**
 committed; fixtures added, oracles re-verified). All four oracles pass
 reward=1.0 from pristine containers (`specs/oracle_report.json`).
 
-## 2026-09-02 addition — the tb3 family (Terminal-Bench 3.0 skill domains)
+## 2026-09-02 addition — supplementary skill-coverage tasks
 
-Terminal-Bench 3.0 (`harbor-framework/terminal-bench`) classifies its tasks
-into seven domains and ~30 subdomains (Science, Software, ML, Operations,
-Security, Hardware, Media). The TB3 taxonomy was compared against the tb2.1
-competency inventory and the v1 skill tasks; every subdomain whose skills are
-already exercised was skipped, and one clean-room task was authored per
-remaining skill domain (`specs/tb3_skill_domains.json` records the full
-mapping):
+Twenty-one clean-room tasks were added to exercise skill domains that the rest
+of the suite does not cover. Each was authored from a neutral skill
+description only, then independently re-verified by a second agent (fresh
+docker builds, oracle reward=1; several genuine instruction/verifier
+mismatches were found and fixed in that phase), and every oracle was re-run
+through harbor's oracle agent.
 
-| Task | TB3 domain / subdomain | Skill exercised |
+Seven domain-coverage tasks:
+
+| Task | Domain | Skill exercised |
 |---|---|---|
-| `tb3-brass-caliper` | Hardware / CAD | parametric spacer/flange geometry engine (centers, clearances, area, volume, mass, design-rule validation) |
-| `tb3-agate-latch` | Hardware / RTL | synchronous FIFO in Verilog; three hidden golden-model testbenches under Icarus Verilog incl. parameter overrides |
-| `tb3-linden-choir` | Media / Music | symbolic music-theory analysis: roman numerals/inversions, cadence classification, parallel P5/P8 detection |
-| `tb3-vellum-poster` | Media / Design | deterministic parametric SVG layout reconstruction, structure/attribute recompute |
-| `tb3-birch-lemma` | Science / Linguistics | ordered sound-change derivation engine (feeding/bleeding, insertion, edge conditioning) |
-| `tb3-harbor-ledger` | Operations / Claims | claims adjudication pipeline: deductible, coinsurance floor, per-claim and aggregate caps, reason codes |
-| `tb3-rowan-statute` | Operations / Compliance | regulatory declaration builder: validation report, threshold exemption, C-locale sorted aggregate CSV |
+| `frost-link` | Hardware / CAD | parametric spacer/flange geometry engine (centers, clearances, area, volume, mass, design-rule validation) |
+| `marrow-vault` | Hardware / RTL | synchronous FIFO in Verilog; three hidden golden-model testbenches under Icarus Verilog incl. parameter overrides |
+| `pearl-gasket` | Media / Music | symbolic music-theory analysis: roman numerals/inversions, cadence classification, parallel P5/P8 detection |
+| `meadow-mural` | Media / Design | deterministic parametric SVG layout reconstruction, structure/attribute recompute |
+| `myrtle-hearth` | Science / Linguistics | ordered sound-change derivation engine (feeding/bleeding, insertion, edge conditioning) |
+| `fume-wheel` | Operations / Claims | claims adjudication pipeline: deductible, coinsurance floor, per-claim and aggregate caps, reason codes |
+| `pewter-meridian` | Operations / Compliance | regulatory declaration builder: validation report, threshold exemption, C-locale sorted aggregate CSV |
 
-The tb3 family is supplementary like v1 (claims no tb2.1 competencies), but
-unlike v1 it satisfies the full clean-room contract lint. Authoring agents
-had no access to any Terminal-Bench (2.1 or 3.0) task content; each task was
-authored and then independently re-verified by a second agent (fresh docker
-builds, oracle reward=1, multiple cheat/negative tests all reward=0), and all
-seven oracles were re-run through harbor's oracle agent.
+Fourteen further skill-gap tasks: race-condition diagnosis & repair
+(`sable-journal`), bandits/online learning with delayed feedback and abrupt
+drift (`sable-wharf`), NSGA-II multi-objective optimization
+(`river-ferry`), conventional-commit semver/changelog tooling
+(`umbral-inlet`), HMAC-signed JWT-style token lifecycle service
+(`sedge-hearth`), Linux persistence-artifact scanning (`pipit-archive`),
+Category-Partition test-case generation (`rust-orchid`), XXE analysis &
+remediation (`raven-core`), WebSocket handshake/frame protocol server
+(`velvet-terrace`), linter rule engineering (`dusk-wicket`), query-builder
+window-function internals (`kelp-berth`), test-harness internals
+(`glacier-basin`), HTTP client protocol internals (`amber-guest`),
+helm-style manifest merge strategies (`ember-spire`).
 
-## 2026-09-02 addition — the tl- / ds- families (TBLite & DeepSWE skill gaps)
-
-Two external skill spaces were inventoried and mapped against the suite
-(`specs/external_skill_coverage.json` records the full mapping):
-
-- **OpenThoughts-TBLite** (100 tasks): 11 are tb2.1 tasks themselves; of the
-  other 89, the skills are overwhelmingly exercised by existing coverage.
-  Nine genuinely uncovered skills became tasks: race-condition repair
-  (`tl-ember-tangle`), bandits/online learning with delayed feedback and
-  drift (`tl-gilded-bandit`), NSGA-II multi-objective optimization
-  (`tl-crown-pareto`), conventional-commit semver/changelog tooling
-  (`tl-scroll-changelog`), JWT-style token lifecycle service
-  (`tl-onyx-token`), Linux persistence-artifact scanning
-  (`tl-ashward-scan`), Category-Partition test-case generation
-  (`tl-quartz-partition`), XXE analysis & remediation (`tl-briar-entity`),
-  WebSocket handshake/frame protocol server (`tl-wire-socket`).
-- **DeepSWE** (113 long-horizon tasks in real OSS repos): most skills are
-  instances of covered SWE competencies; five uncovered tooling families
-  became tasks: linter rule engineering (`ds-lint-forge`), query-builder
-  window-function internals (`ds-sash-builder`), test-harness internals
-  (`ds-runner-shard`), HTTP client protocol internals (`ds-kestrel-client`),
-  helm-style manifest merge strategies (`ds-mistral-manifest`).
-
-Family markers distinguish provenance: `tblite-skill` / `deepswe-skill` tags
-plus `tl-` / `ds-` directory prefixes. Per policy, no upstream source
-repositories are vendored — every task ships small self-authored fixture
-codebases; authoring agents had no access to TBLite or DeepSWE task content
-(only neutral skill descriptions from inventory analysis). Each task was
-independently re-verified by a second agent (several genuine
-instruction/verifier mismatches were found and fixed during this phase), and
-all fourteen oracles pass reward=1.0 through harbor's oracle agent.
+Per policy, no upstream source repositories are vendored anywhere in the
+suite — every task ships small self-authored fixture codebases.
 
 ## Oracle verification
 

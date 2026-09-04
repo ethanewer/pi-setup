@@ -95,6 +95,8 @@ def main() -> int:
         print('ERROR specs/coverage.json missing (run tools/build_coverage.py)')
         return 1
     cov = json.loads(cov_path.read_text())
+    claims_path = ROOT / 'specs/coverage_claims.json'
+    claims = json.loads(claims_path.read_text()) if claims_path.exists() else {}
     comps = {c['id']: c for c in inv['competencies']}
     matrix = cov['matrix']
     second_task_gaps = []
@@ -179,7 +181,7 @@ def main() -> int:
     for task in task_dirs:
         if task not in indexed:
             problems.append(f'task absent from matrix: {task}')
-        elif not cov['task_index'][task] and not task.startswith(('v1-', 'tb3-', 'tl-', 'ds-')):
+        elif not cov['task_index'][task] and not task.startswith('v1-') and not claims.get(task, {}).get('claims_no_competencies'):
             problems.append(f'task claims no competencies: {task}')
 
     # metadata tags must be traceable to the task contract (no decorative

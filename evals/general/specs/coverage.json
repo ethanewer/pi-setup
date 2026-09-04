@@ -2,7 +2,7 @@
   "version": 3,
   "policy": "Task-to-competency matrix. Competency IDs are opaque; the private mapping to reference evidence lives in private-audit/competency_map.json.",
   "competency_count": 726,
-  "task_count": 788,
+  "task_count": 787,
   "matrix": {
     "C-f0fe0218": [
       {
@@ -262,6 +262,18 @@
         "deliverables": [
           "/app/server.py",
           "/app/answer.json"
+        ],
+        "hidden_cases": true,
+        "difficulty": "medium"
+      }
+    ],
+    "C-6f29d769": [
+      {
+        "task_id": "amber-engine",
+        "evidence": "The agent must bring up four Flask microservices (/opt/offsite/up.sh), identify itself to the coordinator desk as planner PLN-47 to receive the offsite authentication phrase, then feed the interactive bash dialer scripts (which POST each typed line to the colleague phone services) with the phrase and the AVAILABILITY/PREFERENCES/CONSTRAINTS questions for all three colleagues, and aggregate the gathered state into the unique optimal plan at /app/offsite_plan.json. A wrong or stale phrase ends each call immediately and no data is gathered. The verifier executes the deliverable against the coordinator's booking desk, compares it to the exact hidden optimum, reads the services' call journal to prove every authenticated conversation happened (phrase issued, all three questions per colleague, completed calls), and re-probes that wrong phrases still hang up.",
+        "verifier_kind": "executes-deliverable",
+        "deliverables": [
+          "/app/offsite_plan.json"
         ],
         "hidden_cases": true,
         "difficulty": "medium"
@@ -4440,18 +4452,6 @@
         "difficulty": "easy"
       }
     ],
-    "C-6f29d769": [
-      {
-        "task_id": "cedar-summit",
-        "evidence": "The agent must bring up four Flask microservices (/opt/offsite/up.sh), identify itself to the coordinator desk as planner PLN-47 to receive the offsite authentication phrase, then feed the interactive bash dialer scripts (which POST each typed line to the colleague phone services) with the phrase and the AVAILABILITY/PREFERENCES/CONSTRAINTS questions for all three colleagues, and aggregate the gathered state into the unique optimal plan at /app/offsite_plan.json. A wrong or stale phrase ends each call immediately and no data is gathered. The verifier executes the deliverable against the coordinator's booking desk, compares it to the exact hidden optimum, reads the services' call journal to prove every authenticated conversation happened (phrase issued, all three questions per colleague, completed calls), and re-probes that wrong phrases still hang up.",
-        "verifier_kind": "executes-deliverable",
-        "deliverables": [
-          "/app/offsite_plan.json"
-        ],
-        "hidden_cases": true,
-        "difficulty": "medium"
-      }
-    ],
     "C-da39d7eb": [
       {
         "task_id": "cedar-vault",
@@ -4611,46 +4611,6 @@
         ],
         "hidden_cases": true,
         "difficulty": "hard"
-      }
-    ],
-    "C-4e83076b": [
-      {
-        "task_id": "cinder-hearth",
-        "evidence": "verifier executes deliverable on hidden cases; oracle verified reward=1.0 during authoring",
-        "verifier_kind": "executes-deliverable",
-        "deliverables": [
-          "/app/mkinit.sh",
-          "/app/console_drive.py",
-          "/app/guest-initrd.cpio.gz",
-          "/app/session.log"
-        ],
-        "hidden_cases": true,
-        "difficulty": "medium"
-      },
-      {
-        "task_id": "larch-hearth",
-        "evidence": "The agent copies /app/base-initrd.cpio.gz, injects a custom /init (mounts proc/sys/dev, insmods isofs/9p modules, mounts the CD and 9p host root), writes /etc/passwd with root and the scenario login_user both having empty password fields, prints LARCH_READY_FOR_LOGIN, then execs `setsid cttyhack /bin/login`, producing a no-password `login:` prompt on ttyS0. The driver logs in as login_user (no password prompt) and confirms with echo LARCH_AUTH_OK. The verifier asserts serial.log contains LARCH_READY_FOR_LOGIN, `login:`, LARCH_AUTH_OK, and the login_user string for every scenario.",
-        "verifier_kind": "executes-deliverable",
-        "deliverables": [
-          "/app/run.sh",
-          "/app/guest.iso",
-          "/app/serial.log"
-        ],
-        "hidden_cases": true,
-        "difficulty": "hard"
-      },
-      {
-        "task_id": "slate-hollow",
-        "evidence": "verifier executes deliverable on hidden cases (lint-enforced); oracle-verified",
-        "verifier_kind": "executes-deliverable",
-        "deliverables": [
-          "/app/mkinit.sh",
-          "/app/appliance.cpio.gz",
-          "/app/drive.sh",
-          "/app/console.log"
-        ],
-        "hidden_cases": true,
-        "difficulty": "medium"
       }
     ],
     "C-1aefef55": [
@@ -8657,30 +8617,6 @@
         "difficulty": "hard"
       }
     ],
-    "C-2e082c47": [
-      {
-        "task_id": "flint-gate",
-        "evidence": "The verifier imports /app/gated_norm.py under TRITON_INTERPRET=1 and runs gated_layernorm on a hidden battery of shapes in BOTH modes \u2014 gate tensor and gate=None \u2014 including B=1, S=1, D=1 and odd non-power-of-two D values (7, 17, 33, 100), comparing each output against a pure-torch reference at rtol=1e-4/atol=1e-6 and requiring a fresh float32 tensor of the input shape. An edge shape or the no-gate branch diverging from the reference fails the corresponding case.",
-        "verifier_kind": "executes-deliverable",
-        "deliverables": [
-          "/app/gated_norm.py"
-        ],
-        "hidden_cases": true,
-        "difficulty": "medium"
-      }
-    ],
-    "C-c34cf87e": [
-      {
-        "task_id": "flint-gate",
-        "evidence": "The verifier statically inspects the deliverable: textually it fails on any tl.sum / triton.language.sum / .sum( occurrence anywhere in the file, and via AST it fails when any @triton.jit body calls the built-in sum(), imports or references torch/numpy/np/math \u2014 forcing reductions to be written out explicitly with other triton.language ops. The same kernel bodies are then executed on the hidden shape battery, so disallowed-op workarounds that break numerics fail execution as well.",
-        "verifier_kind": "executes-deliverable",
-        "deliverables": [
-          "/app/gated_norm.py"
-        ],
-        "hidden_cases": true,
-        "difficulty": "medium"
-      }
-    ],
     "C-28e0bdd9": [
       {
         "task_id": "flint-mantle",
@@ -12293,6 +12229,33 @@
         "difficulty": "hard"
       }
     ],
+    "C-4e83076b": [
+      {
+        "task_id": "larch-hearth",
+        "evidence": "The agent copies /app/base-initrd.cpio.gz, injects a custom /init (mounts proc/sys/dev, insmods isofs/9p modules, mounts the CD and 9p host root), writes /etc/passwd with root and the scenario login_user both having empty password fields, prints LARCH_READY_FOR_LOGIN, then execs `setsid cttyhack /bin/login`, producing a no-password `login:` prompt on ttyS0. The driver logs in as login_user (no password prompt) and confirms with echo LARCH_AUTH_OK. The verifier asserts serial.log contains LARCH_READY_FOR_LOGIN, `login:`, LARCH_AUTH_OK, and the login_user string for every scenario.",
+        "verifier_kind": "executes-deliverable",
+        "deliverables": [
+          "/app/run.sh",
+          "/app/guest.iso",
+          "/app/serial.log"
+        ],
+        "hidden_cases": true,
+        "difficulty": "hard"
+      },
+      {
+        "task_id": "slate-hollow",
+        "evidence": "verifier executes deliverable on hidden cases (lint-enforced); oracle-verified",
+        "verifier_kind": "executes-deliverable",
+        "deliverables": [
+          "/app/mkinit.sh",
+          "/app/appliance.cpio.gz",
+          "/app/drive.sh",
+          "/app/console.log"
+        ],
+        "hidden_cases": true,
+        "difficulty": "medium"
+      }
+    ],
     "C-0a3be828": [
       {
         "task_id": "larch-jetty",
@@ -12472,6 +12435,30 @@
           "/app/extract.txt",
           "/app/digests.txt",
           "/app/digester.py"
+        ],
+        "hidden_cases": true,
+        "difficulty": "medium"
+      }
+    ],
+    "C-2e082c47": [
+      {
+        "task_id": "marble-ridge",
+        "evidence": "The verifier imports /app/gated_norm.py under TRITON_INTERPRET=1 and runs gated_layernorm on a hidden battery of shapes in BOTH modes \u2014 gate tensor and gate=None \u2014 including B=1, S=1, D=1 and odd non-power-of-two D values (7, 17, 33, 100), comparing each output against a pure-torch reference at rtol=1e-4/atol=1e-6 and requiring a fresh float32 tensor of the input shape. An edge shape or the no-gate branch diverging from the reference fails the corresponding case.",
+        "verifier_kind": "executes-deliverable",
+        "deliverables": [
+          "/app/gated_norm.py"
+        ],
+        "hidden_cases": true,
+        "difficulty": "medium"
+      }
+    ],
+    "C-c34cf87e": [
+      {
+        "task_id": "marble-ridge",
+        "evidence": "The verifier statically inspects the deliverable: textually it fails on any tl.sum / triton.language.sum / .sum( occurrence anywhere in the file, and via AST it fails when any @triton.jit body calls the built-in sum(), imports or references torch/numpy/np/math \u2014 forcing reductions to be written out explicitly with other triton.language ops. The same kernel bodies are then executed on the hidden shape battery, so disallowed-op workarounds that break numerics fail execution as well.",
+        "verifier_kind": "executes-deliverable",
+        "deliverables": [
+          "/app/gated_norm.py"
         ],
         "hidden_cases": true,
         "difficulty": "medium"
@@ -16728,6 +16715,10 @@
       "C-8c746cc6",
       "C-e1811563"
     ],
+    "amber-engine": [
+      "C-6f29d769"
+    ],
+    "amber-guest": [],
     "amber-helix": [
       "C-0d649404",
       "C-c1058e7d",
@@ -17019,9 +17010,6 @@
       "C-4d2f3c04",
       "C-7210274e"
     ],
-    "cedar-summit": [
-      "C-6f29d769"
-    ],
     "cedar-vault": [
       "C-da39d7eb"
     ],
@@ -17045,9 +17033,6 @@
     ],
     "cinder-guest": [
       "C-fc5cfb57"
-    ],
-    "cinder-hearth": [
-      "C-4e83076b"
     ],
     "cinder-keeper": [
       "C-1aefef55"
@@ -17242,11 +17227,6 @@
       "C-7aaa36a2",
       "C-cda183ed"
     ],
-    "ds-kestrel-client": [],
-    "ds-lint-forge": [],
-    "ds-mistral-manifest": [],
-    "ds-runner-shard": [],
-    "ds-sash-builder": [],
     "dune-beacon": [
       "C-37683af0",
       "C-5ec3cd70",
@@ -17309,6 +17289,7 @@
     "dusk-lattice": [
       "C-41513365"
     ],
+    "dusk-wicket": [],
     "dust-tape": [
       "C-a1a5f09e"
     ],
@@ -17371,6 +17352,7 @@
     "ember-quill": [
       "C-38bb2e3e"
     ],
+    "ember-spire": [],
     "ember-wheel": [
       "C-ce0e6e1d",
       "C-e797cde5"
@@ -17427,10 +17409,6 @@
       "C-1ddf7eff",
       "C-c89e8bce"
     ],
-    "flint-gate": [
-      "C-2e082c47",
-      "C-c34cf87e"
-    ],
     "flint-hollow": [
       "C-e1811563"
     ],
@@ -17457,6 +17435,7 @@
     "frost-latch": [
       "C-3e518190"
     ],
+    "frost-link": [],
     "frost-marrow": [
       "C-5ef2ad28"
     ],
@@ -17472,6 +17451,7 @@
     "fume-marsh": [
       "C-2dc20425"
     ],
+    "fume-wheel": [],
     "furnace-tide": [
       "C-c3adcbc5"
     ],
@@ -17551,6 +17531,7 @@
     "garnet-mesa": [
       "C-5c8704c8"
     ],
+    "glacier-basin": [],
     "glacier-vane": [
       "C-71a2c135"
     ],
@@ -17819,6 +17800,7 @@
     "keel-bight": [
       "C-a4cb7c45"
     ],
+    "kelp-berth": [],
     "kelp-fjord": [
       "C-409f50fe"
     ],
@@ -17952,6 +17934,10 @@
     "marble-relay": [
       "C-ac61837f"
     ],
+    "marble-ridge": [
+      "C-2e082c47",
+      "C-c34cf87e"
+    ],
     "marble-shard": [
       "C-9aedbe64"
     ],
@@ -17970,12 +17956,14 @@
     "marrow-vane": [
       "C-42872b99"
     ],
+    "marrow-vault": [],
     "meadow-bridge": [
       "C-f1903618",
       "C-62112a44",
       "C-1a1251a2",
       "C-de1205a9"
     ],
+    "meadow-mural": [],
     "meadow-yonder": [
       "C-fdda0949",
       "C-d883e15c",
@@ -18031,6 +18019,7 @@
     "myrtle-canyon": [
       "C-5ede2c22"
     ],
+    "myrtle-hearth": [],
     "nectar-gasket": [
       "C-759b7225",
       "C-7e2ac892",
@@ -18135,6 +18124,7 @@
     "pearl-cipher": [
       "C-fdb58e16"
     ],
+    "pearl-gasket": [],
     "pearl-scroll": [
       "C-29eab4ec",
       "C-73638983"
@@ -18142,6 +18132,8 @@
     "pewter-hull": [
       "C-b18a585c"
     ],
+    "pewter-meridian": [],
+    "pipit-archive": [],
     "pipit-vault": [
       "C-7f8aa502"
     ],
@@ -18315,6 +18307,7 @@
       "C-f4c1e942",
       "C-ea42e9e4"
     ],
+    "raven-core": [],
     "raven-jetty": [
       "C-b45b6939",
       "C-8aca263c",
@@ -18336,6 +18329,7 @@
     "reed-haven": [
       "C-ac4a9918"
     ],
+    "river-ferry": [],
     "river-ledger": [
       "C-18b56bb0",
       "C-7ca0f750",
@@ -18347,6 +18341,7 @@
     "rust-bazaar": [
       "C-d1d1b8cb"
     ],
+    "rust-orchid": [],
     "rust-quay": [
       "C-ce46ee62"
     ],
@@ -18369,6 +18364,7 @@
     "sable-hook": [
       "C-1f4f846b"
     ],
+    "sable-journal": [],
     "sable-marsh": [
       "C-2dc20425"
     ],
@@ -18390,6 +18386,7 @@
     "sable-vellum": [
       "C-1b5c9f63"
     ],
+    "sable-wharf": [],
     "sable-wicket": [
       "C-e797cde5"
     ],
@@ -18435,6 +18432,7 @@
       "C-dce10a92",
       "C-d7e5c576"
     ],
+    "sedge-hearth": [],
     "sedge-vault": [
       "C-92072676"
     ],
@@ -18480,13 +18478,6 @@
     "tarn-quay": [
       "C-5df6a315"
     ],
-    "tb3-agate-latch": [],
-    "tb3-birch-lemma": [],
-    "tb3-brass-caliper": [],
-    "tb3-harbor-ledger": [],
-    "tb3-linden-choir": [],
-    "tb3-rowan-statute": [],
-    "tb3-vellum-poster": [],
     "teal-assembler": [
       "C-13d03a72"
     ],
@@ -18502,15 +18493,6 @@
     "tide-grove": [
       "C-40dd3b94"
     ],
-    "tl-ashward-scan": [],
-    "tl-briar-entity": [],
-    "tl-crown-pareto": [],
-    "tl-ember-tangle": [],
-    "tl-gilded-bandit": [],
-    "tl-onyx-token": [],
-    "tl-quartz-partition": [],
-    "tl-scroll-changelog": [],
-    "tl-wire-socket": [],
     "topaz-marsh": [
       "C-a53822b2"
     ],
@@ -18657,6 +18639,7 @@
       "C-a9d4f82b",
       "C-ef9b7adf"
     ],
+    "umbral-inlet": [],
     "umbral-mesh": [
       "C-f1ee3a04"
     ],
@@ -18949,6 +18932,7 @@
     "velvet-quay": [
       "C-2ecd751b"
     ],
+    "velvet-terrace": [],
     "vesper-broker": [
       "C-3c7bf71e"
     ],

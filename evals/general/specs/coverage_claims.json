@@ -764,24 +764,6 @@
       "C-7210274e": "cedar-pier: verifier executes /app/train.py, /app/config.yaml, /app/model.joblib on the visible fixture and on independent hidden cases (tests/hidden); an agent lacking 'meet a threshold accuracy on a held-out test set' cannot produce artifacts that pass those checks."
     }
   },
-  "drift-canyon": {
-    "competencies": [
-      "C-2867a8c3",
-      "C-a280ae57",
-      "C-e589f42d",
-      "C-9a6e7959",
-      "C-72fb3c19",
-      "C-69755486"
-    ],
-    "evidence": {
-      "C-2867a8c3": "The verifier asserts that /app/site contains index.html (name 'Marlow Bayne'), about.html (bio marker 'barnacle recruitment'), blog.html listing both post titles 'Into the Ember Mud' and 'Harbor at Low Water', blog/into-the-ember-mud.html, blog/harbor-at-low-water.html, and publications.html (marker 'Intertidal Letters'). These files are produced by the deliverable /app/solve.py's build_site() (character-based slugs from each post title) and are also confirmed present in the SSH-cloned copy and referenced from answer.json site_pages, each of which is checked on disk. A solver that leaves the raw notes or omits any required page fails these file+marker checks and the answer.json site_page checks.",
-      "C-a280ae57": "The verifier asserts git ls-files lists writing/sketches/story-notes.txt on the main branch with byte content 'the cove lantern' (committed, not merely present). On the three hidden scenarios the SAME /app/solve.py repair path must restore a stash-carried file (h1 draft/sidecar.txt) and a branch-carried file (h2 draft/lost-hue.txt) onto the declared default branch with exact bytes and commit them; the verifier re-derives the expected bytes from a pristine reference copy (git show stash@{0}:<path> / git show <branch>:<path>) and checks tracked-ness and equality. A solver that fails to locate the stash or the off-branch copy, or that only drops the bytes uncommitted, fails 2 checks per affected hidden case and on the baseline.",
-      "C-e589f42d": "The verifier re-reads each git bundle's advertised HEAD via `git bundle list-heads` and asserts (a) the baseline /app/site branches on-guide and fieldnotes \u2014 the latter carried by a non-flat `prospect/fieldnotes` bundle ref \u2014 equal that HEAD; and (b) on every hidden scenario the local branch the repair created (alpha,beta on h1; scan,orbit on h2) equals the corresponding bundle's HEAD. A solver that guesses a flat branch name or copies the wrong advertised ref fails the equality on-fieldnotes and on the nested/non-flat hidden bundle refs.",
-      "C-9a6e7959": "After solve.py runs, the verifier performs a real clone over SSH (git clone gitdev@127.0.0.1:/srv/git/marlow.git) using sshpass with password-only auth, then a real push back of a new 'verifier-probe' branch. It verifies the clone exposes origin/main, origin/on-guide, origin/fieldnotes, the full site pages and the recovered draft, i.e. the bare repo served over SSH is the complete reconstructed history. A clone/push that lacks SSH access or the expected remote path fails mid-push.",
-      "C-72fb3c19": "The served bare repo is reached through a dedicated OS user 'gitdev' with home and login shell, password 'lantern-9', with PasswordAuthentication yes and no SSH key: the verifier's GIT_SSH_COMMAND forces PreferredAuthentications=password and PubkeyAuthentication=no via sshpass, so both the clone and the push succeed only if password auth is genuinely enabled and the user/path are correct. Disabled password auth or the wrong password breaks the clone immediately; the same gates run against answer.json ssh_user/password/bare_repo fields.",
-      "C-69755486": "The verifier asserts /app/site/deploy/reconstruct.sh is executable (os.X_OK) and that its body is byte-for-byte the fixture script (compared to the exact committed text), and that /app/listing.txt is byte-for-byte the provided source listing. Both file bodies are also recorded in answer.json via deploy_executable and listing_preserved. Removing the exec bit or editing either file body fails these checks directly."
-    }
-  },
   "drift-mantle": {
     "competencies": [
       "C-e8ce0b20",
@@ -4668,14 +4650,6 @@
       "C-ceaa9075": "verifier executes deliverable on hidden cases; oracle verified reward=1.0 during authoring"
     }
   },
-  "cinder-hearth": {
-    "competencies": [
-      "C-4e83076b"
-    ],
-    "evidence": {
-      "C-4e83076b": "verifier executes deliverable on hidden cases; oracle verified reward=1.0 during authoring"
-    }
-  },
   "basalt-tide": {
     "competencies": [
       "C-fdb58e16"
@@ -7199,7 +7173,7 @@
     "evidence": {},
     "supplementary": "v1 general eval task; not part of tb2.1 competency coverage"
   },
-  "cedar-summit": {
+  "amber-engine": {
     "competencies": [
       "C-6f29d769"
     ],
@@ -7207,7 +7181,7 @@
       "C-6f29d769": "The agent must bring up four Flask microservices (/opt/offsite/up.sh), identify itself to the coordinator desk as planner PLN-47 to receive the offsite authentication phrase, then feed the interactive bash dialer scripts (which POST each typed line to the colleague phone services) with the phrase and the AVAILABILITY/PREFERENCES/CONSTRAINTS questions for all three colleagues, and aggregate the gathered state into the unique optimal plan at /app/offsite_plan.json. A wrong or stale phrase ends each call immediately and no data is gathered. The verifier executes the deliverable against the coordinator's booking desk, compares it to the exact hidden optimum, reads the services' call journal to prove every authenticated conversation happened (phrase issued, all three questions per colleague, completed calls), and re-probes that wrong phrases still hang up."
     }
   },
-  "flint-gate": {
+  "marble-ridge": {
     "competencies": [
       "C-2e082c47",
       "C-c34cf87e"
@@ -7217,109 +7191,148 @@
       "C-c34cf87e": "The verifier statically inspects the deliverable: textually it fails on any tl.sum / triton.language.sum / .sum( occurrence anywhere in the file, and via AST it fails when any @triton.jit body calls the built-in sum(), imports or references torch/numpy/np/math \u2014 forcing reductions to be written out explicitly with other triton.language ops. The same kernel bodies are then executed on the hidden shape battery, so disallowed-op workarounds that break numerics fail execution as well."
     }
   },
-  "tb3-brass-caliper": {
+  "frost-link": {
     "competencies": [],
     "evidence": {},
-    "note": "TB3-skill supplementary task: claims no tb2.1 competencies. TB3 Hardware/CAD skill. Verifier imports the deliverable /app/cadmodel.py and independently recomputes bolt-hole centers, edge clearances, annular area, volume, mass and design-rule violations for the visible spec plus five hidden specs (bolt counts 1..24, tiny margins, planted violations, malformed fields) under three limits variants; also checks /app/spacer_report.json against its own recompute and guards the visible fixture via a pristine byte copy."
+    "note": "TB3-skill supplementary task: claims no tb2.1 competencies. TB3 Hardware/CAD skill. Verifier imports the deliverable /app/cadmodel.py and independently recomputes bolt-hole centers, edge clearances, annular area, volume, mass and design-rule violations for the visible spec plus five hidden specs (bolt counts 1..24, tiny margins, planted violations, malformed fields) under three limits variants; also checks /app/spacer_report.json against its own recompute and guards the visible fixture via a pristine byte copy.",
+    "claims_no_competencies": true
   },
-  "tb3-agate-latch": {
+  "marrow-vault": {
     "competencies": [],
     "evidence": {},
-    "note": "TB3-skill supplementary task: claims no tb2.1 competencies. TB3 Hardware/RTL skill. Verifier executes the deliverable /app/rtl/sync_fifo.v by compiling it with Icarus Verilog against three hidden testbenches, each embedding an independent golden behavioral FIFO model compared cycle-by-cycle (randomized fixed-seed sequences, full/empty/simultaneous-rw edges, wrap-around, DEPTH=64/DATA_WIDTH=12 parameter override) and requiring PASS sentinels."
+    "note": "TB3-skill supplementary task: claims no tb2.1 competencies. TB3 Hardware/RTL skill. Verifier executes the deliverable /app/rtl/sync_fifo.v by compiling it with Icarus Verilog against three hidden testbenches, each embedding an independent golden behavioral FIFO model compared cycle-by-cycle (randomized fixed-seed sequences, full/empty/simultaneous-rw edges, wrap-around, DEPTH=64/DATA_WIDTH=12 parameter override) and requiring PASS sentinels.",
+    "claims_no_competencies": true
   },
-  "tb3-linden-choir": {
+  "pearl-gasket": {
     "competencies": [],
     "evidence": {},
-    "note": "TB3-skill supplementary task: claims no tb2.1 competencies. TB3 Media/Music skill. Verifier executes the deliverable CLI /app/analyze.py on the visible score and six hidden scores across four keys, comparing parsed output against the probe's own independent music-theory reimplementation (roman numerals/inversions, cadence classification, parallel P5/P8 detection); the visible /app/analysis.json is checked against the same recompute."
+    "note": "TB3-skill supplementary task: claims no tb2.1 competencies. TB3 Media/Music skill. Verifier executes the deliverable CLI /app/analyze.py on the visible score and six hidden scores across four keys, comparing parsed output against the probe's own independent music-theory reimplementation (roman numerals/inversions, cadence classification, parallel P5/P8 detection); the visible /app/analysis.json is checked against the same recompute.",
+    "claims_no_competencies": true
   },
-  "tb3-vellum-poster": {
+  "meadow-mural": {
     "competencies": [],
     "evidence": {},
-    "note": "TB3-skill supplementary task: claims no tb2.1 competencies. TB3 Media/Design skill. Verifier executes the deliverable renderer /app/render_poster.py on the visible spec and three hidden specs (odd dimensions, zero sections, escape-hostile text, float layout constants), parsing each SVG and recomputing every element/attribute/text with its own layout implementation; checks /app/poster.svg and byte-determinism."
+    "note": "TB3-skill supplementary task: claims no tb2.1 competencies. TB3 Media/Design skill. Verifier executes the deliverable renderer /app/render_poster.py on the visible spec and three hidden specs (odd dimensions, zero sections, escape-hostile text, float layout constants), parsing each SVG and recomputing every element/attribute/text with its own layout implementation; checks /app/poster.svg and byte-determinism.",
+    "claims_no_competencies": true
   },
-  "tb3-birch-lemma": {
+  "myrtle-hearth": {
     "competencies": [],
     "evidence": {},
-    "note": "TB3-skill supplementary task: claims no tb2.1 competencies. TB3 Science/Linguistics skill. Verifier executes the deliverable CLI /app/derive.py on the visible pair and five hidden rule/lexicon pairs exercising feeding/bleeding order, single-pre-pass semantics, insertion, dual-edge conditioning and full deletion, comparing byte-for-byte against the probe's independent derivation engine; enforces the exit-code contract and checks /app/derived.tsv."
+    "note": "TB3-skill supplementary task: claims no tb2.1 competencies. TB3 Science/Linguistics skill. Verifier executes the deliverable CLI /app/derive.py on the visible pair and five hidden rule/lexicon pairs exercising feeding/bleeding order, single-pre-pass semantics, insertion, dual-edge conditioning and full deletion, comparing byte-for-byte against the probe's independent derivation engine; enforces the exit-code contract and checks /app/derived.tsv.",
+    "claims_no_competencies": true
   },
-  "tb3-harbor-ledger": {
+  "fume-wheel": {
     "competencies": [],
     "evidence": {},
-    "note": "TB3-skill supplementary task: claims no tb2.1 competencies. TB3 Operations/Claims skill. Verifier executes the deliverable CLI /app/adjudicate.py on the visible bundle and three hidden policy/claims bundles (leap-day window, duplicate ids and zero amounts, all-denied), comparing against the probe's independent integer-cents adjudication recompute including floor-vs-rounding and aggregate-cap exhaustion traps; checks /app/adjudication.json."
+    "note": "TB3-skill supplementary task: claims no tb2.1 competencies. TB3 Operations/Claims skill. Verifier executes the deliverable CLI /app/adjudicate.py on the visible bundle and three hidden policy/claims bundles (leap-day window, duplicate ids and zero amounts, all-denied), comparing against the probe's independent integer-cents adjudication recompute including floor-vs-rounding and aggregate-cap exhaustion traps; checks /app/adjudication.json.",
+    "claims_no_competencies": true
   },
-  "tb3-rowan-statute": {
+  "pewter-meridian": {
     "competencies": [],
     "evidence": {},
-    "note": "TB3-skill supplementary task: claims no tb2.1 competencies. TB3 Operations/Compliance skill. Verifier executes the deliverable CLI /app/build_declaration.py on the visible workdir and four hidden workdirs (threshold boundary, duplicate txn ids, all-invalid, below-threshold-empty), comparing declaration.csv and validation_report.json against the probe's independent recompute; checks the visible deliverables."
+    "note": "TB3-skill supplementary task: claims no tb2.1 competencies. TB3 Operations/Compliance skill. Verifier executes the deliverable CLI /app/build_declaration.py on the visible workdir and four hidden workdirs (threshold boundary, duplicate txn ids, all-invalid, below-threshold-empty), comparing declaration.csv and validation_report.json against the probe's independent recompute; checks the visible deliverables.",
+    "claims_no_competencies": true
   },
-  "tl-ember-tangle": {
+  "sable-journal": {
     "competencies": [],
     "evidence": {},
-    "note": "TBLite-skill supplementary task (family marker in tags): claims no tb2.1 competencies. TBLite skill: race-condition diagnosis & repair. Verifier executes the repaired /app/svc/wordcount_service.py under the pristine load generator on visible + hidden corpora, recomputing exact expected counts independently; also re-runs the pristine buggy service to confirm the bug reproduces (anti-shortcut), and checks /app/diagnosis.md root-cause claims against the code."
+    "note": "Supplementary skill-coverage task; provenance: specs/external_skill_coverage.json): claims no tb2.1 competencies. Skill exercised: race-condition diagnosis & repair. Verifier executes the repaired /app/svc/wordcount_service.py under the pristine load generator on visible + hidden corpora, recomputing exact expected counts independently; also re-runs the pristine buggy service to confirm the bug reproduces (anti-shortcut), and checks /app/diagnosis.md root-cause claims against the code.",
+    "claims_no_competencies": true
   },
-  "tl-gilded-bandit": {
+  "sable-wharf": {
     "competencies": [],
     "evidence": {},
-    "note": "TBLite-skill supplementary task (family marker in tags): claims no tb2.1 competencies. TBLite skill: online learning under delayed feedback and abrupt drift. Verifier runs the agent's /app/policy.py in the deterministic seeded harness on visible + hidden param sets (no-drift, 3-way swap, long delays), independently recomputing the oracle-best schedule and enforcing a derived regret threshold per case; checks /app/eval_report.json recomputes."
+    "note": "Supplementary skill-coverage task; provenance: specs/external_skill_coverage.json): claims no tb2.1 competencies. Skill exercised: online learning under delayed feedback and abrupt drift. Verifier runs the agent's /app/policy.py in the deterministic seeded harness on visible + hidden param sets (no-drift, 3-way swap, long delays), independently recomputing the oracle-best schedule and enforcing a derived regret threshold per case; checks /app/eval_report.json recomputes.",
+    "claims_no_competencies": true
   },
-  "tl-crown-pareto": {
+  "river-ferry": {
     "competencies": [],
     "evidence": {},
-    "note": "TBLite-skill supplementary task (family marker in tags): claims no tb2.1 competencies. TBLite skill: NSGA-II multi-objective optimization. Verifier executes /app/nsga.py on visible + hidden param sets and validates fronts with an independent implementation: feasibility, objective recompute, true non-domination, independent hypervolume within tolerance, and analytic-front proximity beating a random-search baseline."
+    "note": "Supplementary skill-coverage task; provenance: specs/external_skill_coverage.json): claims no tb2.1 competencies. Skill exercised: NSGA-II multi-objective optimization. Verifier executes /app/nsga.py on visible + hidden param sets and validates fronts with an independent implementation: feasibility, objective recompute, true non-domination, independent hypervolume within tolerance, and analytic-front proximity beating a random-search baseline.",
+    "claims_no_competencies": true
   },
-  "tl-scroll-changelog": {
+  "umbral-inlet": {
     "competencies": [],
     "evidence": {},
-    "note": "TBLite-skill supplementary task (family marker in tags): claims no tb2.1 competencies. TBLite skill: conventional-commit parsing, per-package semver bumps, changelog generation. Verifier executes /app/changelogger.py on visible + hidden repo states and byte-compares changelogs and bumps.json against its own independent implementation (breaking-marker stacking, scope precedence, no-bump omission, tie ordering)."
+    "note": "Supplementary skill-coverage task; provenance: specs/external_skill_coverage.json): claims no tb2.1 competencies. Skill exercised: conventional-commit parsing, per-package semver bumps, changelog generation. Verifier executes /app/changelogger.py on visible + hidden repo states and byte-compares changelogs and bumps.json against its own independent implementation (breaking-marker stacking, scope precedence, no-bump omission, tie ordering).",
+    "claims_no_competencies": true
   },
-  "tl-onyx-token": {
+  "sedge-hearth": {
     "competencies": [],
     "evidence": {},
-    "note": "TBLite-skill supplementary task (family marker in tags): claims no tb2.1 competencies. TBLite skill: JWT-style token service lifecycle. Verifier drives /app/token_service.py over loopback: login/refresh rotation/logout flows, expiry enforcement, tampered-signature rejection, rotated-refresh replay rejection, blacklist persistence across restart \u2014 recomputing HMACs and claims independently \u2014 on visible + hidden configs."
+    "note": "Supplementary skill-coverage task; provenance: specs/external_skill_coverage.json): claims no tb2.1 competencies. Skill exercised: JWT-style token service lifecycle. Verifier drives /app/token_service.py over loopback: login/refresh rotation/logout flows, expiry enforcement, tampered-signature rejection, rotated-refresh replay rejection, blacklist persistence across restart \u2014 recomputing HMACs and claims independently \u2014 on visible + hidden configs.",
+    "claims_no_competencies": true
   },
-  "tl-ashward-scan": {
+  "pipit-archive": {
     "competencies": [],
     "evidence": {},
-    "note": "TBLite-skill supplementary task (family marker in tags): claims no tb2.1 competencies. TBLite skill: Linux persistence-artifact scanning. Verifier executes /app/scan_persistence.py on the visible rootfs and hidden rootfs trees (symlinked cron dirs, allowlisted hits, empty tree) and compares parsed findings against an independent reference scanner; checks idempotent byte-identical re-runs."
+    "note": "Supplementary skill-coverage task; provenance: specs/external_skill_coverage.json): claims no tb2.1 competencies. Skill exercised: Linux persistence-artifact scanning. Verifier executes /app/scan_persistence.py on the visible rootfs and hidden rootfs trees (symlinked cron dirs, allowlisted hits, empty tree) and compares parsed findings against an independent reference scanner; checks idempotent byte-identical re-runs.",
+    "claims_no_competencies": true
   },
-  "tl-quartz-partition": {
+  "rust-orchid": {
     "competencies": [],
     "evidence": {},
-    "note": "TBLite-skill supplementary task (family marker in tags): claims no tb2.1 competencies. TBLite skill: Category-Partition Method test generation. Verifier executes /app/generate_cases.py on visible + hidden TSL specs (conflicting constraints, all-single params, unsatisfiable combinations) and compares exact frame JSON against an independent generator implementation."
+    "note": "Supplementary skill-coverage task; provenance: specs/external_skill_coverage.json): claims no tb2.1 competencies. Skill exercised: Category-Partition Method test generation. Verifier executes /app/generate_cases.py on visible + hidden TSL specs (conflicting constraints, all-single params, unsatisfiable combinations) and compares exact frame JSON against an independent generator implementation.",
+    "claims_no_competencies": true
   },
-  "tl-briar-entity": {
+  "raven-core": {
     "competencies": [],
     "evidence": {},
-    "note": "TBLite-skill supplementary task (family marker in tags): claims no tb2.1 competencies. TBLite skill: XXE analysis and remediation. Verifier behaviorally probes each parser with hidden crafted payloads (file-read, recursive-entity, benign), requiring pristine copies were genuinely exploitable pre-patch, patched parsers neutralize all probes while passing hidden benign inputs, and /app/xxe_audit.json verdicts match the probe's independent verdicts."
+    "note": "Supplementary skill-coverage task; provenance: specs/external_skill_coverage.json): claims no tb2.1 competencies. Skill exercised: XXE analysis and remediation. Verifier behaviorally probes each parser with hidden crafted payloads (file-read, recursive-entity, benign), requiring pristine copies were genuinely exploitable pre-patch, patched parsers neutralize all probes while passing hidden benign inputs, and /app/xxe_audit.json verdicts match the probe's independent verdicts.",
+    "claims_no_competencies": true
   },
-  "tl-wire-socket": {
+  "velvet-terrace": {
     "competencies": [],
     "evidence": {},
-    "note": "TBLite-skill supplementary task (family marker in tags): claims no tb2.1 competencies. TBLite skill: WebSocket protocol server implementation. Verifier speaks the documented protocol over loopback with a raw-socket client: recomputed handshake accept value, masked echo incl. 16/64-bit lengths, fragmentation reassembly, ping/pong, close codes, malformed-mask rejection \u2014 on visible + hidden configs."
+    "note": "Supplementary skill-coverage task; provenance: specs/external_skill_coverage.json): claims no tb2.1 competencies. Skill exercised: WebSocket protocol server implementation. Verifier speaks the documented protocol over loopback with a raw-socket client: recomputed handshake accept value, masked echo incl. 16/64-bit lengths, fragmentation reassembly, ping/pong, close codes, malformed-mask rejection \u2014 on visible + hidden configs.",
+    "claims_no_competencies": true
   },
-  "ds-lint-forge": {
+  "dusk-wicket": {
     "competencies": [],
     "evidence": {},
-    "note": "DeepSWE-skill supplementary task (family marker in tags): claims no tb2.1 competencies. DeepSWE skill: linter rule engineering. Verifier runs the extended lint engine on hidden minipy sources (nested scopes, chained/region suppressions, cache hit and invalidation scenarios) and compares findings JSON against an independent implementation of the three rules + suppression semantics; cache stats verified via double runs."
+    "note": "Supplementary skill-coverage task (: claims no tb2.1 competencies. Skill exercised: linter rule engineering. Verifier runs the extended lint engine on hidden minipy sources (nested scopes, chained/region suppressions, cache hit and invalidation scenarios) and compares findings JSON against an independent implementation of the three rules + suppression semantics; cache stats verified via double runs.",
+    "claims_no_competencies": true
   },
-  "ds-sash-builder": {
+  "kelp-berth": {
     "competencies": [],
     "evidence": {},
-    "note": "DeepSWE-skill supplementary task (family marker in tags): claims no tb2.1 competencies. DeepSWE skill: SQL query-builder window-function internals. Verifier imports the extended library and renders SQL for hidden usage matrices (five functions, multiple windows, frames, interplay with where/order) comparing canonical strings against an independent generator; checks visible demo output."
+    "note": "Supplementary skill-coverage task (: claims no tb2.1 competencies. Skill exercised: SQL query-builder window-function internals. Verifier imports the extended library and renders SQL for hidden usage matrices (five functions, multiple windows, frames, interplay with where/order) comparing canonical strings against an independent generator; checks visible demo output.",
+    "claims_no_competencies": true
   },
-  "ds-runner-shard": {
+  "glacier-basin": {
     "competencies": [],
     "evidence": {},
-    "note": "DeepSWE-skill supplementary task (family marker in tags): claims no tb2.1 competencies. DeepSWE skill: test-harness internals. Verifier executes the extended runner on visible + hidden suites (uneven durations, cross-shard dep chains, all-fail/all-pass, K > cases) and compares shard assignments, bail cascades and CTRF-like reports against an independent LPT/cascade recompute."
+    "note": "Supplementary skill-coverage task (: claims no tb2.1 competencies. Skill exercised: test-harness internals. Verifier executes the extended runner on visible + hidden suites (uneven durations, cross-shard dep chains, all-fail/all-pass, K > cases) and compares shard assignments, bail cascades and CTRF-like reports against an independent LPT/cascade recompute.",
+    "claims_no_competencies": true
   },
-  "ds-kestrel-client": {
+  "amber-guest": {
     "competencies": [],
     "evidence": {},
-    "note": "DeepSWE-skill supplementary task (family marker in tags): claims no tb2.1 competencies. DeepSWE skill: HTTP client protocol internals. Verifier exercises the extended library on hidden byte fixtures: exact multipart body bytes, chunked decoding incl. trailers and malformed-chunk errors, cookie-store scoping/eviction/ordering across scripted exchanges \u2014 compared against an independent reference implementation."
+    "note": "Supplementary skill-coverage task (: claims no tb2.1 competencies. Skill exercised: HTTP client protocol internals. Verifier exercises the extended library on hidden byte fixtures: exact multipart body bytes, chunked decoding incl. trailers and malformed-chunk errors, cookie-store scoping/eviction/ordering across scripted exchanges \u2014 compared against an independent reference implementation.",
+    "claims_no_competencies": true
   },
-  "ds-mistral-manifest": {
+  "ember-spire": {
     "competencies": [],
     "evidence": {},
-    "note": "DeepSWE-skill supplementary task (family marker in tags): claims no tb2.1 competencies. DeepSWE skill: helm-like manifest merge strategies. Verifier executes /app/render_chart.py on visible + hidden charts (conflicting overrides, null deletion, merge-by-key nested conflicts, unknown-policy error behavior, empty values) and compares canonical JSON against an independent merge engine."
+    "note": "Supplementary skill-coverage task (: claims no tb2.1 competencies. Skill exercised: helm-like manifest merge strategies. Verifier executes /app/render_chart.py on visible + hidden charts (conflicting overrides, null deletion, merge-by-key nested conflicts, unknown-policy error behavior, empty values) and compares canonical JSON against an independent merge engine.",
+    "claims_no_competencies": true
+  },
+  "drift-canyon": {
+    "competencies": [
+      "C-2867a8c3",
+      "C-a280ae57",
+      "C-e589f42d",
+      "C-9a6e7959",
+      "C-72fb3c19",
+      "C-69755486"
+    ],
+    "evidence": {
+      "C-2867a8c3": "The verifier asserts that /app/site contains index.html (name 'Marlow Bayne'), about.html (bio marker 'barnacle recruitment'), blog.html listing both post titles 'Into the Ember Mud' and 'Harbor at Low Water', blog/into-the-ember-mud.html, blog/harbor-at-low-water.html, and publications.html (marker 'Intertidal Letters'). These files are produced by the deliverable /app/solve.py's build_site() (character-based slugs from each post title) and are also confirmed present in the SSH-cloned copy and referenced from answer.json site_pages, each of which is checked on disk. A solver that leaves the raw notes or omits any required page fails these file+marker checks and the answer.json site_page checks.",
+      "C-a280ae57": "The verifier asserts git ls-files lists writing/sketches/story-notes.txt on the main branch with byte content 'the cove lantern' (committed, not merely present). On the three hidden scenarios the SAME /app/solve.py repair path must restore a stash-carried file (h1 draft/sidecar.txt) and a branch-carried file (h2 draft/lost-hue.txt) onto the declared default branch with exact bytes and commit them; the verifier re-derives the expected bytes from a pristine reference copy (git show stash@{0}:<path> / git show <branch>:<path>) and checks tracked-ness and equality. A solver that fails to locate the stash or the off-branch copy, or that only drops the bytes uncommitted, fails 2 checks per affected hidden case and on the baseline.",
+      "C-e589f42d": "The verifier re-reads each git bundle's advertised HEAD via `git bundle list-heads` and asserts (a) the baseline /app/site branches on-guide and fieldnotes \u2014 the latter carried by a non-flat `prospect/fieldnotes` bundle ref \u2014 equal that HEAD; and (b) on every hidden scenario the local branch the repair created (alpha,beta on h1; scan,orbit on h2) equals the corresponding bundle's HEAD. A solver that guesses a flat branch name or copies the wrong advertised ref fails the equality on-fieldnotes and on the nested/non-flat hidden bundle refs.",
+      "C-9a6e7959": "After solve.py runs, the verifier performs a real clone over SSH (git clone gitdev@127.0.0.1:/srv/git/marlow.git) using sshpass with password-only auth, then a real push back of a new 'verifier-probe' branch. It verifies the clone exposes origin/main, origin/on-guide, origin/fieldnotes, the full site pages and the recovered draft, i.e. the bare repo served over SSH is the complete reconstructed history. A clone/push that lacks SSH access or the expected remote path fails mid-push.",
+      "C-72fb3c19": "The served bare repo is reached through a dedicated OS user 'gitdev' with home and login shell, password 'lantern-9', with PasswordAuthentication yes and no SSH key: the verifier's GIT_SSH_COMMAND forces PreferredAuthentications=password and PubkeyAuthentication=no via sshpass, so both the clone and the push succeed only if password auth is genuinely enabled and the user/path are correct. Disabled password auth or the wrong password breaks the clone immediately; the same gates run against answer.json ssh_user/password/bare_repo fields.",
+      "C-69755486": "The verifier asserts /app/site/deploy/reconstruct.sh is executable (os.X_OK) and that its body is byte-for-byte the fixture script (compared to the exact committed text), and that /app/listing.txt is byte-for-byte the provided source listing. Both file bodies are also recorded in answer.json via deploy_executable and listing_preserved. Removing the exec bit or editing either file body fails these checks directly."
+    }
   }
 }

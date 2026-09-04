@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 3,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 3,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 2,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 75,
+  "documented_probe": null,
+  "notes": "One chained reconstruction pipeline with strict intra-task ordering: assemble the profile site, recover a stash'ed off-branch file onto main (committed, not just present in the working tree), create two branches from git bundles via their HEAD reference, then stand up a bare repo served over a password-authenticated SSH server (dedicated OS user, running sshd) that must accept a real clone and a real push back. The served component is the hard-floor competency (C-9a6e7959). dependent_stages=3 because the served bare repo can only be handed to the ssh user after the git work is committed/pushed, and because the site recovery must be committed and bundled into the same pushed history the SSH clone exposes. Heavily stateful (interaction_statefulness=2): an sshd daemon, an OS user, a bare repo, and a pushed branch graph must all coexist and survive a re-run. Hidden generalization is genuine: the same /app/solve.py repair path is re-run on three fresh standalone git scenarios that vary the default-branch name (a valid one vs a nonexistent one), the kind of lost work (a stash alone, a branch that also carries the path, and no lost work at all), bundle file presence (two present / one missing), and nested bundle ref names. adversarial_inputs=3 for those malformed bundle-file and missing-branch cases. reasoning_depth=2 because restoring lost work on a branch that is forbidden to touch and reconstructing branches from a nested/non-flat bundle ref require the agent to inspect refs rather than hard-code flat names."
+}
