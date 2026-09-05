@@ -51,8 +51,8 @@ else
   FAIL=$((FAIL + 1)); printf '  FAIL  piwf does not expose the workflow tool\n'
 fi
 # The browser default is the agent-browser CLI driven from bash (taught by the
-# agent-browser-cli skill), not the agent_browser tool. A PI_SETUP_BROWSER_TOOL=1
-# install legitimately fails this check.
+# agent-browser-cli skill), not the agent_browser tool. The fork that provided that
+# tool was retired on 2026-09-04, so nothing may register it again.
 if grep -qi 'agent_browser' <<< "$wow_pi"; then
   FAIL=$((FAIL + 1)); printf '  FAIL  pi must NOT expose the agent_browser tool by default\n'
 else

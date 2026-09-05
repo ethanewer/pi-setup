@@ -33,8 +33,9 @@ setup already installs and pins. Two things the fixture could not measure and th
 motivated the behavior rules anyway: live-web captchas are driven by IP reputation,
 automation signals, and profile state, not by which code drives Chrome; what an agent
 can control is handling. See that branch's `evals/browser/REPORT.md` for the full
-writeup and raw results, and the [README](../README.md) Browser automation section for
-the opt-in back to the native tool (`PI_SETUP_BROWSER_TOOL=1`).
+writeup and raw results. The `pi-agent-browser-native-safe` fork that provided the
+native `agent_browser` tool was retired on 2026-09-04 (see docs/FORKS.md); the CLI is
+the only browser surface this setup ships.
 
 ## update-pi-setup
 

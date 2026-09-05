@@ -88,14 +88,13 @@ rather than as a supported claim.
 |---|---:|
 | `@earendil-works/pi-coding-agent` | `0.85.0` |
 | `@earendil-works/pi-server` | `0.85.0` (see below) |
-| `agent-browser` | `0.35.0` |
+| `agent-browser` | `0.36.0` |
 
 Extension forks and the upstream releases they are based on:
 
 | Fork (Pi local package) | Upstream | Upstream version |
 |---|---|---:|
 | `pi-voice-stt-safe` | `pi-voice-stt` | `0.6.0` |
-| `pi-agent-browser-native-safe` | `pi-agent-browser-native` | `0.5.0` |
 | `pi-dynamic-workflows-safe` | `@quintinshaw/pi-dynamic-workflows` | `3.9.0` |
 | `pi-process-monitor-safe` | `pi-process-monitor` | rewrite, built on `1.3.0`, `2.0.2` reviewed and declined |
 | `pi-context-handoff` | — | first-party |
@@ -298,11 +297,12 @@ was the most robust single choice. See
 
 Two deliberate alternatives:
 
-- **Native tool surface.** The hardened `pi-agent-browser-native-safe` fork stays
-  installed but is not loaded by default. It was the best *extension* arm for the
-  weaker model in the eval, so a setup that runs only weak models may prefer it:
-  `PI_SETUP_BROWSER_TOOL=1 ./install.sh` loads it on every profile and keeps it
-  across reinstalls.
+- **Native tool surface.** The `pi-agent-browser-native-safe` fork that shipped an
+  `agent_browser` tool was **retired on 2026-09-04** and removed wholesale — it was
+  an opt-in this setup never loaded, its re-vendors needed hand-resolved merges, and
+  its capability baseline held the CLI pin back from a security release.
+  [`docs/FORKS.md`](docs/FORKS.md) records the reasoning. If the native tool is ever
+  wanted again, restore it with `git revert` of the retirement commit.
 - **Debugging-heavy work.** For performance traces and network inspection the eval
   points at `chrome-devtools-mcp` behind an MCP bridge. It is not installed by this
   setup.
@@ -581,8 +581,6 @@ added to that profile; the full-profile measurements predate context handoff and
 ~/.local/bin/piwf                            Full entrypoint with dynamic workflows
 ~/.local/bin/p                               Lean entrypoint
 ~/.local/bin/agent-browser                   Bun-backed agent-browser entrypoint
-~/.local/bin/pi-agent-browser-config         Browser config CLI
-~/.local/bin/pi-agent-browser-doctor         Browser diagnostics CLI
 ~/.local/bin/*.cmd                           Windows cmd.exe/PowerShell shims (Windows only)
 ~/.local/lib/pi-coding-agent/pi.exe          Compiled Pi binary (Windows only, optional)
 ~/.pi/agent/settings.json                    Main Pi settings (no workflow package)

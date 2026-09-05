@@ -89,9 +89,8 @@ writeFileSync(modelsStorePath, JSON.stringify({
 	},
 }));
 
-function runWriter(browserTool) {
-	if (browserTool === undefined) delete process.env.PI_SETUP_BROWSER_TOOL;
-	else process.env.PI_SETUP_BROWSER_TOOL = browserTool;
+function runWriter() {
+	delete process.env.PI_SETUP_BROWSER_TOOL;
 	writeConfig({
 		mainPath,
 		pPath,
@@ -127,23 +126,21 @@ test("pi loads every fork except workflows; piwf loads all forks", () => {
 	expect(wf.packages).toEqual(ALL_FORKS);
 });
 
-test("the native browser tool stays out by default and returns with PI_SETUP_BROWSER_TOOL=1", () => {
+test("the retired native browser tool is removed from settings on reinstall", () => {
 	runWriter();
 	const main = JSON.parse(readFileSync(mainPath, "utf8"));
-	const wf = JSON.parse(readFileSync(wfPath, "utf8"));
 	expect(main.packages).not.toContain(BROWSER_TOOL);
+	const wf = JSON.parse(readFileSync(wfPath, "utf8"));
 	expect(wf.packages).not.toContain(BROWSER_TOOL);
-	// A stale entry from before the CLI+skill default is removed on reinstall.
-	main.packages.push(BROWSER_TOOL);
-	writeFileSync(mainPath, JSON.stringify(main));
+	// A stale entry from an install that still shipped the fork is removed on reinstall.
+	for (const path of [mainPath, wfPath]) {
+		const settings = JSON.parse(readFileSync(path, "utf8"));
+		settings.packages.push(BROWSER_TOOL);
+		writeFileSync(path, JSON.stringify(settings));
+	}
 	runWriter();
 	expect(JSON.parse(readFileSync(mainPath, "utf8")).packages).not.toContain(BROWSER_TOOL);
-	// The opt-in puts it back on both profiles, and it survives the next rewrite.
-	runWriter("1");
-	expect(JSON.parse(readFileSync(mainPath, "utf8")).packages).toContain(BROWSER_TOOL);
-	expect(JSON.parse(readFileSync(wfPath, "utf8")).packages).toContain(BROWSER_TOOL);
-	runWriter("1");
-	expect(JSON.parse(readFileSync(mainPath, "utf8")).packages).toContain(BROWSER_TOOL);
+	expect(JSON.parse(readFileSync(wfPath, "utf8")).packages).not.toContain(BROWSER_TOOL);
 });
 
 test("user-persisted values survive the rewrite", () => {

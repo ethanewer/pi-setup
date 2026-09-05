@@ -141,13 +141,14 @@ Then:
 
 ## 4. Move a fork onto a newer upstream release
 
-Four forks track an upstream. Three can be re-vendored mechanically because they have a
-patch file — `pi-voice-stt-safe`, `pi-agent-browser-native-safe`,
-`pi-dynamic-workflows-safe` — and `pi-process-monitor-safe` tracks
+Three forks track an upstream. Two can be re-vendored mechanically because they have a
+patch file — `pi-voice-stt-safe` and `pi-dynamic-workflows-safe` — and
+`pi-process-monitor-safe` tracks
 `pi-process-monitor` by hand, with no patch, so upstream changes are ported deliberately
-and the decision recorded in its `vendor.json` note.
+and the decision recorded in its `vendor.json` note. (pi-agent-browser-native-safe was
+retired on 2026-09-04; it is gone from forks/ and vendor.json.)
 
-For the three with a patch:
+For the two with a patch:
 
 ```bash
 bin/pi-setup-vendor <fork> <new-version>
@@ -241,20 +242,22 @@ packages at runtime and they are not dependencies of this repository, so without
 cannot resolve `@earendil-works/*`, `node:fs` or `process`, and reports errors that are
 artefacts of the invocation rather than defects in the code.
 
-## 6. agent-browser is pinned to the fork's baseline, on purpose
+## 6. agent-browser is pinned, and bumping it is deliberately cheap
 
-`agentBrowser` in `lib/versions.json` is not "whatever npm has latest".
+`agentBrowser` in `lib/versions.json` is not "whatever npm has latest":
 `agent-browser` is the default browser surface itself (the CLI driven from bash,
-taught by the `agent-browser-cli` skill), and the opt-in
-`pi-agent-browser-native-safe` wrapper is validated against one specific CLI release.
-`docs/SUPPORT_MATRIX.md` in that fork names it as the capability baseline. Raising it is
-a re-baseline job. Note that the fork vendors only `dist/`, `scripts/` and `docs/` — the
-`npm run verify` gates its own SUPPORT_MATRIX.md describes live in upstream's repository,
-not here, so re-running them means working from an upstream checkout at the target
-version. What can be done in this repository is re-reading
-`docs/COMMAND_REFERENCE.md` and `docs/SUPPORT_MATRIX.md` against the new CLI's `--help`,
-and re-checking the artifact-path guards that hard-code command prefixes. `bin/pi-setup-doctor` will keep reporting the newer release as a note until
-then; that note is expected, not a defect.
+taught by the `agent-browser-cli` skill), so a release lands here only after its
+changes are known, not by accident. Bumping the pin is a small, defined job — read
+the changelog on
+[vercel-labs/agent-browser](https://github.com/vercel-labs/agent-browser), re-read
+`skills/agent-browser-cli/SKILL.md` against the new CLI's `--help` and
+`agent-browser skills get core --full`, confirm none of its behavior rules (snapshot
+ref freshness, Retry-After waiting, bot-check handling, headless default) changed,
+then set `agentBrowser` in `lib/versions.json`, run the installer, and [Verify](#verify).
+The skill is version-resilient by design — it defers the full command reference to the
+CLI itself — so most releases need nothing but the pin. The
+`pi-agent-browser-native-safe` fork that used to couple the pin to a re-baseline job
+was retired on 2026-09-04; it no longer constrains this.
 
 ## Verify
 
@@ -311,9 +314,6 @@ piwf (must include workflow)
      [Extensions]
        btw, context-handoff, monitor, voice-stt, workflow
 ```
-
-With `PI_SETUP_BROWSER_TOOL=1` both listings also show the `agent-browser` extension
-again.
 
 A fork that failed to load is **silently absent** from that listing rather than raising
 an error, so check the names rather than assuming success.

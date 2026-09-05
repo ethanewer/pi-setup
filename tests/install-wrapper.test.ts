@@ -10,10 +10,10 @@ const doctor = readFileSync(join(root, "bin", "pi-setup-doctor"), "utf8");
 
 test("every Bun entry point uses the operating system CA store", () => {
 	expect(readFileSync(join(root, "lib/install.mjs"), "utf8")).toContain('"--use-system-ca"');
-	for (const name of ["pi.sh", "p.sh", "piwf.sh", "agent-browser.sh", "pi-agent-browser-cli.sh"]) {
+	for (const name of ["pi.sh", "p.sh", "piwf.sh", "agent-browser.sh"]) {
 		expect(readFileSync(join(wrappers, name), "utf8")).toContain("--use-system-ca");
 	}
-	for (const name of ["pi.cmd", "p.cmd", "piwf.cmd", "agent-browser.cmd", "pi-agent-browser-cli.cmd"]) {
+	for (const name of ["pi.cmd", "p.cmd", "piwf.cmd", "agent-browser.cmd"]) {
 		expect(readFileSync(join(wrappers, name), "utf8")).toContain("--use-system-ca");
 	}
 });

@@ -76,7 +76,7 @@ describe("lib/versions.json", () => {
 
 describe("Windows cmd shims", () => {
   test("every cmd wrapper honors BUN_INSTALL before the default ~/.bun path", () => {
-    for (const name of ["pi.cmd", "p.cmd", "piwf.cmd", "agent-browser.cmd", "pi-agent-browser-cli.cmd"]) {
+    for (const name of ["pi.cmd", "p.cmd", "piwf.cmd", "agent-browser.cmd"]) {
       const body = readFileSync(join(root, "lib/wrappers", name), "utf8");
       const installIdx = body.indexOf("%BUN_INSTALL%\\bin\\bun.exe");
       const homeIdx = body.indexOf("%USERPROFILE%\\.bun\\bin\\bun.exe");

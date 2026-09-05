@@ -8,14 +8,6 @@
       "liveTree": "src",
       "patch": "patches/pi-voice-stt@0.6.0.patch"
     },
-    "pi-agent-browser-native-safe": {
-      "upstream": "pi-agent-browser-native",
-      "version": "0.5.0",
-      "live": "dist/extensions/agent-browser/index.js",
-      "liveTree": "dist",
-      "patch": "patches/pi-agent-browser-native@0.5.0.patch",
-      "note": "Demoted from the default load by the browser eval (evals/browser on the browser-eval branch): the CLI+skill surface shipped by the agent-browser-cli skill (skills/) matched or beat the native tool at roughly half the calls and tokens. Still installed; load it with PI_SETUP_BROWSER_TOOL=1 ./install.sh."
-    },
     "pi-dynamic-workflows-safe": {
       "upstream": "@quintinshaw/pi-dynamic-workflows",
       "version": "3.9.0",

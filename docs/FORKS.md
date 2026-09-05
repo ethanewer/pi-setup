@@ -140,157 +140,35 @@ read/bash/edit/write in the working directory without a per-action approval prom
 that would mean removing the feature. On a shared or network-synced run store, a foreign-host
 lock is reclaimable after a staleness window rather than immediately.
 
-## pi-agent-browser-native-safe
+## pi-agent-browser-native-safe — retired
 
-Based on `pi-agent-browser-native@0.5.0`, with the external CLI rebaselined to the `agent-browser 0.35.0` version that `install.sh` pins. Only `dist/` is shipped, so the runtime fixes are in the compiled tree.
+Removed on 2026-09-04. This was the hardened fork of `pi-agent-browser-native`, a Pi
+extension exposing an `agent_browser` tool that wrapped the pinned `agent-browser` CLI.
+The browser eval (`evals/browser` on the `browser-eval` branch, 180 runs) demoted it
+from the default load: the CLI+skill surface (the `agent-browser-cli` skill driving the
+same CLI from bash) matched or beat the native tool on outcome for both models at
+roughly half the calls and tokens, and `cli-agent-browser` was the most robust arm. It
+lingered as an opt-in (`PI_SETUP_BROWSER_TOOL=1`) that this setup never loaded, while
+costing real maintenance: a patch over 135 tracked files whose upstream re-vendors
+needed hand-resolved merges, and an `agent-browser` CLI pin coupled to the fork's
+capability baseline (`docs/SUPPORT_MATRIX.md` inside the fork) — which is why the CLI
+was stuck at 0.35.0 while 0.35.2 shipped a security fix (dashboard origin validation,
+DNS rebinding; vercel-labs/agent-browser#1738).
 
-**No longer loaded by default.** The browser eval (`evals/browser/` on the `browser-eval`
-branch) found the CLI+skill surface shipped by the `agent-browser-cli` skill
-(`skills/`) matched or beat this tool
-surface on task outcome for both models at roughly half the calls and tokens. The fork
-stays installed and hardened for the opt-in: `PI_SETUP_BROWSER_TOOL=1 ./install.sh`. Its
-bash guard (`PI_AGENT_BROWSER_ALLOW_DIRECT_BASH`) only applies when the extension is
-loaded; with the CLI default, direct `agent-browser` launches from bash are the point.
+What the fork's hardening guarded (credential `!command` execution, write-path
+confinement, Electron launch allowlists, `./agent-browser.json` discovery pinning)
+applied only to the extension's tool surface. None of it protected the CLI-from-bash
+default — the model already holds an unrestricted bash tool, and repo trust is the
+boundary for everything a repository ships. With the fork gone, the `agentBrowser` pin
+is bumped by reading the upstream changelog and re-checking the skill against the new
+CLI (see the update-pi-setup skill); the capability-baseline machinery was retired with
+the fork.
 
-**Re-vendored 0.2.72 -> 0.2.77 on 2026-08-04, and this one was a real merge.** Five upstream
-releases landed a new managed-session subsystem (nine new modules, crash-safe restore keys,
-process identity, socket-directory ancestry validation) and touched 22 of the 37 files this
-fork patches. `patch` rejected 14 files, so the merge was redone as a git three-way merge —
-upstream 0.2.72 as base, the fork and 0.2.77 as branches — which reduced it to 21 conflict
-hunks across 15 files. `dist/extensions/agent-browser/lib/process.js` was rebuilt by taking
-upstream's rewritten file and re-porting the eight hardening concerns onto it, because both
-sides had restructured the same functions.
-
-Two resolutions are judgement calls worth knowing:
-
-- **Config pinning is now layered.** Upstream 0.2.74 added its own pin: browser-backed calls
-  reject discovered config unread and get a process-private empty config, and its
-  `trustedPinnedEmptyConfig` policy flag is derived from that variable. This fork's pin —
-  which copies the *user's* config so user defaults keep applying — now runs only where
-  upstream pinned nothing, notably plain-text inspection commands. Two pins can never
-  overwrite each other, and upstream's policy flag stays truthful.
-- **Windows CLI resolution.** Upstream replaced the launcher with a `Get-Command` probe plus
-  a missing-command marker, which is PATH resolution and undoes the pin. The fork keeps the
-  pinned path when one resolves and falls back to upstream's probe only when nothing was
-  pinned, so `isWindowsAgentBrowserCommandMissing` still works.
-
-Every hardening item was re-verified against the merged tree rather than assumed. Statically:
-the credential validator is still implemented (not the upstream stub), there is no `shell:
-true` anywhere and `!command` still goes through `execFile` with an argv array, the Electron
-code-execution denylist and `-launcher`/`-cmd-prefix` patterns are intact, and write-path
-confinement still reaches `prepare`, `direct-anchor-download` and `output-file`.
-Functionally, against the merged build: a page opens and returns its title; a screenshot
-inside the workspace is written; a write to `$HOME` and a write into `.git` are both refused
-with the fork's own messages and neither file exists on disk; a workspace-local
-`agent-browser` shim is never executed; and a hostile repo-local `agent-browser.json`
-naming an `executablePath` is refused in 7s without the named binary ever running.
-
-One upstream behaviour change to expect: 0.2.77 verifies artifacts, so a `close` that follows
-a refused screenshot is itself policy-blocked until the artifact is resolved. That is
-upstream working as designed, not a merge defect — it surfaced as a confusing
-"artifact guard blocked close" during verification.
-
-Re-vendored onto 0.3.0 on 2026-08-18. This release raises the Pi support floor to 0.84.0
-and reorganizes input/result modules while retaining the `agent-browser 0.33.2` capability
-baseline. A three-way merge kept config trust fail-closed, credential commands shell-free,
-write-path and Electron confinement, launch-flag policy, and managed-session protections.
-The external CLI pin therefore remains 0.33.2; 0.34.0 is a separate re-baseline rather
-than part of this extension update.
-
-Re-vendored onto 0.5.0 on 2026-08-22, and rebaselined the external `agent-browser` CLI pin
-0.33.2 -> 0.34.0 — the coupled job the 0.3.0 entry above deferred. Seven upstream releases
-(0.4.0-0.5.0) landed a top-level one-shot `script` code mode with a permissioned child and a
-durable pre-spawn lease, Android/Termux support, the exact-runtime version gate
-(`upstream-version.js`), managed-restore keys scoped to both checkout generation and Pi
-transcript, profiled/`--args`/`--user-agent` session preservation, `--pin-tab`/`--no-pin-tab`
-sticky tab binding with CDP `targetId` refs and `tab_gone` recovery, and the 0.34.0 capability
-baseline (`scripts/agent-browser-target.mjs` pins `TARGET_AGENT_BROWSER_VERSION = "0.34.0"`,
-`inventorySections` include `--pin-tab`/`--no-pin-tab`/`tab_gone`/`data.targetId`, and the
-`upstreamHead` is `548b159b30eef119ccf6846c8bc807d0eaa3f6f8`).
-
-13 patch hunks rejected across 10 files; every one was the fork's own hardening edit that
-lost its context line to upstream's restructuring, not upstream's work. Resolved by hand:
-the CLI-path-pinning spawn call (`{cwd, env}` + `spawnCommand.error` + `detached` process group)
-and the `child-process-policy`/`upstream-config-policy` imports in `process.js`; the
-`getPrivilegedFlagValidationError` validation-chain entry and the `launch-flag-policy`/
-`argv-grammar` (`getFlagName`, `isBooleanFlagEnabled`) imports in `runtime.js`; the
-allowed-domains `allowLocalAppUrls`/`localAppFileRoots` call in `process-output.js` (upstream
-already adopted the `getAllowedDomainsViolation` params and `getLocalAppFileRootsForLaunch`);
-the `adoptOrphanedElectronLaunches`/`planUpstreamConfigPin`/`getUpstreamProjectConfigIgnoredNotice`
-imports and the `readPackageJson` helper in `index.js`; the `getFlagName` import in
-`artifact-paths.js`; the Electron launch schema hardening descriptions in `params.js`; the
-"two layers" config-pin + privileged-`--config`-flag-gating + env-var-stripping (`NODE_OPTIONS`/
-`LD_PRELOAD`/`DYLD_INSERT_LIBRARIES`/`ELECTRON_RUN_AS_NODE` + workspace-local `PATH`) paragraphs
-in `COMMAND_REFERENCE.md`; the 0.34.0 SUPPORT_MATRIX rebaseline note; and the `"private": true`
-and CLI-path-pinning paragraphs in `package.json`/`README.md`. Upstream already adopted the
-config pin (0.4.1), the exact-runtime gate (0.4.1), the CLI-path resolution (0.5.0), and the
-privileged-flag policy (0.5.0); the fork's patch now layers the sessionless `AGENT_BROWSER_CONFIG`
-pin, the env-var/PATH stripping, and the Electron schema descriptions on top.
-
-The 0.34.0 re-baseline was checked the same way as every prior one: all 56 help surfaces the
-baseline samples were diffed between the two published binaries. 53 are byte-identical and
-the other 3 (root help, core skill full, tab help) are purely additive — nothing was removed
-anywhere. Root help gains `--pin-tab`/`--no-pin-tab` (`AGENT_BROWSER_PIN_TAB`), `tab --help` gains
-CDP `targetId` as a tab ref and `tab_gone` recovery, and the core skill gains a tab-pinning
-section. The command set is unchanged — `tab`, `tab list`, `tab close`, `tab new` already
-existed and are already in `inventorySections` — so the artifact-path guards that key off
-command prefixes are unaffected. `--pin-tab`/`--no-pin-tab` are sticky optional global booleans
-(not launch-scoped), already in `GLOBAL_BOOLEAN_FLAGS_WITH_OPTIONAL_VALUES`, so no new flag
-reaches the argv tokenizer unhandled.
-
-Rebaselined the external CLI from 0.34.0 to 0.35.0 on 2026-08-22. The published package comparison found two new global controls, `--ca-cert` and `--no-ca-cert`, plus the `protected-vercel-deployments` skill. No command was removed. The wrapper parses both flags, treats CA installation and clearing as managed-session browser mutations, disables managed restore for the matching argument and environment forms, and checks `--ca-cert` and `AGENT_BROWSER_CA_CERT` as local file paths so they cannot read protected `.agent-browser` storage. A real-upstream contract run exposed changed 0.35.0 `connect` behavior. Direct and batched remote attachments now fail before execution for wrapper-managed sessions and remain available through explicit caller-owned sessions. The generated command reference, live 0.35.0 help verifier, updated real-upstream contract, and native browser smoke pass.
-
-Hardening re-verified against the merged tree: config trust fails closed (project config only
-when Pi reports the project trusted; the `AGENT_BROWSER_CONFIG` pin for sessionless commands
-layers on upstream's empty-config pin for browser-backed calls), `!command` values through
-`execFile` with an argv array, write-path confinement by `realpath` refusing `.git`, Electron
-launches require real framework evidence + `CFBundleExecutable` with no path separators and
-`appArgs` rejects `--*-launcher`/`--*-cmd-prefix`/`--no-sandbox`/`--load-extension`/
-`--disable-web-security`, `--allowed-domains` treats non-`http(s)` URLs as violations (with the
-Electron local-app-roots file-URL exemption), POSIX children in their own process group, the
-CLI path pinned (workspace-local shim refused as `policy-blocked`), the `--config` privileged-
-flag gate, and the `DENIED_CHILD_ENV_VARS` env stripping (`PI_AGENT_BROWSER_FORWARD_ALL_ENV=1`
-overrides). `bin/pi-setup-vendor --verify` reproduces the fork exactly.
-
-**Closed.** `isProjectSafeCredentialValueForProvider` — a stub that returned `true` for any
-non-empty string — is implemented, so a project-scope credential can no longer be a
-`!command` or a plaintext literal; `!command` values run through `execFile` with an argv
-array instead of a shell. Project config is only honoured when Pi reports the project
-trusted, and a host that cannot answer now fails *closed*.
-
-Critically, gating the privileged flags was not enough on its own: upstream `agent-browser`
-auto-discovers `./agent-browser.json` from its working directory and, per its own `--help`,
-that project file *overrides* user defaults — so a repo needed no flag at all to supply
-`executablePath`, `initScripts`, `proxy` and `allowFileAccess`. The wrapper now pins the
-child's configuration so a repo-local file cannot apply silently.
-
-Write paths are confined by `realpath` of the deepest existing ancestor (not by string
-comparison) and refuse `.git`, across every entry point — `outputPath`, download, pdf,
-screenshot, state save, the `mkdir -p` paths, and batch steps in *both* JSON-stdin and
-argument mode, the latter tokenized the way upstream tokenizes it. Electron launches require
-real framework evidence and a `CFBundleExecutable` with no path separators, and `appArgs` is
-an allowlist that rejects `--*-launcher`, `--*-cmd-prefix`, `--no-sandbox`,
-`--load-extension` and `--disable-web-security`. `--allowed-domains` treats a non-`http(s)`
-URL as a violation rather than as no-violation. POSIX children run in their own process group
-so timeout and abort actually reap descendants. The CLI path is pinned rather than resolved
-through `PATH`.
-
-**CLI re-baseline, 2026-07-30.** The pinned `agent-browser` moved 0.33.0 -> 0.33.1. The
-release adds one flag, `--idle-timeout`, which this wrapper's argv grammar already listed,
-and changes no command. It also changes a default that matters for long runs: the
-`agent-browser` daemon now exits after **one hour** with no commands, where before it ran
-until told to stop. A run that opens a page, works elsewhere for over an hour and comes back
-finds a fresh daemon; tabs and transient state from the old one are gone unless the session
-had a restore key. Headed, Safari/iOS and user-attached browsers are exempt.
-`--idle-timeout 0` disables it, and `AGENT_BROWSER_IDLE_TIMEOUT_MS` still works.
-
-**Residual risk.** `--download-path` and `--screenshot-dir` are `.git`-guarded but
-deliberately *not* workspace-confined, so a model can still place artifacts in a writable
-directory outside the workspace — the price of keeping upstream download directories usable.
-Writes inside the workspace are still writes: content that lands in a tracked file is a
-supply-chain risk if committed unreviewed. `scripts/doctor.mjs` still runs
-`agent-browser --version` unpinned in the operator's directory; verified empirically against
-a hostile project config that `--version` reaches no privileged key and launches no browser.
+Its retired identities (`pi-agent-browser-native`, `pi-agent-browser-native-safe`) stay
+in the installer's managed set so stale settings entries and npm copies are pruned on
+reinstall, and `RETIRED_PKG_DIRS` removes an installed local copy. The eval artifacts
+under `evals/browser/` and the audit notes in `docs/AUDIT-EXTENSIONS.md` are historical
+records and still describe it.
 
 ## pi-continue-safe — retired
 
@@ -508,8 +386,9 @@ piwf (full, with dynamic workflows — the historical `pi`)
        btw, context-handoff, monitor, voice-stt, workflow
 ```
 
-With `PI_SETUP_BROWSER_TOOL=1` the listings gain `agent-browser` under [Extensions]
-again. The order Pi prints is alphabetical within each group.
+The order Pi prints is alphabetical within each group. (`pi-agent-browser-native-safe`
+used to appear here when installed with its opt-in; it was retired on 2026-09-04 and
+must never appear again.)
 
 For voice-stt that entry is a one-line re-export; `src/` is still the implementation. For
 dynamic-workflows the entry file moved into its own directory and its two relative imports
@@ -535,18 +414,6 @@ reachable by repo-controlled or model-chosen input before.
 
 | Opt-in | Restores |
 |---|---|
-| `PI_SETUP_BROWSER_TOOL=1` (install-time) | Loading the `pi-agent-browser-native-safe` extension and its `agent_browser` tool (the browser eval's default is the CLI plus skill instead) |
-| `PI_AGENT_BROWSER_ALLOW_PRIVILEGED_FLAGS` | `--executable-path`, `--args`, `--init-script`, `--extension`, `--proxy`, `--config`, `--allow-file-access` in raw `args` |
-| `PI_AGENT_BROWSER_TRUST_PROJECT_CONFIG` | Project-scope browser config, including upstream's `./agent-browser.json` |
-| `PI_AGENT_BROWSER_ALLOW_UNCONFINED_WRITES` | Writes outside the workspace |
-| `PI_AGENT_BROWSER_ALLOWED_WRITE_ROOTS` | Additional approved write roots |
-| `PI_AGENT_BROWSER_ALLOW_PROJECT_CREDENTIAL_COMMANDS` | `!command` credential sources from project scope |
-| `PI_AGENT_BROWSER_CLI_PATH` / `PI_AGENT_BROWSER_ALLOW_WORKSPACE_CLI` | A pinned or workspace-local `agent-browser` binary |
-| `PI_AGENT_BROWSER_ELECTRON_EXTRA_APP_ARGS` | Electron switches outside the allowlist |
-| `PI_AGENT_BROWSER_ELECTRON_APP_URL_SCHEMES` | Extra schemes exempt from `--allowed-domains` |
-| `PI_AGENT_BROWSER_FORWARD_ALL_ENV` | Forwarding loader vars (`NODE_OPTIONS`, `LD_PRELOAD`, …) to the child |
-| `PI_AGENT_BROWSER_ALLOW_DIRECT_BASH` | Calling `agent-browser` directly from `bash` (upstream gate, not added here) |
-| `PI_AGENT_BROWSER_SKIP_ORPHAN_ELECTRON_ADOPTION` | Skipping adoption/cleanup of Electron processes orphaned by a previous run |
 | `PI_STT_ALLOWED_ENDPOINT_HOSTS` | Additional hosts accepted for a named vendor alias |
 | `PI_STT_BRIDGE_ALLOW_REMOTE` | Binding the bridge daemon beyond loopback |
 | `trustProjectLocalWorkflows` | Repo-local saved workflows and run records |
