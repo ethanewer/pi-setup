@@ -156,27 +156,40 @@ def norm_t2(trial: Path, model: str):
 def norm_claude(trial: Path, model: str):
     tp = trial / 'agent/trajectory.json'
     t = json.loads(tp.read_text())
-    # harbor claude-code trajectory: adapt to the v3.1 published schema
-    msgs = []
-    for m in t.get('messages', []):
-        msgs.append(m)
-    if not msgs:  # steps-style fallback
-        for s in t.get('steps', []):
-            role = 'user' if s.get('source') == 'user' else 'assistant'
-            msgs.append({'role': role, 'content': [
+    # harbor writes ATIF-style steps; map to the v3.1 published message format
+    messages, tools_used = [], set()
+    for s in t.get('steps', []):
+        obs = s.get('observation') or {}
+        for r in obs.get('results') or []:
+            messages.append({'role': 'tool', 'content': r.get('content', ''),
+                             'tool_call_id': r.get('source_call_id')})
+        if s.get('source') == 'user':
+            messages.append({'role': 'user', 'content': [
                 {'type': 'text', 'text': s.get('message', '')}]})
-    tools_used = sorted({b.get('name') for m in msgs if m.get('role') == 'assistant'
-                         for b in (m.get('content') or [])
-                         if isinstance(b, dict) and b.get('type') == 'tool_use'
-                         and b.get('name')})
+            continue
+        tc_out = []
+        for tc in s.get('tool_calls') or []:
+            tc_out.append({'id': tc.get('tool_call_id'), 'type': 'function',
+                           'function': {'name': tc.get('function_name'),
+                                        'arguments': tc.get('arguments') or {}}})
+            tools_used.add(tc.get('function_name'))
+        msg = {'role': 'assistant',
+               'content': ([{'type': 'text', 'text': s['message']}]
+                           if s.get('message') else None),
+               'reasoning_content': s.get('reasoning_content')}
+        if tc_out:
+            msg['tool_calls'] = tc_out
+        messages.append(msg)
     return {
         'agent': 'claude-code',
-        'agent_version': t.get('agent_version') or '2.1.260',
+        'agent_version': (t.get('agent') or {}).get('version', '2.1.260')
+                         if isinstance(t.get('agent'), dict) else '2.1.260',
         'model': model,
         'task': TASK,
-        'tools': t.get('tools', []),
-        'tools_used': tools_used,
-        'messages': msgs,
+        'tools': [{'type': 'function', 'function': {'name': n}}
+                  for n in sorted(tools_used)],
+        'tools_used': sorted(tools_used),
+        'messages': messages,
         'final_metrics': t.get('final_metrics'),
         'reward': None,
         'exception': False,
