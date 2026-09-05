@@ -86,7 +86,8 @@ rather than as a supported claim.
 
 | Component | Version |
 |---|---:|
-| `@earendil-works/pi-coding-agent` | `0.84.4` |
+| `@earendil-works/pi-coding-agent` | `0.85.0` |
+| `@earendil-works/pi-server` | `0.85.0` (see below) |
 | `agent-browser` | `0.35.0` |
 
 Extension forks and the upstream releases they are based on:
@@ -103,10 +104,21 @@ Extension forks and the upstream releases they are based on:
 `vendor.json` is the machine-readable version of this table and is what the tooling
 reads.
 
-Pi `0.84.4` ships upstream's fix for the stream half of the fragmented OpenAI-compatible
+`pi-server` is not a declared dependency of `pi-coding-agent` 0.85.0: its Bun
+entrypoint graph (`dist/bun/cli.js` → `dist/cli.js` → `dist/experimental/server.js`
+and `session-worker-manager.js`) imports `@earendil-works/pi-server` without listing it
+in `package.json` ([earendil-works/pi#9158](https://github.com/earendil-works/pi/issues/9158),
+fix pending in [#9170](https://github.com/earendil-works/pi/pull/9170)). The npm
+bundle entrypoint embeds the code, so npm installs work; the Bun path this setup's
+wrappers use resolves from `node_modules` and fails on every `pi` invocation. The
+installer therefore pins and installs `pi-server` at the matching version
+(`piServer` in `lib/versions.json`, checked by `bin/pi-setup-doctor`). Remove the
+pin once a published pi-coding-agent declares the dependency itself.
+
+Pi `0.85.0` ships upstream's fix for the stream half of the fragmented OpenAI-compatible
 `reasoning_details` regression, but still replays historical signatures unnormalized. The
 installer therefore applies
-[`patches/pi-ai@0.84.4-reasoning-details.patch`](patches/pi-ai@0.84.4-reasoning-details.patch)
+[`patches/pi-ai@0.85.0-reasoning-details.patch`](patches/pi-ai@0.85.0-reasoning-details.patch)
 after the version-pinned install. It wraps `parseOpenAIReasoningDetails` in the existing
 upstream merge helpers so adjacent text/summary entries are also normalized when replaying
 historical sessions, and already-affected transcripts no longer send token-fragmented

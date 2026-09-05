@@ -1,6 +1,7 @@
 {
-  "comment": "Pinned CLI versions. lib/install.mjs installs these; bin/pi-setup-doctor checks the installed copies against them. Do not duplicate them in install.sh.",
-  "pi": "0.84.4",
-  "piAi": "0.84.4",
+  "comment": "Pinned CLI versions. lib/install.mjs installs these; bin/pi-setup-doctor checks the installed copies against them. Do not duplicate them in install.sh. piServer is not a real upstream dependency of pi-coding-agent: 0.85.0 imports @earendil-works/pi-server from its Bun entrypoint graph (dist/bun/cli.js -> dist/cli.js -> dist/experimental/server.js and session-worker-manager.js) without declaring it in package.json. The npm bundle entrypoint embeds the code, so npm installs work; the Bun path this setup's wrappers use resolves from node_modules and fails without the package present. Remove this pin once a published pi-coding-agent declares pi-server itself.",
+  "pi": "0.85.0",
+  "piAi": "0.85.0",
+  "piServer": "0.85.0",
   "agentBrowser": "0.35.0"
 }

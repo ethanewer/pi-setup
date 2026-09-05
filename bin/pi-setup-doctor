@@ -489,6 +489,7 @@ BUN_GLOBAL="${BUN_INSTALL:-$HOME/.bun}/install/global/node_modules"
 PINNED_PI="$("$JS" -e 'process.stdout.write(String(require(process.argv[1] + "/lib/versions.json").pi ?? ""))' "$REPO_DIR")"
 PINNED_PI_AI="$("$JS" -e 'process.stdout.write(String(require(process.argv[1] + "/lib/versions.json").piAi ?? ""))' "$REPO_DIR")"
 PINNED_AB="$("$JS" -e 'process.stdout.write(String(require(process.argv[1] + "/lib/versions.json").agentBrowser ?? ""))' "$REPO_DIR")"
+PINNED_PI_SERVER="$("$JS" -e 'process.stdout.write(String(require(process.argv[1] + "/lib/versions.json").piServer ?? ""))' "$REPO_DIR")"
 pkg_version() { # pkg_version <package-dir>
   "$JS" -e '
 const { existsSync, readFileSync } = require("node:fs");
@@ -500,7 +501,15 @@ try { process.stdout.write(String(JSON.parse(readFileSync(path, "utf8")).version
 INSTALLED_PI="$(pkg_version "$BUN_GLOBAL/@earendil-works/pi-coding-agent")"
 INSTALLED_PI_AI="$(pkg_version "$BUN_GLOBAL/@earendil-works/pi-ai")"
 INSTALLED_AB="$(pkg_version "$BUN_GLOBAL/agent-browser")"
-for entry in "Pi|$PINNED_PI|$INSTALLED_PI" "Pi AI|$PINNED_PI_AI|$INSTALLED_PI_AI" "agent-browser|$PINNED_AB|$INSTALLED_AB"; do
+INSTALLED_PI_SERVER="$(pkg_version "$BUN_GLOBAL/@earendil-works/pi-server")"
+# pi-server is not a declared dependency of pi-coding-agent; it is pinned here because
+# pi 0.85.0 imports it from its Bun entrypoint graph (see lib/versions.json). An empty
+# pin is allowed while pi does not need it, but a pin without an install breaks every pi run.
+VERSION_ENTRIES=("Pi|$PINNED_PI|$INSTALLED_PI" "Pi AI|$PINNED_PI_AI|$INSTALLED_PI_AI" "agent-browser|$PINNED_AB|$INSTALLED_AB")
+if [[ -n "$PINNED_PI_SERVER" ]]; then
+  VERSION_ENTRIES+=("Pi Server|$PINNED_PI_SERVER|$INSTALLED_PI_SERVER")
+fi
+for entry in "${VERSION_ENTRIES[@]}"; do
   IFS='|' read -r NAME PINNED INSTALLED <<< "$entry"
   if [[ -z "$PINNED" ]]; then
     bad "could not read the $NAME version pinned in lib/versions.json"

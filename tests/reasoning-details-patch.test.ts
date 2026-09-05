@@ -3,7 +3,10 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
 
-const patchPath = join(import.meta.dir, "..", "patches", "pi-ai@0.84.4-reasoning-details.patch");
+const piAiVersion = JSON.parse(
+	readFileSync(join(import.meta.dir, "..", "lib", "versions.json"), "utf8"),
+).piAi;
+const patchPath = join(import.meta.dir, "..", "patches", `pi-ai@${piAiVersion}-reasoning-details.patch`);
 const patch = readFileSync(patchPath, "utf8");
 
 const installedPiAi = join(

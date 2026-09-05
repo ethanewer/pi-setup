@@ -20,7 +20,7 @@ test("every Bun entry point uses the operating system CA store", () => {
 
 test("installer applies the version-guarded Pi reasoning-details patch", () => {
 	const versions = JSON.parse(readFileSync(join(root, "lib", "versions.json"), "utf8"));
-	expect(versions.piAi).toBe("0.84.4");
+	expect(versions.piAi).toBe("0.85.0");
 	expect(installer).toContain("pi-ai@${versions.piAi}-reasoning-details.patch");
 	expect(installer).toContain("refusing to apply a version-specific patch");
 	expect(installer).toContain("patch --dry-run --batch --forward");
