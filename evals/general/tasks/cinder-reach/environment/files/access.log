@@ -1,0 +1,12 @@
+198.51.100.4 - alice [07/Jan/2025:09:12:03 +0000] "GET /index.html HTTP/1.1" 200 5120 34 "https://search.example/"
+203.0.113.9 - - [07/Jan/2025:09:12:05 +0000] "POST /api/login HTTP/1.1" 401 210 88 "-"
+198.51.100.4 - alice [07/Jan/2025:09:12:41 +0000] "GET /api/items HTTP/1.1" 200 8731 51 "-"
+203.0.113.9 - - [07/Jan/2025:09:13:02 +0000] "GET /api/items HTTP/1.1" 500 132 402 "-"
+192.0.2.77 - bob [07/Jan/2025:09:13:10 +0000] "GET /static/app.js HTTP/1.1" 304 - 12 "-"
+192.0.2.77 - bob [07/Jan/2025:09:13:55 +0000] "DELETE /api/items/42 HTTP/1.1" 204 0 45 "-"
+198.51.100.4 - alice [07/Jan/2025:09:14:19 +0000] "GET /api/items HTTP/1.1" 200 8731 47 "-"
+
+this line is completely malformed
+203.0.113.9 - - [07/Jan/2025:09:15:00 +0000] "GET /api/health HTTP/1.1" 200 15 3 "-"
+192.0.2.77 - bob [07/Jan/2025:09:15:31 +0000] "GET /reports HTTP/1.1" 302 0 9 "https://portal.example/"
+198.51.100.4 - carol [07/Jan/2025:09:16:44 +0000] "POST /api/orders HTTP/1.1" 201 341 120 "https://portal.example/cart"

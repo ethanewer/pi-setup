@@ -4,6 +4,17 @@ tasks/harbor-gasket/environment/files/releases/node-v20.19.3-linux-x64.tar.xz
 tasks/zephyr-orchid/environment/files/model/vosk_model.zip
 tasks/raven-orchid/environment/files/vosk-model/graph/Gr.fst
 tasks/raven-orchid/environment/files/vosk-model/graph/HCLr.fst
+
+# The repository-root .gitignore ignores `*.log` and `evals/**/results/` to keep
+# eval run artifacts out. Both patterns also match task fixture files, which are
+# benchmark inputs, not artifacts: 65 .log fixtures and 74 files inside
+# directories named results/. A fresh clone was missing all 139, which left
+# kiln-anchor and larch-vane with empty tests/hidden (every hidden case is a
+# series.log) and 145 provenance entries pointing at files that did not exist.
+# Re-include the task tree. The five large assets above stay ignored and are
+# listed first, so these negations cannot pull them back in.
+!tasks/**/results/
+!tasks/**/*.log
 # audit artifacts (generated, not source)
 specs/independence_report.json
 specs/similarity_report.json

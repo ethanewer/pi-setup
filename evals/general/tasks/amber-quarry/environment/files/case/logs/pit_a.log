@@ -1,0 +1,6 @@
+=== quarry pit A scheduler ===
+declare queue depth=6
+solve timeout=120s
+check: unsat-core retained for audit
+verdict: SATISFIABLE
+schedule written to slot 1
