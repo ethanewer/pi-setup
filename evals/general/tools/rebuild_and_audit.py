@@ -36,13 +36,14 @@ def main():
 
     # 2. derived specs
     run([py, 'tools/build_coverage.py'])
-    run([py, 'tools/build_difficulty.py', '--allow-unmeasured']
-        if False else [py, 'tools/build_difficulty.py'])
+    run([py, 'tools/build_difficulty.py'])
 
     # 3. provenance refresh (content freeze point)
     run([py, 'tools/update_provenance.py'])
 
     # 4. gates
+    run([py, 'tools/selftest_binary_reward.py'])
+    run([py, 'tools/check_binary_reward.py'])
     run([py, 'tools/check_general_coverage.py'])
     run([py, 'tools/check_tb21_coverage.py'])
     run([py, 'tools/lint_tasks.py'])

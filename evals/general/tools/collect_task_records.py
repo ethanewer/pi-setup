@@ -1,16 +1,23 @@
 #!/usr/bin/env python3
-"""Collect drift-canyon v3.2 harbor trials into the published record layout.
+"""Collect harbor trials for one task into the published record layout.
 
 Output: OUT/<harness>/<provider>/<model>/<task>/{metadata.json,trajectory.json,
         verifier/reward.txt, verifier/test-stdout.txt}
-matching the v3.1 format on HF exactly.
+matching the published format exactly, for use as an --overlay to
+tools/assemble_publish.py.
+
+Written for the v3.2 drift-canyon restoration and generalized since. It fails
+closed: a missing job, a missing trial, or a trial with no verifier/reward.txt
+is an error, not a skip. The original printed SKIP and carried on, and the
+original copy loop wrote reward.txt only `if src.exists()`, which is how records
+with no reward reached the published tree.
 """
-import json, os, re, sys
+import argparse, json, os, re, sys
 from pathlib import Path
 
-TASK = 'drift-canyon'
-JOBS = Path('/mnt/data/v32-jobs')
-OUT = Path('/mnt/data/v32-stage')
+DEFAULT_TASK = 'drift-canyon'
+DEFAULT_JOBS = Path('/mnt/data/v32-jobs')
+DEFAULT_OUT = Path('/mnt/data/v32-stage')
 
 PAIRS = {
     'pi-glm-v32':     ('pi',         'z-ai/glm-5.3-flash',                'openrouter/z-ai/glm-5.3-flash'),
@@ -64,10 +71,10 @@ PI_TOOLS = [
 ]
 
 
-def trial_dir(job: Path) -> Path:
-    cands = sorted(job.glob('*/drift-canyon__*/result.json'))
+def trial_dir(job: Path, task: str) -> Path:
+    cands = sorted(job.glob(f'*/{task}__*/result.json'))
     if not cands:
-        raise SystemExit(f'no trial under {job}')
+        raise FileNotFoundError(f'no {task} trial under {job}')
     return cands[-1].parent
 
 
@@ -197,15 +204,34 @@ def norm_claude(trial: Path, model: str):
 
 
 def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument('--task', default=DEFAULT_TASK)
+    ap.add_argument('--jobs', type=Path, default=DEFAULT_JOBS)
+    ap.add_argument('--out', type=Path, default=DEFAULT_OUT)
+    ap.add_argument('--allow-missing', action='store_true',
+                    help='downgrade a missing job/trial to a warning; the '
+                         'assemble step still refuses to publish the gap')
+    args = ap.parse_args()
+    TASK, JOBS, OUT = args.task, args.jobs, args.out
+
+    errors, written = [], 0
     for jobname, (harness, model_plain, model_meta) in PAIRS.items():
         job = JOBS / jobname
         if not job.exists():
-            print(f'SKIP {jobname} (missing)')
+            msg = f'{jobname}: job directory missing ({job})'
+            if args.allow_missing:
+                print('WARN ' + msg)
+            else:
+                errors.append(msg)
             continue
         try:
-            trial = trial_dir(job)
-        except SystemExit as e:
-            print('SKIP', e)
+            trial = trial_dir(job, TASK)
+        except FileNotFoundError as e:
+            msg = f'{jobname}: {e}'
+            if args.allow_missing:
+                print('WARN ' + msg)
+            else:
+                errors.append(msg)
             continue
         res = json.loads((trial / 'result.json').read_text())
         exc = (res.get('exception_info') or {}).get('exception_type') or ''
@@ -228,13 +254,35 @@ def main():
             'reward': reward, 'agent_timeout': agent_timeout,
             'source_trial': trial.name}, indent=1) + '\n')
         (dest / 'trajectory.json').write_text(json.dumps(traj, indent=1))
+        # both verifier artifacts are mandatory: a record without reward.txt is
+        # unscoreable and must never be staged for publish
         for f in ('reward.txt', 'test-stdout.txt'):
             src = trial / 'verifier' / f
-            if src.exists():
-                (dest / 'verifier' / f).write_bytes(src.read_bytes())
+            if not src.exists():
+                errors.append(f'{jobname}: trial has no verifier/{f} ({trial})')
+                continue
+            (dest / 'verifier' / f).write_bytes(src.read_bytes())
+        rp = dest / 'verifier/reward.txt'
+        if rp.exists():
+            try:
+                val = float(rp.read_text().strip())
+            except ValueError:
+                val = None
+            if val not in (0.0, 1.0):
+                errors.append(f'{jobname}: reward {rp.read_text().strip()!r} is '
+                              f'not binary (0 or 1)')
+        written += 1
         print(f'{jobname:16s} -> {dest.relative_to(OUT)}  reward={reward} '
               f'timeout={agent_timeout} msgs={len(traj["messages"])}')
 
+    print(f'\nstaged {written}/{len(PAIRS)} pairs for task {TASK}')
+    if errors:
+        print(f'ERRORS: {len(errors)}')
+        for e in errors:
+            print('  ', e)
+        return 1
+    return 0
+
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main())
