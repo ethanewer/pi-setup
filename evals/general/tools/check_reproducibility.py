@@ -30,13 +30,38 @@ def sha_file(p: Path) -> str:
     return h.hexdigest()
 
 
+def declared_large_assets():
+    """repo_path -> sha256 for the >20MB fixtures that are fetched on demand.
+
+    These are gitignored and recorded in specs/large_assets.json, so a fresh
+    clone legitimately does not have them. Treating their absence as drift made
+    this gate fail on every clean checkout until 1.1 GB of fixtures had been
+    downloaded. Absence is expected; a present file must still match, and the
+    two specs must agree on the hash.
+    """
+    p = ROOT / 'specs/large_assets.json'
+    if not p.exists():
+        return {}
+    try:
+        data = json.loads(p.read_text())
+    except Exception as e:
+        print(f'ERROR specs/large_assets.json unparseable: {e}')
+        return None
+    return {a['repo_path']: a.get('sha256') for a in data.get('assets', [])
+            if a.get('repo_path')}
+
+
 def content_freeze() -> int:
     prov_path = ROOT / 'specs/provenance.json'
     if not prov_path.exists():
         print('ERROR specs/provenance.json missing (run tools/update_provenance.py)')
         return 1
     prov = json.loads(prov_path.read_text()).get('task_files', {})
+    large = declared_large_assets()
+    if large is None:
+        return 1
     problems = []
+    notes = []
     seen = set()
     for sub in OWNED:
         base = ROOT / sub
@@ -57,12 +82,33 @@ def content_freeze() -> int:
             if entry is None:
                 problems.append(f'no provenance entry: {rel}')
                 continue
-            if entry.get('sha256') != sha_file(p):
+            actual = sha_file(p)
+            if entry.get('sha256') != actual:
                 problems.append(f'hash drift since freeze: {rel}')
+            # a fetched large asset must also match the published digest
+            if rel in large and large[rel] and large[rel] != actual:
+                problems.append(f'large asset does not match specs/large_assets.json '
+                                f'sha256: {rel}')
     for rel in prov:
-        if rel not in seen and rel.startswith(OWNED):
-            problems.append(f'provenance entry for deleted file: {rel}')
-    print(f'checked={len(seen)} drift_problems={len(problems)}')
+        if rel in seen or not rel.startswith(OWNED):
+            continue
+        if rel in large:
+            notes.append(f'large asset not fetched (expected on a fresh clone): {rel}')
+            continue
+        problems.append(f'provenance entry for deleted file: {rel}')
+    # the two specs must agree on every declared asset that is pinned
+    for rel, digest in sorted(large.items()):
+        entry = prov.get(rel)
+        if entry is None:
+            problems.append(f'specs/large_assets.json declares {rel} but it has no '
+                            f'provenance entry')
+        elif digest and entry.get('sha256') != digest:
+            problems.append(f'provenance and large_assets.json disagree on {rel}: '
+                            f'{entry.get("sha256")} vs {digest}')
+    print(f'checked={len(seen)} drift_problems={len(problems)} '
+          f'large_assets_declared={len(large)} not_fetched={len(notes)}')
+    for n in notes:
+        print('NOTE', n)
     for p in problems[:60]:
         print('ERROR', p)
     return 1 if problems else 0
