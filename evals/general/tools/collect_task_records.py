@@ -1,24 +1,34 @@
 #!/usr/bin/env python3
-"""Collect harbor trials for one task into the published record layout.
+"""Collect harbor trials into the published record layout.
 
 Output: OUT/<harness>/<provider>/<model>/<task>/{metadata.json,trajectory.json,
         verifier/reward.txt, verifier/test-stdout.txt}
 matching the published format exactly, for use as an --overlay to
 tools/assemble_publish.py.
 
-Written for the v3.2 drift-canyon restoration and generalized since. It fails
-closed: a missing job, a missing trial, or a trial with no verifier/reward.txt
-is an error, not a skip. The original printed SKIP and carried on, and the
-original copy loop wrote reward.txt only `if src.exists()`, which is how records
-with no reward reached the published tree.
+Jobs are named on the command line so any run can be collected, not just the v3.2
+drift-canyon restoration this started as:
+
+  --job v33-pi-glm:pi:z-ai/glm-5.3-flash:openrouter/z-ai/glm-5.3-flash
+
+The four fields are job-name:harness:model-in-the-path:model-in-metadata. Harbor
+keeps the whole -m string for claude-code, so its metadata model is the bare
+OpenRouter slug while pi and terminus-2 carry the openrouter/ prefix.
+
+Every task found in a job is collected unless --task narrows it. It fails closed:
+a missing job, a job with no trials, or a trial with no verifier/reward.txt is an
+error, not a skip. The original printed SKIP and carried on, and its copy loop
+wrote reward.txt only `if src.exists()`, which is how records with no reward
+reached the published tree.
 """
 import argparse, json, os, re, sys
 from pathlib import Path
 
-DEFAULT_TASK = 'drift-canyon'
-DEFAULT_JOBS = Path('/mnt/data/v32-jobs')
-DEFAULT_OUT = Path('/mnt/data/v32-stage')
+DEFAULT_JOBS = Path('/home/ee/general-eval-runs/jobs')
+DEFAULT_OUT = Path('/tmp/v33-stage')
 
+# The v3.2 drift-canyon jobs, kept as the default so the historical invocation
+# still works without arguments.
 PAIRS = {
     'pi-glm-v32':     ('pi',         'z-ai/glm-5.3-flash',                'openrouter/z-ai/glm-5.3-flash'),
     'pi-ds-v32':      ('pi',         'deepseek/deepseek-v4-flash-0731',   'openrouter/deepseek/deepseek-v4-flash-0731'),
@@ -71,11 +81,20 @@ PI_TOOLS = [
 ]
 
 
-def trial_dir(job: Path, task: str) -> Path:
-    cands = sorted(job.glob(f'*/{task}__*/result.json'))
-    if not cands:
-        raise FileNotFoundError(f'no {task} trial under {job}')
-    return cands[-1].parent
+def trial_dirs_by_task(job: Path, only_tasks=None):
+    """Map task -> latest finished trial dir under a harbor job.
+
+    Harbor writes `<task>__<id>/` trial directories. Several attempts at one task
+    can exist, so the last by name wins, matching collect_run.py.
+    """
+    best = {}
+    for rp in sorted(job.glob('*__*/result.json')):
+        td = rp.parent
+        task = td.name.split('__')[0]
+        if only_tasks and task not in only_tasks:
+            continue
+        best[task] = td          # sorted() => later attempt overwrites
+    return best
 
 
 def norm_pi(trial: Path, model: str):
@@ -203,19 +222,43 @@ def norm_claude(trial: Path, model: str):
     }
 
 
+def parse_job_spec(spec):
+    """`jobname:harness:model-in-path:model-in-metadata` -> tuple.
+
+    The model strings contain slashes but never colons, so split from the left
+    into exactly four fields.
+    """
+    parts = spec.split(':')
+    if len(parts) != 4 or not all(parts):
+        raise SystemExit(
+            f'--job expects jobname:harness:model:model_meta, got {spec!r}')
+    return tuple(parts)
+
+
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument('--task', default=DEFAULT_TASK)
-    ap.add_argument('--jobs', type=Path, default=DEFAULT_JOBS)
+    ap.add_argument('--job', action='append', default=[], metavar='SPEC',
+                    help='jobname:harness:model:model_meta; repeatable. '
+                         'Defaults to the historical v3.2 drift-canyon pairs.')
+    ap.add_argument('--task', action='append', default=[],
+                    help='collect only these tasks (repeatable); default is all')
+    ap.add_argument('--jobs', type=Path, default=DEFAULT_JOBS,
+                    help='directory holding the harbor job dirs')
     ap.add_argument('--out', type=Path, default=DEFAULT_OUT)
     ap.add_argument('--allow-missing', action='store_true',
                     help='downgrade a missing job/trial to a warning; the '
                          'assemble step still refuses to publish the gap')
     args = ap.parse_args()
-    TASK, JOBS, OUT = args.task, args.jobs, args.out
+    JOBS, OUT = args.jobs, args.out
+    only = set(args.task) or None
+
+    if args.job:
+        pairs = {parse_job_spec(s)[0]: parse_job_spec(s)[1:] for s in args.job}
+    else:
+        pairs = PAIRS
 
     errors, written = [], 0
-    for jobname, (harness, model_plain, model_meta) in PAIRS.items():
+    for jobname, (harness, model_plain, model_meta) in pairs.items():
         job = JOBS / jobname
         if not job.exists():
             msg = f'{jobname}: job directory missing ({job})'
@@ -224,58 +267,66 @@ def main():
             else:
                 errors.append(msg)
             continue
-        try:
-            trial = trial_dir(job, TASK)
-        except FileNotFoundError as e:
-            msg = f'{jobname}: {e}'
+        found = trial_dirs_by_task(job, only)
+        if not found:
+            msg = f'{jobname}: no trials found under {job}' + \
+                  (f' matching {sorted(only)}' if only else '')
             if args.allow_missing:
                 print('WARN ' + msg)
             else:
                 errors.append(msg)
             continue
-        res = json.loads((trial / 'result.json').read_text())
-        exc = (res.get('exception_info') or {}).get('exception_type') or ''
-        agent_timeout = 'Timeout' in exc
-        if 'Timeout' in exc and 'Verifier' in exc:
-            agent_timeout = False
-        reward = res.get('verifier_result', {}).get('rewards', {}).get('reward')
-        if harness == 'pi':
-            traj = norm_pi(trial, model_meta)
-        elif harness == 'terminus-2':
-            traj = norm_t2(trial, model_meta)
-        else:
-            traj = norm_claude(trial, model_plain)
-        traj['reward'] = reward
-        traj['exception'] = bool(exc) and not agent_timeout
-        dest = OUT / harness / model_plain / TASK
-        (dest / 'verifier').mkdir(parents=True, exist_ok=True)
-        (dest / 'metadata.json').write_text(json.dumps({
-            'task': TASK, 'agent': harness, 'model': model_meta,
-            'reward': reward, 'agent_timeout': agent_timeout,
-            'source_trial': trial.name}, indent=1) + '\n')
-        (dest / 'trajectory.json').write_text(json.dumps(traj, indent=1))
-        # both verifier artifacts are mandatory: a record without reward.txt is
-        # unscoreable and must never be staged for publish
-        for f in ('reward.txt', 'test-stdout.txt'):
-            src = trial / 'verifier' / f
-            if not src.exists():
-                errors.append(f'{jobname}: trial has no verifier/{f} ({trial})')
-                continue
-            (dest / 'verifier' / f).write_bytes(src.read_bytes())
-        rp = dest / 'verifier/reward.txt'
-        if rp.exists():
+        for TASK in sorted(found):
+            trial = found[TASK]
+            res = json.loads((trial / 'result.json').read_text())
+            exc = (res.get('exception_info') or {}).get('exception_type') or ''
+            agent_timeout = 'Timeout' in exc
+            if 'Timeout' in exc and 'Verifier' in exc:
+                agent_timeout = False
+            reward = res.get('verifier_result', {}).get('rewards', {}).get('reward')
             try:
-                val = float(rp.read_text().strip())
-            except ValueError:
-                val = None
-            if val not in (0.0, 1.0):
-                errors.append(f'{jobname}: reward {rp.read_text().strip()!r} is '
-                              f'not binary (0 or 1)')
-        written += 1
-        print(f'{jobname:16s} -> {dest.relative_to(OUT)}  reward={reward} '
-              f'timeout={agent_timeout} msgs={len(traj["messages"])}')
+                if harness == 'pi':
+                    traj = norm_pi(trial, model_meta)
+                elif harness == 'terminus-2':
+                    traj = norm_t2(trial, model_meta)
+                else:
+                    traj = norm_claude(trial, model_plain)
+            except Exception as e:
+                errors.append(f'{jobname}/{TASK}: trajectory normalization failed: {e}')
+                continue
+            traj['reward'] = reward
+            traj['exception'] = bool(exc) and not agent_timeout
+            dest = OUT / harness / model_plain / TASK
+            (dest / 'verifier').mkdir(parents=True, exist_ok=True)
+            (dest / 'metadata.json').write_text(json.dumps({
+                'task': TASK, 'agent': harness, 'model': model_meta,
+                'reward': reward, 'agent_timeout': agent_timeout,
+                'source_trial': trial.name}, indent=1) + '\n')
+            (dest / 'trajectory.json').write_text(json.dumps(traj, indent=1))
+            # both verifier artifacts are mandatory: a record without reward.txt
+            # is unscoreable and must never be staged for publish
+            for f in ('reward.txt', 'test-stdout.txt'):
+                src = trial / 'verifier' / f
+                if not src.exists():
+                    errors.append(f'{jobname}/{TASK}: trial has no verifier/{f} '
+                                  f'({trial})')
+                    continue
+                (dest / 'verifier' / f).write_bytes(src.read_bytes())
+            rp = dest / 'verifier/reward.txt'
+            if rp.exists():
+                raw = rp.read_text().strip()
+                try:
+                    val = float(raw.splitlines()[-1]) if raw else None
+                except ValueError:
+                    val = None
+                if val not in (0.0, 1.0):
+                    errors.append(f'{jobname}/{TASK}: reward {raw!r} is not '
+                                  f'binary (0 or 1)')
+            written += 1
+            print(f'{jobname:16s} {TASK:22s} reward={reward} '
+                  f'timeout={agent_timeout} msgs={len(traj["messages"])}')
 
-    print(f'\nstaged {written}/{len(PAIRS)} pairs for task {TASK}')
+    print(f'\nstaged {written} records from {len(pairs)} jobs into {OUT}')
     if errors:
         print(f'ERRORS: {len(errors)}')
         for e in errors:
