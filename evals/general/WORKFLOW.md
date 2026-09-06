@@ -1,11 +1,14 @@
 # General Eval — Build & Verification Workflow
 
-786 Harbor tasks for training and evaluating coding agents. Covers the full
-Terminal-Bench 2.1 competency space (726 atomic competencies, 723 covered,
-1 waived as environmentally infeasible, 2 currently uncovered following the
-removal of two broken tasks in v3.1) plus 271 supplementary general-coding
-tasks (v1 family) and 21 supplementary clean-room skill-coverage tasks.
-Zero contamination with Terminal-Bench 2.1 — verified by byte-level audit.
+787 Harbor tasks for training and evaluating coding agents. Covers the full
+Terminal-Bench 2.1 competency space (726 atomic competencies, 725 covered,
+1 waived as environmentally infeasible, 0 uncovered) plus 271 supplementary
+general-coding tasks (v1 family) and 20 supplementary clean-room skill-coverage
+tasks. Zero contamination with Terminal-Bench 2.1, verified by byte-level audit.
+
+Every verifier writes a binary reward: `/logs/verifier/reward.txt` contains
+exactly `1` or `0`. `tools/check_binary_reward.py` proves this statically for
+all 787 tasks and runs in the gate pipeline, so partial credit cannot come back.
 
 ## Dataset composition
 
@@ -13,8 +16,8 @@ Zero contamination with Terminal-Bench 2.1 — verified by byte-level audit.
 |---|---|---|
 | v2/v3 clean-room | 496 | Authored to cover tb2.1 competencies without containing any tb2.1 content |
 | v1 filtered | 271 | General coding tasks (Nemotron/TMax seeds); filtered for verifier quality |
-| Supplementary skill tasks | 21 | Clean-room tasks exercising skill domains not covered by the rest of the suite (see the 2026-09-02 additions below) |
-| **Total** | **786** | Two further skill tasks (cinder-hearth, drift-canyon) were removed in v3.1: unbuildable image and missing hidden fixtures respectively |
+| Supplementary skill tasks | 20 | Clean-room tasks exercising skill domains not covered by the rest of the suite (see the 2026-09-02 additions below) |
+| **Total** | **787** | 21 skill tasks were authored; cinder-hearth was removed in v3.1 (unbuildable image behind a network proxy). drift-canyon was removed at the same time for a lost hidden fixture, then restored in v3.1 once the fixture was recreated, so it is counted here |
 
 v1 filtering removed 245 tasks with weak verifiers (no deliverable execution)
 and 8 tasks with tb2.1 contamination (block/n-gram overlap). The v1 family is
@@ -79,13 +82,45 @@ All gates run via `tools/rebuild_and_audit.sh` or individually:
 
 | Gate | Tool | Result |
 |---|---|---|
-| Layout & contract lint | `tools/lint_tasks.py` | 515 clean-room tasks, 0 problems (271 legacy v1 skipped by design) |
-| Competency coverage | `tools/check_tb21_coverage.py` | 723/726 covered, 1 waived-infeasible, 2 uncovered after v3.1 removals |
-| Difficulty calibration | `tools/check_difficulty.py` | mirrors coverage gate (--allow-unmeasured) |
-| Provenance | `tools/update_provenance.py` + `check_reproducibility.py` | ~12,500 files, 0 drift |
+| Reward binarity | `tools/check_binary_reward.py` | 787/787 provably binary, 0 problems |
+| Reward binarity self-test | `tools/selftest_binary_reward.py` | 23/23 fixtures (12 fractional shapes flagged, 11 binary shapes passed) |
+| Layout & contract lint | `tools/lint_tasks.py` | 516 clean-room tasks, 0 problems (271 legacy v1 skipped by design) |
+| Competency coverage | `tools/check_tb21_coverage.py` | 725/726 covered, 1 waived-infeasible, 0 problems |
+| Difficulty calibration | `tools/check_difficulty.py` | 516 measured (49 easy / 251 medium / 216 hard), 0 problems; the 271 v1 tasks carry no rubric, hence `--allow-unmeasured` |
+| Provenance | `tools/update_provenance.py` + `check_reproducibility.py` | 12,495 files, 0 drift |
+| General inventory | `tools/check_general_coverage.py` | not-retained (decision D1), 0 errors |
 | Independence audit | `tools/audit_independence_stream.py` | **Clean**: exact=0, block=0, ngram=0, canary=0, repo=0 |
 | Similarity triage | `tools/check_task_similarity.py` | flagged pairs cleared by two-reviewer blind triage (boilerplate/API-signature overlaps; no direct recipes) |
 | Suite report | `tools/suite_report.py` | see `private-audit/reports/suite_report.json` |
+
+The independence audit, similarity triage, reference freeze and suite report all
+need the frozen tb2.1 checkout named in `specs/frozen_reference.json`. They
+cannot run on a clone that does not have it; pass the path as
+`bash tools/rebuild_and_audit.sh /path/to/original-tasks`.
+
+### Reward binarity
+
+The contract is that `reward.txt` is `1` or `0`. It was documented but never
+enforced, so 45 verifiers shipped partial credit: 41 `v1-item-*`, 3 `v1-skill-*`
+and one clean-room task (`zephyr-bridge`, a weighted 0.5 visible + 0.25 per
+hidden case accumulator). `v1-item-035-main` could even write `1.25`.
+
+`tools/check_binary_reward.py` proves binarity statically rather than by
+pattern-matching for suspicious arithmetic. Per task it builds the reward value
+cone: the expressions written to `reward.txt`, every assignment to a variable
+that reaches it, and the stdout of any command substitution or heredoc whose
+output is captured into it. Shell and embedded python are audited as separate
+scopes, because a heredoc computing `reward = passes / total` for python has
+nothing to do with the shell variable that captures that interpreter's stdout.
+A helper run only for its exit code contributes nothing, so its `%.4f`
+diagnostics are not mistaken for fractional rewards.
+
+All 45 were fixed by binarizing at full credit: the reward is now `1` exactly
+where the old scoring produced `1.0` or more, and `0` everywhere else. Graded
+ladders had their partial tiers set to `0`; computed fractions are wrapped at
+the write, so the internal computation and its diagnostics survive. The pass
+set is unchanged, which is what makes already-published records rescorable
+without re-running any model.
 
 ### Independence audit detail
 
@@ -108,8 +143,8 @@ labels relative to the suite ROOT, so it survives directory renames.
 
 Two tasks were authored for the three remaining uncovered competencies
 (the fourth, C-c65bea8a kernel rebuild + QEMU/KVM boot, is environmentally
-infeasible on Docker-on-macOS and carries a documented waiver in
-`private-audit/infeasible/kernel-rebuild.json`):
+infeasible and carries a permanent waiver in the tracked
+`specs/infeasible_waivers.json`):
 
 - **amber-engine** (C-6f29d769): multi-service interactive negotiation.
   Four Flask microservices (coordinator desk + three colleague phones),
@@ -125,7 +160,7 @@ infeasible on Docker-on-macOS and carries a documented waiver in
   battery of shapes in both gate and no-gate modes (B=1, S=1, D=1, odd
   non-power-of-two D) at rtol=1e-4/atol=1e-6, plus static inspection that
   fails on any `tl.sum`/`.sum(`/built-in `sum` or torch/numpy/math inside
-  kernel bodies — reductions must be explicit `tl` ops.
+  kernel bodies, since reductions must be explicit `tl` ops.
 
 Also completed the two in-flight tasks **kiln-anchor** and **larch-vane**
 (their verifiers required `tests/hidden` fixtures that had never been
@@ -176,17 +211,68 @@ Every task's oracle solution was run from a pristine container. The original
 each passed their own oracle during authoring. A spot-check of 17
 WIP-touched tasks passed 17/17 (1 fixed: brisk-kiln ctl.sh syntax bug).
 
+The 45 verifiers binarized for the reward contract have not been oracle-swept
+again; that needs harbor, which is not installed on every machine that clones
+this repo. The change is safe by construction rather than by re-test: each one
+now writes `1` exactly where the previous scoring produced `1.0` or more, so
+the full-credit condition is untouched and only the partial tiers collapsed to
+`0`. `bash -n` and a python compile of every embedded heredoc pass on all 45.
+Re-run `tools/collect_oracle_results.py` over those 45 before the next publish
+if you want the sweep on record.
+
 ## Model benchmarks
 
-Original v2 suite (204 tasks) on `openrouter/z-ai/glm-5.3-flash`:
+Six harness/model pairs over all 787 tasks, rescored under the binary reward
+contract from the published v3.2 records. `unscored` counts records that shipped
+with no `verifier/reward.txt` and therefore need a re-run before these numbers
+are final; they are excluded from the denominator.
 
-| Agent | Score |
-|---|---|
-| claude-code | 146/204 = 0.716 |
-| terminus-2 | 141/204 = 0.691 |
-| pi (PAgent) | 136/204 = 0.667 |
+| Harness | Model | Pass | Scored | Rate | Unscored |
+|---|---|---|---|---|---|
+| pi | z-ai/glm-5.3-flash | 648 | 779 | 0.8318 | 8 |
+| claude-code | z-ai/glm-5.3-flash | 646 | 785 | 0.8229 | 2 |
+| claude-code | deepseek/deepseek-v4-flash-0731 | 639 | 786 | 0.8130 | 1 |
+| terminus-2 | z-ai/glm-5.3-flash | 638 | 787 | 0.8107 | 0 |
+| pi | deepseek/deepseek-v4-flash-0731 | 634 | 781 | 0.8118 | 6 |
+| terminus-2 | deepseek/deepseek-v4-flash-0731 | 594 | 782 | 0.7596 | 5 |
 
-Full results archived in HF dataset `eewer/general-agent-bench-results`.
+Every reward is now `0` or `1`, so the pass count and the total reward are the
+same number and the rate is a true pass rate. Before the fix these were means
+over fractional rewards, which inflated each pair by 0.32 to 0.62 percentage
+points and up to 4.90 reward points.
+
+Historical, for continuity only: the original 204-task v2 suite on
+`openrouter/z-ai/glm-5.3-flash` scored claude-code 146/204 = 0.716,
+terminus-2 141/204 = 0.691, pi (PAgent) 136/204 = 0.667.
+
+## Publishing results
+
+Run records live in the HF dataset `eewer/general-agent-bench-results` under
+`<version>/<harness>/<provider>/<model>/<task>/`, with `metadata.json`,
+`trajectory.json`, `verifier/reward.txt` and `verifier/test-stdout.txt`.
+
+- `tools/collect_task_records.py` normalizes harbor trials for one task into
+  that layout, for use as an overlay. It fails closed on a missing job, a
+  missing trial, or a trial with no `verifier/reward.txt`.
+- `tools/rescore_binary.py` remaps fractional published rewards to binary
+  (`1` iff the old value was `>= 1.0`) with no model involvement, and reports
+  which records cannot be rescored because no reward was ever written.
+- `tools/assemble_publish.py` carries a previous tree forward, applies
+  overlays, then validates the result and writes the aggregates. It refuses to
+  publish unless every pair covers every suite task, every record has all four
+  files, and every reward is exactly `0` or `1`. It writes one `results.json`
+  per pair plus a top-level `summary.json`, and stages the audit bundle.
+
+The v3.2 publish predates that tooling and shows why it exists. It reported
+itself complete while 22 records had no `verifier/reward.txt`, it shipped no
+`results.json` for any pair, and the one aggregate it inherited from v3.1 for
+claude-code/glm said `647.50` where the reward files sum to `648.50`.
+
+When reading the dataset back, do not use the `siblings` array from
+`/api/datasets/<id>`. On this repo it returns 62,787 of 68,064 files and drops
+whole subtrees silently, which makes an entire harness/model pair look missing.
+Walk `/api/datasets/<id>/tree/<rev>?recursive=true` and follow the `rel="next"`
+link header instead.
 
 ## Large assets
 
