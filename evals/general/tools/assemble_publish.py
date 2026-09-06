@@ -143,7 +143,8 @@ def audit(out: Path, tasks, pairs_expected):
     return problems, stats
 
 
-def write_aggregates(out: Path, version: str, tasks, stats, suite_root: Path):
+def write_aggregates(out: Path, version: str, tasks, stats, suite_root: Path,
+                     notes=(), sources=()):
     """Write the per-pair results.json and the top-level summary.json."""
     n = len(tasks)
     for pair, s in sorted(stats.items()):
@@ -190,6 +191,12 @@ def write_aggregates(out: Path, version: str, tasks, stats, suite_root: Path):
         ],
         'unscoreable_records': {p: s['unscoreable'] for p, s in sorted(stats.items())
                                 if s['unscoreable']},
+        # what this version changed, and which trees it was built from. v3.2
+        # shipped a summary with no aggregates and no account of its own
+        # provenance, so nobody could tell afterwards which records were carried
+        # over and which were new.
+        'notes': list(notes),
+        'sources': list(sources),
     }
     (out / 'summary.json').write_text(json.dumps(summary, indent=1) + '\n')
     return summary
@@ -206,6 +213,8 @@ def main() -> int:
                     default=Path(__file__).resolve().parents[1])
     ap.add_argument('--report-only', action='store_true',
                     help='validate --out in place and write nothing')
+    ap.add_argument('--note', action='append', default=[], metavar='TEXT',
+                    help='provenance line for summary.json; repeatable')
     args = ap.parse_args()
 
     if not args.out:
@@ -259,7 +268,9 @@ def main() -> int:
                 print(f'      {label}: {len(s[label])} {shown}{more}')
 
     if not args.report_only and not problems:
-        summary = write_aggregates(args.out, args.version, tasks, stats, args.suite_root)
+        summary = write_aggregates(args.out, args.version, tasks, stats,
+                                   args.suite_root, notes=args.note,
+                                   sources=[str(d) for d in sources])
         # stage the audit bundle that is available locally. These are gitignored
         # generated artifacts, so a clone that never ran the audits ships without
         # them; say so instead of quietly publishing a tree with no audit trail.
