@@ -16,10 +16,8 @@ Enforces:
 import hashlib, json, re, sys
 from pathlib import Path
 
-try:
-    import tomllib
-except ImportError:
-    tomllib = None
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import _toml_compat
 
 ROOT = Path(__file__).resolve().parents[1]
 CATEGORIES = {'programming', 'debugging', 'data_processing', 'data_science',
@@ -34,9 +32,7 @@ RUBRIC_KEYS = {'dependent_stages', 'tool_breadth', 'reasoning_depth',
 
 
 def read_toml(p: Path):
-    if tomllib:
-        return tomllib.loads(p.read_text())
-    raise RuntimeError('tomllib unavailable')
+    return _toml_compat.loads(p.read_text())
 
 
 def sha(b: bytes) -> str:

@@ -53,17 +53,13 @@ def main() -> int:
     inv = json.loads((ROOT / 'specs/tb21_competencies.json').read_text())
     cov = json.loads((ROOT / 'specs/coverage.json').read_text())
     matrix = cov['matrix']
-    # documented environmentally-infeasible competencies are waived
-    infeasible_ids = set()
-    infeas_dir = ROOT / 'private-audit/infeasible'
-    if infeas_dir.exists():
-        import glob as _glob
-        for f in _glob.glob(str(infeas_dir / '*.json')):
-            try:
-                infeasible_ids |= set(json.loads(Path(f).read_text())
-                                      .get('competencies', []))
-            except Exception:
-                pass
+    # documented environmentally-infeasible competencies are waived. Same
+    # loader as check_tb21_coverage.py so the two gates cannot disagree, and it
+    # reads the tracked specs/infeasible_waivers.json, so a fresh clone with no
+    # private-audit/ still reaches the right verdict.
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from check_tb21_coverage import load_infeasible
+    infeasible_ids = load_infeasible(ROOT)
     for c in inv['competencies']:
         cid = c['id']
         if cid in infeasible_ids:

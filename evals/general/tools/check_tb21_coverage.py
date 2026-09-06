@@ -3,8 +3,8 @@
 
 Failures (hard):
   - missing reference competency (inventory id with no covering task),
-    except competencies documented environmentally infeasible in
-    private-audit/infeasible/*.json
+    except competencies waived in specs/infeasible_waivers.json (tracked) or
+    private-audit/infeasible/*.json (local only)
   - competency mapped only to tasks that do not exercise it
   - missing verifier evidence
   - no covering task at the competency's difficulty floor, unless the
@@ -25,28 +25,15 @@ on any hard problem.
 import glob, json, re, sys
 from pathlib import Path
 
-try:
-    import tomllib
-except ImportError:
-    tomllib = None
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import _toml_compat
 
 ROOT = Path(__file__).resolve().parents[1]
 DIFF_ORDER = {'easy': 0, 'medium': 1, 'hard': 2}
 
 
 def read_toml(p: Path) -> dict:
-    if tomllib:
-        return tomllib.loads(p.read_text())
-    data, section = {}, None
-    for line in p.read_text().splitlines():
-        s = line.strip()
-        if s.startswith('['):
-            section = s.strip('[]')
-            data.setdefault(section, {})
-        elif '=' in s and section:
-            k, _, v = s.partition('=')
-            data[section][k.strip()] = v.strip().strip('"')
-    return data
+    return _toml_compat.loads(p.read_text())
 
 
 def slug(s: str) -> str:
@@ -58,7 +45,29 @@ def words(s: str) -> set:
 
 
 def load_infeasible(root: Path) -> set:
+    """Competency IDs waived as environmentally infeasible.
+
+    The tracked copy in specs/infeasible_waivers.json is authoritative so the
+    gate reaches the same verdict on any clone. private-audit/infeasible/*.json
+    is gitignored and may only add to the set, never be its sole source.
+    """
     ids = set()
+    spec = root / 'specs/infeasible_waivers.json'
+    if spec.exists():
+        try:
+            data = json.loads(spec.read_text())
+        except Exception as e:
+            raise SystemExit(f'specs/infeasible_waivers.json is not valid JSON: {e}')
+        for w in data.get('waivers', []):
+            cid = w.get('competency')
+            if not cid:
+                raise SystemExit('specs/infeasible_waivers.json: waiver without a "competency" id')
+            if w.get('reason') != 'environmentally-infeasible':
+                raise SystemExit(f'specs/infeasible_waivers.json: {cid} reason must be '
+                                 f'"environmentally-infeasible", got {w.get("reason")!r}')
+            if not w.get('blocking_constraint'):
+                raise SystemExit(f'specs/infeasible_waivers.json: {cid} needs a blocking_constraint')
+            ids.add(cid)
     d = root / 'private-audit/infeasible'
     if d.exists():
         for f in glob.glob(str(d / '*.json')):
@@ -103,6 +112,9 @@ def main() -> int:
 
     # documented environmentally-infeasible competencies are waived
     infeasible = load_infeasible(ROOT)
+    unknown_waivers = sorted(infeasible - set(comps))
+    for cid in unknown_waivers:
+        problems.append(f'waiver names a competency absent from the inventory: {cid}')
 
     # difficulty buckets + documented probe waivers (same source as
     # check_difficulty.py so both gates agree on floors)
@@ -112,13 +124,12 @@ def main() -> int:
     if len(task_dirs) != len(set(task_dirs)):
         problems.append('duplicate task directory IDs')
 
-    # every inventory competency must be covered (infeasible ones waived)
-    uncovered = [cid for cid in comps
-                 if cid not in matrix or not matrix[cid]]
-    for cid in list(uncovered):
-        if cid in infeasible:
-            uncovered.remove(cid)
-            continue
+    # every inventory competency must be covered (waived ones excepted)
+    uncovered_all = [cid for cid in comps
+                     if cid not in matrix or not matrix[cid]]
+    waived = sorted(set(uncovered_all) & infeasible)
+    uncovered = [cid for cid in uncovered_all if cid not in infeasible]
+    for cid in uncovered:
         problems.append(f'missing reference competency: {cid} '
                         f'({comps[cid]["definition"][:70]})')
 
@@ -215,8 +226,9 @@ def main() -> int:
 
     covered = sum(1 for cid in comps if matrix.get(cid))
     print(f'competencies={len(comps)} covered={covered} '
-          f'uncovered={len(uncovered)} (of which waived-infeasible '
-          f'{len(infeasible & (set(comps) - set(matrix)))}) problems={len(problems)} '
+          f'uncovered={len(uncovered_all)} (waived-infeasible {len(waived)}: '
+          f'{", ".join(waived) or "none"}; hard {len(uncovered)}) '
+          f'problems={len(problems)} '
           f'second_task_gaps={len(second_task_gaps)} (documented residual)')
     for cid in uncovered:
         print('UNCOVERED', cid, comps[cid]['definition'][:90])

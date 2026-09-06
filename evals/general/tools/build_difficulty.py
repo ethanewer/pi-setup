@@ -3,10 +3,8 @@
 import json, sys
 from pathlib import Path
 
-try:
-    import tomllib
-except ImportError:
-    tomllib = None
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import _toml_compat
 
 ROOT = Path(__file__).resolve().parents[1]
 RUBRIC_KEYS = ['dependent_stages', 'tool_breadth', 'reasoning_depth',
@@ -40,7 +38,7 @@ def main() -> int:
         rub = dd.get('rubric', {})
         total = sum(rub.get(k, 0) for k in RUBRIC_KEYS)
         bucket = bucket_for(total)
-        toml = tomllib.loads((d / 'task.toml').read_text())
+        toml = _toml_compat.loads((d / 'task.toml').read_text())
         meta = toml.get('metadata', {})
         env = toml.get('environment', {})
         out_tasks[d.name] = {

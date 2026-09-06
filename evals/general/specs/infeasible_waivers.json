@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "policy": "Competencies that no task in this suite can cover because the reference behaviour is environmentally infeasible inside the suite's container runtime. Each waiver is permanent, must name the blocking constraint, and is counted as uncovered-but-waived rather than as a gate failure. Waivers live here, in a tracked file, so the coverage gate reaches the same verdict on any clone. The gitignored private-audit/infeasible/ directory may add to this list but can never be the only copy.",
+  "waivers": [
+    {
+      "competency": "C-c65bea8a",
+      "definition_summary": "Modify the kernel's main init function to emit a distinctive line, then recompile and boot it to observe the line.",
+      "reason": "environmentally-infeasible",
+      "blocking_constraint": "Requires a Linux kernel rebuild plus a QEMU/KVM boot of the resulting image. /dev/kvm is not available to the suite's containers (nested virtualization is unavailable on the Docker-on-macOS build host and is not granted in the CI runtime), so the boot step cannot be observed and the competency cannot be verified objectively.",
+      "waived_since": "2026-09-02",
+      "revisit_if": "A runtime with /dev/kvm passthrough, or a kernel-capable bare-metal runner, becomes available to the suite."
+    }
+  ]
+}

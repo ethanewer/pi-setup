@@ -9,27 +9,14 @@ Output: specs/coverage.json (validated task-to-competency matrix)
 import json, sys
 from pathlib import Path
 
-try:
-    import tomllib
-except ImportError:
-    tomllib = None
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import _toml_compat
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
 def read_toml(p: Path) -> dict:
-    if tomllib:
-        return tomllib.loads(p.read_text())
-    data, section = {}, None
-    for line in p.read_text().splitlines():
-        s = line.strip()
-        if s.startswith('['):
-            section = s.strip('[]')
-            data.setdefault(section, {})
-        elif '=' in s and section:
-            k, _, v = s.partition('=')
-            data[section][k.strip()] = v.strip().strip('"')
-    return data
+    return _toml_compat.loads(p.read_text())
 
 
 def main() -> int:
