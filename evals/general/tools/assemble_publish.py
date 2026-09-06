@@ -267,9 +267,20 @@ def main() -> int:
         for name in ('independence_report.json', 'similarity_report.json',
                      'oracle_report.json', 'oracle_times.json'):
             src = args.suite_root / 'specs' / name
-            (staged if src.is_file() else absent).append(name)
             if src.is_file():
                 shutil.copy(src, args.out / name)
+                staged.append(name)
+                continue
+            # these are gitignored generated artifacts, so a clone that never ran
+            # the audits has none. Carry the mirror's copy forward rather than
+            # publishing a tree that silently dropped the audit trail the
+            # previous version shipped.
+            carried = args.mirror / name if args.mirror else None
+            if carried and carried.is_file():
+                shutil.copy(carried, args.out / name)
+                staged.append(f'{name} (carried from mirror)')
+            else:
+                absent.append(name)
         waivers = args.suite_root / 'specs/infeasible_waivers.json'
         if waivers.is_file():
             shutil.copy(waivers, args.out / 'infeasible_waivers.json')
