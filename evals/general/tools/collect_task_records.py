@@ -97,7 +97,7 @@ def trial_dirs_by_task(job: Path, only_tasks=None):
     return best
 
 
-def norm_pi(trial: Path, model: str):
+def norm_pi(trial: Path, model: str, task: str):
     sess = sorted((trial / 'agent/pi/sessions').glob('*.jsonl'))[-1]
     messages, tools_used = [], set()
     version = None
@@ -144,7 +144,7 @@ def norm_pi(trial: Path, model: str):
         'agent_profile': 'p (lean: no extensions, no skills)',
         'agent_version': f'pi {mver.group(1)} (patched)' if mver else 'pi (patched)',
         'model': model,
-        'task': TASK,
+        'task': task,
         'tools': PI_TOOLS,
         'tools_used': sorted(tools_used),
         'messages': messages,
@@ -155,7 +155,7 @@ def norm_pi(trial: Path, model: str):
     }
 
 
-def norm_t2(trial: Path, model: str):
+def norm_t2(trial: Path, model: str, task: str):
     t = json.loads((trial / 'agent/trajectory.json').read_text())
     messages, tools_used = [], set()
     for s in t.get('steps', []):
@@ -169,7 +169,7 @@ def norm_t2(trial: Path, model: str):
         'agent': 'terminus-2',
         'agent_version': t.get('agent', {}).get('version', '2.0.0'),
         'model': model,
-        'task': TASK,
+        'task': task,
         'tools': [T2_TOOL],
         'tools_used': sorted(tools_used),
         'messages': messages,
@@ -179,7 +179,7 @@ def norm_t2(trial: Path, model: str):
     }
 
 
-def norm_claude(trial: Path, model: str):
+def norm_claude(trial: Path, model: str, task: str):
     tp = trial / 'agent/trajectory.json'
     t = json.loads(tp.read_text())
     # harbor writes ATIF-style steps; map to the v3.1 published message format
@@ -211,7 +211,7 @@ def norm_claude(trial: Path, model: str):
         'agent_version': (t.get('agent') or {}).get('version', '2.1.260')
                          if isinstance(t.get('agent'), dict) else '2.1.260',
         'model': model,
-        'task': TASK,
+        'task': task,
         'tools': [{'type': 'function', 'function': {'name': n}}
                   for n in sorted(tools_used)],
         'tools_used': sorted(tools_used),
@@ -283,14 +283,19 @@ def main():
             agent_timeout = 'Timeout' in exc
             if 'Timeout' in exc and 'Verifier' in exc:
                 agent_timeout = False
-            reward = res.get('verifier_result', {}).get('rewards', {}).get('reward')
+            # verifier_result is null, not absent, when harbor skipped the
+            # verifier phase after an agent timeout, so `or {}` is required:
+            # .get(k, {}) returns the stored None and the chain then crashes on
+            # exactly the records this path exists to handle.
+            vr = (res.get('verifier_result') or {})
+            reward = ((vr.get('rewards') or {}).get('reward'))
             try:
                 if harness == 'pi':
-                    traj = norm_pi(trial, model_meta)
+                    traj = norm_pi(trial, model_meta, TASK)
                 elif harness == 'terminus-2':
-                    traj = norm_t2(trial, model_meta)
+                    traj = norm_t2(trial, model_meta, TASK)
                 else:
-                    traj = norm_claude(trial, model_plain)
+                    traj = norm_claude(trial, model_plain, TASK)
             except Exception as e:
                 errors.append(f'{jobname}/{TASK}: trajectory normalization failed: {e}')
                 continue
@@ -298,20 +303,56 @@ def main():
             traj['exception'] = bool(exc) and not agent_timeout
             dest = OUT / harness / model_plain / TASK
             (dest / 'verifier').mkdir(parents=True, exist_ok=True)
-            (dest / 'metadata.json').write_text(json.dumps({
-                'task': TASK, 'agent': harness, 'model': model_meta,
-                'reward': reward, 'agent_timeout': agent_timeout,
-                'source_trial': trial.name}, indent=1) + '\n')
             (dest / 'trajectory.json').write_text(json.dumps(traj, indent=1))
-            # both verifier artifacts are mandatory: a record without reward.txt
-            # is unscoreable and must never be staged for publish
+            # Verifier artifacts. A missing reward.txt is not automatically a
+            # defect: harbor skips the verifier phase entirely when the agent
+            # exhausts its own declared timeout, which leaves result.json with
+            # exception_type=AgentTimeoutError, verifier_result=null and an empty
+            # test-stdout.txt. That is the mechanism behind every one of the 22
+            # v3.2 records that shipped unscoreable.
+            #
+            # audit_run_rewards.py already classifies this: AgentTimeoutError is
+            # TIMEOUT_FAIL and scores 0 under the strict convention, because an
+            # agent that cannot finish inside the task's own budget has not
+            # solved it. VerifierTimeoutError is the verifier's fault, not the
+            # agent's, so scoring it 0 would be wrong and it needs review.
+            # Anything else is INFRA and the trial is invalid.
+            reward_provenance = 'verifier'
             for f in ('reward.txt', 'test-stdout.txt'):
                 src = trial / 'verifier' / f
-                if not src.exists():
-                    errors.append(f'{jobname}/{TASK}: trial has no verifier/{f} '
-                                  f'({trial})')
+                if src.exists():
+                    (dest / 'verifier' / f).write_bytes(src.read_bytes())
                     continue
-                (dest / 'verifier' / f).write_bytes(src.read_bytes())
+                if f != 'reward.txt':
+                    # stdout is diagnostics; an agent timeout legitimately leaves
+                    # it empty, and harbor usually creates the file anyway
+                    (dest / 'verifier' / f).write_text('')
+                    continue
+                if exc == 'AgentTimeoutError' and not agent_timeout:
+                    errors.append(f'{jobname}/{TASK}: AgentTimeoutError but the '
+                                  f'timeout was classified as the verifier\'s; '
+                                  f'refusing to guess a reward')
+                    continue
+                if exc == 'AgentTimeoutError':
+                    (dest / 'verifier' / 'reward.txt').write_text('0\n')
+                    reward = 0
+                    reward_provenance = ('agent-timeout: the agent exhausted the '
+                                         'task timeout_sec, harbor skipped the '
+                                         'verifier phase, scored 0 as '
+                                         'TIMEOUT_FAIL per audit_run_rewards.py')
+                    print(f'  NOTE {jobname}/{TASK}: agent timeout, verifier '
+                          f'never ran -> reward 0 (TIMEOUT_FAIL)')
+                    continue
+                if exc == 'VerifierTimeoutError':
+                    errors.append(f'{jobname}/{TASK}: VerifierTimeoutError with no '
+                                  f'reward.txt; the verifier exceeded its budget, '
+                                  f'which is not the agent\'s failure. Needs '
+                                  f'manual review, not a synthesized 0.')
+                    continue
+                errors.append(f'{jobname}/{TASK}: trial has no verifier/reward.txt '
+                              f'and exception {exc or "none"!r} is not an agent '
+                              f'timeout, so the trial is INFRA-invalid and must '
+                              f'be re-run ({trial})')
             rp = dest / 'verifier/reward.txt'
             if rp.exists():
                 raw = rp.read_text().strip()
@@ -322,6 +363,17 @@ def main():
                 if val not in (0.0, 1.0):
                     errors.append(f'{jobname}/{TASK}: reward {raw!r} is not '
                                   f'binary (0 or 1)')
+            # written last so it can record where the reward actually came from.
+            # A synthesized TIMEOUT_FAIL 0 must be distinguishable from a 0 the
+            # verifier returned, or the published tree cannot be audited.
+            traj['reward'] = reward
+            (dest / 'trajectory.json').write_text(json.dumps(traj, indent=1))
+            (dest / 'metadata.json').write_text(json.dumps({
+                'task': TASK, 'agent': harness, 'model': model_meta,
+                'reward': reward, 'agent_timeout': agent_timeout,
+                'exception': exc or None,
+                'reward_provenance': reward_provenance,
+                'source_trial': trial.name}, indent=1) + '\n')
             written += 1
             print(f'{jobname:16s} {TASK:22s} reward={reward} '
                   f'timeout={agent_timeout} msgs={len(traj["messages"])}')
