@@ -66,5 +66,5 @@ if [ -f .git/ORIG_HEAD ] && [ -s .git/ORIG_HEAD ]; then
   fi
 fi
 
-reward=$(awk "BEGIN{print $A*0.25+$B*0.25+$C*0.25+$D*0.25}")
+reward=$(awk "BEGIN{print (($A+$B+$C+$D)>=4)?1:0}")
 echo "$reward" > /logs/verifier/reward.txt

@@ -79,5 +79,5 @@ PY
 if [ "$log_ok" = "OK" ]; then points=$((points+20)); fi
 
 # fraction 0..1 (reaches 1.0 only when every check passes)
-reward=$(python3 -c "print($points / 100.0)")
+reward=$(python3 -c "print(1 if ($points) >= 100 else 0)")
 echo "$reward" > /logs/verifier/reward.txt

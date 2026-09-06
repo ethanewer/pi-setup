@@ -70,7 +70,7 @@ if rep.get('counts', {}).get('total', {}).get('fewest') == 'deepseek':
 if rep.get('reproducible') is True:
     points += 0.05
 
-print(f"{min(points, 1.0):.2f}")
+print(1 if (min(points, 1.0)) >= 1.0 else 0)
 PY
 )
 if [ -z "$reward" ]; then reward="0.00"; fi

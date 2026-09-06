@@ -25,5 +25,5 @@ if [ -f /app/vm.js ]; then
   fi
 fi
 
-reward=$(python3 -c "print('%.2f' % ($pass/$total))")
+reward=$(python3 -c "print(1 if ($total and $pass >= $total) else 0)")
 echo "$reward" > /logs/verifier/reward.txt

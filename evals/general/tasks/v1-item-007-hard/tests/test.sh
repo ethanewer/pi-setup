@@ -62,7 +62,7 @@ if [ -f /app/run/train.log ] && [ -f /app/run/report.json ]; then
   if run_checks; then
     reward=1
   else
-    reward=0.3
+    reward=0
   fi
 fi
 

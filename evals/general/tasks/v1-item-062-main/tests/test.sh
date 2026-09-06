@@ -67,7 +67,7 @@ try:
 
     con.close()
     frac = passed / total if total else 0.0
-    print("%.2f" % frac)
+    print(1 if (frac) >= 1.0 else 0)
 except Exception as e:
     print("0.00")
     sys.exit(0)

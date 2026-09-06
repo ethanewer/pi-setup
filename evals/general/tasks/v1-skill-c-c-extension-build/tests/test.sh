@@ -31,6 +31,6 @@ reward=0
 if [ "$ext_ok" = 1 ] && [ "$cli_ok" = 1 ]; then
   reward=1
 elif [ "$ext_ok" = 1 ] || [ "$cli_ok" = 1 ]; then
-  reward=0.5
+  reward=0
 fi
 echo "$reward" > /logs/verifier/reward.txt

@@ -52,7 +52,7 @@ elif esc_clean:
 elif hits >= 5:
     score = 0.2
 
-print(f"{score:.2f}", end="")
+print(1 if (score) >= 1.0 else 0, end="")
 EOF
 )
 printf "%s" "$score" > /logs/verifier/reward.txt

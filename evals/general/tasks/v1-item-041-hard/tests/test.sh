@@ -53,13 +53,13 @@ fi
 if [ "$elf_ok" = "1" ] && [ "$frame_ok" = "1" ]; then
   reward=1
 elif [ "$elf_ok" = "1" ] && [ "$left_ok" = "1" ]; then
-  reward=0.9
+  reward=0
 elif [ "$elf_ok" = "1" ] && [ "$frame_ok" = "0" ] && [ "$node_rc" != "0" ]; then
-  reward=0.4   # ABI ok but runner/emission still failing
+  reward=0   # ABI ok but runner/emission still failing
 elif [ "$elf_ok" = "1" ] && [ "$frame_ok" = "0" ]; then
-  reward=0.5   # right ABI, wrong frame content
+  reward=0   # right ABI, wrong frame content
 elif [ "$frame_ok" = "1" ]; then
-  reward=0.5   # right frame but not a big-endian MIPS ELF
+  reward=0   # right frame but not a big-endian MIPS ELF
 fi
 
 echo "$reward" > /logs/verifier/reward.txt

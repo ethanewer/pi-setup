@@ -132,7 +132,7 @@ elif got >= 4:
     score = 0.4
 elif got >= 3:
     score = 0.25
-print(f"{score:.2f}", end="")
+print(1 if (score) >= 1.0 else 0, end="")
 PYEOF
 )
 printf "%s" "$score" > /logs/verifier/reward.txt

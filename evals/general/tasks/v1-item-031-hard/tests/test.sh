@@ -60,7 +60,7 @@ EOF
 if [ "$matches" -ge 22 ]; then
   reward=1
 elif [ "$matches" -ge 16 ]; then
-  reward=0.5
+  reward=0
 else
   reward=0
 fi

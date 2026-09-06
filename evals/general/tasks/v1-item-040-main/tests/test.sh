@@ -62,4 +62,4 @@ PY
 )
 if [ "$workflow_ok" = "OK" ]; then points=$((points+45)); fi
 
-python3 -c "print(round($points/100.0, 4))" > /logs/verifier/reward.txt
+python3 -c "print(1 if ($points) >= 100 else 0)" > /logs/verifier/reward.txt

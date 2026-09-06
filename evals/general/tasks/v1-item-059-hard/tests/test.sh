@@ -71,7 +71,7 @@ if [ $BASE_OK -eq 0 ]; then
   if [ -n "$PAGE" ] && echo "$PAGE" | grep -q "demo-1.0.0" && echo "$PAGE" | grep -q "demo-1.0.1"; then
     reward=1
   else
-    reward=0.5
+    reward=0
   fi
 fi
 

@@ -38,7 +38,7 @@ if isinstance(rep.get('corpus_chars'), int) and rep['corpus_chars'] == exp_chars
     extra += 0.5
 
 reward = core * 0.8 + extra * 0.2
-print(f"{reward:.2f}")
+print(1 if (reward) >= 1.0 else 0)
 PY
 )
 if [ -z "$reward" ]; then reward="0.00"; fi

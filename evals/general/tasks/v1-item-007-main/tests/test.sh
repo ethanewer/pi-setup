@@ -57,7 +57,7 @@ PY
   if [ $? -eq 0 ]; then
     reward=1
   else
-    reward=0.5
+    reward=0
   fi
 fi
 

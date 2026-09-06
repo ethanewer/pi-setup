@@ -70,7 +70,7 @@ if [ $BASE_OK -eq 0 ]; then
      && curl -fsS --max-time 5 http://127.0.0.1:8080/simple/demo/ | grep -q "1.0.0"; then
     reward=1
   else
-    reward=0.5
+    reward=0
   fi
 fi
 

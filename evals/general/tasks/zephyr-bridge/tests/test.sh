@@ -226,9 +226,12 @@ for case, weight, outn in [
             reward += weight
             print("hidden %s PASS acc=%.3f" % (case, acc))
 
-reward = round(min(reward, 1.0), 4)
+# `reward` above accumulates weighted credit (0.5 visible + 0.25 per hidden
+# case). The published reward is binary: full credit only when every part
+# passed, which is exactly credit reaching 1.0.
+binary_reward = 1 if reward >= 1.0 else 0
 with open("/logs/verifier/reward.txt", "w") as fh:
-    fh.write("%.4f\n" % reward)
-print("REWARD=%.4f" % reward)
+    fh.write("%d\n" % binary_reward)
+print("REWARD=%d credit=%.4f" % (binary_reward, min(reward, 1.0)))
 sys.exit(0)
 PY

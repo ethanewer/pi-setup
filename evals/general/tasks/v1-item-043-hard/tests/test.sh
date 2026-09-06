@@ -18,12 +18,12 @@ if [ "$r_ran" = "1" ] && [ "$p_ran" = "1" ]; then
       /app/rstan_diag.json /app/pystan_diag.json --hard > /tmp/cross.json 2>&1; then
     reward=1
   else
-    reward=0.6
+    reward=0
     echo "evaluate_043 failed:" >&2
     cat /tmp/cross.json >&2
   fi
 elif [ "$r_ran" = "1" ] || [ "$p_ran" = "1" ]; then
-  reward=0.3
+  reward=0
 fi
 
 # posterior predictive sanity: requires /app/ppc.json with ratios in range
@@ -40,7 +40,7 @@ exit(0 if ok else 1)
 PY
 fi
 if [ "$ppc_ok" = "1" ] && [ "$reward" = "1" ]; then reward=1
-elif [ "$reward" = "1" ]; then reward=0.6
+elif [ "$reward" = "1" ]; then reward=0
 fi
 
 echo "$reward" > /logs/verifier/reward.txt

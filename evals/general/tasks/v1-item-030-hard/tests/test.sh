@@ -93,5 +93,5 @@ if find /app -maxdepth 2 -type f ! -path '/app/repo/*' ! -path '/app/recovery/*'
 fi
 [ -z "${E_bad:-}" ] && E=1
 
-reward=$(awk "BEGIN{printf \"%.2f\", $A*0.2+$B*0.2+$C*0.2+$D*0.2+$E*0.2}")
+reward=$(awk "BEGIN{print (($A+$B+$C+$D+$E)>=5)?1:0}")
 echo "$reward" > /logs/verifier/reward.txt

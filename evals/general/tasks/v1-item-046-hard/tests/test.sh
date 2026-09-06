@@ -151,7 +151,7 @@ try:
         reward = 0.5
     else:
         reward = 0.0
-    open("/logs/verifier/reward.txt", "w").write(repr(reward))
+    open("/logs/verifier/reward.txt", "w").write("1" if (reward) >= 1.0 else "0")
     print(checks, file=sys.stderr)
 except Exception as e:
     open("/logs/verifier/reward.txt", "w").write("0.0")

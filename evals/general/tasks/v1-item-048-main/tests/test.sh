@@ -12,7 +12,7 @@ python3 - <<'PYEOF'
 import json, os, re, subprocess, sys
 
 def write(r):
-    open("/logs/verifier/reward.txt", "w").write(repr(r))
+    open("/logs/verifier/reward.txt", "w").write("1" if (r) >= 1.0 else "0")
 
 try:
     cfg = json.load(open("/app/config.json"))

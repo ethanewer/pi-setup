@@ -4,7 +4,9 @@
 For every trial directory (<task>__<id>/) in each job it checks:
 
   1. result.json parses and carries verifier_result.rewards.reward
-  2. verifier/reward.txt exists, parses, and MATCHES result.json
+  2. verifier/reward.txt exists, parses, MATCHES result.json, and is exactly
+     0 or 1 (the binary reward contract; a fractional value is a defect in the
+     task verifier, caught statically by tools/check_binary_reward.py)
   3. verifier/test-stdout.txt is non-empty when reward == 1 (a passing
      verifier must always print what it executed and why it passed)
   4. exception classification:
@@ -61,6 +63,10 @@ def classify_merged(td: Path) -> dict:
             val = None
         if val is None:
             out["problems"].append(f"verifier/reward.txt unparseable: {txt!r}")
+        elif val not in (0.0, 1.0):
+            out["problems"].append(
+                f"reward not binary: verifier/reward.txt={txt!r} "
+                f"(contract is exactly 0 or 1; see tools/check_binary_reward.py)")
         elif meta.get("reward") is not None and val != float(meta["reward"]):
             out["problems"].append(
                 f"reward mismatch: metadata={meta['reward']} reward.txt={val}")
@@ -123,6 +129,10 @@ def classify_trial(td: Path) -> dict:
             val = None
         if val is None:
             out["problems"].append(f"verifier/reward.txt unparseable: {txt!r}")
+        elif val not in (0.0, 1.0):
+            out["problems"].append(
+                f"reward not binary: verifier/reward.txt={txt!r} "
+                f"(contract is exactly 0 or 1; see tools/check_binary_reward.py)")
         elif reward is not None and val != float(reward):
             out["problems"].append(
                 f"reward mismatch: result.json={reward} reward.txt={val}")

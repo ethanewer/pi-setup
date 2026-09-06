@@ -29,7 +29,7 @@ if total == 0:
     reward = 0.0
 else:
     reward = passes / total
-print(f"{reward:.2f}")
+print(1 if (reward) >= 1.0 else 0)
 PY
 )
 if [ -z "$reward" ]; then reward="0.00"; fi

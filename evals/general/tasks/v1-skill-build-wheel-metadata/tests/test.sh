@@ -31,6 +31,6 @@ reward=0
 if [ "$p1" = 1 ] && [ "$p2" = 1 ]; then
   reward=1
 elif [ "$p1" = 1 ] || [ "$p2" = 1 ]; then
-  reward=0.5
+  reward=0
 fi
 echo "$reward" > /logs/verifier/reward.txt

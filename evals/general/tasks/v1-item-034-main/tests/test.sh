@@ -86,7 +86,7 @@ try:
     valuate()
 except Exception:
     pass
-print(f"{SCORE['v']:.2f}", end="")
+print(1 if (SCORE['v']) >= 1.0 else 0, end="")
 EOF
 )
 printf "%s" "$score" > /logs/verifier/reward.txt

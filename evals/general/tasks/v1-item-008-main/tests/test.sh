@@ -90,7 +90,7 @@ fi
 if [ "$behav_ok" = "1" ] && [ "$agent_ok" = "1" ]; then
   reward=1
 elif [ "$behav_ok" = "1" ]; then
-  reward=0.5
+  reward=0
 else
   reward=0
 fi

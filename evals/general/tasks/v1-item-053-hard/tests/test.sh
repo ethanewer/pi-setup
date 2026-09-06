@@ -79,7 +79,7 @@ except Exception:
 checks = ["image_intact", "png_exact", "sha256_match",
           "journal_meta", "journal_image_sha", "journal_rec_sha"]
 score = sum(1 for c in checks if results.get(c)) / len(checks)
-print(f"{score:.4f}")
+print(1 if (score) >= 1.0 else 0)
 PY
 )
 printf '%s\n' "$REWARD" > /logs/verifier/reward.txt

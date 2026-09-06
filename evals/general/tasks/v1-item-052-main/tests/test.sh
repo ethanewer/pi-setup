@@ -45,6 +45,6 @@ fi
 if [ "$clean" -eq 1 ] && [ "$editsok" -eq 1 ] && [ "$haspdf" -eq 1 ]; then
   reward=1.0
 elif [ "$clean" -eq 1 ]; then
-  reward=0.5
+  reward=0
 fi
 echo "$reward" > /logs/verifier/reward.txt

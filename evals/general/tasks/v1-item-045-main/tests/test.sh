@@ -61,5 +61,5 @@ except Exception as e:
     reward = 0.0
     print("verifier exception:", repr(e), file=sys.stderr)
 
-open("/logs/verifier/reward.txt", "w").write(repr(reward))
+open("/logs/verifier/reward.txt", "w").write("1" if (reward) >= 1.0 else "0")
 PY

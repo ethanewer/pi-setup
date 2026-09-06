@@ -44,7 +44,7 @@ elif ok_room and (ok_start or ok_end):
     reward = 0.5
 elif ok_room or ok_start:
     reward = 0.25
-print(f"{reward:.2f}")
+print(1 if (reward) >= 1.0 else 0)
 PY
 )
 if [ -z "$reward" ]; then reward="0.00"; fi

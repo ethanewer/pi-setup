@@ -113,7 +113,7 @@ try:
 except Exception:
     pass
 
-print(f"{min(points,100)/100.0:.2f}")
+print(1 if (min(points,100)/100.0) >= 1.0 else 0)
 PY
 )
 if [ -z "$reward" ]; then reward="0.00"; fi

@@ -29,5 +29,5 @@ fi
 # 7. the bundle still verifies
 git -C /app/arc-repo bundle verify /app/arc-repo.bundle >/dev/null 2>&1 && pass=$((pass+1))
 
-reward=$(python3 -c "print(round($pass/$total,2))")
+reward=$(python3 -c "print(1 if ($total and $pass >= $total) else 0)")
 echo "$reward" > /logs/verifier/reward.txt

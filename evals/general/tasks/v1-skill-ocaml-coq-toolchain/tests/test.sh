@@ -32,7 +32,7 @@ fi
 if [ "$PART_COQ" -eq 1 ] && [ "$PART_OCAML" -eq 1 ]; then
   reward=1
 elif [ "$PART_COQ" -eq 1 ] || [ "$PART_OCAML" -eq 1 ]; then
-  reward=0.5
+  reward=0
 else
   reward=0
 fi

@@ -101,7 +101,7 @@ try:
     validate()
 except Exception:
     pass
-print(f"{STATE['score']:.2f}", end="")
+print(1 if (STATE['score']) >= 1.0 else 0, end="")
 EOF
 )
 printf "%s" "$score" > /logs/verifier/reward.txt
