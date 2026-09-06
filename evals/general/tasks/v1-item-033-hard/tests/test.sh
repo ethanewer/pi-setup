@@ -48,9 +48,8 @@ try:
         except Exception:
             pass
         time.sleep(0.5)
-    if not ready:
+    if ready:
         marks.append("health")
-    else:
         # model revision metadata matches model_meta.json
         try:
             meta = json.load(open("/app/model/model_meta.json"))
