@@ -94,8 +94,32 @@ if [ ${#JOBS[@]} -gt 0 ]; then
   for j in "${JOBS[@]}"; do COLLECT+=(--job "$j"); done
   python3 "$HERE/collect_task_records.py" "${COLLECT[@]}" || die "collect_task_records failed"
   got=$(find "$STAGE" -name metadata.json | wc -l)
-  echo "overlay records: $got (unscoreable in mirror: $RERUN)"
-  [ "$got" -eq "$RERUN" ] || die "overlay has $got records but $RERUN were unscoreable"
+  echo "overlay records: $got (records needing a re-run in the mirror: $RERUN)"
+  # The overlay must COVER every unscoreable record, but it may legitimately be
+  # larger: a task whose verifier or environment was repaired has to be re-run
+  # for every pair even though its old records were scoreable. Requiring equality
+  # would reject exactly the case that most needs republishing.
+  RESCORE_JSON=/tmp/rescore-$VERSION.json STAGE="$STAGE" python3 - <<'PY' || die "overlay does not cover every record that needed a re-run"
+import json, os, sys
+from pathlib import Path
+data = json.load(open(os.environ['RESCORE_JSON']))
+stage = Path(os.environ['STAGE'])
+have = set()
+for meta in stage.rglob('metadata.json'):
+    rel = meta.parent.relative_to(stage).parts
+    if len(rel) == 4:
+        have.add(('/'.join(rel[:3]), rel[3]))
+missing = []
+for pair, stats in data['pairs'].items():
+    for task in stats['rerun_tasks']:
+        if (pair, task) not in have:
+            missing.append(f'{pair}/{task}')
+print(f'overlay covers {len(have)} (pair, task) records; '
+      f'uncovered that needed a re-run: {len(missing)}')
+for m in missing[:20]:
+    print('  MISSING', m)
+sys.exit(1 if missing else 0)
+PY
   OVERLAY_ARGS+=(--overlay "$STAGE")
 else
   step "2/4 no --job given; skipping collection"
