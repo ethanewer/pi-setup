@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Self-test for tools/check_binary_reward.py.
 
-The gate makes a static claim about 787 shell/python verifiers, so it needs
-fixtures that pin both directions:
+The gate makes a static claim about every shell/python verifier in the suite, so
+it needs fixtures that pin both directions:
 
   * every fractional-reward shape that has actually shipped in this suite must
     still be flagged, otherwise the gate is quietly permissive

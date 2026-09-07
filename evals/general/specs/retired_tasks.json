@@ -1,0 +1,32 @@
+{
+ "note": "Tasks removed from the suite. A removal is recorded here rather than performed by deleting a directory alone, so the published record trees that still contain these tasks can be reconciled against the suite that no longer does: tools/assemble_publish.py drops their records when carrying a mirror forward instead of failing on records 'which are not in the suite', and reports how many it dropped. Removing a task changes the suite denominator, so every version after the removal is not directly comparable to the ones before it on raw pass counts.",
+ "retired": [
+  {
+   "task": "slate-fjord",
+   "removed_in": "v3.4",
+   "category": "system_administration",
+   "difficulty": "hard",
+   "competency": "C-a9d4f82b",
+   "coverage_after_removal": "still covered by umber-yonder, so the competency count is unchanged at 725/726",
+   "reason": "Cannot run in this harness. The task requires a loopback SSH daemon started at container start, and the harness does not execute the image ENTRYPOINT in the trial container: reproduced twice with the oracle printing a preflight showing sshd absent, /etc/ssh/sshd_config still the stock Debian file, and ports 22 and 2222 dead, while the /srv/git fixtures built at image time were present and sshpass was installed. The same image under the harness's own compose configuration, both the prebuilt and the build path, provisions correctly with PID1 as 'sh -c sleep infinity', two sshd processes and both policy lines set, so the trial container is started by another route. Separately, under network_mode none the loopback TCP port is dead even with sshd running, and there is no way to bring it up because ip is not installed and the container has no NET_ADMIN.",
+   "effect_on_records": "Scored 0 for all six pairs in v3.2 and v3.3. Those zeros measured a harness limitation, not agent capability, so removing the task removes twelve records that were never measuring anything.",
+   "salvage_attempted": "The oracle was given a preflight so the state is visible instead of dying silently at a git -q invocation, and the verifier's sshd_config anti-tamper check was fixed: it was a bare substring test that matched Debian's commented-out '#PasswordAuthentication yes' defaults, so an entirely unprovisioned server passed it. Neither makes the task runnable here."
+  },
+  {
+   "task": "v1-item-043-hard",
+   "removed_in": "v3.4",
+   "category": "data_science",
+   "difficulty": "hard",
+   "competency": null,
+   "coverage_after_removal": "no C- competency tag, so no effect on the competency count",
+   "reason": "Its reference solution fails the task's own convergence gates: n_eff and divergences do not meet the thresholds the verifier asserts, while rhat is fine. Fixing it means tuning the MCMC sampler and re-validating across repeated one-to-two-hour oracle runs, which is a re-authoring job rather than a repair. In the v3.4 full-suite census its trial ended in CancelledError rather than a verdict.",
+   "effect_on_records": "Two pairs scored 1.0 and four scored 0, so unlike slate-fjord this task did produce discriminating records. They are dropped rather than rescored: a task whose own reference solution cannot satisfy its stated convergence criteria does not have a defensible pass bar, and keeping four zeros against two ones would report a measurement the task cannot support.",
+   "salvage_attempted": "Documented in v3.3 as an oracle defect and deliberately left out of the v3.4 re-run set, because nothing about it had been repaired and re-running it would have replaced four zeros with four fresh zeros at considerable cost."
+  }
+ ],
+ "suite_size": {
+  "before": 787,
+  "after": 785,
+  "records_dropped_per_pair": 2
+ }
+}

@@ -2,7 +2,7 @@
   "version": 3,
   "policy": "Task-to-competency matrix. Competency IDs are opaque; the private mapping to reference evidence lives in private-audit/competency_map.json.",
   "competency_count": 726,
-  "task_count": 787,
+  "task_count": 785,
   "matrix": {
     "C-f0fe0218": [
       {
@@ -14555,33 +14555,6 @@
         "difficulty": "easy"
       }
     ],
-    "C-a9d4f82b": [
-      {
-        "task_id": "slate-fjord",
-        "evidence": "verifier executes deliverable on hidden cases; oracle verified reward=1.0 during authoring",
-        "verifier_kind": "executes-deliverable",
-        "deliverables": [
-          "/app/sync.sh",
-          "/app/clone"
-        ],
-        "hidden_cases": true,
-        "difficulty": "hard"
-      },
-      {
-        "task_id": "umber-yonder",
-        "evidence": "Verified in Docker both directions with image v2t-umber-yonder. POSITIVE: build environment, run solution/solve.sh then tests/test.sh -> REWARD=1 (ALL PASS). solve.sh clones gitdev@127.0.0.1:/srv/git/paloma.git into /app/repo over password-automated SSH (sshpass + GIT_SSH_COMMAND), runs the reusable scrubber /app/repurge.py, recovers the deleted retry credential SURF:81a2cf4d into /app/recovered.txt, records the rewritten main history in /app/rebased_history, and writes an executable /app/push_commands.sh. The verifier derives expectations independently from the untouched pristine remote /srv/git/paloma.git: asserts no reachable/dangling object or commit message contains either secret (case-insensitive byte scan of git cat-file --batch-all-objects plus working tree), byte-identical unrelated tracked files, typed placeholders ([REDACTED_API_KEY]/[REDACTED_CREDENTIAL]) in secret-bearing files, history actually rewritten (new HEAD), correct recovered value, rebased_history==git log, push_commands.sh output checks, and re-runs /app/repurge.py on three hidden incident repos (harbour-reed: key in working file + commit message, recovery in deleted-from-tree blob; drift-rail: key+recovery only in dangling objects; lumen-jack: two api keys + case-variant message + benign credential-shaped lookalike preserved, no recovery) plus a malformed non-repository input. NEGATIVE: fresh container with tests/test.sh only -> REWARD=0 (deliverables absent).",
-        "verifier_kind": "executes-deliverable",
-        "deliverables": [
-          "/app/repo",
-          "/app/recovered.txt",
-          "/app/rebased_history",
-          "/app/push_commands.sh",
-          "/app/repurge.py"
-        ],
-        "hidden_cases": true,
-        "difficulty": "hard"
-      }
-    ],
     "C-5c1872d3": [
       {
         "task_id": "sorrel-tide",
@@ -15691,6 +15664,22 @@
       }
     ],
     "C-932cedb0": [
+      {
+        "task_id": "umber-yonder",
+        "evidence": "Verified in Docker both directions with image v2t-umber-yonder. POSITIVE: build environment, run solution/solve.sh then tests/test.sh -> REWARD=1 (ALL PASS). solve.sh clones gitdev@127.0.0.1:/srv/git/paloma.git into /app/repo over password-automated SSH (sshpass + GIT_SSH_COMMAND), runs the reusable scrubber /app/repurge.py, recovers the deleted retry credential SURF:81a2cf4d into /app/recovered.txt, records the rewritten main history in /app/rebased_history, and writes an executable /app/push_commands.sh. The verifier derives expectations independently from the untouched pristine remote /srv/git/paloma.git: asserts no reachable/dangling object or commit message contains either secret (case-insensitive byte scan of git cat-file --batch-all-objects plus working tree), byte-identical unrelated tracked files, typed placeholders ([REDACTED_API_KEY]/[REDACTED_CREDENTIAL]) in secret-bearing files, history actually rewritten (new HEAD), correct recovered value, rebased_history==git log, push_commands.sh output checks, and re-runs /app/repurge.py on three hidden incident repos (harbour-reed: key in working file + commit message, recovery in deleted-from-tree blob; drift-rail: key+recovery only in dangling objects; lumen-jack: two api keys + case-variant message + benign credential-shaped lookalike preserved, no recovery) plus a malformed non-repository input. NEGATIVE: fresh container with tests/test.sh only -> REWARD=0 (deliverables absent).",
+        "verifier_kind": "executes-deliverable",
+        "deliverables": [
+          "/app/repo",
+          "/app/recovered.txt",
+          "/app/rebased_history",
+          "/app/push_commands.sh",
+          "/app/repurge.py"
+        ],
+        "hidden_cases": true,
+        "difficulty": "hard"
+      }
+    ],
+    "C-a9d4f82b": [
       {
         "task_id": "umber-yonder",
         "evidence": "Verified in Docker both directions with image v2t-umber-yonder. POSITIVE: build environment, run solution/solve.sh then tests/test.sh -> REWARD=1 (ALL PASS). solve.sh clones gitdev@127.0.0.1:/srv/git/paloma.git into /app/repo over password-automated SSH (sshpass + GIT_SSH_COMMAND), runs the reusable scrubber /app/repurge.py, recovers the deleted retry credential SURF:81a2cf4d into /app/recovered.txt, records the rewritten main history in /app/rebased_history, and writes an executable /app/push_commands.sh. The verifier derives expectations independently from the untouched pristine remote /srv/git/paloma.git: asserts no reachable/dangling object or commit message contains either secret (case-insensitive byte scan of git cat-file --batch-all-objects plus working tree), byte-identical unrelated tracked files, typed placeholders ([REDACTED_API_KEY]/[REDACTED_CREDENTIAL]) in secret-bearing files, history actually rewritten (new HEAD), correct recovered value, rebased_history==git log, push_commands.sh output checks, and re-runs /app/repurge.py on three hidden incident repos (harbour-reed: key in working file + commit message, recovery in deleted-from-tree blob; drift-rail: key+recovery only in dangling objects; lumen-jack: two api keys + case-variant message + benign credential-shaped lookalike preserved, no recovery) plus a malformed non-repository input. NEGATIVE: fresh container with tests/test.sh only -> REWARD=0 (deliverables absent).",
@@ -18445,9 +18434,6 @@
     "slate-anchor": [
       "C-f0b8c2b9"
     ],
-    "slate-fjord": [
-      "C-a9d4f82b"
-    ],
     "slate-hollow": [
       "C-4e83076b"
     ],
@@ -18687,7 +18673,6 @@
     "v1-item-041-main": [],
     "v1-item-042-hard": [],
     "v1-item-042-main": [],
-    "v1-item-043-hard": [],
     "v1-item-044-main": [],
     "v1-item-045-hard": [],
     "v1-item-045-main": [],

@@ -1,6 +1,6 @@
 {
   "external_sources": [],
-  "generated_at": "2026-09-07T03:26:13.450249+00:00",
+  "generated_at": "2026-09-07T16:58:17.369377+00:00",
   "policy": "clean-room; zero shared source repositories with the frozen reference provenance set",
   "task_files": {
     "agents/p_agent.py": {
@@ -14,7 +14,7 @@
     "specs/coverage.json": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2-spec",
-      "sha256": "3a9d5bbc65ddd48efa26b37a4fa5a05d856005a0e84754084e2a531cfc7636d1",
+      "sha256": "84ea4c5b0d0028a14ea5f447a47f48a81f6ee374fa1375d42fe0140d9d831e60",
       "source_commit": null,
       "source_repository": null,
       "transformation": "derived from private audit records"
@@ -22,7 +22,7 @@
     "specs/coverage_claims.json": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2-spec",
-      "sha256": "4d39cda9cde6ba244399cf831be60ff3c690a3751c0543aa5f1a8767f1339c7e",
+      "sha256": "39f5f0d01743f92493649e6e8c84cace520829f877d30c56fa969e1897a90b4d",
       "source_commit": null,
       "source_repository": null,
       "transformation": "derived from private audit records"
@@ -30,7 +30,7 @@
     "specs/difficulty.json": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2-spec",
-      "sha256": "f7a1a3eeb9e6bfea466cded71dd1b377f556816f74d0bcba526548663769f23e",
+      "sha256": "a8c0364fa324f58cb971c93a830f129f0d5e7ef016b092ed3d9451f26e4bb67c",
       "source_commit": null,
       "source_repository": null,
       "transformation": "derived from private audit records"
@@ -55,6 +55,14 @@
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2-spec",
       "sha256": "eb60e4d8bf09f4bf24d55eb1b2ad1086c33ad18bf84110b15d1b31791f9c89c2",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "derived from private audit records"
+    },
+    "specs/retired_tasks.json": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2-spec",
+      "sha256": "1edbb48ad01deb34d93ec2eee356312b6df7d82c2d3f7158be85b5732813a7f5",
       "source_commit": null,
       "source_repository": null,
       "transformation": "derived from private audit records"
@@ -254,7 +262,7 @@
     "tasks/alder-fathom/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "2b1b456c3250584d1e861c9c3018f2f39fed3b13dcf51654fa512b948f45b468",
+      "sha256": "73fa58fca64d3010e2f3486269c5918682ac762e26c17834e507edeb7143a441",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -622,7 +630,7 @@
     "tasks/amber-dial/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "4fe8dbc3604197cc85c62515af96829b18a5a13641a59a836fe292f6b504b866",
+      "sha256": "f36734dd458a5139ed44080e92175c7bce568211a55b734743ac4e19e6a5a31a",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -1078,7 +1086,7 @@
     "tasks/amber-helix/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "f7728732b2be9a1f91451260676113fda8abf577e0fff3951507a2d12f263e0f",
+      "sha256": "f7bc7f842b2fd18497c3d16f74ccd413026d82f2041ef20eb5758e22c7ddb199",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -1659,14 +1667,6 @@
       "source_repository": null,
       "transformation": "hand-authored"
     },
-    "tasks/amber-quarry/environment/files/case/inputs_fixed.npz": {
-      "license": "internal (authored for general-v2)",
-      "origin": "authored-clean-room-v2",
-      "sha256": "72deee7b904dd669a327adda679f433379e711292817c8b2ee5de21fbe4769f7",
-      "source_commit": null,
-      "source_repository": null,
-      "transformation": "hand-authored"
-    },
     "tasks/amber-quarry/environment/files/case/logs/pit_a.log": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
@@ -1707,42 +1707,10 @@
       "source_repository": null,
       "transformation": "hand-authored"
     },
-    "tasks/amber-quarry/environment/files/case/meta.json": {
-      "license": "internal (authored for general-v2)",
-      "origin": "authored-clean-room-v2",
-      "sha256": "834d23553dda0a68891a281d46091fe481f6e303392f767bf68b47a1805ba411",
-      "source_commit": null,
-      "source_repository": null,
-      "transformation": "hand-authored"
-    },
-    "tasks/amber-quarry/environment/files/case/model.onnx": {
-      "license": "internal (authored for general-v2)",
-      "origin": "authored-clean-room-v2",
-      "sha256": "0b88ba4fe7a8314fbce55aec517761e99fef9fa6f038386d23c7cb93b956614a",
-      "source_commit": null,
-      "source_repository": null,
-      "transformation": "hand-authored"
-    },
     "tasks/amber-quarry/instruction.md": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
       "sha256": "c91ae8acea49dd90c03a9d2006a7472f66cad64b27139367aab2371280d5f84a",
-      "source_commit": null,
-      "source_repository": null,
-      "transformation": "hand-authored"
-    },
-    "tasks/amber-quarry/scripts/gen.py": {
-      "license": "internal (authored for general-v2)",
-      "origin": "authored-clean-room-v2",
-      "sha256": "8bb9a878e6d7c26919dc3a3157d15044f620af45b15f7cf720f48c7a887e7f5e",
-      "source_commit": null,
-      "source_repository": null,
-      "transformation": "hand-authored"
-    },
-    "tasks/amber-quarry/solution/mirror.py": {
-      "license": "internal (authored for general-v2)",
-      "origin": "authored-clean-room-v2",
-      "sha256": "65f6518cf6a1be48ede15b10dacdcf6fdeae8f219b44c099239dbb85ee7e3053",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -1763,14 +1731,6 @@
       "source_repository": null,
       "transformation": "hand-authored"
     },
-    "tasks/amber-quarry/tests/block_ort/onnxruntime.py": {
-      "license": "internal (authored for general-v2)",
-      "origin": "authored-clean-room-v2",
-      "sha256": "a5178b2acc30c9ec2d1fe953753d709628692492f9cb388d1c5555b5f8e2be59",
-      "source_commit": null,
-      "source_repository": null,
-      "transformation": "hand-authored"
-    },
     "tasks/amber-quarry/tests/expected_visible.txt": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
@@ -1787,6 +1747,46 @@
       "source_repository": null,
       "transformation": "hand-authored"
     },
+    "tasks/amber-quarry/tests/hidden/edge/logs/z1.log": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "c9c00ad27562b65f9dc19be1133b042f0e73dad528340b69b227c5652bcdd30b",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/amber-quarry/tests/hidden/edge/logs/z2.log": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "685c1eeccdaafd5af776ff33fb96e2f08e1ec92fe11bddde29e655d179f65d21",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/amber-quarry/tests/hidden/edge/logs/z3.log": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "846a90c5843796ac1d7d9460115b758f896927892d4a56f7da65dbb03a64cb9e",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/amber-quarry/tests/hidden/edge/logs/z4.log": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "bddaac76a1ee9ce3924d1ac65001d0cb43eab31cd46eeb0ef9ddde43d805cbb1",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/amber-quarry/tests/hidden/edge/logs/z5.log": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "2cb983d7bcebda5fb5ccfe42c651948ebcbcceae9f79b083b99b5f6036e91ffa",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
     "tasks/amber-quarry/tests/hidden/empty/expected.txt": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
@@ -1795,74 +1795,10 @@
       "source_repository": null,
       "transformation": "hand-authored"
     },
-    "tasks/amber-quarry/tests/hidden/hid1/inputs_fixed.npz": {
+    "tasks/amber-quarry/tests/hidden/empty/logs/.gitkeep": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "97e6a70429ad0f89413aa1fca366a0eea9515b0612399b971670033a7e90eeae",
-      "source_commit": null,
-      "source_repository": null,
-      "transformation": "hand-authored"
-    },
-    "tasks/amber-quarry/tests/hidden/hid1/meta.json": {
-      "license": "internal (authored for general-v2)",
-      "origin": "authored-clean-room-v2",
-      "sha256": "7bf9cc9b074960c0e9b461b67dcf3822f99a0c7947a8f156cded708d9e4af794",
-      "source_commit": null,
-      "source_repository": null,
-      "transformation": "hand-authored"
-    },
-    "tasks/amber-quarry/tests/hidden/hid1/model.onnx": {
-      "license": "internal (authored for general-v2)",
-      "origin": "authored-clean-room-v2",
-      "sha256": "1250eaeec14d596cdade0c39564dea8bd894203c9c4eaf5cbe2e7e26dee3d173",
-      "source_commit": null,
-      "source_repository": null,
-      "transformation": "hand-authored"
-    },
-    "tasks/amber-quarry/tests/hidden/hid2/inputs_fixed.npz": {
-      "license": "internal (authored for general-v2)",
-      "origin": "authored-clean-room-v2",
-      "sha256": "154c41d3ecadd67e9bfca216acdc852d15d0c71abb9cbed1a3abbd373c40ed0a",
-      "source_commit": null,
-      "source_repository": null,
-      "transformation": "hand-authored"
-    },
-    "tasks/amber-quarry/tests/hidden/hid2/meta.json": {
-      "license": "internal (authored for general-v2)",
-      "origin": "authored-clean-room-v2",
-      "sha256": "9bdb82f15135015bcc0836c0e7cdcbee48d5e85a2af17b2b27e73fabdb5a81ff",
-      "source_commit": null,
-      "source_repository": null,
-      "transformation": "hand-authored"
-    },
-    "tasks/amber-quarry/tests/hidden/hid2/model.onnx": {
-      "license": "internal (authored for general-v2)",
-      "origin": "authored-clean-room-v2",
-      "sha256": "042f7615faaceee92c7f4423a58a59f3732efadf5b0ffb30123df486acb4a793",
-      "source_commit": null,
-      "source_repository": null,
-      "transformation": "hand-authored"
-    },
-    "tasks/amber-quarry/tests/hidden/hid3/inputs_fixed.npz": {
-      "license": "internal (authored for general-v2)",
-      "origin": "authored-clean-room-v2",
-      "sha256": "77c38d45ba20fd002b2965b985c46255ee2544d3f1a005738be71b265523db3d",
-      "source_commit": null,
-      "source_repository": null,
-      "transformation": "hand-authored"
-    },
-    "tasks/amber-quarry/tests/hidden/hid3/meta.json": {
-      "license": "internal (authored for general-v2)",
-      "origin": "authored-clean-room-v2",
-      "sha256": "09040f4f53ba2eed0756278fb7ce63d0aa295face47758713e1957d7c3fae9a5",
-      "source_commit": null,
-      "source_repository": null,
-      "transformation": "hand-authored"
-    },
-    "tasks/amber-quarry/tests/hidden/hid3/model.onnx": {
-      "license": "internal (authored for general-v2)",
-      "origin": "authored-clean-room-v2",
-      "sha256": "502884205e7a323982675c9e18b4be09c349071d9bb32b9f1803380ca7bed1bf",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -1875,18 +1811,58 @@
       "source_repository": null,
       "transformation": "hand-authored"
     },
-    "tasks/amber-quarry/tests/test.sh": {
+    "tasks/amber-quarry/tests/hidden/tricky/logs/s1.log": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "507aa0c6d4c7826b7bbc7f32c59688e248078ac147bbdf6c7ea55963946598ad",
+      "sha256": "42ab07b6dab7b77087939b10877cd7e77bdfdbb4c87ad246e9640a9f32a5e48c",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
     },
-    "tasks/amber-quarry/tests/verify.py": {
+    "tasks/amber-quarry/tests/hidden/tricky/logs/s2.log": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "82fdf8a60390ff2a89fda7b38c2dc81a800dbfbba3c56e9924a0e3350ecdaded",
+      "sha256": "49505ed550757748644c5b1484bcc9565a894d71fb3e7478de97e257c2c14746",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/amber-quarry/tests/hidden/tricky/logs/s3.log": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "c081aea41fd5303699e473f2024b64e6c16f67db43a984e35763e644bf1551c3",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/amber-quarry/tests/hidden/tricky/logs/s4.log": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "00f2bdccfaa45491ed9104845f82884c896f93ce4a2ebfb9574b731a53cda2cb",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/amber-quarry/tests/hidden/tricky/logs/s5.log": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "c469296b78866c1e5c0b8a6564b71e762ed1b210b3ffe159123f79510c45d631",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/amber-quarry/tests/hidden/tricky/logs/s6.log": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "e0e9a69964ee9272ec2b64d70d16bae91e48da469a0a9c3c36cc86ec1c43b161",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/amber-quarry/tests/test.sh": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "507aa0c6d4c7826b7bbc7f32c59688e248078ac147bbdf6c7ea55963946598ad",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -2110,7 +2086,7 @@
     "tasks/arid-cipher/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "22e89c5932f023e30c0cbe2715b33481d1feb095e7b38ba4dc64190851b84cde",
+      "sha256": "482fa8ca17c69b198d14163c18b750d63a4d988775b18d533a7595cb3d6ddfe3",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -2758,7 +2734,7 @@
     "tasks/arid-orchid/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "8130b13f9819af310feca29648fdf78e3375744df5cc3479874c33580af4eb0b",
+      "sha256": "a24d717e9b2305b28f239b7b3ee5ae58169eaecb3c050771b0e739e60f369ffb",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -3830,7 +3806,7 @@
     "tasks/aspen-drift/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "da1919a70bda7fbb41c30b266091ba1a306f20dc8bee7805034d13b99996ca43",
+      "sha256": "506211b45d3e48547c6d96c6c43406b4c3ac7084eca4781f2c08661acf76a772",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -4110,7 +4086,7 @@
     "tasks/aurora-reef/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "d1409df6b9b1f9c09c281e128c9d72b2c5d9def35967d5370c77fc924ae6a657",
+      "sha256": "cd1f4955efdafd63e4ce2cc43a4190e69f377d464bac4ca1b7e3f28b59973968",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -5254,7 +5230,7 @@
     "tasks/basalt-mantle/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "454a34d0f808f130be4d26839d1ade1dd45a90340f6b682f8009890c54ca0556",
+      "sha256": "27f5e8515d017f071133d2ab809ff094cb6bceca92a6391aa8850525a72d36f7",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -5558,7 +5534,7 @@
     "tasks/basalt-mesa/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "b9d874a56a32f1cda2446e22c72aaa1a6bc5ea8b060539a992f868f2ce391e5e",
+      "sha256": "ef40eff354d77e14d5922170a5fdbf59b1cfd788fbdc35bb9b8f135d764b65af",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -5790,7 +5766,7 @@
     "tasks/basalt-quill/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "b1dac619999d76cadd9a336621ebf484c5c2715b5397013dfce46e9b6adc7059",
+      "sha256": "17d05e4bcc48444009e7600f5e4819560e124de4a550aaf6e25951514cc60d54",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -6006,7 +5982,7 @@
     "tasks/basalt-ridge/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "f86550712fd0940993f36723f6e5a784e69c0b22b3d7d4ddfa076eddc20da720",
+      "sha256": "f4f06fb80225287670004639cde3ef8e0ce5c79178948d0b43831fb71e2bb372",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -6470,7 +6446,7 @@
     "tasks/birch-bight/tests/test.sh": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "5af8f29e23fb58a28fa81dced34336042856bc081d479045718717bd91c65707",
+      "sha256": "7a916744d2b4c844351dd42b2e2229d5167305951426f5f9db173c2d307cc4d8",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -6487,6 +6463,14 @@
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
       "sha256": "40bb167c27572a634242a0a12c0b1db1f0cdeee30f951b20f4f31383bd382536",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/black-ink/environment/files/operations.log": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "6d3ee60853706f2e7d5c20cced7fc42caab3ab9024b991fd754f506d17983c14",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -6630,7 +6614,7 @@
     "tasks/black-ink/tests/test.sh": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "7fc2fe01881ce2dd0d9f8b4b56c10bc9ae8bbdc77d48f6c65409383560557a4b",
+      "sha256": "2714cd71f17a0a57cd30e7f770c6b949727c622936671af5ade6ee0271589bac",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -7686,7 +7670,7 @@
     "tasks/brine-mesa/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "b7a0c04cff4a9563cc06277ff08049935f2f155ba98b2197092350cb016ad2b1",
+      "sha256": "faf11a845e70b162729b4fe96e06999ad254bd250c82567906101dd9f3e8b0f4",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -8022,7 +8006,7 @@
     "tasks/brisk-anchor/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "38c54e7cfb1acd0d7fd50a38acbe2e837071812493d2c705dd8f3309f68a3d32",
+      "sha256": "3be3f7cbb905388ef8296855a5619407eede083783ed53411b3084d63977371b",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -9038,7 +9022,7 @@
     "tasks/brisk-wharf/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "9cb1376e59ab1e6bba558ba2a3aa8cbc21fdfa08025b102836ab5e880c1b53b4",
+      "sha256": "f3b5f73835493dee8693a16d5b09c15b25a2cd2ef51b50caf494a2b527b75dc3",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -9550,7 +9534,7 @@
     "tasks/calm-bridge/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "971e381268f1df3e0c8d940a9d284cfaa9e8e93210e1e9e6fff94f042cff84bf",
+      "sha256": "729881eaf6c817e139bf1dd9dda7c31bd84ffa5c98ecf8899497d746d866fe88",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -10142,7 +10126,7 @@
     "tasks/cedar-beacon/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "42ba993d34370a230bbe12337f55f91debb6895f495a234c2c9c9dd88b480e71",
+      "sha256": "27b6dc7262f1ec14e16b2b23d0a2efe70b4ee88a68f22e9f46a43020ee052e1f",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -10246,7 +10230,7 @@
     "tasks/cedar-canyon/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "263e147db7da1e3d0e8853d08291f4ab774f8b863ae86455bff53ca289a79431",
+      "sha256": "6a7c79a4d2ace91d3efdcef4e3e043fbb648281710b1153dbc7dbb8a29b02bf0",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -10414,7 +10398,7 @@
     "tasks/cedar-cipher/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "c803111106329ecfcfafcd36b06a7c2f324a7009eebd9eb65189fd7982070b33",
+      "sha256": "ca63908f0c503670921635aed349fa2647f6bc64ce8cd79480a81ad58e92aa76",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -10958,7 +10942,7 @@
     "tasks/cedar-gasket/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "ac7c989b4ad6d45df524243e192d09943b3f8c9f30d00e9eff0e2359105d0cf8",
+      "sha256": "9294dcf1737c00b2a83253a3f90dce5e4c660f5fe1a6175cf123d138cbed6192",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -11046,7 +11030,7 @@
     "tasks/cedar-jetty/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "7044508ca4425b49da0716348efc24be98cac3912e3b9231d397675962d06dfc",
+      "sha256": "1b6bc28ea73b9f731608daa23c35542604c8cd8ce3cad1abb652bebe1bc86d99",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -11190,7 +11174,7 @@
     "tasks/cedar-pier/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "6a336c5dd60edbe7d5d1b54a7d89186acd9f0a9b2fee562b544d0105613b54e7",
+      "sha256": "9b3b47104a82209cabcd164e32f6097dee6da1b4a758f6916897638210a75bab",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -13030,7 +13014,7 @@
     "tasks/cinder-vane/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "b7ca2fbb7ff0a52768f66020b536181800094fa213ea5827141ac35e28082a99",
+      "sha256": "8e4345c3752e8261ea22452fad41733eef42a6829386c8791a6cf01d1d5e5768",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -14382,7 +14366,7 @@
     "tasks/cobalt-quill/solution/keyfind.c": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "e725bf5f813ad173ed47485cc1f3af4dfc376ea0fb666d0485306fef4c11acab",
+      "sha256": "e5e8f2ea86f45caa8f03d87ab8a94e660c34fd5055f8a2a5d110b929ae9b3d01",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -14390,7 +14374,7 @@
     "tasks/cobalt-quill/solution/solve.sh": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "62e69ead202028b18c36d5165182a7ff3a17afee2885a99e317c65dd65ef64c6",
+      "sha256": "8ee9b949d102f3ecf5d047901ab8ec1d0ffcb9508ff5b9a916266a170a39f392",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -14518,7 +14502,7 @@
     "tasks/cobalt-sonar/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "639d709278f9c86bcdeac557b92a35908194e5bf7a6bf709445f70518fbd1988",
+      "sha256": "030f4ea869044c36067fad35afcd5829f8ff003873c8edbeba9cad511d3b18e5",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -14598,7 +14582,7 @@
     "tasks/cobalt-tide/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "1d191a1a997e5239658519107cf3396e9c4a83dc5829b2978c6f81a11fdf4583",
+      "sha256": "3576f7b50a9e2bf91d421f9c6838b6d5b6fc6745ce65fb7138323573f897c2dd",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -16302,7 +16286,7 @@
     "tasks/copper-vane/solution/solve.sh": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "d2cf51ec2e8cbab2535a1be53e9ece0144c5139ee845b0efa892430a27e565a4",
+      "sha256": "5ea82a93a4005b9aa16c3a1850956dc61bfd726515a65ff4e75caf7462778170",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -16318,7 +16302,7 @@
     "tasks/copper-vane/tests/expected.json": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "5cb92dcd4f954435ea1ed4116ff515f36aebef21f3287e4e2a752c2f013083b7",
+      "sha256": "95c11541a98a0d11176a9069a53923f7c679fc835fa3b58010f6e5018135782f",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -16326,7 +16310,7 @@
     "tasks/copper-vane/tests/hidden/aligned/expected.json": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "63cb257515199bfae984c64bc7e969bd1cada34899c7b5e78cfbf0004fa534b3",
+      "sha256": "39288b7f07b2ae04c8fbb0a96589ecc0b6793f71c3ca15c8e0c49b7378986274",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -16342,7 +16326,7 @@
     "tasks/copper-vane/tests/hidden/empty/expected.json": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "4ce3076a662a5b327ba03f58675596b8e8fdae578edafa9edc3ffe49b1ac8fd2",
+      "sha256": "9661a6f5a4a9808805700d28608793c6cb6eb9b41aceb1b470325d80eec256e1",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -16358,7 +16342,7 @@
     "tasks/copper-vane/tests/hidden/intact/expected.json": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "cfd5032a374a2ddb69a7bc7880d130e523fc9d0394f3fca998585174be70b72a",
+      "sha256": "12732ef6f8f74f4fcd58e9cea0e7841e4e0128fb54f9056a5792f35676547dd1",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -16374,7 +16358,7 @@
     "tasks/copper-vane/tests/hidden/mid/expected.json": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "5fa474d0b2f886538cc3c8704069c11c72d16bc6b3567a6469c7d11602b28c94",
+      "sha256": "eee65da77fb67c8d847b5c581fe962838ababed6170355feb3d851c9ba663013",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -16534,7 +16518,7 @@
     "tasks/coral-basin/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "2a2fc0e38166281d6517e8b660d77c2e07ceeda14d8389bfcb0aafe37edd1340",
+      "sha256": "bf48275fc4d5a0403afd1fdfaf3800e71d35f3ef3a2d15dbf38787152f22fb3a",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -16622,7 +16606,7 @@
     "tasks/coral-dial/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "ed91ec808fca277b2a13a6a4ffe1a2b619f6d3b14dbccac3597379cba1e206db",
+      "sha256": "69b8976b6540bcf3c1ddea280f70ab273695273578f02ab8a36ee200ac1edc11",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -16750,7 +16734,7 @@
     "tasks/coral-fjord/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "4513f63e248d9f8e8e93de0c26585421b42e924d75e83ee78505126ac874476e",
+      "sha256": "fe110eed3a9ad3649d5b852d6d2d4a515f860eed2d39b51bcb234f28e62df997",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -17782,7 +17766,7 @@
     "tasks/crisp-relay/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "66000d610cc1ac7344d2c7ad9a51aa9424944f2453153b0bf9d5ad59153b981e",
+      "sha256": "1102310422dce79bfcff81150b579d7c144e79880ea9d370e0e6b34f17817c14",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -18166,7 +18150,7 @@
     "tasks/drift-atlas/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "4f149e94f4819db193c2a558229b0df297cb018d8e95b8ef72f75f430498d739",
+      "sha256": "ab75875ca69900d378a952795deb3cde3028633f678ac44ef29bf6b134d84bb0",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -19158,7 +19142,7 @@
     "tasks/drift-grove/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "6ef53d3e4dae19b033a00a52b5be4b3f009504538ff997d7d0e673bc9e1b906c",
+      "sha256": "3ac5a3eb12095c4f861293e20890ba585ac147552a0f9a2c6dce0892b58d9c24",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -19414,7 +19398,7 @@
     "tasks/drift-mantle/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "0a1b894a93b62978d378772368fe2f4c9966aa14b3eeb8e4f82199a370e746da",
+      "sha256": "be21c9dbffc123b4361f9a5d8c24b5cdf58d0edcef2da30e0f90198fee118e30",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -19423,6 +19407,14 @@
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
       "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/drift-mantle/environment/files/access.log": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "faa8ec1085d031e4372a696687f9ff7c2d7921ec379fdd6d2c13ca9abfaec93a",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -19678,7 +19670,7 @@
     "tasks/drift-pier/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "cb5c2da81ca1a32cab59c24b48bb48265fce9b017b9b919462ecc868c54e37d4",
+      "sha256": "15539655cbbb448c45fdd63fc529f57d9a59db68f906404277246d028ab17b64",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -20478,7 +20470,7 @@
     "tasks/drift-terrace/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "aef7474414beef5f914f572de013566db19de668978365cef89ec2813e7332d9",
+      "sha256": "dee3f5a4154935cff68abe045b72542bbd0f2ea65c2d65adfa80bfc2744f7b01",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -21454,7 +21446,7 @@
     "tasks/dune-hearth/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "5a0af8b4ad25d4f7c702d069b244adaff0c93272c1fdbf9dc855b8e6f68bb067",
+      "sha256": "d69d2f8422e48b7a12c2b54aa29618aacc1a34d0268137f92d6d0f2441a9eb29",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -22262,7 +22254,7 @@
     "tasks/dune-terrace/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "a3d0500a321d799babdc9c9ceef0b4d84b10a9b66f166d41eefe38436aab750c",
+      "sha256": "bc50b7142f254ad6a9bfa5bd5914f67b6cfac3bb117eaec744c7ec775ed3464a",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -22894,7 +22886,7 @@
     "tasks/dusk-forge/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "cc0ffce0b0626d0f5886ba803723da3510b992c2be1ec8068cd1741a41143946",
+      "sha256": "1e44f3d28908d89b3c1af29bac3acef5b4d2d7a8cad0c5ae27e2a34dacf54e67",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -24526,7 +24518,7 @@
     "tasks/elm-terrace/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "7569f1b1bb3813d053132201fd4045767e7bd33a0f3806bf58fd9c6de585fe00",
+      "sha256": "0d166eca22944589eba045a24fd8bedc8dc7aadf2e0384e16eab44171101a43e",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -24894,7 +24886,7 @@
     "tasks/ember-atlas/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "95e816f0fec9afce03beb3d86e9a4f151ffcb8a0f6fe3765639dbde6eb055885",
+      "sha256": "bbfcff23a27179b207a7d4459ba41586d62b163d68fe66c2231c07b5a97f61ac",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -25206,7 +25198,7 @@
     "tasks/ember-quarry/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "29ac99dbee82d1e249182594d3a343df88174599ea3e3f386f459c13b314754e",
+      "sha256": "42b2d578809d9cbd1acb8f185ded7371141e823ef150039d72fab45cda569f8b",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -26398,7 +26390,7 @@
     "tasks/fern-engine/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "38ff6384691e642832f872941ee2e8ce81048cc13fc04f3677c1f569c5365537",
+      "sha256": "b5b01a01821c41788fbdff95dbfb8d543f5f60144db229087ecc152f0dcfda44",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -27150,7 +27142,7 @@
     "tasks/flint-cipher/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "c18b34fd946043e6dfe02f31ca911721178510c5328cd31ce596578b7c118bd3",
+      "sha256": "0b14eaa16c3597f498b79ee983ac7763e0eb720794bd449f4049024c5efb0af8",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -27622,7 +27614,7 @@
     "tasks/flint-fathom/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "748e81f414f1a6b4902dba388e5efb278abaef1547bf93e56650f893d5f65163",
+      "sha256": "695835e6ed4d073b909d8901d3eebefda5c20da4c66f04368176208734947978",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -28078,7 +28070,7 @@
     "tasks/flint-orchid/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "85c9b2e5785aec16e326711563e38d53de966c17a36e2664151be7cf60df2d8c",
+      "sha256": "abe1e28c409899ee2e8823570494124df74c5c6e8f09375602089f12c4638bbb",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -29086,7 +29078,7 @@
     "tasks/frost-quay/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "a2700261998ae0a69583c667698cc0435752cd3b5856672af692da30ff252a53",
+      "sha256": "646551472dbc58190d895b8ed0fe9d77ee984c2956838641cf2f911c9f4f1bf8",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -29494,7 +29486,7 @@
     "tasks/fume-marsh/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "2b029c0d50483718a8bdba4e4552e47f88044e903a326c52f01f7fce63f36cc7",
+      "sha256": "a1d7bc43ac86fb77a589fc4e3b1bed24d957a18a08751828dfefd062e4eb7a3b",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -29702,7 +29694,7 @@
     "tasks/furnace-tide/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "e68b365e5066a643cc637d9e9050697d5e62ee26bb9b04880c167caf3cf97327",
+      "sha256": "65b66069265e1cffae794b2208eb72a449df367fbcf7856b6561b18dc0523354",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -30022,7 +30014,7 @@
     "tasks/gale-jetty/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "d24ef8defd24544b1a1c5dde74b81a4c91d4d2798ddd85c2197b42cc84196ac0",
+      "sha256": "f0bacb45ed65ccd16ed49b3e518e97e0503cc92933d10933ce971af77cc63f45",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -30286,7 +30278,7 @@
     "tasks/gale-latch/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "d450bc87b6c7ee7766b826d855591ab3b2ed1f1556eb05234f313aa0d549001a",
+      "sha256": "367da6f5bd3174f1753ac0d72959fc20797c5f2d56140db0fe4ed5a313ab168b",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -30830,7 +30822,7 @@
     "tasks/gale-quarry/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "cf7d85e1289e97caeedd9ad2bfd9bb61673958f135373393570fd4d282bbf60f",
+      "sha256": "f270d89ef325e12d63d732775003f086865d24f0ae0bd73a9ab9e6a8c010110c",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -30910,7 +30902,7 @@
     "tasks/gale-ridge/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "43539799df674d0811e7defbe28402dc5f18e3f9eb2f5373fd19488c974490cd",
+      "sha256": "696443265c6fdacb863943db9aa4a551f8361b10e38055413ac985f0faff8a08",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -31878,7 +31870,7 @@
     "tasks/glass-mantle/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "f28b202129e14d42aab808f77cd41143db92b0b25777887b9ba59741810b2aba",
+      "sha256": "39f65dca8947155d3739478d361d54e2ee5a1bd090078314a93068d05f1c9fb5",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -32478,7 +32470,7 @@
     "tasks/granite-anchor/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "50abb54eba535cdaadbc192c95e254c91363bef4de93e8f506ec5903cb56ce6c",
+      "sha256": "1fa5ee1482def02dede3ad23195ebd1f78b5d5034dc698f69ebe5d5a65a1f6f8",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -33854,7 +33846,7 @@
     "tasks/harbor-dial/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "3e9834214fda8140de987e2ebb03221d0922bed36ef740b871c6e7509d04ce24",
+      "sha256": "95f2aacbdb492cb3b6208d6b000a1c2b9b11b0b70cbb9619e891437c8d94954b",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -33998,7 +33990,7 @@
     "tasks/harbor-gasket/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "31dd7df677f49f7139d932357f1b5e02af52a81e0d35ad7458d74956fe1200e3",
+      "sha256": "f6182b0e1b109b3aff71a5dd1dd3330c0ee0ee2dff6956891f29f4327fe4c93f",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -34174,7 +34166,7 @@
     "tasks/harbor-keystone/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "f4376653f2e398336778a07e567705c0788331c6428bce4945b6c7dee1e3d6dc",
+      "sha256": "907f29091c537f4e77e0202e5b059d6058f239d21eb28f19cce52bc82fc1afa4",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -34390,7 +34382,7 @@
     "tasks/harbor-mantle/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "05d0f822ac76f32d20ad75b666dfbde305d724a38ae44791a6031bb858b8de8f",
+      "sha256": "b6d475b27f3268d10b31486391d05061f54a75e4a841193c01a6afb9a6b84a55",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -34590,7 +34582,7 @@
     "tasks/harbor-notch/tests/hidden/edge-terms/expected.txt": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "508fab00169a5735e617073ac9d1b411874a4902a5bce9e4b79d524f3524b3b6",
+      "sha256": "c2b043f7cc9ceb14ebaf47e1631c702dca795bf8fd029456946327e544f81dd4",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -38110,7 +38102,7 @@
     "tasks/iris-anchor/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "288d091a507af08cd0291b00b60777965bff26f33230083b6fb378dee7cadc03",
+      "sha256": "02b436b25132171de2978f8cb75e57db89dd83c1a49b98f72d1143bc4f82d9df",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -38870,7 +38862,7 @@
     "tasks/iris-terrace/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "148264a210a9e59a5338d568ead7d65c8d54f1be6fdc8f3985082d1f9e60e8be",
+      "sha256": "f823fe70d61e9840419d940fce869f2ba1eb1973816d52cd12bbde8075091cf5",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -39158,7 +39150,7 @@
     "tasks/ivory-kiln/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "a04d29d54f92632fb75c7f3f433fe9b989f1ffaf8086dd3be746726d73e7e800",
+      "sha256": "c4a0095361e809a525b4d90c57729596ff8440bf4e2624a4122abcd05c10137c",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -39302,7 +39294,7 @@
     "tasks/ivory-lantern/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "f040bc8ab38f34d5ff4d64641550cba6cf0e012c8d49193ed9ea0e8f81b2ac53",
+      "sha256": "69ce62635d10817a0de59e477cb5f2190d0e79e6baa36482948bb6476fb12471",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -39886,7 +39878,7 @@
     "tasks/juniper-bridge/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "53d699603fc01ec8684ac76b6ba28f02038fb6a55c9a04da483f7b781dc5f480",
+      "sha256": "87236fb685a62940aa2925a7f146844a2acc7d0febeacfc3986f8d6aa98830b5",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -40302,7 +40294,7 @@
     "tasks/juniper-gasket/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "56b69b8332b3526e92d0f2d3f03c038d2e9cf47e7aef6d9349dfa1b817dc90ca",
+      "sha256": "c5a9422b94fac2a9e6ec2877ecd72759039443888a9e0d4bcc7bee87478775ac",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -41158,7 +41150,7 @@
     "tasks/juniper-notch/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "9c9a8651d77e8737ef3a10bcfc6abde74b8b16f47c27b7232a497f3ea034b2ec",
+      "sha256": "f8c0a7ed13523f2c270f1465d6b739e695831c89f4b69e6f814efe7a32104387",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -41294,7 +41286,7 @@
     "tasks/juniper-pier/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "ebd736ac1075cab6d20355dfacd5fd4313b5c442da08fb26c066fb8d1dd43ace",
+      "sha256": "5dde531a9fde9bfa2240091d9622df778d44d443e479aad154f9e4f9864677d8",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -42371,6 +42363,14 @@
       "source_repository": null,
       "transformation": "hand-authored"
     },
+    "tasks/juniper-yonder/environment/files/workspace/src/beta/audit.log": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "b308064e4b9feab49cb355f23d11fa939b752b2efc8db89e8db348b727bdce4f",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
     "tasks/juniper-yonder/environment/files/workspace/src/deep/a.cfg": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
@@ -42511,6 +42511,14 @@
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
       "sha256": "b6a98d9ce9a2d9149288fa3df42d377c3e42737afdcdaf714e33c0a100b51060",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/juniper-yonder/tests/hidden/H1/src/logs/external.log": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "f9895e598fa2717aebc6e0081be8b069b60423369e62db0ac975ad0828435458",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -43110,7 +43118,7 @@
     "tasks/kelp-notch/solution/solve.sh": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "e79758f4593045f7ca1c5151f80caf9b844093f188a59a2c98f91a60ee31961c",
+      "sha256": "991614c1d1bc8edc68b1bdbdbb8048d0c16c007c3ae5725f052ab5fd5b9f3294",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -43326,7 +43334,7 @@
     "tasks/kestrel-bay/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "00217c59f5f9acceac81258ad7cd026f46aa3baa1ac7b4986a7462ccda68f40d",
+      "sha256": "d3ef2c381cc955550310cf3b693ad475a926f7f7a2ddd2e5ad6d7458e14f5cf2",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -45182,7 +45190,7 @@
     "tasks/kite-mesa/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "10928478ab70bf94239db67333b975efd93475ca4ab6ee1a3403889f331249cd",
+      "sha256": "2b66a4ede8e89e11fbebc313f3d872a08618fa2e0b1b8e5be3ab43c4b6e544bc",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -45254,7 +45262,7 @@
     "tasks/kite-summit/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "0dd354fe8cec1a0742ee58340fda8c2b4fcc530f0c1455715eab3ed5c0cfc502",
+      "sha256": "4c3b5622ee5d25c19f9edd3dcc2cc0f9c2f0bb62b3e3b2c2ca4eee9198d2e125",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -45278,7 +45286,7 @@
     "tasks/kite-summit/solution/solve.sh": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "94cd6fd618a0708c2d4499056ec3e65034a525bd4a81ff5d61dd52efba9a3817",
+      "sha256": "bcef835a820dd5b45b417ee89ab2bef7455a8e3fdf23ef9fc882b1cb9f46e9a7",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -45390,7 +45398,7 @@
     "tasks/kite-yonder/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "e32de021b387902d004f05c6c439ac126542ea31686876189cea8574e4c58496",
+      "sha256": "8d1ffd50324cb213e8e70204190d49f06a5ac773019a25f8822bed2a012a99ba",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -45814,7 +45822,7 @@
     "tasks/larch-cipher/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "31402be0ec2ff3c5acda5311de0d989e056b31a75f2cbc8a33a3b576ec37768c",
+      "sha256": "f5d33f996fcdf4e843d20d0fc2e2ec2abfb61a1e2adcc71e47e685687dfa5923",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -47470,7 +47478,7 @@
     "tasks/lichen-mesa/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "d00eb17f5b8a4a4c2f7e3eb52c646a4d1f839655a3f2e45ecd8e55869b7c5c6f",
+      "sha256": "be7d5e4d6390dc3c516beb77ddb172f7deb053bcc0afcc51d5dd9008ac161a8a",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -48654,7 +48662,7 @@
     "tasks/marble-hearth/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "d76f85f50bf63e3ac289616e4393d882d8007b4fc6629540969b641a886bf076",
+      "sha256": "4f0670ad261ba15c4e43cd0e5a2c9f8cd6105871c2499454444fc1531546ba22",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -49190,7 +49198,7 @@
     "tasks/marble-ridge/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "cc19eacbd3d994278b10e63078dc02679fc4e084813a03e443c1e2c4bbecc4ed",
+      "sha256": "1808fe5452acdc9ec5db217243729bc5f0faaad95907e858971e614b007f10a4",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -49446,7 +49454,7 @@
     "tasks/marl-haven/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "5f1431925d4b04939a6bb2035f7935db32308001548d98faf1eb115f264a7b88",
+      "sha256": "0452cab05adb9fc58218d83d316f904b6e63985f12807d0faacb6b9e39b2cdb7",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -50475,6 +50483,14 @@
       "source_repository": null,
       "transformation": "hand-authored"
     },
+    "tasks/meadow-yonder/environment/files/data/access.log": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "a11621a10d7001dbebff75ecd03f8aecc507f0d5eca494fad42ad320d311030f",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
     "tasks/meadow-yonder/environment/files/data/cluster_probe": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
@@ -50539,6 +50555,14 @@
       "source_repository": null,
       "transformation": "hand-authored"
     },
+    "tasks/meadow-yonder/tests/hidden/case1_dup/access.log": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "aaaea6ff4928a4570e779c3ecb5a462aeef2e2ef30550f5a190378a25ec4e426",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
     "tasks/meadow-yonder/tests/hidden/case1_dup/probe.sh": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
@@ -50555,6 +50579,14 @@
       "source_repository": null,
       "transformation": "hand-authored"
     },
+    "tasks/meadow-yonder/tests/hidden/case2_edge/access.log": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "a4decfec6df4a608e1ecf8c0223992a09f7a1f359bd37af3cf03c558aafab592",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
     "tasks/meadow-yonder/tests/hidden/case2_edge/probe.sh": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
@@ -50567,6 +50599,14 @@
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
       "sha256": "e005a5010fabc4f3fbc3aa493a4701fd55f23563ddd45d9573d8627e3b9628ef",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/meadow-yonder/tests/hidden/case3_min/access.log": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "b76e3fa68bbecaaf67591933af83f18ea79dac4943bb26474c113bbf7ec4a04a",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -50606,7 +50646,7 @@
     "tasks/mica-fjord/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "a0cd4771d7360d0ae30065569cb7fb018fcb751d5c23bee29c87aa6588acb24b",
+      "sha256": "2abceb2ad45019c649211ed0524fc7728c2ac23910c8912a35d2eab64a3a7ec9",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -50894,7 +50934,7 @@
     "tasks/mica-marsh/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "2c5f296eea8c06aab02704f38b4d932a7315e65ad1d8a94c434296181264d63f",
+      "sha256": "38125e5c80180b570940e70e709e6d533f9605a38bd5e96c73a26e571459c85b",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -51918,7 +51958,7 @@
     "tasks/moss-kernel/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "805a2205b27f3640fa56462999ed787812cf77ab34caa8af5650c396ace773de",
+      "sha256": "2ccf2cb03f2ad298304c0f949c0b58a669ddaceaee9a989499441294111c8faf",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -52014,7 +52054,7 @@
     "tasks/moss-latch/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "59e340ca66247606de3d021e6575fee07e8af94e71f772a329551d1c537c9f4c",
+      "sha256": "5687d90b8932f95ebc48c6a63e9a513a0f39b7b24ff1917df4bd657cdd73b688",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -52142,7 +52182,7 @@
     "tasks/moss-loft/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "75e73906e78b86e5a461b544bae1d334901396e99c99fdc9564ba7293d9d9fb5",
+      "sha256": "4f0447374bf877a54eb666d76f4199a9ba7e62c11b2c72d168d84aecd7ae983f",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -52294,7 +52334,7 @@
     "tasks/moss-quill/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "7754bb7ff2b6e32dd16297376ba000d3493b72b5afed1722d35317a20d523a08",
+      "sha256": "f4ae7ae176c15d0ff19d91a3cd73db32de3143c8c1117cfa671becc30d31b302",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -53014,7 +53054,7 @@
     "tasks/nectar-helix/solution/solve.sh": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "ed58673b8170e21849c105f16a42643c3a0ea08929a7af72fab5b4b96ead1d86",
+      "sha256": "c350ca0e7941b4bffbdadbe72158e7b2fca600a708cf3506ca393d051bac1b9c",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -53251,6 +53291,102 @@
       "source_repository": null,
       "transformation": "hand-authored"
     },
+    "tasks/nectar-helix/tests/hidden/case_rs_3/src/archive/blob_24k.dat": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "8a644f964d41f69322799b824b6dad569c9cfb2f7f79c1214aa1b17203d345b3",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/nectar-helix/tests/hidden/case_rs_3/src/archive/meta.json": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "172ce7ff5bf07733a44dc370c26154a8f227d2bb025c54f6d158b5aca6b20639",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/nectar-helix/tests/hidden/case_rs_3/src/deep/a/b/c/leaf.txt": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "0f77733796586f8db51ff1fe520b011a3939706d7f8cb067f7a46303a57f2b19",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/nectar-helix/tests/hidden/case_rs_3/src/deep/a/b/mid.txt": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "9f5e00f15ff0159b515e5f837a044581ace02ca7a1ddb26169af30a31d50c88f",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/nectar-helix/tests/hidden/case_rs_3/src/deep/a/top.txt": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "579937035dcd31680f7d5d1daf4d772f15210c0fb8b1c98e7d4dd106d7ba37aa",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/nectar-helix/tests/hidden/case_rs_3/src/index.txt": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "836dbe9a4bda859766818b6f6aae58fbcc7f7c103780e3d43528f0d7ee6fbe8f",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/nectar-helix/tests/hidden/case_rs_3/src/wide/w0.dat": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "f52b23db1fbb6ded89ef42a23ce0c8922c45f25c50b568a93bf1c075420bbb7c",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/nectar-helix/tests/hidden/case_rs_3/src/wide/w1.dat": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "335a461692b30bba1d647cc71604e88e676c90e4c22455d0b8c83f4bd7c8ac9b",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/nectar-helix/tests/hidden/case_rs_3/src/wide/w2.dat": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "3d08c4d7bdda7ec922b0741df357de46e7bd102f9ab7a5c67624ab58da6d9d75",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/nectar-helix/tests/hidden/case_rs_3/src/wide/w3.dat": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "cc63be92e3a900cd067da89473b61b40579b54ef54f8305c2ffcc893743792e9",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/nectar-helix/tests/hidden/case_rs_3/src/wide/w4.dat": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "865447fc4fae01471f2fc973bfb448de00217521ef02e3214d5177ea89c3ef31",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/nectar-helix/tests/hidden/case_rs_3/src/wide/w5.dat": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "3daa582f9563601e290f3cd6d304bff7e25a9ee42a34ffbac5cf2bf40134e0d4",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
     "tasks/nectar-helix/tests/test.sh": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
@@ -53406,7 +53542,7 @@
     "tasks/nova-quarry/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "ab4344cc986e15dcf23129bbfbb93cb27b315a3412a57a156421d36c92e27603",
+      "sha256": "f035acd657f57d964569829e035fcb3d2c1267502d390b8f5bc2f56c272b2c2d",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -53774,7 +53910,7 @@
     "tasks/onyx-ember/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "7ceb8ad2f126775029336a3312260614be0293f972ac3f03f0aa071229e31146",
+      "sha256": "650ac33b8f0b9854e5e26460f0fd99466712fb050c15570cfbbb0a56c7069b23",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -54038,7 +54174,7 @@
     "tasks/onyx-gasket/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "412761a608608368097778afb5acd02691a4b24e873e0eea0ebfc49ba70a860e",
+      "sha256": "1671c9e6d93f7445edca7206413b6b535e08fce07512ed08eb2d6b91b175b888",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -54886,7 +55022,7 @@
     "tasks/opal-basin/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "09a064b81ffbe820e4d1457be3412aed9156153972e44b93045873f17a945f5a",
+      "sha256": "b8b921a87c011661ad89a3b5bc7a997d7408955ca293e82b8dd84be853c70bd8",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -55054,7 +55190,7 @@
     "tasks/opal-fathom/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "35e234d718a1e550a59bf683d862d1211e63fb68396705745f751cae3e14e4ae",
+      "sha256": "c68164acbd248574d418d279d775f83360d87fa0d235476c305f545f4babe22a",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -55182,7 +55318,7 @@
     "tasks/opal-grove/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "2fc0d34cb3625f83d34150b3598d717945355ccc74d33af91d98db180d5948cd",
+      "sha256": "e9a74d27c4f6accce6b2e21049ebb161b25013b676b0d85087dae62c77dd67fc",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -56374,7 +56510,7 @@
     "tasks/opal-quill/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "d453a551d761655532db8c0b5960fa89cc636f348f2c32722c8746aaaa2b397a",
+      "sha256": "72c43c9fe2d8767339ffa0e6a426111f6d0e15db13662897b1e5b6fabc6b256e",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -56694,7 +56830,7 @@
     "tasks/opal-wave/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "d9dc78224b4ab1e31c42cd430a58d92a27fbaff103522cfa975c50b15d4d46bc",
+      "sha256": "51a0ff011c4c4541ef17acc57c7c9b0523fec60ed04669ab69e4db1326ed6849",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -57126,7 +57262,7 @@
     "tasks/pearl-cipher/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "573a37dd18ea139fd0c7a66428f8c5430fc45b7ea34613870a4e6feddfc31bdc",
+      "sha256": "c3608ba711fef444d07001053da54970f8a316ee5f03834010028c03c4e375b8",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -59342,7 +59478,7 @@
     "tasks/prism-hearth/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "2f26b3b6d08767f80febee8e7977adbf3f2f0d1ef0b4f3700556b189030b4f1f",
+      "sha256": "517816706001faa20090a92b4dde9000f336382fe1809ae063daea3f71e877e4",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -60022,7 +60158,7 @@
     "tasks/prism-ledge/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "0e42818e62147ba8ea9c6c1663e217dc2dba0922845ce049fbf3032f3957fc06",
+      "sha256": "3e076edae755bc25580dfcc673bc313e91cc5de07fd43cb3fb10eb7a7a5a739d",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -62046,7 +62182,7 @@
     "tasks/quartz-delta/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "c60e3572bcb3af34122eb50db8c1ac9ee093f98487fe6ac011bb488b78217fd5",
+      "sha256": "7eadcc34ceba152e9c790cacbfb7187fa16879c965defa85ccf6f6e67ca673d0",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -62182,7 +62318,7 @@
     "tasks/quartz-dial/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "490609afeb32febe94bc6ea7a2e9d1504159727ef99b0cbe8599886e5ed6b460",
+      "sha256": "d3e5ef26147807c9bc23a0f5c2dc960377c5daa0d5a9dea960c773abe1ee7990",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -62502,7 +62638,7 @@
     "tasks/quartz-forge/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "8398670034ba432816c50a18edcd1f0ea057e8e80bd6279ef4be0ddb6d953326",
+      "sha256": "b100ac688edc9c698208397f90007cc3950dde822273c9ffa31ccced15f322a1",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -62598,7 +62734,7 @@
     "tasks/quartz-grove/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "919fbf0b877d7e451748d18313058ce408d3cb965f2012e10a93203c82430284",
+      "sha256": "b9314f1cc0ed0c2e7111c5a6b3a395b7aa0b43b2dc04adfc40e8e7966310b81a",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -62846,7 +62982,7 @@
     "tasks/quartz-helix/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "d53217e30d54a22b774ce0b7aed55cbd9abb01ff285ed2c3e39d77e26a339dd4",
+      "sha256": "b9582ca4eddddcde7b8e94342080cede09b123b220821ca205ed2be8c56d66de",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -63190,7 +63326,7 @@
     "tasks/quartz-marsh/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "8e81c50758815b9d49ddda0a30c9ade113dcc46a15f545e0974cfa3f67c1667c",
+      "sha256": "a9b8fe7f0d18051bcfe67d80a0e2f40f174e6306c35fa09039b20dad8fdfbce9",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -63822,7 +63958,7 @@
     "tasks/quartz-summit/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "fd138ba90876a242b7cbce9fa9bd5d295f533fadd38a327e4f440c4bc25103c4",
+      "sha256": "55737d916a733e4294d49974d4e0e0f949a3139ce3b753762a993bbca0aaec74",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -63974,7 +64110,7 @@
     "tasks/quartz-upland/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "5f9f00b80a99c6050a5f65099f4efa676b2c24d2ede36e8f76bf5dad0c20c064",
+      "sha256": "dd7a1a9a8064b6c318c791c6d1e33a4778cf9aacf19159b933e62bf8b47b5ad5",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -64094,7 +64230,7 @@
     "tasks/quartz-wharf/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "61f96f206abe13741a895c7fe042afef7b0c423875ec2a361123b1eb99c0381c",
+      "sha256": "774f4c641a6a2ee6a34c23c5bc9df386f9e108dbc9901a9b67a44729031f9946",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -64990,7 +65126,7 @@
     "tasks/quill-fathom/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "db9b3653efc2be9ad4e64cfad7cb5cf49a04dfe8028b71eb975c77e3670e5d08",
+      "sha256": "c253da27511db7daaa74e056b45ec4a970c4e35ea475f0f7c07dd191e3a90059",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -65238,7 +65374,7 @@
     "tasks/raven-anchor/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "7d3f6a5c12e650f629f43008a697b9492ae87b2ed3d1c9b7bdee4bc2a9148256",
+      "sha256": "f5ba1ffb9960f9cde38a1e8859b8df9100c98b1619d01cd36106824d1f539879",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -66030,7 +66166,7 @@
     "tasks/raven-mantle/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "ebdc69aab8eea85859c77cd4275febe64607aeb3ff7f76b31470a4423ab015eb",
+      "sha256": "9bb924ae86ae7df9ba786296f14bf63f03e067b4cbee3af85e9103baa1fdc766",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -66222,7 +66358,7 @@
     "tasks/raven-orchid/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "c8951a6d27d664bb483e7dbf0b1d6f68693e3d499fbe87311c832d9339be848d",
+      "sha256": "ce747e8faafa7bc20633398d28209e2f31ea99e2204a320b2ff693d1f5b7ba51",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -67230,7 +67366,7 @@
     "tasks/rust-bazaar/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "b38a66206d4fc4040152240359265690a39e2b3e7e6dfce498e33390498033e7",
+      "sha256": "d607c8cd8d4a7ef87feec0c3854c8e015e18879a69dbed0c08afef0686f72d9e",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -68926,7 +69062,7 @@
     "tasks/sable-marsh/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "af6d5b709ab9d920c20085c82f13d85ce478944f57ead5c36e55370ea7977a4f",
+      "sha256": "12684b0c1981aaeffe5e12f93077a0f947f8753fa4020e34d889aab6565bc234",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -70558,7 +70694,7 @@
     "tasks/saffron-ember/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "35f7b68171d72f8fd569a5445b5444531677c132e9423a38d669145a97c92f3d",
+      "sha256": "9e44d197ccb29c0ac96fdf8ef23c3c0f4d4be155838f72671006479b7d5c63bd",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -71006,7 +71142,7 @@
     "tasks/saffron-rune/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "16cd88b3c0a5c9619842151e3b622368a670a94d8a3d4cb82dae422a1b94b092",
+      "sha256": "2db3d7b6f2c92879b7f7cce327f40bd5a61cfe9467870fb980db83af9eabc3ec",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -71094,7 +71230,7 @@
     "tasks/saffron-vine/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "90e980808e5a513bc840d9c33ff65eb2c07409e59bb6ced626e40640db9f7ee6",
+      "sha256": "5df6ca155cc12bae1ee4f579a3ec8c13a70e9f3a20896d12c9e84c36860e4c19",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -71510,7 +71646,7 @@
     "tasks/sage-keystone/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "926948a056524964138c751f611573328877496433f2ac8492f62228adaca678",
+      "sha256": "4a647277e4b54cd7c29a198adef8a017aef7648913fbd2fde975a856e9de7a25",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -72523,94 +72659,6 @@
       "source_repository": null,
       "transformation": "hand-authored"
     },
-    "tasks/slate-fjord/difficulty.json": {
-      "license": "internal (authored for general-v2)",
-      "origin": "authored-clean-room-v2",
-      "sha256": "dff62d53982b746158174d8e1cc5c1b74b0d587883928d8e9adec9d996e7ce9d",
-      "source_commit": null,
-      "source_repository": null,
-      "transformation": "hand-authored"
-    },
-    "tasks/slate-fjord/environment/Dockerfile": {
-      "license": "internal (authored for general-v2)",
-      "origin": "authored-clean-room-v2",
-      "sha256": "32b67821698d3630cdcaaac144992ab7f74b1b621ab3205d88776af238f6caaa",
-      "source_commit": null,
-      "source_repository": null,
-      "transformation": "hand-authored"
-    },
-    "tasks/slate-fjord/environment/files/build_fixtures.sh": {
-      "license": "internal (authored for general-v2)",
-      "origin": "authored-clean-room-v2",
-      "sha256": "c1307d3947e276b5354acc4cbb44e754da6d971107f3d4a49b6a1ff9efa5e6b4",
-      "source_commit": null,
-      "source_repository": null,
-      "transformation": "hand-authored"
-    },
-    "tasks/slate-fjord/environment/files/entrypoint.sh": {
-      "license": "internal (authored for general-v2)",
-      "origin": "authored-clean-room-v2",
-      "sha256": "560041583d3642d235114a0c607fd2fdacee1eb82becd1207534a317f4163009",
-      "source_commit": null,
-      "source_repository": null,
-      "transformation": "hand-authored"
-    },
-    "tasks/slate-fjord/instruction.md": {
-      "license": "internal (authored for general-v2)",
-      "origin": "authored-clean-room-v2",
-      "sha256": "4d4215d55b2cb813f2194f9f48d00a14c73433ffec6a487d39846230c0dc5aec",
-      "source_commit": null,
-      "source_repository": null,
-      "transformation": "hand-authored"
-    },
-    "tasks/slate-fjord/solution/solve.sh": {
-      "license": "internal (authored for general-v2)",
-      "origin": "authored-clean-room-v2",
-      "sha256": "abb38e5b42d85f867c4610166c0f2878f8f0e9bc64c66c600d8a312d69a29ec5",
-      "source_commit": null,
-      "source_repository": null,
-      "transformation": "hand-authored"
-    },
-    "tasks/slate-fjord/task.toml": {
-      "license": "internal (authored for general-v2)",
-      "origin": "authored-clean-room-v2",
-      "sha256": "8eb1c5f05954f042c50d3fbf86e6f94652b1fd3598b43ccfbd7eaefb99be6c5f",
-      "source_commit": null,
-      "source_repository": null,
-      "transformation": "hand-authored"
-    },
-    "tasks/slate-fjord/tests/hidden/empty-repo/case.json": {
-      "license": "internal (authored for general-v2)",
-      "origin": "authored-clean-room-v2",
-      "sha256": "59198e417e3b9b2bbbb02faf07331bd1eae7298325a06391ef5bc9500dab9a64",
-      "source_commit": null,
-      "source_repository": null,
-      "transformation": "hand-authored"
-    },
-    "tasks/slate-fjord/tests/hidden/legacy-master/case.json": {
-      "license": "internal (authored for general-v2)",
-      "origin": "authored-clean-room-v2",
-      "sha256": "75681722e2c644346f26af2594f32d3998b65150e46c424fb4cdb023e17007a3",
-      "source_commit": null,
-      "source_repository": null,
-      "transformation": "hand-authored"
-    },
-    "tasks/slate-fjord/tests/hidden/port-2222/case.json": {
-      "license": "internal (authored for general-v2)",
-      "origin": "authored-clean-room-v2",
-      "sha256": "72ed37a57b69fc2885b09ddd9917ad99306eae44d3e10c975ea1c62cecfa21ad",
-      "source_commit": null,
-      "source_repository": null,
-      "transformation": "hand-authored"
-    },
-    "tasks/slate-fjord/tests/test.sh": {
-      "license": "internal (authored for general-v2)",
-      "origin": "authored-clean-room-v2",
-      "sha256": "386ff1f8cf1ea29362447a254dab0b4426819021ca0b65cec9d9970ddb08f551",
-      "source_commit": null,
-      "source_repository": null,
-      "transformation": "hand-authored"
-    },
     "tasks/slate-hollow/difficulty.json": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
@@ -73390,7 +73438,7 @@
     "tasks/tarn-mesa/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "fc764a7e3da5d1ce65405e46914853ea23b9fae3eef7d119ff2947a86201aaa4",
+      "sha256": "f0edf0a3e07c59990a3cfa2160711f54feefa0b08fd87aa290a64da762cce8fc",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -73942,7 +73990,7 @@
     "tasks/tern-delta/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "a193073e2d6be2fe56171ecd8d3459a6ce8ae0a451d3b95ed0ab4845d147fd18",
+      "sha256": "d8b22e3c730e6117e089a75ff52db3827c754f1118c19a3e18c5741437cb4729",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -73974,7 +74022,7 @@
     "tasks/tern-delta/solution/solve.sh": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "407736d1f1f0877a0b9e9e3fd24331130522f65c72e9900ea46af9b5c1e8cbe8",
+      "sha256": "d42fc2df48907848a031822b2a1ec8ef211fb13cbf76a401cfc47c414045adad",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -74254,7 +74302,7 @@
     "tasks/tide-grove/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "69d34919d5c44b7193859b23f66d7c9fd0f47d8870e67f2e32fe8d422750bd35",
+      "sha256": "547e128810f698bad08f2d12afe80f9547465be08998329f9e317ca8cd6847dd",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -74406,7 +74454,7 @@
     "tasks/topaz-marsh/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "b5e7247193d54c8094eb81dc246fd8bc09a6ee0fadc188fcf213ce7f798eec22",
+      "sha256": "98f47673a26070f0c90e45e14475094d4c4ebde203a44537958a69451ad1dcab",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -74518,7 +74566,7 @@
     "tasks/topaz-quarry/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "0ddc9a3b6954e2cfce36a6915a4d21fc01deb7c67f83699f20e3933e5eec636a",
+      "sha256": "f4f2e992e66a5602078a5fe1c0bb306d12de239bebfca57b8f6455d41086ca7f",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -74838,7 +74886,7 @@
     "tasks/tundra-cipher/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "77cf94c345d6fdf886e878592be6263b9eb2f3e1bdd81d3a307a509195580502",
+      "sha256": "3192c4a93e4aaa88985256d6769dbf575a5d87cd3bc3512fd746f393e70a275d",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -75270,7 +75318,7 @@
     "tasks/tundra-keystone/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "7a673991736f5e909bba33f5538b1c0e111115fd3b1cf628f197e95ac58a62bc",
+      "sha256": "76b8cae6c111a53c1c5557b053872a46615ae7a5b91efb74ee33da9a885be92b",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -75430,7 +75478,7 @@
     "tasks/tundra-ledge/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "79e43f32449d7990d1672d6f4f64c108d641ff47a818da037eb0cd430df6a37d",
+      "sha256": "7dc3893401f2bf9973ae3e611ca8408bebcb7ed049cfb78ceb23a1eb1b379555",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -75558,7 +75606,7 @@
     "tasks/tundra-orchid/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "78da523a55df08e5d2a6dda3af9e23a9e18caf2e03c13b77c071cd2316847e40",
+      "sha256": "d90c256c78c7f4655b63894ddd8f0cfb4dba6f5cd0e81a4e2de0d610a788034d",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -75575,6 +75623,14 @@
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
       "sha256": "219b639d4c8ec4e795b2b461bc53a85d72f5a129c924e4209964d9b91eaf5437",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/tundra-orchid/environment/files/sample_access.log": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "dcbc48a25ce0868065fd0f9f49732d0236411f443510f830f7e213d79af6b85b",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -75654,7 +75710,7 @@
     "tasks/tundra-orchid/tests/test.sh": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "aa97302c4cc53bf024fb52fa08a84eeeab8c84147de8fdb1beb722baac14411d",
+      "sha256": "5fc20c7abb79a5d5f558170b9cc3d01596eaa00f7a9a24a0708ad48c634cbf65",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -75886,7 +75942,7 @@
     "tasks/tundra-terrace/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "e3448b7cf40241419c8fa1cb0c5d7ce2dd9b6db5d691b47267212d9819ab17d0",
+      "sha256": "51240ff76a73f805be54c2737693ece793172cbd737ae2d7d5db245e0f19b8d9",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -76094,7 +76150,7 @@
     "tasks/umber-anchor/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "5989a9c651399ba6fbe64d05b97203e1227222ab1c5ab6d6f3db93479e6929d5",
+      "sha256": "781b5466507d091dbedf4a5e96a86b69a6978f02a5030720375bca2aa9f7538d",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -76598,7 +76654,7 @@
     "tasks/umber-larch/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "21375724ce202623699c20eadfc73a17b49e600412b88ca25ab8a290479730d0",
+      "sha256": "440d2e4333a2eb0be8e53549eba4943e80bb1eecdfbd4a21208b56947409adac",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -76758,7 +76814,7 @@
     "tasks/umber-mantle/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "15a58fff2c7f8f3d56929a5ee5ff8615eeb47146c5c4f9b29b9894041871d491",
+      "sha256": "3c413a86b7db112cb2272eec6095297061280407256baf605198ed7d5e70fcdf",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -76855,6 +76911,14 @@
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
       "sha256": "15d79d889b924e418a2c674c8c80a25791c9b1aa9877cb2b09d2bb3e99702d24",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/umber-mantle/environment/files/payloads/raw.log": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "0bd172104df2920a58e8da10075e9fcdb17087ca6630336547f5c88df20a4392",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -76995,6 +77059,14 @@
       "source_repository": null,
       "transformation": "hand-authored"
     },
+    "tasks/umber-mantle/tests/hidden/H1/payloads/raw.log": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "298fb4d22121681609f1be0920a40bddd9a1574482b57fdf521560c3868dd43d",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
     "tasks/umber-mantle/tests/hidden/H1/place/feed-1.printer": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
@@ -77095,6 +77167,14 @@
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
       "sha256": "897a34a9d1c080a70e3cbcf1032d0b52256a1463a3afb75f8f48d36117e97def",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/umber-mantle/tests/hidden/H2/payloads/raw.log": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "b653556e4e602c95092bb6ec6bead5bd6c9c355b59b860d46b12fe9d7e1da828",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -77203,6 +77283,14 @@
       "source_repository": null,
       "transformation": "hand-authored"
     },
+    "tasks/umber-mantle/tests/hidden/H3/payloads/raw.log": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "88b0fc5b245d9b8996dd3301fc30fb8047120ca0b01494525416da29b75b237d",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
     "tasks/umber-mantle/tests/hidden/H3/place/feed-3.printer": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
@@ -77214,7 +77302,7 @@
     "tasks/umber-mantle/tests/test.sh": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "5d784f0f0c16835fcb3dbe55236bb51c8791cc069c5ba8a805e26b121ee94fba",
+      "sha256": "334c52c974ae4ffb55fbd4acc48719ae414f72f70dc4b14c17dd8018ec9b8ac5",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -77686,7 +77774,7 @@
     "tasks/umber-ridge/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "e1613c5f3613ca72675ff7b92c98cbdec38cdc4fa94fd5b71416a947e1813fd4",
+      "sha256": "f50e3e4e704f0948091945184233bdbaaaef51c9310fd3f97266daff1f8fda35",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -77891,6 +77979,22 @@
       "source_repository": null,
       "transformation": "hand-authored"
     },
+    "tasks/umber-summit/environment/files/logs/access.log": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "f388dc98a2f20d3ed2970f29a610c1f2f96696faaf087a938a5bf0e46a8df60e",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/umber-summit/environment/files/logs/auth.log": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "db871a763221b04e125ac47c7a3ca4c2d68a593cd5deb6728f23d4753cb9e36e",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
     "tasks/umber-summit/environment/files/worker.py": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
@@ -77974,7 +78078,7 @@
     "tasks/umber-terrace/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "af273e70668cc5f8c26653a30f0d0963cedd2de9b3246a52f446d2e0c54fa67c",
+      "sha256": "b611b448de706f40efe5bb21be043eb96e0d04c75622070bd7b0f0cfe36e7708",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -78142,7 +78246,7 @@
     "tasks/umber-vault/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "091a574533fdb6a429be5551695023da1262cd364755fe3c10266e0c239cecd0",
+      "sha256": "413e21473a4585490808775a92934f9f3b5de1451f8c29eb36cf8c7ce5ab7010",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -78702,7 +78806,7 @@
     "tasks/umbral-mesh/tests/test.sh": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "cd68d8e2dcab8a7f52ccfe3022cc4a68431189a23f0700487a12ea5d3d111163",
+      "sha256": "d7ad2f60a2a3a4e26400f28570ceb845811d4a82c741baefd645aae8e504c5e9",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -78814,7 +78918,7 @@
     "tasks/v1-item-002-hard/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "b649e36590cb8ed835328d3e1230b9463a4c455231b99bd09f4a8f860c487a35",
+      "sha256": "61ab88a194a1ad0a83c89ec8d2f2078339dc0bfb7a82aed475e7b9d307e4e359",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -78870,7 +78974,7 @@
     "tasks/v1-item-002-main/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "b649e36590cb8ed835328d3e1230b9463a4c455231b99bd09f4a8f860c487a35",
+      "sha256": "61ab88a194a1ad0a83c89ec8d2f2078339dc0bfb7a82aed475e7b9d307e4e359",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -79726,7 +79830,7 @@
     "tasks/v1-item-020-main/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "310b6cf7baabe6604200449b409b8c9859d55548a8a1c90207556137dd1191a4",
+      "sha256": "6813d397c45f9dc22575aa3db7ba4325259feeb45eee73da68b7a30af56dd246",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -80678,7 +80782,7 @@
     "tasks/v1-item-037-hard/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "3f0012b24924ccb1d0607eddcf87e1f6204709607e43fedd5b8a5184fcea288d",
+      "sha256": "993e3b7cbead7102d1b32992c94282e05cd330c7651590091ec7a6c655c5a0ab",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -80734,7 +80838,7 @@
     "tasks/v1-item-037-main/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "c093efb27d5589aaae95c02b8b280e1c85c07c3ba2efd30b31261c0b3946bfaf",
+      "sha256": "c63c14c64b6461d500192cbb6f31a0d0f8097019369be20b355fea97c9d1a506",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -81787,86 +81891,6 @@
       "source_repository": null,
       "transformation": "hand-authored"
     },
-    "tasks/v1-item-043-hard/environment/Dockerfile": {
-      "license": "internal (authored for general-v2)",
-      "origin": "authored-clean-room-v2",
-      "sha256": "3c7fcf25922517bd98566409160e483e26085db53bae0affa5d7f9c081910939",
-      "source_commit": null,
-      "source_repository": null,
-      "transformation": "hand-authored"
-    },
-    "tasks/v1-item-043-hard/environment/files/README.md": {
-      "license": "internal (authored for general-v2)",
-      "origin": "authored-clean-room-v2",
-      "sha256": "e701e0f5641e688a91e442264ea0e31146a896ba25641ea7bad8cf0c18aae8c5",
-      "source_commit": null,
-      "source_repository": null,
-      "transformation": "hand-authored"
-    },
-    "tasks/v1-item-043-hard/environment/files/data.csv": {
-      "license": "internal (authored for general-v2)",
-      "origin": "authored-clean-room-v2",
-      "sha256": "f3f1189322fdf0ffd41e1e0798c77e67dfc6d3122e6975c9322ebd35b9d18739",
-      "source_commit": null,
-      "source_repository": null,
-      "transformation": "hand-authored"
-    },
-    "tasks/v1-item-043-hard/environment/files/fit_rstan.R": {
-      "license": "internal (authored for general-v2)",
-      "origin": "authored-clean-room-v2",
-      "sha256": "cc8a7d81207d173647df95349bb5f128d52a33f8614d41790104a9d46377d8cf",
-      "source_commit": null,
-      "source_repository": null,
-      "transformation": "hand-authored"
-    },
-    "tasks/v1-item-043-hard/environment/files/model.stan": {
-      "license": "internal (authored for general-v2)",
-      "origin": "authored-clean-room-v2",
-      "sha256": "b164edd7381172c7cb9475b4264da16730367ca9e64a2c5196b21846a3d8c910",
-      "source_commit": null,
-      "source_repository": null,
-      "transformation": "hand-authored"
-    },
-    "tasks/v1-item-043-hard/instruction.md": {
-      "license": "internal (authored for general-v2)",
-      "origin": "authored-clean-room-v2",
-      "sha256": "9545d481435997cbef2e3ef52ca43fa9a607ce32aac83c598aa90bcf4a385c3a",
-      "source_commit": null,
-      "source_repository": null,
-      "transformation": "hand-authored"
-    },
-    "tasks/v1-item-043-hard/solution/solve.sh": {
-      "license": "internal (authored for general-v2)",
-      "origin": "authored-clean-room-v2",
-      "sha256": "e7e71fbcdbb995882f40e1d6fcfa5f56c6f14ec21f1dd1f626595a616f5f6d16",
-      "source_commit": null,
-      "source_repository": null,
-      "transformation": "hand-authored"
-    },
-    "tasks/v1-item-043-hard/task.toml": {
-      "license": "internal (authored for general-v2)",
-      "origin": "authored-clean-room-v2",
-      "sha256": "651678781e6b3a1f9875fbe5c8040e21144990b59404f7aae5facd0cecc1b45d",
-      "source_commit": null,
-      "source_repository": null,
-      "transformation": "hand-authored"
-    },
-    "tasks/v1-item-043-hard/tests/evaluate_043.py": {
-      "license": "internal (authored for general-v2)",
-      "origin": "authored-clean-room-v2",
-      "sha256": "0b8ef5fc89899c25ab3be88b167e16442a12702f4004c78013979b2ae7b38eb3",
-      "source_commit": null,
-      "source_repository": null,
-      "transformation": "hand-authored"
-    },
-    "tasks/v1-item-043-hard/tests/test.sh": {
-      "license": "internal (authored for general-v2)",
-      "origin": "authored-clean-room-v2",
-      "sha256": "6093dd368cc7497e0734a66eeb43ad638770189c8e05fce1ba5aefcc454739a3",
-      "source_commit": null,
-      "source_repository": null,
-      "transformation": "hand-authored"
-    },
     "tasks/v1-item-044-main/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
@@ -81950,7 +81974,7 @@
     "tasks/v1-item-045-hard/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "310b6cf7baabe6604200449b409b8c9859d55548a8a1c90207556137dd1191a4",
+      "sha256": "6813d397c45f9dc22575aa3db7ba4325259feeb45eee73da68b7a30af56dd246",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -81998,7 +82022,7 @@
     "tasks/v1-item-045-main/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "310b6cf7baabe6604200449b409b8c9859d55548a8a1c90207556137dd1191a4",
+      "sha256": "6813d397c45f9dc22575aa3db7ba4325259feeb45eee73da68b7a30af56dd246",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -82158,7 +82182,7 @@
     "tasks/v1-item-048-main/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "a15cfc35ddaac89f9722b19b43cee4c85b5496e8acc72ae3ed98b3305739a51c",
+      "sha256": "e0cc8557721011bdaedcad945100e765f9912db85860ca7dfe8a7ddf09c7e31f",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -82502,7 +82526,7 @@
     "tasks/v1-item-056-hard/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "5b8a1743924806d5abba38d77c0185c414f1a56ca768f81d9fbbea08db6a0423",
+      "sha256": "559025de05820d465c6eabd2a12f710435d72a37524c7893d7c0a12953084ccd",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -82582,7 +82606,7 @@
     "tasks/v1-item-056-main/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "7e616ebb6d404630e1912f9f152d70b9c360b83b7e3f7fd930a306dc9cc87e31",
+      "sha256": "e57d4dbb0134eed249a0bb69edeff6094e3a406520cbdcb5db8c2f4d08436b30",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -82822,7 +82846,7 @@
     "tasks/v1-item-057-main/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "310b6cf7baabe6604200449b409b8c9859d55548a8a1c90207556137dd1191a4",
+      "sha256": "6813d397c45f9dc22575aa3db7ba4325259feeb45eee73da68b7a30af56dd246",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -83214,7 +83238,7 @@
     "tasks/v1-item-063-hard/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "d6590621544e11984847efd3342b1bb138e0005d6057011a4551afac09b7dd95",
+      "sha256": "ffa4a3fc20cc76516808893400202a56e294ff45fae15748b412ccbaa0f558b6",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -83270,7 +83294,7 @@
     "tasks/v1-item-063-main/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "78185853b63723aa5c440b28372c8e88550863f2c678506185f1a6a2fceb259e",
+      "sha256": "cd62f66aca0a471aea47437d75fada118cc3a0c3fe1785e0137b038462b0968f",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -87206,7 +87230,7 @@
     "tasks/v1-skill-forward-backward-equivalence-across-shards/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "45ed3ca6878fb61983bcc470f569a942f47b5b62cef6ac4683fc482ba4e13aa4",
+      "sha256": "7be84a53bb5549fe1aaadd2ff8530e7cc71a44d2b2e38ecf1a1b60ae233f7a0b",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -87406,7 +87430,7 @@
     "tasks/v1-skill-gaussian-process-regression/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "04df38a801eb6667ca496f248147324b763ecb87cae7933e908d6d13524c83a0",
+      "sha256": "208372c8cfae66566292e18944615e24baac0c709ce50a90b8079a997aee60f4",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -89046,7 +89070,7 @@
     "tasks/v1-skill-mnist-inference/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "c60c8d430f2d2f3f9c690ed53d9d509f917b635ecabda598dc9dca0018ecd7ba",
+      "sha256": "957e00d842603dd0199b440f96fdbf93ff209635ffb569dd92f6ccfda283bf3e",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -89206,7 +89230,7 @@
     "tasks/v1-skill-neural-network-inference/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "b9af80d0c5a22d3655e2edf3d461815e727fe08616236ae9f8c13c1211d410ee",
+      "sha256": "ed5d121d7cdda7a0b9c35075b2492d6a4ee807efc08ee56269ffd2ff185621ae",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -89326,7 +89350,7 @@
     "tasks/v1-skill-numpy-arrays/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "4a5bc2c9007d751019c9fc7a9248d22886cee0ba5e7f2a185d13a0cc4168f8f8",
+      "sha256": "8d071643845d73343dff695541f636f768f5e934bf1be92ab56c44a2b25253ca",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -89366,7 +89390,7 @@
     "tasks/v1-skill-numpy-c-api/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "9b3ca5b302189304609a358f2df1d330fdf8bc1c7e79ea000b2b0fbda6dcdebd",
+      "sha256": "ce41e28425d4fffad5529d80223d4434b81e5d407d897fce5ff25d6a24e9498d",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -89406,7 +89430,7 @@
     "tasks/v1-skill-numpy-scipy-optimization/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "7f8ba716f4da6e3cce8f9e6109d6dee71fdbb45eac6462c9e5f1b31ba3654a60",
+      "sha256": "501a35ae62ef894e1eedf71fdec4a0ce1017a61ae2f09b776a96b54a98e21adc",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -89622,7 +89646,7 @@
     "tasks/v1-skill-optimization/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "4de44974e6a951ca9330bb78087bb036d1fdef33f1d71a4030ddd14f220f234b",
+      "sha256": "3661cbc96e8cbfea8f41b1fad2380f09231c37f3d2ee4fe3c749521f19117d95",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -90166,7 +90190,7 @@
     "tasks/v1-skill-protobuf-opencv-blas/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "f91cd63cbd250e3a314c1b5c4d000e4f78d67b4d02a91bfd18d6dfc25dcccdfb",
+      "sha256": "4ebe48847092127cb58d49323cf10b329b7365024c8f25b90b1c8e2d195af5f6",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -91246,7 +91270,7 @@
     "tasks/v1-skill-scipy-pandas/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "13ed2f158b75a65950720b60022aa82ff2408907b2d3f5e1c83b66b48bd160ef",
+      "sha256": "f687304507336b840f1a5d7bdbccc2ca603fe277fde2e72c619bc7e65123fd38",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -91870,7 +91894,7 @@
     "tasks/v1-skill-tensor-partitioning/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "c876046fd82bedbb6f9f3aff66a2a7561505707f6eb18090b785bc0d1d1a5cd9",
+      "sha256": "b18007dba7844dbe70c3ed0af265375b2d6003d3360e64008e382ef5db40e64a",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -92294,7 +92318,7 @@
     "tasks/v1-skill-torch-distributed/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "5d2a3802d432f85cd54a51e85c3f4762bbe260471a37d0f5598b91f921989d49",
+      "sha256": "46164d1f6d3d195e210be1f3444a7fe0cd09f3bf8a07e9c968be3cfc57b91033",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -92342,7 +92366,7 @@
     "tasks/v1-skill-torch-serialization/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "249c5985d97040b515f4b8230139018551a9ead93f7428a3610b3d812c5d3c32",
+      "sha256": "05175853216618be6e33af843a2f72962573192736747bcdf0e576d9c3525f14",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -93726,7 +93750,7 @@
     "tasks/vine-forge/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "35c62b18e54af9e979022495d099d65133c280a7786bc5e15a42a785544f0cf1",
+      "sha256": "3a99e8ebfdf0ffca861e11b8ed1b3bc3a290de54a5020acc2c618755973d44ee",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -93851,6 +93875,38 @@
       "source_repository": null,
       "transformation": "hand-authored"
     },
+    "tasks/vine-helix/environment/files/jobs/digest_fast.py": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "cc1e3c66b328ca03321372f4ff156cb78d2255182302906f84b13117895b803b",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/vine-helix/environment/files/jobs/digest_slow.py": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "38369795a9d41911650ed18b0e8969c108d26178a06bb3efd4455390a1756207",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/vine-helix/environment/files/jobs/refine_fast.py": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "6f8aebf1c124aa7f410bb443cdda0cb550bf917d1c3f0aae07a9b19926cb82d9",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/vine-helix/environment/files/jobs/refine_slow.py": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "3f885f2b7f49eafe80ba63d95f5de5da3cd390994a4827625d28d1b4a2fed220",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
     "tasks/vine-helix/environment/files/registry/gw.pid": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
@@ -93918,7 +93974,7 @@
     "tasks/vine-helix/solution/solve.sh": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "6c961540ed8d7cd13e3fb8a25c0da9cfa44b650747a3c4ae81c8369be65ddf3e",
+      "sha256": "ca187c92df74dfd76d9d41949cd587b5106aec37cf0015704ace4b66a78c4295",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -94003,6 +94059,14 @@
       "source_repository": null,
       "transformation": "hand-authored"
     },
+    "tasks/vine-helix/tests/hidden/fix/f3/work/.gitkeep": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
     "tasks/vine-helix/tests/hidden/runner/back.solution.json": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
@@ -94038,7 +94102,7 @@
     "tasks/vine-helix/tests/test.sh": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "ade525c35ff129dead2adb66e39a9b960f46f8367988fc73a4c827008dddc9f1",
+      "sha256": "3f0b988148fbf6537917007d6979547d1c7dac08988b6bd60bf468c57fb188a8",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -94206,7 +94270,7 @@
     "tasks/vine-ledge/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "38855a22d4dd2c22922d6146191c713370550d4243b713c135817f74c752a45e",
+      "sha256": "9e405ce3ee02424c57602ff0848cdbeb3006133ecd682a0b4ef8195fd27703cd",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -94534,7 +94598,7 @@
     "tasks/vine-pier/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "db6f2f03ee92ca95c5de7295c9cdd7bdeb3f29eb5f13585b1bb476fcfc6699fc",
+      "sha256": "cff9883c1be50cecbece19c62500eb70c1e9bc4d53f64a458fba84122b0ca01b",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -94654,7 +94718,7 @@
     "tasks/vine-terrace/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "018d3d82744d57217350658371a05559decd07cfa14718b04b0a2547d5e33951",
+      "sha256": "394063a8b0ec081e1163783f00b7270a08101d4ce8b73265a5a758b7ced59aea",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -94918,7 +94982,7 @@
     "tasks/vine-yonder/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "22b22c8d984861d95af73877d949137bc765e1e9a36a3660300e855505671b1d",
+      "sha256": "1152bd7c77685a9594957e1fa18a81d2dff0f2ceb74e881c303d6c9d4d6e39fb",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -94927,6 +94991,30 @@
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
       "sha256": "ee528e86948dd83c160fa6a48000b74356cf27ff8d1cc9d655c1e9ec61dfcf20",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/vine-yonder/environment/files/events/2026-03-12_events.log": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "27a77fb1a2ba139baed81f3ebac84881d39b98179ef06bf069fb4f43df9cbd3a",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/vine-yonder/environment/files/events/2026-03-13_events.log": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "24c7202d4a36961fbb29c21783dbd73f87c6fce9c538258f523b909f17c087c8",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/vine-yonder/environment/files/events/2026-03-14_events.log": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "bdf05835c32e3eb18d996a93a17f4043901a2f1372aeeb096bd685c8e30a9c56",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -95907,6 +95995,22 @@
       "source_repository": null,
       "transformation": "hand-authored"
     },
+    "tasks/willow-upland/environment/files/logs/app.log": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "5b6814c50b809cdc2821d65e130b1fb8ba8fd5fb3cf0593af666e39972f34f90",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/willow-upland/environment/files/logs/worker.log": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "e4ab96a48c7b41ad996e12a6406de9af9b9a96d8cb6c72dacec71a622ca78c4f",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
     "tasks/willow-upland/environment/files/src/pgen.c": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
@@ -96163,6 +96267,14 @@
       "source_repository": null,
       "transformation": "hand-authored"
     },
+    "tasks/willow-upland/tests/hidden/h_idem/logs/sentinel.log": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "8790918d8ddc57aecc79a2b6a82ceca5192f645b3cd9c82beb63d8efca19114d",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
     "tasks/willow-upland/tests/hidden/h_idem/out_seed/records/keep.txt": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
@@ -96199,6 +96311,14 @@
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
       "sha256": "297ab342ce3dc878318e6fe4c15e36488858536d70274422c97bf3513cc0a725",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/willow-upland/tests/hidden/h_severity/logs/scan.log": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "8df30199e285255a8072aa8c558ed41b46370f8d5dfae4282dd7cf33aa30197c",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -97542,7 +97662,7 @@
     "tasks/zephyr-bridge/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "46704332c268e16145ce389e22ec4669043186483d1f1c12c47f4efdbee62b37",
+      "sha256": "7e2e849985977412f615f4036ffec8f26e9feeff988894693df22e9e22b61ced",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -97622,7 +97742,7 @@
     "tasks/zephyr-cipher/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "62f4476b738d71b10c35da1818904bc0350b1880482982b2367277e7b92a5e0b",
+      "sha256": "c906e2d9b1ff7d2c77cd4d7951efa16cfdd3256579778f49f3f6df22640ad8e9",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -98078,7 +98198,7 @@
     "tasks/zephyr-forge/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "943ba6fb4da9e5d858c83199e5f2797f09af1eaaef263cfe74e7fceab807529b",
+      "sha256": "fe2bbb197b771c1ae48d5277cbdb08dfded162cca7413117102da2c5bcd224b5",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -98590,7 +98710,7 @@
     "tasks/zephyr-grove/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "b2e7d3293afa290f46df3a3b646b37bc38c0e67ae8e5c915f3048a754b3f7282",
+      "sha256": "5a0b6b721e34caa895789befb89ac3655795778222dbeb27ae1d7d8b9e123dc5",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -98694,7 +98814,7 @@
     "tasks/zephyr-helix/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "a2ecf4893970eaa646317b45d51f4902ce44168d935c4a9eaa4a113e3ba9a523",
+      "sha256": "794740c0d16a750a952074768140b9e4122b0d005cd76d5db162c2778c133b63",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -98815,6 +98935,14 @@
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
       "sha256": "48388d63101e95f8f1fe2f2bdc53742491554aa10aa81c7740db18648c456812",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/zephyr-notch/environment/files/data/activity.log": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "712782b5db4fcedec47e25935316b08dd1341fb89a739d9f06148d0a71e82dff",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -99062,7 +99190,7 @@
     "tasks/zephyr-notch/tests/test.sh": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "a83fea1317b797638426ad2fbe51581e57e39a7639da8df1b3e17a616aee9021",
+      "sha256": "033ce5398a040c76f379cd145e3d33ed1f85cfc1b91d67f62b4465af76c53fad",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -99750,7 +99878,7 @@
     "tools/assemble_publish.py": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2-tooling",
-      "sha256": "ee95e2849573b0ec4a0463bb83cf840aa575f426a47bf13bff1b5517f81405d1",
+      "sha256": "725d7310a7e3cfbd701dac8e3e5096469e36b24759ae90b6ba9974b3eec5ba2a",
       "source_commit": null,
       "source_repository": null,
       "transformation": "authored tooling"
@@ -99894,7 +100022,7 @@
     "tools/ensure_reward_guard.py": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2-tooling",
-      "sha256": "592b6ba81a2242203b88816f0a7b5ffc4bca45d27799e1b93340b10e1b18bd87",
+      "sha256": "cffaa1a8d7f15975486dcfe2f6f17b272b8e2c295b6c16aea696b44740b33c17",
       "source_commit": null,
       "source_repository": null,
       "transformation": "authored tooling"
@@ -99915,6 +100043,14 @@
       "source_repository": null,
       "transformation": "authored tooling"
     },
+    "tools/pin_numeric_threads.py": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2-tooling",
+      "sha256": "10ef181400f96fd526547512e8f891346aa771a6d426c68deefa750372d55dc8",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "authored tooling"
+    },
     "tools/publish_version.sh": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2-tooling",
@@ -99926,7 +100062,7 @@
     "tools/rebuild_and_audit.py": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2-tooling",
-      "sha256": "9bf1c6bc6957d06ad086613841422fbdeff2f2d78802183d298472c5c744bcb8",
+      "sha256": "60ab7c2742446896149fac7517255119fc780fb8bbcc44592386a408d073f1d6",
       "source_commit": null,
       "source_repository": null,
       "transformation": "authored tooling"
@@ -99935,6 +100071,14 @@
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2-tooling",
       "sha256": "3c233f212716ebdf82a64f9cf462010d32ac853a74d4e64c577aafae7c2021bf",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "authored tooling"
+    },
+    "tools/report_never_passed.py": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2-tooling",
+      "sha256": "7ba9e7dc5003cda756dde20df30186f0494e49c8337aaff72fb8d6a3148febd9",
       "source_commit": null,
       "source_repository": null,
       "transformation": "authored tooling"
@@ -99958,7 +100102,7 @@
     "tools/selftest_binary_reward.py": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2-tooling",
-      "sha256": "70a899f446f37679e78c421162fe82f63f3b632ad5e60fc98f26be013be7ae3c",
+      "sha256": "3ccfd85bd221b57e9b72fa4400456d3fc3b90286d36cbb9a180c7f08f2e018e0",
       "source_commit": null,
       "source_repository": null,
       "transformation": "authored tooling"

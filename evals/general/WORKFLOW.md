@@ -1,23 +1,46 @@
 # General Eval — Build & Verification Workflow
 
-787 Harbor tasks for training and evaluating coding agents. Covers the full
+785 Harbor tasks for training and evaluating coding agents. Covers the full
 Terminal-Bench 2.1 competency space (726 atomic competencies, 725 covered,
-1 waived as environmentally infeasible, 0 uncovered) plus 271 supplementary
+1 waived as environmentally infeasible, 0 uncovered) plus 270 supplementary
 general-coding tasks (v1 family) and 20 supplementary clean-room skill-coverage
 tasks. Zero contamination with Terminal-Bench 2.1, verified by byte-level audit.
 
 Every verifier writes a binary reward: `/logs/verifier/reward.txt` contains
 exactly `1` or `0`. `tools/check_binary_reward.py` proves this statically for
-all 787 tasks and runs in the gate pipeline, so partial credit cannot come back.
+all 785 tasks and runs in the gate pipeline, so partial credit cannot come back.
 
 ## Dataset composition
 
 | Source | Tasks | Description |
 |---|---|---|
-| v2/v3 clean-room | 496 | Authored to cover tb2.1 competencies without containing any tb2.1 content |
-| v1 filtered | 271 | General coding tasks (Nemotron/TMax seeds); filtered for verifier quality |
+| v2/v3 clean-room | 495 | Authored to cover tb2.1 competencies without containing any tb2.1 content |
+| v1 filtered | 270 | General coding tasks (Nemotron/TMax seeds); filtered for verifier quality |
 | Supplementary skill tasks | 20 | Clean-room tasks exercising skill domains not covered by the rest of the suite (see the 2026-09-02 additions below) |
-| **Total** | **787** | 21 skill tasks were authored; cinder-hearth was removed in v3.1 (unbuildable image behind a network proxy). drift-canyon was removed at the same time for a lost hidden fixture, then restored in v3.1 once the fixture was recreated, so it is counted here |
+| **Total** | **785** | 21 skill tasks were authored; cinder-hearth was removed in v3.1 (unbuildable image behind a network proxy). drift-canyon was removed at the same time for a lost hidden fixture, then restored in v3.1 once the fixture was recreated, so it is counted here. slate-fjord and v1-item-043-hard were removed in v3.4 and are recorded in `specs/retired_tasks.json` |
+
+### Tasks retired in v3.4
+
+Both were removed because their own reference solution cannot pass, so every
+record for them measured a defect rather than agent capability. Removals are
+tracked in `specs/retired_tasks.json`, which `tools/assemble_publish.py` reads so
+that carrying an older mirror forward drops their records instead of failing on
+rows that are no longer in the suite.
+
+- **slate-fjord** could not run in this harness at all. It needs a loopback SSH
+  daemon started at container start, the harness does not execute the image
+  `ENTRYPOINT` in the trial container, and under `network_mode: none` the loopback
+  port is unreachable with no way to bring it up. It scored 0 for all six pairs in
+  v3.2 and v3.3. Its competency `C-a9d4f82b` remains covered by umber-yonder, so
+  the competency count is unchanged.
+- **v1-item-043-hard** fails its own MCMC convergence gates on `n_eff` and
+  divergences. Two pairs scored 1.0 and four scored 0, so unlike slate-fjord it did
+  produce discriminating records; they are dropped rather than kept because a task
+  whose reference solution cannot meet its stated convergence criteria has no
+  defensible pass bar. It carries no `C-` competency tag.
+
+Removing tasks changes the suite denominator, so pass counts from v3.4 onward are
+not directly comparable with v3.3 and earlier. Rates over 785 are.
 
 v1 filtering removed 245 tasks with weak verifiers (no deliverable execution)
 and 8 tasks with tb2.1 contamination (block/n-gram overlap). The v1 family is
@@ -82,9 +105,9 @@ All gates run via `tools/rebuild_and_audit.sh` or individually:
 
 | Gate | Tool | Result |
 |---|---|---|
-| Reward binarity | `tools/check_binary_reward.py` | 787/787 provably binary, 0 problems |
+| Reward binarity | `tools/check_binary_reward.py` | 785/785 provably binary, 0 problems |
 | Reward binarity self-test | `tools/selftest_binary_reward.py` | 23/23 fixtures (12 fractional shapes flagged, 11 binary shapes passed) |
-| Reward on every exit path | `tools/ensure_reward_guard.py` | 787/787 guarded, 0 unpatchable; also parses every EXIT trap body, which `bash -n` on the file cannot do |
+| Reward on every exit path | `tools/ensure_reward_guard.py` | 785/785 guarded, 0 unpatchable; also parses every EXIT trap body, which `bash -n` on the file cannot do |
 | Thread pools vs CPU quota | `tools/pin_numeric_threads.py` | 162/162 pinned to their declared `cpus`, 0 skipped |
 | Layout & contract lint | `tools/lint_tasks.py` | 516 clean-room tasks, 0 problems (271 legacy v1 skipped by design) |
 | Competency coverage | `tools/check_tb21_coverage.py` | 725/726 covered, 1 waived-infeasible, 0 problems |

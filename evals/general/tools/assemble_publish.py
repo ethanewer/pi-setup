@@ -54,6 +54,30 @@ def suite_tasks(suite_root: Path):
     return sorted(p.name for p in d.iterdir() if p.is_dir())
 
 
+def retired_tasks(suite_root: Path):
+    """Tasks deliberately removed from the suite, per specs/retired_tasks.json.
+
+    A published mirror outlives the suite it was assembled against, so once a task
+    is retired the mirror still holds records for it. Carrying those forward would
+    fail the 'record for X which is not in the suite' check, and deleting them from
+    a copy by hand leaves no trace of what was dropped or why. The retirement is
+    recorded in specs/ instead, and the assembler honours it and reports the count.
+    """
+    spec = suite_root / 'specs' / 'retired_tasks.json'
+    if not spec.is_file():
+        return {}
+    try:
+        data = json.loads(spec.read_text())
+    except (OSError, ValueError) as e:
+        raise SystemExit(f'specs/retired_tasks.json unreadable: {e}')
+    out = {}
+    for entry in data.get('retired', []):
+        name = entry.get('task')
+        if name:
+            out[name] = entry
+    return out
+
+
 def read_reward(p: Path):
     """Return (value, problem). value is None when the reward is unusable."""
     try:
@@ -269,6 +293,13 @@ def main() -> int:
     if not args.out:
         ap.error('--out is required')
     tasks = suite_tasks(args.suite_root)
+    retired = retired_tasks(args.suite_root)
+    still_present = sorted(t for t in retired if t in tasks)
+    if still_present:
+        raise SystemExit(
+            'retired in specs/retired_tasks.json but still under tasks/: '
+            + ', '.join(still_present))
+    dropped = 0
 
     sources = [d for d in ([args.mirror] + args.overlay) if d]
     for d in sources:
@@ -288,11 +319,17 @@ def main() -> int:
             shutil.rmtree(args.out)
         if args.mirror:
             for pair, task, rec in records_under(args.mirror):
+                if task in retired:
+                    dropped += 1
+                    continue
                 dest = args.out / pair / task
                 dest.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copytree(rec, dest, symlinks=False)
         for ov in args.overlay:
             for pair, task, rec in records_under(ov):
+                if task in retired:
+                    dropped += 1
+                    continue
                 dest = args.out / pair / task
                 if dest.exists():
                     shutil.rmtree(dest)
@@ -304,6 +341,9 @@ def main() -> int:
         problems, stats = audit(args.out, tasks, pairs_expected)
 
     print(f'suite tasks: {len(tasks)}   pairs: {len(stats)}')
+    if retired:
+        print(f'retired tasks: {len(retired)} ({", ".join(sorted(retired))})'
+              f'   records dropped from the sources: {dropped}')
     for pair, s in sorted(stats.items()):
         tag = 'COMPLETE' if not (s['missing'] or s['unscoreable'] or
                                  s['non_binary'] or s['incomplete']) else 'GAPS'
