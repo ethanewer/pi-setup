@@ -248,6 +248,38 @@ if you want the sweep on record.
 
 ## Model benchmarks
 
+### v3.4 — current, 785 tasks
+
+Six harness/model pairs over all 785 tasks, every record scored, every reward
+exactly `0` or `1`. Published as `v3.4/` on
+`eewer/general-agent-bench-results`: 18,858 files, 4,710 records.
+
+| Harness | Model | Pass | Rate | Timeouts | Pass excl. timeouts |
+|---|---|---|---|---|---|
+| pi | z-ai/glm-5.3-flash | 663 | 0.8446 | 12 | 659 |
+| claude-code | z-ai/glm-5.3-flash | 659 | 0.8395 | 126 | 607 |
+| terminus-2 | z-ai/glm-5.3-flash | 653 | 0.8318 | 213 | 531 |
+| pi | deepseek/deepseek-v4-flash-0731 | 649 | 0.8268 | 95 | 610 |
+| claude-code | deepseek/deepseek-v4-flash-0731 | 647 | 0.8242 | 9 | 644 |
+| terminus-2 | deepseek/deepseek-v4-flash-0731 | 608 | 0.7745 | 237 | 496 |
+
+The first five columns are the verifier-authoritative convention: `reward.txt` as
+the verifier wrote it, including trials whose agent exhausted its budget but were
+still graded. The last column is the strict alternative, where any trial with
+`agent_timeout` counts 0. Timeouts are not spread evenly across pairs, so the
+choice reorders the table -- claude-code/deepseek rises from 5th to 2nd and both
+terminus-2 pairs fall to the bottom -- which is why both are published per pair in
+`results.json` rather than left for a reader to assume.
+
+Against v3.3 every pair gained 8 to 13 passes, because 28 tasks that could not be
+passed by their own reference solution were repaired and re-run for all six pairs.
+One ordering flips: pi/deepseek and claude-code/deepseek were separated by a single
+pass in v3.3 and now sit the other way round. The denominator also changed, 787 to
+785, so these counts are not directly comparable with v3.3 and earlier; the rates
+are the comparable figures.
+
+### v3.2 records rescored under the binary contract — historical
+
 Six harness/model pairs over all 787 tasks, rescored under the binary reward
 contract from the published v3.2 records. `unscored` counts records that shipped
 with no `verifier/reward.txt` and therefore need a re-run before these numbers
