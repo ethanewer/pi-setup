@@ -26,6 +26,25 @@ def sha256_bytes(b: bytes) -> str:
     return hashlib.sha256(b).hexdigest()
 
 
+def checkout_entries(tasks_root: Path):
+    """Sorted (relative_path, sha256) for every file under every task directory."""
+    entries = []
+    for name in sorted(p.name for p in tasks_root.iterdir() if p.is_dir()):
+        d = tasks_root / name
+        for f in sorted(d.rglob('*')):
+            if f.is_file():
+                entries.append((str(f.relative_to(tasks_root)), sha256_file(f)))
+    return entries
+
+
+def checkout_merkle(entries) -> str:
+    """Deterministic identity of a task checkout, independent of repo state."""
+    h = hashlib.sha256()
+    for rel, fh in entries:
+        h.update(f'{rel}\x00{fh}\x00'.encode())
+    return h.hexdigest()
+
+
 def sha256_file(p: Path) -> str:
     h = hashlib.sha256()
     with p.open('rb') as f:
@@ -83,8 +102,25 @@ def main() -> int:
         if cfg['commit'] != commit:
             print(f'ERROR checkout commit {commit} != frozen {cfg["commit"]}')
             return 1
+        # The commit hash alone is not enough. It is a merkle over committed
+        # content, so it says nothing about uncommitted edits in the working tree,
+        # and a doctored checkout at the right HEAD would pass. Compare the
+        # recorded content merkle as well; that is what actually pins the bytes
+        # the contamination audit compares against.
+        entries = checkout_entries(tasks_root)
+        got = checkout_merkle(entries)
+        want = cfg.get('task_checkout_sha256')
+        if want and got != want:
+            print(f'ERROR checkout content {got} != frozen {want}', file=sys.stderr)
+            return 1
+        names = sorted({rel.split('/')[0] for rel, _ in entries})
+        if cfg.get('task_count') and len(names) != cfg['task_count']:
+            print(f'ERROR checkout has {len(names)} tasks, frozen record says '
+                  f'{cfg["task_count"]}', file=sys.stderr)
+            return 1
         print(f'reference identity verified: commit={commit[:12]}, '
-              f'{cfg["task_count"]} tasks')
+              f'{len(names)} tasks, {len(entries)} files, '
+              f'checkout_sha256={got[:16]}')
         return 0
 
     remote = ''
@@ -94,17 +130,9 @@ def main() -> int:
         pass
     # Deterministic identity of the task checkout itself (independent of the
     # surrounding repo state): merkle over sorted relative path + file hash.
-    entries = []
-    task_names = sorted(p.name for p in tasks_root.iterdir() if p.is_dir())
-    for name in task_names:
-        d = tasks_root / name
-        for f in sorted(d.rglob('*')):
-            if f.is_file():
-                entries.append((str(f.relative_to(tasks_root)), sha256_file(f)))
-    h = hashlib.sha256()
-    for rel, fh in entries:
-        h.update(f'{rel}\x00{fh}\x00'.encode())
-    checkout_hash = h.hexdigest()
+    entries = checkout_entries(tasks_root)
+    checkout_hash = checkout_merkle(entries)
+    task_names = sorted({rel.split('/')[0] for rel, _ in entries})
 
     manifest_tasks = {}
     for name in task_names:
