@@ -15,7 +15,15 @@ reward=0
 
 # Pristine sha256 of the supplied visible fixtures (the instruction forbids
 # modifying them; tampering defeats the visible-case check).
-PRISTINE_TELEMETRY_SHA="b5e215b9c59a01323549661ca7bb9934fcd5aa83e4f0321f4e43dea5e7158ea3"
+#
+# The telemetry pin was stale: it did not match the shipped
+# environment/files/telemetry.csv, so the no-modify rule failed for every agent
+# that never touched the file and the task could not be passed at all. The file
+# is authoritative, not the pin: running the task's own oracle over the shipped
+# telemetry.csv and spec.json reproduces tests/expected_visible.csv exactly, so
+# the fixture is the one the expectations were built from and the recorded hash
+# was simply never refreshed against it. spec.json's pin already matched.
+PRISTINE_TELEMETRY_SHA="797d319c769ee71ecb767cd8e14bc2776881321173f3e5bc102010dc63cc0664"
 PRISTINE_SPEC_SHA="6ec8cced51e197be9f98c5266437af5d1025e8339e1899595b7950209647ef5f"
 
 no_modify_broken=0

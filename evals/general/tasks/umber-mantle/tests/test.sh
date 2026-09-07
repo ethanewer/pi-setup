@@ -24,7 +24,7 @@ ok()  { echo "ok:   $1"; }
 # Integrity digests of the VISIBLE fixture (variant 0) for the unmodified checks.
 EXPECT_EXAMPLE=2bc6540f997668e4bc3ee777e441114bfc8987bfb63507e790facd9cbd47ed17
 EXPECT_MAIN=37fbbf9aff6ff843123986d997b4783e4c7cc4a73ae3d263637ffea909ef9fec
-EXPECT_LOG=d96c6e1f0f75c46ea0dd06969fa5991106a68ee8230a869d1aa3722bad65463e
+EXPECT_LOG=0bd172104df2920a58e8da10075e9fcdb17087ca6630336547f5c88df20a4392
 
 # ---------------------------------------------------------------- oracles ----
 # decode_oracle: uncompressed printer bytes (raw if already plaintext).
@@ -142,6 +142,16 @@ for hd in "$SRC"/*; do
   name=$(basename "$hd")
   wd=$(mktemp -d /tmp/umber_hx_XXXX) || wd=/tmp/umber_hx_$name
   rm -rf "$wd"; cp -r "$hd" "$wd"
+
+  # Restore the intended restrictive mode on the staged copy. Git stores only
+  # 100644 and 100755, so credentials.file arrives world-readable no matter what
+  # the scenario intends, and the solver's "exclude anything without the
+  # other-read bit" rule then never fires. The visible tree gets the same
+  # treatment in environment/Dockerfile; vine-helix's verifier already restores
+  # restrictive modes after staging for the same reason.
+  if [ -f "$wd/data/credentials.file" ]; then
+    chmod 0600 "$wd/data/credentials.file"
+  fi
 
   main_dig=$(sha256sum "$wd/data/records/main.csv" | cut -d' ' -f1)
   ex_dig=$(sha256sum "$wd/data/scripts/etl_probe.py" | cut -d' ' -f1)

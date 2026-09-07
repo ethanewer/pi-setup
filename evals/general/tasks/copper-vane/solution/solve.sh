@@ -114,7 +114,16 @@ def salvage_manifest_page(data, page_size, root_page):
             abs_end = (root_page - 1) * page_size + i + plen
             if abs_end > len(data):
                 continue  # payload runs past the truncation cut -> lost row
-            crate, origin, weighed_on, mass = decode_record(page[i:i + plen])[:4]
+            # `id` is an INTEGER PRIMARY KEY, that is a rowid alias, so SQLite
+            # stores NULL in its record slot and the real value is the cell's
+            # rowid, read just above. The payload is therefore
+            # (NULL, crate, origin, weighed_on, mass). Taking the first four
+            # decoded values shifts every column one place left and lands the
+            # weighed_on date in `mass`, which is not even numeric.
+            vals = decode_record(page[i:i + plen])
+            if len(vals) < 5:
+                continue  # record truncated by the cut
+            crate, origin, weighed_on, mass = vals[1:5]
             rows.append({
                 "id": rowid,
                 "crate": crate,

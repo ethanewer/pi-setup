@@ -1,0 +1,12 @@
+# shipped access log: two repeated clients, one unique, plus every skip rule
+10.0.0.7 - - [07/Feb/2032:10:15:01 +0000] "GET /index.html HTTP/1.1" 200 512
+10.0.0.7 - - [07/Feb/2032:10:15:04 +0000] "GET /style.css HTTP/1.1" 200 1024
+192.168.1.22 - - [07/Feb/2032:10:16:11 +0000] "POST /api/upload HTTP/1.1" 201 88
+   
+10.0.0.9 - - [07/Feb/2032:10:17:02 +0000] "GET /health HTTP/1.1" 200 2
+- - - [07/Feb/2032:10:17:09 +0000] "GET /favicon.ico HTTP/1.1" 404 0
+192.168.1.22 - - [07/Feb/2032:10:18:44 +0000] "GET /api/status HTTP/1.1" 200 310
+localhost - - [07/Feb/2032:10:19:00 +0000] "GET / HTTP/1.1" 200 512
+10.0.0.7 - - [07/Feb/2032:10:20:15 +0000] "GET /index.html HTTP/1.1" 304 0
+[broken] - - [07/Feb/2032:10:20:31 +0000] "GET / HTTP/1.1" 400 0
+172.16.0.5 - - [07/Feb/2032:10:21:02 +0000] "DELETE /api/item/9 HTTP/1.1" 204 0

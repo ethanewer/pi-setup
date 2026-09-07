@@ -106,6 +106,38 @@ def gather(src):
     return files
 
 
+def layout_shards(count, n):
+    """Map each shard index to the list of intermediate directories it lives in.
+
+    Every directory in the output must hold at most n items, and the root also
+    has to hold manifest.tsv, so the root gets n-1 slots. Shards that do not fit
+    beside the manifest are grouped under `grp-NNN` directories, recursively,
+    until each level is within its cap. With few enough shards the layout stays
+    flat, which leaves the output of small cases unchanged.
+    """
+    if n < 2:
+        # A cap of one cannot hold a manifest and any shard; nothing to lay out.
+        return {i: [] for i in range(count)}
+
+    def rec(indices, is_root):
+        limit = n - 1 if is_root else n
+        if len(indices) <= limit:
+            return {i: [] for i in indices}
+        chunk = n
+        groups = [indices[k:k + chunk] for k in range(0, len(indices), chunk)]
+        while len(groups) > limit:
+            chunk *= n
+            groups = [indices[k:k + chunk]
+                      for k in range(0, len(indices), chunk)]
+        placed = {}
+        for gi, group in enumerate(groups):
+            for i, parts in rec(group, False).items():
+                placed[i] = ["grp-%03d" % gi] + parts
+        return placed
+
+    return rec(list(range(count)), True)
+
+
 def main(argv):
     ap = argparse.ArgumentParser(prog='reshard.py')
     ap.add_argument('--input', required=True)
@@ -137,9 +169,12 @@ def main(argv):
         shutil.rmtree(out)
     os.makedirs(out)
 
+    # ---- pass 1: decide how many pieces each file needs and which shard it
+    # lands in. The shard count is not known until every file has been sized,
+    # and the layout below depends on it, so planning and writing are separate.
+    plan = []
     shard_index = 0
     items_in_shard = 0
-    rows = []
     for k, (rel, ab) in enumerate(files):
         size = os.path.getsize(ab)
         pieces = max(1, math.ceil(size / b))
@@ -150,7 +185,21 @@ def main(argv):
         if items_in_shard + pieces > n:
             shard_index += 1
             items_in_shard = 0
-        shard_dir = os.path.join(out, "shard-%03d" % shard_index)
+        plan.append((k, rel, ab, pieces, shard_index))
+        items_in_shard += pieces
+    shard_count = shard_index + 1 if plan else 0
+
+    # ---- pass 2: place the shards so that EVERY output directory obeys the
+    # item cap, the root included. manifest.tsv has to sit at the root, so the
+    # root has one fewer free slot than an interior directory; when the shards
+    # do not fit beside it they are grouped under intermediate directories.
+    layout = layout_shards(shard_count, n)
+
+    rows = []
+    for k, rel, ab, pieces, si in plan:
+        prefix = layout[si]
+        shard_rel = os.path.join(*(prefix + ["shard-%03d" % si]))
+        shard_dir = os.path.join(out, shard_rel)
         os.makedirs(shard_dir, exist_ok=True)
         parts_out = []
         with open(ab, 'rb') as fin:
@@ -162,8 +211,7 @@ def main(argv):
                     pname = "f_%06d_%d" % (k, p)
                 with open(os.path.join(shard_dir, pname), 'wb') as fout:
                     fout.write(chunk)
-                parts_out.append("shard-%03d/%s" % (shard_index, pname))
-                items_in_shard += 1
+                parts_out.append(shard_rel + "/" + pname)
         rows.append("%s\t%s\t%d" % (rel, ",".join(parts_out),
                                     1 if pieces > 1 else 0))
 
@@ -172,7 +220,7 @@ def main(argv):
         if rows:
             fh.write("\n")
     print("reshard: repacked %d file(s) into %d shard(s)"
-          % (len(files), shard_index + 1))
+          % (len(files), shard_count))
     return 0
 
 

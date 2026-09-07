@@ -1,0 +1,11 @@
+# case2: every documented skip rule, and the charsets that stay valid
+# a second comment line, also skipped
+   
+- - - [02/Mar/2032:01:00:00 +0000] "GET / HTTP/1.1" 404 0
+" - - [02/Mar/2032:01:00:01 +0000] "GET / HTTP/1.1" 400 0
+[broken] - - [02/Mar/2032:01:00:02 +0000] "GET / HTTP/1.1" 400 0
+nodigitshere - - [02/Mar/2032:01:00:03 +0000] "GET / HTTP/1.1" 200 0
+bad*token - - [02/Mar/2032:01:00:07 +0000] "GET / HTTP/1.1" 400 0
+client_9 - - [02/Mar/2032:01:00:04 +0000] "GET / HTTP/1.1" 200 5
+fe80::1 - - [02/Mar/2032:01:00:05 +0000] "GET / HTTP/1.1" 200 5
+10.0.0.1:8080 - - [02/Mar/2032:01:00:06 +0000] "GET / HTTP/1.1" 200 5

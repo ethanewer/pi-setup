@@ -1,0 +1,10 @@
+# zephyr backbone activity manifest -- exported before decommission
+2026-08-19T07:14:02Z export   source=/backbone          records=1188 status=complete
+2026-08-19T07:14:05Z manifest  file=activity.log         entries=9    status=written
+2026-08-19T08:02:41Z handoff   bundle=/app/handoff       cipher=aes-256-ctr status=sealed
+2026-08-19T08:02:44Z handoff   key=key.hex iv=iv.hex     status=recorded
+2026-08-19T09:31:17Z vault     path=/app/vault           files=5      status=pending-erase
+2026-08-19T09:31:18Z vault     note=galley.db            status=pending-erase
+2026-08-19T09:31:19Z vault     note=hex-map.pdf          status=pending-erase
+2026-08-19T09:31:20Z vault     note=old/backup_02.xml    status=pending-erase
+2026-08-19T10:05:00Z neighbor  path=/app/data/notes.rst  status=preserved

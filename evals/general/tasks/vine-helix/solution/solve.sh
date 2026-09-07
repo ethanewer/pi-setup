@@ -68,10 +68,16 @@ chmod 644 /app/cleanup/sweep.py
 
 # 4) profile the python workloads with cProfile and record the band ----------
 mkdir -p /app/prof
-python3 -m cProfile -o /app/prof/digest_slow.stats /app/jobs/digest_slow.py 300
-python3 -m cProfile -o /app/prof/digest_fast.stats /app/jobs/digest_fast.py 300
-python3 -m cProfile -o /app/prof/refine_slow.stats /app/jobs/refine_slow.py 300
-python3 -m cProfile -o /app/prof/refine_fast.stats /app/jobs/refine_fast.py 300
+# n=2000: the slow variants are quadratic and the fast ones linear, so at this
+# size the recorded totals sit around 0.46s/0.12s against roughly 0.002s. The
+# verifier requires the fast total below 1.0s and below the slow total, and a
+# band that wide holds regardless of how noisy the machine is. At the old n=300
+# both totals were a few milliseconds apart from zero and the ordering was
+# decided by profiler resolution rather than by the algorithms.
+python3 -m cProfile -o /app/prof/digest_slow.stats /app/jobs/digest_slow.py 2000
+python3 -m cProfile -o /app/prof/digest_fast.stats /app/jobs/digest_fast.py 2000
+python3 -m cProfile -o /app/prof/refine_slow.stats /app/jobs/refine_slow.py 2000
+python3 -m cProfile -o /app/prof/refine_fast.stats /app/jobs/refine_fast.py 2000
 python3 - <<'PY'
 import pstats
 pairs = [

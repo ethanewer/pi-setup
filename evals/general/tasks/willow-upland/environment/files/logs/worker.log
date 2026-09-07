@@ -1,0 +1,6 @@
+2025-03-02T08:11:02Z INFO  worker=7 action=claim job=income.proof
+2025-03-02T08:11:40Z WARN  worker=7 action=backoff job=income.proof
+2025-03-02T08:12:05Z ERROR worker=7 action=fail job=income.proof reason=locked
+2025-03-02T08:12:31Z INFO  worker=9 action=claim job=ledger.proof
+2025-03-02T08:13:00Z ERROR worker=9 action=fail job=ledger.proof reason=locked
+2025-03-02T08:13:44Z INFO  worker=9 action=release job=ledger.proof

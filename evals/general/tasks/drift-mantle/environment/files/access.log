@@ -1,0 +1,12 @@
+node-a    192.168.1.10 probe
+node-a    192.168.1.10 retry
+node-a    192.168.1.10 done
+edge      10.0.0.1 dns
+edge      10.0.0.1 dns-repeat
+gateway   172.16.0.5 uplink
+legacy    010.020.030.01 old-scheme
+decoy     x192.0.2.1y embedded-not-counted
+noise     --- malformed line with no address ---
+probe     8.8.8.8 resolver-a
+quiet     no address on this line
+tail      9.9.9.9 resolver-tail

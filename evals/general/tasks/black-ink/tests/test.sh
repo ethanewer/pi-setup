@@ -15,7 +15,26 @@ reward=0
 
 # Pristine sha256 of the supplied visible fixtures in /app (the instruction tells
 # the agent not to modify these; tampering defeats the visible-case check).
-PRISTINE_LOG_SHA="86d6dfc5158092f16ea85c06f06311285b7a07595260f0ce5ba30103f382d36b"
+#
+# operations.log was RECONSTRUCTED, not recovered. The repository-root .gitignore
+# ignores *.log, so the fixture was never committed; it was deleted from the
+# working tree before the v3.2 rollouts, and every one of the six pairs then saw
+# an /app with no operations.log at all. Three agents noticed and wrote their own
+# substitute, which is why their trials reported "was modified" rather than
+# "missing", and three left it absent. No transcript therefore contains the
+# original bytes, and the old pin below matched nothing that ever existed on disk.
+#
+# The replacement is derived from the contract rather than invented: instruction.md
+# quotes `2032-02-01T10:00:00Z INFO read 4ms` and
+# `[2032-02-02T11:00:00Z] WARN write duration=8` as its format examples, and those
+# two lines are exactly what tests/expected.json reports (counts 1 and 1,
+# averages 4.0 and 8.0) for query.txt's range 2032-02-01..2032-02-02. Added to
+# them are one malformed near-miss to reach expected.json's malformed=1, and one
+# entry a day outside each boundary, since the instruction names boundary
+# exclusion as behaviour the hidden cases probe. Verified with the task's own
+# oracle on Python 3.12: all five cases (visible plus four hidden) reproduce their
+# expected.json byte-for-byte under tests/test.sh's normalisation.
+PRISTINE_LOG_SHA="6d3ee60853706f2e7d5c20cced7fc42caab3ab9024b991fd754f506d17983c14"
 PRISTINE_QUERY_SHA="ebbaea0f9c28866b0cb80912407af4da8c38256309b365a2eb7444a5139ae0cf"
 
 no_modify_broken=0

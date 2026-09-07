@@ -1,0 +1,6 @@
+2025-03-02T07:00:01Z INFO  service=ledger action=start
+2025-03-02T07:00:04Z INFO  service=ledger action=load_stage bytes=4096
+2025-03-02T07:00:09Z WARN  service=ledger action=retry reason=slow_io
+2025-03-02T07:00:15Z ERROR service=ledger action=seal reason=checksum_mismatch
+2025-03-02T07:00:22Z INFO  service=ledger action=recover
+2025-03-02T07:00:30Z ERROR service=ledger action=abort reason=timeout

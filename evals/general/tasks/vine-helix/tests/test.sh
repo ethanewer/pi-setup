@@ -131,7 +131,15 @@ if [ -d /tests/hidden/fix ]; then
     # the task checksumming; the scenario starts from restrictive modes)
     case "$case_name" in
       f1) chmod 000 "$w/a.sh" "$w/b.sh" ;;
-      f2) chmod 111 "$w/run.sh"; chmod 000 "$w/exec_only.sh" ;;
+      f2) chmod 111 "$w/run.sh"; chmod 000 "$w/exec_only.sh"
+          # data.txt is the case's "non-script must keep its mode" probe, and
+          # expected.txt pins that mode at 644. Git stores only 100644/100755 and
+          # a checkout materialises 0666 & ~umask, so under a 002 umask the file
+          # arrives 664 and the case fails no matter how correct fixperms.sh is:
+          # the contract forbids touching it. Pin the intended initial mode here,
+          # the same way the two scripts above are pinned, so the case tests the
+          # deliverable instead of the host's umask.
+          if [ -f "$w/data.txt" ]; then chmod 644 "$w/data.txt"; fi ;;
     esac
     if ! bash /app/fixperms.sh "$w" >/dev/null 2>&1; then
       fail "fixperms.sh failed on hidden tree $case_name"

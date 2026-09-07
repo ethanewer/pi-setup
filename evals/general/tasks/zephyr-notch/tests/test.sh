@@ -28,7 +28,19 @@ fail() { echo "  FAIL: $1"; FAILS+=("$1"); }
 
 HALL=/tests/hidden
 FINAL_MESSAGE="VERIFIED HAILING BRIDGE PROTOCOL COMPLETE"
-REF_ACTIVITY=6e7faf243ab04e7ae99f1a37bb3f40ba7e1b3ceef9cf187f147c027e64d2d621
+# The two neighbouring files in /app/data must survive the erase byte-for-byte.
+#
+# activity.log was RECONSTRUCTED, not recovered. The repository-root .gitignore
+# ignores *.log, so the fixture was never committed and is gone from the working
+# tree; the old REF_ACTIVITY pinned bytes that no longer exist anywhere, which
+# made the check fail for every agent before it could say anything about the
+# deliverable. The check's purpose is "the agent did not touch the neighbour",
+# and that holds for any content as long as the pin matches what ships, so the
+# file is rebuilt from the narrative notes.rst and instruction.md give (an
+# activity manifest exported from /backbone, a sealed handoff bundle, a vault
+# pending erase) and the pin is refreshed against it. notes.rst was never lost
+# and its pin is unchanged.
+REF_ACTIVITY=712782b5db4fcedec47e25935316b08dd1341fb89a739d9f06148d0a71e82dff
 REF_NOTES=56486b5a3a6fa5d0752e79ba2e8405c260bad3199fa6126db7ff91ec6511e843
 
 # ---------------------------------------------------------------------------
