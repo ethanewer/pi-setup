@@ -29,6 +29,10 @@
 #   --extra PATH copy a derived file into the published tree root before
 #                uploading, for artifacts computed from the run records rather
 #                than from specs/, so they are not part of the audit bundle.
+#   --require-rerun TASK
+#                assert that every pair in the mirror has a freshly collected
+#                record for TASK in the overlay, and die if any pair would fall
+#                back to the mirror's copy. Repeatable.
 #
 # Requires HF_TOKEN in the environment for --no-upload=false.
 set -uo pipefail
@@ -38,7 +42,7 @@ ROOT="$(dirname "$HERE")"
 REPO=eewer/general-agent-bench-results
 VERSION="" MIRROR="" OUT="" NO_UPLOAD=0
 OVERLAYS=() JOBS=() JOBS_DIR="" STAGE="" EXTRAS=()
-NOTES=()
+NOTES=() REQUIRE_RERUN=()
 
 die() { echo "FATAL: $*" >&2; exit 1; }
 step() { echo; echo "=== [$(date -Is)] $* ==="; }
@@ -55,6 +59,7 @@ while [ $# -gt 0 ]; do
     --repo)      REPO=$2; shift 2 ;;
     --note)      NOTES+=("$2"); shift 2 ;;
     --extra)     EXTRAS+=("$2"); shift 2 ;;
+    --require-rerun) REQUIRE_RERUN+=("$2"); shift 2 ;;
     --no-upload) NO_UPLOAD=1; shift ;;
     *)           die "unknown argument: $1" ;;
   esac
@@ -120,6 +125,48 @@ for m in missing[:20]:
     print('  MISSING', m)
 sys.exit(1 if missing else 0)
 PY
+  # A repaired task has to be re-run for every pair, but its old records are
+  # scoreable, so nothing else in this pipeline notices when one is missing from
+  # the overlay: assemble_publish just carries the mirror's stale record forward
+  # and the tree still validates as complete and binary. v3.4 shipped two such
+  # records for terminus-2/glm because the retry job was left out of the --job
+  # list, and one of them published a 0 where the re-run had earned a 1.
+  if [ ${#REQUIRE_RERUN[@]} -gt 0 ]; then
+    STAGE="$STAGE" MIRROR="$MIRROR" python3 - "${REQUIRE_RERUN[@]}" <<'PY' || die "a task that had to be re-run is missing from the overlay for some pair"
+import os, sys
+from pathlib import Path
+stage = Path(os.environ['STAGE'])
+mirror = Path(os.environ['MIRROR'])
+tasks = sys.argv[1:]
+
+def pairs_with_task(root, task):
+    out = set()
+    if not root.is_dir():
+        return out
+    for p in root.glob(f'*/*/*/{task}'):
+        if p.is_dir():
+            out.add('/'.join(p.relative_to(root).parts[:3]))
+    return out
+
+mirror_pairs = {'/'.join(p.relative_to(mirror).parts[:3])
+                for p in mirror.glob('*/*/*/') if p.is_dir()}
+missing = []
+for task in tasks:
+    have = pairs_with_task(stage, task)
+    for pair in sorted(mirror_pairs):
+        if pair not in have:
+            missing.append(f'{pair}/{task}')
+print(f'required re-runs: {len(tasks)} tasks x {len(mirror_pairs)} pairs'
+      f' = {len(tasks) * len(mirror_pairs)} records; absent from the overlay:'
+      f' {len(missing)}')
+for m in missing[:20]:
+    print('  NOT RE-RUN', m)
+if missing:
+    print('These would silently fall back to the mirror\'s pre-repair record.',
+          file=sys.stderr)
+sys.exit(1 if missing else 0)
+PY
+  fi
   OVERLAY_ARGS+=(--overlay "$STAGE")
 else
   step "2/4 no --job given; skipping collection"
