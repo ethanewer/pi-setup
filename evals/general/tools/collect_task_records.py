@@ -82,19 +82,43 @@ PI_TOOLS = [
 
 
 def trial_dirs_by_task(job: Path, only_tasks=None):
-    """Map task -> latest finished trial dir under a harbor job.
+    """Map task -> trial dir under a harbor job.
 
     Harbor writes `<task>__<id>/` trial directories. Several attempts at one task
     can exist, so the last by name wins, matching collect_run.py.
+
+    A trial with exception.txt but no result.json is still included. Harbor can
+    record the exception and then hang in artifact collection, which leaves the
+    outcome on disk with no result.json; v1-item-043-hard sat that way for over
+    half an hour after hitting its 7200 s budget. Discarding the trial would lose
+    a result that was actually determined, and silently dropping it is how v3.2
+    ended up publishing records with no reward.
     """
     best = {}
-    for rp in sorted(job.glob('*__*/result.json')):
-        td = rp.parent
+    for td in sorted(p for p in job.glob('*__*/') if p.is_dir()):
         task = td.name.split('__')[0]
         if only_tasks and task not in only_tasks:
             continue
-        best[task] = td          # sorted() => later attempt overwrites
-    return best
+        ranked = (td / 'result.json').exists()
+        prev = best.get(task)
+        # prefer a trial that has result.json; otherwise take the later name
+        if prev is None or ranked >= (prev[1] / 'result.json').exists():
+            best[task] = (td, ranked)
+    return {t: v[0] for t, v in best.items()}
+
+
+def exception_from_file(trial: Path):
+    """Exception type recorded in exception.txt, when result.json is absent."""
+    p = trial / 'exception.txt'
+    if not p.exists():
+        return ''
+    text = p.read_text(errors='replace')
+    m = re.findall(r'harbor\.trial\.errors\.(\w+)|\b(\w*(?:Timeout|Error|Exception))\b:', text)
+    for a, b in reversed(m):
+        name = a or b
+        if name and name not in ('CancelledError',):
+            return name
+    return ''
 
 
 def norm_pi(trial: Path, model: str, task: str):
@@ -278,15 +302,24 @@ def main():
             continue
         for TASK in sorted(found):
             trial = found[TASK]
-            res = json.loads((trial / 'result.json').read_text())
-            exc = (res.get('exception_info') or {}).get('exception_type') or ''
+            rj = trial / 'result.json'
+            if rj.exists():
+                res = json.loads(rj.read_text())
+                exc = (res.get('exception_info') or {}).get('exception_type') or ''
+            else:
+                # harbor recorded the exception but never finalized the trial
+                res = {}
+                exc = exception_from_file(trial)
+                if not exc:
+                    errors.append(f'{jobname}/{TASK}: trial has neither result.json '
+                                  f'nor a readable exception.txt, so its outcome is '
+                                  f'unknown and it cannot be published ({trial})')
+                    continue
+                print(f'  NOTE {jobname}/{TASK}: no result.json; harbor did not '
+                      f'finalize, using exception.txt ({exc})')
             agent_timeout = 'Timeout' in exc
             if 'Timeout' in exc and 'Verifier' in exc:
                 agent_timeout = False
-            # verifier_result is null, not absent, when harbor skipped the
-            # verifier phase after an agent timeout, so `or {}` is required:
-            # .get(k, {}) returns the stored None and the chain then crashes on
-            # exactly the records this path exists to handle.
             vr = (res.get('verifier_result') or {})
             reward = ((vr.get('rewards') or {}).get('reward'))
             try:
@@ -336,12 +369,15 @@ def main():
                 if exc == 'AgentTimeoutError':
                     (dest / 'verifier' / 'reward.txt').write_text('0\n')
                     reward = 0
-                    reward_provenance = ('agent-timeout: the agent exhausted the '
-                                         'task timeout_sec, harbor skipped the '
-                                         'verifier phase, scored 0 as '
-                                         'TIMEOUT_FAIL per audit_run_rewards.py')
+                    basis = ('result.json' if rj.exists()
+                             else 'exception.txt, harbor never wrote result.json')
+                    reward_provenance = (
+                        'agent-timeout: the agent exhausted the task timeout_sec, '
+                        'harbor skipped the verifier phase, scored 0 as '
+                        'TIMEOUT_FAIL per audit_run_rewards.py. Evidence from '
+                        f'{basis}.')
                     print(f'  NOTE {jobname}/{TASK}: agent timeout, verifier '
-                          f'never ran -> reward 0 (TIMEOUT_FAIL)')
+                          f'never ran -> reward 0 (TIMEOUT_FAIL, from {basis})')
                     continue
                 if exc == 'VerifierTimeoutError':
                     errors.append(f'{jobname}/{TASK}: VerifierTimeoutError with no '
