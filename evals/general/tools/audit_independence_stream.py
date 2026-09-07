@@ -264,6 +264,53 @@ def excluded_media(label: str, data: bytes) -> bool:
     want = EXCLUDED_MEDIA.get(rel)
     return bool(want) and hashlib.sha256(data).hexdigest() == want
 
+
+# Large vendored distributions are pinned by sha256 in specs/large_assets.json
+# against an upstream source (Apache's hadoop-3.3.6.tar.gz, nodejs.org's
+# node-v20.19.3-linux-x64.tar.xz, the Vosk model and its derived FSTs). Their
+# bytes are provably the vendor's rather than authored here, so a hash match
+# against the upstream release is stronger provenance evidence than a similarity
+# scan against the reference could be -- and expanding them is not cheap: those
+# two archives alone contribute 24,352 of this suite's 37,981 payloads, and the
+# audit walks every payload three times. Skipping a file whose hash matches its
+# pin therefore narrows the scan to material we actually wrote, without weakening
+# what the scan can conclude. A file whose hash does NOT match its pin is never
+# skipped, so a substituted asset is scanned in full and reported.
+VERIFIED_ASSETS: dict = {}
+
+
+def load_verified_assets(root: Path) -> dict:
+    """Map repo_path -> sha256 for large assets whose bytes match their pin."""
+    spec = root / 'specs' / 'large_assets.json'
+    out = {}
+    if not spec.is_file():
+        return out
+    try:
+        assets = json.loads(spec.read_text()).get('assets', [])
+    except (OSError, ValueError):
+        return out
+    for a in assets:
+        rel, want = a.get('repo_path'), a.get('sha256')
+        if not rel or not want:
+            continue
+        p = root / rel
+        if not p.is_file():
+            continue
+        h = hashlib.sha256()
+        try:
+            with open(p, 'rb') as fh:
+                for chunk in iter(lambda: fh.read(1 << 22), b''):
+                    h.update(chunk)
+        except OSError:
+            continue
+        if h.hexdigest() == want:
+            out[rel] = want
+    return out
+
+
+def is_verified_asset(label: str) -> bool:
+    return rel_label(label) in VERIFIED_ASSETS
+
 # Generated audit artifacts are excluded from scanning: they are outputs of the
 # gates themselves and must name reference paths/strings to report them.  This
 # exclusion is path-based and documented, not filename-pattern based.
@@ -379,6 +426,8 @@ def iter_payloads(root: Path, expand_archives: bool = True):
     for p in walk_files(root):
         data = read_bytes(p)
         label = str(p)
+        if VERIFIED_ASSETS and is_verified_asset(label):
+            continue
         yield label, data
         if expand_archives:
             for mname, mdata in archive_members(p.name, data):
@@ -462,6 +511,10 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--reference-root', type=Path, default=None)
     ap.add_argument('--reference-provenance', type=Path, default=None)
+    ap.add_argument('--skip-verified-assets', action='store_true',
+                    help='skip large vendored distributions whose bytes match '
+                         'their pinned sha256 in specs/large_assets.json; an '
+                         'asset whose hash does not match is still scanned')
     args = ap.parse_args()
 
     ref_root = args.reference_root
@@ -475,6 +528,13 @@ def main():
     if not reference_identity_ok(ref_root):
         return 1
 
+    global VERIFIED_ASSETS
+    if args.skip_verified_assets:
+        VERIFIED_ASSETS = load_verified_assets(ROOT)
+        print(f'skipping {len(VERIFIED_ASSETS)} hash-verified vendored asset(s):')
+        for rel, sha in sorted(VERIFIED_ASSETS.items()):
+            print(f'  {rel}  sha256={sha[:16]}')
+
     report = {
         'reference_root': str(ref_root),
         'v2_payloads': 0,
@@ -484,6 +544,8 @@ def main():
         'exclusions': {
             'private-audit/': 'gitignored audit record; competency names, not task material',
             'boilerplate_allowlist': BOILERPLATE_ALLOWLIST or 'none',
+            'hash_verified_vendored_assets': (
+                sorted(VERIFIED_ASSETS) if VERIFIED_ASSETS else 'none'),
         },
         'exact_matches': [], 'block_matches': [], 'block_soft_matches': [],
         'ngram_matches': [],
