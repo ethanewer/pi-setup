@@ -41,6 +41,7 @@ def records_under(root: Path):
 def rescore(tree: Path, apply: bool):
     per_pair = defaultdict(lambda: {'records': 0, 'already_binary': 0,
                                     'rescored': 0, 'needs_rerun': 0,
+                                    'recanonicalised': 0,
                                     'reward_before': 0.0, 'reward_after': 0.0,
                                     'rescored_tasks': set(),
                                     'rerun_tasks': set()})
@@ -64,13 +65,23 @@ def rescore(tree: Path, apply: bool):
         new = 1.0 if val >= 1.0 else 0.0
         s['reward_before'] += val
         s['reward_after'] += new
-        if new == val:
-            s['already_binary'] += 1
-        else:
+        # Canonicalise the text as well as the value. A record carried over from a
+        # verifier that wrote "%.4f" holds "1.0000", which is binary in value but
+        # breaks a consumer doing int(reward.txt.read()). Rewriting every reward
+        # as "0" or "1" makes the published contract literally true and changes
+        # no value.
+        canonical = '%d' % int(new)
+        value_changed = new != val
+        text_changed = raw != canonical
+        if value_changed:
             s['rescored'] += 1
             s['rescored_tasks'].add(task)
-            if apply:
-                rp.write_text('%d\n' % int(new))
+        if text_changed:
+            s['recanonicalised'] += 1
+        if not value_changed and not text_changed:
+            s['already_binary'] += 1
+        if (value_changed or text_changed) and apply:
+            rp.write_text(canonical + '\n')
     return per_pair
 
 
@@ -90,7 +101,8 @@ def main() -> int:
     tot = defaultdict(int)
     tasks_rescored, tasks_rerun = set(), set()
     for s in per_pair.values():
-        for k in ('records', 'already_binary', 'rescored', 'needs_rerun'):
+        for k in ('records', 'already_binary', 'rescored', 'needs_rerun',
+                  'recanonicalised'):
             tot[k] += s[k]
         tot['reward_before'] += s['reward_before']
         tot['reward_after'] += s['reward_after']
@@ -117,9 +129,11 @@ def main() -> int:
             print(f"{pair:52s} {s['records']:5d} {s['already_binary']:7d} "
                   f"{s['rescored']:9d} {s['needs_rerun']:6d} "
                   f"{s['reward_before']:14.2f} {s['reward_after']:9.2f}")
-        print(f"\nrecords: {tot['records']}   already binary: {tot['already_binary']}")
-        print(f"RESCORED (no inference needed): {tot['rescored']} records "
+        print(f"\nrecords: {tot['records']}   already canonical: {tot['already_binary']}")
+        print(f"RESCORED (value changed, no inference needed): {tot['rescored']} records "
               f"across {len(tasks_rescored)} distinct tasks")
+        print(f"RECANONICALISED (same value, text normalised to 0/1): "
+              f"{tot['recanonicalised']} records")
         print(f"NEEDS RE-RUN (no reward.txt):   {tot['needs_rerun']} records "
               f"across {len(tasks_rerun)} distinct tasks")
         print(f"total reward {tot['reward_before']:.2f} -> {tot['reward_after']:.2f}")
