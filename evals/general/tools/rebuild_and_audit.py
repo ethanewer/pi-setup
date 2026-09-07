@@ -45,6 +45,7 @@ def main():
     run([py, 'tools/selftest_binary_reward.py'])
     run([py, 'tools/check_binary_reward.py'])
     run([py, 'tools/ensure_reward_guard.py'])
+    run([py, 'tools/pin_numeric_threads.py'])
     run([py, 'tools/check_general_coverage.py'])
     run([py, 'tools/check_tb21_coverage.py'])
     run([py, 'tools/lint_tasks.py'])
