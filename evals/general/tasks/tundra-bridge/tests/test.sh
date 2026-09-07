@@ -17,8 +17,7 @@ finish() {
     echo 0 > /logs/verifier/reward.txt
   fi
 }
-trap finish EXIT
-
+trap 'finish; [ -f /logs/verifier/reward.txt ] || { echo "VERIFIER EXITED WITHOUT WRITING A REWARD; scoring 0" >&2; mkdir -p /logs/verifier; echo 0 > /logs/verifier/reward.txt; }' EXIT
 # ---- 0. deliverables must exist (negative control fails here) -------------------
 [ -f /app/nginx.conf ]                || fail "missing /app/nginx.conf"
 [ -f /app/site/index.html ]           || fail "missing /app/site/index.html"

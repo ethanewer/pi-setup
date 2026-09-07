@@ -3,6 +3,11 @@
 # the restored curl are live in this container. Executes the deliverables and hidden
 # scenarios, then writes 0/1 to /logs/verifier/reward.txt.
 # A pristine (unsolved) container must end with reward 0.
+# Guarantee a reward on every exit path. Without this a verifier that
+# raises while inspecting the agent's deliverable writes nothing at all,
+# which yields a record that cannot be scored.
+trap '[ -f /logs/verifier/reward.txt ] || { echo "VERIFIER EXITED WITHOUT WRITING A REWARD; scoring 0" >&2; mkdir -p /logs/verifier; echo 0 > /logs/verifier/reward.txt; }' EXIT
+
 set -uo pipefail
 
 LOGS=/logs/verifier

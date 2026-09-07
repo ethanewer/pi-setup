@@ -5,6 +5,11 @@
 # /app/out.jpg produced from the visible fixture by running the solver.
 # Runs the solver on every hidden case under /tests/hidden and validates each
 # output byte-for-byte/schema against the expected.json in that case dir.
+# Guarantee a reward on every exit path. Without this a verifier that
+# raises while inspecting the agent's deliverable writes nothing at all,
+# which yields a record that cannot be scored.
+trap '[ -f /logs/verifier/reward.txt ] || { echo "VERIFIER EXITED WITHOUT WRITING A REWARD; scoring 0" >&2; mkdir -p /logs/verifier; echo 0 > /logs/verifier/reward.txt; }' EXIT
+
 set -eu
 R=/logs/verifier/reward.txt
 mkdir -p /logs/verifier

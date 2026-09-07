@@ -3,6 +3,11 @@
 # checks /app/plugin.bc symbol resolution with llvm-nm, and executes
 # /app/skerry_demo. Writes 1/0 to /logs/verifier/reward.txt; never crashes on
 # missing/malformed agent output.
+# Guarantee a reward on every exit path. Without this a verifier that
+# raises while inspecting the agent's deliverable writes nothing at all,
+# which yields a record that cannot be scored.
+trap '[ -f /logs/verifier/reward.txt ] || { echo "VERIFIER EXITED WITHOUT WRITING A REWARD; scoring 0" >&2; mkdir -p /logs/verifier; echo 0 > /logs/verifier/reward.txt; }' EXIT
+
 set -u
 mkdir -p /logs/verifier
 reward=0

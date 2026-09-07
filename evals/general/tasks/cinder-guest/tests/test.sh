@@ -12,6 +12,11 @@
 #   * the serial console (loopback TCP port) still shows the CG> shell prompt
 #     and executes a fresh probe command — the emulator is a live, drivable
 #     background service
+# Guarantee a reward on every exit path. Without this a verifier that
+# raises while inspecting the agent's deliverable writes nothing at all,
+# which yields a record that cannot be scored.
+trap '[ -f /logs/verifier/reward.txt ] || { echo "VERIFIER EXITED WITHOUT WRITING A REWARD; scoring 0" >&2; mkdir -p /logs/verifier; echo 0 > /logs/verifier/reward.txt; }' EXIT
+
 set -u
 
 REWARD=/logs/verifier/reward.txt

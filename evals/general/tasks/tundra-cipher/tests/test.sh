@@ -5,6 +5,11 @@
 # meeting slots, neighbour pairs) for the visible /app case and for every
 # hidden case directory, and compares them with the /app deliverables and with
 # what /app/solver.py produces on the hidden cases. Writes reward 0/1.
+# Guarantee a reward on every exit path. Without this a verifier that
+# raises while inspecting the agent's deliverable writes nothing at all,
+# which yields a record that cannot be scored.
+trap '[ -f /logs/verifier/reward.txt ] || { echo "VERIFIER EXITED WITHOUT WRITING A REWARD; scoring 0" >&2; mkdir -p /logs/verifier; echo 0 > /logs/verifier/reward.txt; }' EXIT
+
 set -u
 
 mkdir -p /logs/verifier

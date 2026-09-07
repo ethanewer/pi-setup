@@ -22,8 +22,7 @@ restore_native() {
         mv /app/target/.pixelcast.hidden /app/target/pixelcast 2>/dev/null
     fi
 }
-trap restore_native EXIT
-
+trap 'restore_native; [ -f /logs/verifier/reward.txt ] || { echo "VERIFIER EXITED WITHOUT WRITING A REWARD; scoring 0" >&2; mkdir -p /logs/verifier; echo 0 > /logs/verifier/reward.txt; }' EXIT
 export PRISTINE_FIXTURE_SHA
 python3 - <<'PY'
 import hashlib, os, subprocess, sys

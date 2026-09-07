@@ -7,6 +7,11 @@
 # /app/moves.txt via the deliverable to prove reproducibility, and
 # cross-checks the committed moves.txt against an independent replay of the
 # canonical session. Writes a numeric reward to /logs/verifier/reward.txt.
+# Guarantee a reward on every exit path. Without this a verifier that
+# raises while inspecting the agent's deliverable writes nothing at all,
+# which yields a record that cannot be scored.
+trap '[ -f /logs/verifier/reward.txt ] || { echo "VERIFIER EXITED WITHOUT WRITING A REWARD; scoring 0" >&2; mkdir -p /logs/verifier; echo 0 > /logs/verifier/reward.txt; }' EXIT
+
 set -u
 mkdir -p /logs/verifier
 ok=1

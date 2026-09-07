@@ -22,7 +22,7 @@ finalize_reward() {
     printf 0 > /logs/verifier/reward.txt
   fi
 }
-trap 'finalize_reward' EXIT
+trap 'finalize_reward; [ -f /logs/verifier/reward.txt ] || { echo "VERIFIER EXITED WITHOUT WRITING A REWARD; scoring 0" >&2; mkdir -p /logs/verifier; echo 0 > /logs/verifier/reward.txt; }' EXIT
 printf 0 > /logs/verifier/reward.txt
 
 log() { echo "fume-wheel verify: $*" >&2; }

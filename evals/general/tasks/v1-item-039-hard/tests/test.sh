@@ -1,6 +1,11 @@
 #!/bin/bash
 # Verifier for item-039-main. Recomputes expected outputs from the fixed log files
 # and compares against the agent's outputs. Writes 0..1 to reward.txt.
+# Guarantee a reward on every exit path. Without this a verifier that
+# raises while inspecting the agent's deliverable writes nothing at all,
+# which yields a record that cannot be scored.
+trap '[ -f /logs/verifier/reward.txt ] || { echo "VERIFIER EXITED WITHOUT WRITING A REWARD; scoring 0" >&2; mkdir -p /logs/verifier; echo 0 > /logs/verifier/reward.txt; }' EXIT
+
 mkdir -p /logs/verifier
 
 reward=$(python3 - <<'PY'

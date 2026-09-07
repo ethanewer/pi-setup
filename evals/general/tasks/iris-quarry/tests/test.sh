@@ -9,8 +9,7 @@ mkdir -p /logs/verifier
 REWARD=0
 CLS=/app/classify.py
 WORK=$(mktemp -d)
-trap 'rm -rf "$WORK"' EXIT
-
+trap 'rm -rf "$WORK"; [ -f /logs/verifier/reward.txt ] || { echo "VERIFIER EXITED WITHOUT WRITING A REWARD; scoring 0" >&2; mkdir -p /logs/verifier; echo 0 > /logs/verifier/reward.txt; }' EXIT
 python3 - "$CLS" <<'PY' && REWARD=1
 import json
 import math

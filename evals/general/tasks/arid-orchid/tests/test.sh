@@ -8,8 +8,7 @@ set -uo pipefail
 REWARD_FILE=/logs/verifier/reward.txt
 REF="$(cd "$(dirname "$0")" && pwd)/reference.py"
 TMP=$(mktemp -d)
-trap 'rm -rf "$TMP"' EXIT
-
+trap 'rm -rf "$TMP"; [ -f /logs/verifier/reward.txt ] || { echo "VERIFIER EXITED WITHOUT WRITING A REWARD; scoring 0" >&2; mkdir -p /logs/verifier; echo 0 > /logs/verifier/reward.txt; }' EXIT
 ALL_PASS=1
 PY=""
 fail(){ echo "FAIL: $*"; ALL_PASS=0; }

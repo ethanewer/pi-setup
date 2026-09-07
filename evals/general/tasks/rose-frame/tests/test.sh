@@ -13,8 +13,7 @@ if [ ! -x /app/render.py ] && [ ! -f /app/render.py ]; then
 fi
 
 WORK=$(mktemp -d)
-trap 'rm -rf "$WORK"' EXIT
-
+trap 'rm -rf "$WORK"; [ -f /logs/verifier/reward.txt ] || { echo "VERIFIER EXITED WITHOUT WRITING A REWARD; scoring 0" >&2; mkdir -p /logs/verifier; echo 0 > /logs/verifier/reward.txt; }' EXIT
 if command -v python3 >/dev/null; then
     run_render() { python3 /app/render.py "$1" "$2"; }
 else

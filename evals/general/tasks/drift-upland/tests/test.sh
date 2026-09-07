@@ -3,6 +3,11 @@
 # Executes /app/solve.py over every competency (series, meeting, mahjong,
 # pursuit, puzzle) on the visible fixtures and on every hidden case in
 # /tests/hidden, and replays the /app/moves.txt deliverable. Writes REWARD.
+# Guarantee a reward on every exit path. Without this a verifier that
+# raises while inspecting the agent's deliverable writes nothing at all,
+# which yields a record that cannot be scored.
+trap '[ -f /logs/verifier/reward.txt ] || { echo "VERIFIER EXITED WITHOUT WRITING A REWARD; scoring 0" >&2; mkdir -p /logs/verifier; echo 0 > /logs/verifier/reward.txt; }' EXIT
+
 set -u
 
 mkdir -p /logs/verifier

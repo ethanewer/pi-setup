@@ -2,6 +2,11 @@
 # Verifier for brass-lantern: enforces the no-modify rule on the visible card,
 # checks /app/adapter_config.json, and EXECUTES /app/make_adapter.py on every
 # hidden card (with hidden flag combinations). Writes 0/1 to reward.txt.
+# Guarantee a reward on every exit path. Without this a verifier that
+# raises while inspecting the agent's deliverable writes nothing at all,
+# which yields a record that cannot be scored.
+trap '[ -f /logs/verifier/reward.txt ] || { echo "VERIFIER EXITED WITHOUT WRITING A REWARD; scoring 0" >&2; mkdir -p /logs/verifier; echo 0 > /logs/verifier/reward.txt; }' EXIT
+
 set -u
 
 mkdir -p /logs/verifier

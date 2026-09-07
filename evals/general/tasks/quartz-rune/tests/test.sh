@@ -4,6 +4,11 @@
 # the visible probe inputs and on every hidden input file, and independently
 # re-evaluates /app/circuit.gn with its own interpreter against expected.json.
 # Writes 1.0 or 0.0 to /logs/verifier/reward.txt.
+# Guarantee a reward on every exit path. Without this a verifier that
+# raises while inspecting the agent's deliverable writes nothing at all,
+# which yields a record that cannot be scored.
+trap '[ -f /logs/verifier/reward.txt ] || { echo "VERIFIER EXITED WITHOUT WRITING A REWARD; scoring 0" >&2; mkdir -p /logs/verifier; echo 0 > /logs/verifier/reward.txt; }' EXIT
+
 set -u
 
 mkdir -p /logs/verifier

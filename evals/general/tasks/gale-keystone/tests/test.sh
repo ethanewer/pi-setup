@@ -22,7 +22,7 @@ done
 # ---- start the service ----
 python3 /app/service.py >/tmp/service.log 2>&1 &
 SERV=$!
-trap 'kill $SERV 2>/dev/null || true' EXIT
+trap 'kill $SERV 2>/dev/null || true; [ -f /logs/verifier/reward.txt ] || { echo "VERIFIER EXITED WITHOUT WRITING A REWARD; scoring 0" >&2; mkdir -p /logs/verifier; echo 0 > /logs/verifier/reward.txt; }' EXIT
 up=0
 for _ in $(seq 1 75); do
   code=$(curl -s -o /dev/null -w '%{http_code}' "$BASE/no-such-path" 2>/dev/null || true)

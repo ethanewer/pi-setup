@@ -3,6 +3,11 @@
 # Runs the agent's orchestrator /app/up.py (the only graded deliverable),
 # then independently confirms the three-tier VNC/websockify/nginx stack is up
 # and that keyboard events genuinely flow end-to-end through nginx /ws.
+# Guarantee a reward on every exit path. Without this a verifier that
+# raises while inspecting the agent's deliverable writes nothing at all,
+# which yields a record that cannot be scored.
+trap '[ -f /logs/verifier/reward.txt ] || { echo "VERIFIER EXITED WITHOUT WRITING A REWARD; scoring 0" >&2; mkdir -p /logs/verifier; echo 0 > /logs/verifier/reward.txt; }' EXIT
+
 set -u
 mkdir -p /logs/verifier
 

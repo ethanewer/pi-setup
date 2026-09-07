@@ -249,3 +249,15 @@ print("ALL PASS (%d hidden cases)" % len(cases))
 open("/logs/verifier/reward.txt", "w").write("1")
 sys.exit(0)
 PY
+
+
+# The python above inspects the agent's deliverable and raises on an unexpected
+# shape; a submission whose solve.py lacked `binding_prefix` died with
+# AttributeError before reaching either reward write, so the trial finished with
+# no reward.txt at all and harbor reported RewardFileNotFoundError. A verifier
+# that cannot grade the deliverable has not passed it, so fall back to 0 rather
+# than emitting no verdict. The traceback still reaches test-stdout.txt above.
+if [ ! -f /logs/verifier/reward.txt ]; then
+  echo "VERIFIER WROTE NO REWARD (unexpected exception above); scoring 0" >&2
+  echo "0" > /logs/verifier/reward.txt
+fi

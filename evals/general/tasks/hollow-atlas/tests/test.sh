@@ -8,7 +8,7 @@ set -u
 mkdir -p /logs/verifier
 reward=0
 work=$(mktemp -d)
-trap 'rm -rf "$work"' EXIT
+trap 'rm -rf "$work"; [ -f /logs/verifier/reward.txt ] || { echo "VERIFIER EXITED WITHOUT WRITING A REWARD; scoring 0" >&2; mkdir -p /logs/verifier; echo 0 > /logs/verifier/reward.txt; }' EXIT
 fail(){ echo "FAIL: $*" >&2; FAILED=1; }
 
 # --- helper: a workflow file must have no token on any NON-comment line ---

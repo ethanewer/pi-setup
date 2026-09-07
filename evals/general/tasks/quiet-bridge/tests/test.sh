@@ -11,8 +11,7 @@ VISIBLE_EXP=/tests/expected.json
 HIDDEN_DIR=/tests/hidden
 
 work=$(mktemp -d)
-trap 'rm -rf "$work"' EXIT
-
+trap 'rm -rf "$work"; [ -f /logs/verifier/reward.txt ] || { echo "VERIFIER EXITED WITHOUT WRITING A REWARD; scoring 0" >&2; mkdir -p /logs/verifier; echo 0 > /logs/verifier/reward.txt; }' EXIT
 ok=1  # assume success, unset on any failure
 
 run() {

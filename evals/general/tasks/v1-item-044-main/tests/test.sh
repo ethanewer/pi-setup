@@ -1,6 +1,11 @@
 #!/bin/bash
 # Verifier for item-044: validates the reconstructed git repo state.
 # Always writes /logs/verifier/reward.txt; reward = passes/7.
+# Guarantee a reward on every exit path. Without this a verifier that
+# raises while inspecting the agent's deliverable writes nothing at all,
+# which yields a record that cannot be scored.
+trap '[ -f /logs/verifier/reward.txt ] || { echo "VERIFIER EXITED WITHOUT WRITING A REWARD; scoring 0" >&2; mkdir -p /logs/verifier; echo 0 > /logs/verifier/reward.txt; }' EXIT
+
 set -uo pipefail
 mkdir -p /logs/verifier
 cd /app

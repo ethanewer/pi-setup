@@ -2,6 +2,11 @@
 # Verifier: executes /app/parse.py on the visible fixtures AND hidden cases,
 # then checks every deliverable + regenerated output. Writes REWARD to
 # /logs/verifier/reward.txt.
+# Guarantee a reward on every exit path. Without this a verifier that
+# raises while inspecting the agent's deliverable writes nothing at all,
+# which yields a record that cannot be scored.
+trap '[ -f /logs/verifier/reward.txt ] || { echo "VERIFIER EXITED WITHOUT WRITING A REWARD; scoring 0" >&2; mkdir -p /logs/verifier; echo 0 > /logs/verifier/reward.txt; }' EXIT
+
 set -u
 
 DIFF() { python3 /tests/helper.py "$@" >/dev/null 2>&1; }

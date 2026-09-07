@@ -38,8 +38,7 @@ stop_service() {
   if [ -n "$SVC_PID" ]; then kill "$SVC_PID" 2>/dev/null || true; wait "$SVC_PID" 2>/dev/null || true; fi
   SVC_PID=""
 }
-trap 'kill "$SVC_PID" 2>/dev/null || true' EXIT
-
+trap 'kill "$SVC_PID" 2>/dev/null || true; [ -f /logs/verifier/reward.txt ] || { echo "VERIFIER EXITED WITHOUT WRITING A REWARD; scoring 0" >&2; mkdir -p /logs/verifier; echo 0 > /logs/verifier/reward.txt; }' EXIT
 # Reference summary recomputed deterministically from the case config (same
 # calendar semantics as the roster service, independent of any live service).
 reference_summary() { # case_dir -> prints JSON on stdout

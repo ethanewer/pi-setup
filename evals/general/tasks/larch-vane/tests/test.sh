@@ -4,6 +4,11 @@
 # recording directories, enforces byte-identical pipeline scripts and tree
 # listing, and checks the executable bits. Writes reward to
 # /logs/verifier/reward.txt. Never crashes on malformed agent output.
+# Guarantee a reward on every exit path. Without this a verifier that
+# raises while inspecting the agent's deliverable writes nothing at all,
+# which yields a record that cannot be scored.
+trap '[ -f /logs/verifier/reward.txt ] || { echo "VERIFIER EXITED WITHOUT WRITING A REWARD; scoring 0" >&2; mkdir -p /logs/verifier; echo 0 > /logs/verifier/reward.txt; }' EXIT
+
 set -u
 mkdir -p /logs/verifier
 reward=0

@@ -1,6 +1,11 @@
 #!/bin/bash
 # Verifier for item-030-main. Objective checks only.
 # Reward = A(0.25 recovery) + B(0.25 placeholder) + C(0.25 no leak) + D(0.25 refs/clean).
+# Guarantee a reward on every exit path. Without this a verifier that
+# raises while inspecting the agent's deliverable writes nothing at all,
+# which yields a record that cannot be scored.
+trap '[ -f /logs/verifier/reward.txt ] || { echo "VERIFIER EXITED WITHOUT WRITING A REWARD; scoring 0" >&2; mkdir -p /logs/verifier; echo 0 > /logs/verifier/reward.txt; }' EXIT
+
 mkdir -p /logs/verifier
 
 AWS_ID="AKIAEXAMPLEKEY000001"

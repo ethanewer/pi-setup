@@ -3,6 +3,11 @@
 # Reward = A(0.2 recovery) + B(0.2 placeholder, content+messages)
 #        + C(0.2 no credential bytes anywhere) + D(0.2 refs/count/orig_head)
 #        + E(0.2 hygiene: clean status, no stray token files, fsck healthy).
+# Guarantee a reward on every exit path. Without this a verifier that
+# raises while inspecting the agent's deliverable writes nothing at all,
+# which yields a record that cannot be scored.
+trap '[ -f /logs/verifier/reward.txt ] || { echo "VERIFIER EXITED WITHOUT WRITING A REWARD; scoring 0" >&2; mkdir -p /logs/verifier; echo 0 > /logs/verifier/reward.txt; }' EXIT
+
 mkdir -p /logs/verifier
 
 AWS_ID="AKIAEXAMPLEKEY000001"

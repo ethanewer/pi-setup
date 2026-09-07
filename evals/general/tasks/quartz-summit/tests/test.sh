@@ -4,6 +4,11 @@
 # produced /app/artifact, and checks RL policy / edge cases and clustering via
 # the agent's own left-behind environment and functions. Writes REWARD to
 # /logs/verifier/reward.txt.
+# Guarantee a reward on every exit path. Without this a verifier that
+# raises while inspecting the agent's deliverable writes nothing at all,
+# which yields a record that cannot be scored.
+trap '[ -f /logs/verifier/reward.txt ] || { echo "VERIFIER EXITED WITHOUT WRITING A REWARD; scoring 0" >&2; mkdir -p /logs/verifier; echo 0 > /logs/verifier/reward.txt; }' EXIT
+
 set -uo pipefail
 
 LOGS=/logs/verifier

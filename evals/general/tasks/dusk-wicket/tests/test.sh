@@ -11,7 +11,7 @@ mkdir -p /logs/verifier
 TIMEOUT_CMD=$(command -v timeout || true); [ -n "${TIMEOUT_CMD-}" ] || TIMEOUT_CMD=""
 overall=1
 finalize_reward() { if [ "${overall:-0}" = "1" ]; then printf 1 > /logs/verifier/reward.txt; else printf 0 > /logs/verifier/reward.txt; fi; }
-trap 'finalize_reward' EXIT
+trap 'finalize_reward; [ -f /logs/verifier/reward.txt ] || { echo "VERIFIER EXITED WITHOUT WRITING A REWARD; scoring 0" >&2; mkdir -p /logs/verifier; echo 0 > /logs/verifier/reward.txt; }' EXIT
 printf 0 > /logs/verifier/reward.txt
 log() { echo "dusk-wicket verify: $*" >&2; }
 

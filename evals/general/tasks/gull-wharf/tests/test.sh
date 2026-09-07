@@ -36,8 +36,7 @@ finalize_reward() {
   fi
   echo "gull-wharf verifier: overall=$overall${msgs:+:${msgs}}" >&2
 }
-trap 'finalize_reward; rm -rf "$TMP"' EXIT
-
+trap 'finalize_reward; rm -rf "$TMP"; [ -f /logs/verifier/reward.txt ] || { echo "VERIFIER EXITED WITHOUT WRITING A REWARD; scoring 0" >&2; mkdir -p /logs/verifier; echo 0 > /logs/verifier/reward.txt; }' EXIT
 note() { msgs="$msgs $1"; }
 
 # --- scenario up ------------------------------------------------------------

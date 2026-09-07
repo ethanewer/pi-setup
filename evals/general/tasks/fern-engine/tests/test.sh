@@ -10,7 +10,7 @@ mkdir -p /logs/verifier
 WF=/app/workflow.py
 HID=/tests/hidden
 WORK=$(mktemp -d)
-trap 'rm -rf "$WORK"' EXIT
+trap 'rm -rf "$WORK"; [ -f /logs/verifier/reward.txt ] || { echo "VERIFIER EXITED WITHOUT WRITING A REWARD; scoring 0" >&2; mkdir -p /logs/verifier; echo 0 > /logs/verifier/reward.txt; }' EXIT
 ok=1
 fail(){ echo "FAIL: $*" >&2; ok=0; }
 

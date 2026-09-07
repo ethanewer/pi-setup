@@ -2,6 +2,11 @@
 # Verifier for night-console (executes-deliverable).
 # Rewards 1 only if /app/session.py runs correctly on the visible case AND on
 # every hidden case in /tests/hidden/.
+# Guarantee a reward on every exit path. Without this a verifier that
+# raises while inspecting the agent's deliverable writes nothing at all,
+# which yields a record that cannot be scored.
+trap '[ -f /logs/verifier/reward.txt ] || { echo "VERIFIER EXITED WITHOUT WRITING A REWARD; scoring 0" >&2; mkdir -p /logs/verifier; echo 0 > /logs/verifier/reward.txt; }' EXIT
+
 mkdir -p /logs/verifier
 reward=1
 
