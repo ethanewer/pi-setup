@@ -108,7 +108,8 @@ All gates run via `tools/rebuild_and_audit.sh` or individually:
 | Reward binarity | `tools/check_binary_reward.py` | 785/785 provably binary, 0 problems |
 | Reward binarity self-test | `tools/selftest_binary_reward.py` | 23/23 fixtures (12 fractional shapes flagged, 11 binary shapes passed) |
 | Reward on every exit path | `tools/ensure_reward_guard.py` | 785/785 guarded, 0 unpatchable; also parses every EXIT trap body, which `bash -n` on the file cannot do |
-| Thread pools vs CPU quota | `tools/pin_numeric_threads.py` | 162/162 pinned to their declared `cpus`, 0 skipped |
+| Thread pools vs CPU quota | `tools/pin_numeric_threads.py` | 161/161 pinned to their declared `cpus`, 0 skipped |
+| Git repos safe for any user | `tools/ensure_git_safe_directory.py` | 8/8 images that build a repository set a system-wide `safe.directory`, 0 skipped |
 | Layout & contract lint | `tools/lint_tasks.py` | 516 clean-room tasks, 0 problems (271 legacy v1 skipped by design) |
 | Competency coverage | `tools/check_tb21_coverage.py` | 725/726 covered, 1 waived-infeasible, 0 problems |
 | Difficulty calibration | `tools/check_difficulty.py` | 516 measured (49 easy / 251 medium / 216 hard), 0 problems; the 271 v1 tasks carry no rubric, hence `--allow-unmeasured` |
