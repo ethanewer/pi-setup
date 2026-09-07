@@ -102,11 +102,26 @@ def audit(out: Path, tasks, pairs_expected):
         unknown = sorted(names - set(tasks))
         incomplete, unscoreable, nonbinary = [], [], []
         total, strict = 0.0, 0
+        timeouts, strict_no_timeout = 0, 0.0
         for task in sorted(names):
             rec = recs[task]
             absent = [f for f in REQUIRED if not (rec / f).is_file()]
             if absent:
                 incomplete.append((task, absent))
+            # An agent that exhausts its budget can still get a verifier verdict,
+            # and that verdict is what reward.txt holds. Counting it as a pass is
+            # the verifier-authoritative convention this dataset has always used,
+            # but it is a choice and it moves the ranking, so the alternative is
+            # published beside it rather than left for someone to rediscover.
+            timed_out = False
+            mp = rec / 'metadata.json'
+            if mp.is_file():
+                try:
+                    timed_out = bool(json.loads(mp.read_text()).get('agent_timeout'))
+                except Exception:
+                    timed_out = False
+            if timed_out:
+                timeouts += 1
             rp = rec / 'verifier/reward.txt'
             if rp.is_file():
                 val, prob = read_reward(rp)
@@ -117,6 +132,8 @@ def audit(out: Path, tasks, pairs_expected):
                 else:
                     total += val
                     strict += 1 if val == 1.0 else 0
+                    if not timed_out:
+                        strict_no_timeout += val
             else:
                 unscoreable.append((task, 'no verifier/reward.txt'))
         for t in missing:
@@ -139,6 +156,8 @@ def audit(out: Path, tasks, pairs_expected):
             'incomplete': [t for t, _ in incomplete],
             'total_reward': round(total, 4),
             'strict_pass': strict,
+            'agent_timeouts': timeouts,
+            'strict_pass_excluding_timeouts': int(strict_no_timeout),
         }
     return problems, stats
 
@@ -168,6 +187,18 @@ def write_aggregates(out: Path, version: str, tasks, stats, suite_root: Path,
             'strict_pass_rate_scored': round(s['strict_pass'] / denom, 6),
             'mean_reward_all_suite_tasks': round(s['total_reward'] / n, 6),
             'reward_contract': 'binary: every reward.txt is exactly 0 or 1',
+            # Both timeout conventions, because the choice moves the ranking.
+            'agent_timeouts': s['agent_timeouts'],
+            'convention': {
+                'published': ('verifier-authoritative: reward.txt as the verifier '
+                              'wrote it, including for trials whose agent timed out '
+                              'but were still graded'),
+                'alternative': ('strict: any trial with agent_timeout counts 0 '
+                                'regardless of the verdict'),
+                'strict_pass_excluding_timeouts': s['strict_pass_excluding_timeouts'],
+                'strict_rate_excluding_timeouts': round(
+                    s['strict_pass_excluding_timeouts'] / n, 6),
+            },
         }
         (out / pair).mkdir(parents=True, exist_ok=True)
         (out / pair / 'results.json').write_text(
@@ -180,14 +211,32 @@ def write_aggregates(out: Path, version: str, tasks, stats, suite_root: Path,
         'pairs': len(stats),
         'pairs_fully_scored': len(scored_pairs),
         'reward_contract': 'binary: every reward.txt is exactly 0 or 1',
+        'timeout_convention': (
+            'The leaderboard below is verifier-authoritative: reward.txt as the '
+            'verifier wrote it, including trials whose agent exhausted its budget '
+            'but were still graded. Under the strict alternative, where any '
+            'agent_timeout counts 0, the ranking changes: pairs that time out '
+            'often lose a lot. Both are published per pair in results.json so the '
+            'choice is explicit rather than implicit.'),
         'leaderboard': [
             {'pair': p,
              'total_reward': s['total_reward'],
              'strict_pass': s['strict_pass'],
              'scored': s['scored'],
-             'pass_rate': round(s['strict_pass'] / (s['scored'] or 1), 6)}
+             'pass_rate': round(s['strict_pass'] / (s['scored'] or 1), 6),
+             'agent_timeouts': s['agent_timeouts'],
+             'strict_pass_excluding_timeouts': s['strict_pass_excluding_timeouts'],
+             'pass_rate_excluding_timeouts': round(
+                 s['strict_pass_excluding_timeouts'] / n, 6)}
             for p, s in sorted(stats.items(),
                                key=lambda kv: -kv[1]['strict_pass'])
+        ],
+        'leaderboard_strict_excluding_timeouts': [
+            {'pair': p, 'strict_pass': s['strict_pass_excluding_timeouts'],
+             'pass_rate': round(s['strict_pass_excluding_timeouts'] / n, 6)}
+            for p, s in sorted(
+                stats.items(),
+                key=lambda kv: -kv[1]['strict_pass_excluding_timeouts'])
         ],
         'unscoreable_records': {p: s['unscoreable'] for p, s in sorted(stats.items())
                                 if s['unscoreable']},
