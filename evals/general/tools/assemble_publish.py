@@ -310,7 +310,14 @@ def main() -> int:
         for rec_pair, _, _ in records_under(d):
             pairs_expected.add(rec_pair)
     if not pairs_expected:
-        raise SystemExit('no records found in any source tree')
+        if args.report_only and args.out.is_dir():
+            # Validating an already-assembled tree in place needs no source: the
+            # pairs are whatever the tree itself holds. Requiring --mirror here made
+            # the one mode that writes nothing unusable on its own.
+            for rec_pair, _, _ in records_under(args.out):
+                pairs_expected.add(rec_pair)
+        if not pairs_expected:
+            raise SystemExit('no records found in any source tree')
 
     if args.report_only:
         problems, stats = audit(args.out, tasks, pairs_expected)
