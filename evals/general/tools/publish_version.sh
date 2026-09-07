@@ -20,11 +20,15 @@
 #
 # Usage:
 #   tools/publish_version.sh --version v3.3 --mirror DIR --out DIR \
-#       [--overlay DIR]... [--job SPEC]... [--repo OWNER/NAME] [--no-upload]
+#       [--overlay DIR]... [--job SPEC]... [--repo OWNER/NAME] [--extra PATH]...
+#       [--no-upload]
 #
 #   --job SPEC   jobname:harness:model-in-path:model-in-metadata, passed through
 #                to collect_task_records.py. Omit --job entirely to skip
 #                collection and publish the mirror plus overlays as they stand.
+#   --extra PATH copy a derived file into the published tree root before
+#                uploading, for artifacts computed from the run records rather
+#                than from specs/, so they are not part of the audit bundle.
 #
 # Requires HF_TOKEN in the environment for --no-upload=false.
 set -uo pipefail
@@ -33,7 +37,7 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(dirname "$HERE")"
 REPO=eewer/general-agent-bench-results
 VERSION="" MIRROR="" OUT="" NO_UPLOAD=0
-OVERLAYS=() JOBS=() JOBS_DIR="" STAGE=""
+OVERLAYS=() JOBS=() JOBS_DIR="" STAGE="" EXTRAS=()
 NOTES=()
 
 die() { echo "FATAL: $*" >&2; exit 1; }
@@ -50,6 +54,7 @@ while [ $# -gt 0 ]; do
     --stage)     STAGE=$2; shift 2 ;;
     --repo)      REPO=$2; shift 2 ;;
     --note)      NOTES+=("$2"); shift 2 ;;
+    --extra)     EXTRAS+=("$2"); shift 2 ;;
     --no-upload) NO_UPLOAD=1; shift ;;
     *)           die "unknown argument: $1" ;;
   esac
@@ -101,6 +106,12 @@ step "3/4 assemble and validate $VERSION"
 ASM=(--version "$VERSION" --mirror "$WORK" --out "$OUT" ${OVERLAY_ARGS[@]+"${OVERLAY_ARGS[@]}"})
 for n in ${NOTES[@]+"${NOTES[@]}"}; do [ -n "$n" ] && ASM+=(--note "$n"); done
 python3 "$HERE/assemble_publish.py" "${ASM[@]}" || die "assemble_publish refused to publish"
+
+for e in ${EXTRAS[@]+"${EXTRAS[@]}"}; do
+  [ -f "$e" ] || die "--extra file missing: $e"
+  cp "$e" "$OUT/$(basename "$e")"
+  echo "staged extra: $(basename "$e")"
+done
 
 if [ "$NO_UPLOAD" -eq 1 ]; then
   step "done (--no-upload)"
