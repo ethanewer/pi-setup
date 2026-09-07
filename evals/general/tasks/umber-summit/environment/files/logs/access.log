@@ -1,0 +1,13 @@
+[2026-04-02T05:11:07Z] src=10.20.0.4 GET /inventory HTTP/1.1 200 1843
+[2026-04-02T05:11:19Z] src=10.20.0.4 GET /inventory/summary HTTP/1.1 200 402
+[2026-04-02T05:12:44Z] src=192.168.9.17 detected SYN port scan across 214 ports
+[2026-04-02T05:13:02Z] src=192.168.9.17 detected SYN port scan across 388 ports
+[2026-04-02T05:13:58Z] src=192.168.9.17 detected SYN port scan across 501 ports
+[2026-04-02T05:14:21Z] src=172.16.4.9 detected ping sweep over 172.16.4.0/24
+[2026-04-02T05:15:03Z] src=172.16.4.9 detected ping sweep over 172.16.5.0/24
+[2026-04-02T05:16:40Z] src=10.20.0.11 POST /inventory/adjust HTTP/1.1 201 96
+[2026-04-02T05:17:12Z] no source token on this line: malformed upstream record
+[2026-04-02T05:18:55Z] src=10.20.0.11 GET /healthz HTTP/1.1 200 2
+[2026-04-02T05:19:31Z] metric-push batch accepted rows=412
+[2026-04-02T05:20:09Z] src=10.20.0.4 GET /inventory HTTP/1.1 304 0
+[2026-04-02T05:21:47Z] metric-push batch accepted rows=388

@@ -49,15 +49,33 @@ static uint32_t recover_key_impl(const char *pairs_path) {
     int have_key = 0;
     uint32_t key = 0;
     while (fgets(line, sizeof line, fh)) {
-        char *a = NULL, *b = NULL, *p = line;
-        /* tokenize on whitespace/commas, skip # comments */
+        char *tok[3];
+        int ntok = 0;
+        char *p = line;
+        /* Tokenize on whitespace/commas and stop at a # comment. Each token has
+         * to be NUL-terminated in place: parse_hex32 reads to the end of the
+         * string it is given, so a token that merely points into the line runs
+         * straight through the separator after it, hits a non-hex character and
+         * is rejected -- which discarded every pair in every fixture and made
+         * recover_key return its "no valid pair" zero. main() does not have this
+         * problem because fscanf("%127s") terminates what it hands back.
+         *
+         * A line has to carry exactly two tokens to be a pair. The malformed
+         * hidden fixture contains a three-token line, and reading only its first
+         * two tokens would recover a key from a file that is specified to yield
+         * none, so over-long lines are rejected rather than truncated. */
         while (*p) {
             if (*p == '#') break;
             if (isspace((unsigned char)*p) || *p == ',') { p++; continue; }
-            if (!a) a = p; else if (!b) b = p; else break;
-            while (*p && !isspace((unsigned char)*p) && *p != ',') p++;
+            char *start = p;
+            while (*p && !isspace((unsigned char)*p) && *p != ',' && *p != '#') p++;
+            char sep = *p;
+            *p = '\0';
+            if (ntok < 3) tok[ntok++] = start;
+            if (sep) p++;
         }
-        if (!a || !b) continue; /* blank / comment / single-token line */
+        if (ntok != 2) continue; /* blank / comment / single token / over-long */
+        char *a = tok[0], *b = tok[1];
         uint32_t P, C;
         if (!parse_hex32(a, &P) || !parse_hex32(b, &C)) continue;
         uint32_t k = unmix(C) ^ P;

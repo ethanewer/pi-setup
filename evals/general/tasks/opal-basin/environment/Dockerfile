@@ -23,6 +23,15 @@ import transformers
 import importlib.metadata as im
 from transformers import BertConfig, BertModel, BertTokenizer
 
+# [environment] declares cpus = 1, which Docker enforces as a CFS
+# quota and not as a CPU-affinity mask: the process still sees every
+# host core, so thread pools sized from the core count oversubscribe the
+# quota badly. Pin them to the declared budget.
+ENV OMP_NUM_THREADS=1 \
+    MKL_NUM_THREADS=1 \
+    OPENBLAS_NUM_THREADS=1 \
+    NUMEXPR_NUM_THREADS=1
+
 VOCAB = (["[PAD]", "[UNK]", "[CLS]", "[SEP]", "[MASK]"] + [
     "pump", "valve", "sensor", "fault", "alarm", "reset", "leak", "pressure",
     "temp", "overheat", "shutdown", "motor", "bearing", "vibrate", "noise",

@@ -37,8 +37,20 @@ while IFS= read -r line || [ -n "$line" ]; do
   line="$(printf '%s' "$line" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
   [ -z "$line" ] && continue
   case "$line" in \#*) continue ;; esac
-  addr="$(printf '%s' "$line" | cut -f1 | sed -e 's/[[:space:]]*$//')"
-  rcpt="$(printf '%s' "$line" | cut -f2 | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+  # Split on tabs by hand and keep the first two fields that still hold something
+  # once trimmed. The contract says whitespace around the fields must be tolerated
+  # and trimmed, and the hidden millhouse spec pads a line to three columns with a
+  # whitespace-only middle one; reading a fixed column with cut -f2 turned that
+  # padding into an empty recipient and aborted the whole run, so a padded column
+  # was treated as malformed input instead of as whitespace.
+  addr=""; rcpt=""; rest="$line"
+  while [ -n "$rest" ]; do
+    field="${rest%%$'\t'*}"
+    if [ "$field" = "$rest" ]; then rest=""; else rest="${rest#*$'\t'}"; fi
+    field="$(printf '%s' "$field" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+    [ -z "$field" ] && continue
+    if [ -z "$addr" ]; then addr="$field"; elif [ -z "$rcpt" ]; then rcpt="$field"; fi
+  done
   if [ -z "$addr" ] || [ -z "$rcpt" ]; then
     echo "provision_lists: malformed spec line: $line" >&2
     exit 1

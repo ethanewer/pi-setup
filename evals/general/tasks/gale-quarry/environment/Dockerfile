@@ -5,6 +5,15 @@
 # launch.py and then re-runs the produced binaries directly.
 FROM bench-base:python-3.12
 
+# [environment] declares cpus = 2, which Docker enforces as a CFS
+# quota and not as a CPU-affinity mask: the process still sees every
+# host core, so thread pools sized from the core count oversubscribe the
+# quota badly. Pin them to the declared budget.
+ENV OMP_NUM_THREADS=2 \
+    MKL_NUM_THREADS=2 \
+    OPENBLAS_NUM_THREADS=2 \
+    NUMEXPR_NUM_THREADS=2
+
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update >/dev/null 2>&1 && \

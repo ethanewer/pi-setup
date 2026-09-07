@@ -1,5 +1,14 @@
 FROM bench-base:ubuntu-24.04
 
+# [environment] declares cpus = 1, which Docker enforces as a CFS
+# quota and not as a CPU-affinity mask: the process still sees every
+# host core, so thread pools sized from the core count oversubscribe the
+# quota badly. Pin them to the declared budget.
+ENV OMP_NUM_THREADS=1 \
+    MKL_NUM_THREADS=1 \
+    OPENBLAS_NUM_THREADS=1 \
+    NUMEXPR_NUM_THREADS=1
+
 # Quartz Grove -- reproducible scientific environment with dependency conflict
 # resolution. Keep the build lean and under the 5-minute budget: only Python,
 # venv, pip and a single pre-existing GLOBAL numpy.

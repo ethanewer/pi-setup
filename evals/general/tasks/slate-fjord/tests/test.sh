@@ -34,8 +34,35 @@ try:
         cfg = f.read()
 except OSError:
     failures.append("sshd_config unreadable")
-if "PubkeyAuthentication no" not in cfg or "PasswordAuthentication yes" not in cfg:
-    failures.append("sshd_config auth policy was altered (password-only required)")
+
+
+def uncommented(cfg, name):
+    """Value of an uncommented sshd directive, or None when it is not set.
+
+    A bare substring test is vacuous here: Debian's stock sshd_config ships
+    "#PasswordAuthentication yes" and "#PubkeyAuthentication no" as commented
+    defaults, so the old check passed on a server that had never been provisioned
+    at all -- which is exactly the state this task's container is in when the
+    image ENTRYPOINT does not run.
+    """
+    for raw in cfg.splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        parts = line.split(None, 1)
+        if len(parts) == 2 and parts[0].lower() == name.lower():
+            return parts[1].strip()
+    return None
+
+
+if uncommented(cfg, "PasswordAuthentication") != "yes" \
+        or uncommented(cfg, "PubkeyAuthentication") != "no":
+    failures.append(
+        "sshd_config auth policy is not the required password-only one "
+        "(PasswordAuthentication=%r PubkeyAuthentication=%r); the image "
+        "ENTRYPOINT that provisions the server did not run in this container"
+        % (uncommented(cfg, "PasswordAuthentication"),
+           uncommented(cfg, "PubkeyAuthentication")))
 
 # --- 2. deliverable present; host-key checking must NOT be relaxed ----------
 if not os.path.isfile(SYNC):

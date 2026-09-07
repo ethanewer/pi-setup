@@ -68,7 +68,24 @@ exit 0
 SH
 chmod 0755 "$SYNC"
 
-# ---- 2. Run the script on the visible remote to produce /app/clone.
+# ---- 2. Preflight. This task's environment is provisioned by the image
+# ENTRYPOINT (deploy account, password-only sshd on 22 and 2222, the git
+# fixtures under /srv/git). Every git and ssh invocation below runs with -q, so
+# without this the oracle dies at the sync step having printed nothing at all,
+# which is how a missing daemon and a broken deliverable came to look identical.
+echo "[preflight] sshd_config policy: $(grep -cE '^(PasswordAuthentication yes|PubkeyAuthentication no)$' /etc/ssh/sshd_config 2>/dev/null || echo 0)/2 required lines"
+echo "[preflight] sshd processes: $(pgrep -c sshd 2>/dev/null || echo 0)"
+for port in 22 2222; do
+  if (exec 3<>/dev/tcp/127.0.0.1/$port) 2>/dev/null; then
+    echo "[preflight] port $port: accepting connections"
+  else
+    echo "[preflight] port $port: NOT ANSWERING" >&2
+  fi
+done
+echo "[preflight] /srv/git: $(ls /srv/git 2>/dev/null | tr '\n' ' ')"
+echo "[preflight] sshpass: $(command -v sshpass || echo MISSING)"
+
+# ---- 3. Run the script on the visible remote to produce /app/clone.
 bash "$SYNC" deploy@127.0.0.1:/srv/git/ledger.git /app/clone 'bootstrap mirror'
 
 echo "solve.sh done -> $SYNC and /app/clone"
