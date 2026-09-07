@@ -14,8 +14,12 @@ fi
 for id in $(echo "$ids" | tr ' ' '\n' | sort -u); do
   [ -z "$id" ] && continue
   if git cat-file -e "$id^{commit}" 2>/dev/null; then
-    c=$(git show "$id:secret.txt" 2>/dev/null)
-    if [ -n "$c" ]; then
+    # Guard the substitution rather than assigning it directly. `git show` exits
+    # 128 for any candidate commit that does not contain secret.txt, which is most
+    # of them, and under `set -euo pipefail` a failed command substitution in an
+    # assignment aborts the whole script. Testing it in an `if` keeps the search
+    # going until a commit actually carries the file.
+    if c=$(git show "$id:secret.txt" 2>/dev/null) && [ -n "$c" ]; then
       content="$c"
       break
     fi

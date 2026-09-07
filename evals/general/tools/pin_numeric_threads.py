@@ -56,7 +56,32 @@ OPENMP = re.compile(r'-fopenmp|\bomp\.h\b|libomp', re.I)
 VARS = ('OMP_NUM_THREADS', 'MKL_NUM_THREADS', 'OPENBLAS_NUM_THREADS',
         'NUMEXPR_NUM_THREADS')
 
-FROM_LINE = re.compile(r'^\s*FROM\s+', re.I | re.M)
+# Uppercase and anchored, and never matched inside a RUN heredoc. The original
+# form was `^\s*FROM\s+` with re.I, which matched the `from transformers import
+# ...` line inside opal-basin's `RUN python3 - <<'PY'` block and injected the ENV
+# instruction into the middle of that Python source, so the image no longer built.
+FROM_LINE = re.compile(r'^FROM\s+', re.M)
+HEREDOC_START = re.compile(r"<<-?\s*'?\"?([A-Za-z_][A-Za-z0-9_]*)'?\"?\s*$")
+
+
+def heredoc_regions(text: str):
+    """Line ranges covered by a RUN heredoc, as (first, last) inclusive 1-based."""
+    regions = []
+    tag = None
+    start = 0
+    for n, line in enumerate(text.splitlines(), 1):
+        if tag is None:
+            m = HEREDOC_START.search(line.rstrip())
+            if m and '<<' in line:
+                tag, start = m.group(1), n
+        elif line.strip() == tag:
+            regions.append((start, n))
+            tag = None
+    return regions
+
+
+def _in_heredoc(regions, lineno: int) -> bool:
+    return any(a <= lineno <= b for a, b in regions)
 
 
 def threaded(task_dir: Path, dockerfile: str) -> str | None:
@@ -85,7 +110,7 @@ def already_pinned(dockerfile: str) -> bool:
 
 
 def patch(dockerfile: str, cpus: int):
-    """Insert the ENV after the last FROM, so it applies to the stage that runs."""
+    """Insert the ENV after the last real FROM, so it applies to the stage that runs."""
     body = ' \\\n'.join(
         ['%s=%d' % (VARS[0], cpus)]
         + ['    %s=%d' % (v, cpus) for v in VARS[1:]])
@@ -95,7 +120,12 @@ def patch(dockerfile: str, cpus: int):
         '# host core, so thread pools sized from the core count oversubscribe the\n'
         '# quota badly. Pin them to the declared budget.\n'
         'ENV %s\n' % (cpus, body))
-    starts = [m.end() for m in FROM_LINE.finditer(dockerfile)]
+    regions = heredoc_regions(dockerfile)
+    starts = []
+    for m in FROM_LINE.finditer(dockerfile):
+        lineno = dockerfile.count('\n', 0, m.start()) + 1
+        if not _in_heredoc(regions, lineno):
+            starts.append(m.end())
     if not starts:
         return None
     at = dockerfile.find('\n', starts[-1])
