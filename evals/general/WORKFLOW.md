@@ -113,6 +113,7 @@ All gates run via `tools/rebuild_and_audit.sh` or individually:
 | Reward on every exit path | `tools/ensure_reward_guard.py` | 785/785 guarded, 0 unpatchable; also parses every EXIT trap body, which `bash -n` on the file cannot do |
 | Thread pools vs CPU quota | `tools/pin_numeric_threads.py` | 161/161 pinned to their declared `cpus`, 0 skipped |
 | Git repos safe for any user | `tools/ensure_git_safe_directory.py` | 8/8 images that build a repository set a system-wide `safe.directory`, 0 skipped |
+| Negative control | harbor `nop` agent over all 785 tasks | 785/785 score 0 on a pristine container; found 3 vacuous verifiers, all repaired. Not yet a scripted gate — see `## Negative control` |
 | Layout & contract lint | `tools/lint_tasks.py` | 516 clean-room tasks, 0 problems (271 legacy v1 skipped by design) |
 | Competency coverage | `tools/check_tb21_coverage.py` | 725/726 covered, 1 waived-infeasible, 0 problems |
 | Difficulty calibration | `tools/check_difficulty.py` | 516 measured (49 easy / 251 medium / 216 hard), 0 problems; the 271 v1 tasks carry no rubric, hence `--allow-unmeasured` |
@@ -308,9 +309,68 @@ the full-credit condition is untouched and only the partial tiers collapsed to
 Re-run `tools/collect_oracle_results.py` over those 45 before the next publish
 if you want the sweep on record.
 
+## Negative control
+
+The oracle census and the negative control are the two halves of verifier
+validation, and only the first had ever been run here.
+
+Running each task's own `solution/solve.sh` under harbor's oracle agent proves the
+verifier **accepts** a correct solution. It cannot prove the verifier **rejects** an
+incorrect one. A verifier that unconditionally wrote `1` would pass that census at
+785/785 while measuring nothing at all.
+
+The other half is to grade a container in which nobody worked. Harbor ships a `nop`
+agent whose `setup()` and `run()` are both `pass`, so:
+
+```
+harbor run -p <all tasks> -n 12 -k 1 -y -q --job-name negative-control -o <jobs> -a nop
+```
+
+Every task must score 0. Run over all 785 tasks for v3.5, it found three that scored
+1 — `pale-heron`, `opal-basin`, and `drift-marsh` (the last by static scan for the
+same code shape rather than by the sweep, whose trial for it happened to land after
+the fix). All six pairs had been scoring 1 on each of them in v3.2 through v3.4.
+
+Two distinct causes:
+
+- **`pale-heron`, `drift-marsh`** — a python heredoc wrote `0` to `reward.txt` on
+  failure and then exited **0**, followed by a shell epilogue that derived its own
+  reward from that status and wrote the same file again:
+  `[ "$rc" -eq 0 ] && reward=1`. The epilogue read success and overwrote the 0 with
+  a 1. Both failure paths now exit 1.
+- **`opal-basin`** — `ref_texts` was initialised to `None` and never assigned; the
+  `try` block imported torch, loaded the model and *defined* `reference()` but never
+  called it. Since the entire deliverable section is gated on
+  `if ref_texts is not None`, about sixty lines never executed and the verifier
+  reduced to a vendor-script hash check.
+
+The same run exposed a latent contract violation in `v1-item-019-main`, which
+captured its heredoc's stdout into the reward while three early paths printed a
+diagnostic to stdout and raised `SystemExit` — a `BaseException`, so the handler that
+prints `0` never ran and `reward.txt` received the text `recovered db missing`. Its
+published records were unaffected because real agents reach the success path.
+`check_binary_reward.py` had reported the task BINARY; it now matches parentheses
+when extracting print seeds and flags a quoted literal that evaluates to neither 0
+nor 1, with two self-test fixtures pinning both directions.
+
+**This is not yet a scripted gate.** It needs a full 785-task harbor run, so it does
+not belong in `rebuild_and_audit.py` beside the static checks. Run it before any
+release, and treat any task scoring 1 as a blocker. Note also that it must run
+against a frozen tree: the v3.5 sweep ran while repairs were being applied, so three
+tasks were fixed partway through and it is not a single consistent snapshot. Each
+repair was re-verified individually in both directions — nop scoring 0 with its
+failure list intact, oracle still scoring 1 — which is the result that matters.
+
 ## Model benchmarks
 
-### v3.4 — current, 785 tasks
+### v3.5 — current, 785 tasks
+
+Identical scores to v3.4. v3.5 repairs three verifiers that awarded reward 1 for a
+container in which no agent had run, and re-runs their eighteen records; the re-runs
+came back with the same values, so no score had been inflated. What changed is that
+the reward now means something on those three tasks. See `## Negative control`.
+
+### v3.4 — 785 tasks
 
 Six harness/model pairs over all 785 tasks, every record scored, every reward
 exactly `0` or `1`. Published as `v3.4/` on
