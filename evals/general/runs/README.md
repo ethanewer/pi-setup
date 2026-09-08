@@ -37,7 +37,8 @@ harbor.
 | Oracle census | `run-v35-pinverify.sh` | Every task's own `solution/solve.sh` under harbor's `oracle` agent, one trial each, no model and no inference. A task whose reference solution cannot earn reward 1 is broken regardless of what any agent scored. |
 | Negative control | `run-v34-negative.sh` | Every task under harbor's `nop` agent, whose `setup()` and `run()` are both `pass`, so the verifier grades a pristine container. All must score 0. The census cannot substitute: a verifier that always writes 1 passes it at 785/785. |
 | Six-pair re-run | `run-v35-rerun.sh` | Agent rollouts for every harness/model pair over a task list, one job per pair, launched concurrently. |
-| Publish | `publish-v36.sh` | Chains `tools/publish_version.sh`: rescore, collect, assemble, upload, then read the tree back through the paginated Hub endpoint and compare counts. |
+| Transcript recovery | `publish-v37.sh` | Re-collects records from raw trials already on disk, using `--overlay` instead of `--job`, when a collector bug published a lossy transcript. Verifies rewards are unchanged before assembling. |
+| Publish | `publish-v37.sh` | Chains `tools/publish_version.sh`: rescore, collect, assemble, upload, then read the tree back through the paginated Hub endpoint and compare counts. |
 
 Concurrency is a real parameter, not a detail. The oracle census at twelve parallel
 builds failed twenty tasks with `apt-get` exit 100 because the Debian mirrors
@@ -87,7 +88,10 @@ published tree.
   because the commit messages cite their job directories.
 - `run-v34-amberdial.sh`, `run-v34-fixbatch5.sh` — single-task and small-batch
   oracle checks used while diagnosing individual repairs.
-- `publish-v33.sh` … `publish-v36.sh`, `finalize*.sh`, `assemble_v31.py` — the
+- `run-v37-driftcanyon.sh` — re-runs one task for the two terminus-2 pairs. Used when a
+  record's raw trial directory is gone and the published transcript cannot be
+  recovered from disk, so the trial has to be produced again.
+- `publish-v33.sh` … `publish-v37.sh`, `finalize*.sh`, `assemble_v31.py` — the
   per-version publish recipes. `publish_version.sh` in `tools/` superseded the
   `finalize`/`assemble` pair; the older ones are kept because the published
   summaries name them as their own provenance.
