@@ -138,6 +138,10 @@ halves because `0.84.3` shipped neither. The version bump history:
   unchanged — the parse function and helper context in `dist/api/openai-completions.js`
   are identical, and the bundle chunk still carries exactly one occurrence of each
   `bin/patch-pi-bundle` anchor.
+- `pi-ai 0.85.1`: same situation — `dist/api/openai-completions.js` is byte-identical
+  to `0.85.0`, and the `pi-coding-agent 0.85.1` bundle chunk carries the upstream helper
+  and exactly one `parseOpenAIReasoningDetails` anchor, so the patch and the bundle
+  patcher rebase unchanged (verified against the published tarballs before install).
 
 Opaque `reasoning.encrypted` entries remain separate and preserve order. The normalizer carries forward common fields such as `id`, `format`, `index`, and text signatures.
 
