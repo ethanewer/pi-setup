@@ -8,8 +8,8 @@ three-node cluster. The machine was handed over in a broken state on four
 fronts:
 
 1. **Name resolution / hostname are broken** — the hostname is the unqualified
-   `host3`, `/etc/hosts` has no entry for the site's intended name, and
-   `/etc/nsswitch.conf` was fragmented to `hosts: files` only.
+   `host3` and `/etc/hosts` has no entry for the site's intended name, so
+   `getent hosts <host>` fails.
 2. **The cluster is not running** — no palisade daemon has been started, so the
    RPC port is closed and no status report exists.
 3. **List mail is misconfigured** — postfix was repointed to a bogus external
@@ -82,8 +82,9 @@ performing any side effect, and never write the report for an invalid input.
 
 ### 1. Repair name resolution + hostname (and persist it)
 * Add `127.0.0.1  <host>` to `/etc/hosts` if not already present.
-* Restore `/etc/nsswitch.conf` so its `hosts:` line includes **both** `files`
-  and `dns` (e.g. `hosts: files dns`). Detect the broken line and fix it.
+* Leave `/etc/nsswitch.conf` with a `hosts:` line that includes **both** `files`
+  and `dns` (e.g. `hosts: files dns`). It already does; do not fragment it, and
+  repair it if your own changes ever break it.
 * Set the hostname to `<host>` and write `/etc/hostname` so the FQDN survives.
 * After this, `getent hosts <host>` (and localhost lookups) must resolve to
   `127.0.0.1`, and the changes must be visible from later processes — i.e. they
@@ -154,8 +155,9 @@ For the **default** site, after re-running `bash /app/setup.sh`:
   online, `online:true`);
 * `/app/status.json` exists, parses, has `host == palisade-core.hollow.farm`,
   reports 3 online nodes and `capacity == 65536*3*1024*1024`;
-* `getent hosts palisade-core.hollow.farm` → contains `127.0.0.1`; the fix is in
-  `/etc/hosts`, `/etc/hostname`, and the `hosts:` line of `/etc/nsswitch.conf`;
+* `getent hosts palisade-core.hollow.farm` → contains `127.0.0.1`; the
+  configuration is in `/etc/hosts`, `/etc/hostname`, and the `hosts:` line of
+  `/etc/nsswitch.conf`;
 * `/etc/aliases` declares the list; `/etc/postfix/main.cf` has `mydestination`
   covering `hollow.farm` and **no** `relayhost`;
 * each of `/var/mail/sable`, `/var/mail/rona`, `/var/mail/trio` contains
