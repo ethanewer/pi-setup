@@ -3,7 +3,7 @@ FROM bench-base:ubuntu-24.04
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         openssh-server sudo procps acl python3-pip && \
-    python3 -m pip install --no-cache-dir --break-system-packages pytest && \
+    python3 -m pip install --no-cache-dir --break-system-packages pytest==9.1.1 && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

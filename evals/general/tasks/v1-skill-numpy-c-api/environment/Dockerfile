@@ -15,4 +15,4 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends gcc libc6-dev g++ libc6-dev make && rm -rf /var/lib/apt/lists/*
 
 # NumPy headers + build tools.
-RUN pip install --disable-pip-version-check numpy setuptools wheel
+RUN pip install --disable-pip-version-check numpy==2.5.3 setuptools==84.0.0 wheel==0.48.0

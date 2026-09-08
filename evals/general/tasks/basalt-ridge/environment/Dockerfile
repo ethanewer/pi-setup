@@ -15,7 +15,7 @@ WORKDIR /app
 
 # numpy is the only runtime dependency (the framework is built from numpy,
 # not from a prebuilt ML library).
-RUN pip install --no-cache-dir numpy
+RUN pip install --no-cache-dir numpy==2.5.3
 
 # Seed the RIDGE framework (deliberately defective: naive attention softmax +
 # a wrong-sign objective gradient) and the training entrypoint.

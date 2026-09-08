@@ -3,7 +3,7 @@ FROM bench-base:python-3.12
 # Data-log-reporting task: parse/tabulate an access log, fix a newline bug in a
 # CSV processor, write a bash cluster-state sampler, and produce exact-format
 # computed answers. Only stock python + coreutils are needed; pandas kept lean.
-RUN pip install --no-cache-dir pandas
+RUN pip install --no-cache-dir pandas==3.0.5
 
 WORKDIR /app
 

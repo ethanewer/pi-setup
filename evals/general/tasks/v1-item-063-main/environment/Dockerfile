@@ -11,7 +11,7 @@ ENV OMP_NUM_THREADS=1 \
 
 WORKDIR /app
 
-RUN pip install numpy scipy
+RUN pip install numpy==2.5.3 scipy==1.18.1
 
 COPY files/ /app/
 RUN mkdir -p /app/out

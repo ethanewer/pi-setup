@@ -14,9 +14,9 @@ WORKDIR /app
 # Robotics/vision/physicstack. opencv-python-headless supplies image reading and
 # drawing without an X server; mujoco provides CPU physics (no GPU used).
 RUN pip install --no-cache-dir \
-        mujoco \
-        opencv-python-headless \
-        numpy \
-        pillow
+        mujoco==3.12.0 \
+        opencv-python-headless==5.0.0.93 \
+        numpy==2.5.3 \
+        pillow==12.3.0
 
 COPY files/ /app/

@@ -11,4 +11,4 @@ ENV OMP_NUM_THREADS=1 \
 WORKDIR /app
 COPY files/ /app/
 RUN chmod +x /app/bin/observe /app/bin/sim-gates \
- && pip install --no-cache-dir numpy
+ && pip install --no-cache-dir numpy==2.5.3

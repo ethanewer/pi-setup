@@ -11,7 +11,7 @@ ENV OMP_NUM_THREADS=1 \
 
 WORKDIR /app
 
-RUN pip install --no-cache-dir numpy
+RUN pip install --no-cache-dir numpy==2.5.3
 
 # A small 2-layer MLP (6->4->3) and one test feature vector.
 RUN mkdir -p /app/data && python3 - <<'PY'

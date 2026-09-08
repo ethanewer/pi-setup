@@ -9,7 +9,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 RUN python3 -m pip install --no-cache-dir --break-system-packages \
-    grpcio grpcio-tools protobuf
+    grpcio==1.83.1 grpcio-tools==1.83.1 protobuf==7.36.1
 
 WORKDIR /app
 COPY files/ /app/

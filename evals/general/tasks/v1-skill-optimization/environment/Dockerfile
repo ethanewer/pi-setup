@@ -11,7 +11,7 @@ ENV OMP_NUM_THREADS=1 \
 
 WORKDIR /app
 
-RUN pip install --disable-pip-version-check numpy scipy
+RUN pip install --disable-pip-version-check numpy==2.5.3 scipy==1.18.1
 
 RUN cat > /app/objective.py <<'PYEOF'
 def objective(x):

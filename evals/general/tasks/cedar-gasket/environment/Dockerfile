@@ -13,8 +13,8 @@ WORKDIR /app
 
 # numpy + rdkit from the default index, then CPU-only torch from the PyTorch
 # CPU wheel index (no GPU in this image; the #nn module only needs CPU ops).
-RUN pip install --no-cache-dir -q numpy rdkit && \
-    pip install --no-cache-dir -q torch --index-url https://download.pytorch.org/whl/cpu
+RUN pip install --no-cache-dir -q numpy==2.5.3 rdkit==2026.3.6 && \
+    pip install --no-cache-dir -q torch==2.14.0+cpu --index-url https://download.pytorch.org/whl/cpu
 
 # Read-only fixtures: the word-relation vocabulary and the molecule catalog.
 COPY files/ /app/

@@ -14,11 +14,11 @@ WORKDIR /app
 # Numeric/ML stack used by the affinity-tuning pipeline and (optionally) the
 # sequence tooling. Kept CPU-only; installs finish well inside the build budget.
 RUN pip install --no-cache-dir \
-        numpy \
-        scipy \
-        pandas \
-        scikit-learn \
-        biopython
+        numpy==2.5.3 \
+        scipy==1.18.1 \
+        pandas==3.0.5 \
+        scikit-learn==1.9.0 \
+        biopython==1.88
 
 # Task fixtures: molecular catalog + wanted-names list, the mutagenesis target
 # FASTA and scene, and the binding-affinity descriptor/measurement matrices.

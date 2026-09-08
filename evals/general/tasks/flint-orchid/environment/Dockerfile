@@ -14,7 +14,7 @@ WORKDIR /app
 # report, an RDF/Turtle relationship catalog, and a custom skinned-mesh binary.
 COPY files/ /app/
 
-RUN pip install --no-cache-dir --quiet pypdf beautifulsoup4 rdflib numpy
+RUN pip install --no-cache-dir --quiet pypdf==6.18.0 beautifulsoup4==4.15.0 rdflib==7.6.0 numpy==2.5.3
 
 RUN python3 - <<'PY'
 import pypdf, bs4, rdflib, numpy

@@ -11,6 +11,6 @@ ENV OMP_NUM_THREADS=1 \
 WORKDIR /app
 
 # numpy is used by the fixtures and by the deliverable's extraction math.
-RUN pip install --no-cache-dir --disable-pip-version-check numpy
+RUN pip install --no-cache-dir --disable-pip-version-check numpy==2.5.3
 
 COPY files/ /app/

@@ -3,7 +3,7 @@ FROM bench-base:python-3.12
 WORKDIR /app
 
 # RDKit is required for the SMILES-conversion deliverable and the verifier.
-RUN pip install --no-cache-dir -q rdkit
+RUN pip install --no-cache-dir -q rdkit==2026.3.6
 
 COPY files/ /app/
 

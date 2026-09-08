@@ -14,7 +14,7 @@ WORKDIR /app
 COPY files/ /app/
 
 RUN pip install --no-cache-dir \
-        "numpy" \
-        "scikit-learn" \
-        "tokenizers" \
+        "numpy==2.5.3" \
+        "scikit-learn==1.9.0" \
+        "tokenizers==0.23.2" \
     && python3 -c "import numpy, sklearn, tokenizers; print('deps ok', numpy.__version__)"

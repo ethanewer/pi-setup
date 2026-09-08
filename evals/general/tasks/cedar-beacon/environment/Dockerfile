@@ -11,7 +11,7 @@ ENV OMP_NUM_THREADS=1 \
 
 RUN apt-get update && apt-get install -y --no-install-recommends gfortran \
     && rm -rf /var/lib/apt/lists/* \
-    && pip install --no-cache-dir numpy scipy cython
+    && pip install --no-cache-dir numpy==2.5.3 scipy==1.18.1 cython==3.3.0
 
 WORKDIR /app
 

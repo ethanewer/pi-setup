@@ -13,11 +13,11 @@ WORKDIR /app
 
 # Numeric stack (numpy/scipy/pandas via corporate CA 3.x proxy).
 RUN pip install --quiet --no-cache-dir --no-warn-script-location \
-        numpy scipy pandas
+        numpy==2.5.3 scipy==1.18.1 pandas==3.0.5
 
 # CPU-only PyTorch from the official CPU wheel index.
 RUN pip install --quiet --no-cache-dir --no-warn-script-location \
-        torch --index-url https://download.pytorch.org/whl/cpu
+        torch==2.14.0+cpu --index-url https://download.pytorch.org/whl/cpu
 
 # The pinned Triton version this task requires (see C-4e0123b6).
 RUN pip install --quiet --no-cache-dir --no-warn-script-location \

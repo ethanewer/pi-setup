@@ -25,7 +25,7 @@ RUN apt-get update -y && apt-get install -y --no-install-recommends \
         libosmesa6-dev \
         mesa-utils \
     && rm -rf /var/lib/apt/lists/* \
-    && python3 -m pip install --no-cache-dir --break-system-packages numpy pillow
+    && python3 -m pip install --no-cache-dir --break-system-packages numpy==2.5.3 pillow==12.3.0
 
 COPY files/ /app/
 

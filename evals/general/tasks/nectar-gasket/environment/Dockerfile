@@ -1,6 +1,6 @@
 FROM bench-base:python-3.12
 
-RUN pip install --no-cache-dir numpy scipy
+RUN pip install --no-cache-dir numpy==2.5.3 scipy==1.18.1
 
 # The task env is pinned to 1 CPU, but bench-base BLAS defaults to spawning one
 # thread per host core. Under a concurrent full-suite sweep that thread

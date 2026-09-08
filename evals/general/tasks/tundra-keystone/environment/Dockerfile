@@ -10,6 +10,6 @@ ENV OMP_NUM_THREADS=1 \
     NUMEXPR_NUM_THREADS=1
 # tundra-keystone: concurrency & parallel-execution gap task.
 # CPU-only torch (loopback/gloo build) + numpy; small image.
-RUN pip install --no-cache-dir --quiet numpy \
- && pip install --no-cache-dir --quiet torch --index-url https://download.pytorch.org/whl/cpu
+RUN pip install --no-cache-dir --quiet numpy==2.5.3 \
+ && pip install --no-cache-dir --quiet torch==2.14.0+cpu --index-url https://download.pytorch.org/whl/cpu
 WORKDIR /app

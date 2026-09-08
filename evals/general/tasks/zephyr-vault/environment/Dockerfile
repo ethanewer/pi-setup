@@ -5,7 +5,7 @@ FROM bench-base:python-3.12
 
 WORKDIR /app
 
-RUN pip install --no-cache-dir flask requests
+RUN pip install --no-cache-dir flask==3.1.3 requests==2.34.2
 
 # Provided fixtures: legacy audit source and the spreadsheet REST mock.
 COPY files/src/ /app/src/

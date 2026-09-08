@@ -11,7 +11,7 @@ ENV OMP_NUM_THREADS=1 \
 
 WORKDIR /app
 
-RUN pip install --no-cache-dir -q numpy
+RUN pip install --no-cache-dir -q numpy==2.5.3
 
 # Read-only fixture: the clan-dialect word relations.
 COPY files/ /app/

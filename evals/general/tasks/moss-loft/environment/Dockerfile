@@ -13,7 +13,7 @@ WORKDIR /app
 
 # CPU training stack: torch for the model/snapshot, numpy for the fixtures.
 RUN pip install --no-cache-dir --disable-pip-version-check \
-    numpy \
+    numpy==2.5.3 \
     torch==2.13.0
 
 # Build-time-only dataset/config generator.

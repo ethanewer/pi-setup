@@ -10,7 +10,7 @@ ENV OMP_NUM_THREADS=1 \
     NUMEXPR_NUM_THREADS=1
 
 # Pillow and numpy are used by the deliverable generator (Pillow renders out.jpg).
-RUN pip install --no-cache-dir pillow numpy
+RUN pip install --no-cache-dir pillow==12.3.0 numpy==2.5.3
 
 WORKDIR /app
 COPY files/ /app/

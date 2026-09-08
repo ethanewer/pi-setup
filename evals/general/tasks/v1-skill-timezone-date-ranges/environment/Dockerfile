@@ -1,6 +1,6 @@
 FROM bench-base:python-3.12
 
-RUN pip install --disable-pip-version-check tzdata
+RUN pip install --disable-pip-version-check tzdata==2026.3
 
 WORKDIR /app
 

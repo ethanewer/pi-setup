@@ -9,7 +9,7 @@ ENV OMP_NUM_THREADS=1 \
     OPENBLAS_NUM_THREADS=1 \
     NUMEXPR_NUM_THREADS=1
 
-RUN pip install --no-cache-dir pandas scipy
+RUN pip install --no-cache-dir pandas==3.0.5 scipy==1.18.1
 
 WORKDIR /app
 

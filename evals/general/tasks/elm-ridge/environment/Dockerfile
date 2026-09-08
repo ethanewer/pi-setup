@@ -11,10 +11,10 @@ COPY files/chain.proto /app/chain.proto
 # System-wide toolchain inherited by the venvs via --system-site-packages:
 # the Jupyter notebook server, and the gRPC runtimes/tools.
 RUN pip install --quiet --no-cache-dir --no-warn-script-location \
-        notebook \
-        grpcio \
-        grpcio-tools \
-        protobuf
+        notebook==7.6.2 \
+        grpcio==1.83.1 \
+        grpcio-tools==1.83.1 \
+        protobuf==7.36.1
 
 # The OLD bundled data-frame library (1.4.0) is installed system-wide on
 # purpose: /app/venvs/analytics inherits it, and its `Table.groupby` does NOT

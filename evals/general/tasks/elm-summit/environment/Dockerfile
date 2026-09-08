@@ -3,7 +3,7 @@ FROM bench-base:python-3.12
 # gRPC toolchain + MLflow tracking server runtime.
 # A single pip invocation lets the resolver pick one protobuf version that
 # satisfies both grpcio-tools and mlflow.
-RUN pip install --no-cache-dir grpcio grpcio-tools mlflow
+RUN pip install --no-cache-dir grpcio==1.83.1 grpcio-tools==1.83.1 mlflow==3.16.0
 
 COPY files/ /app/
 WORKDIR /app

@@ -14,8 +14,8 @@ WORKDIR /app
 # Tabular ML: pandas + scikit-learn. Installs from PyPI through the corporate
 # CA proxy baked into bench-base.
 RUN pip install --no-cache-dir --quiet \
-        numpy \
-        pandas \
-        scikit-learn
+        numpy==2.5.3 \
+        pandas==3.0.5 \
+        scikit-learn==1.9.0
 
 COPY files/ /app/

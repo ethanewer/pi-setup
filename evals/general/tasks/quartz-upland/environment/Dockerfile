@@ -11,6 +11,6 @@ ENV OMP_NUM_THREADS=1 \
 
 WORKDIR /app
 
-RUN pip install --no-cache-dir numpy pandas >/dev/null 2>&1
+RUN pip install --no-cache-dir numpy==2.5.3 pandas==3.0.5 >/dev/null 2>&1
 
 COPY files/ /app/

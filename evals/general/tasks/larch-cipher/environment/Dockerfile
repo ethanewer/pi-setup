@@ -13,7 +13,7 @@ WORKDIR /app
 # from PyPI through the corporate CA proxy baked into bench-base.
 RUN pip install --no-cache-dir --quiet \
         torch==2.4.1 \
-        numpy \
-        safetensors \
-        scikit-learn
+        numpy==2.5.3 \
+        safetensors==0.8.0 \
+        scikit-learn==1.9.0
 COPY files/ /app/

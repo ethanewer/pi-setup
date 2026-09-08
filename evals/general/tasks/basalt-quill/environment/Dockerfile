@@ -11,7 +11,7 @@ ENV OMP_NUM_THREADS=1 \
 WORKDIR /app
 
 # scientific python stack for spectra fitting + astropy compound models
-RUN pip install --no-cache-dir numpy scipy astropy sympy
+RUN pip install --no-cache-dir numpy==2.5.3 scipy==1.18.1 astropy==8.0.1 sympy==1.14.0
 
 # R runtime for the adaptive-rejection-sampling component
 RUN apt-get update \

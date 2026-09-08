@@ -17,6 +17,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Numerics for the pipeline-parallel deliverable.
-RUN pip install --no-cache-dir numpy
+RUN pip install --no-cache-dir numpy==2.5.3
 
 COPY files/ /app/

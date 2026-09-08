@@ -10,7 +10,7 @@ ENV OMP_NUM_THREADS=1 \
     NUMEXPR_NUM_THREADS=1
 RUN apt-get update && apt-get install -y --no-install-recommends wget ffmpeg && \
     rm -rf /var/lib/apt/lists/* && \
-    pip install --no-cache-dir numpy scipy soundfile vosk && \
+    pip install --no-cache-dir numpy==2.5.3 scipy==1.18.1 soundfile==0.14.0 vosk==0.3.45 && \
     mkdir -p /opt/vosk && cd /opt/vosk && \
     wget -q https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip && \
     python3 -c "import zipfile; zipfile.ZipFile('vosk-model-small-en-us-0.15.zip').extractall('/opt/vosk')" && \

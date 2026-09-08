@@ -14,9 +14,9 @@ WORKDIR /app
 # ML toolchain used by the deliverable (torch for the 300-dim embedding layer)
 # and by the verifier (numpy recomputes the STS / edge expectations). CPU only.
 RUN pip install --no-cache-dir --disable-pip-version-check \
-    torch \
-    numpy \
-    scipy \
-    scikit-learn
+    torch==2.14.0 \
+    numpy==2.5.3 \
+    scipy==1.18.1 \
+    scikit-learn==1.9.0
 
 COPY files/ /app/

@@ -19,7 +19,7 @@ RUN apt-get update -qq && \
         llvm-16 clang-16 \
     && python3 -m venv /opt/z3venv \
     && /opt/z3venv/bin/pip install --quiet --no-cache-dir \
-        --index-url https://pypi.org/simple z3-solver \
+        --index-url https://pypi.org/simple z3-solver==5.1.0.0 \
     && mkdir -p /app/proofs /app/artifact /app/bin \
     && chmod -R a+rX /app
 

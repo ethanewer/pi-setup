@@ -26,8 +26,8 @@ RUN apt-get update -qq \
 #      preinstalled - leaving it importable is part of the repair).
 RUN pip install -q --no-warn-script-location \
         "cython>=3.0,<3.1" \
-        "setuptools" \
-        "pytest"
+        "setuptools==84.0.0" \
+        "pytest==9.1.1"
 
 # ---- Miniconda baked in so the env-spec competency exercises conda itself,
 #      not a parallel miniconda download. Pinned for a deterministic version.

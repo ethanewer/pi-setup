@@ -18,7 +18,7 @@ RUN apt-get update -qq \
     && rm -rf /var/lib/apt/lists/*
 
 # the NEW numpy the vendored package must be ported to (no numpy 1.x present)
-RUN pip install -q "numpy>=2.0,<3" "cython>=3.0,<4" setuptools
+RUN pip install -q "numpy>=2.0,<3" "cython>=3.0,<4" setuptools==84.0.0
 
 # vendored sources in their broken (numpy 1.x era) state
 COPY files/ /app/

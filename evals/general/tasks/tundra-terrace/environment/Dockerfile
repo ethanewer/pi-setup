@@ -11,7 +11,7 @@ ENV OMP_NUM_THREADS=1 \
 
 # Minimal dependencies: the engine reconstruction must be dependency-free
 # (numpy only, no torch/triton). Corporate CA is baked into the base image.
-RUN pip install --no-cache-dir numpy
+RUN pip install --no-cache-dir numpy==2.5.3
 
 WORKDIR /app
 COPY files/ /app/

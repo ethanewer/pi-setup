@@ -10,7 +10,7 @@ ENV OMP_NUM_THREADS=2 \
     NUMEXPR_NUM_THREADS=2
 
 RUN apt-get update && apt-get install -y --no-install-recommends gcc libc6-dev && rm -rf /var/lib/apt/lists/*
-RUN pip install --disable-pip-version-check numpy setuptools
+RUN pip install --disable-pip-version-check numpy==2.5.3 setuptools==84.0.0
 
 WORKDIR /app
 

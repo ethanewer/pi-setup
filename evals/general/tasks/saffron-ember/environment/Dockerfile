@@ -10,8 +10,8 @@ ENV OMP_NUM_THREADS=1 \
     NUMEXPR_NUM_THREADS=1
 
 # CPU-only torch plus the data stack used by the deliverable and the verifier.
-RUN pip install --no-cache-dir --disable-pip-version-check numpy pandas \
- && pip install --no-cache-dir --disable-pip-version-check torch --index-url https://download.pytorch.org/whl/cpu
+RUN pip install --no-cache-dir --disable-pip-version-check numpy==2.5.3 pandas==3.0.5 \
+ && pip install --no-cache-dir --disable-pip-version-check torch==2.14.0+cpu --index-url https://download.pytorch.org/whl/cpu
 
 WORKDIR /app
 

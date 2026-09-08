@@ -11,7 +11,7 @@ ENV OMP_NUM_THREADS=1 \
 
 WORKDIR /app
 
-RUN pip install --no-cache-dir numpy
+RUN pip install --no-cache-dir numpy==2.5.3
 
 # Create a small MNIST-style trained network snapshot and a single test image.
 # The image is a 28x28 flattened grayscale digit (1,784) and the model is a 2-layer MLP.

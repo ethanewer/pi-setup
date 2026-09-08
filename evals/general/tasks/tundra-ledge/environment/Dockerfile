@@ -14,8 +14,8 @@ WORKDIR /app
 # the fixtures (numpy recompute the extraction probes). CPU-only.
 RUN pip install --no-cache-dir --disable-pip-version-check \
     torch==2.13.0 \
-    numpy \
-    scipy \
-    scikit-learn
+    numpy==2.5.3 \
+    scipy==1.18.1 \
+    scikit-learn==1.9.0
 
 COPY files/ /app/

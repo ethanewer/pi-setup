@@ -16,7 +16,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         ffmpeg curl python3 python3-pip ca-certificates \
  && rm -rf /var/lib/apt/lists/*
 
-RUN python3 -m pip install --break-system-packages --no-cache-dir opencv-python-headless numpy
+RUN python3 -m pip install --break-system-packages --no-cache-dir opencv-python-headless==5.0.0.93 numpy==2.5.3
 
 # Fixtures and provided tools (the "flint-fathom" projects repo).
 COPY files/ /app/

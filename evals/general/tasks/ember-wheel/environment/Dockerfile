@@ -7,6 +7,6 @@ WORKDIR /app
 RUN apt-get update \
     && apt-get install -y --no-install-recommends build-essential python3-dev \
     && rm -rf /var/lib/apt/lists/* \
-    && pip install --no-cache-dir setuptools
+    && pip install --no-cache-dir setuptools==84.0.0
 
 COPY files/ /app/

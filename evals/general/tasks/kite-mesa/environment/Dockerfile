@@ -13,6 +13,6 @@ WORKDIR /app
 
 # numpy is used by the verifier's reference computations (allowed for the
 # deliverable too, though pure Python suffices).
-RUN pip install --no-cache-dir --disable-pip-version-check numpy
+RUN pip install --no-cache-dir --disable-pip-version-check numpy==2.5.3
 
 COPY files/ /app/

@@ -13,9 +13,9 @@ WORKDIR /app
 
 # numpy (required by the Triton interpreter) and CPU-only PyTorch.
 RUN pip install --quiet --no-cache-dir --no-warn-script-location \
-        numpy
+        numpy==2.5.3
 RUN pip install --quiet --no-cache-dir --no-warn-script-location \
-        torch --index-url https://download.pytorch.org/whl/cpu
+        torch==2.14.0+cpu --index-url https://download.pytorch.org/whl/cpu
 
 # Pinned Triton: CPU *interpreter* mode (TRITON_INTERPRET=1) runs @triton.jit
 # kernels with no GPU device.

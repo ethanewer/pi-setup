@@ -18,7 +18,7 @@ RUN apt-get update -y \
  && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
       gcc libc6-dev \
  && rm -rf /var/lib/apt/lists/*
-RUN python3 -m pip install --quiet numpy tomli
+RUN python3 -m pip install --quiet numpy==2.5.3 tomli==2.4.1
 
 WORKDIR /app
 

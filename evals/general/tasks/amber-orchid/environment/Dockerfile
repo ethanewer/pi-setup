@@ -10,7 +10,7 @@ COPY files/ /app/
 # Flask (service) + Playwright with headless Chromium. The Chromium binary and
 # its apt dependencies are needed to honestly exercise "auto-executes in a
 # headless browser". Corporate CA is already baked into the bench base image.
-RUN pip install --no-cache-dir flask playwright \
+RUN pip install --no-cache-dir flask==3.1.3 playwright==1.62.0 \
  && python3 -m playwright install chromium --with-deps \
  && rm -rf /var/lib/apt/lists/* \
  && python3 -c "from playwright.sync_api import sync_playwright; \

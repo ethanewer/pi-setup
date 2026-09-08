@@ -12,7 +12,7 @@ ENV OMP_NUM_THREADS=1 \
 WORKDIR /app
 
 # CPU-only torch plus the data stack used by the pipeline and the verifier.
-RUN pip install --no-cache-dir --disable-pip-version-check numpy pandas \
+RUN pip install --no-cache-dir --disable-pip-version-check numpy==2.5.3 pandas==3.0.5 \
  && pip install --no-cache-dir --disable-pip-version-check \
     torch==2.13.0 --index-url https://download.pytorch.org/whl/cpu
 

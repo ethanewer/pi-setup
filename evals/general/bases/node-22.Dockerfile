@@ -1,4 +1,11 @@
-FROM node:22-slim
+# Pinned by digest rather than by tag. A floating tag silently changes what
+# every task in the suite builds against, and the digest is the only immutable
+# handle Docker offers. See specs/pinned_python_deps.json for the image IDs the
+# published records were produced against, and for why apt is not pinned.
+#
+# The local bench-base image shares every layer with this digest, so rebuilding
+# reproduces the base the published records were produced against.
+FROM node:22-slim@sha256:83f487e0a63425e5b4d146fb5e5be574bcbe1b7b843d3ebafdd95eaf7767a7e5
 
 COPY corp-root-ca.pem /usr/local/share/ca-certificates/corp-root-ca.crt
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl git jq unzip zip procps python3 patch tmux \
@@ -22,7 +29,7 @@ RUN set -ex \
     && curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.2/install.sh | env -u NODE_VERSION bash \
     && export NVM_DIR="$HOME/.nvm" \
     && . "$NVM_DIR/nvm.sh" \
-    && nvm install 22 \
+    && nvm install 22.23.2 \
     && nvm alias default 22 \
     && npm install -g --ignore-scripts @earendil-works/pi-coding-agent@0.84.3 \
     && PI_ROOT="$(npm root -g)/@earendil-works/pi-coding-agent" \

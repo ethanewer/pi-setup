@@ -11,7 +11,7 @@ ENV OMP_NUM_THREADS=1 \
 
 # Libraries for the deliverable (fetch/verify subcommands) and the verifier.
 RUN pip install --no-cache-dir \
-        torch==2.5.1 transformers==4.46.3 huggingface_hub==0.26.5 safetensors
+        torch==2.5.1 transformers==4.46.3 huggingface_hub==0.26.5 safetensors==0.8.0
 
 ENV HF_HUB_DISABLE_TELEMETRY=1
 

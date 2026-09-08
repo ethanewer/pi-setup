@@ -8,7 +8,7 @@ ENV OMP_NUM_THREADS=1 \
     MKL_NUM_THREADS=1 \
     OPENBLAS_NUM_THREADS=1 \
     NUMEXPR_NUM_THREADS=1
-RUN python3 -m pip install --no-cache-dir numpy >/dev/null 2>&1 && python3 -c "import numpy; print('numpy', numpy.__version__)"
+RUN python3 -m pip install --no-cache-dir numpy==2.5.3 >/dev/null 2>&1 && python3 -c "import numpy; print('numpy', numpy.__version__)"
 WORKDIR /app
 COPY files/ /app/
 # Record the pristine global site-packages size as the footprint baseline.

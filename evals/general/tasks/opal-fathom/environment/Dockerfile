@@ -12,7 +12,7 @@ ENV OMP_NUM_THREADS=1 \
 WORKDIR /app
 
 # numpy is the only runtime dependency (policy forward pass + seeded env).
-RUN pip install --no-cache-dir --quiet numpy
+RUN pip install --no-cache-dir --quiet numpy==2.5.3
 
 # Read-only evaluation fixture (visible case).
 COPY files/ /app/

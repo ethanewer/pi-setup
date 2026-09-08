@@ -11,7 +11,7 @@ ENV OMP_NUM_THREADS=1 \
 
 # numpy is used by the verifier for spectral property checks (and is allowed
 # for the deliverable).
-RUN pip install --no-cache-dir --disable-pip-version-check numpy
+RUN pip install --no-cache-dir --disable-pip-version-check numpy==2.5.3
 
 WORKDIR /app
 

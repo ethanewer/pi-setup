@@ -10,7 +10,7 @@ RUN apt-get update -qq \
         r-base-core \
         r-cran-irkernel \
     && rm -rf /var/lib/apt/lists/*
-RUN pip install -q jupyter ipykernel
+RUN pip install -q jupyter==1.1.1 ipykernel==7.3.0
 
 WORKDIR /app
 

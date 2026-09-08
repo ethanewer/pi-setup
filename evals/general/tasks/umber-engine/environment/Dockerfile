@@ -7,5 +7,5 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Python runtime dependencies: WebAssembly runtime for the memory probe, and the
 # grpc python toolchain (library + code generator) installed system-wide.
 RUN python3 -m pip install --break-system-packages --no-cache-dir \
-    wasmtime grpcio grpcio-tools
+    wasmtime==48.0.0 grpcio==1.83.1 grpcio-tools==1.83.1
 COPY files/ /app/

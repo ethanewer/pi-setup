@@ -5,8 +5,8 @@ WORKDIR /app
 # Spreadsheet writing/reading (openpyxl) and dataframe convenience (pandas)
 # that the /app/solve.py pipeline and the verifier rely on.
 RUN pip install --quiet --no-cache-dir --no-warn-script-location \
-        openpyxl \
-        pandas
+        openpyxl==3.1.5 \
+        pandas==3.0.5
 
 # The committed fleet-request input the solver runs against.
 RUN mkdir -p /opt/keystone

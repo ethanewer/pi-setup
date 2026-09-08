@@ -11,7 +11,7 @@ ENV OMP_NUM_THREADS=1 \
 
 # numpy + pandas only (torch is deliberately absent: the scorer ships as .npz
 # and streaming inference is numpy work).
-RUN pip install --no-cache-dir --disable-pip-version-check numpy pandas
+RUN pip install --no-cache-dir --disable-pip-version-check numpy==2.5.3 pandas==3.0.5
 
 WORKDIR /app
 

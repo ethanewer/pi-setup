@@ -13,7 +13,7 @@ WORKDIR /app
 
 # Data stack used by the scorer and the verifier (deliberately NO torch: the
 # frozen model is plain numpy and the memory cap assumes a lean runtime).
-RUN pip install --no-cache-dir numpy pandas
+RUN pip install --no-cache-dir numpy==2.5.3 pandas==3.0.5
 
 # Provided fixtures and the (build-time only) generator script.
 COPY files/ /app/

@@ -113,6 +113,7 @@ All gates run via `tools/rebuild_and_audit.sh` or individually:
 | Reward on every exit path | `tools/ensure_reward_guard.py` | 785/785 guarded, 0 unpatchable; also parses every EXIT trap body, which `bash -n` on the file cannot do |
 | Thread pools vs CPU quota | `tools/pin_numeric_threads.py` | 161/161 pinned to their declared `cpus`, 0 skipped |
 | Git repos safe for any user | `tools/ensure_git_safe_directory.py` | 8/8 images that build a repository set a system-wide `safe.directory`, 0 skipped |
+| Pinned pip dependencies | `tools/pin_python_dependencies.py` | 0 unpinned requirements across 233 install sites in 209 tasks; versions resolved per base image and per index in `specs/pinned_python_deps.json` |
 | Negative control | harbor `nop` agent over all 785 tasks | 785/785 score 0 on a pristine container; found 3 vacuous verifiers, all repaired. Not yet a scripted gate — see `## Negative control` |
 | Layout & contract lint | `tools/lint_tasks.py` | 516 clean-room tasks, 0 problems (271 legacy v1 skipped by design) |
 | Competency coverage | `tools/check_tb21_coverage.py` | 725/726 covered, 1 waived-infeasible, 0 problems |

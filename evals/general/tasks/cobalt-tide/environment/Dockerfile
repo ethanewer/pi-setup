@@ -14,10 +14,10 @@ WORKDIR /app
 # Numeric/ML stack for the yield-rank modelling pipeline. CPU-only; installs
 # finish well inside the build budget.
 RUN pip install --no-cache-dir \
-        numpy \
-        scipy \
-        pandas \
-        scikit-learn
+        numpy==2.5.3 \
+        scipy==1.18.1 \
+        pandas==3.0.5 \
+        scikit-learn==1.9.0
 
 # Task fixtures: the process-sensor feature matrix and the matching measured
 # wafer-yield vector. The deliverable program is authored by the agent in /app,

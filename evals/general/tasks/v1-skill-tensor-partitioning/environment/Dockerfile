@@ -11,7 +11,7 @@ ENV OMP_NUM_THREADS=1 \
 
 WORKDIR /app
 
-RUN pip install --no-cache-dir --no-input numpy
+RUN pip install --no-cache-dir --no-input numpy==2.5.3
 
 COPY files/make_data.py /app/make_data.py
 RUN python3 /app/make_data.py

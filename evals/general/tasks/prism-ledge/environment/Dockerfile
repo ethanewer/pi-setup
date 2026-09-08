@@ -25,10 +25,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Python ML/vision stack (torch is pulled as the CPU wheel). pytesseract is the
 # OCR binding; the tesseract binary is installed above.
 RUN pip install --no-cache-dir \
-        torch \
-        opencv-python-headless \
-        numpy \
-        timm \
-        pytesseract
+        torch==2.14.0 \
+        opencv-python-headless==5.0.0.93 \
+        numpy==2.5.3 \
+        timm==1.0.29 \
+        pytesseract==0.3.13
 
 COPY files/ /app/

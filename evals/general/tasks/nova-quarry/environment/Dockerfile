@@ -10,7 +10,7 @@ ENV OMP_NUM_THREADS=1 \
     NUMEXPR_NUM_THREADS=1
 
 # Only numpy is needed: the engine must be dependency-free beyond stdlib+numpy.
-RUN pip install --no-cache-dir numpy
+RUN pip install --no-cache-dir numpy==2.5.3
 
 WORKDIR /app
 

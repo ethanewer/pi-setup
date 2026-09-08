@@ -14,8 +14,8 @@ WORKDIR /app
 # CPU-only torch (no CUDA), plus the data/ML stack used by the pipeline and the
 # verifier. scikit-learn is pulled for the documented stack even though the core
 # deliverable scripts rely on numpy/pandas/torch only.
-RUN pip install --no-cache-dir numpy pandas scikit-learn \
- && pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
+RUN pip install --no-cache-dir numpy==2.5.3 pandas==3.0.5 scikit-learn==1.9.0 \
+ && pip install --no-cache-dir torch==2.14.0+cpu --index-url https://download.pytorch.org/whl/cpu
 
 # Architecture constant shared by every component (must match the verifier).
 ENV UMBER_FEATURES=48 UMBER_HIDDEN=64 UMBER_CLASSES=2

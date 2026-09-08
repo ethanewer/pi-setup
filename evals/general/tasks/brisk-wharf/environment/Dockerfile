@@ -16,8 +16,8 @@ RUN apt-get update \
          build-essential libopenmpi-dev openmpi-bin libssl-dev \
          postfix mlmmj mailutils \
     && rm -rf /var/lib/apt/lists/*
-RUN pip install --no-cache-dir torch \
+RUN pip install --no-cache-dir torch==2.14.0+cpu \
         --index-url https://download.pytorch.org/whl/cpu \
         --extra-index-url https://pypi.org/simple \
-    && pip install --no-cache-dir boto3 awscli 'moto[server]'
+    && pip install --no-cache-dir boto3==1.43.89 awscli==1.46.1 'moto[server]==5.2.3'
 COPY files/ /app/

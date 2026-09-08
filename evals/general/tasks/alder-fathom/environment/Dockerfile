@@ -13,9 +13,9 @@ WORKDIR /app
 
 # Deterministic replay eval of a trained CPU policy: torch (CPU wheel) + numpy.
 RUN pip install --no-cache-dir --quiet \
-        numpy && \
+        numpy==2.5.3 && \
     pip install --no-cache-dir --quiet \
-        torch --index-url https://download.pytorch.org/whl/cpu
+        torch==2.14.0+cpu --index-url https://download.pytorch.org/whl/cpu
 
 # Read-only fixture: the rover case (env config + trained checkpoint).
 COPY files/ /app/

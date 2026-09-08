@@ -7,7 +7,7 @@ WORKDIR /app
 # The web/SSH servers and miniconda itself are deliberately NOT baked in: the
 # agent must bring those in non-interactively (apt-get) and install the pinned
 # miniconda from the pre-seeded installer. git ships preinstalled in the base.
-RUN pip install --quiet --no-cache-dir --no-warn-script-location uv \
+RUN pip install --quiet --no-cache-dir --no-warn-script-location uv==0.12.10 \
  && apt-get update -y -q \
  && apt-get install -y -q --no-install-recommends nodejs npm zsh \
  && rm -rf /var/lib/apt/lists/*

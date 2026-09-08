@@ -17,7 +17,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
 
 # numpy/scipy: numerics; scikit-learn + pandas: penalty selection engine.
 RUN pip install --no-cache-dir \
-    numpy scipy scikit-learn pandas pystan
+    numpy==2.5.3 scipy==1.18.1 scikit-learn==1.9.0 pandas==3.0.5 pystan==3.10.1
 
 WORKDIR /app
 

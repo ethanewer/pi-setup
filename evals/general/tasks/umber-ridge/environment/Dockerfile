@@ -10,7 +10,7 @@ ENV OMP_NUM_THREADS=1 \
     NUMEXPR_NUM_THREADS=1
 
 # Unframework parsing + numeric stack for the reconciliation deliverable.
-RUN pip install --no-cache-dir numpy pyarrow
+RUN pip install --no-cache-dir numpy==2.5.3 pyarrow==25.0.1
 
 WORKDIR /app
 COPY files/ /app/

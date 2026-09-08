@@ -10,12 +10,12 @@ RUN apt-get update -qq \
     && rm -rf /var/lib/apt/lists/*
 
 RUN pip install -q \
-        jupyter_core \
-        jupyter_client \
-        nbformat \
-        nbclient \
-        nbconvert \
-        ipykernel
+        jupyter_core==5.9.1 \
+        jupyter_client==8.10.0 \
+        nbformat==5.11.1 \
+        nbclient==0.11.0 \
+        nbconvert==7.17.1 \
+        ipykernel==7.3.0
 
 # ---- vendored (NOT installed) R analysis packages + IRkernel, for offline use
 # The agent must install these from /app/vendor; nothing below installs them.

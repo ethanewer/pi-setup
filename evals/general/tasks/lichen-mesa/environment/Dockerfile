@@ -16,7 +16,7 @@ WORKDIR /app
 # generation; no network needed at run or verify time.
 RUN pip install --no-cache-dir \
         --index-url https://download.pytorch.org/whl/cpu \
-        torch numpy pillow
+        torch==2.14.0+cpu numpy==2.5.2 pillow==12.3.0
 
 COPY files/ /app/
 

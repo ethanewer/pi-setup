@@ -14,7 +14,7 @@ WORKDIR /app
 RUN apt-get update && \
     apt-get install -y --no-install-recommends mosquitto && \
     rm -rf /var/lib/apt/lists/* && \
-    pip install --no-cache-dir paho-mqtt aiohttp numpy
+    pip install --no-cache-dir paho-mqtt==2.1.0 aiohttp==3.14.3 numpy==2.5.3
 
 # Relay fixtures: worker, survey gate, station config, broker config, maps.
 COPY files/relay /app/relay

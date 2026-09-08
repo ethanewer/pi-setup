@@ -6,7 +6,7 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y tesseract-ocr tesseract-ocr-eng fonts-liberation && rm -rf /var/lib/apt/lists/*
 
 # Python imaging / OCR / PDF libraries
-RUN pip install -q --break-system-packages pillow pymupdf pytesseract
+RUN pip install -q --break-system-packages pillow==12.3.0 pymupdf==1.28.2 pytesseract==0.3.13
 
 # Build the deterministic inbox documents (then delete the generator so it is
 # not part of the shipped container).

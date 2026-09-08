@@ -12,8 +12,8 @@ COPY files/ /app/
 # Install the importable harness package (vellum_eval) from the copied source
 # tree; PyYAML comes from the base image cache. No build isolation so the
 # already-present setuptools is reused.
-RUN pip install --no-cache-dir --quiet setuptools \
-    && pip install --no-cache-dir --quiet pyyaml \
+RUN pip install --no-cache-dir --quiet setuptools==84.0.0 \
+    && pip install --no-cache-dir --quiet pyyaml==6.0.3 \
     && pip install --no-cache-dir --quiet --no-build-isolation -e /app/harness
 
 RUN python3 -c "import vellum_eval; print('vellum_eval', vellum_eval.__version__)"

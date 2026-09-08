@@ -14,4 +14,4 @@ WORKDIR /app
 # The visible reference case for the arrangement engine.
 COPY files/instance/ /app/instance/
 
-RUN pip install --no-cache-dir scipy >/dev/null 2>&1 || true
+RUN pip install --no-cache-dir scipy==1.18.1 >/dev/null 2>&1 || true

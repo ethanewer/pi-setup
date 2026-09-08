@@ -10,7 +10,7 @@ ENV OMP_NUM_THREADS=1 \
     NUMEXPR_NUM_THREADS=1
 
 # numpy only: synthesis + spectrum checks use numpy; the wav writer is stdlib.
-RUN pip install --no-cache-dir --disable-pip-version-check numpy
+RUN pip install --no-cache-dir --disable-pip-version-check numpy==2.5.3
 
 WORKDIR /app
 

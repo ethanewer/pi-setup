@@ -11,7 +11,7 @@ ENV OMP_NUM_THREADS=1 \
 
 WORKDIR /app
 
-RUN pip install numpy
+RUN pip install numpy==2.5.3
 
 RUN python3 - <<'PY'
 import json

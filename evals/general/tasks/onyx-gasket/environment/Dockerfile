@@ -27,8 +27,8 @@ RUN apt-get update -qq \
 RUN python3 -m pip install -q --no-cache-dir \
         "numpy>=2.0" \
         "cython<3.1" \
-        setuptools \
-        pytest
+        setuptools==84.0.0 \
+        pytest==9.1.1
 
 # --- Miniconda base (baked; the target conda env is created at runtime) ------
 RUN curl -fsSL \

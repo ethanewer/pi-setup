@@ -14,4 +14,4 @@ WORKDIR /app
 # The visible case fixtures for the forge engine.
 COPY files/ /app/case/
 
-RUN pip install --no-cache-dir scipy numpy highspy pulp >/dev/null 2>&1 || true
+RUN pip install --no-cache-dir scipy==1.18.1 numpy==2.5.3 highspy==1.15.1 pulp==3.3.2 >/dev/null 2>&1 || true

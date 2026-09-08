@@ -11,7 +11,7 @@ ENV OMP_NUM_THREADS=1 \
 
 WORKDIR /app
 
-RUN pip install --disable-pip-version-check numpy
+RUN pip install --disable-pip-version-check numpy==2.5.3
 
 RUN python3 - <<'PYEOF'
 vals = [(i * 13 + 7) % 25 for i in range(50)]

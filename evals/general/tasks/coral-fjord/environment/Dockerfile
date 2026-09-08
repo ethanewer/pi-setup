@@ -15,6 +15,6 @@ WORKDIR /app
 # corporate CA proxy baked into bench-base.
 RUN pip install --no-cache-dir --quiet \
         torch==2.4.1 \
-        numpy
+        numpy==2.5.3
 
 COPY files/ /app/

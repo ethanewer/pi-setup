@@ -10,12 +10,12 @@ ENV OMP_NUM_THREADS=1 \
     NUMEXPR_NUM_THREADS=1
 
 RUN pip install --no-cache-dir \
-    scikit-learn \
-    scipy \
-    pandas \
-    hydra-core \
-    joblib \
-    pyyaml
+    scikit-learn==1.9.0 \
+    scipy==1.18.1 \
+    pandas==3.0.5 \
+    hydra-core==1.3.6 \
+    joblib==1.6.0 \
+    pyyaml==6.0.3
 
 WORKDIR /app
 COPY files/ /app/

@@ -9,7 +9,7 @@ ENV OMP_NUM_THREADS=1 \
     OPENBLAS_NUM_THREADS=1 \
     NUMEXPR_NUM_THREADS=1
 
-RUN pip install --no-cache-dir numpy hydra-core
+RUN pip install --no-cache-dir numpy==2.5.3 hydra-core==1.3.6
 
 WORKDIR /app
 

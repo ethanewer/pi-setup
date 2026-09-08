@@ -12,7 +12,7 @@ ENV OMP_NUM_THREADS=1 \
 # Simulation-studio authoring bench for drift-atlas.
 # numpy/scipy: neuron cable integration; rdkit: descriptor chemistry;
 # mujoco: tuned-model simulation (CPU only, no plugins, no rendering).
-RUN pip install --no-cache-dir numpy scipy rdkit mujoco >/dev/null 2>&1 && \
+RUN pip install --no-cache-dir numpy==2.5.3 scipy==1.18.1 rdkit==2026.3.6 mujoco==3.12.0 >/dev/null 2>&1 && \
     python3 -c "import numpy, scipy, rdkit, mujoco"
 
 WORKDIR /app

@@ -11,7 +11,7 @@ ENV OMP_NUM_THREADS=1 \
 
 # Quartz-delta numerical-kernels task. numpy / scipy / sympy provide the
 # linear-programming and linear-algebra primitives the kernel library builds on.
-RUN pip install --no-cache-dir numpy scipy sympy
+RUN pip install --no-cache-dir numpy==2.5.3 scipy==1.18.1 sympy==1.14.0
 
 WORKDIR /app
 

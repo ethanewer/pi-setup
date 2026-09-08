@@ -27,10 +27,10 @@ RUN apt-get update -qq \
 RUN pip install -q \
         "numpy>=2.0" \
         "cython<3.1" \
-        setuptools \
-        pytest \
-        jupyter \
-        ipykernel
+        setuptools==84.0.0 \
+        pytest==9.1.1 \
+        jupyter==1.1.1 \
+        ipykernel==7.3.0
 
 # ---- platform sources + fixtures (the *unrepaired* state is created below)
 COPY files/ /app/

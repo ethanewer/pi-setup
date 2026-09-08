@@ -12,7 +12,7 @@ ENV OMP_NUM_THREADS=1 \
 WORKDIR /app
 
 # Data-wrangling toolchain for the quartz-helix data-mart close-out.
-RUN pip install --no-cache-dir --quiet pandas numpy
+RUN pip install --no-cache-dir --quiet pandas==3.0.5 numpy==2.5.3
 
 # Shipped workbench fixtures (same schema as the hidden cases) so the agent
 # can develop and self-test the transforms locally.

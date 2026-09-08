@@ -8,7 +8,7 @@ ENV OMP_NUM_THREADS=1 \
     MKL_NUM_THREADS=1 \
     OPENBLAS_NUM_THREADS=1 \
     NUMEXPR_NUM_THREADS=1
-RUN pip install --no-cache-dir pillow numpy pytesseract && \
+RUN pip install --no-cache-dir pillow==12.3.0 numpy==2.5.3 pytesseract==0.3.13 && \
     apt-get update && apt-get install -y --no-install-recommends tesseract-ocr && \
     rm -rf /var/lib/apt/lists/* && \
     tesseract --version | head -1

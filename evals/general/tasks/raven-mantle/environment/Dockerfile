@@ -16,8 +16,8 @@ WORKDIR /app
 RUN pip install --no-cache-dir --disable-pip-version-check \
     torch==2.13.0 \
     transformers==5.16.1 \
-    tokenizers \
-    numpy
+    tokenizers==0.23.2 \
+    numpy==2.5.3
 
 # Vendor generator: builds the local transformer+tokenizer engine, the runtime
 # config, and the shipped input fixtures (all baked into the image).

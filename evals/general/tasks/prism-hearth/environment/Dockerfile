@@ -15,7 +15,7 @@ WORKDIR /app
 # used at *build* time to synthesize the local checkpoints, and again at runtime
 # by the deliverable /app/infer.py. numpy is a light dependency for fixtures.
 RUN pip install --no-cache-dir --disable-pip-version-check \
-    torch==2.13.0 transformers==5.16.1 tokenizers numpy
+    torch==2.13.0 transformers==5.16.1 tokenizers==0.23.2 numpy==2.5.3
 
 # Copy the fixture-builder source, then run it to synthesize all immutable
 # assets (the local causal-LM checkpoint, the BPE tokenizer, and the HearthNet

@@ -3,7 +3,7 @@ FROM bench-base:python-3.12
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y gcc libc6-dev && rm -rf /var/lib/apt/lists/*
-RUN pip install --no-cache-dir --upgrade pip setuptools
+RUN pip install --no-cache-dir --upgrade pip==26.2.1 setuptools==84.0.0
 
 RUN cat > /app/numc.c <<'SRC_END'
 #include <Python.h>

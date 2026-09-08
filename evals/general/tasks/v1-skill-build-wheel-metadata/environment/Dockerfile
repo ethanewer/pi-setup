@@ -2,7 +2,7 @@ FROM bench-base:python-3.12
 
 WORKDIR /app
 
-RUN pip install --no-cache-dir --upgrade pip setuptools wheel
+RUN pip install --no-cache-dir --upgrade pip==26.2.1 setuptools==84.0.0 wheel==0.48.0
 
 RUN mkdir -p /app/melonpkg/pkg && \
     printf 'def add(a, b):\n    return a + b\n' > /app/melonpkg/pkg/core.py && \

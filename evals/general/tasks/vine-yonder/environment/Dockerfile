@@ -20,14 +20,14 @@ RUN apt-get update && \
 
 # PySpark (bundled standalone jars, offline), datasets, and HTTP/parquet deps.
 RUN python3 -m pip install --no-cache-dir --break-system-packages \
-        pyspark \
-        datasets \
-        pandas \
-        pyarrow \
-        requests \
-        flask >/dev/null 2>&1 || \
+        pyspark==4.2.0 \
+        datasets==5.0.1 \
+        pandas==3.0.5 \
+        pyarrow==25.0.1 \
+        requests==2.34.2 \
+        flask==3.1.3 >/dev/null 2>&1 || \
     python3 -m pip install --no-cache-dir --break-system-packages \
-        pyspark requests datasets pandas pyarrow flask >/dev/null 2>&1
+        pyspark==4.2.0 requests==2.34.2 datasets==5.0.1 pandas==3.0.5 pyarrow==25.0.1 flask==3.1.3 >/dev/null 2>&1
 
 # Neural any JVM known-good.
 RUN java -version 2>&1 | head -1

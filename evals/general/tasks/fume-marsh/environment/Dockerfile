@@ -9,7 +9,7 @@ ENV OMP_NUM_THREADS=1 \
     OPENBLAS_NUM_THREADS=1 \
     NUMEXPR_NUM_THREADS=1
 
-RUN pip install --no-cache-dir numpy scikit-learn joblib
+RUN pip install --no-cache-dir numpy==2.5.3 scikit-learn==1.9.0 joblib==1.6.0
 
 WORKDIR /app
 

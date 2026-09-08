@@ -22,8 +22,8 @@ RUN elan toolchain install stable && elan default stable \
 
 # 3) Python binding toolchain (grpc / protobuf code generators + client runtime)
 RUN python3 -m pip install --no-cache-dir --break-system-packages \
-        grpcio grpcio-tools protobuf >/dev/null 2>&1 || \
-    python3 -m pip install --no-cache-dir --break-system-packages grpcio grpcio-tools protobuf
+        grpcio==1.83.1 grpcio-tools==1.83.1 protobuf==7.36.1 >/dev/null 2>&1 || \
+    python3 -m pip install --no-cache-dir --break-system-packages grpcio==1.83.1 grpcio-tools==1.83.1 protobuf==7.36.1
 
 # 4) fixtures: the release object store, the bundled math library, helpers
 COPY files/ /app/

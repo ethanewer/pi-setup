@@ -7,9 +7,9 @@ WORKDIR /app
 # independent verifier to parse DTSTART/DTEND; ics provides a standards
 # calendar parser; pandas is available for convenience.
 RUN pip install --no-cache-dir \
-        ics \
-        python-dateutil \
-        pandas
+        ics==0.7.3 \
+        python-dateutil==2.9.0.post0 \
+        pandas==3.0.5
 
 # Provided fixtures: attendee availability minutes and the per-person schedule
 # producer tool that the deliverable must discover and drive.

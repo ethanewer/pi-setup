@@ -9,7 +9,7 @@ ENV OMP_NUM_THREADS=1 \
     OPENBLAS_NUM_THREADS=1 \
     NUMEXPR_NUM_THREADS=1
 
-RUN pip install --disable-pip-version-check numpy
+RUN pip install --disable-pip-version-check numpy==2.5.3
 
 WORKDIR /app
 

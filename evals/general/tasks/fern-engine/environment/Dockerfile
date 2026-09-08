@@ -11,7 +11,7 @@ ENV OMP_NUM_THREADS=1 \
 WORKDIR /app
 
 # Python ML libs used by the deliverable and the fixtures.
-RUN python3 -m pip install --no-cache-dir torch transformers safetensors
+RUN python3 -m pip install --no-cache-dir torch==2.14.0 transformers==5.16.1 safetensors==0.8.0
 
 # Generate the visible fixtures (/app/pretrained_lm, /app/state_seed.pkl,
 # /app/base_clf, /app/data) and the hidden verifier fixtures (/buildout/hidden).

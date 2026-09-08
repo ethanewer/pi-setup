@@ -4,7 +4,7 @@ WORKDIR /app
 
 # python-chess provides a real beat-up reference for the knight-move engine and
 # is small; the deliverables themselves are all hand-written.
-RUN pip install --no-cache-dir -q python-chess
+RUN pip install --no-cache-dir -q python-chess==1.999
 
 # Read-only fixtures illustrating the scenario inputs (sample starter FEN and a
 # tiny M program). The four deliverables are created by the agent under /app.

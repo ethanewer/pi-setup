@@ -13,8 +13,8 @@ WORKDIR /app
 
 # Numerics for the MIL forward pass: numpy for the fixture bags, CPU-only torch
 # for the model (no GPU in this image).
-RUN pip install --no-cache-dir -q numpy && \
-    pip install --no-cache-dir -q torch --index-url https://download.pytorch.org/whl/cpu
+RUN pip install --no-cache-dir -q numpy==2.5.3 && \
+    pip install --no-cache-dir -q torch==2.14.0+cpu --index-url https://download.pytorch.org/whl/cpu
 
 # Read-only visible fixture: the station config and its sensor bag.
 COPY files/ /app/

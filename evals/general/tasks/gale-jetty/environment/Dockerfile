@@ -12,7 +12,7 @@ ENV OMP_NUM_THREADS=1 \
 WORKDIR /app
 
 # Data tooling for the pipeline (csv/json/parquet parsing + numpy matrices).
-RUN python -m pip install --no-cache-dir numpy pandas pyarrow
+RUN python -m pip install --no-cache-dir numpy==2.5.3 pandas==3.0.5 pyarrow==25.0.1
 
 COPY files/ /app/.fixtures/
 

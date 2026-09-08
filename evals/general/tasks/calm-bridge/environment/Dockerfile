@@ -18,7 +18,7 @@ WORKDIR /app
 COPY files/ /app/
 
 # Declared dependency; numpy is optional for this task so never fail the build.
-RUN timeout 120 python3 -m pip install --no-cache-dir numpy >/dev/null 2>&1 || true
+RUN timeout 120 python3 -m pip install --no-cache-dir numpy==2.5.3 >/dev/null 2>&1 || true
 
 # Confirm the generator imports and the visible fixture is intact.
 RUN python3 -c "import sys; sys.path.insert(0,'/app/files'); import tool.gen; print('gen ok')"

@@ -18,7 +18,7 @@ RUN apt-get update -qq \
         build-essential \
         python3-dev \
     && rm -rf /var/lib/apt/lists/* \
-    && pip install -q "numpy>=2.0" "cython<3.1" setuptools
+    && pip install -q "numpy>=2.0" "cython<3.1" setuptools==84.0.0
 
 COPY files/ /app/
 

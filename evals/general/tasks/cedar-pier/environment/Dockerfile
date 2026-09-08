@@ -9,7 +9,7 @@ ENV OMP_NUM_THREADS=1 \
     OPENBLAS_NUM_THREADS=1 \
     NUMEXPR_NUM_THREADS=1
 
-RUN pip install --no-cache-dir numpy scipy pandas scikit-learn joblib hydra-core
+RUN pip install --no-cache-dir numpy==2.5.3 scipy==1.18.1 pandas==3.0.5 scikit-learn==1.9.0 joblib==1.6.0 hydra-core==1.3.6
 
 WORKDIR /app
 

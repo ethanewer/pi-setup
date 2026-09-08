@@ -3,7 +3,7 @@ FROM bench-base:python-3.12
 WORKDIR /app
 
 # Willow Bridge field-support harness toolchain (jupyter server, vim, gawk, jq).
-RUN pip install --quiet --no-cache-dir "notebook" && \
+RUN pip install --quiet --no-cache-dir "notebook==7.6.2" && \
     apt-get update -qq && \
     apt-get install -y -qq --no-install-recommends gawk >/dev/null && \
     rm -rf /var/lib/apt/lists/*

@@ -11,6 +11,6 @@ ENV OMP_NUM_THREADS=1 \
 
 WORKDIR /app
 
-RUN pip install --no-cache-dir pillow numpy
+RUN pip install --no-cache-dir pillow==12.3.0 numpy==2.5.3
 
 COPY files/ /app/

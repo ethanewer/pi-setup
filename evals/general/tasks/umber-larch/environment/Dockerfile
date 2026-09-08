@@ -12,7 +12,7 @@ ENV OMP_NUM_THREADS=1 \
 WORKDIR /app
 
 # umber-larch: observational ATE estimation. numpy for the analysis.
-RUN pip install --no-cache-dir numpy
+RUN pip install --no-cache-dir numpy==2.5.3
 
 # Visible observational study (deterministic; hidden studies are generated
 # from the same DGP family with different seeds/params at authoring time).

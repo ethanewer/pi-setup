@@ -12,8 +12,8 @@ ENV OMP_NUM_THREADS=1 \
 WORKDIR /app
 
 # CPU-only torch plus the data stack used by the fixtures and the verifier.
-RUN pip install --no-cache-dir numpy pandas \
- && pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
+RUN pip install --no-cache-dir numpy==2.5.3 pandas==3.0.5 \
+ && pip install --no-cache-dir torch==2.14.0+cpu --index-url https://download.pytorch.org/whl/cpu
 
 # Architecture constants shared by the deliverable contract and the verifier.
 ENV CORAL_FEATURES=20 CORAL_HIDDEN=32 CORAL_CLASSES=2

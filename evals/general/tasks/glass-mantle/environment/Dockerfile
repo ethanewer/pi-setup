@@ -12,8 +12,8 @@ ENV OMP_NUM_THREADS=1 \
 WORKDIR /app
 
 # numpy for the fixtures, CPU-only torch for the pooling module.
-RUN pip install --no-cache-dir -q numpy && \
-    pip install --no-cache-dir -q torch --index-url https://download.pytorch.org/whl/cpu
+RUN pip install --no-cache-dir -q numpy==2.5.3 && \
+    pip install --no-cache-dir -q torch==2.14.0+cpu --index-url https://download.pytorch.org/whl/cpu
 
 # Read-only visible fixture: the LiDAR cluster config and catalog.
 COPY files/ /app/

@@ -8,9 +8,9 @@ WORKDIR /app
 # CPU fine, but it is large and it picks its intra-op thread count from the host
 # core count rather than from the container's CPU quota.
 RUN pip install --no-cache-dir \
-        torch \
-        numpy \
-        flask
+        torch==2.14.0 \
+        numpy==2.5.3 \
+        flask==3.1.3
 
 # [environment] declares cpus = 1, which Docker implements as a CFS quota and
 # NOT as a CPU-affinity mask: the process still sees all 64 host cores, so torch

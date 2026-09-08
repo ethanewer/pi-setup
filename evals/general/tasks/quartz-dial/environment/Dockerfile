@@ -16,14 +16,14 @@ WORKDIR /app
 # for the asset fetch, requests for the live leaderboard fetch, pyyaml for the
 # harness task config, and langdetect for English-language detection.
 RUN pip install --no-cache-dir \
-        torch \
+        torch==2.14.0+cpu \
         --index-url https://download.pytorch.org/whl/cpu
 RUN pip install --no-cache-dir \
-        transformers \
-        huggingface_hub \
-        numpy \
-        requests \
-        pyyaml \
-        langdetect
+        transformers==5.16.1 \
+        huggingface_hub==1.30.0 \
+        numpy==2.5.3 \
+        requests==2.34.2 \
+        pyyaml==6.0.3 \
+        langdetect==1.0.9
 
 COPY files/ /app/

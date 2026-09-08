@@ -20,8 +20,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 RUN pip install --no-cache-dir \
-        pillow \
-        numpy \
-        scikit-learn
+        pillow==12.3.0 \
+        numpy==2.5.3 \
+        scikit-learn==1.9.0
 
 COPY files/ /app/

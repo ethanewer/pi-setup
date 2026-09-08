@@ -11,8 +11,8 @@ ENV OMP_NUM_THREADS=2 \
 
 WORKDIR /app
 
-RUN pip install --no-cache-dir numpy \
- && pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu torch --break-system-packages \
- && pip install --no-cache-dir sentence-transformers
+RUN pip install --no-cache-dir numpy==2.5.3 \
+ && pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu torch==2.14.0+cpu --break-system-packages \
+ && pip install --no-cache-dir sentence-transformers==6.0.1
 
 COPY files/ /app/

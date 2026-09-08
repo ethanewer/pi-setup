@@ -16,9 +16,9 @@ WORKDIR /app
 RUN pip install --no-cache-dir --disable-pip-version-check \
     torch==2.13.0 \
     transformers==5.16.1 \
-    safetensors \
-    mlflow \
-    scikit-learn
+    safetensors==0.8.0 \
+    mlflow==3.16.0 \
+    scikit-learn==1.9.0
 
 # Vendor fixtures: the pretrained-weights generator, the committed pipeline
 # config, and the char token vocabulary text.

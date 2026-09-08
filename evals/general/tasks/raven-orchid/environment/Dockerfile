@@ -19,7 +19,7 @@ ENV VOSK_MODEL=/app/vosk-model
 RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg psmisc && rm -rf /var/lib/apt/lists/*
 
 # Scientific-array + transcription stack.
-RUN pip install --no-cache-dir numpy scipy tifffile vosk
+RUN pip install --no-cache-dir numpy==2.5.3 scipy==1.18.1 tifffile==2026.8.23 vosk==0.3.45
 
 # Fixtures (media files, TIFF frames, spectra, animation spec, media server,
 # URL list, and the small offline ASR model) all ship inside the image.

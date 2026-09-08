@@ -2,7 +2,7 @@ FROM bench-base:python-3.12
 
 WORKDIR /app
 
-RUN pip install --no-cache-dir protobuf grpcio-tools
+RUN pip install --no-cache-dir protobuf==7.36.1 grpcio-tools==1.83.1
 
 COPY files/schemas/person.proto /app/schemas/person.proto
 
