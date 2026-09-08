@@ -30,7 +30,8 @@ fields and wrongly condemned four valid runs, three of which had passed.
 Exit code is 1 if any trial shows no real model turn, so it can gate a publish.
 
 Usage:
-  python3 tools/check_agent_actually_ran.py --job DIR [--harness NAME]
+  python3 tools/check_agent_actually_ran.py --job DIR [--job DIR2 ...] [--harness NAME]
+  python3 tools/check_agent_actually_ran.py --trial DIR [--trial DIR2 ...]
   python3 tools/check_agent_actually_ran.py --tree PUBLISHED_ROOT
 """
 from __future__ import annotations
@@ -259,7 +260,8 @@ def api_evidence(trial: Path):
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument('--job', type=Path, help='a harbor job directory of trial dirs')
+    ap.add_argument('--job', type=Path, action='append', default=[],
+                    help='a harbor job directory of trial dirs; repeatable')
     ap.add_argument('--trial', type=Path, action='append', default=[],
                     help='a single trial directory; repeatable')
     ap.add_argument('--harness', choices=sorted(EVIDENCE),
@@ -267,8 +269,11 @@ def main() -> int:
     args = ap.parse_args()
 
     trials = list(args.trial)
-    if args.job:
-        trials += sorted(p for p in args.job.glob('*__*/') if p.is_dir())
+    for job in args.job:
+        found = sorted(p for p in job.glob('*__*/') if p.is_dir())
+        if not found:
+            print('warning: no trial directories under %s' % job, file=sys.stderr)
+        trials += found
     if not trials:
         print('no trials given; pass --job or --trial', file=sys.stderr)
         return 2

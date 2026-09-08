@@ -37,10 +37,11 @@ harbor.
 | Oracle census | `run-v35-pinverify.sh` | Every task's own `solution/solve.sh` under harbor's `oracle` agent, one trial each, no model and no inference. A task whose reference solution cannot earn reward 1 is broken regardless of what any agent scored. |
 | Negative control | `run-v34-negative.sh` | Every task under harbor's `nop` agent, whose `setup()` and `run()` are both `pass`, so the verifier grades a pristine container. All must score 0. The census cannot substitute: a verifier that always writes 1 passes it at 785/785. |
 | Six-pair re-run | `run-v35-rerun.sh` | Agent rollouts for every harness/model pair over a task list, one job per pair, launched concurrently. |
-| Corpus re-collection | `collect-t2-full.sh`, `build-v38-overlay.sh`, `build-v38-artifact.py`, `build-v39-overlay.sh` | Re-collects every record for one harness from the trial named in its own published `source_trial`, then diffs the result against what is published on content bytes rather than message counts. Use when a detector heuristic has already been trusted once and was wrong. |
-| Infrastructure retry | `run-v38-llm-stalls.sh`, `run-v38-harbor-gasket.sh`, `run-v39-stalls.sh`, `run-v39-cc-fixed.sh`, `run-v39-cc-retry.sh` | Re-runs trials that never measured anything: an agent that timed out inside `_query_llm` having issued no command, or one killed by the tmux server vanishing. Distinct from a legitimate timeout, which is a real result and is not re-run. |
+| Corpus re-collection | `collect-t2-full.sh`, `build-v38-overlay.sh`, `build-v38-artifact.py`, `build-v39-overlay.sh`, `build-v40-overlay.sh` | Re-collects every record for one harness from the trial named in its own published `source_trial`, then diffs the result against what is published on content bytes rather than message counts. Use when a detector heuristic has already been trusted once and was wrong. |
+| Infrastructure retry | `run-v38-llm-stalls.sh`, `run-v38-harbor-gasket.sh`, `run-v39-stalls.sh`, `run-v39-cc-fixed.sh`, `run-v39-cc-retry.sh`, `run-v40-noassistant.sh` | Re-runs trials that never measured anything: an agent that timed out inside `_query_llm` having issued no command, or one killed by the tmux server vanishing. Distinct from a legitimate timeout, which is a real result and is not re-run. |
 | Transcript recovery | `publish-v37.sh` | Re-collects records from raw trials already on disk, using `--overlay` instead of `--job`, when a collector bug published a lossy transcript. Verifies rewards are unchanged before assembling. |
-| Publish | `publish-v39.sh` |
+| Publish | `publish-v310.sh` |
+| Task repair | `run-v40-hollow-notch.sh` | Re-runs **all** pairs for a task whose environment was changed, not only the pairs that were broken. Leaving the unaffected pairs on the old task would compare a different task against the rest. |
 
 Two failure modes look identical in a reward file and are not. `check_agent_actually_ran.py`
 is the gate that separates them, and `build-v39-overlay.sh` runs it over exactly the trials
@@ -118,7 +119,7 @@ published tree.
 - `run-v37-driftcanyon.sh` — re-runs one task for the two terminus-2 pairs. Used when a
   record's raw trial directory is gone and the published transcript cannot be
   recovered from disk, so the trial has to be produced again.
-- `publish-v33.sh` … `publish-v39.sh`, `finalize*.sh`, `assemble_v31.py` — the
+- `publish-v33.sh` … `publish-v310.sh`, `finalize*.sh`, `assemble_v31.py` — the
   per-version publish recipes. `publish_version.sh` in `tools/` superseded the
   `finalize`/`assemble` pair; the older ones are kept because the published
   summaries name them as their own provenance.
@@ -134,3 +135,28 @@ version. The four files per record that the dataset contract requires are publis
 to Hugging Face; the rest is scratch. The published `summary.json` names the job
 directory each record was collected from, so a record can be traced back to a trial
 on the machine that ran it but not reconstructed from the repository alone.
+
+
+## A task can break the agent instead of the task
+
+Two of the three harnesses are *installed* agents: their CLI runs inside the task
+container and calls the LLM API over the network from there. Anything a task does to the
+container's network or name resolution therefore happens to the agent, not only to the
+work under test.
+
+`hollow-notch` fragmented `/etc/nsswitch.conf` to `hosts: files`, removing the dns
+fallback. Inside that container `curl` fails with `Could not resolve host:
+openrouter.ai`. claude-code retried ten times and gave up with `UnknownApiError`, leaving
+one synthetic message and no real assistant turn, at $0.000 and 0 output tokens; pi left
+four assistant messages with null content. Four of six pairs scored 0 without making a
+single model call. terminus-2 was immune because harbor drives its tmux session from the
+host.
+
+The tell is a reward of 0 with **no API spend and no output tokens**, clustered on one
+task across every installed-agent pair. `check_agent_actually_ran.py` reports exactly
+those counters. A task-side cause is also reproducible: re-running does not help, and the
+same task fails the same way on two different models, which is what distinguished it from
+the provider-outage window that produced the nineteen stalled trials in v3.8 and v3.9.
+
+When a task's environment changes, re-run **all** pairs for it. The unaffected pairs'
+existing records describe the old task.
