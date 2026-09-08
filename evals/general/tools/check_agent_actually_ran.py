@@ -192,8 +192,23 @@ INFRA_EXCEPTIONS = {
     'AgentSetupTimeoutError': 'the agent never finished starting, so it never ran',
     'ApiConnectionClosedError': 'the provider dropped the connection mid-run',
     'ApiConnectionError': 'the provider connection failed',
+    'UnknownApiError': 'the provider returned errors and the CLI exhausted its retries',
     'NonZeroAgentExitCodeError': 'the agent CLI exited non-zero',
 }
+
+# An infrastructure exception only invalidates a trial that had not done real work
+# by the time it hit it. A trial that made 25 tool calls and then lost the
+# connection measured something and its reward stands; one that produced a single
+# turn and no tool use did not. Without this, sable-quill (1 synthetic turn,
+# connection closed) would look like ashen-vane (58 turns, 25 tool calls, killed by
+# an agent timeout) and both would be condemned.
+SUBSTANTIAL_TURNS = 3
+
+
+def acted_substantially(ev: dict):
+    return (ev.get('tool_use') or 0) > 0 or (ev.get('tool_calls') or 0) > 0 \
+        or (ev.get('observations') or 0) > 0 \
+        or (ev.get('real_assistant_turns') or 0) >= SUBSTANTIAL_TURNS
 
 
 def infra_fault(trial: Path, exc: str):
@@ -211,6 +226,34 @@ def infra_fault(trial: Path, exc: str):
         if 'failed to send non-blocking keys' in text or 'no server running' in text:
             return 'the tmux server vanished mid-run'
     return None
+
+
+def api_evidence(trial: Path):
+    """Provider-side counters, to separate a fault from a poor-but-real response.
+
+    A trial that cost nothing and produced no output tokens never got a usable
+    response. One that cost $0.70 and produced 24,270 output tokens did, whatever
+    it then failed to do with them. These are reported, not gated on, because
+    claude-code only emits them in its final result event and that event is absent
+    whenever harbor kills the CLI on an agent timeout.
+    """
+    log = trial / 'agent/claude-code.txt'
+    retries = cost = out = inp = 0
+    errors = set()
+    if log.is_file():
+        for e in _jsonl_events(log):
+            if e.get('subtype') == 'api_retry':
+                retries += 1
+                for k in ('error', 'error_status'):
+                    if e.get(k):
+                        errors.add(str(e[k]))
+            if 'usage' in e:
+                u = e.get('usage') or {}
+                cost = e.get('total_cost_usd') or cost
+                out = u.get('output_tokens') or out
+                inp = u.get('input_tokens') or inp
+    return {'api_retries': retries, 'api_errors': sorted(errors),
+            'cost_usd': round(cost, 4), 'output_tokens': out, 'input_tokens': inp}
 
 
 def main() -> int:
@@ -234,7 +277,14 @@ def main() -> int:
     for t in trials:
         ev = check_trial(t, args.harness)
         reward, exc = outcome(t)
+        ev.update(api_evidence(t))
         fault = infra_fault(t, exc)
+        # An infrastructure exception invalidates the trial only if it had not done
+        # real work yet. See acted_substantially.
+        if fault and acted_substantially(ev):
+            fault = None
+            ev['note'] = ('hit an infrastructure fault but only after real work, '
+                          'so it measured something')
         ev['infra_fault'] = fault
         rows.append((t.name, ev.get('harness') or '?', reward, exc or 'none', ev))
         if ev.get('acted') is False:
@@ -243,8 +293,9 @@ def main() -> int:
             never.append((t.name, reward, exc or 'none', fault))
 
     keys = ['real_assistant_turns', 'synthetic_turns', 'tool_use', 'tool_result',
-            'steps', 'observations', 'tool_calls', 'session_files']
-    hdr = ('%-34s %-12s %-7s %-24s ' % ('trial', 'harness', 'reward', 'exception')
+            'steps', 'observations', 'tool_calls', 'session_files',
+            'api_retries', 'cost_usd', 'output_tokens']
+    hdr = ('%-30s %-12s %-7s %-22s ' % ('trial', 'harness', 'reward', 'exception')
            + ' '.join('%-7s' % k[:7] for k in keys) + ' measured')
     print(hdr)
     for name, h, reward, exc, ev in rows:
@@ -253,9 +304,9 @@ def main() -> int:
         verdict = {True: 'yes', False: 'NO', None: '?'}[acted]
         if acted and ev.get('infra_fault'):
             verdict = 'NO*'
-        print('%-34s %-12s %-7s %-24s %s %s'
-              % (name[:34], h[:12], reward[:7], exc[:24], cells, verdict))
-    print('  (* produced model turns but was killed by infrastructure)')
+        print('%-30s %-12s %-7s %-22s %s %s'
+              % (name[:30], h[:12], reward[:7], exc[:22], cells, verdict))
+    print('  (* produced model turns but was killed by infrastructure before doing real work)')
 
     print()
     faults = [(n, r, e, w) for n, r, e, w in never]
@@ -263,7 +314,7 @@ def main() -> int:
     if faults:
         print('NEVER MEASURED: %d of %d trials are not results.' % (len(faults), len(trials)))
         for name, reward, exc, why in faults:
-            print('   %-34s reward=%-7s %-26s %s' % (name[:34], reward, exc[:26], why))
+            print('   %-30s reward=%-7s %-22s %s' % (name[:30], reward, exc[:22], why))
         if infra:
             print('(%d of those produced model turns but were killed by infrastructure, '
                   'which is not the same as a model that tried and lost)' % len(infra))
