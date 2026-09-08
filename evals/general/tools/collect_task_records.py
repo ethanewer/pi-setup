@@ -181,17 +181,44 @@ def norm_pi(trial: Path, model: str, task: str):
 
 def norm_t2(trial: Path, model: str, task: str):
     t = json.loads((trial / 'agent/trajectory.json').read_text())
+    # harbor writes the same ATIF-style steps for terminus-2 as for claude-code:
+    # each agent step carries message, reasoning_content, tool_calls and an
+    # observation holding the tool results that were fed back to the model. This
+    # used to keep only `message`, so every terminus-2 record collected through
+    # here published the assistant's prose and dropped the commands it ran, the
+    # output it saw and its reasoning -- 2.0 MB of observations, 7.9 MB of
+    # reasoning and 1.2 MB of tool calls across 80 records, which is not a
+    # transcript of what was sent to the API in any useful sense. Map it the way
+    # norm_claude does.
     messages, tools_used = [], set()
     for s in t.get('steps', []):
-        role = 'user' if s.get('source') == 'user' else 'assistant'
-        messages.append({'role': role,
-                         'content': [{'type': 'text',
-                                      'text': s.get('message', '')}]})
-        if role == 'assistant':
-            tools_used.add('bash_command')
+        obs = s.get('observation') or {}
+        for r in obs.get('results') or []:
+            messages.append({'role': 'tool', 'content': r.get('content', ''),
+                             'tool_call_id': r.get('source_call_id')})
+        if s.get('source') == 'user':
+            messages.append({'role': 'user', 'content': [
+                {'type': 'text', 'text': s.get('message', '')}]})
+            continue
+        tc_out = []
+        for tc in s.get('tool_calls') or []:
+            tc_out.append({'id': tc.get('tool_call_id'), 'type': 'function',
+                           'function': {'name': tc.get('function_name'),
+                                        'arguments': tc.get('arguments') or {}}})
+            tools_used.add(tc.get('function_name'))
+        msg = {'role': 'assistant',
+               'content': ([{'type': 'text', 'text': s['message']}]
+                           if s.get('message') else None),
+               'reasoning_content': s.get('reasoning_content')}
+        if tc_out:
+            msg['tool_calls'] = tc_out
+        messages.append(msg)
+    if not tools_used:
+        tools_used.add('bash_command')
     return {
         'agent': 'terminus-2',
-        'agent_version': t.get('agent', {}).get('version', '2.0.0'),
+        'agent_version': (t.get('agent') or {}).get('version', '2.0.0')
+                         if isinstance(t.get('agent'), dict) else '2.0.0',
         'model': model,
         'task': task,
         'tools': [T2_TOOL],
@@ -305,11 +332,22 @@ def main():
             rj = trial / 'result.json'
             if rj.exists():
                 res = json.loads(rj.read_text())
-                exc = (res.get('exception_info') or {}).get('exception_type') or ''
+                ei = res.get('exception_info') or {}
+                exc = ei.get('exception_type') or ''
+                # Keep the message as well as the type. "AgentTimeoutError" alone
+                # does not say which budget was exhausted, and the timeout is a
+                # property of the task rather than of the harness, so two records
+                # with the same type can mean different things. 701 of the 742
+                # published records that carry an exception already store the
+                # "Type: message" form; the other 41 came from a version of this
+                # collector that kept only the type.
+                msg = (ei.get('exception_message') or '').strip()
+                exc_detail = ('%s: %s\n' % (exc, msg)) if (exc and msg) else (exc or '')
             else:
                 # harbor recorded the exception but never finalized the trial
                 res = {}
                 exc = exception_from_file(trial)
+                exc_detail = exc
                 if not exc:
                     errors.append(f'{jobname}/{TASK}: trial has neither result.json '
                                   f'nor a readable exception.txt, so its outcome is '
@@ -407,7 +445,7 @@ def main():
             (dest / 'metadata.json').write_text(json.dumps({
                 'task': TASK, 'agent': harness, 'model': model_meta,
                 'reward': reward, 'agent_timeout': agent_timeout,
-                'exception': exc or None,
+                'exception': exc_detail or None,
                 'reward_provenance': reward_provenance,
                 'source_trial': trial.name}, indent=1) + '\n')
             written += 1
