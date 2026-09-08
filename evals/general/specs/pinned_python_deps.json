@@ -149,7 +149,11 @@
  "task_pins": {
   "zephyr-bridge": {
    "scipy": "1.13.1"
+  },
+  "arid-orchid": {
+   "numpy": "1.26.4",
+   "pillow": "10.2.0"
   }
  },
- "task_pins_note": "Per-task overrides where a site's own pre-existing pins constrain the resolution differently from the (base,index) default. zephyr-bridge pins numpy==1.26.4 and gensim==4.3.3, so its scipy must be 1.13.1; the default for bench-base:python-3.12|pypi is 1.18.1, which requires numpy>=2 and produces an image that fails to build. Versions are resolved per install site with dependencies considered, never per package with --no-deps."
+ "task_pins_note": "Per-task overrides where a site's own pre-existing pins constrain the resolution differently from the (base,index) default. zephyr-bridge pins numpy==1.26.4 and gensim==4.3.3, so its scipy must be 1.13.1; the default for bench-base:python-3.12|pypi is 1.18.1, which requires numpy>=2 and produces an image that fails to build. Versions are resolved per install site with dependencies considered, never per package with --no-deps. arid-orchid is the second kind of override: its Dockerfile apt-installs python3-numpy and python3-pil in the same RUN, so the bare pip requirements were already satisfied and pinning them to the newest PyPI versions made pip attempt to uninstall a Debian package, which fails because Debian installs carry no RECORD. They are pinned to the versions apt provides, with --ignore-installed so pip never touches the Debian copy."
 }

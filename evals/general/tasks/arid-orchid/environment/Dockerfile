@@ -11,6 +11,16 @@ ENV OMP_NUM_THREADS=1 \
 
 WORKDIR /app
 
+# numpy and pillow are pinned to the versions the apt packages above provide
+# (python3-numpy 1.26.4, python3-pil 10.2.0), not to the newest on PyPI. These two
+# requirements used to be bare, which pip read as "already satisfied" and left
+# alone; pinning them to today's PyPI versions instead made pip try to upgrade over
+# a Debian-installed package, which fails with "Cannot uninstall numpy 1.26.4,
+# RECORD file not found. Hint: The package was installed by debian." -- Debian
+# packages carry no RECORD, so they cannot be uninstalled by pip at all.
+# --ignore-installed keeps pip from touching the Debian copy while still fixing the
+# version, so the environment stays the one this task was validated against even if
+# the Ubuntu archive moves.
 # Software-only rendering stack: GCC + Python + an OSMesa (headless GL) dev lib.
 # No X server, no GPU, no systemd.
 RUN apt-get update -y && apt-get install -y --no-install-recommends \
@@ -25,7 +35,8 @@ RUN apt-get update -y && apt-get install -y --no-install-recommends \
         libosmesa6-dev \
         mesa-utils \
     && rm -rf /var/lib/apt/lists/* \
-    && python3 -m pip install --no-cache-dir --break-system-packages numpy==2.5.3 pillow==12.3.0
+    && python3 -m pip install --no-cache-dir --break-system-packages --ignore-installed \
+        numpy==1.26.4 pillow==10.2.0
 
 COPY files/ /app/
 
