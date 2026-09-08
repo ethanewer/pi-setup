@@ -238,14 +238,47 @@ WITH_OPEN = re.compile(r'with\s+open\([^)]*reward\.txt[^)]*\)\s+as\s+(\w+)\s*:')
 
 
 def py_seeds_from_body(body: str):
-    """Top-level print(...) args in a python body: what becomes stdout."""
+    """Top-level print(...) args in a python body: what becomes stdout.
+
+    The argument is extracted by matching parentheses rather than by taking the
+    rest of the line. A verifier that writes
+
+        print('recovered db missing'); raise SystemExit(1)
+
+    puts that message on stdout, and when the shell captures the interpreter's
+    stdout into the reward the message becomes the reward. Taking the remainder of
+    the line yielded the compound string `'recovered db missing'); raise
+    SystemExit(1`, which no classifier recognised, so the defect passed the gate
+    and shipped.
+    """
     seeds = []
     for line in body.splitlines():
         s = line.strip()
         if s.startswith('#'):
             continue
-        for m in re.finditer(r'\bprint\s*\((.*)', s):
-            seeds.append(m.group(1).rstrip(')'))
+        for m in re.finditer(r'\bprint\s*\(', s):
+            i = m.end()
+            depth = 1
+            quote = None
+            j = i
+            while j < len(s):
+                ch = s[j]
+                if quote:
+                    if ch == '\\':
+                        j += 2
+                        continue
+                    if ch == quote:
+                        quote = None
+                elif ch in '"\'':
+                    quote = ch
+                elif ch in '([':
+                    depth += 1
+                elif ch in ')]':
+                    depth -= 1
+                    if depth == 0:
+                        break
+                j += 1
+            seeds.append(s[i:j])
     return seeds
 
 
@@ -653,6 +686,36 @@ def classify_expr(expr: str):
     bare = e.strip('"\'')
     if bare in BINARY_LITERALS:
         return False, ''
+    # A quoted literal that does not denote 0 or 1 is prose, and prose printed to
+    # a captured stdout becomes the reward. '0.0' and '1.0' are value-binary even
+    # though the publish step canonicalises their spelling, so judge by float.
+    # Anything carrying a shell expansion is a variable reference rather than a
+    # literal -- "$reward" is exactly what a correct verifier writes -- and is left
+    # to the rest of the cone, which resolves the variable.
+    if (len(e) >= 2 and e[0] == e[-1] and e[0] in '"\'' and e.count(e[0]) == 2
+            and '$' not in e and '`' not in e):
+        # Evaluate the literal rather than stripping quotes, so an escaped sequence
+        # is read the way the interpreter reads it: '0\n' is the string "0\n",
+        # which float() accepts, not the four characters that would look like prose.
+        try:
+            import ast as _ast
+            val = _ast.literal_eval(e)
+        except Exception:
+            val = bare
+        if isinstance(val, str):
+            # A filesystem path is not a reward candidate. strip_paths already
+            # blanks these for the arithmetic checks below; apply the same test
+            # here so '/app/evidence' in a cone is not read as prose. The real
+            # defect this catches -- 'recovered db missing' -- has spaces and so
+            # survives, which is the distinction strip_paths was written for.
+            if val.startswith('/') and ' ' not in val and not re.search(r'[%:]', val):
+                pass
+            else:
+                try:
+                    if float(val) not in (0.0, 1.0):
+                        return True, f'non-binary literal reward {e[:80]}'
+                except ValueError:
+                    return True, f'prose literal written as reward: {e[:80]}'
     # a bare integer written straight to reward.txt that is not 0 or 1
     if re.fullmatch(r'-?\d+', bare) and int(bare) not in (0, 1):
         return True, f'bare integer reward {bare}'

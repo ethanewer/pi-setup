@@ -47,6 +47,52 @@ fi
 echo "$reward" > /logs/verifier/reward.txt
 ''', 'NON_BINARY')
 
+# v1-item-019-main shipped this. The interpreter's stdout is captured whole into
+# the reward, and an early-exit path printed a diagnostic to stdout before raising
+# SystemExit -- which is a BaseException, so the `except Exception` handler that
+# prints 0 never ran. reward.txt received the literal text "recovered db missing".
+# The seed extractor used to take the rest of the line, producing a compound string
+# no classifier recognised; it now matches parentheses, and a quoted literal that
+# is neither 0 nor 1 nor a path is flagged.
+CASES['prose-print-into-captured-stdout'] = ('''#!/bin/bash
+mkdir -p /logs/verifier
+reward=0
+ok=$(python3 - <<'PYEOF'
+import os, sys
+try:
+    if not os.path.exists('/app/recovered/orders.db'):
+        print('recovered db missing'); raise SystemExit(1)
+    print(1)
+except Exception:
+    print('0')
+PYEOF
+)
+reward=$ok
+echo "$reward" > /logs/verifier/reward.txt
+''', 'NON_BINARY')
+
+# The same shape with the diagnostic correctly routed to stderr and a numeric
+# verdict printed, plus a shell epilogue that refuses to write anything but 0 or 1.
+CASES['prose-print-routed-to-stderr'] = ('''#!/bin/bash
+mkdir -p /logs/verifier
+reward=0
+ok=$(python3 - <<'PYEOF'
+import os, sys
+try:
+    if not os.path.exists('/app/recovered/orders.db'):
+        print('recovered db missing', file=sys.stderr); print(0); raise SystemExit(1)
+    print(1)
+except Exception:
+    print('0')
+PYEOF
+)
+case "$ok" in
+  0|1) reward=$ok ;;
+  *) reward=0 ;;
+esac
+echo "$reward" > /logs/verifier/reward.txt
+''', 'BINARY')
+
 CASES['frac-heredoc-fstring'] = ('''#!/bin/bash
 score=$(python3 - <<'PY'
 score = 0.0

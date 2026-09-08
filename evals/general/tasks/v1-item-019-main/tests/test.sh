@@ -8,13 +8,13 @@ mkdir -p /logs/verifier
 reward=0
 
 ok=$(python3 - <<'PYEOF'
-import os, json, sqlite3
+import os, json, sqlite3, sys
 evidence = '/app/evidence'
 out = '/app/recovered'
 try:
     wal = open(os.path.join(evidence, 'orders.db-wal'), 'rb').read()
     if os.path.getsize(os.path.join(evidence, 'orders.db-wal')) != 16512:
-        print('evidence wal size changed'); raise SystemExit(1)
+        print('evidence wal size changed', file=sys.stderr); print(0); raise SystemExit(1)
     key = None
     for cand in range(256):
         dec = [wal[32+i] ^ cand for i in range(4)]
@@ -22,11 +22,11 @@ try:
             key = cand
             break
     if key is None:
-        print('could not infer xor key from evidence'); raise SystemExit(1)
+        print('could not infer xor key from evidence', file=sys.stderr); print(0); raise SystemExit(1)
 
     db_path = os.path.join(out, 'orders.db')
     if not os.path.exists(db_path):
-        print('recovered db missing'); raise SystemExit(1)
+        print('recovered db missing', file=sys.stderr); print(0); raise SystemExit(1)
     con = sqlite3.connect(db_path)
     cur = con.cursor()
     integrity = cur.execute('PRAGMA integrity_check').fetchone()[0]
@@ -49,5 +49,14 @@ except Exception as e:
 PYEOF
 )
 
-reward=$ok
+# Only 0 or 1 may reach the reward file. The heredoc's stdout is captured whole,
+# so any path that prints a diagnostic instead of a verdict used to write that
+# diagnostic as the reward -- this verifier shipped "recovered db missing" into
+# reward.txt, which is neither binary nor parseable. Keep the text as a diagnostic
+# on stderr and score 0.
+case "$ok" in
+  0|1) reward=$ok ;;
+  *)   [ -n "$ok" ] && echo "verifier printed a non-binary verdict: $ok" >&2
+       reward=0 ;;
+esac
 echo "$reward" > /logs/verifier/reward.txt
