@@ -37,10 +37,35 @@ harbor.
 | Oracle census | `run-v35-pinverify.sh` | Every task's own `solution/solve.sh` under harbor's `oracle` agent, one trial each, no model and no inference. A task whose reference solution cannot earn reward 1 is broken regardless of what any agent scored. |
 | Negative control | `run-v34-negative.sh` | Every task under harbor's `nop` agent, whose `setup()` and `run()` are both `pass`, so the verifier grades a pristine container. All must score 0. The census cannot substitute: a verifier that always writes 1 passes it at 785/785. |
 | Six-pair re-run | `run-v35-rerun.sh` | Agent rollouts for every harness/model pair over a task list, one job per pair, launched concurrently. |
-| Corpus re-collection | `collect-t2-full.sh`, `build-v38-overlay.sh`, `build-v38-artifact.py` | Re-collects every record for one harness from the trial named in its own published `source_trial`, then diffs the result against what is published on content bytes rather than message counts. Use when a detector heuristic has already been trusted once and was wrong. |
-| Infrastructure retry | `run-v38-llm-stalls.sh`, `run-v38-harbor-gasket.sh` | Re-runs trials that never measured anything: an agent that timed out inside `_query_llm` having issued no command, or one killed by the tmux server vanishing. Distinct from a legitimate timeout, which is a real result and is not re-run. |
+| Corpus re-collection | `collect-t2-full.sh`, `build-v38-overlay.sh`, `build-v38-artifact.py`, `build-v39-overlay.sh` | Re-collects every record for one harness from the trial named in its own published `source_trial`, then diffs the result against what is published on content bytes rather than message counts. Use when a detector heuristic has already been trusted once and was wrong. |
+| Infrastructure retry | `run-v38-llm-stalls.sh`, `run-v38-harbor-gasket.sh`, `run-v39-stalls.sh`, `run-v39-cc-fixed.sh`, `run-v39-cc-retry.sh` | Re-runs trials that never measured anything: an agent that timed out inside `_query_llm` having issued no command, or one killed by the tmux server vanishing. Distinct from a legitimate timeout, which is a real result and is not re-run. |
 | Transcript recovery | `publish-v37.sh` | Re-collects records from raw trials already on disk, using `--overlay` instead of `--job`, when a collector bug published a lossy transcript. Verifies rewards are unchanged before assembling. |
-| Publish | `publish-v38.sh` | Chains `tools/publish_version.sh`: rescore, collect, assemble, upload, then read the tree back through the paginated Hub endpoint and compare counts. |
+| Publish | `publish-v39.sh` |
+
+Two failure modes look identical in a reward file and are not. `check_agent_actually_ran.py`
+is the gate that separates them, and `build-v39-overlay.sh` runs it over exactly the trials
+about to be published, stopping the build if any of them never reached the model.
+
+- **Never measured.** The provider did not answer, or the harness died before the agent
+  started. The trial burned its budget and scored 0 under TIMEOUT_FAIL, charging an outage
+  to the model. Re-run it; the zero is not a result.
+- **Legitimate timeout.** The agent worked and did not finish inside the task's budget.
+  The zero is a real result. Do not re-run it, because re-rolling only failures moves the
+  scoreboard in one direction.
+
+Count turns, not token accounting. claude-code reports `input_tokens` and `total_cost_usd`
+only in its final result event, which never lands when harbor kills the CLI on an agent
+timeout, so a trial that did 58 real turns and 25 tool calls reports zero usage. The first
+version of the gate used those fields and wrongly condemned four valid runs, three of which
+had passed.
+
+Per-pair environment differs and is easy to omit. claude-code reaches OpenRouter through
+`ANTHROPIC_API_KEY` and `ANTHROPIC_BASE_URL`, which `run-all.sh` exports; pi and terminus-2
+take an `openrouter/`-prefixed model path instead. Omitting the two exports makes
+claude-code return one synthetic message and exit 1, and every trial fails identically —
+indistinguishable from a model that tried and lost. `run-v39-cc-fixed.sh` records that
+incident, and the invalid job is kept as `v39-cc-glm-stalls-INVALID-noenv/` with an
+`INVALID.md` rather than deleted. Chains `tools/publish_version.sh`: rescore, collect, assemble, upload, then read the tree back through the paginated Hub endpoint and compare counts. |
 
 Concurrency is a real parameter, not a detail. The oracle census at twelve parallel
 builds failed twenty tasks with `apt-get` exit 100 because the Debian mirrors
@@ -93,7 +118,7 @@ published tree.
 - `run-v37-driftcanyon.sh` — re-runs one task for the two terminus-2 pairs. Used when a
   record's raw trial directory is gone and the published transcript cannot be
   recovered from disk, so the trial has to be produced again.
-- `publish-v33.sh` … `publish-v38.sh`, `finalize*.sh`, `assemble_v31.py` — the
+- `publish-v33.sh` … `publish-v39.sh`, `finalize*.sh`, `assemble_v31.py` — the
   per-version publish recipes. `publish_version.sh` in `tools/` superseded the
   `finalize`/`assemble` pair; the older ones are kept because the published
   summaries name them as their own provenance.
