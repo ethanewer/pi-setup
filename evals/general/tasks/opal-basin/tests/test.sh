@@ -110,6 +110,18 @@ try:
                 out = model(**enc)
                 embeds.append(out.last_hidden_state[0].mean(dim=0).tolist())
         return texts, embeds
+
+    # Actually compute the reference. ref_texts doubles as the sentinel for "the
+    # offline load path works, so embeddings can be validated": run_scorer returns
+    # early when it is None so a broken load path does not cascade into spurious
+    # embedding failures, and the whole deliverable section below is gated on it.
+    # This assignment was missing, so ref_texts stayed None forever, that gate was
+    # never entered, and roughly sixty lines of checking -- /app/score.py,
+    # /app/refresh.sh, the runtime-derived manifest, every hidden text case -- were
+    # dead code. The verifier then reduced to the vendor-script hash check above
+    # and awarded reward 1 to any container at all, including one where no agent
+    # had run.
+    ref_texts, ref_embeds = reference("/app/input_texts.txt")
 except Exception as e:
     failures.append("offline load path broken (reference unavailable): %s" % e)
 
