@@ -15,7 +15,7 @@ WORKDIR /app
 
 RUN pip install --no-cache-dir \
     numpy==1.26.4 \
-    scipy==1.18.1 \
+    scipy==1.13.1 \
     scikit-learn==1.9.0 \
     gensim==4.3.3
 

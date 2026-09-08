@@ -211,42 +211,69 @@ def load_spec():
 
 
 def resolve(sites):
-    """Ask each base image's own pip what it would install, per index."""
-    combos = collections.defaultdict(set)
-    for task, path, base, idx, names in sites:
-        for n in names:
-            combos[(base, idx)].add(n)
+    """Ask each base image's own pip what it would install, per install site.
+
+    Resolution is per site and considers dependencies, not per package with
+    --no-deps. A site that already pins one requirement constrains the others:
+    zephyr-bridge pinned numpy==1.26.4 and gensim==4.3.3, and resolving its bare
+    scipy independently gave 1.18.1, which requires numpy>=2 -- an unsatisfiable
+    image that failed to build. Resolved together with dependencies, pip picks
+    scipy 1.13.1 and the site is consistent. That also means one package can
+    legitimately resolve to different versions in different tasks, so the result
+    is returned both as a per-(base,index) default and as per-task overrides.
+    """
+    cache = {}
     out = {}
-    for (base, idx), pkgs in sorted(combos.items()):
-        pkgs = sorted(pkgs)
+    task_out = {}
+    todo = collections.OrderedDict()
+    for task, path, base, idx, names in sites:
+        text = path.read_text(errors='replace')
+        for start, end, sidx in install_sites(text):
+            span = text[start:end]
+            bare = [n for _, _, n, _ in tokens(span)]
+            if not bare:
+                continue
+            existing = re.findall(r'[\'"]?([A-Za-z0-9_.\-]+(?:\[[^\]]*\])?)==([^\s\'"\\]+)', span)
+            reqs = tuple(['%s==%s' % (n, v) for n, v in existing] + bare)
+            todo[(base, sidx, reqs)] = (task, bare)
+    print('%d distinct install sites to resolve' % len(todo))
+    for (base, idx, reqs), (task, bare) in todo.items():
         iu = ('--index-url %s ' % idx) if idx != 'pypi' else ''
-        # ubuntu/node bases do not always ship pip, so install it first if needed
+        quoted = ' '.join("'%s'" % r if '[' in r else r for r in reqs)
+        # the base images do not all ship pip, so install it first if absent
         script = ('command -v pip3 >/dev/null 2>&1 || python3 -m pip --version >/dev/null 2>&1 || '
                   '{ apt-get update -qq >/dev/null 2>&1; '
                   'apt-get install -y -qq --no-install-recommends python3-pip >/dev/null 2>&1; }; '
                   'python3 -m pip install --break-system-packages --dry-run '
-                  '--ignore-installed --no-deps %s--report /tmp/r.json %s >/dev/null 2>&1 || '
-                  'python3 -m pip install --dry-run --ignore-installed --no-deps '
+                  '--ignore-installed %s--report /tmp/r.json %s >/dev/null 2>&1 || '
+                  'python3 -m pip install --dry-run --ignore-installed '
                   '%s--report /tmp/r.json %s >/dev/null 2>&1; cat /tmp/r.json'
-                  % (iu, ' '.join(pkgs), iu, ' '.join(pkgs)))
-        print('resolving %2d package(s) on %-26s %s' % (len(pkgs), base, idx), flush=True)
+                  % (iu, quoted, iu, quoted))
+        print('  %-22s %-26s %s' % (task, base, ' '.join(reqs)[:78]), flush=True)
         p = subprocess.run(['docker', 'run', '--rm', '--entrypoint', 'sh', base, '-c', script],
                            capture_output=True, text=True, timeout=3600)
         raw = p.stdout
         i = raw.find('{')
         if i < 0:
-            print('  FAILED: %s' % (p.stderr or raw)[-200:].strip())
+            print('    FAILED: %s' % (p.stderr or raw)[-200:].strip())
             continue
         try:
             d = json.loads(raw[i:])
         except ValueError as e:
-            print('  FAILED to parse report: %s' % e)
+            print('    FAILED to parse report: %s' % e)
             continue
         got = {it['metadata']['name'].lower(): it['metadata']['version']
                for it in d.get('install', [])}
-        out['%s|%s' % (base, idx)] = got
-        print('  -> %d version(s)' % len(got))
-    return out
+        key = '%s|%s' % (base, idx)
+        table = out.setdefault(key, {})
+        per_task = task_out.setdefault(task, {})
+        for n in bare:
+            if n.lower() in got:
+                table.setdefault(n.lower(), got[n.lower()])
+                per_task[n.lower()] = got[n.lower()]
+            else:
+                print('    no resolved version for %s' % n)
+    return out, task_out
 
 
 def collect_sites():
@@ -275,27 +302,33 @@ def main() -> int:
     spec = load_spec()
 
     if args.resolve:
-        versions = resolve(sites)
-        spec = {
-            'note': ('Versions each base image\'s own pip resolves for the packages '
-                     'task Dockerfiles install, keyed "<base>|<index>". Resolved with '
-                     '--dry-run --ignore-installed --no-deps so nothing is installed, '
-                     'against the index the task names rather than PyPI globally, '
-                     'because the pytorch CPU index serves different builds and the '
-                     'bases carry different Pythons (3.11 on bench-base:node-22, '
-                     '3.12 on bench-base:python-3.12).'),
-            'apt_note': ('apt packages are not pinned. Debian and Ubuntu rotate their '
-                         'archives, so an exact version pin stops resolving once that '
-                         'version is published out and turns silent drift into a hard '
-                         'build failure. Reproducible apt needs a snapshot mirror or '
-                         'vendored .debs.'),
-            'resolved_at': datetime.datetime.now().astimezone().isoformat(timespec='seconds'),
-            'versions': versions,
-        }
+        versions, task_versions = resolve(sites)
+        # keep the hand-maintained parts of the spec (base image IDs, the apt and
+        # drift notes) and refresh only the version tables
+        spec = dict(spec or {})
+        merged = {k: dict(v) for k, v in (spec.get('versions') or {}).items()}
+        for k, v in versions.items():
+            merged.setdefault(k, {}).update(v)
+        tmerged = {k: dict(v) for k, v in (spec.get('task_pins') or {}).items()}
+        for k, v in task_versions.items():
+            tmerged.setdefault(k, {}).update(v)
+        spec['versions'] = merged
+        spec['task_pins'] = tmerged
+        spec.setdefault('note',
+            'Versions each base image\'s own pip resolves for the packages task '
+            'Dockerfiles install, keyed "<base>|<index>", plus per-task overrides '
+            'where a site\'s own existing pins constrain the resolution differently.')
+        spec.setdefault('apt_note',
+            'apt packages are not pinned. Debian and Ubuntu rotate their archives, '
+            'so an exact version pin stops resolving once that version is published '
+            'out and turns silent drift into a hard build failure. Reproducible apt '
+            'needs a snapshot mirror or vendored .debs.')
+        spec['resolved_at'] = datetime.datetime.now().astimezone().isoformat(timespec='seconds')
         SPEC.write_text(json.dumps(spec, indent=1) + '\n')
         print('wrote %s' % SPEC)
 
     versions = (spec or {}).get('versions', {})
+    task_pins = (spec or {}).get('task_pins', {})
     if not versions:
         print('FATAL: no pinned versions recorded; run with --resolve first',
               file=sys.stderr)
@@ -304,7 +337,7 @@ def main() -> int:
     rewritten, unpinned, unknown, mismatched = [], [], [], []
     for task, path, base, idx, names in sites:
         text = path.read_text(errors='replace')
-        table = versions.get('%s|%s' % (base, idx), {})
+        tpin = task_pins.get(task, {})
         out = []
         cursor = 0
         changed = False
@@ -314,7 +347,7 @@ def main() -> int:
             pieces = []
             last = 0
             for off, length, name, extras in tokens(span):
-                ver = stable.get(name.lower())
+                ver = tpin.get(name.lower()) or stable.get(name.lower())
                 if ver is None:
                     unknown.append((task, name, base, sidx))
                     continue
@@ -335,20 +368,42 @@ def main() -> int:
                     path.write_text(new)
 
     # gate: after applying, nothing may remain unpinned
+    # Gate. Nothing may be left bare. Pins an author already wrote are left
+    # alone: ember-atlas deliberately holds torch at 2.5.1 and transformers at
+    # 4.46.3, and demanding those match today's resolution would be wrong -- the
+    # point of pinning is that a task keeps the version it was authored against.
+    # What the tool owes is that every requirement it was asked to pin got a
+    # version resolved for that site, which `unknown` already covers, and that a
+    # per-task override is honoured where a site's own pins constrain it.
+    left = [(t, n) for t, _, _, _, names in collect_sites() for n in names]
+    offspec = []
+    for task, path in dockerfiles():
+        tpin = task_pins.get(task)
+        if not tpin:
+            continue
+        text = path.read_text(errors='replace')
+        for start, end, sidx in install_sites(text):
+            span = text[start:end]
+            for m in re.finditer(r'(?<![\w.-])([A-Za-z0-9][A-Za-z0-9_.\-]*)(\[[^\]]*\])?==([^\s\'"\\]+)', span):
+                pkg, ver = m.group(1).lower(), m.group(3)
+                want = tpin.get(pkg)
+                if want is not None and want != ver:
+                    offspec.append((task, pkg, ver, 'task_pins records %s' % want))
+
     if args.apply:
-        left = []
-        for task, path, base, idx, names in collect_sites():
-            table = versions.get('%s|%s' % (base, idx), {})
-            for n in names:
-                if n.lower() not in table:
-                    left.append((task, n))
         print('rewrote %d Dockerfiles' % len(rewritten))
+        bad = 0
         if left:
+            bad = 1
             print('STILL UNPINNED (no resolved version recorded): %d' % len(left))
             for t, n in sorted(set(left))[:20]:
                 print('  %-24s %s' % (t, n))
-            return 1
-        return 0
+        if offspec:
+            bad = 1
+            print('PINS CONTRADICTING A RECORDED PER-TASK RESOLUTION: %d' % len(offspec))
+            for t, pkg, ver, why in sorted(set(offspec))[:20]:
+                print('  %-24s %-18s ==%-14s %s' % (t, pkg, ver, why))
+        return bad
 
     print('pip install sites: %d across %d tasks' % (len(sites), len({s[0] for s in sites})))
     print('Dockerfiles that would be pinned: %d' % len(rewritten))
@@ -361,7 +416,11 @@ def main() -> int:
         by[base] += len(names)
     for b, n in by.most_common():
         print('  %-26s %d unpinned requirements' % (b, n))
-    if rewritten or unknown:
+    if offspec:
+        print('pins contradicting a recorded per-task resolution: %d' % len(offspec))
+        for t, pkg, ver, why in sorted(set(offspec))[:20]:
+            print('  %-24s %-18s ==%-14s %s' % (t, pkg, ver, why))
+    if rewritten or unknown or offspec:
         print('\nrun with --resolve then --apply')
         return 1
     print('every pip requirement is pinned to a recorded version')
