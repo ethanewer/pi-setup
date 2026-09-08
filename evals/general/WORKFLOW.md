@@ -4,7 +4,10 @@
 Terminal-Bench 2.1 competency space (726 atomic competencies, 725 covered,
 1 waived as environmentally infeasible, 0 uncovered) plus 270 supplementary
 general-coding tasks (v1 family) and 20 supplementary clean-room skill-coverage
-tasks. Zero contamination with Terminal-Bench 2.1, verified by byte-level audit.
+tasks. Zero contamination with Terminal-Bench 2.1: re-audited over the v3.4 tree
+against the frozen reference commit, with 0 exact, 0 canary and 0 source-repository
+matches, and every remaining block and n-gram hit inspected and shown to be
+boilerplate (see `## Contamination audit` below).
 
 Every verifier writes a binary reward: `/logs/verifier/reward.txt` contains
 exactly `1` or `0`. `tools/check_binary_reward.py` proves this statically for
@@ -115,14 +118,73 @@ All gates run via `tools/rebuild_and_audit.sh` or individually:
 | Difficulty calibration | `tools/check_difficulty.py` | 516 measured (49 easy / 251 medium / 216 hard), 0 problems; the 271 v1 tasks carry no rubric, hence `--allow-unmeasured` |
 | Provenance | `tools/update_provenance.py` + `check_reproducibility.py` | 12,495 files, 0 drift |
 | General inventory | `tools/check_general_coverage.py` | not-retained (decision D1), 0 errors |
-| Independence audit | `tools/audit_independence_stream.py` | **Clean**: exact=0, block=0, ngram=0, canary=0, repo=0 |
-| Similarity triage | `tools/check_task_similarity.py` | flagged pairs cleared by two-reviewer blind triage (boilerplate/API-signature overlaps; no direct recipes) |
-| Suite report | `tools/suite_report.py` | see `private-audit/reports/suite_report.json` |
+| Independence audit | `tools/audit_independence_stream.py` | Re-run over the v3.4 tree: 13,610 authored payloads against 4,838 reference payloads, **0 exact / 0 canary / 0 source-repository matches**. The 5 block, 8 n-gram and 575 soft matches were each inspected and are boilerplate; see `independence_report.json` in the published dataset for the overlapping bytes and the reasoning |
+| Similarity triage | `tools/check_task_similarity.py` | **Not re-verified.** The record behind the original "cleared by two-reviewer blind triage" claim lived in `private-audit/`, which is gitignored, was never committed, and is not on this machine. The claim is carried forward unverified; the independence audit row above is the substantiated one |
+| Suite report | `tools/suite_report.py` | **Not available.** `private-audit/reports/suite_report.json` is gitignored, was never committed, and is not on this machine |
 
 The independence audit, similarity triage, reference freeze and suite report all
 need the frozen tb2.1 checkout named in `specs/frozen_reference.json`. They
 cannot run on a clone that does not have it; pass the path as
 `bash tools/rebuild_and_audit.sh /path/to/original-tasks`.
+
+The checkout is re-fetchable rather than lost: `specs/frozen_reference.json` pins
+the upstream repository and commit, so
+
+```
+git clone https://github.com/laude-institute/terminal-bench.git
+git -C terminal-bench checkout 1a6ffa9674b571da0ed040c470cb40c4d85f9b9b
+python3 tools/freeze_reference.py --verify --reference-root ./terminal-bench
+```
+
+reproduces it, and `--verify` fails closed unless both the commit and the
+recomputed `task_checkout_sha256` merkle match the pin.
+
+## Contamination audit
+
+Run for v3.4 over the current 785-task tree; the report ships as
+`independence_report.json` in the published dataset and carries its own `scope`
+and `verdict` blocks.
+
+**Reference.** Re-fetched at the pinned commit and verified byte-identical to the
+frozen one: 241 tasks, 2,059 files, `task_checkout_sha256` matching. Scope was
+deliberately wider than `specs/frozen_reference.json` defines — the whole
+reference repository, 4,838 payloads, rather than `original-tasks/` alone, 4,423
+— so it also compares against that repo's own CI workflows, adapter templates and
+LICENSE. Any conclusion holds a fortiori for the narrower task-only scope.
+
+**Ours.** 13,610 payloads. Five files were skipped under
+`--skip-verified-assets` because their sha256 matches their pin in
+`specs/large_assets.json`: Apache's `hadoop-3.3.6.tar.gz`, nodejs.org's
+`node-v20.19.3-linux-x64.tar.xz`, the Vosk model and its two derived FSTs.
+Together they are 24,371 of the 37,981 payloads this tree expands to, and a hash
+match against the upstream release is stronger provenance evidence than a
+similarity scan could be. An asset whose hash does *not* match its pin is scanned
+in full.
+
+**Result.** 0 exact matches, 0 canary matches, 0 source-repository matches. The
+canary check is the strong one: tb2.1 embeds detector strings in its tasks
+specifically so that copying is caught, and none is present here.
+
+The remaining hits were each inspected rather than counted, and the overlapping
+bytes are recorded in the report:
+
+- **5 block matches**, all 32–64 byte windows: `ENV DEBIAN_FRONTEND=noninteractive
+  apt-get install`, `runs-on: ubuntu-latest` / `uses: actions/checkout` (twice),
+  `importlib.util.module_from_spec` / `spec.loader.exec_module`, and a Python
+  `import subprocess / sys / tempfile / from pathlib import Path` block. Four are
+  against the reference repo's own CI and adapter scaffolding, not any tb2.1 task.
+- **8 n-gram matches**, all the same two 14-word runs of Apache License 2.0 text.
+  The reference LICENSE is Apache-2.0 and `calm-canyon` ships four synthetic
+  source tarballs whose `debian/copyright` files quote it, as Debian copyright
+  files do. Four tarballs × two members.
+- **575 soft matches** across 337 tasks. Sampled at random (seed 7, n=14) with
+  each collision recomputed: the largest matching window was 32 bytes in 13 of 14
+  and 64 bytes in one. Every fragment is a language idiom — `#!/usr/bin/env bash`
+  with `set -euo pipefail`, `np.random.default_rng(seed)`, `RUN apt-get update`,
+  `out_dir.mkdir(parents=True,`, `torch.load(model_path, map_location=`,
+  `os.path.dirname(os.path.abspath(__file__`, `open(path, "r", encoding="utf-8")`,
+  a base64 alphabet literal, `except (json.JSONDecodeError, ValueError)`. No task
+  content, no solution recipe, no verifier logic.
 
 ### Reward binarity
 
