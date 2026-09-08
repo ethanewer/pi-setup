@@ -6,6 +6,12 @@
   "task_checkout_sha256": "5b144a6924a3cae13f5bce0a824fb2b0dccc7efae1e45406f933158afa6886da",
   "task_count": 241,
   "frozen_at": "2026-08-26T22:06:12.057298+00:00",
-  "reference_root": "/home/eewer/agent-collab/terminal-bench/original-tasks",
-  "policy": "Audit tools must resolve the reference from this file when --reference-root is omitted and must fail closed if the checkout identity no longer matches."
+  "reference_root": "/home/ee/tb-ref/terminal-bench",
+  "policy": "Audit tools must resolve the reference from this file when --reference-root is omitted and must fail closed if the checkout identity no longer matches.",
+  "reference_root_history": [
+    {
+      "path": "/home/eewer/agent-collab/terminal-bench/original-tasks",
+      "note": "Original freeze location. The checkout was later moved, which left this spec pointing at a path that no longer exists, so audit_independence_stream.py failed with 'reference root missing' whenever --reference-root was omitted. The identity that matters is unchanged and is verified on every run: git rev-parse HEAD of the checkout must equal `commit` below. Confirmed 1a6ffa9674b571da0ed040c470cb40c4d85f9b9b at the new location on 2026-09-09 before repointing this field."
+    }
+  ]
 }
