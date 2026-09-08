@@ -40,7 +40,7 @@ harbor.
 | Corpus re-collection | `collect-t2-full.sh`, `build-v38-overlay.sh`, `build-v38-artifact.py` | Re-collects every record for one harness from the trial named in its own published `source_trial`, then diffs the result against what is published on content bytes rather than message counts. Use when a detector heuristic has already been trusted once and was wrong. |
 | Infrastructure retry | `run-v38-llm-stalls.sh`, `run-v38-harbor-gasket.sh` | Re-runs trials that never measured anything: an agent that timed out inside `_query_llm` having issued no command, or one killed by the tmux server vanishing. Distinct from a legitimate timeout, which is a real result and is not re-run. |
 | Transcript recovery | `publish-v37.sh` | Re-collects records from raw trials already on disk, using `--overlay` instead of `--job`, when a collector bug published a lossy transcript. Verifies rewards are unchanged before assembling. |
-| Publish | `publish-v37.sh` | Chains `tools/publish_version.sh`: rescore, collect, assemble, upload, then read the tree back through the paginated Hub endpoint and compare counts. |
+| Publish | `publish-v38.sh` | Chains `tools/publish_version.sh`: rescore, collect, assemble, upload, then read the tree back through the paginated Hub endpoint and compare counts. |
 
 Concurrency is a real parameter, not a detail. The oracle census at twelve parallel
 builds failed twenty tasks with `apt-get` exit 100 because the Debian mirrors
@@ -93,7 +93,7 @@ published tree.
 - `run-v37-driftcanyon.sh` — re-runs one task for the two terminus-2 pairs. Used when a
   record's raw trial directory is gone and the published transcript cannot be
   recovered from disk, so the trial has to be produced again.
-- `publish-v33.sh` … `publish-v37.sh`, `finalize*.sh`, `assemble_v31.py` — the
+- `publish-v33.sh` … `publish-v38.sh`, `finalize*.sh`, `assemble_v31.py` — the
   per-version publish recipes. `publish_version.sh` in `tools/` superseded the
   `finalize`/`assemble` pair; the older ones are kept because the published
   summaries name them as their own provenance.
