@@ -141,7 +141,12 @@ if failures:
     for m in failures:
         print("  - " + m)
     open("/logs/verifier/reward.txt", "w").write("0")
-    sys.exit(0)
+    # Must be a NON-zero exit. The shell epilogue derives its own reward from this
+    # process's status -- `[ "$rc" -eq 0 ] && reward=1` -- and writes
+    # /logs/verifier/reward.txt again, so exiting 0 here lets the shell overwrite
+    # the 0 just written with a 1, and the task scores 1 for a container in which
+    # nothing was done.
+    sys.exit(1)
 
 # --------------------------------------------------- visible boot + listening
 clear_run_state()
@@ -225,7 +230,8 @@ if failures:
     for m in failures:
         print("  - " + m)
     open("/logs/verifier/reward.txt", "w").write("0")
-    sys.exit(0)
+    sys.exit(1)   # see the note on the earlier failure path: 0 here means the
+                  # shell epilogue overwrites this 0 with a 1
 
 print("ALL PASS")
 open("/logs/verifier/reward.txt", "w").write("1")

@@ -65,7 +65,12 @@ if failures:
         print("  - " + m)
     with open("/logs/verifier/reward.txt", "w") as fh:
         fh.write("0")
-    sys.exit(0)
+    # Must be a NON-zero exit. The shell epilogue below derives its own reward
+    # from this process's status -- `[ "$rc" -eq 0 ] && reward=1` -- and then
+    # writes /logs/verifier/reward.txt again, so exiting 0 here made the shell
+    # overwrite the 0 just written with a 1. The task awarded reward 1 for a
+    # container in which no agent had run at all.
+    sys.exit(1)
 
 # ------------------------------------------------------------- hidden launches
 HIDDEN = "/tests/hidden"
@@ -169,7 +174,8 @@ if failures:
         print("  - " + m)
     with open("/logs/verifier/reward.txt", "w") as fh:
         fh.write("0")
-    sys.exit(0)
+    sys.exit(1)   # see the note on the earlier failure path: 0 here means the
+                  # shell epilogue overwrites this 0 with a 1
 
 print("ALL PASS")
 with open("/logs/verifier/reward.txt", "w") as fh:
