@@ -23,7 +23,7 @@ slug_for() {
     glm)        printf '%s' "z-ai/glm-5.3" ;;
     kimi)       printf '%s' "moonshotai/kimi-k3" ;;
     qwen-flash) printf '%s' "qwen/qwen3.8-flash" ;;
-    qwen-max)   printf '%s' "qwen/qwen3.8-max" ;;
+    qwen-max)   printf '%s' "qwen/qwen3.8-max-0902" ;;
     *) return 1 ;;
   esac
 }
@@ -194,19 +194,19 @@ else
   export ANTHROPIC_DEFAULT_MODEL="$(slug_for glm-flash)"
   export ANTHROPIC_DEFAULT_HAIKU_MODEL="$(slug_for glm-flash)"
   export ANTHROPIC_DEFAULT_HAIKU_MODEL_NAME="GLM 5.3 Flash"
-  export ANTHROPIC_DEFAULT_HAIKU_MODEL_DESCRIPTION="OpenRouter: $0.07 in / $0.25 out per M tokens"
+  export ANTHROPIC_DEFAULT_HAIKU_MODEL_DESCRIPTION="OpenRouter: \$0.07 in / \$0.25 out / \$0.01 cache read"
   export ANTHROPIC_DEFAULT_SONNET_MODEL="$(slug_for ds-flash)"
   export ANTHROPIC_DEFAULT_SONNET_MODEL_NAME="DeepSeek V4 Flash"
-  export ANTHROPIC_DEFAULT_SONNET_MODEL_DESCRIPTION="OpenRouter: $0.07 in / $0.18 out per M tokens"
+  export ANTHROPIC_DEFAULT_SONNET_MODEL_DESCRIPTION="OpenRouter: \$0.07 in / \$0.18 out / \$0.02 cache read"
   export ANTHROPIC_DEFAULT_OPUS_MODEL="$(slug_for glm)"
   export ANTHROPIC_DEFAULT_OPUS_MODEL_NAME="GLM 5.3"
-  export ANTHROPIC_DEFAULT_OPUS_MODEL_DESCRIPTION="OpenRouter: $1.40 in / $4.40 out per M tokens"
+  export ANTHROPIC_DEFAULT_OPUS_MODEL_DESCRIPTION="OpenRouter: \$1.40 in / \$4.40 out / \$0.26 cache read"
   export ANTHROPIC_DEFAULT_FABLE_MODEL="$(slug_for ds-pro)"
   export ANTHROPIC_DEFAULT_FABLE_MODEL_NAME="DeepSeek V4 Pro"
-  export ANTHROPIC_DEFAULT_FABLE_MODEL_DESCRIPTION="OpenRouter: $0.58 in / $1.74 out per M tokens"
+  export ANTHROPIC_DEFAULT_FABLE_MODEL_DESCRIPTION="OpenRouter: \$0.58 in / \$1.74 out / \$0.06 cache read"
   export ANTHROPIC_CUSTOM_MODEL_OPTION="$(slug_for kimi)"
   export ANTHROPIC_CUSTOM_MODEL_OPTION_NAME="Kimi K3"
-  export ANTHROPIC_CUSTOM_MODEL_OPTION_DESCRIPTION="OpenRouter: $3.00 in / $15.00 out per M tokens"
+  export ANTHROPIC_CUSTOM_MODEL_OPTION_DESCRIPTION="OpenRouter: \$3.00 in / \$15.00 out / \$0.30 cache read"
   export ANTHROPIC_SMALL_FAST_MODEL="$(slug_for glm-flash)"
 fi
 

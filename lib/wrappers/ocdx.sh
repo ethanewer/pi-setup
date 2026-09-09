@@ -25,7 +25,7 @@ slug_for() {
     glm)        printf '%s' "z-ai/glm-5.3" ;;
     kimi)       printf '%s' "moonshotai/kimi-k3" ;;
     qwen-flash) printf '%s' "qwen/qwen3.8-flash" ;;
-    qwen-max)   printf '%s' "qwen/qwen3.8-max" ;;
+    qwen-max)   printf '%s' "qwen/qwen3.8-max-0902" ;;
     *) return 1 ;;
   esac
 }
