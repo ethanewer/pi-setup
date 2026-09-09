@@ -130,6 +130,9 @@ export OPENROUTER_API_KEY="$key"
 args=()
 [[ -n "$model" ]] && args+=(-m "$model")
 [[ -n "$effort" ]] && args+=(-c "model_reasoning_effort=\"$effort\"")
+# Match the cdx alias: skip approvals and sandbox, drop the OpenAI developer-docs
+# MCP server, and disable the apps/plugins surfaces.
+args+=(--dangerously-bypass-approvals-and-sandbox -c mcp_servers.openaiDeveloperDocs.enabled=false --disable apps --disable plugins)
 # The ${arr[@]+...} guard is for bash 3.2 (macOS): expanding an empty array
 # under set -u errors there.
 exec codex ${args[@]+"${args[@]}"} ${extra[@]+"${extra[@]}"}
