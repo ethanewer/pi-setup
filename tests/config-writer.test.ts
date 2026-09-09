@@ -43,20 +43,16 @@ afterAll(() => rmSync(dir, { recursive: true, force: true }));
 const mainPath = join(dir, "agent", "settings.json");
 const pPath = join(dir, "agent-p", "settings.json");
 const wfPath = join(dir, "agent-wf", "settings.json");
-const occPath = join(dir, "agent-occ", "settings.json");
-const ocdxPath = join(dir, "agent-ocdx", "settings.json");
 const sttPath = join(dir, "agent", "stt.json");
 const npmPkgPath = join(dir, "agent", "npm", "package.json");
 const pNpmPkgPath = join(dir, "agent-p", "npm", "package.json");
 const wfNpmPkgPath = join(dir, "agent-wf", "npm", "package.json");
-const occNpmPkgPath = join(dir, "agent-occ", "npm", "package.json");
-const ocdxNpmPkgPath = join(dir, "agent-ocdx", "npm", "package.json");
-const keybinds = ["agent", "agent-p", "agent-wf", "agent-occ", "agent-ocdx"].map((d) => join(dir, d, "keybindings.json"));
+const keybinds = ["agent", "agent-p", "agent-wf"].map((d) => join(dir, d, "keybindings.json"));
 const modelsStorePath = join(dir, "agent", "models-store.json");
 const modelTiersSrcPath = join(REPO, "config/model-tiers.json");
 const modelTiersDestPath = join(dir, "workflows", "model-tiers.json");
 
-for (const d of ["agent", "agent/npm", "agent-p/npm", "agent-wf/npm", "agent-occ/npm", "agent-ocdx/npm"]) {
+for (const d of ["agent", "agent/npm", "agent-p/npm", "agent-wf/npm"]) {
 	mkdirSync(join(dir, d), { recursive: true });
 }
 writeFileSync(mainPath, JSON.stringify({
@@ -79,23 +75,9 @@ writeFileSync(pPath, JSON.stringify({
 	defaultProvider: "openrouter",
 	defaultModel: "deepseek/deepseek-v4-flash-0731",
 }));
-// occ carries a thinking level a previous run persisted through /thinking: it must
-// survive the rewrite, and ocdx starts fresh so the writer seeds its high default.
-writeFileSync(occPath, JSON.stringify({
-	defaultProvider: "openrouter",
-	defaultModel: "moonshotai/kimi-k3",
-	defaultThinkingLevel: "medium",
-	httpProxy: "http://keep-occ",
-	packages: [],
-}));
-writeFileSync(ocdxPath, JSON.stringify({
-	packages: ["npm:user-pkg-ocdx"],
-}));
 writeFileSync(npmPkgPath, JSON.stringify({ dependencies: { "pi-btw": "1.0.0", "left-alone": "2.0.0" } }));
 writeFileSync(pNpmPkgPath, JSON.stringify({ dependencies: { "pi-continue": "1.0.0" } }));
 writeFileSync(wfNpmPkgPath, JSON.stringify({ dependencies: { "left-alone-wf": "3.0.0" } }));
-writeFileSync(occNpmPkgPath, JSON.stringify({ dependencies: {} }));
-writeFileSync(ocdxNpmPkgPath, JSON.stringify({ dependencies: {} }));
 writeFileSync(modelsStorePath, JSON.stringify({
 	openai: { models: [{ id: "gpt-5.6-sol", contextWindow: 272000 }] },
 	openrouter: {
@@ -113,21 +95,15 @@ function runWriter() {
 		mainPath,
 		pPath,
 		wfPath,
-		occPath,
-		ocdxPath,
 		sttPath,
 		npmPkgPath,
 		pNpmPkgPath,
 		wfNpmPkgPath,
-		occNpmPkgPath,
-		ocdxNpmPkgPath,
 		piVersion: "0.84.4",
 		keybindingsSrcPath: join(REPO, "config/keybindings.json"),
 		mainKeybindsPath: keybinds[0],
 		pKeybindsPath: keybinds[1],
 		wfKeybindsPath: keybinds[2],
-		occKeybindsPath: keybinds[3],
-		ocdxKeybindsPath: keybinds[4],
 		compactionSrcPath: join(REPO, "config/compaction.json"),
 		modelsStorePath,
 		modelTiersSrcPath,
@@ -135,14 +111,11 @@ function runWriter() {
 	});
 }
 
-test("the model scope lands on all three main profiles and the open scope on occ/ocdx", () => {
+test("the model scope lands on all three profiles", () => {
 	runWriter();
 	expect(JSON.parse(readFileSync(mainPath, "utf8")).enabledModels).toEqual(SCOPE);
 	expect(JSON.parse(readFileSync(wfPath, "utf8")).enabledModels).toEqual(SCOPE);
 	expect(JSON.parse(readFileSync(pPath, "utf8")).enabledModels).toEqual(SCOPE);
-	const openScope = SCOPE.filter((model) => !model.startsWith("openai/"));
-	expect(JSON.parse(readFileSync(occPath, "utf8")).enabledModels).toEqual(openScope);
-	expect(JSON.parse(readFileSync(ocdxPath, "utf8")).enabledModels).toEqual(openScope);
 });
 
 test("pi loads every fork except workflows; piwf loads all forks", () => {
@@ -151,11 +124,6 @@ test("pi loads every fork except workflows; piwf loads all forks", () => {
 	expect(main.packages).toEqual(["npm:user-pkg", ...FORKS_MINUS_WORKFLOWS]);
 	const wf = JSON.parse(readFileSync(wfPath, "utf8"));
 	expect(wf.packages).toEqual(ALL_FORKS);
-	// occ and ocdx load the same set as pi, minus whatever they persisted themselves.
-	const occ = JSON.parse(readFileSync(occPath, "utf8"));
-	expect(occ.packages).toEqual(FORKS_MINUS_WORKFLOWS);
-	const ocdx = JSON.parse(readFileSync(ocdxPath, "utf8"));
-	expect(ocdx.packages).toEqual(["npm:user-pkg-ocdx", ...FORKS_MINUS_WORKFLOWS]);
 });
 
 test("the retired native browser tool is removed from settings on reinstall", () => {
@@ -165,7 +133,7 @@ test("the retired native browser tool is removed from settings on reinstall", ()
 	const wf = JSON.parse(readFileSync(wfPath, "utf8"));
 	expect(wf.packages).not.toContain(BROWSER_TOOL);
 	// A stale entry from an install that still shipped the fork is removed on reinstall.
-	for (const path of [mainPath, wfPath, occPath, ocdxPath]) {
+	for (const path of [mainPath, wfPath]) {
 		const settings = JSON.parse(readFileSync(path, "utf8"));
 		settings.packages.push(BROWSER_TOOL);
 		writeFileSync(path, JSON.stringify(settings));
@@ -173,8 +141,6 @@ test("the retired native browser tool is removed from settings on reinstall", ()
 	runWriter();
 	expect(JSON.parse(readFileSync(mainPath, "utf8")).packages).not.toContain(BROWSER_TOOL);
 	expect(JSON.parse(readFileSync(wfPath, "utf8")).packages).not.toContain(BROWSER_TOOL);
-	expect(JSON.parse(readFileSync(occPath, "utf8")).packages).not.toContain(BROWSER_TOOL);
-	expect(JSON.parse(readFileSync(ocdxPath, "utf8")).packages).not.toContain(BROWSER_TOOL);
 });
 
 test("user-persisted values survive the rewrite", () => {
@@ -196,27 +162,17 @@ test("user-persisted values survive the rewrite", () => {
 	// Compaction is raised to the policy floor where it was below it.
 	expect(main.compaction.reserveTokens).toBe(68000);
 	expect(p.compaction.reserveTokens).toBe(68000);
-	// occ keeps its persisted thinking level and unrelated keys; ocdx is fresh, so the
-	// writer seeds the open-weight profiles' high reasoning default.
-	const occ = JSON.parse(readFileSync(occPath, "utf8"));
-	expect(occ.defaultThinkingLevel).toBe("medium");
-	expect(occ.httpProxy).toBe("http://keep-occ");
-	expect(occ.defaultModel).toBe("moonshotai/kimi-k3");
-	expect(occ.quietStartup).toBeUndefined();
-	const ocdx = JSON.parse(readFileSync(ocdxPath, "utf8"));
-	expect(ocdx.defaultThinkingLevel).toBe("high");
-	expect(ocdx.packages).toContain("npm:user-pkg-ocdx");
 });
 
 test("the writer is idempotent", () => {
 	runWriter();
-	const before = [mainPath, pPath, wfPath, occPath, ocdxPath].map((p) => readFileSync(p, "utf8"));
+	const before = [mainPath, pPath, wfPath].map((p) => readFileSync(p, "utf8"));
 	runWriter();
-	const after = [mainPath, pPath, wfPath, occPath, ocdxPath].map((p) => readFileSync(p, "utf8"));
+	const after = [mainPath, pPath, wfPath].map((p) => readFileSync(p, "utf8"));
 	expect(after).toEqual(before);
 });
 
-test("npm-installed fork copies are pruned from all five manifests", () => {
+test("npm-installed fork copies are pruned from all three manifests", () => {
 	runWriter();
 	const main = JSON.parse(readFileSync(npmPkgPath, "utf8"));
 	expect(main.dependencies).toEqual({ "left-alone": "2.0.0" });
@@ -225,8 +181,6 @@ test("npm-installed fork copies are pruned from all five manifests", () => {
 	expect(lean.dependencies).toEqual({});
 	const wf = JSON.parse(readFileSync(wfNpmPkgPath, "utf8"));
 	expect(wf.dependencies).toEqual({ "left-alone-wf": "3.0.0" });
-	expect(JSON.parse(readFileSync(occNpmPkgPath, "utf8")).dependencies).toEqual({});
-	expect(JSON.parse(readFileSync(ocdxNpmPkgPath, "utf8")).dependencies).toEqual({});
 });
 
 test("model-tiers.json is seeded when absent", () => {

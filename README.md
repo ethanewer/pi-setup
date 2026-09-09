@@ -1,6 +1,8 @@
 # Ethan's Pi setup
 
-A reproducible, fast [Pi coding agent](https://pi.dev) setup with five entrypoints:
+A reproducible, fast [Pi coding agent](https://pi.dev) setup with five entrypoints — three
+Pi profiles and two launchers for the real Claude Code and Codex CLIs on open-weight
+models:
 
 - **`pi`** — full environment without dynamic workflows: Voice STT, browser
   automation via the `agent-browser` CLI, mid-run and between-runs context compaction,
@@ -12,13 +14,15 @@ A reproducible, fast [Pi coding agent](https://pi.dev) setup with five entrypoin
 - **`p`** — lean environment with Voice STT, `/btw` side questions, the same two
   compaction extensions, and local MLX model management on macOS, but no browser,
   monitor, workflows, or skills.
-- **`occ`** — Open Claude Code: the full `pi` environment as its own isolated install
-  (`~/.pi/agent-occ`), scoped to the open-weight models only (no GPT family) with high
-  reasoning as the default effort.
-- **`ocdx`** — Open Codex: the same open-weight, high-reasoning environment as a second
-  isolated install (`~/.pi/agent-ocdx`), so the two never share sessions or settings.
+- **`occ`** — Open Claude Code: the real `claude` CLI pointed at OpenRouter's
+  Anthropic-compatible endpoint, running only the pinned open-weight models, effort
+  defaulting to high. State lives in `~/.pi/agent-occ`, never in a personal `~/.claude`.
+- **`ocdx`** — Open Codex: the real `codex` CLI pointed at OpenRouter's
+  OpenAI-compatible endpoint, running only the pinned open-weight models, reasoning
+  defaulting to high. State lives in `~/.pi/agent-ocdx/codex`, never in a personal
+  `~/.codex`.
 
-All three commands run the same Pi installation through Pi's Bun entrypoint. They share
+The three Pi profiles run the same Pi installation through Pi's Bun entrypoint. They share
 authentication, model catalogs, sessions, helper binaries, and installed package files.
 
 Every extension is installed from `forks/` as a **security-hardened local fork**, not
@@ -249,28 +253,44 @@ profile, not another Pi installation. The `pi` wrapper explicitly rejects an inh
 `p` or `piwf` profile environment, so a tmux server started from either cannot
 accidentally turn later `pi` sessions into a different configuration.
 
-### `occ` and `ocdx`: open-weight profiles
+### `occ` and `ocdx`: the real CLIs on open-weight models
 
-`occ` (Open Claude Code) and `ocdx` (Open Codex) are full Pi environments in the shape of
-`pi` — the same extensions, the same skills, no dynamic workflows — each installed into
-its own agent directory (`~/.pi/agent-occ` and `~/.pi/agent-ocdx`), so their sessions,
-settings, and model scope never mix with the main profiles or with each other. They share
-main's auth, model catalogs, helper binaries, installed package files, and voice
-configuration, exactly like `piwf` does.
+`occ` (Open Claude Code) and `ocdx` (Open Codex) do not run Pi. They launch the real
+`claude` and `codex` CLIs against OpenRouter — its Anthropic-compatible endpoint for
+`claude`, its OpenAI-compatible endpoint for `codex` — restricted to the open-weight
+models this setup pins. Both need the CLI installed (`claude`, `codex`); the installer
+warns when either is missing.
 
-Two deliberate differences from the other entrypoints:
+What they enforce:
 
-- **Open-weight models only.** Their `enabledModels` scope is the pinned model scope
-  minus the `openai/` GPT family (see [Default model scope](#default-model-scope)), so
-  Ctrl+P cycling, `/model`, and `/scoped-models` only ever offer the open-weight models.
-- **High reasoning by default.** `defaultThinkingLevel` is seeded to `high`. It is
-  seeded, not forced: the `/thinking` (effort) selector works normally in both, and a
-  level you pick there persists across reinstalls, like the seeded default provider and
-  model do everywhere.
+- **Open-weight models only.** The model handles are exactly the pinned scope minus the
+  GPT family (`occ --list` / `ocdx --list`): DeepSeek V4, GLM 5.3, Kimi K3, and Qwen 3.8.
+  A model id containing `claude`, `anthropic`, `gpt`, or `openai/` is refused at launch,
+  and the endpoints are pinned to OpenRouter, so no request can reach Anthropic or OpenAI
+  by accident.
+- **High reasoning by default.** `occ` passes `--effort high` unless overridden with
+  `--effort`; `ocdx` writes `model_reasoning_effort = "high"` into its managed
+  `config.toml`. The in-session selectors (`/effort` in claude — kept alive with
+  `CLAUDE_CODE_ALWAYS_ENABLE_EFFORT=1` — and `/model` in codex) work normally.
+- **Every model slot pinned (occ).** Claude Code's four tier slots and its background
+  model all point at the chosen open-weight model, so changing effort can never route a
+  request to an Anthropic model. `--family-tiers` optionally maps low/medium effort to
+  the family's fast model and high/xhigh/max to its full model (e.g. `glm-flash` →
+  `glm`).
+- **Isolated state.** `CLAUDE_CONFIG_DIR=~/.pi/agent-occ` and
+  `CODEX_HOME=~/.pi/agent-ocdx/codex`, so sessions, history, and settings never mix with
+  a personal `~/.claude` or `~/.codex`. The `config.toml` for codex is install output,
+  rewritten on every install; the OpenRouter key is never written to disk there.
+- **Key resolution.** `OPENROUTER_API_KEY`, then `~/.openrouter-key`, then pi's own
+  credential chain (`pi auth print-api-key --provider openrouter`, which covers the
+  macOS keychain). Existing `ANTHROPIC_API_KEY`/`ANTHROPIC_AUTH_TOKEN` exports win, and
+  must themselves be OpenRouter keys.
 
-Like `piwf`, both wrappers reject an inherited profile environment (from `p`, `piwf`,
-`occ`, or `ocdx`), so a tmux server started under one profile cannot shadow another's
-configuration.
+```bash
+occ --model glm --effort xhigh          # strongest GLM at xhigh effort
+ocdx --model ds-pro -p "explain this repo"
+occ --list                              # the seven handles
+```
 
 ## Default model scope
 
@@ -291,9 +311,7 @@ openai/gpt-5.6-terra
 openai/gpt-5.6-luna
 ```
 
-The patterns are canonical `provider/id`, so each matches exactly one model. The
-`occ` and `ocdx` profiles scope the same list minus the three `openai/` GPT models —
-their whole point is to run the open-weight models. Two
+The patterns are canonical `provider/id`, so each matches exactly one model. Two
 consequences of how Pi applies the list are worth knowing:
 
 - It is a managed default: `install.sh` rewrites `enabledModels` on every install, so a
@@ -302,10 +320,6 @@ consequences of how Pi applies the list are worth knowing:
   the first scoped model (`openrouter/deepseek/deepseek-v4-flash-0731`) instead of the saved default. All
   three profiles' current defaults are inside the scope, so this only bites if the
   default is later changed to something outside it.
-
-The same two consequences apply to `occ`/`ocdx`'s open-weight-only scope, with the first
-scoped model (`openrouter/deepseek/deepseek-v4-flash-0731`) as the fallback default there
-too.
 
 ## Browser automation
 
@@ -614,8 +628,8 @@ added to that profile; the full-profile measurements predate context handoff and
 ~/.local/bin/pi                              Full entrypoint (no dynamic workflows)
 ~/.local/bin/piwf                            Full entrypoint with dynamic workflows
 ~/.local/bin/p                               Lean entrypoint
-~/.local/bin/occ                             Open Claude Code entrypoint (open-weight)
-~/.local/bin/ocdx                            Open Codex entrypoint (open-weight)
+~/.local/bin/occ                             Open Claude Code: real claude CLI on OpenRouter open-weight models
+~/.local/bin/ocdx                            Open Codex: real codex CLI on OpenRouter open-weight models
 ~/.local/bin/agent-browser                   Bun-backed agent-browser entrypoint
 ~/.local/bin/*.cmd                           Windows cmd.exe/PowerShell shims (Windows only)
 ~/.local/lib/pi-coding-agent/pi.exe          Compiled Pi binary (Windows only, optional)
@@ -643,24 +657,10 @@ added to that profile; the full-profile measurements predate context handoff and
 ~/.pi/agent-wf/models-store.json             Symlink/copy to main model catalog
 ~/.pi/agent-wf/bin                           Symlink/junction to main helper binaries
 ~/.pi/agent-wf/local                         Symlink/junction to main hardened fork install
-~/.pi/agent-occ/settings.json                Open-weight settings, high thinking default,
-                                             enabledModels minus the GPT family
-~/.pi/agent-occ/skills/                      The first-party skills for the occ profile
-~/.pi/agent-occ/keybindings.json             The same remapped keys for the occ profile
-~/.pi/agent-occ/auth.json                    Symlink/copy to main auth
-~/.pi/agent-occ/models-store.json            Symlink/copy to main model catalog
-~/.pi/agent-occ/stt.json                     Symlink/copy to main voice configuration
-~/.pi/agent-occ/bin                          Symlink/junction to main helper binaries
-~/.pi/agent-occ/local                        Symlink/junction to main hardened fork install
-~/.pi/agent-ocdx/settings.json               Open-weight settings, high thinking default,
-                                             enabledModels minus the GPT family
-~/.pi/agent-ocdx/skills/                     The first-party skills for the ocdx profile
-~/.pi/agent-ocdx/keybindings.json            The same remapped keys for the ocdx profile
-~/.pi/agent-ocdx/auth.json                   Symlink/copy to main auth
-~/.pi/agent-ocdx/models-store.json           Symlink/copy to main model catalog
-~/.pi/agent-ocdx/stt.json                    Symlink/copy to main voice configuration
-~/.pi/agent-ocdx/bin                         Symlink/junction to main helper binaries
-~/.pi/agent-ocdx/local                       Symlink/junction to main hardened fork install
+~/.pi/agent-occ/                             CLAUDE_CONFIG_DIR for occ (claude sessions and state)
+~/.pi/agent-ocdx/codex/                      CODEX_HOME for ocdx (codex sessions and state)
+~/.pi/agent-ocdx/codex/config.toml           Managed codex config: openrouter provider,
+                                             responses wire API, high reasoning default
 ```
 
 The installer adds `~/.local/bin` and `~/.bun/bin` to `.zshrc` and `.bashrc`, and on

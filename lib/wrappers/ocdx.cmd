@@ -1,58 +1,22 @@
 @echo off
 setlocal EnableExtensions
-set "MAIN_DIR=__MAIN_DIR__"
-if /I "%PI_CODING_AGENT_DIR%"=="%USERPROFILE%\.pi\agent-p" (
-  set "PI_CODING_AGENT_DIR="
-  set "PI_CODING_AGENT_SESSION_DIR="
-  set "PI_SKIP_VERSION_CHECK="
-)
-if /I "%PI_CODING_AGENT_DIR%"=="%USERPROFILE%\.pi\agent-wf" (
-  set "PI_CODING_AGENT_DIR="
-  set "PI_CODING_AGENT_SESSION_DIR="
-  set "PI_SKIP_VERSION_CHECK="
-)
-if /I "%PI_CODING_AGENT_DIR%"=="%USERPROFILE%\.pi\agent-occ" (
-  set "PI_CODING_AGENT_DIR="
-  set "PI_CODING_AGENT_SESSION_DIR="
-  set "PI_SKIP_VERSION_CHECK="
-)
-if /I "%PI_CODING_AGENT_DIR%"=="%USERPROFILE%\.pi\agent-ocdx" (
-  set "PI_CODING_AGENT_DIR="
-  set "PI_CODING_AGENT_SESSION_DIR="
-  set "PI_SKIP_VERSION_CHECK="
-)
-set "PI_CODING_AGENT_DIR=%USERPROFILE%\.pi\agent-ocdx"
-
-set "BUN_BIN="
-if defined BUN_INSTALL if exist "%BUN_INSTALL%\bin\bun.exe" set "BUN_BIN=%BUN_INSTALL%\bin\bun.exe"
-if not defined BUN_BIN if exist "%USERPROFILE%\.bun\bin\bun.exe" set "BUN_BIN=%USERPROFILE%\.bun\bin\bun.exe"
-if not defined BUN_BIN (
-  where bun >nul 2>&1 && for /f "delims=" %%I in ('where bun') do (
-    set "BUN_BIN=%%I"
-    goto :have_bun
+rem ocdx — Open Codex. Runs the bash launcher through Git Bash, which pi
+rem requires for its bash tool anyway. Best-effort on Windows: argument paths
+rem pass through Git Bash's translation.
+set "BASH_BIN="
+if exist "%ProgramFiles%\Git\bin\bash.exe" set "BASH_BIN=%ProgramFiles%\Git\bin\bash.exe"
+if not defined BASH_BIN if exist "%ProgramFiles(x86)%\Git\bin\bash.exe" set "BASH_BIN=%ProgramFiles(x86)%\Git\bin\bash.exe"
+if not defined BASH_BIN if exist "%ProgramFiles%\Git\usr\bin\bash.exe" set "BASH_BIN=%ProgramFiles%\Git\usr\bin\bash.exe"
+if not defined BASH_BIN (
+  where bash >nul 2>&1 && for /f "delims=" %%I in ('where bash') do (
+    set "BASH_BIN=%%I"
+    goto :have_bash
   )
 )
-:have_bun
-if not defined BUN_BIN (
-  echo ocdx: bun not found 1>&2
+:have_bash
+if not defined BASH_BIN (
+  echo ocdx: Git Bash not found; install Git for Windows 1>&2
   exit /b 1
 )
-
-if defined BUN_INSTALL (
-  set "BUN_HOME=%BUN_INSTALL%"
-) else (
-  set "BUN_HOME=%USERPROFILE%\.bun"
-)
-
-set "CLI="
-if defined PI_PACKAGE_ROOT if exist "%PI_PACKAGE_ROOT%\dist\bun\cli.js" set "CLI=%PI_PACKAGE_ROOT%\dist\bun\cli.js"
-if not defined CLI if exist "%BUN_HOME%\install\global\node_modules\@earendil-works\pi-coding-agent\dist\bun\cli.js" (
-  set "CLI=%BUN_HOME%\install\global\node_modules\@earendil-works\pi-coding-agent\dist\bun\cli.js"
-)
-if not defined CLI (
-  echo ocdx: could not locate @earendil-works/pi-coding-agent 1>&2
-  exit /b 1
-)
-
-"%BUN_BIN%" --use-system-ca "%CLI%" %*
+"%BASH_BIN%" "%USERPROFILE%\.local\bin\ocdx.sh" %*
 exit /b %ERRORLEVEL%
