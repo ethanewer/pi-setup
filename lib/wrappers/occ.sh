@@ -215,6 +215,7 @@ export CLAUDE_CODE_ALWAYS_ENABLE_EFFORT=1
 
 # Third-party endpoint defaults.
 export API_TIMEOUT_MS="${API_TIMEOUT_MS:-600000}"
+export CLAUDE_CODE_NO_FLICKER=1
 # The pinned models run ~1M-token windows, but claude assumes 200k for ids it does
 # not recognize and prints a warning banner on every launch. Disable the unknown-
 # model window enforcement (restoring claude's wait-for-the-API behavior) and state
@@ -228,7 +229,8 @@ export DISABLE_TELEMETRY=1
 export CLAUDE_CONFIG_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.pi/agent-occ}"
 mkdir -p "$CLAUDE_CONFIG_DIR"
 
-args=(--effort "$effort")
+# Skip permission prompts, like the cld alias: occ sessions are trusted operator runs.
+args=(--effort "$effort" --dangerously-skip-permissions)
 [[ -n "$model" ]] && args+=(--model "$model")
 # The ${arr[@]+...} guard is for bash 3.2 (macOS): expanding an empty array
 # under set -u errors there.

@@ -4,6 +4,19 @@
 
 `bin/convert-pi-traces` builds the private `eewer/pi-trace-cache` Hugging Face dataset from local Pi sessions and selected monitor-bench traces. It produces derived training data. It never edits raw session JSONL or session archives.
 
+## Open and closed lanes
+
+The dataset has two data paths:
+
+- `data/` — the open-model union (the original dataset).
+- `data-closed/` — traces from closed providers (OpenAI GPT/o-series, Anthropic Claude), uploaded only when the exporter runs with `--include-closed`.
+
+Both lanes use identical conversion, redaction, smoke filtering, and the newline-reasoning quarantine below. A session is routed to the closed lane only when every assistant turn came from a closed provider; mixed sessions are dropped from both lanes. `faux` and `qwen3-0.6b` sessions stay excluded regardless of lane. Monitor-bench eval traces from closed models remain excluded by the eval model invariant.
+
+The sanitation manifest at `manifests/newline-reasoning-v1.jsonl` covers both lanes, so every truncated or excluded trace — open or closed — appears in the same stable manifest.
+
+`--include-closed` does not change the open lane: open-lane rows, their shard path, and the manifest schema are unchanged whether or not the flag is set.
+
 The exporter handles the `pi-ai 0.84.3` reasoning-details incident described in [`incidents/PI-AI-0.84.3-REASONING-DETAILS.md`](incidents/PI-AI-0.84.3-REASONING-DETAILS.md). This document defines the filter contract and the procedure for future dataset updates.
 
 ## Contamination boundary
@@ -135,6 +148,8 @@ Run the upload only after that review:
 uv run --with zstandard --with huggingface_hub bin/convert-pi-traces
 ```
 
+Add `--include-closed` to also export and upload the closed-provider lane to `data-closed/`. Review the closed-lane summary counts and the generated `pi-traces-closed-*.jsonl` with the same secret scan before uploading.
+
 The uploader downloads all existing remote shards, merges by `trace_key`, and applies the sanitation filter to the full union. This second pass is required. It removes affected suffixes from rows uploaded by older pipeline versions or another machine. The uploader then writes one replacement union shard, uploads the stable manifest and dataset card, and deletes superseded shards.
 
 `--keep-newline-reasoning` is for local forensic exports. The command rejects it unless `--no-upload` or `--dry-run` is also present.
@@ -143,9 +158,9 @@ The uploader downloads all existing remote shards, merges by `trace_key`, and ap
 
 Download the new remote shard and verify these conditions before treating it as SFT input:
 
-- Exactly one union shard exists under `data/`.
-- The old union shard no longer exists.
-- Every manifest trace key maps to either one marked clean-prefix row or an excluded trace.
+- Exactly one union shard exists under `data/` (and, when `--include-closed` was used, exactly one under `data-closed/`).
+- The old union shard (or shards) no longer exist.
+- Every manifest trace key maps to either one marked clean-prefix row, an excluded trace, or a monitor-bench row dropped by the per-task eval cap (dropped rows are never published, so absence is safe but worth confirming).
 - Every marked row ends before its recorded first affected message.
 - No assistant `reasoning_content` block passes `newline_reasoning_metrics(...)["severe"]`.
 - No token totals or suffix exceptions survive on truncated rows.

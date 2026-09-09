@@ -156,6 +156,16 @@ triggered by a bad replay structure rather than display-only corruption.
 `manifests/newline-reasoning-v1.jsonl` records each truncated or excluded trace,
 the first affected message index, and detector metrics. The original local
 trace archive is immutable and is not uploaded by this pipeline.
+
+## Closed-model lane
+
+Open-model traces live under `data/`. Traces from closed providers (OpenAI
+GPT/o-series, Anthropic Claude) are kept out of the open-model union and are
+exported only to the separate lane at `data-closed/`. The same redaction,
+smoke filters, and newline-reasoning quarantine apply to both lanes; the
+stable manifest covers both. A session is routed to the closed lane only when
+every assistant turn came from a closed provider; mixed sessions are dropped.
+Monitor-bench eval traces from closed models remain excluded entirely.
 """
 
 # Directories to never descend into while walking for traces.
@@ -1363,6 +1373,7 @@ class ConvStats:
     skipped_smoke: Counter = field(default_factory=Counter)
     newline_reasoning_truncated: int = 0
     newline_reasoning_excluded: int = 0
+    converted_closed: int = 0
     tools_used: set[str] = field(default_factory=set)
 
 
@@ -1545,10 +1556,13 @@ def convert_session(
     events: list[dict],
     source_path: str,
     source_archive: str,
+    include_closed: bool = False,
 ) -> tuple[dict | None, str]:
     """Convert a parsed session event list to a target row.
 
-    Returns (row_or_None, skip_reason).
+    Returns (row_or_None, skip_reason). Closed-provider sessions (openai/
+    anthropic) are dropped unless include_closed is set, in which case the
+    returned row carries a `model_lane` field for the separate closed lane.
     """
     session = next((e for e in events if e.get("type") == "session"), None)
     if session is None:
@@ -1576,18 +1590,32 @@ def convert_session(
                 eff_model = eff_model or m.get("model")
                 break
 
-    # ---- OpenAI filter -------------------------------------------------- #
+    # ---- Closed-model classification (openai/anthropic) ---------------- #
+    # Sessions from closed providers are excluded from the main open-model
+    # dataset. With include_closed they are kept and tagged with model_lane
+    # for export to the separate data-closed/ lane. A session is classified
+    # closed only when every assistant turn came from a closed provider;
+    # mixed sessions are dropped in both lanes. faux and qwen3-0.6b stay
+    # dropped regardless of lane (mock / tiny test models, not real data).
+    closed_kind = ""
     if is_openai_model(eff_provider, eff_model):
-        return None, "openai"
-    if meta["assistant_turns"] > 0 and meta["openai_turns"] == meta["assistant_turns"]:
-        return None, "openai"
+        if not include_closed:
+            return None, "openai"
+        closed_kind = "openai"
+    elif meta["assistant_turns"] > 0 and meta["openai_turns"] == meta["assistant_turns"]:
+        if not include_closed:
+            return None, "openai"
+        closed_kind = "openai"
     if not messages:
         return None, "empty"
 
     # ---- Extra model-family filter (anthropic, qwen3-0.6b, faux) ----- #
     extra = extra_filter_match(eff_provider, eff_model)
-    if extra:
-        return None, f"model:{extra}"
+    if extra and not closed_kind:
+        if extra == "anthropic" and include_closed:
+            closed_kind = "anthropic"
+        else:
+            return None, f"model:{extra}"
 
     # ---- Benchmark-rollout filter -------------------------------------- #
     rollout = detect_benchmark_rollout(events, cwd)
@@ -1694,6 +1722,8 @@ def convert_session(
         "trial_name": "",
         "truth": "",
     }
+    if closed_kind:
+        row["model_lane"] = closed_kind
     return row, ""
 
 
@@ -1759,7 +1789,8 @@ def token_has_write(token: str) -> tuple[bool, str]:
         return (False, "")
 
 
-def upload_to_hub(files: list[Path], repo: str, token: str, dry_run: bool) -> None:
+def upload_to_hub(files: list[Path], repo: str, token: str, dry_run: bool,
+                  path_prefix: str = "data/") -> None:
     if not files:
         print("  [upload] nothing to upload")
         return
@@ -1770,7 +1801,7 @@ def upload_to_hub(files: list[Path], repo: str, token: str, dry_run: bool) -> No
         return
     api = HfApi(token=token)
     for f in files:
-        path_in_repo = f"data/{f.name}"
+        path_in_repo = f"{path_prefix}{f.name}"
         if dry_run:
             print(f"  [dry-run] would upload {f} -> {repo}:{path_in_repo}")
             continue
@@ -1819,8 +1850,8 @@ def load_rows_from_zst(path: Path) -> list[dict]:
     return rows
 
 
-def list_remote_shards(repo: str, token: str) -> list[str]:
-    """Return repo paths of data/*.jsonl.zst shards in the remote dataset."""
+def list_remote_shards(repo: str, token: str, prefix: str = "data/") -> list[str]:
+    """Return repo paths of <prefix>*.jsonl.zst shards in the remote dataset."""
     try:
         from huggingface_hub import HfApi  # type: ignore
     except Exception as e:
@@ -1832,16 +1863,17 @@ def list_remote_shards(repo: str, token: str) -> list[str]:
     except Exception as e:
         print(f"  [warn] could not list {repo}: {e}", file=sys.stderr)
         return []
-    return [f for f in files if f.startswith("data/") and f.endswith(".jsonl.zst")]
+    return [f for f in files if f.startswith(prefix) and f.endswith(".jsonl.zst")]
 
 
-def download_remote_rows(repo: str, token: str, tmpdir: Path) -> tuple[list[dict], list[str]]:
-    """Download all remote shards; return (rows, shard_repo_paths).
+def download_remote_rows(repo: str, token: str, tmpdir: Path,
+                         prefix: str = "data/") -> tuple[list[dict], list[str]]:
+    """Download all remote shards under prefix; return (rows, shard_repo_paths).
 
     Used to compute the union of already-uploaded data and local data so a run
     on one machine never clobbers traces uploaded by another.
     """
-    shard_paths = list_remote_shards(repo, token)
+    shard_paths = list_remote_shards(repo, token, prefix=prefix)
     if not shard_paths:
         return [], []
     rows: list[dict] = []
@@ -1905,6 +1937,9 @@ def main(argv: list[str] | None = None) -> int:
                     help="Skip monitor-bench eval trace ingestion.")
     ap.add_argument("--eval-cap", type=int, default=EVAL_PER_TASK_CAP,
                     help=f"Max monitor-bench traces per task (default {EVAL_PER_TASK_CAP}).")
+    ap.add_argument("--include-closed", action="store_true",
+                    help="Also convert OpenAI/Anthropic sessions into the separate "
+                         "closed lane (data-closed/ in the dataset).")
     ap.add_argument("--keep-smoke", action="store_true",
                     help="Keep smoke/probe sessions and empty traces (default: drop them).")
     ap.add_argument("--keep-newline-reasoning", action="store_true",
@@ -1947,6 +1982,7 @@ def main(argv: list[str] | None = None) -> int:
 
         stats = ConvStats(discovered=len(all_sources))
         rows: list[dict] = []
+        rows_closed: list[dict] = []
         seen_keys: set[str] = set()
         sanitization_records: dict[str, dict] = {}
         for path, archive in all_sources:
@@ -1955,7 +1991,8 @@ def main(argv: list[str] | None = None) -> int:
             if events is None:
                 stats.skipped_parse += 1
                 continue
-            row, reason = convert_session(events, str(path), archive)
+            row, reason = convert_session(events, str(path), archive,
+                                          include_closed=args.include_closed)
             if row is None:
                 if reason == "openai":
                     stats.skipped_openai += 1
@@ -1999,7 +2036,11 @@ def main(argv: list[str] | None = None) -> int:
                     continue
             stats.converted += 1
             stats.tools_used |= set(_tools_from_row(row))
-            rows.append(row)
+            if row.get("model_lane"):
+                stats.converted_closed += 1
+                rows_closed.append(row)
+            else:
+                rows.append(row)
 
         # ---- monitor-bench eval traces ------------------------------------- #
         eval_stats = EvalStats()
@@ -2045,6 +2086,11 @@ def main(argv: list[str] | None = None) -> int:
         manifest_path = out_dir / f"pi-trace-sanitization-{ts}.jsonl"
         dataset_card_path = out_dir / "pi-trace-cache-README.md"
         n = write_jsonl(rows, jsonl_path)
+        if rows_closed:
+            closed_jsonl_path = out_dir / f"pi-traces-closed-{ts}.jsonl"
+            closed_zst_path = closed_jsonl_path.with_suffix(".jsonl.zst")
+            write_jsonl(rows_closed, closed_jsonl_path)
+            compress_zst(closed_jsonl_path, closed_zst_path, level=args.zstd_level)
         write_jsonl(
             [sanitization_records[key] for key in sorted(sanitization_records)],
             manifest_path,
@@ -2062,6 +2108,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"  skipped terminalbench: {stats.skipped_terminalbench}")
         print(f"  skipped benchmark (other): {stats.skipped_benchmark}")
         print(f"  skipped model filter (anthropic/faux/qwen3-0.6b): {stats.skipped_model_filter}")
+        if args.include_closed:
+            print(f"  converted (closed lane): {stats.converted_closed}")
         print(f"  skipped empty:   {stats.skipped_empty}")
         print(f"  skipped smoke/probe: {dict(stats.skipped_smoke)} "
               f"(total {sum(stats.skipped_smoke.values())})")
@@ -2076,6 +2124,9 @@ def main(argv: list[str] | None = None) -> int:
         print(f"  local jsonl:     {jsonl_path}  ({n} rows, {raw_bytes:,} B)")
         print(f"  local zst:       {zst_path}      ({zst_bytes:,} B, {zst_bytes*100/max(raw_bytes,1):.1f}% of raw)")
         print(f"  sanitization:    {manifest_path} ({len(sanitization_records)} record(s))")
+        if rows_closed:
+            print(f"  local closed:    {closed_jsonl_path}  ({len(rows_closed)} rows)")
+            print(f"  local closed zst: {closed_zst_path}")
 
         # ---- upload ------------------------------------------------------- #
         do_upload = (not args.no_upload) and (not args.dry_run)
@@ -2147,6 +2198,76 @@ def main(argv: list[str] | None = None) -> int:
                                 merged[key] = clean_row
                         print(f"[upload] newline-reasoning policy: truncated={merged_truncated} "
                               f"excluded={merged_excluded}")
+                    # ---- closed lane (data-closed/) ----------------------------- #
+                    # Same union/dedup/sanitation rules as the open lane, but
+                    # merged and uploaded under data-closed/ so closed-provider
+                    # traces (openai/anthropic) never mix with the open-model
+                    # dataset. Sanitation records share the stable manifest.
+                    if rows_closed:
+                        with tempfile.TemporaryDirectory(prefix="pi-traces-closed-remote-") as crtmpd:
+                            remote_closed, closed_shards = download_remote_rows(
+                                args.repo, token, Path(crtmpd), prefix="data-closed/")
+                        closed_keys = {r.get("trace_key") for r in remote_closed if r.get("trace_key")}
+                        merged_closed: dict[str, dict] = {}
+                        for r in remote_closed:
+                            k = r.get("trace_key")
+                            if k:
+                                merged_closed[k] = r
+                        for r in rows_closed:
+                            k = r.get("trace_key")
+                            if k:
+                                merged_closed[k] = r
+                        print(f"[upload] closed lane: remote={len(remote_closed)} rows "
+                              f"({len(closed_shards)} shard(s)), local={len(rows_closed)} rows, "
+                              f"new={len(set(merged_closed) - closed_keys)}")
+                        if not args.keep_smoke:
+                            n_smoke_closed = 0
+                            for k in [k for k, r in merged_closed.items() if smoke_drop_reason(r)]:
+                                del merged_closed[k]
+                                n_smoke_closed += 1
+                            if n_smoke_closed:
+                                print(f"[upload] dropped {n_smoke_closed} merged closed smoke/empty row(s)")
+                        if not args.keep_newline_reasoning:
+                            c_truncated = 0
+                            c_excluded = 0
+                            for key in list(merged_closed):
+                                clean_row, sanitization = sanitize_newline_reasoning(merged_closed[key])
+                                if sanitization:
+                                    sanitization_records[sanitization["trace_key"]] = sanitization
+                                    if sanitization["action"] == "exclude_trace":
+                                        c_excluded += 1
+                                    else:
+                                        c_truncated += 1
+                                if clean_row is None:
+                                    del merged_closed[key]
+                                else:
+                                    merged_closed[key] = clean_row
+                            print(f"[upload] closed lane newline-reasoning policy: "
+                                  f"truncated={c_truncated} excluded={c_excluded}")
+                        remote_closed_by_key = {r.get("trace_key"): r for r in remote_closed
+                                                if r.get("trace_key")}
+                        closed_changed_keys = {
+                            k for k in set(merged_closed) & closed_keys
+                            if json.dumps(merged_closed[k], sort_keys=True)
+                            != json.dumps(remote_closed_by_key.get(k), sort_keys=True)
+                        }
+                        closed_changed = (set(merged_closed) != closed_keys
+                                          or bool(closed_changed_keys) or not closed_shards)
+                        if closed_changed:
+                            cts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+                            c_jsonl = out_dir / f"pi-traces-closed-union-{cts}.jsonl"
+                            c_upload_zst = c_jsonl.with_suffix(".jsonl.zst")
+                            write_jsonl(list(merged_closed.values()), c_jsonl)
+                            compress_zst(c_jsonl, c_upload_zst, level=args.zstd_level)
+                            print(f"  closed union shard: {c_upload_zst} "
+                                  f"({len(merged_closed)} rows, {c_upload_zst.stat().st_size:,} B)")
+                            upload_to_hub([c_upload_zst], args.repo, token, dry_run=False,
+                                          path_prefix="data-closed/")
+                            if closed_shards:
+                                delete_remote_shards(args.repo, token, closed_shards)
+                        else:
+                            print("[upload] closed lane: no data changes after merge/filter; "
+                                  "remote closed shard is already current.")
                     write_jsonl(
                         [sanitization_records[key] for key in sorted(sanitization_records)],
                         manifest_path,

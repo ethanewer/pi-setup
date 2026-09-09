@@ -156,6 +156,8 @@ test("occ and ocdx launch the real CLIs on OpenRouter with closed-weight refusal
 			expect(sh).toContain('effort="high"');
 			expect(sh).toContain('--effort "$effort"');
 			expect(sh).toContain("CLAUDE_CODE_ALWAYS_ENABLE_EFFORT=1");
+			expect(sh).toContain("CLAUDE_CODE_NO_FLICKER=1");
+			expect(sh).toContain('args=(--effort "$effort" --dangerously-skip-permissions)');
 			// No model is forced at launch: --model is optional, and without it the tier
 			// slots expose the open-weight models to the in-session /model picker.
 			expect(sh).toContain('[[ -n "$model" ]] && args+=(--model "$model")');
