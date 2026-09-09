@@ -1,6 +1,6 @@
 # Ethan's Pi setup
 
-A reproducible, fast [Pi coding agent](https://pi.dev) setup with three entrypoints:
+A reproducible, fast [Pi coding agent](https://pi.dev) setup with five entrypoints:
 
 - **`pi`** — full environment without dynamic workflows: Voice STT, browser
   automation via the `agent-browser` CLI, mid-run and between-runs context compaction,
@@ -12,6 +12,11 @@ A reproducible, fast [Pi coding agent](https://pi.dev) setup with three entrypoi
 - **`p`** — lean environment with Voice STT, `/btw` side questions, the same two
   compaction extensions, and local MLX model management on macOS, but no browser,
   monitor, workflows, or skills.
+- **`occ`** — Open Claude Code: the full `pi` environment as its own isolated install
+  (`~/.pi/agent-occ`), scoped to the open-weight models only (no GPT family) with high
+  reasoning as the default effort.
+- **`ocdx`** — Open Codex: the same open-weight, high-reasoning environment as a second
+  isolated install (`~/.pi/agent-ocdx`), so the two never share sessions or settings.
 
 All three commands run the same Pi installation through Pi's Bun entrypoint. They share
 authentication, model catalogs, sessions, helper binaries, and installed package files.
@@ -64,7 +69,7 @@ attention.
 |---|---|---|
 | macOS 15 on Apple Silicon | the machine this is developed on | everything, continuously |
 | Ubuntu 24.04 x86-64 | [`tests/linux-install.sh`](tests/linux-install.sh) | the piped install as a non-root user, the missing-`unzip` refusal, and `bin/pi-setup-doctor` on a host with no `node` |
-| Windows 10 x64 | PowerShell `install.ps1` + `.cmd` shims | installer, `pi`/`p`/`piwf`/`agent-browser` launchers, doctor (via Git Bash), process-tree kill |
+| Windows 10 x64 | PowerShell `install.ps1` + `.cmd` shims | installer, `pi`/`p`/`piwf`/`occ`/`ocdx`/`agent-browser` launchers, doctor (via Git Bash), process-tree kill |
 
 Run `tests/linux-install.sh` to reproduce the Linux row; it needs Docker and takes a few
 minutes. It sets `PI_SETUP_SKIP_BROWSER_INSTALL=1`, so **Chrome and `agent-browser` are not
@@ -244,9 +249,32 @@ profile, not another Pi installation. The `pi` wrapper explicitly rejects an inh
 `p` or `piwf` profile environment, so a tmux server started from either cannot
 accidentally turn later `pi` sessions into a different configuration.
 
+### `occ` and `ocdx`: open-weight profiles
+
+`occ` (Open Claude Code) and `ocdx` (Open Codex) are full Pi environments in the shape of
+`pi` — the same extensions, the same skills, no dynamic workflows — each installed into
+its own agent directory (`~/.pi/agent-occ` and `~/.pi/agent-ocdx`), so their sessions,
+settings, and model scope never mix with the main profiles or with each other. They share
+main's auth, model catalogs, helper binaries, installed package files, and voice
+configuration, exactly like `piwf` does.
+
+Two deliberate differences from the other entrypoints:
+
+- **Open-weight models only.** Their `enabledModels` scope is the pinned model scope
+  minus the `openai/` GPT family (see [Default model scope](#default-model-scope)), so
+  Ctrl+P cycling, `/model`, and `/scoped-models` only ever offer the open-weight models.
+- **High reasoning by default.** `defaultThinkingLevel` is seeded to `high`. It is
+  seeded, not forced: the `/thinking` (effort) selector works normally in both, and a
+  level you pick there persists across reinstalls, like the seeded default provider and
+  model do everywhere.
+
+Like `piwf`, both wrappers reject an inherited profile environment (from `p`, `piwf`,
+`occ`, or `ocdx`), so a tmux server started under one profile cannot shadow another's
+configuration.
+
 ## Default model scope
 
-All three entrypoints (`pi`, `piwf`, and `p`) restrict Ctrl+P model cycling (the
+All three main entrypoints (`pi`, `piwf`, and `p`) restrict Ctrl+P model cycling (the
 `/scoped-models` list) to exactly these models via `enabledModels` in each profile's
 settings (`~/.pi/agent`, `~/.pi/agent-wf`, and `~/.pi/agent-p`):
 
@@ -263,7 +291,9 @@ openai/gpt-5.6-terra
 openai/gpt-5.6-luna
 ```
 
-The patterns are canonical `provider/id`, so each matches exactly one model. Two
+The patterns are canonical `provider/id`, so each matches exactly one model. The
+`occ` and `ocdx` profiles scope the same list minus the three `openai/` GPT models —
+their whole point is to run the open-weight models. Two
 consequences of how Pi applies the list are worth knowing:
 
 - It is a managed default: `install.sh` rewrites `enabledModels` on every install, so a
@@ -272,6 +302,10 @@ consequences of how Pi applies the list are worth knowing:
   the first scoped model (`openrouter/deepseek/deepseek-v4-flash-0731`) instead of the saved default. All
   three profiles' current defaults are inside the scope, so this only bites if the
   default is later changed to something outside it.
+
+The same two consequences apply to `occ`/`ocdx`'s open-weight-only scope, with the first
+scoped model (`openrouter/deepseek/deepseek-v4-flash-0731`) as the fallback default there
+too.
 
 ## Browser automation
 
@@ -580,6 +614,8 @@ added to that profile; the full-profile measurements predate context handoff and
 ~/.local/bin/pi                              Full entrypoint (no dynamic workflows)
 ~/.local/bin/piwf                            Full entrypoint with dynamic workflows
 ~/.local/bin/p                               Lean entrypoint
+~/.local/bin/occ                             Open Claude Code entrypoint (open-weight)
+~/.local/bin/ocdx                            Open Codex entrypoint (open-weight)
 ~/.local/bin/agent-browser                   Bun-backed agent-browser entrypoint
 ~/.local/bin/*.cmd                           Windows cmd.exe/PowerShell shims (Windows only)
 ~/.local/lib/pi-coding-agent/pi.exe          Compiled Pi binary (Windows only, optional)
@@ -607,6 +643,24 @@ added to that profile; the full-profile measurements predate context handoff and
 ~/.pi/agent-wf/models-store.json             Symlink/copy to main model catalog
 ~/.pi/agent-wf/bin                           Symlink/junction to main helper binaries
 ~/.pi/agent-wf/local                         Symlink/junction to main hardened fork install
+~/.pi/agent-occ/settings.json                Open-weight settings, high thinking default,
+                                             enabledModels minus the GPT family
+~/.pi/agent-occ/skills/                      The first-party skills for the occ profile
+~/.pi/agent-occ/keybindings.json             The same remapped keys for the occ profile
+~/.pi/agent-occ/auth.json                    Symlink/copy to main auth
+~/.pi/agent-occ/models-store.json            Symlink/copy to main model catalog
+~/.pi/agent-occ/stt.json                     Symlink/copy to main voice configuration
+~/.pi/agent-occ/bin                          Symlink/junction to main helper binaries
+~/.pi/agent-occ/local                        Symlink/junction to main hardened fork install
+~/.pi/agent-ocdx/settings.json               Open-weight settings, high thinking default,
+                                             enabledModels minus the GPT family
+~/.pi/agent-ocdx/skills/                     The first-party skills for the ocdx profile
+~/.pi/agent-ocdx/keybindings.json            The same remapped keys for the ocdx profile
+~/.pi/agent-ocdx/auth.json                   Symlink/copy to main auth
+~/.pi/agent-ocdx/models-store.json           Symlink/copy to main model catalog
+~/.pi/agent-ocdx/stt.json                    Symlink/copy to main voice configuration
+~/.pi/agent-ocdx/bin                         Symlink/junction to main helper binaries
+~/.pi/agent-ocdx/local                       Symlink/junction to main hardened fork install
 ```
 
 The installer adds `~/.local/bin` and `~/.bun/bin` to `.zshrc` and `.bashrc`, and on

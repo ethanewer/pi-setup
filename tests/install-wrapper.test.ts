@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { OPEN_MODEL_SCOPE } from "../lib/install.mjs";
 
 const root = join(import.meta.dir, "..");
 const wrappers = join(root, "lib/wrappers");
@@ -137,4 +138,37 @@ test("pi and piwf both reject an inherited p profile environment", () => {
 	expect(pi).toContain('"$HOME/.pi/agent-wf"');
 	expect(readFileSync(join(wrappers, "pi.cmd"), "utf8")).toContain("%USERPROFILE%\\.pi\\agent-wf");
 	expect(readFileSync(join(wrappers, "piwf.cmd"), "utf8")).toContain("%USERPROFILE%\\.pi\\agent-wf");
+});
+
+test("occ and ocdx pin their own agent directories and reject inherited profile environments", () => {
+	for (const [name, dir] of [
+		["occ", "agent-occ"],
+		["ocdx", "agent-ocdx"],
+	] as const) {
+		const sh = readFileSync(join(wrappers, `${name}.sh`), "utf8");
+		expect(sh).toContain(`export PI_CODING_AGENT_DIR="$HOME/.pi/${dir}"`);
+		expect(sh).toContain("unset PI_CODING_AGENT_DIR PI_CODING_AGENT_SESSION_DIR PI_SKIP_VERSION_CHECK");
+		// Each open-weight profile drops every other profile's environment, its own included,
+		// so a tmux server started under one cannot shadow a later invocation.
+		for (const other of ["agent-p", "agent-wf", "agent-occ", "agent-ocdx"]) {
+			expect(sh).toContain(`"$HOME/.pi/${other}"`);
+		}
+		expect(sh).not.toContain("--no-extensions");
+		expect(sh).not.toContain("--no-skills");
+		const cmd = readFileSync(join(wrappers, `${name}.cmd`), "utf8");
+		expect(cmd).toContain(`set "PI_CODING_AGENT_DIR=%USERPROFILE%\\.pi\\${dir}"`);
+		expect(cmd).toContain("%USERPROFILE%\\.pi\\agent-p");
+	}
+});
+
+test("the open-weight model scope excludes the GPT family and keeps the rest of the pin", () => {
+	// Every non-openai pinned model survives; every openai/ entry (the GPT family in the
+	// pinned scope) is excluded.
+	const installer = readFileSync(join(root, "lib", "install.mjs"), "utf8");
+	const scopeBlock = installer.match(/const MODEL_SCOPE = \[([\s\S]*?)\];/)?.[1] ?? "";
+	const pinned = [...scopeBlock.matchAll(/"([^"]+)"/g)].map((m) => m[1]);
+	expect(pinned.length).toBeGreaterThan(0);
+	expect(OPEN_MODEL_SCOPE).toEqual(pinned.filter((model) => !model.startsWith("openai/")));
+	expect(OPEN_MODEL_SCOPE.every((model) => !model.startsWith("openai/"))).toBe(true);
+	expect(OPEN_MODEL_SCOPE.length).toBe(pinned.length - pinned.filter((m) => m.startsWith("openai/")).length);
 });
