@@ -216,7 +216,10 @@ export CLAUDE_CODE_ALWAYS_ENABLE_EFFORT=1
 # Third-party endpoint defaults.
 export API_TIMEOUT_MS="${API_TIMEOUT_MS:-600000}"
 # The pinned models run ~1M-token windows, but claude assumes 200k for ids it does
-# not recognize; state the real size so auto-compact does not fire early.
+# not recognize and prints a warning banner on every launch. Disable the unknown-
+# model window enforcement (restoring claude's wait-for-the-API behavior) and state
+# the real size, so auto-compact is neither early nor unconfigured.
+export CLAUDE_CODE_DISABLE_UNKNOWN_MODEL_WINDOW_ENFORCEMENT=1
 export CLAUDE_CODE_MAX_CONTEXT_TOKENS="${CLAUDE_CODE_MAX_CONTEXT_TOKENS:-1000000}"
 export CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1
 export DISABLE_TELEMETRY=1
