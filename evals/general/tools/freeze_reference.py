@@ -76,14 +76,32 @@ def parse_task_yaml(p: Path) -> dict:
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument('--reference-root', type=Path,
-                    default=Path('/home/eewer/agent-collab/terminal-bench'))
+    ap.add_argument('--reference-root', type=Path, default=None,
+                    help='the terminal-bench checkout. Defaults to the parent of '
+                         'reference_root in specs/frozen_reference.json, so the '
+                         'spec stays the single source of truth for where the '
+                         'frozen reference lives.')
     ap.add_argument('--verify', action='store_true',
                     help='fail closed unless the checkout still matches the '
                          'frozen identity (does not rewrite the manifest)')
     args = ap.parse_args()
 
+    # The default used to be a hardcoded absolute path. When the checkout moved,
+    # every invocation without --reference-root failed with 'not found' even
+    # though specs/frozen_reference.json could have resolved it, and the spec's
+    # own policy line says the audit tools must resolve the reference from that
+    # file. Derive the repo root from the spec instead: reference_root is written
+    # below as the original-tasks subdirectory, so its parent is the checkout.
     repo = args.reference_root
+    if repo is None:
+        cfg_path = ROOT / 'specs/frozen_reference.json'
+        if not cfg_path.exists():
+            print('ERROR --reference-root omitted and specs/frozen_reference.json '
+                  'is missing; pass --reference-root explicitly', file=sys.stderr)
+            return 1
+        pinned = Path(json.loads(cfg_path.read_text())['reference_root'])
+        repo = pinned.parent if pinned.name == 'original-tasks' else pinned
+        print(f'resolving reference from specs/frozen_reference.json: {repo}')
     tasks_root = repo / 'original-tasks'
     if not tasks_root.is_dir():
         print(f'ERROR: {tasks_root} not found', file=sys.stderr)

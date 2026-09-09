@@ -6,12 +6,18 @@
   "task_checkout_sha256": "5b144a6924a3cae13f5bce0a824fb2b0dccc7efae1e45406f933158afa6886da",
   "task_count": 241,
   "frozen_at": "2026-08-26T22:06:12.057298+00:00",
-  "reference_root": "/home/ee/tb-ref/terminal-bench",
+  "reference_root": "/home/ee/tb-ref/terminal-bench/original-tasks",
   "policy": "Audit tools must resolve the reference from this file when --reference-root is omitted and must fail closed if the checkout identity no longer matches.",
   "reference_root_history": [
     {
       "path": "/home/eewer/agent-collab/terminal-bench/original-tasks",
-      "note": "Original freeze location. The checkout was later moved, which left this spec pointing at a path that no longer exists, so audit_independence_stream.py failed with 'reference root missing' whenever --reference-root was omitted. The identity that matters is unchanged and is verified on every run: git rev-parse HEAD of the checkout must equal `commit` below. Confirmed 1a6ffa9674b571da0ed040c470cb40c4d85f9b9b at the new location on 2026-09-09 before repointing this field."
+      "note": "Original freeze location. The checkout was later moved to /home/ee/tb-ref/terminal-bench, which left this field pointing at a path that no longer exists. Two tools resolve the reference from it -- audit_independence_stream.py when --reference-root is omitted, and freeze_reference.py, whose default was separately hardcoded to the same dead path and now derives from this field instead. Both failed with a missing-path error, which is fail-closed behaviour and the right instinct but the wrong outcome for a moved checkout."
+    },
+    {
+      "path": "/home/ee/tb-ref/terminal-bench",
+      "note": "An intermediate correction that pointed at the repository root rather than the original-tasks subdirectory this field is documented to hold (freeze_reference.py writes it as tasks_root). It satisfied the audit, which accepts either form, but not freeze_reference.py --verify, which appends original-tasks itself. Corrected to the subdirectory form."
     }
-  ]
+  ],
+  "repointed_at": "2026-09-09T09:50:00+09:00",
+  "identity_reverified": "git rev-parse HEAD of /home/ee/tb-ref/terminal-bench equals the frozen commit 1a6ffa9674b571da0ed040c470cb40c4d85f9b9b, and original-tasks holds 241 entries matching task_count. The commit is the identity that matters; the path is only where it happens to live."
 }
