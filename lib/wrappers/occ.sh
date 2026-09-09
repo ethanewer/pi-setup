@@ -194,15 +194,19 @@ else
   export ANTHROPIC_DEFAULT_MODEL="$(slug_for glm-flash)"
   export ANTHROPIC_DEFAULT_HAIKU_MODEL="$(slug_for glm-flash)"
   export ANTHROPIC_DEFAULT_HAIKU_MODEL_NAME="GLM 5.3 Flash"
+  export ANTHROPIC_DEFAULT_HAIKU_MODEL_DESCRIPTION="Fast Z.ai GLM 5.3 via OpenRouter; thinking always on"
   export ANTHROPIC_DEFAULT_SONNET_MODEL="$(slug_for ds-flash)"
   export ANTHROPIC_DEFAULT_SONNET_MODEL_NAME="DeepSeek V4 Flash"
+  export ANTHROPIC_DEFAULT_SONNET_MODEL_DESCRIPTION="Fast DeepSeek V4 via OpenRouter; large output budget"
   export ANTHROPIC_DEFAULT_OPUS_MODEL="$(slug_for glm)"
   export ANTHROPIC_DEFAULT_OPUS_MODEL_NAME="GLM 5.3"
+  export ANTHROPIC_DEFAULT_OPUS_MODEL_DESCRIPTION="Full Z.ai GLM 5.3 via OpenRouter; strong general coding model"
   export ANTHROPIC_DEFAULT_FABLE_MODEL="$(slug_for ds-pro)"
   export ANTHROPIC_DEFAULT_FABLE_MODEL_NAME="DeepSeek V4 Pro"
+  export ANTHROPIC_DEFAULT_FABLE_MODEL_DESCRIPTION="Strongest DeepSeek V4 tier via OpenRouter"
   export ANTHROPIC_CUSTOM_MODEL_OPTION="$(slug_for kimi)"
   export ANTHROPIC_CUSTOM_MODEL_OPTION_NAME="Kimi K3"
-  export ANTHROPIC_CUSTOM_MODEL_OPTION_DESCRIPTION="Moonshot Kimi K3 via OpenRouter"
+  export ANTHROPIC_CUSTOM_MODEL_OPTION_DESCRIPTION="Moonshot Kimi K3 via OpenRouter; strong agentic coding model"
   export ANTHROPIC_SMALL_FAST_MODEL="$(slug_for glm-flash)"
 fi
 
@@ -211,6 +215,9 @@ export CLAUDE_CODE_ALWAYS_ENABLE_EFFORT=1
 
 # Third-party endpoint defaults.
 export API_TIMEOUT_MS="${API_TIMEOUT_MS:-600000}"
+# The pinned models run ~1M-token windows, but claude assumes 200k for ids it does
+# not recognize; state the real size so auto-compact does not fire early.
+export CLAUDE_CODE_MAX_CONTEXT_TOKENS="${CLAUDE_CODE_MAX_CONTEXT_TOKENS:-1000000}"
 export CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1
 export DISABLE_TELEMETRY=1
 
