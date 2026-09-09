@@ -188,11 +188,21 @@ if [[ -n "$model" ]]; then
   fi
   export ANTHROPIC_SMALL_FAST_MODEL="$fast"
 else
+  # /model offers the pinned open-weight models: the four tier slots plus the
+  # custom option (claude's picker has no more slots, so kimi rides the custom
+  # entry and the qwen pair stays reachable via --model only).
   export ANTHROPIC_DEFAULT_MODEL="$(slug_for glm-flash)"
   export ANTHROPIC_DEFAULT_HAIKU_MODEL="$(slug_for glm-flash)"
+  export ANTHROPIC_DEFAULT_HAIKU_MODEL_NAME="GLM 5.3 Flash"
   export ANTHROPIC_DEFAULT_SONNET_MODEL="$(slug_for ds-flash)"
+  export ANTHROPIC_DEFAULT_SONNET_MODEL_NAME="DeepSeek V4 Flash"
   export ANTHROPIC_DEFAULT_OPUS_MODEL="$(slug_for glm)"
+  export ANTHROPIC_DEFAULT_OPUS_MODEL_NAME="GLM 5.3"
   export ANTHROPIC_DEFAULT_FABLE_MODEL="$(slug_for ds-pro)"
+  export ANTHROPIC_DEFAULT_FABLE_MODEL_NAME="DeepSeek V4 Pro"
+  export ANTHROPIC_CUSTOM_MODEL_OPTION="$(slug_for kimi)"
+  export ANTHROPIC_CUSTOM_MODEL_OPTION_NAME="Kimi K3"
+  export ANTHROPIC_CUSTOM_MODEL_OPTION_DESCRIPTION="Moonshot Kimi K3 via OpenRouter"
   export ANTHROPIC_SMALL_FAST_MODEL="$(slug_for glm-flash)"
 fi
 

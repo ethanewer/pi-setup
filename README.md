@@ -270,10 +270,13 @@ What they enforce:
   by accident.
 - **Model selection happens in-session.** Neither launcher asks for a model up front.
   `occ` maps the pinned open-weight models onto Claude Code's tier slots by strength —
-  haiku: `glm-5.3-flash`, sonnet: `ds-v4-flash`, opus: `glm-5.3`, fable: `ds-v4-pro` — so
-  `/model` switches between them, starting on `glm-5.3-flash`. `ocdx` starts on the
-  default from its `config.toml` and `/model` changes it. `--model` still exists for a
-  one-off launch on a specific model.
+  haiku: `glm-5.3-flash`, sonnet: `ds-v4-flash`, opus: `glm-5.3`, fable: `ds-v4-pro`, and
+  the custom option: `kimi-k3` — each with a human-readable name in `/model`. Claude
+  Code's picker has no more slots, so the qwen pair is reachable only via `--model`.
+  `ocdx` replaces codex's bundled OpenAI-only catalog with all seven pinned models
+  (a setup-managed `models.json` referenced by `model_catalog_json` in its
+  `config.toml`), so `/model` lists and names them directly. `--model` still exists for
+  a one-off launch on a specific model.
 - **High reasoning by default.** `occ` passes `--effort high` unless overridden with
   `--effort`; `ocdx` writes `model_reasoning_effort = "high"` into its managed
   `config.toml`. The in-session selectors (`/effort` in claude — kept alive with
@@ -289,8 +292,9 @@ What they enforce:
   (e.g. `glm-flash` → `glm`).
 - **Isolated state.** `CLAUDE_CONFIG_DIR=~/.pi/agent-occ` and
   `CODEX_HOME=~/.pi/agent-ocdx/codex`, so sessions, history, and settings never mix with
-  a personal `~/.claude` or `~/.codex`. The `config.toml` for codex is install output,
-  rewritten on every install; the OpenRouter key is never written to disk there.
+  a personal `~/.claude` or `~/.codex`. The `config.toml` and `models.json` for codex are
+  install output, rewritten on every install; the OpenRouter key is never written to disk
+  there.
 - **Key resolution.** `OPENROUTER_API_KEY`, then `~/.openrouter-key`, then pi's own
   credential chain (`pi auth print-api-key --provider openrouter`, which covers the
   macOS keychain).
@@ -670,7 +674,8 @@ added to that profile; the full-profile measurements predate context handoff and
 ~/.pi/agent-occ/                             CLAUDE_CONFIG_DIR for occ (claude sessions and state)
 ~/.pi/agent-ocdx/codex/                      CODEX_HOME for ocdx (codex sessions and state)
 ~/.pi/agent-ocdx/codex/config.toml           Managed codex config: openrouter provider,
-                                             responses wire API, high reasoning default
+                                             responses wire API, high reasoning default,
+                                             /model catalog of the seven open-weight models
 ```
 
 The installer adds `~/.local/bin` and `~/.bun/bin` to `.zshrc` and `.bashrc`, and on

@@ -482,8 +482,8 @@ process.exit("packages" in s ? 0 : 1);
   fi
 done
 if [[ -f "$OCDX_CODEX_CONFIG" ]]; then
-  if grep -q 'model_provider = "openrouter"' "$OCDX_CODEX_CONFIG" && grep -q 'wire_api = "responses"' "$OCDX_CODEX_CONFIG" && grep -q 'model_reasoning_effort = "high"' "$OCDX_CODEX_CONFIG"; then
-    ok "ocdx codex config.toml pins the openrouter provider with high reasoning"
+  if grep -q 'model_provider = "openrouter"' "$OCDX_CODEX_CONFIG" && grep -q 'wire_api = "responses"' "$OCDX_CODEX_CONFIG" && grep -q 'model_reasoning_effort = "high"' "$OCDX_CODEX_CONFIG" && grep -q 'model_catalog_json' "$OCDX_CODEX_CONFIG" && [[ -f "$OCDX_CONFIG_DIR/codex/models.json" ]]; then
+    ok "ocdx codex config.toml pins the openrouter provider with the open-weight /model catalog and high reasoning"
   else
     bad "$OCDX_CODEX_CONFIG does not pin model_provider=openrouter, wire_api=chat, and model_reasoning_effort=high; reinstall to rewrite it (bin/pi-setup-doctor --fix)"
     fixable install

@@ -164,10 +164,13 @@ test("occ and ocdx launch the real CLIs on OpenRouter with closed-weight refusal
 				expect(sh).toContain(`export ${slot}=`);
 			}
 			// Slot mapping by strength: default/haiku glm-flash, sonnet ds-flash,
-			// opus glm, fable ds-pro.
+			// opus glm, fable ds-pro; the custom option adds kimi as the fifth picker
+			// entry (claude's /model has no more slots; qwen stays --model-only).
 			expect(sh).toContain('export ANTHROPIC_DEFAULT_SONNET_MODEL="$(slug_for ds-flash)"');
 			expect(sh).toContain('export ANTHROPIC_DEFAULT_OPUS_MODEL="$(slug_for glm)"');
 			expect(sh).toContain('export ANTHROPIC_DEFAULT_FABLE_MODEL="$(slug_for ds-pro)"');
+			expect(sh).toContain('export ANTHROPIC_CUSTOM_MODEL_OPTION="$(slug_for kimi)"');
+			expect(sh).toContain('export ANTHROPIC_DEFAULT_HAIKU_MODEL_NAME="GLM 5.3 Flash"');
 		} else {
 			expect(sh).toContain('-c "model_reasoning_effort=\\"$effort\\""');
 		}
