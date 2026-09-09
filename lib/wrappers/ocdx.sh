@@ -35,16 +35,16 @@ usage() {
 Usage: ocdx [--model MODEL] [--effort LEVEL] [--list] [codex args]
 
 MODEL    ds-flash | ds-pro | glm-flash | glm | kimi | qwen-flash | qwen-max,
-         or a full OpenRouter slug. Default: glm-flash (from config.toml).
-LEVEL    minimal | low | medium | high. Default: high. Passed as
-         model_reasoning_effort; /model also works in the session.
+         or a full OpenRouter slug. Default: glm-flash.
+LEVEL    minimal | low | medium | high. Default: high; passed as
+         model_reasoning_effort. /model and /effort still work in-session.
 
 Other arguments pass through to codex. Put -- before them if they start with -.
 EOF
 }
 
 model=""
-effort=""
+effort="high"
 list=0
 extra=()
 
@@ -81,6 +81,9 @@ fi
 if [[ -n "$model" ]] && slug="$(slug_for "$model")"; then
   model="$slug"
 fi
+# Without --model, pin the config.toml default explicitly: a trusted project-local
+# config would otherwise override it (see the session-flags note below).
+[[ -z "$model" ]] && model="$(slug_for glm-flash)"
 
 # Never route to a closed-weight model, even by accident: the managed
 # config.toml already pins the provider, this keeps the model id honest too.
@@ -127,9 +130,14 @@ fi
 unset OPENAI_API_KEY ANTHROPIC_API_KEY ANTHROPIC_AUTH_TOKEN
 export OPENROUTER_API_KEY="$key"
 
-args=()
+# The managed config.toml sets the defaults, but a trusted project-local config
+# (cwd/.codex/config.toml — including ~/.codex/config.toml when launched from the
+# home directory) has higher precedence (project 25) than the user config (20) and
+# would override model, effort, and provider. Session flags (-c, precedence 30)
+# outrank the project layer, so the wrapper pins them explicitly. /model and
+# /effort still work in-session; these only fix the session defaults.
+args+=(-c 'model_provider="openrouter"' -c 'model_reasoning_effort="'"$effort"'"' -c 'service_tier="default"')
 [[ -n "$model" ]] && args+=(-m "$model")
-[[ -n "$effort" ]] && args+=(-c "model_reasoning_effort=\"$effort\"")
 # Match the cdx alias: skip approvals and sandbox and disable the apps/plugins
 # surfaces. The OpenAI developer-docs MCP server is disabled in the managed
 # config.toml rather than here - a -c override on an undefined server creates an
