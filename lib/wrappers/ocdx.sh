@@ -112,8 +112,8 @@ if [[ "$key" != sk-or-* ]]; then
 fi
 
 # Isolated Codex state, with the installer-managed config.toml. The endpoint
-# (https://openrouter.ai/api/v1), the chat wire API, the default model, and the high
-# reasoning default all come from that file; the key is injected per launch
+# (https://openrouter.ai/api/v1), the responses wire API, the default model, and the
+# high reasoning default all come from that file; the key is injected per launch
 # (config.toml sets env_key), never written to disk here.
 export CODEX_HOME="${CODEX_HOME:-$HOME/.pi/agent-ocdx/codex}"
 mkdir -p "$CODEX_HOME"
@@ -121,6 +121,10 @@ if [[ ! -f "$CODEX_HOME/config.toml" ]]; then
   echo "error: $CODEX_HOME/config.toml is missing; re-run the pi-setup installer, which writes the openrouter provider config" >&2
   exit 2
 fi
+
+# Never let a personal OpenAI or Anthropic credential be auto-detected: drop
+# them before codex resolves auth, then inject the OpenRouter key only.
+unset OPENAI_API_KEY ANTHROPIC_API_KEY ANTHROPIC_AUTH_TOKEN
 export OPENROUTER_API_KEY="$key"
 
 args=()

@@ -268,27 +268,37 @@ What they enforce:
   A model id containing `claude`, `anthropic`, `gpt`, or `openai/` is refused at launch,
   and the endpoints are pinned to OpenRouter, so no request can reach Anthropic or OpenAI
   by accident.
+- **Model selection happens in-session.** Neither launcher asks for a model up front.
+  `occ` maps the pinned open-weight models onto Claude Code's tier slots by strength —
+  haiku: `glm-5.3-flash`, sonnet: `ds-v4-flash`, opus: `glm-5.3`, fable: `ds-v4-pro` — so
+  `/model` switches between them, starting on `glm-5.3-flash`. `ocdx` starts on the
+  default from its `config.toml` and `/model` changes it. `--model` still exists for a
+  one-off launch on a specific model.
 - **High reasoning by default.** `occ` passes `--effort high` unless overridden with
   `--effort`; `ocdx` writes `model_reasoning_effort = "high"` into its managed
   `config.toml`. The in-session selectors (`/effort` in claude — kept alive with
   `CLAUDE_CODE_ALWAYS_ENABLE_EFFORT=1` — and `/model` in codex) work normally.
-- **Every model slot pinned (occ).** Claude Code's four tier slots and its background
-  model all point at the chosen open-weight model, so changing effort can never route a
-  request to an Anthropic model. `--family-tiers` optionally maps low/medium effort to
-  the family's fast model and high/xhigh/max to its full model (e.g. `glm-flash` →
-  `glm`).
+- **No personal credentials auto-detected.** Both launchers `unset OPENAI_API_KEY`,
+  `ANTHROPIC_API_KEY`, and `ANTHROPIC_AUTH_TOKEN` before exec'ing the CLI, so a personal
+  OpenAI or Anthropic key in the environment can never be picked up; auth comes only
+  from the resolved OpenRouter key. `occ` also drops `CLAUDE_CODE_OAUTH_TOKEN`.
+- **Model slots pinned (occ).** With `--model`, Claude Code's four tier slots and its
+  background model all point at the chosen open-weight model, so changing effort can
+  never route a request to an Anthropic model; `--family-tiers` optionally maps
+  low/medium effort to the family's fast model and high/xhigh/max to its full model
+  (e.g. `glm-flash` → `glm`).
 - **Isolated state.** `CLAUDE_CONFIG_DIR=~/.pi/agent-occ` and
   `CODEX_HOME=~/.pi/agent-ocdx/codex`, so sessions, history, and settings never mix with
   a personal `~/.claude` or `~/.codex`. The `config.toml` for codex is install output,
   rewritten on every install; the OpenRouter key is never written to disk there.
 - **Key resolution.** `OPENROUTER_API_KEY`, then `~/.openrouter-key`, then pi's own
   credential chain (`pi auth print-api-key --provider openrouter`, which covers the
-  macOS keychain). Existing `ANTHROPIC_API_KEY`/`ANTHROPIC_AUTH_TOKEN` exports win, and
-  must themselves be OpenRouter keys.
+  macOS keychain).
 
 ```bash
-occ --model glm --effort xhigh          # strongest GLM at xhigh effort
+occ --model glm --effort xhigh          # one-off: strongest GLM at xhigh effort
 ocdx --model ds-pro -p "explain this repo"
+occ                                     # no pick needed: /model selects in-session
 occ --list                              # the seven handles
 ```
 

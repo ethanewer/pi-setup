@@ -156,10 +156,18 @@ test("occ and ocdx launch the real CLIs on OpenRouter with closed-weight refusal
 			expect(sh).toContain('effort="high"');
 			expect(sh).toContain('--effort "$effort"');
 			expect(sh).toContain("CLAUDE_CODE_ALWAYS_ENABLE_EFFORT=1");
+			// No model is forced at launch: --model is optional, and without it the tier
+			// slots expose the open-weight models to the in-session /model picker.
+			expect(sh).toContain('[[ -n "$model" ]] && args+=(--model "$model")');
 			// Every tier slot is pinned so effort cannot route to an Anthropic model.
 			for (const slot of ["ANTHROPIC_DEFAULT_HAIKU_MODEL", "ANTHROPIC_DEFAULT_SONNET_MODEL", "ANTHROPIC_DEFAULT_OPUS_MODEL", "ANTHROPIC_DEFAULT_FABLE_MODEL", "ANTHROPIC_SMALL_FAST_MODEL"]) {
 				expect(sh).toContain(`export ${slot}=`);
 			}
+			// Slot mapping by strength: default/haiku glm-flash, sonnet ds-flash,
+			// opus glm, fable ds-pro.
+			expect(sh).toContain('export ANTHROPIC_DEFAULT_SONNET_MODEL="$(slug_for ds-flash)"');
+			expect(sh).toContain('export ANTHROPIC_DEFAULT_OPUS_MODEL="$(slug_for glm)"');
+			expect(sh).toContain('export ANTHROPIC_DEFAULT_FABLE_MODEL="$(slug_for ds-pro)"');
 		} else {
 			expect(sh).toContain('-c "model_reasoning_effort=\\"$effort\\""');
 		}
@@ -167,6 +175,9 @@ test("occ and ocdx launch the real CLIs on OpenRouter with closed-weight refusal
 		expect(sh).toContain('OPENROUTER_API_KEY:-');
 		expect(sh).toContain('.openrouter-key');
 		expect(sh).toContain("pi auth print-api-key --provider openrouter");
+		// Personal OpenAI/Anthropic credentials are stripped, not inherited, so the CLI
+		// can never auto-detect its vendor's key and route to the closed API.
+		expect(sh).toContain("unset OPENAI_API_KEY ANTHROPIC_API_KEY ANTHROPIC_AUTH_TOKEN");
 		// The launcher execs the real CLI, not pi.
 		expect(sh).toContain(`exec ${cli} `);
 		expect(sh).not.toContain("pi-coding-agent");

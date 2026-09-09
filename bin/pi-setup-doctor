@@ -456,6 +456,9 @@ for launcher in occ:claude ocdx:codex; do
   elif ! grep -q 'openrouter.ai/api' "$WRAPPER"; then
     bad "$WRAPPER does not pin the OpenRouter endpoint; it could reach Anthropic or OpenAI (bin/pi-setup-doctor --fix)"
     fixable install
+  elif ! grep -q 'unset OPENAI_API_KEY ANTHROPIC_API_KEY ANTHROPIC_AUTH_TOKEN' "$WRAPPER"; then
+    bad "$WRAPPER does not strip personal OpenAI/Anthropic credentials before launch; they could be auto-detected (bin/pi-setup-doctor --fix)"
+    fixable install
   elif ! grep -q '\*claude\*\|\*anthropic\*\|\*gpt\*' "$WRAPPER"; then
     bad "$WRAPPER has no closed-weight model refusal; a claude/anthropic/gpt model id could slip through (bin/pi-setup-doctor --fix)"
     fixable install
@@ -467,9 +470,15 @@ done
 OCC_CONFIG_DIR="$HOME/.pi/agent-occ"
 OCDX_CONFIG_DIR="$HOME/.pi/agent-ocdx"
 OCDX_CODEX_CONFIG="$OCDX_CONFIG_DIR/codex/config.toml"
+# The retired pi-profile implementation wrote pi settings.json overlays here. Claude
+# itself also writes a settings.json into CLAUDE_CONFIG_DIR (theme, onboarding), so a
+# bare file is not a problem - only one carrying pi's packages key is.
 for stale_dir in "$OCC_CONFIG_DIR" "$OCDX_CONFIG_DIR"; do
-  if [[ -f "$stale_dir/settings.json" ]]; then
-    bad "$stale_dir/settings.json is left over from the retired pi-profile implementation of occ/ocdx; occ/ocdx now launch the real CLIs. Delete it: rm '$stale_dir/settings.json' (this is a judgement call, so --fix will not touch it)"
+  if [[ -f "$stale_dir/settings.json" ]] && "$JS" -e '
+const s = JSON.parse(require("node:fs").readFileSync(process.argv[1], "utf8"));
+process.exit("packages" in s ? 0 : 1);
+' "$stale_dir/settings.json" 2>/dev/null; then
+    bad "$stale_dir/settings.json is a pi-profile leftover from the retired occ/ocdx implementation; occ/ocdx now launch the real CLIs. Delete it: rm '$stale_dir/settings.json' (this is a judgement call, so --fix will not touch it)"
   fi
 done
 if [[ -f "$OCDX_CODEX_CONFIG" ]]; then

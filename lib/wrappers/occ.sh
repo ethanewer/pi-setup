@@ -55,14 +55,16 @@ usage() {
   cat <<'EOF'
 Usage: occ [--model MODEL] [--effort LEVEL] [--family-tiers] [--list] [claude args]
 
-MODEL    ds-flash | ds-pro | glm-flash | glm | kimi | qwen-flash | qwen-max,
-         or a full OpenRouter slug. Default: glm-flash.
+MODEL    Optional. ds-flash | ds-pro | glm-flash | glm | kimi | qwen-flash |
+         qwen-max, or a full OpenRouter slug. Without it, claude starts on the
+         default slot and /model switches between the slot-mapped open-weight
+         models (haiku: glm-flash, sonnet: ds-flash, opus: glm, fable: ds-pro).
 LEVEL    low | medium | high | xhigh | max. Default: high. Forwarded to
          claude --effort; /effort also works in the session.
 --family-tiers
-         Map low/medium to the family's fast model and high/xhigh/max to the
-         family's full model, so effort also picks the model. Default: every
-         effort level uses MODEL and effort only changes the thinking budget.
+         With --model: map low/medium to the family's fast model and
+         high/xhigh/max to the family's full model, so effort also picks the
+         model. Default: every effort level uses MODEL.
 
 Other arguments pass through to claude. Put -- before them if they start with -.
 EOF
@@ -101,29 +103,21 @@ case "$effort" in
   *) echo "error: effort must be low, medium, high, xhigh, or max (got: $effort)" >&2; exit 2 ;;
 esac
 
-# Resolve MODEL from a handle or accept a raw slug; default to glm-flash, the
-# same default model the pi profiles use.
+# Resolve MODEL from a handle or accept a raw slug. Empty means no launch-time
+# pick: claude starts on the default slot and /model selects in-session.
 handle=""
-if [[ -z "$model" ]]; then
-  if [[ -t 0 ]]; then
-    echo "Pick a model (effort: $effort):"
-    select m in $HANDLES; do
-      [[ -n "$m" ]] && { handle="$m"; model="$(slug_for "$m")"; break; }
-    done
+if [[ -n "$model" ]]; then
+  if slug="$(slug_for "$model")"; then
+    handle="$model"
+    model="$slug"
   else
-    handle="glm-flash"
-    model="$(slug_for "$handle")"
+    for k in $HANDLES; do
+      if [[ "$(slug_for "$k")" == "$model" ]]; then
+        handle="$k"
+        break
+      fi
+    done
   fi
-elif slug="$(slug_for "$model")"; then
-  handle="$model"
-  model="$slug"
-else
-  for k in $HANDLES; do
-    if [[ "$(slug_for "$k")" == "$model" ]]; then
-      handle="$k"
-      break
-    fi
-  done
 fi
 
 # Never route to an Anthropic or GPT model, even by accident: the base URL
@@ -162,37 +156,45 @@ if [[ "$key" != sk-or-* ]]; then
   echo "warning: the resolved OpenRouter key does not start with sk-or-" >&2
 fi
 
-# Endpoint. Always OpenRouter, so no request ever reaches Anthropic.
-export ANTHROPIC_BASE_URL="${ANTHROPIC_BASE_URL:-https://openrouter.ai/api}"
+# Endpoint. Forced, not defaulted: no request may reach Anthropic.
+export ANTHROPIC_BASE_URL="https://openrouter.ai/api"
 
-# Auth. Leave credentials the user already exported untouched. Claude Code
-# reads ANTHROPIC_API_KEY before ANTHROPIC_AUTH_TOKEN, so an existing API key
-# wins. If you keep your own key set, it must be the OpenRouter key.
-if [[ -z "${ANTHROPIC_API_KEY:-}" ]]; then
-  export ANTHROPIC_API_KEY="$key"
-fi
-if [[ -z "${ANTHROPIC_AUTH_TOKEN:-}" ]]; then
-  export ANTHROPIC_AUTH_TOKEN="$key"
-fi
+# Never let a personal Anthropic or OpenAI credential be auto-detected: drop
+# every OAuth/key variable claude might pick up, then authenticate from the
+# resolved OpenRouter key only.
+unset OPENAI_API_KEY ANTHROPIC_API_KEY ANTHROPIC_AUTH_TOKEN CLAUDE_CODE_OAUTH_TOKEN
+export ANTHROPIC_API_KEY="$key"
+export ANTHROPIC_AUTH_TOKEN="$key"
 
-# Model selection. Every tier slot is pinned, so the effort selector can never
-# route a request to an Anthropic model; effort only changes the thinking
-# budget (or, with --family-tiers, moves between the family's fast/full pair).
-export ANTHROPIC_MODEL="$model"
-export ANTHROPIC_DEFAULT_MODEL="$model"
-if [[ "$family" == 1 ]]; then
-  export ANTHROPIC_DEFAULT_HAIKU_MODEL="$fast"
-  export ANTHROPIC_DEFAULT_SONNET_MODEL="$fast"
-  export ANTHROPIC_DEFAULT_OPUS_MODEL="$full"
-  export ANTHROPIC_DEFAULT_FABLE_MODEL="$full"
+# Model selection. Without --model, the four tier slots expose the pinned
+# open-weight models by strength, so /model switches between them in-session
+# and the default slot (glm-flash) starts the session. With --model, every
+# slot is pinned to the chosen model so the effort selector can never route a
+# request to an Anthropic model; effort only changes the thinking budget (or,
+# with --family-tiers, moves between the family's fast/full pair).
+if [[ -n "$model" ]]; then
+  export ANTHROPIC_MODEL="$model"
+  export ANTHROPIC_DEFAULT_MODEL="$model"
+  if [[ "$family" == 1 ]]; then
+    export ANTHROPIC_DEFAULT_HAIKU_MODEL="$fast"
+    export ANTHROPIC_DEFAULT_SONNET_MODEL="$fast"
+    export ANTHROPIC_DEFAULT_OPUS_MODEL="$full"
+    export ANTHROPIC_DEFAULT_FABLE_MODEL="$full"
+  else
+    export ANTHROPIC_DEFAULT_HAIKU_MODEL="$model"
+    export ANTHROPIC_DEFAULT_SONNET_MODEL="$model"
+    export ANTHROPIC_DEFAULT_OPUS_MODEL="$model"
+    export ANTHROPIC_DEFAULT_FABLE_MODEL="$model"
+  fi
+  export ANTHROPIC_SMALL_FAST_MODEL="$fast"
 else
-  export ANTHROPIC_DEFAULT_HAIKU_MODEL="$model"
-  export ANTHROPIC_DEFAULT_SONNET_MODEL="$model"
-  export ANTHROPIC_DEFAULT_OPUS_MODEL="$model"
-  export ANTHROPIC_DEFAULT_FABLE_MODEL="$model"
+  export ANTHROPIC_DEFAULT_MODEL="$(slug_for glm-flash)"
+  export ANTHROPIC_DEFAULT_HAIKU_MODEL="$(slug_for glm-flash)"
+  export ANTHROPIC_DEFAULT_SONNET_MODEL="$(slug_for ds-flash)"
+  export ANTHROPIC_DEFAULT_OPUS_MODEL="$(slug_for glm)"
+  export ANTHROPIC_DEFAULT_FABLE_MODEL="$(slug_for ds-pro)"
+  export ANTHROPIC_SMALL_FAST_MODEL="$(slug_for glm-flash)"
 fi
-# Background work always uses the cheap model.
-export ANTHROPIC_SMALL_FAST_MODEL="$fast"
 
 # Keep /effort available on model ids Claude Code does not recognize.
 export CLAUDE_CODE_ALWAYS_ENABLE_EFFORT=1
@@ -206,7 +208,8 @@ export DISABLE_TELEMETRY=1
 export CLAUDE_CONFIG_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.pi/agent-occ}"
 mkdir -p "$CLAUDE_CONFIG_DIR"
 
-args=(--model "$model" --effort "$effort")
+args=(--effort "$effort")
+[[ -n "$model" ]] && args+=(--model "$model")
 # The ${arr[@]+...} guard is for bash 3.2 (macOS): expanding an empty array
 # under set -u errors there.
 exec claude "${args[@]}" ${extra[@]+"${extra[@]}"}
