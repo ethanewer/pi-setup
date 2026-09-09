@@ -175,7 +175,7 @@ test("occ and ocdx launch the real CLIs on OpenRouter with closed-weight refusal
 			expect(sh).toContain('export ANTHROPIC_DEFAULT_HAIKU_MODEL_NAME="GLM 5.3 Flash"');
 		} else {
 			expect(sh).toContain('-c "model_reasoning_effort=\\"$effort\\""');
-			expect(sh).toContain('args+=(--dangerously-bypass-approvals-and-sandbox -c mcp_servers.openaiDeveloperDocs.enabled=false --disable apps --disable plugins)');
+			expect(sh).toContain('args+=(--dangerously-bypass-approvals-and-sandbox --disable apps --disable plugins)');
 			expect(sh).toContain("--dangerously-bypass-approvals-and-sandbox");
 		}
 		// The key resolution chain: env, then ~/.openrouter-key, then pi's auth chain.
