@@ -381,3 +381,69 @@ control was run per task as the nop half of the acceptance gate, not as a
 suite-wide sweep against one frozen snapshot. The 20 new tasks are cleared as
 clean-room by the audit in section 7, which means the wave is gate-clean and
 contamination-clean and the suite is publishable when a sweep is run.
+## 9. Suite-level finding: trials are not offline, and never were
+
+Recorded here rather than left in the `clinker-quay` reviewer row, because it
+affects every task in the suite and every record published for it, not one task.
+
+**Verified from harbor 0.22.0 source, the version pinned in
+`runs/harbor-requirements.txt`:**
+
+- `harbor/models/task/config.py:69` — `network_mode: NetworkMode =
+  NetworkMode.PUBLIC`. The default is public egress, not `no-network`.
+- `grep -rl network_mode tasks/*/task.toml` returns **0 of 857**. No task in this
+  suite has ever declared a network mode.
+- `harbor/environments/docker/docker.py:275` — the egress-control sidecar is
+  engaged only when `any(policy.network_mode != NetworkMode.PUBLIC ...)`. With no
+  task declaring one, it is never started.
+- `harbor/environments/docker/docker.py:1186-1193` — `_apply_network_policy`
+  returns immediately when egress control is not enabled and the mode is PUBLIC.
+  When it is enabled, PUBLIC maps to `allow-all` at line 1202.
+
+So every trial of every task, in every published version from v3.0 through v4.2,
+ran with unrestricted outbound network.
+
+**This contradicts three documents in this repository:**
+
+- `WORKFLOW.md` line 35, which explains the retirement of `slate-fjord` partly by
+  "under `network_mode: none` the loopback port is unreachable". No task declares
+  that mode, so the premise does not describe how the suite actually ran.
+- `reports/AUTHORING_SPEC_v41.md` constraint 4: "No network at trial time. The
+  container runs with `network_mode: none`."
+- `reports/AUTHORING_SPEC_v42.md`, which repeats it and builds several rules on
+  it ("the trial has no network, so anything fetched at trial time fails").
+
+Both specs were written by the operator on the strength of the WORKFLOW.md claim
+and were not checked against harbor's source. The instruction was wrong, and 72
+tasks were authored against it.
+
+**What it does and does not break.** Nothing is broken. A task verified to work
+offline also works with egress, and the v4.2 reviewers proved offline capability
+for their tasks rather than assuming it (`clinker-mast`, `corbel-stave`,
+`derrick-tarn`, `ferrule-keel`, `jerkin-cleat`, `nock-trestle` and others ran the
+verifier under `docker run --network none`). What is lost is a guarantee: an
+agent is not prevented from fetching documentation, a hint, or the upstream
+repository itself during a trial, and no published record can assert otherwise.
+
+**Reviewer-reported, not independently reproduced here.** The `clinker-quay`
+reviewer states that setting `no-network` on a task engages the egress-control
+sidecar whose deny-all was ineffective on this host, and left the field unset
+rather than ship a task with a false guarantee. That is a second and deeper
+problem than the default: it would mean offline trials are not currently
+achievable on this host at all. It is recorded as reported. Confirming it needs an
+experiment against the sidecar, which was not run because a 20-task census was
+competing for the same docker daemon.
+
+**What already mitigates it in this family.** `plinth-wicket` and
+`ferrule-berth` assert `git rev-parse HEAD` against the pinned commit and a clean
+`git status --porcelain` on `/app/src`, so an agent that re-fetches or mutates the
+upstream tree is caught regardless of egress. That guard is the right pattern for
+every clone-based task and should be required rather than incidental.
+
+**Recommendation, which is a decision and not a change made here.** Either fix
+egress control and declare `network_mode` per task, then re-verify the suite; or
+accept that trials have egress and correct `WORKFLOW.md` and both authoring specs,
+require the upstream-integrity guard on every clone task, and stop describing the
+suite as offline. Adding `network_mode = "no-network"` to 857 task.toml files
+without first establishing that deny-all works would convert a documented falsehood
+into an unverified one, and could fail tasks that currently pass.
