@@ -11,7 +11,7 @@ as when they were packages that profile never listed.
 
 Editing a skill: change it here, run `./install.sh`, done. `bin/pi-setup-doctor` checks
 the installed copies against this directory. Do not add unrelated skills next to these;
-`install.sh` only manages the four named directories and leaves anything else in
+`install.sh` only manages the three named directories and leaves anything else in
 `~/.pi/agent/skills/` alone.
 
 ## agent-browser-cli
@@ -36,19 +36,6 @@ can control is handling. See that branch's `evals/browser/REPORT.md` for the ful
 writeup and raw results. The `pi-agent-browser-native-safe` fork that provided the
 native `agent_browser` tool was retired on 2026-09-04 (see docs/FORKS.md); the CLI is
 the only browser surface this setup ships.
-
-## external-review
-
-Runs read-only external reviews over significant changes to this repository via the
-`cursor-agent` CLI before they are committed: bugbot for code quality on every
-significant diff, a measurement-correctness review when evals/scorers/the trace
-exporter change (a scoring bug that silently invalidates a benchmark is invisible to
-bugbot), and a setup-invariants review when the installer, wrappers, patches, forks,
-or version pins change. Findings are advisory: the skill requires verifying each one
-against the code before fixing, and looping review/fix until clean. It exists because
-this repo's worst incidents were exactly the classes an external reader catches best:
-silent extension-load failures, pinned-version drift from the live setup, and budget
-enforcement a hung call could bypass.
 
 ## update-pi-setup
 

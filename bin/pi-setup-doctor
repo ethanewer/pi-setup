@@ -134,7 +134,7 @@ say "First-party skills: repository vs installed"
 # skills/ is installed into the agent directories' own skills/, not as a package; see
 # skills/README.md. Both full profiles get copies (piwf has its own agent directory);
 # the lean p runs --no-skills and gets none.
-for skill in agent-browser-cli external-review unslop update-pi-setup; do
+for skill in agent-browser-cli unslop update-pi-setup; do
   SRC="$REPO_DIR/skills/$skill/SKILL.md"
   if [[ ! -f "$SRC" ]]; then
     bad "skill $skill is missing from skills/"
