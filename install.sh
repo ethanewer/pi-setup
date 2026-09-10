@@ -64,6 +64,15 @@ if ! BUN_BIN="$(bun_bin)"; then
 fi
 
 export PATH="$HOME/.local/bin:$BUN_INSTALL/bin:$PATH"
+# The lean and wf profile directories are installer output, never a main directory (see
+# the same guard in lib/install.mjs). Unset rather than trust it if a session on one of
+# those profiles leaks the variable into this script.
+case "${PI_CODING_AGENT_DIR:-}" in
+  "$HOME/.pi/agent-p"|"$HOME/.pi/agent-wf")
+    warn "PI_CODING_AGENT_DIR points at a profile directory the installer manages as output; installing to $HOME/.pi/agent instead."
+    unset PI_CODING_AGENT_DIR
+    ;;
+esac
 MAIN_DIR="${PI_CODING_AGENT_DIR:-$HOME/.pi/agent}"
 
 SRC_DIR=""
