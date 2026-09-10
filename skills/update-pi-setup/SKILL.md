@@ -19,7 +19,7 @@ Windows), and prunes stale npm copies of the extensions.
    `pi package add` for these extensions. They bypass the pin, the next installer run
    silently reverts them, and `bin/pi-setup-doctor` reports the drift as a PROBLEM.
 2. **Never** edit anything under `~/.pi/agent/local/` or the managed skill directories
-   under `~/.pi/agent/skills/` (`agent-browser-cli`, `update-pi-setup`, `unslop`). They
+   under `~/.pi/agent/skills/` (`agent-browser-cli`, `external-review`, `update-pi-setup`, `unslop`). They
    are install output. Edit `forks/<name>/` or `skills/<name>/` in the repository and
    reinstall.
 3. Read the upstream changelog for breaking changes **before** bumping a version, not
@@ -210,7 +210,7 @@ again at the next release, because `reviewedAgainst` will no longer equal latest
 them directly, bump `version` in both `package.json` and `vendor.json` if the change is
 worth marking, then re-run the installer.
 
-First-party skills are not packages: `agent-browser-cli`, `update-pi-setup` (this one),
+First-party skills are not packages: `agent-browser-cli`, `external-review`, `update-pi-setup` (this one),
 and `unslop` live in `skills/` and are installed into the agent directories' `skills/`.
 Edit them directly and `./install.sh`; no version file exists to bump.
 
@@ -300,7 +300,7 @@ Then start `pi` and `piwf` once interactively and confirm each startup listing i
 ```text
 pi   (must omit workflow and the workflow skills/commands)
      [Skills]
-       agent-browser-cli, monitor, unslop, update-pi-setup
+       agent-browser-cli, external-review, monitor, unslop, update-pi-setup
      [Prompts]
        /watch
      [Extensions]
@@ -308,7 +308,7 @@ pi   (must omit workflow and the workflow skills/commands)
 
 piwf (must include workflow)
      [Skills]
-       agent-browser-cli, monitor, unslop, update-pi-setup, workflow-authoring, workflow-patterns
+       agent-browser-cli, external-review, monitor, unslop, update-pi-setup, workflow-authoring, workflow-patterns
      [Prompts]
        /watch
      [Extensions]
