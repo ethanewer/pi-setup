@@ -17,6 +17,36 @@ subsequent lines are events of `type` in {model_change, thinking_level_change,
 message, custom_message, custom, compaction}. The script discovers these by
 walking the configured roots and by extracting the session-archives tarballs.
 
+Sister harnesses: occ (Claude Code) and ocdx (Codex CLI)
+---------------------------------------------------------
+The occ/ocdx wrappers in lib/wrappers pin the same open-weight OpenRouter
+models under isolated state dirs, and both CLIs persist full transcripts:
+
+  * occ   -> ~/.pi/agent-occ/projects/<escaped-cwd>/<session>.jsonl
+             Claude Code transcript lines: type in {user, assistant, system,
+             attachment, summary, ...}; Anthropic-format `message` payloads
+             with thinking / tool_use / tool_result blocks, per-message model
+             and usage. `thinking` text is captured verbatim into
+             reasoning_content. The system prompt is NOT persisted by Claude
+             Code, so (like pi) no system message is emitted.
+  * ocdx  -> ~/.pi/agent-ocdx/codex/sessions/YYYY/MM/DD/rollout-*.jsonl
+             Codex rollout lines: session_meta (includes the full
+             base_instructions system prompt, which IS emitted as a system
+             message), turn_context (model), token_usage_record (per-call
+             usage), and response_item payloads: message / reasoning
+             (summary + reasoning_text content) / function_call /
+             function_call_output / custom_tool_call(_output) /
+             local_shell_call.
+
+Tool *schemas* are persisted by neither raw format (same as pi); the exported
+`tools` field lists every tool name observed in calls, and every call keeps its
+full arguments and every result its full text. Rows carry harness/agent
+"claude-code" (source local/occ) or "codex" (source local/ocdx) so they stay
+distinguishable from pi rows. Sidechain (subagent) lines in Claude transcripts
+are skipped; the count is recorded in source_metadata. Benchmark-rollout
+detection is pi-specific and does not run on these sources; the smoke/probe,
+model-invariant, redaction, and newline-reasoning policies apply unchanged.
+
 Target row schema (matches glm-5.2-multi-harness-agent default config)
 ------------------------------------------------------------------------
 One JSON object per converted trace. `messages` is rendered in OpenAI chat
@@ -112,6 +142,9 @@ DEFAULT_ROOTS = [
     # piwf (workflow profile) persists workflow subagent transcripts under its
     # own agent dir (PI_CODING_AGENT_DIR), not the shared sessions dir.
     HOME / ".pi" / "agent-wf" / "sessions",
+    # occ (Claude Code) and ocdx (Codex) wrapper state dirs; see lib/wrappers.
+    HOME / ".pi" / "agent-occ" / "projects",
+    HOME / ".pi" / "agent-ocdx" / "codex" / "sessions",
     HOME / "mk-sessions",
     Path("/tmp"),
     Path("/private/tmp"),
@@ -137,9 +170,16 @@ pretty_name: Pi Trace Cache
 
 # Pi Trace Cache
 
-Private, redacted Pi coding-agent traces used as source material for dataset
-construction. Raw session files remain outside this repository; uploaded files
-are derived exports.
+Private, redacted agent traces used as source material for dataset
+construction. Rows come from the pi coding agent (`harness: "pi"`) and from
+the pinned open-weight sister harnesses occ (Claude Code, `harness:
+"claude-code"`, `source: local/occ`) and ocdx (Codex CLI, `harness: "codex"`,
+`source: local/ocdx`). Raw session files remain outside this repository;
+uploaded files are derived exports. Codex rollouts persist their
+`base_instructions` system prompt (emitted as a system message); pi and Claude
+Code transcripts do not persist system prompts. Tool schemas are persisted by
+no source format, so `tools` lists the tool names observed in calls; every
+call keeps its full arguments and every result its full text.
 
 ## Newline-reasoning quarantine
 
@@ -333,6 +373,16 @@ def detect_benchmark_rollout(events: list[dict], cwd: str) -> str | None:
         return "terminalbench"
 
     return None
+
+
+# Sessions whose cwd is inside an eval results tree are benchmark rollouts by
+# construction. Defense in depth: the live eval runners use --no-session or
+# per-run isolated homes, so normally no such files reach the scanned roots.
+EVAL_RESULTS_CWD_RE = re.compile(r"/evals/[^/]+/results(/|$)")
+
+
+def eval_results_cwd(cwd: str) -> str | None:
+    return "benchmark_rollout" if EVAL_RESULTS_CWD_RE.search(cwd or "") else None
 
 # --------------------------------------------------------------------------- #
 # Smoke / probe session detection
@@ -648,9 +698,22 @@ class EvalStats:
     runs: int = 0
     scored_tasks: int = 0
     dropped_model: int = 0
+    dropped_harness: int = 0
     dropped_imperfect: int = 0
     selected: int = 0
     fail_reasons: Counter = field(default_factory=Counter)
+
+
+def monitor_meta_is_pi(meta: dict) -> bool:
+    """Only pi-harness runs belong to the monitor-bench dataset policy.
+
+    The eval now also runs under p/occ/ocdx (meta.json harness field; legacy
+    metas predate it and are pi). External-harness runs must never be ingested
+    as `harness: "pi"` rows: their control-task (t5) runs can pass the
+    perfect-run filter — used_monitor is legitimately False there — and would
+    crowd real pi traces out of the per-task cap under the wrong identity.
+    """
+    return str((meta or {}).get("harness") or "pi") == "pi"
 
 
 def discover_monitor_bench_runs() -> list[tuple[Path, Path]]:
@@ -860,6 +923,9 @@ def convert_monitor_bench_traces(
     candidates: list[dict] = []
     for co, run_dir in runs:
         meta = json.loads((run_dir / "meta.json").read_text())
+        if not monitor_meta_is_pi(meta):
+            stats.dropped_harness += 1
+            continue
         model = str(meta.get("model") or "")
         provider = model.split("/")[0].lower() if model else ""
         try:
@@ -1256,18 +1322,83 @@ def looks_like_pi_session(path: Path) -> bool:
         return False
 
 
-def walk_for_traces(roots: Iterable[Path]) -> list[Path]:
-    """Walk roots looking for pi session JSONL files. Skips heavy/system dirs."""
-    out: list[Path] = []
+def looks_like_codex_rollout(path: Path) -> bool:
+    """True if the first JSONL line is a Codex `session_meta` event (ocdx).
+
+    The session_meta line embeds the full base_instructions system prompt, so
+    the first line can be large; read generously.
+    """
+    try:
+        with open(path, "rb") as f:
+            head = f.readline(8 * 1024 * 1024)
+        if not head.startswith(b"{"):
+            return False
+        obj = json.loads(head)
+        return (
+            obj.get("type") == "session_meta"
+            and isinstance(obj.get("payload"), dict)
+            and bool(obj["payload"].get("id") or obj["payload"].get("session_id"))
+        )
+    except Exception:
+        return False
+
+
+def looks_like_claude_session(path: Path) -> bool:
+    """True if one of the first few JSONL lines is a Claude Code transcript
+    message (occ): type user/assistant with a sessionId and an Anthropic-format
+    message payload. Files can open with summary/system/file-history-snapshot
+    lines, so scan a short prefix."""
+    try:
+        with open(path, "r", encoding="utf-8", errors="replace") as f:
+            for i, line in enumerate(f):
+                if i >= 5:
+                    break
+                line = line.strip()
+                if not line.startswith("{"):
+                    continue
+                try:
+                    obj = json.loads(line)
+                except Exception:
+                    continue
+                if not isinstance(obj, dict):
+                    continue
+                if (
+                    obj.get("type") in ("user", "assistant")
+                    and obj.get("sessionId")
+                    and isinstance(obj.get("message"), dict)
+                ):
+                    return True
+        return False
+    except Exception:
+        return False
+
+
+def classify_trace_file(path: Path) -> str | None:
+    """Return "pi", "claude" (occ transcript), "codex" (ocdx rollout), or None."""
+    if looks_like_pi_session(path):
+        return "pi"
+    if looks_like_codex_rollout(path):
+        return "codex"
+    if looks_like_claude_session(path):
+        return "claude"
+    return None
+
+
+def walk_for_traces(roots: Iterable[Path]) -> list[tuple[Path, str]]:
+    """Walk roots looking for pi/occ/ocdx session JSONL files. Skips heavy/system
+    dirs. Returns (path, kind) pairs with kind from classify_trace_file."""
+    out: list[tuple[Path, str]] = []
     seen: set[Path] = set()
     for root in roots:
         root = root.expanduser()
         if not root.exists():
             continue
         if root.is_file():
-            if root.suffix == ".jsonl" and root not in seen and looks_like_pi_session(root):
-                seen.add(root)
-                out.append(root)
+            if root.suffix == ".jsonl" and root not in seen:
+                kind = classify_trace_file(root)
+                if kind:
+                    seen.add(root)
+                    out.append((root, kind))
             continue
         for dp, dns, fns in os.walk(root):
             dns[:] = [d for d in dns if d not in SKIP_DIRS]
@@ -1281,9 +1412,10 @@ def walk_for_traces(roots: Iterable[Path]) -> list[Path]:
                 p = Path(dp) / fn
                 if p in seen:
                     continue
-                if looks_like_pi_session(p):
+                kind = classify_trace_file(p)
+                if kind:
                     seen.add(p)
-                    out.append(p)
+                    out.append((p, kind))
     return sorted(out)
 
 
@@ -1374,6 +1506,7 @@ class ConvStats:
     newline_reasoning_truncated: int = 0
     newline_reasoning_excluded: int = 0
     converted_closed: int = 0
+    converted_sources: Counter = field(default_factory=Counter)
     tools_used: set[str] = field(default_factory=set)
 
 
@@ -1425,6 +1558,7 @@ def convert_messages(events: list[dict]) -> tuple[list[dict], dict]:
     exception_type: str | None = None
     assistant_turns = 0
     openai_turns = 0
+    anthropic_turns = 0
     reasoning_present = False
 
     for ev in events:
@@ -1451,6 +1585,8 @@ def convert_messages(events: list[dict]) -> tuple[list[dict], dict]:
             mdl = m.get("model")
             if is_openai_model(prov, mdl):
                 openai_turns += 1
+            if extra_filter_match(prov, mdl) == "anthropic":
+                anthropic_turns += 1
             texts: list[str] = []
             thinks: list[str] = []
             tool_calls: list[dict] = []
@@ -1532,6 +1668,7 @@ def convert_messages(events: list[dict]) -> tuple[list[dict], dict]:
     meta = {
         "assistant_turns": assistant_turns,
         "openai_turns": openai_turns,
+        "anthropic_turns": anthropic_turns,
         "tools_used": all_tools,
         "usage_inputs": usage_inputs,
         "usage_outputs": usage_outputs,
@@ -1598,6 +1735,11 @@ def convert_session(
     # mixed sessions are dropped in both lanes. faux and qwen3-0.6b stay
     # dropped regardless of lane (mock / tiny test models, not real data).
     closed_kind = ""
+    anthropic_turns = meta.get("anthropic_turns", 0)
+    closed_turns = meta["openai_turns"] + anthropic_turns
+    if meta["assistant_turns"] > 0 and 0 < closed_turns < meta["assistant_turns"]:
+        # Mixed open/closed sessions are dropped from both lanes (TRACE-DATASET.md).
+        return None, "model:mixed-closed"
     if is_openai_model(eff_provider, eff_model):
         if not include_closed:
             return None, "openai"
@@ -1606,6 +1748,10 @@ def convert_session(
         if not include_closed:
             return None, "openai"
         closed_kind = "openai"
+    elif meta["assistant_turns"] > 0 and anthropic_turns == meta["assistant_turns"]:
+        if not include_closed:
+            return None, "model:anthropic"
+        closed_kind = "anthropic"
     if not messages:
         return None, "empty"
 
@@ -1618,7 +1764,7 @@ def convert_session(
             return None, f"model:{extra}"
 
     # ---- Benchmark-rollout filter -------------------------------------- #
-    rollout = detect_benchmark_rollout(events, cwd)
+    rollout = detect_benchmark_rollout(events, cwd) or eval_results_cwd(cwd)
     if rollout:
         return None, rollout
 
@@ -1741,6 +1887,686 @@ def parse_session_file(path: Path) -> list[dict] | None:
         print(f"  [warn] parse error in {path}: {e}", file=sys.stderr)
         return None
     return events if events else None
+
+
+# --------------------------------------------------------------------------- #
+# occ (Claude Code) and ocdx (Codex) transcript adapters
+# --------------------------------------------------------------------------- #
+#
+# Both wrappers (lib/wrappers/occ.sh, lib/wrappers/ocdx.sh) pin the same
+# open-weight OpenRouter models, and both CLIs persist full transcripts:
+#
+#   occ  -> ~/.pi/agent-occ/projects/<escaped-cwd>/<session>.jsonl
+#           Anthropic-format message payloads: thinking blocks (verbatim
+#           reasoning), tool_use blocks (full arguments), tool_result blocks
+#           (full output text), per-message model + usage. The system prompt
+#           is not persisted by Claude Code, so no system message is emitted.
+#   ocdx -> ~/.pi/agent-ocdx/codex/sessions/YYYY/MM/DD/rollout-*.jsonl
+#           session_meta carries the full base_instructions system prompt
+#           (emitted as a system message); response_item payloads carry
+#           reasoning (summary + reasoning_text), function_call / output,
+#           custom_tool_call / output, and local_shell_call items; per-turn
+#           token_usage_record lines carry usage.
+#
+# Tool *schemas* are persisted by neither raw format (same as pi), so the
+# exported `tools` field lists every tool name observed in calls, and every
+# call keeps its full arguments and every result its full text.
+
+def _closed_lane_for(
+    provider: str | None,
+    model: str | None,
+    assistant_turns: int,
+    openai_turns: int,
+    anthropic_turns: int,
+    include_closed: bool,
+) -> tuple[str, str]:
+    """Shared closed-model classification for the occ/ocdx adapters. Returns
+    (closed_kind, drop_reason); exactly one of them is empty on a drop.
+
+    Per TRACE-DATASET.md a session routes to the closed lane only when EVERY
+    assistant turn came from a closed provider (OpenAI or Anthropic); a mixed
+    session (any closed turn plus any open turn, in either order) is dropped
+    from both lanes.
+    """
+    closed_turns = openai_turns + anthropic_turns
+    if assistant_turns > 0 and 0 < closed_turns < assistant_turns:
+        return "", "model:mixed-closed"
+    if is_openai_model(provider, model) or (assistant_turns > 0 and openai_turns == assistant_turns):
+        if not include_closed:
+            return "", "openai"
+        return "openai", ""
+    if (assistant_turns > 0 and anthropic_turns == assistant_turns) \
+            or extra_filter_match(provider, model) == "anthropic":
+        if not include_closed:
+            return "", "model:anthropic"
+        return "anthropic", ""
+    extra = extra_filter_match(provider, model)
+    if extra:
+        return "", f"model:{extra}"
+    return "", ""
+
+
+def _assemble_row(
+    *,
+    harness: str,
+    agent: str,
+    source_label: str,
+    key_prefix: str,
+    session_id: str,
+    messages: list[dict],
+    model: str | None,
+    provider: str | None,
+    date: str,
+    cwd: str,
+    source_path: str,
+    source_archive: str,
+    usage_inputs: list[int],
+    usage_outputs: list[int],
+    usage_reasoning: list[int],
+    usage_total: list[int],
+    assistant_turns: int,
+    tools_used: set[str],
+    exception_message: str | None,
+    exception_type: str | None,
+    reasoning_present: bool,
+    extra_source_metadata: dict | None = None,
+) -> dict:
+    """Build a dataset row in the same schema convert_session emits for pi."""
+    first_input = usage_inputs[0] if usage_inputs else 0
+    completion = sum(usage_outputs)
+    last_input = usage_inputs[-1] if usage_inputs else 0
+    last_total = usage_total[-1] if usage_total else (last_input + completion)
+    prompt_tokens = first_input
+    total_tokens = prompt_tokens + completion
+    api_usage_complete = bool(usage_inputs) and len(usage_inputs) == assistant_turns
+
+    lang, domain = _detect_language(
+        [tc for m in messages for tc in (m.get("tool_calls") or [])]
+    )
+    description = _first_user_text(messages)
+    row_id = f"{key_prefix}:{session_id}" if session_id else f"{key_prefix}:{abs(hash(source_path))}"
+    source_metadata = {
+        "cwd": cwd,
+        "host": os.uname().nodename if hasattr(os, "uname") else "",
+        "pi_session_file": source_path,
+    }
+    source_metadata.update(extra_source_metadata or {})
+
+    return {
+        "agent": agent,
+        "api_completion_tokens": completion,
+        "api_exchange_count": assistant_turns,
+        "api_prompt_tokens": last_input,
+        "api_provider": "auto",
+        "api_reasoning_complete": reasoning_present or not assistant_turns,
+        "api_row_id": row_id,
+        "api_session_id": session_id,
+        "api_session_key": f"{key_prefix}:{session_id}" if session_id else "",
+        "api_total_tokens": last_total,
+        "api_usage_complete": api_usage_complete,
+        "command_complexity": "",
+        "completion_tokens": completion,
+        "container_def": "",
+        "date": date,
+        "description": description,
+        "domain": domain,
+        "exception_message": exception_message,
+        "exception_type": exception_type,
+        "harness": harness,
+        "harness_completion_tokens": 0,
+        "harness_prompt_tokens": 0,
+        "language": lang,
+        "messages": messages,
+        "model": str(model or ""),
+        "model_provider": str(provider or ""),
+        "outcome": {
+            "completion_tokens": completion,
+            "exception_message": exception_message,
+            "exception_type": exception_type,
+            "harness": harness,
+            "passed": None,
+            "prompt_tokens": prompt_tokens,
+            "result_path": source_path,
+            "reward": None,
+            "task_name": session_id,
+            "trial_name": "",
+        },
+        "parent_row_id": None,
+        "passed": None,
+        "primitive_skills": json.dumps([lang]) if lang else "[]",
+        "prompt_tokens": prompt_tokens,
+        "provider_metadata": {"api_base": ""},
+        "reasoning_complete": reasoning_present or not assistant_turns,
+        "result_path": source_path,
+        "reward": None,
+        "root_row_id": row_id,
+        "run_id": session_id,
+        "scenario": "",
+        "segment_index": 0,
+        "segment_reason": "root",
+        "skill_type": domain,
+        "source": source_label,
+        "source_archive": source_archive,
+        "source_metadata": source_metadata,
+        "source_path": source_path,
+        "task": f"{key_prefix}-session/{session_id}" if session_id else f"{key_prefix}-session",
+        "task_complexity": "",
+        "task_id": session_id,
+        "test_final_state": "",
+        "test_initial_state": "",
+        "token_accounting": "conversation_delta_from_api_usage" if api_usage_complete else "estimated",
+        "tools": sorted(tools_used),
+        "total_tokens": total_tokens,
+        "trace_key": f"{key_prefix}-session:{session_id}" if session_id else row_id,
+        "trial_name": "",
+        "truth": "",
+    }
+
+
+def convert_claude_messages(events: list[dict]) -> tuple[list[dict], dict]:
+    """Build OpenAI-style messages from a Claude Code (occ) transcript.
+
+    Keeps every thinking block verbatim as reasoning_content and every
+    tool_use/tool_result pair with full arguments and output text. Sidechain
+    (subagent) lines and isMeta lines are skipped and counted.
+    """
+    messages: list[dict] = []
+    usage_inputs: list[int] = []
+    usage_outputs: list[int] = []
+    usage_reasoning: list[int] = []
+    usage_total: list[int] = []
+    all_tools: set[str] = set()
+    exception_message: str | None = None
+    exception_type: str | None = None
+    assistant_turns = 0
+    openai_turns = 0
+    anthropic_turns = 0
+    reasoning_present = False
+    sidechain_lines = 0
+    meta_lines = 0
+    models: list[str] = []
+    vendors: list[str] = []
+
+    for ev in events:
+        if not isinstance(ev, dict):
+            continue
+        t = ev.get("type")
+        if ev.get("isSidechain"):
+            sidechain_lines += 1
+            continue
+        if t not in ("user", "assistant"):
+            continue
+        if ev.get("isMeta"):
+            meta_lines += 1
+            continue
+        m = ev.get("message") or {}
+        role = m.get("role")
+        content = m.get("content")
+
+        if t == "user" and role == "user":
+            texts: list[str] = []
+            tool_results: list[tuple[str, str, bool]] = []
+            if isinstance(content, str):
+                texts.append(content)
+            elif isinstance(content, list):
+                for b in content:
+                    if not isinstance(b, dict):
+                        continue
+                    bt = b.get("type")
+                    if bt == "text":
+                        texts.append(str(b.get("text") or ""))
+                    elif bt == "tool_result":
+                        c = b.get("content")
+                        if isinstance(c, list):
+                            txt = "\n".join(
+                                _blk_text(x) for x in c if isinstance(x, dict)
+                            )
+                        else:
+                            txt = str(c if c is not None else "")
+                        tool_results.append(
+                            (str(b.get("tool_use_id") or ""), txt, bool(b.get("is_error")))
+                        )
+            if tool_results:
+                for cid, txt, is_err in tool_results:
+                    if is_err and exception_message is None:
+                        exception_message = txt[:4000] or "tool error"
+                        exception_type = "tool_error"
+                    messages.append({"role": "tool", "content": txt, "tool_call_id": cid})
+            # A user line can carry text alongside tool results (interruptions /
+            # steering); keep it as its own user message AFTER the tool results
+            # so no utterance is dropped from the exported row.
+            tx = "\n".join(x for x in texts if x)
+            if tx.strip():
+                messages.append({"role": "user", "content": [{"type": "text", "text": tx}]})
+
+        elif t == "assistant" and role == "assistant":
+            assistant_turns += 1
+            mdl = m.get("model")
+            vendor = m.get("provider")
+            if mdl:
+                models.append(str(mdl))
+            if vendor:
+                vendors.append(str(vendor))
+            if is_openai_model(None, mdl):
+                openai_turns += 1
+            if extra_filter_match(None, mdl) == "anthropic":
+                anthropic_turns += 1
+            texts, thinks, tool_calls = [], [], []
+            for b in content if isinstance(content, list) else []:
+                if not isinstance(b, dict):
+                    continue
+                bt = b.get("type")
+                if bt == "text":
+                    tx = str(b.get("text") or "")
+                    if tx:
+                        texts.append(tx)
+                elif bt == "thinking":
+                    tk = b.get("thinking") or b.get("content") or ""
+                    if tk:
+                        thinks.append(str(tk))
+                        reasoning_present = True
+                elif bt == "redacted_thinking":
+                    reasoning_present = True  # opaque payload; presence only
+                elif bt == "tool_use":
+                    name = str(b.get("name") or "")
+                    if name:
+                        all_tools.add(name)
+                    args = b.get("input") if isinstance(b.get("input"), (dict, list)) else {}
+                    tool_calls.append({
+                        "id": str(b.get("id") or ""),
+                        "type": "function",
+                        "function": {"name": name, "arguments": args},
+                    })
+            u = m.get("usage") or {}
+            turn_reasoning: int | None = None
+            if isinstance(u, dict) and u:
+                inp = (int(u.get("input_tokens") or 0)
+                       + int(u.get("cache_read_input_tokens") or 0)
+                       + int(u.get("cache_creation_input_tokens") or 0))
+                out = int(u.get("output_tokens") or 0)
+                det = u.get("output_tokens_details") or {}
+                rsn = int(det.get("thinking_tokens") or 0) if isinstance(det, dict) else 0
+                usage_inputs.append(inp)
+                usage_outputs.append(out)
+                usage_reasoning.append(rsn)
+                usage_total.append(int(u.get("total_tokens") or 0) or (inp + out))
+                turn_reasoning = rsn
+            msg: dict = {
+                "role": "assistant",
+                "content": "\n".join(texts) if texts else None,
+                "reasoning_content": "\n".join(thinks) if thinks else "",
+            }
+            if tool_calls:
+                msg["tool_calls"] = tool_calls
+            # Per-turn only: an assistant line without usage must not inherit
+            # the previous turn's reasoning_tokens.
+            if turn_reasoning is not None:
+                msg["reasoning_tokens"] = turn_reasoning
+            msg["reasoning_status"] = "present" if thinks else "native_empty"
+            messages.append(msg)
+
+    meta = {
+        "assistant_turns": assistant_turns,
+        "openai_turns": openai_turns,
+        "anthropic_turns": anthropic_turns,
+        "tools_used": all_tools,
+        "usage_inputs": usage_inputs,
+        "usage_outputs": usage_outputs,
+        "usage_reasoning": usage_reasoning,
+        "usage_total": usage_total,
+        "exception_message": exception_message,
+        "exception_type": exception_type,
+        "reasoning_present": reasoning_present,
+        "sidechain_lines": sidechain_lines,
+        "meta_lines": meta_lines,
+        "models": models,
+        "vendors": vendors,
+    }
+    return messages, meta
+
+
+def convert_claude_session(
+    events: list[dict],
+    source_path: str,
+    source_archive: str,
+    include_closed: bool = False,
+) -> tuple[dict | None, str]:
+    """Convert a parsed occ (Claude Code) transcript to a dataset row."""
+    session_id = cwd = ts = cli_version = git_branch = ""
+    for ev in events:
+        if not isinstance(ev, dict):
+            continue
+        session_id = session_id or str(ev.get("sessionId") or "")
+        cwd = cwd or str(ev.get("cwd") or "")
+        ts = ts or str(ev.get("timestamp") or "")
+        cli_version = cli_version or str(ev.get("version") or "")
+        git_branch = git_branch or str(ev.get("gitBranch") or "")
+        if session_id and cwd and ts:
+            break
+
+    if eval_results_cwd(cwd):
+        return None, "benchmark_rollout"
+
+    messages, meta = convert_claude_messages(events)
+    if not messages or meta["assistant_turns"] == 0:
+        return None, "empty"
+
+    eff_model = meta["models"][-1] if meta["models"] else None
+    # occ always routes through OpenRouter (the wrapper forces the endpoint);
+    # the per-message provider field names the upstream vendor, not the API.
+    eff_provider = "openrouter" if eff_model else None
+    closed_kind, drop = _closed_lane_for(
+        eff_provider, eff_model, meta["assistant_turns"], meta["openai_turns"],
+        meta["anthropic_turns"], include_closed
+    )
+    if drop:
+        return None, drop
+
+    row = _assemble_row(
+        harness="claude-code",
+        agent="claude-code",
+        source_label="local/occ",
+        key_prefix="occ",
+        session_id=session_id,
+        messages=messages,
+        model=eff_model,
+        provider=eff_provider,
+        date=_iso_to_date(ts),
+        cwd=cwd,
+        source_path=source_path,
+        source_archive=source_archive,
+        usage_inputs=meta["usage_inputs"],
+        usage_outputs=meta["usage_outputs"],
+        usage_reasoning=meta["usage_reasoning"],
+        usage_total=meta["usage_total"],
+        assistant_turns=meta["assistant_turns"],
+        tools_used=meta["tools_used"],
+        exception_message=meta["exception_message"],
+        exception_type=meta["exception_type"],
+        reasoning_present=meta["reasoning_present"],
+        extra_source_metadata={
+            "harness_profile": "occ",
+            "claude_cli_version": cli_version,
+            "git_branch": git_branch,
+            "openrouter_vendors": sorted(set(meta["vendors"])),
+            "sidechain_lines_skipped": meta["sidechain_lines"],
+            "meta_lines_skipped": meta["meta_lines"],
+        },
+    )
+    if closed_kind:
+        row["model_lane"] = closed_kind
+    return row, ""
+
+
+def _codex_output_text(output: Any) -> str:
+    """Extract text from a codex function_call_output/custom_tool_call_output
+    payload (plain string, or {content: [{type, text}, ...]})."""
+    if isinstance(output, str):
+        return output
+    if isinstance(output, dict):
+        c = output.get("content")
+        if isinstance(c, list):
+            return "\n".join(_blk_text(x) for x in c if isinstance(x, dict))
+        if isinstance(c, str):
+            return c
+    return "" if output is None else str(output)
+
+
+def convert_codex_messages(events: list[dict]) -> tuple[list[dict], dict, dict]:
+    """Build OpenAI-style messages from an ocdx (Codex) rollout.
+
+    Consecutive reasoning / function_call / assistant-message response items
+    are grouped into one assistant turn (flushed at the first tool output, the
+    next user message, or end of file), mirroring pi's one-message-per-call
+    structure. base_instructions from session_meta become a system message.
+    Returns (messages, meta, session_info).
+    """
+    messages: list[dict] = []
+    usage_inputs: list[int] = []
+    usage_outputs: list[int] = []
+    usage_reasoning: list[int] = []
+    usage_total: list[int] = []
+    all_tools: set[str] = set()
+    assistant_turns = 0
+    openai_turns = 0
+    anthropic_turns = 0
+    reasoning_present = False
+    models: list[str] = []
+    current_model: str | None = None
+    info = {
+        "session_id": "", "cwd": "", "timestamp": "", "cli_version": "",
+        "model_provider": "", "base_instructions": "",
+    }
+    pending: dict | None = None
+
+    def new_pending() -> dict:
+        return {"reasoning": [], "texts": [], "tool_calls": []}
+
+    def flush() -> None:
+        nonlocal pending, assistant_turns, openai_turns, anthropic_turns
+        if pending is None:
+            return
+        if not (pending["reasoning"] or pending["texts"] or pending["tool_calls"]):
+            pending = None
+            return
+        assistant_turns += 1
+        if is_openai_model(None, current_model):
+            openai_turns += 1
+        if extra_filter_match(None, current_model) == "anthropic":
+            anthropic_turns += 1
+        msg: dict = {
+            "role": "assistant",
+            "content": "\n".join(pending["texts"]) if pending["texts"] else None,
+            "reasoning_content": "\n".join(pending["reasoning"]) if pending["reasoning"] else "",
+        }
+        if pending["tool_calls"]:
+            msg["tool_calls"] = pending["tool_calls"]
+        msg["reasoning_status"] = "present" if pending["reasoning"] else "native_empty"
+        messages.append(msg)
+        pending = None
+
+    for ev in events:
+        if not isinstance(ev, dict):
+            continue
+        t = ev.get("type")
+        p = ev.get("payload") if isinstance(ev.get("payload"), dict) else {}
+
+        if t == "session_meta":
+            info["session_id"] = str(p.get("id") or p.get("session_id") or "")
+            info["cwd"] = str(p.get("cwd") or "")
+            info["timestamp"] = str(p.get("timestamp") or ev.get("timestamp") or "")
+            info["cli_version"] = str(p.get("cli_version") or "")
+            info["model_provider"] = str(p.get("model_provider") or "")
+            bi = p.get("base_instructions")
+            if isinstance(bi, dict):
+                info["base_instructions"] = str(bi.get("text") or "")
+            elif isinstance(bi, str):
+                info["base_instructions"] = bi
+            if info["base_instructions"]:
+                messages.append({"role": "system", "content": [
+                    {"type": "text", "text": info["base_instructions"]}]})
+
+        elif t == "turn_context":
+            mdl = p.get("model")
+            if mdl:
+                models.append(str(mdl))
+                current_model = str(mdl)
+            info["cwd"] = info["cwd"] or str(p.get("cwd") or "")
+
+        elif t == "token_usage_record":
+            u = p.get("turn_token_usage") or p.get("usage") or {}
+            if isinstance(u, dict) and u:
+                usage_inputs.append(int(u.get("input_tokens") or 0))
+                usage_outputs.append(int(u.get("output_tokens") or 0))
+                usage_reasoning.append(int(u.get("reasoning_output_tokens") or 0))
+                usage_total.append(int(u.get("total_tokens") or 0))
+
+        elif t == "response_item":
+            pt = p.get("type")
+            if pt == "message":
+                role = p.get("role")
+                texts = [
+                    str(c.get("text") or "")
+                    for c in (p.get("content") or [])
+                    if isinstance(c, dict) and c.get("type") in ("input_text", "output_text", "text")
+                ]
+                texts = [x for x in texts if x]
+                if role == "user":
+                    flush()
+                    if texts:
+                        messages.append({"role": "user", "content": [
+                            {"type": "text", "text": "\n".join(texts)}]})
+                elif role in ("system", "developer"):
+                    flush()
+                    if texts:
+                        messages.append({"role": "system", "content": [
+                            {"type": "text", "text": "\n".join(texts)}]})
+                elif role == "assistant":
+                    if pending is None:
+                        pending = new_pending()
+                    pending["texts"].extend(texts)
+            elif pt == "reasoning":
+                if pending is None:
+                    pending = new_pending()
+                for part in (p.get("summary") or []) + (p.get("content") or []):
+                    if isinstance(part, dict):
+                        tx = str(part.get("text") or "")
+                        if tx:
+                            pending["reasoning"].append(tx)
+                            reasoning_present = True
+                if p.get("encrypted_content"):
+                    reasoning_present = True  # opaque payload; presence only
+            elif pt == "function_call":
+                if pending is None:
+                    pending = new_pending()
+                name = str(p.get("name") or "")
+                if name:
+                    all_tools.add(name)
+                args = p.get("arguments")
+                if isinstance(args, str):
+                    try:
+                        parsed = json.loads(args)
+                        args = parsed if isinstance(parsed, (dict, list)) else {"value": parsed}
+                    except Exception:
+                        args = {"raw": args}
+                if not isinstance(args, (dict, list)):
+                    args = {}
+                pending["tool_calls"].append({
+                    "id": str(p.get("call_id") or p.get("id") or ""),
+                    "type": "function",
+                    "function": {"name": name, "arguments": args},
+                })
+            elif pt == "custom_tool_call":
+                if pending is None:
+                    pending = new_pending()
+                name = str(p.get("name") or "")
+                if name:
+                    all_tools.add(name)
+                pending["tool_calls"].append({
+                    "id": str(p.get("call_id") or ""),
+                    "type": "function",
+                    "function": {"name": name, "arguments": {"input": str(p.get("input") or "")}},
+                })
+            elif pt == "local_shell_call":
+                if pending is None:
+                    pending = new_pending()
+                all_tools.add("shell")
+                action = p.get("action") if isinstance(p.get("action"), (dict, list)) else {}
+                pending["tool_calls"].append({
+                    # Codex LocalShellCall pairs its function_call_output by
+                    # call_id (id may be absent); same fallback as function_call.
+                    "id": str(p.get("call_id") or p.get("id") or ""),
+                    "type": "function",
+                    "function": {"name": "shell", "arguments": action},
+                })
+            elif pt in ("function_call_output", "custom_tool_call_output"):
+                flush()
+                messages.append({
+                    "role": "tool",
+                    "content": _codex_output_text(p.get("output")),
+                    "tool_call_id": str(p.get("call_id") or ""),
+                })
+        # event_msg, world_state, compaction, etc. carry no new message content.
+
+    flush()
+
+    # token_usage_record lines land after their turn's response items, so
+    # backfill per-turn reasoning tokens onto assistant messages by ordinal.
+    assistant_msgs = [m for m in messages if m.get("role") == "assistant"]
+    if usage_reasoning and len(usage_reasoning) == len(assistant_msgs):
+        for m, rsn in zip(assistant_msgs, usage_reasoning):
+            m["reasoning_tokens"] = rsn
+
+    meta = {
+        "assistant_turns": assistant_turns,
+        "openai_turns": openai_turns,
+        "anthropic_turns": anthropic_turns,
+        "tools_used": all_tools,
+        "usage_inputs": usage_inputs,
+        "usage_outputs": usage_outputs,
+        "usage_reasoning": usage_reasoning,
+        "usage_total": usage_total,
+        "exception_message": None,
+        "exception_type": None,
+        "reasoning_present": reasoning_present,
+        "models": models,
+    }
+    return messages, meta, info
+
+
+def convert_codex_session(
+    events: list[dict],
+    source_path: str,
+    source_archive: str,
+    include_closed: bool = False,
+) -> tuple[dict | None, str]:
+    """Convert a parsed ocdx (Codex) rollout to a dataset row."""
+    messages, meta, info = convert_codex_messages(events)
+    if not messages or meta["assistant_turns"] == 0:
+        return None, "empty"
+    if eval_results_cwd(info["cwd"]):
+        return None, "benchmark_rollout"
+
+    eff_model = meta["models"][-1] if meta["models"] else None
+    eff_provider = info["model_provider"] or ("openrouter" if eff_model else None)
+    closed_kind, drop = _closed_lane_for(
+        eff_provider, eff_model, meta["assistant_turns"], meta["openai_turns"],
+        meta["anthropic_turns"], include_closed
+    )
+    if drop:
+        return None, drop
+
+    row = _assemble_row(
+        harness="codex",
+        agent="codex",
+        source_label="local/ocdx",
+        key_prefix="ocdx",
+        session_id=info["session_id"],
+        messages=messages,
+        model=eff_model,
+        provider=eff_provider,
+        date=_iso_to_date(info["timestamp"]),
+        cwd=info["cwd"],
+        source_path=source_path,
+        source_archive=source_archive,
+        usage_inputs=meta["usage_inputs"],
+        usage_outputs=meta["usage_outputs"],
+        usage_reasoning=meta["usage_reasoning"],
+        usage_total=meta["usage_total"],
+        assistant_turns=meta["assistant_turns"],
+        tools_used=meta["tools_used"],
+        exception_message=meta["exception_message"],
+        exception_type=meta["exception_type"],
+        reasoning_present=meta["reasoning_present"],
+        extra_source_metadata={
+            "harness_profile": "ocdx",
+            "codex_cli_version": info["cli_version"],
+            "system_prompt_persisted": bool(info["base_instructions"]),
+        },
+    )
+    if closed_kind:
+        row["model_lane"] = closed_kind
+    return row, ""
 
 
 # --------------------------------------------------------------------------- #
@@ -1965,17 +2791,20 @@ def main(argv: list[str] | None = None) -> int:
     if args.archives:
         archive_dirs += [Path(a).expanduser() for a in args.archives]
 
-    print(f"== discovering pi traces under: {[str(r) for r in roots]}")
+    print(f"== discovering traces under: {[str(r) for r in roots]}")
     live = walk_for_traces(roots)
-    print(f"   live sessions found: {len(live)}")
+    live_kinds = Counter(k for _, k in live)
+    print(f"   live sessions found: {len(live)}  "
+          f"(pi={live_kinds.get('pi', 0)}, occ/claude={live_kinds.get('claude', 0)}, "
+          f"ocdx/codex={live_kinds.get('codex', 0)})")
 
     extracted: list[tuple[Path, str]] = []
     with tempfile.TemporaryDirectory(prefix="pi-traces-archive-") as tmpd:
         extracted = extract_archives(archive_dirs, Path(tmpd))
         print(f"   archived sessions extracted: {len(extracted)}")
 
-        all_sources: list[tuple[Path, str]] = (
-            [(p, "") for p in live] + extracted
+        all_sources: list[tuple[Path, str, str]] = (
+            [(p, "", k) for p, k in live] + [(p, a, "pi") for p, a in extracted]
         )
         if args.max_files:
             all_sources = all_sources[: args.max_files]
@@ -1985,14 +2814,21 @@ def main(argv: list[str] | None = None) -> int:
         rows_closed: list[dict] = []
         seen_keys: set[str] = set()
         sanitization_records: dict[str, dict] = {}
-        for path, archive in all_sources:
+        for path, archive, kind in all_sources:
             stats.discovered = len(all_sources)
             events = parse_session_file(path)
             if events is None:
                 stats.skipped_parse += 1
                 continue
-            row, reason = convert_session(events, str(path), archive,
-                                          include_closed=args.include_closed)
+            if kind == "claude":
+                row, reason = convert_claude_session(events, str(path), archive,
+                                                     include_closed=args.include_closed)
+            elif kind == "codex":
+                row, reason = convert_codex_session(events, str(path), archive,
+                                                    include_closed=args.include_closed)
+            else:
+                row, reason = convert_session(events, str(path), archive,
+                                              include_closed=args.include_closed)
             if row is None:
                 if reason == "openai":
                     stats.skipped_openai += 1
@@ -2035,6 +2871,7 @@ def main(argv: list[str] | None = None) -> int:
                     seen_keys.discard(row["trace_key"])
                     continue
             stats.converted += 1
+            stats.converted_sources[row.get("source") or "local/pi"] += 1
             stats.tools_used |= set(_tools_from_row(row))
             if row.get("model_lane"):
                 stats.converted_closed += 1
@@ -2069,6 +2906,7 @@ def main(argv: list[str] | None = None) -> int:
             print(f"  checkouts: {eval_stats.checkouts}  runs: {eval_stats.runs}  "
                   f"scored task-runs: {eval_stats.scored_tasks}")
             print(f"  dropped by model invariant (openai/anthropic): {eval_stats.dropped_model}")
+            print(f"  dropped non-pi harness runs (p/occ/ocdx): {eval_stats.dropped_harness}")
             print(f"  dropped imperfect: {eval_stats.dropped_imperfect} "
                   f"reasons={dict(eval_stats.fail_reasons)}")
             print(f"  selected (cap {args.eval_cap}/task, version-diverse, shortest): {eval_stats.selected}")
@@ -2104,6 +2942,7 @@ def main(argv: list[str] | None = None) -> int:
         print("== summary ==")
         print(f"  discovered:      {stats.discovered}")
         print(f"  converted:       {stats.converted}")
+        print(f"  converted by source: {dict(stats.converted_sources)}")
         print(f"  skipped openai:  {stats.skipped_openai}")
         print(f"  skipped terminalbench: {stats.skipped_terminalbench}")
         print(f"  skipped benchmark (other): {stats.skipped_benchmark}")

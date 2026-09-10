@@ -2,7 +2,27 @@
 
 ## Purpose
 
-`bin/convert-pi-traces` builds the private `eewer/pi-trace-cache` Hugging Face dataset from local Pi sessions and selected monitor-bench traces. It produces derived training data. It never edits raw session JSONL or session archives.
+`bin/convert-pi-traces` builds the private `eewer/pi-trace-cache` Hugging Face dataset from local Pi sessions, the occ/ocdx sister-harness transcripts, and selected monitor-bench traces. It produces derived training data. It never edits raw session JSONL or session archives.
+
+## Harness sources
+
+Three local transcript formats are converted into the same row schema:
+
+| Source | Root | `harness` / `agent` | `source` | `trace_key` |
+| --- | --- | --- | --- | --- |
+| pi sessions | `~/.pi/agent{,-wf}/sessions` (+ archives) | `pi` | `local/pi` | `pi-session:<id>` |
+| occ (Claude Code) | `~/.pi/agent-occ/projects` | `claude-code` | `local/occ` | `occ-session:<id>` |
+| ocdx (Codex CLI) | `~/.pi/agent-ocdx/codex/sessions` | `codex` | `local/ocdx` | `ocdx-session:<id>` |
+
+The occ/ocdx wrappers (`lib/wrappers/`) pin the same open-weight OpenRouter models, so their rows belong to the open lane. Fidelity notes:
+
+- Reasoning is preserved verbatim: Claude Code `thinking` blocks and Codex `reasoning` items (summary + reasoning_text) become assistant `reasoning_content`. Opaque payloads (`redacted_thinking`, `encrypted_content`) mark presence only and are never synthesized into text.
+- Every tool call keeps its full arguments and every result its full text, paired by call id. Tool *schemas* are persisted by no raw format (pi included), so the `tools` field lists the tool names observed in calls.
+- Codex rollouts persist their `base_instructions` system prompt; it is emitted as a system message. pi and Claude Code do not persist system prompts, so those rows have none.
+- Claude Code sidechain (subagent) lines and `isMeta` lines are skipped; counts are recorded in `source_metadata`.
+- The benchmark-rollout detector is pi-specific and does not run on occ/ocdx sources; smoke/probe filtering, model invariants, redaction, and the newline-reasoning quarantine apply to all sources unchanged.
+
+Tests: `tests/trace-adapters.test.ts` (fixtures asserting reasoning/tool/usage fidelity for both adapters).
 
 ## Open and closed lanes
 
