@@ -1,14 +1,14 @@
 ---
 name: external-review
-description: Run external reviews over significant pi-setup changes via the cursor-agent CLI before committing. Use when asked for an external review or audit of changes to this repo, or before committing changes to the installer, wrappers, patches, forks, skills, bin/, evals/, or tests/.
+description: Run external reviews over significant pi-setup changes via the cursor-agent CLI before committing. Use when asked for an external review or audit of changes to this repo, or before committing significant changes — bugbot for any significant diff, plus the measurement and live-setup-contract reviews when the eval pipeline changes.
 ---
 
 # External review of pi-setup changes
 
 The `cursor-agent` CLI runs read-only external reviews over this repository's
 changes. The reviewer returns text only and never edits files; its findings are
-advisory input, not truth. Significant changes to this setup are reviewed
-before they are committed, and the review/fix cycle repeats until clean.
+advisory input, not truth. Significant changes are reviewed before they are
+committed, and the review/fix cycle repeats until clean.
 
 ## When to run
 
@@ -31,14 +31,20 @@ generated commands).
 
 ## Which reviews to run
 
+Review 1 runs for every significant diff. Reviews 2 and 3 run ONLY when the
+diff touches the eval pipeline (`evals/**`; review 2 also covers
+`bin/convert-pi-traces`). Setup, harness, wrapper, fork, or skill changes get
+review 1 alone — that layer already has its own gates (`bin/pi-setup-doctor`,
+the installer's refuse-on-partial-install behavior, and the repo's tests).
+
 Run each applicable review as a SEPARATE invocation — never fold two review
 types into one prompt; a finding from one category hides behind the other.
 
-| The diff touches | Review |
+| The diff touches | Reviews |
 |---|---|
-| anything significant, before committing | 1. software quality (bugbot) |
-| `evals/**`, scorers, `bin/convert-pi-traces` | 2. measurement correctness |
-| installer, wrappers, patches, forks, versions | 3. setup invariants |
+| anything significant (setup, wrappers, installer, forks, skills, bin/, tests) | 1. software quality (bugbot) |
+| `evals/**` or `bin/convert-pi-traces` | 1 + 2. measurement correctness |
+| `evals/**` | 1 + 2 + 3. live-setup contract |
 
 ## Invoking
 
@@ -76,7 +82,7 @@ Use `Diff: branch changes` instead when the work is already committed on a branc
 Expected results: "nothing to review" on an empty diff, one line when clean,
 otherwise the severity table.
 
-### Review 2: measurement correctness
+### Review 2: measurement correctness (eval changes only)
 
 For eval harnesses, scorers, and the trace exporter — the analog of a
 scientific-correctness review: a scoring bug that silently invalidates a
@@ -102,28 +108,31 @@ Return as text only: a one-paragraph verdict; a Severity | file:line | Finding t
 (high first); the checks you ran with results. Do not fix anything.
 ```
 
-### Review 3: setup invariants
+### Review 3: live-setup contract (eval changes only)
 
-For installer, wrappers, patches, forks, and version changes:
+The evals must measure the operator's CURRENT setup and must never drift from
+it silently. This review checks that contract whenever eval code changes.
 
 ```text
 Read-only external review of the uncommitted changes in <repo root> (git diff HEAD,
-including intent-to-add files). You are checking the invariants this pi-setup depends
-on, not style.
-1. Wrappers: closed-weight model refusal intact; endpoints forced, never defaulted;
-   per-profile state dirs isolated; credentials never written to disk; bash 3.2
-   compatibility preserved where claimed.
-2. Installer: patches applied AND verified (never leaves an unpatched install);
-   managed lists (skills, forks, packages) stay in sync with bin/pi-setup-doctor and
-   the config writer; Unix/Windows parity where both exist.
-3. Versions: no drift between lib/versions.json, patches/ filenames, and any version
-   string an eval or agent hardcodes; nothing outside lib/versions.json may pin an
-   agent version.
-4. Idempotence and failure modes: re-running install.sh must be safe; partial
-   failures must fail loudly rather than silently degrade (this repo has been burned
-   by silent extension-load failures).
-Run cheap verification where possible (bash -n, syntax checks, doctor). Use /tmp for
-scratch. Never edit project files.
+including intent-to-add files), focused on the eval-to-setup contract. Not style.
+1. No agent-version pins outside lib/versions.json: evals must resolve pi/p/occ/ocdx
+   (and harbor-side claude/codex engines) from the live setup at run time; flag any
+   hardcoded version, stale catalog snapshot, or copied patch/wrapper that can drift.
+2. Derivation is fail-loud: when a setup value (pin, patch file, wrapper, compiled
+   fork, managed config, credential) cannot be resolved, the eval must refuse to run
+   rather than fall back to @latest, a neighbor version, or a degraded surface.
+3. No silent degradation: extension/package loading, bake checks, and materialize
+   steps must verify their result (a missing compiled entry that loads zero
+   extensions is the historical failure this repo hit).
+4. Wrapper fidelity: evals that drive occ/ocdx must go through the setup wrappers
+   (endpoint pin, closed-model refusal, isolated state dirs) rather than
+   re-deriving their environment.
+5. Shared-state safety: per-arm/per-run directories shared by parallel tasks use
+   create-once or atomic rename-aside semantics, never in-place removal under a
+   possible concurrent loader.
+Run cheap verification where possible (bash -n, syntax checks, grep for pins).
+Use /tmp for scratch. Never edit project files.
 Return as text only: verdict paragraph; Severity | file:line | Finding table (high
 first); checks run with results. Do not fix anything.
 ```
