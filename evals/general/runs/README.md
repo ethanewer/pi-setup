@@ -27,8 +27,34 @@ byte-identical between the two.
 Every script assumes `HARBOR`, `EVAL` and `OUT` near the top, `PYTHONPATH` pointed
 at `evals/general/agents` for the `p_agent:PAgent` harness, and credentials sourced
 from an env file. None of them contains a key. `p_agent.py` is the only agent that
-lives in this repository; `oracle`, `nop`, `terminus-2` and `claude-code` ship with
-harbor.
+lived in this repository historically; `oracle`, `nop`, `terminus-2` and `claude-code`
+ship with harbor.
+
+## Live-setup agents (current)
+
+The repo now carries a full harness matrix whose versions, patches, wrappers, and
+extensions all resolve from the HOST pi-setup at run time (`agents/setup_sync.py`
+reads `lib/versions.json`, `patches/`, `lib/wrappers/`, and `~/.pi/agent/local`).
+Updating the setup updates the eval; nothing here pins a version. The historical
+scripts above keep their hardcoded pins because they document published runs.
+
+| Agent | Harness | How it stays in sync |
+| --- | --- | --- |
+| `p_agent:PAgent` | p (lean pi) | pi pin + reasoning patch from `lib/versions.json` / `patches/` via `pi_setup_base.SetupPiInstallMixin`; bake check compares against the CURRENT pin, so stale base images fall through to a fresh in-container install |
+| `pi_agent:PiSetupAgent` | pi (full profile) | same install, plus the setup's container-safe forks (`monitor`, `dynamic-workflows`, `btw`, `context-handoff`) uploaded as the host installer compiled them and registered via `~/.pi/agent/settings.json`; host-only forks (voice-stt, mlx) excluded by design |
+| `occ_agent:OccAgent` | occ | uploads the live `lib/wrappers/occ.sh` and runs claude THROUGH it (endpoint pin, closed-model refusal, effort defaults all come from the wrapper); container claude CLI pinned to the host `claude --version` |
+| `ocdx_agent:OcdxAgent` | ocdx | uploads the live `lib/wrappers/ocdx.sh` plus the installer-managed `~/.pi/agent-ocdx/codex/config.toml`/`models.json`; container codex CLI pinned to the host `codex --version` |
+| `terminus-2` | TerminalBench 2 agent | ships with harbor |
+| `claude-code` | reference Claude Code | ships with harbor |
+
+Output conventions match harbor's own agents (`pi.txt`, `claude-code.txt`,
+`codex.txt` in the trial logs), so the existing gates (`check_agent_actually_ran.py`,
+collectors, publisher) parse them unchanged.
+
+The matrix recipe is `runs/run-harness-matrix.sh` (set `HARBOR`, `OUT`; optional
+`MODELS`, `JOBS`). It exports `OPENROUTER_API_KEY` from the setup's `pi auth`
+chain when unset. The historical `run-all.sh` remains as the record of the
+published six-pair runs.
 
 ## The four operations that matter
 

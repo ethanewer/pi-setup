@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
-"""Aggregate scores across the per-model dirs of a run-multi base dir.
+"""Aggregate scores across the per-run dirs of a run-multi base dir.
 
 Usage: python3 score/aggregate.py results/<base>
-Prints per-model adoption/trust/outcome rates across all seeds.
+Prints per-(harness, model) adoption/trust/outcome rates across all seeds.
+Runs whose meta.json predates the harness dimension are bucketed as "pi".
+Mixing harnesses in one bucket would be wrong: occ/ocdx score used_monitor
+False by construction and fail the t6/t7 heartbeat checks structurally.
 """
 import json
 import os
@@ -14,20 +17,21 @@ LONG_TASKS = ["t1", "t2", "t3", "t4", "t6", "t7"]
 
 def main():
     base = os.path.abspath(sys.argv[1])
-    models = defaultdict(list)  # model -> list of per-task rows (all seeds)
+    models = defaultdict(list)  # (harness, model) -> list of per-task rows (all seeds)
     for d in sorted(os.listdir(base)):
         sj = os.path.join(base, d, "scores.json")
         if not os.path.isdir(os.path.join(base, d)) or not os.path.exists(sj):
             continue
         data = json.load(open(sj))
         model = data["meta"]["model"]
-        models[model].extend(data["tasks"])
+        harness = data["meta"].get("harness") or "pi"
+        models[(harness, model)].extend(data["tasks"])
 
-    hdr = (f"{'model':45} {'seeds':5} {'adopt':6} {'trust':6} {'hb':5} {'adopt+':6} "
+    hdr = (f"{'harness':8} {'model':45} {'seeds':5} {'adopt':6} {'trust':6} {'hb':5} {'adopt+':6} "
            f"{'avgblk':6} {'wake':4} {'outcm':6}")
     print(hdr)
     print("-" * len(hdr))
-    for model, rows in sorted(models.items()):
+    for (harness, model), rows in sorted(models.items()):
         long_rows = [r for r in rows if r["task"] in LONG_TASKS]
         ctrl_rows = [r for r in rows if r["task"] not in LONG_TASKS]
         n = len(long_rows)
@@ -42,7 +46,7 @@ def main():
         ctrl_fp = sum(1 for r in ctrl_rows if r["used_monitor"])
         outcomes = [r["outcome_score"] for r in rows if r["outcome_score"] is not None]
         outcome = sum(outcomes) / len(outcomes) if outcomes else 0
-        print(f"{model:45} {seeds:<5} "
+        print(f"{harness:8} {model:45} {seeds:<5} "
               f"{len(adopted)}/{n:<4} {len(trusted)}/{n:<4} "
               f"{f'{hb_ok}/{len(hb_rows)}':<5} "
               f"{f'{len(adopted)}/{n} -fp{ctrl_fp}':<6} "

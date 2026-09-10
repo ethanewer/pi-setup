@@ -128,17 +128,27 @@ Highlights:
 
 ```bash
 cd evals/browser
-ARM=agent-browser SEED=101 ./run.sh          # one arm, one seed, all 5 tasks in parallel
-python3 score/score.py results/latest        # per-run scores
-python3 score/aggregate.py results/latest
+ARM=agent-browser SEED=101 ./run.sh          # pi (default harness), one arm, one seed, all 5 tasks in parallel
+HARNESS=p    SEED=101 ./run.sh               # p lean profile (native surface; ARM ignored)
+HARNESS=occ  SEED=101 ./run.sh               # Claude Code via the occ wrapper (native surface)
+HARNESS=ocdx SEED=101 ./run.sh               # Codex CLI via the ocdx wrapper (native surface)
+python3 score/score.py results/latest-pi-agent-browser   # per-run scores (latest-<harness>-<arm>)
+python3 score/aggregate.py results/latest-pi-agent-browser
 
-ARMS="agent-browser agent-browser-guided playwright devtools" SEEDS="101 202 303" ./run-multi.sh
+HARNESSES="pi occ ocdx" SEEDS="101 202 303" ./run-multi.sh   # pi runs every ARM; others run native
 python3 score/aggregate.py browser results/*_agent-browser_seed* \
   results/*_agent-browser-guided_seed* results/*_playwright_seed* results/*_devtools_seed*
 ```
 
-Keys come from the ambient environment (`OPENROUTER_API_KEY`), as in the monitor
-eval. The default model is `openrouter/z-ai/glm-5.3-flash`.
+The eval has **no pinned agent copy**: `pi`/`p` resolve to the installed CLIs
+(driven over `--mode rpc`; version, patches, and catalog come from the live
+setup, recorded per run as `agentVersion`) and `occ`/`ocdx` to the installed
+wrappers (`claude -p --output-format stream-json` / `codex exec --json`,
+normalized into the same transcript: `Bash`/`exec_command` -> `bash` etc.).
+`ARM` applies to `HARNESS=pi` only; other harnesses record
+`<harness>-native` and bring their own tool surface. Keys come from the
+ambient environment (`OPENROUTER_API_KEY`) or the setup's `pi auth` chain.
+The default model is `openrouter/z-ai/glm-5.3-flash`.
 
 ## Notes
 

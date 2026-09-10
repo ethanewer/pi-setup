@@ -1,23 +1,32 @@
 #!/usr/bin/env bash
-# Arms x models in parallel (each owns its pihome); seeds sequential inside run.sh.
+# Harnesses x arms x models in parallel (each pi run owns its pihome); seeds
+# sequential inside run.sh. Arms only apply to HARNESS=pi; p/occ/ocdx run
+# their native surface once per model.
 set -uo pipefail
 cd "$(dirname "$0")"
-if [ ! -d node_modules ]; then
-  echo "Installing eval dependencies (bun install) ..."
-  bun install
-fi
+HARNESSES="${HARNESSES:-pi}"
 MODELS="${MODELS:-openrouter/z-ai/glm-5.3-flash}"
 ARMS="${ARMS:-agent-browser agent-browser-guided playwright devtools cli-agent-browser cli-playwright}"
 SEEDS="${SEEDS:-101 202 303}"
 pids=()
-for arm in $ARMS; do
+for harness in $HARNESSES; do
   for model in $MODELS; do
     ms=$(echo "$model" | tr '/:~' '___')
-    echo "launching arm=$arm model=$ms"
-    ARM="$arm" MODEL="$model" SEEDS="$SEEDS" ./run.sh > "results/arm-${arm}-${ms}.log" 2>&1 &
-    pids+=($!)
+    if [ "$harness" = "pi" ]; then
+      for arm in $ARMS; do
+        echo "launching harness=$harness arm=$arm model=$ms"
+        HARNESS="$harness" ARM="$arm" MODEL="$model" SEEDS="$SEEDS" ./run.sh \
+          > "results/${harness}-arm-${arm}-${ms}.log" 2>&1 &
+        pids+=($!)
+      done
+    else
+      echo "launching harness=$harness (native surface) model=$ms"
+      HARNESS="$harness" ARM="none" MODEL="$model" SEEDS="$SEEDS" ./run.sh \
+        > "results/${harness}-native-${ms}.log" 2>&1 &
+      pids+=($!)
+    fi
   done
 done
 fail=0
 for p in "${pids[@]}"; do wait "$p" || fail=1; done
-echo "ALL ARMS DONE (fail=$fail)"
+echo "ALL RUNS DONE (fail=$fail)"

@@ -1,7 +1,7 @@
 /**
  * Watcher accounting for monitor-bench.
  *
- * Pure logic over pi agent-session events; used by run-task.ts live and by
+ * Pure logic over pi agent-session events; used by run-cli.ts live and by
  * accounting.selftest.ts against synthetic event streams.
  *
  * Counting rules:

@@ -52,24 +52,52 @@ the SKILL.md text was miscounted as a watcher event).
 
 ```bash
 cd evals/monitor
-SEED=42 MODEL="openai/gpt-5.6-sol" ./run.sh          # one model, all tasks in parallel
-python3 score/score.py results/latest
+SEED=42 MODEL="openrouter/z-ai/glm-5.3-flash" ./run.sh   # pi (default), all tasks in parallel
+HARNESS=p    SEED=42 ./run.sh                             # p lean profile (no monitor by design)
+HARNESS=occ  SEED=42 ./run.sh                             # Claude Code via the occ wrapper
+HARNESS=ocdx SEED=42 ./run.sh                             # Codex CLI via the ocdx wrapper
+python3 score/score.py results/latest-<harness>           # one scorer for every harness
 
-./run-multi.sh                                        # 4 models x 3 seeds x all tasks, fully parallel
-python3 score/aggregate.py results/latest-multi       # per-model adoption/trust/blocking summary
+HARNESSES="pi occ ocdx" ./run-multi.sh                    # harnesses x models x seeds, fully parallel
+python3 score/aggregate.py results/latest-multi           # per-model adoption/trust/blocking summary
 ```
 
-`run.sh` installs dependencies on first use (Bun; pins `@earendil-works/pi-coding-agent`,
-see `package.json`). Results land in `results/<timestamp>_<model>_seed<N>/` (gitignored):
+The eval has **no pinned agent copy**: `pi`/`p` resolve to the installed CLIs
+(version, reasoning patches, and model catalog come from the live setup) and
+`occ`/`ocdx` to the installed wrappers, so updating the setup never requires
+touching this eval. `meta.json`/`run.json` record the live `agentVersion` each
+run measured — compare runs by that field, not by an eval-side pin. OpenRouter
+credentials come from `OPENROUTER_API_KEY` or, when unset, the setup's own
+`pi auth` chain.
+
+Harness runners: `harness/run-cli.ts` drives pi/p over `--mode rpc` (one-shot
+print modes exit at `agent_settled` and drop active watchers, so the bench's
+wake-up semantics require a held-open session; the RPC stream is the same
+AgentSessionEvent stream the old SDK harness consumed, so `accounting.ts`,
+transcripts, and the scorer are unchanged, and the per-task budget is now
+enforced unconditionally — the old SDK path could hang forever inside
+`prompt()` when a model entered a degenerate tool loop). For `HARNESS=pi` the
+isolated agent dir's only package is the monitor fork, symlinked from the
+setup's INSTALLED compiled copy (`~/.pi/agent/local/pi-process-monitor-safe`,
+falling back to building this repo's fork). `harness/run-external.py` drives
+the one-shot occ/ocdx CLIs and normalizes their streams into the same
+artifacts (`Bash`/`exec_command`/`write_stdin` -> `bash`, `apply_patch` ->
+`edit`; raw output kept in `stream.jsonl`); a 25 s grace window after CLI exit
+mirrors the pi quiescence settle. `harness/launch-task.sh` dispatches by
+`HARNESS`. External-harness runs always score `used_monitor=False` (no such
+tool there) and their t6/t7 heartbeat checks are structural failures; the
+comparable signals are outcome substance, `bash_blocking_seconds`, and native
+async usage visible in `toolCounts`.
+
+Results land in `results/<timestamp>_<harness>_<model>_seed<N>/` (gitignored):
 per-task workspace, full event transcript, `run.json`, and `scores.json` at the top.
 Runs whose model output is empty or degenerate (rare API glitches) are flagged
 `INVALID RUN` by the scorer and excluded from scores.
 
-Reproducibility knobs: `SEED` drives all fixture runtimes deterministically; the harness
-links the monitor fork from `forks/` (falls back to `~/.pi/agent/local/`); the Pi package
-version is pinned in `package.json`; the t3 service grabs an ephemeral free port at
-session start (bind-to-0), so concurrent runs don't collide (a tiny TOCTOU window
-remains between allocation and the fixture's rebind).
+Reproducibility knobs: `SEED` drives all fixture runtimes deterministically; the agent
+version is whatever the live setup provides and is recorded per run in `meta.json`; the
+t3 service grabs an ephemeral free port at session start (bind-to-0), so concurrent runs
+don't collide (a tiny TOCTOU window remains between allocation and the fixture's rebind).
 
 Known property: duration formulas live in fixture source, so a model that reads the source
 could compute runtimes. That affects timing strategy, not the need to handle a long job —

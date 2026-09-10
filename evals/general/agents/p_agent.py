@@ -9,7 +9,9 @@ profile with no extensions and no skills.
 
 This agent subclasses harbor's built-in Pi agent and injects the
 `--no-extensions --no-skills` flags into the run command so the
-in-container agent behaves like the `p` lean profile.
+in-container agent behaves like the `p` lean profile. The pi version and
+reasoning-details patch come from the LIVE host setup (pi_setup_base +
+setup_sync) — never pinned here — so updating the setup updates the eval.
 
 Run with:
   PYTHONPATH=<benchmark>/agents harbor run -a p_agent:PAgent \
@@ -17,45 +19,15 @@ Run with:
 """
 
 import shlex
-from pathlib import Path
 from typing import override
 
 from harbor.agents.installed.pi import Pi, with_prompt_template
 from harbor.environments.base import BaseEnvironment
 from harbor.models.agent.context import AgentContext
-
-# The bench-base images bake this pinned Pi plus the repo's reasoning-details
-# fix. harbor's stock install resolves @latest -> pi-ai 0.84.3, whose
-# fragmented reasoning_details replay contaminates multi-turn rollouts (see
-# docs/incidents/PI-AI-0.84.3-REASONING-DETAILS.md); the upstream fix is not
-# in any published release, so never let npm touch the baked install.
-#
-# The fix must target pi's npm entrypoint: bin -> dist/bundle/cli.js loads
-# pi-ai from dist/bundle/chunks/openai-completions-*.js, NOT node_modules.
-_PI_PIN = "0.84.3"
-_PI_AI_PATCH_MARKER = "normalizeOpenAIReasoningDetails"
-_PI_AI_BUG_PATTERN = "preservedDetails.push(detail)"
-_PATCH_PI_BUNDLE = Path(__file__).resolve().parents[1] / "bases" / "patch-pi-bundle"
+from pi_setup_base import SetupPiInstallMixin
 
 
-def _pi_bake_verify_command() -> str:
-    # Always exits 0; the PI_BAKE_OK / PI_BAKE_MISSING marker decides the path.
-    # No `set -e`: on non-bench-base images the nvm source legitimately fails,
-    # and harbor's exec_as_agent raises on any non-zero exit.
-    return (
-        "( . ~/.nvm/nvm.sh && "
-        'v="$(pi --version | tail -n 1)" && '
-        f'[ "$v" = "{_PI_PIN}" ] && '
-        'PI_ROOT="$(npm root -g)/@earendil-works/pi-coding-agent" && '
-        f'grep -q {_PI_AI_PATCH_MARKER} '
-        '"$PI_ROOT"/dist/bundle/chunks/openai-completions-*.js && '
-        f'! grep -q "{_PI_AI_BUG_PATTERN}" '
-        '"$PI_ROOT"/dist/bundle/chunks/openai-completions-*.js && '
-        "echo PI_BAKE_OK ) || echo PI_BAKE_MISSING"
-    )
-
-
-class PAgent(Pi):
+class PAgent(SetupPiInstallMixin, Pi):
     """Pi agent running in the lean `p` profile (no extensions/skills)."""
 
     @staticmethod
@@ -63,54 +35,8 @@ class PAgent(Pi):
     def name() -> str:
         return "p-pi"
 
-    @override
-    async def install(self, environment: BaseEnvironment) -> None:
-        # Fast path: the task image descends from a bench-base image with the
-        # pinned, patched Pi baked in. Verify it and skip npm entirely.
-        # exec_as_agent raises on non-zero exit, so the probe always exits 0
-        # and reports via a marker.
-        result = await self.exec_as_agent(
-            environment,
-            command=_pi_bake_verify_command(),
-        )
-        if "PI_BAKE_OK" in (result.stdout or ""):
-            return
-
-        # Fallback for non-bench-base images (item-052-main, skill-pdflatex
-        # use texlive/texlive): pinned install, then patch the bundle chunk
-        # in-container with the same version-guarded patcher.
-        from harbor.agents.installed.node_install import nvm_node_install_snippet
-
-        await self.ensure_system_dependencies(
-            environment, ("curl", "python3")
-        )
-        await self.exec_as_agent(
-            environment,
-            command=(
-                "set -euo pipefail; "
-                f"{nvm_node_install_snippet()} && "
-                f"npm install -g --ignore-scripts "
-                f"@earendil-works/pi-coding-agent@{_PI_PIN} && "
-                "pi --version"
-            ),
-        )
-        await environment.upload_file(_PATCH_PI_BUNDLE, "/tmp/patch-pi-bundle")
-        result = await self.exec_as_agent(
-            environment,
-            command=(
-                "set -eo pipefail; . ~/.nvm/nvm.sh; "
-                "python3 /tmp/patch-pi-bundle "
-                '"$(npm root -g)/@earendil-works/pi-coding-agent" && '
-                "echo PI_BUNDLE_PATCHED || echo PI_BUNDLE_PATCH_FAILED"
-            ),
-        )
-        if "PI_BUNDLE_PATCHED" not in (result.stdout or ""):
-            raise RuntimeError(
-                "Failed to patch the pi bundle in-container; refusing to run "
-                "rollouts on unpatched pi-ai 0.84.3. "
-                f"stdout: {(result.stdout or '')[-2000:]} "
-                f"stderr: {result.stderr[-2000:] if result.stderr else ''}"
-            )
+    # install(): inherited from SetupPiInstallMixin — the setup's current pin,
+    # bake fast-path, and patched in-container fallback.
 
     @override
     @with_prompt_template
