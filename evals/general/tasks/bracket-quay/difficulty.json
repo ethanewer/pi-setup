@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 3,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 3,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 150,
+  "documented_probe": null,
+  "notes": "Hard. The agent lands in a ~7.6k-line, 40-module self-authored documentation generator (quaydoc) with a 31-commit real git history and a green 100+ test pytest suite, and is given only a user-facing symptom report: on pages whose headings contain '&' or ':', in-page fragment links and TOC jump-links never match the rendered id attributes, and quaydoc check reports broken fragments. The bug module is never named: the regression lives in one module's anchor computation that drifted from the shared slugifier used by the link module, so it is reachable only through the interaction of the link and TOC/anchor rendering paths, while every shipped unit test stays green. The agent must reproduce with an ad-hoc docset, isolate the divergence (touching git history to name the introducing commit), fix it without breaking the suite, and write /app/postmortem.md naming the exact introducing commit (40-hex, verified by git log -S). Verifier runs the shipped suite plus 3 hidden test modules exercising the same interaction from different angles (rendered-fragment resolution, unit-level slug agreement, CLI build+check integrity), and validates the postmortem commit against the pickaxe on the buggy marker. Depth comes from cross-module reasoning (3), ambiguity of a symptom-only bug report (3), multi-stage repro->diagnose->fix->verify->postmortem (3), and git/pytest/CLI tool breadth (3); adversarial headings (ampersand, colon, punctuation edge cases) and 3 unseen hidden fixtures generalize it."
+}

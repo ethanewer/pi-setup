@@ -1,0 +1,6 @@
+{
+  "name": "visible-single",
+  "requests": [
+    {"path": "/order/OR-1001", "expect_status": 200, "backend_spans": 1, "expect_error": false}
+  ]
+}

@@ -1,0 +1,6 @@
+{
+  "name": "failure",
+  "requests": [
+    {"path": "/order/OR-LOST", "expect_status": 500, "backend_spans": 1, "expect_error": true}
+  ]
+}

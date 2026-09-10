@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 2,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 2
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": null,
+  "notes": "Pushback-required reasoning task over a small real repository (git history, 6 source modules, 15 green tests, schema + README documenting a load-bearing UNIQUE(student_id, course_id) invariant on registrations). The product request asks to drop that constraint and store retakes as duplicate registration rows; the correct response is a written objection (/app/objection.md) plus a safe alternative (retakes modelled outside registrations) that keeps the invariant, the schema-level unique index, and all 15 tests intact while adding retake/attempts CLI behaviour. reasoning_depth=3: the agent must detect that the literal request breaks a documented guarantee, decide not to implement it literally, and design a storage alternative that preserves seat counting, one-student-once rosters and grading semantics. dependent_stages=3: read repo+docs+tests -> identify the conflict -> write objection -> design alternative storage -> implement CLI contract -> keep the shipped suite green (verifier re-runs an independent pristine copy). debugging_ambiguity=2: the conflict is spread across README, schema DDL and a raw-SQL test; recognizing where the request bites requires tracing, not a stack trace. adversarial_inputs=2: hidden scenarios probe retake-without-prior-registration, duplicate retakes, unknown students/courses, retake-of-retake, dropped-then-retake, completed/dropped state transitions. hidden_case_generalization=3: the verifier re-drives the whole CLI on three structurally distinct scenario batteries (visible + two hidden). unsafe_action_penalty=2: the destructive path is the literal request itself -- weakening schema uniqueness -- and it is what a naive agent does; the verifier detects it via the SQL-level index check and failing tests. Room in hard bucket: 18."
+}

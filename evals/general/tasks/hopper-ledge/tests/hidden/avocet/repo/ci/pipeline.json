@@ -1,0 +1,23 @@
+{
+  "ci_version": 1,
+  "jobs": {
+    "build": {
+          "steps": [
+          {"step": "restore_cache", "key": "cache-{{hash:ci/requirements.lock}}", "path": ".deps", "if": "always"},
+          {"step": "run", "name": "install", "cmd": "bash ci/install.sh", "if": "cache_miss"},
+          {"step": "run", "name": "build", "cmd": "python3 scripts/build.py", "if": "always"},
+          {"step": "upload_artifacts", "path": "artifacts/", "if": "always"}
+          ]
+        },
+    "test": {
+          "steps": [
+          {"step": "download_artifacts", "from": "build", "if": "always"},
+          {"step": "run", "name": "verify_artifact", "cmd": "python3 scripts/check_artifact.py", "if": "always"},
+          {"step": "run", "name": "unit",
+             "cmd": "python3 -m pytest -p no:cacheprovider -q tests/",
+             "if": "always",
+             "env": {"PYTHONDONTWRITEBYTECODE": "1"}}
+          ]
+        }
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": null,
+  "notes": "Go module dependency upgrade with a breaking API change. The fixture is a real multi-package Go repository (cmd/, internal/app, internal/engine, internal/state) with a git history, pinned to urfave/cli v1.22.14 with a green suite. The agent must upgrade two major versions to urfave/cli/v3 (v3.11.0), migrate every call site (NewApp->Command literal, Run gains context.Context, Commands become []*cli.Command, flags become pointers, actions take (context.Context, *cli.Command), NewExitError->Exit, and the v3 ExitErrHandler/os.Exit trap in tests), and keep go build ./... and go test ./... green. The module cache is pre-populated with the v3.11.0 graph at build time so the upgrade works offline. Verifier asserts go.mod carries the v3 module, build and tests pass, and two hidden Go test cases exercise the new API shape (one self-contained, one against a fixture state directory of pre-made run records). reasoning_depth=2: understanding the breaking API and the ExitErrHandler behavior; debugging_ambiguity=2: compile errors from the new API plus the os.Exit-on-ExitCoder trap; hidden_case_generalization=2: hidden tests only compile and pass against the migrated API."
+}

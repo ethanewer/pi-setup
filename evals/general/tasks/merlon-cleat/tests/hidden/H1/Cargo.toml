@@ -1,0 +1,11 @@
+[package]
+name = "rivetscan"
+version = "0.1.0"
+edition = "2021"
+description = "Hidden consumer H1: scans a generated frame stream against the pennant API"
+
+[dependencies]
+pennant = { path = "/app/pennant" }
+
+[profile.release]
+opt-level = 3

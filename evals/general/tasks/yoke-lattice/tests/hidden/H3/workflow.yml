@@ -1,0 +1,54 @@
+name: pipeline-gamma
+on: review
+
+jobs:
+  beta:
+    name: Beta
+    steps:
+      - name: init beta
+        env:
+          MODE: strict
+        run: |
+          echo "${MODE}" > mode.txt
+          echo "beta" > name.txt
+          cp name.txt "$GITHUB_WORKSPACE/beta-name.txt"
+  alpha:
+    name: Alpha
+    needs: []
+    steps:
+      - name: init alpha
+        run: |
+          echo "alpha" > name.txt
+          cp name.txt "$GITHUB_WORKSPACE/alpha-name.txt"
+  delta:
+    name: Delta
+    needs: beta
+    if: "needs.beta.result == 'success'"
+    steps:
+      - name: join branch
+        run: |
+          cp "$GITHUB_WORKSPACE/beta-name.txt" joined.txt
+  gamma:
+    name: Gamma
+    needs: alpha
+    steps:
+      - name: join branch
+        run: |
+          cp "$GITHUB_WORKSPACE/alpha-name.txt" joined.txt
+  hub:
+    name: Hub
+    needs: [alpha, beta]
+    steps:
+      - name: merge point
+        run: |
+          cat "$GITHUB_WORKSPACE/snippet.txt" > merged.txt
+          cp merged.txt "$GITHUB_WORKSPACE/hub-merged.txt"
+          wc -c < merged.txt > size.txt
+  fin:
+    name: Fin
+    needs: [gamma, delta, hub]
+    steps:
+      - name: final gate
+        run: |
+          test -s "$GITHUB_WORKSPACE/hub-merged.txt"
+          echo "$GITHUB_JOB" > who.txt

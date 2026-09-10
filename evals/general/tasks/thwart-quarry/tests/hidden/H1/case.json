@@ -1,0 +1,20 @@
+{
+  "port": 6402,
+  "ttl_seconds": 2,
+  "backend_latency_s": 0.15,
+  "values": {
+    "shelf": "oak-plank",
+    "torus": "coiled-brass",
+    "whetstone": "grey-grit",
+    "lantern": "glass-flame",
+    "ratchet": "steel-tooth"
+  },
+  "readers_per_key": 12,
+  "rounds": 3,
+  "spend_key": "ledger",
+  "spend_start": 500,
+  "spend_workers": 8,
+  "ops_per_worker": 30,
+  "amount_min": 1,
+  "amount_max": 5
+}

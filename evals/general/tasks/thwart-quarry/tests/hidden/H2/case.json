@@ -1,0 +1,19 @@
+{
+  "port": 6403,
+  "ttl_seconds": 4,
+  "backend_latency_s": 0.08,
+  "values": {
+    "loom": "weft-thread",
+    "belfry": "bronze-clapper",
+    "bastion": "dressed-stone",
+    "gudgeon": "cast-pin"
+  },
+  "readers_per_key": 6,
+  "rounds": 2,
+  "spend_key": "coffer",
+  "spend_start": 300,
+  "spend_workers": 5,
+  "ops_per_worker": 50,
+  "amount_min": 2,
+  "amount_max": 6
+}

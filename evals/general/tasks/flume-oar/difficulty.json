@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 3,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 3,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 80,
+  "documented_probe": null,
+  "notes": "Slot-based concurrent memoization cache (Go/bench-base:ubuntu-24.04, golang-go 1.22). The shipped cache is lock-free; the data race is only visible under `go test -race` (the race detector trips on unsynchronized slot accesses; values stay correct in the plain run, so the tool is the discovery instrument). Requires (1) zero race reports across the suite run 5x under the detector, (2) hidden-case correctness under three distinct concurrency shapes (hot-slot contention, skewed compute latency, wide aliased key space), (3) a throughput floor vs a baked-in serialized reference: flume_ratio >= 2.5, which rejects the naive 'wrap everything in one global lock' fix (~1.0) and accepts a compute-outside-lock double-checked design (~8x). Reference serial.go and the visible test sources are checksum-protected. Thread pools: none beyond Go's runtime; tests pin GOMAXPROCS themselves; cpus=1."
+}

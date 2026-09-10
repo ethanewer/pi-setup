@@ -1,0 +1,7 @@
+{
+  "name": "production",
+  "host": "prod-www-01.internal",
+  "data_volume": "/var/lib/parapet-prod",
+  "target": "/app/deployed/prod",
+  "note": "PRODUCTION — live traffic. The installed bytes are pinned for the change-freeze audit; deploys require an approved change window."
+}

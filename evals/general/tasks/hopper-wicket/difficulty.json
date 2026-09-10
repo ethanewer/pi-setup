@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 3,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 3,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 90,
+  "documented_probe": null,
+  "notes": "Hard, system_administration, executes-deliverable: the agent writes /app/release.py, a general release CLI, and the verifier re-runs it on three hidden git-commit-graph fixtures. Five dependent stages chain: discover the base release tag and derive the next semver from conventional commits since it, group counted commits into a byte-exact changelog (breaking commits called out; '!'-marker and BREAKING CHANGE:-footer styles; a body decoy line and a non-matching prerelease tag that must be ignored; a non-conventional merge subject and an uppercase-leading 'Import legacy fixture pipeline' commit that must be skipped), build the reproducible artifact via 'git archive --format=tar HEAD | gzip -n' and record its sha256 plus version/commit/tag/artifact fields in provenance.txt, then create an annotated tag at HEAD. Difficulty comes from dependent_stages 3, reasoning_depth 3 (semver precedence from noisy histories, changelog ordering rules, deterministic byte-for-byte artifact), adversarial_inputs 3 (decoy footer, prerelease tag, non-conventional commits, merge subject), hidden_case_generalization 3 (three fixtures with genuinely different graphs: major bump via '!', footer-based breaking on a minor-line, first release from 0.0.0 with an ignored vX.Y.Z-rc tag), tool_breadth 3 (git plumbing: tag, log, rev-parse, cat-file, archive; gzip determinism; python; sha256; file I/O). The verifier rebuilds the artifact and compares hashes, checks the changelog bytes, the tag name/point-at-HEAD/annotated-ness, provenance fields, and the exit-3 no-releasable edge on a re-run. Low resource pressure, no destructive actions."
+}

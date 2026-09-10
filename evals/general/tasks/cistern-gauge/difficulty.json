@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 3,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 3,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 120,
+  "documented_probe": null,
+  "notes": "Hard. The agent receives a generated 4-module Maven Java 21 reactor (cistern-model/core/report/cli, ~4.4k LOC across 68 Java files) with a 15-commit git history and a green JUnit 5 suite, and must implement one requested behaviour change - the 'baseline' level strategy must estimate the median of the window instead of the arithmetic mean - without breaking the report module that consumes core through the LevelAssessor interface. Difficulty derives from dependent_stages (understand repo, run the reactor, locate the estimator, update the stale shipped test and user-visible descriptions, keep the whole reactor green offline), tool_breadth (maven reactor build with offline cache, git history inspection, JUnit 5, javap-based API surface checks, Java 21 toolchain), reasoning_depth (module-boundary reasoning: changing the interface or registry codes breaks module 2; the estimator must stay isolated), debugging_ambiguity (the reactor ships green encoding the old mean behaviour; the agent must classify the failing shipped test as stale and update it, while only the hidden median-semantics tests disambiguate a correct from a superficial fix), hidden_case_generalization (verifier drops 2 hidden JUnit files into cistern-core and 2 into cistern-report across two differing edge-case batteries and runs `mvn clean verify`), and quantitative_correctness (median semantics incl. even-window averaging, clamping, severity bands flow through the report). Low resource pressure (1 cpu, warm maven cache), no dangerous actions."
+}

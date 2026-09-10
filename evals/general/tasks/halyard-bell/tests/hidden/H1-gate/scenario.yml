@@ -1,0 +1,78 @@
+# H1 — GateBacklogFault (tightened): fires on an over-ceiling lane that is not
+# draining past the 10m window; refuses to fire on healthy-but-busy (over
+# ceiling but draining), on empty-but-stalled, on a backlog present for less
+# than the 10m sustain window, and on occupancy sitting exactly at the ceiling.
+rule_files:
+  - /app/alerting/alerts.yml
+evaluation_interval: 1m
+
+tests:
+  # must fire: over ceiling AND not draining, sustained past the 10m window
+  - interval: 1m
+    input_series:
+      - series: 'yard_gate_occupancy{lane="south"}'
+        values: '12 12 90 90 90 90 90 90 90 90 90 90 90 90 90 90 90'
+      - series: 'yard_lane_drain_total{lane="south"}'
+        values: '4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4'
+    alert_rule_test:
+      - eval_time: 16m
+        alertname: GateBacklogFault
+        exp_alerts:
+          - exp_labels:
+              severity: page
+              lane: south
+            exp_annotations:
+              summary: gate lane over ceiling and not draining
+
+  # healthy-but-busy: over ceiling but the lane drains at 3/min — no alert.
+  # An over-broad rule that pages on occupancy alone fails here.
+  - interval: 1m
+    input_series:
+      - series: 'yard_gate_occupancy{lane="west"}'
+        values: '30 30 85 85 85 85 85 85 85 85 85 85 85 85 85'
+      - series: 'yard_lane_drain_total{lane="west"}'
+        values: '12 15 18 21 24 27 30 33 36 39 42 45 48 51 54'
+    alert_rule_test:
+      - eval_time: 14m
+        alertname: GateBacklogFault
+        exp_alerts: []
+
+  # stalled but never over ceiling: not draining, but occupancy stays low — no
+  # alert.  An over-broad rule that pages on the drain rate alone fails here.
+  - interval: 1m
+    input_series:
+      - series: 'yard_gate_occupancy{lane="east"}'
+        values: '25 25 25 25 25 25 25 25 25 25 25 25 25 25 25'
+      - series: 'yard_lane_drain_total{lane="east"}'
+        values: '9 9 9 9 9 9 9 9 9 9 9 9 9 9 9'
+    alert_rule_test:
+      - eval_time: 14m
+        alertname: GateBacklogFault
+        exp_alerts: []
+
+  # over ceiling and stalled, but only for the LAST 8 MINUTES before eval:
+  # inside the 10m sustain window, so no alert.  A rule that drops the
+  # sustained window (or shortens it) fires here and fails.
+  - interval: 1m
+    input_series:
+      - series: 'yard_gate_occupancy{lane="harbor"}'
+        values: '20 20 20 20 20 20 20 20 90 90 90 90 90 90 90'
+      - series: 'yard_lane_drain_total{lane="harbor"}'
+        values: '5 5 5 5 5 5 5 5 5 5 5 5 5 5 5'
+    alert_rule_test:
+      - eval_time: 14m
+        alertname: GateBacklogFault
+        exp_alerts: []
+
+  # occupancy exactly at the 60-truck ceiling, stalled the whole time: over
+  # ceiling means EXCEEDS 60, so no alert.  A rule using >= 60 fires here.
+  - interval: 1m
+    input_series:
+      - series: 'yard_gate_occupancy{lane="dock"}'
+        values: '60 60 60 60 60 60 60 60 60 60 60 60 60 60 60'
+      - series: 'yard_lane_drain_total{lane="dock"}'
+        values: '7 7 7 7 7 7 7 7 7 7 7 7 7 7 7'
+    alert_rule_test:
+      - eval_time: 14m
+        alertname: GateBacklogFault
+        exp_alerts: []

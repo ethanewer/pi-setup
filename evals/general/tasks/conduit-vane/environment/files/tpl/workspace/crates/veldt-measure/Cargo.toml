@@ -1,0 +1,11 @@
+[package]
+name = "veldt-measure"
+version = "0.3.1"
+description = "Veldt quantities, units and descriptive statistics"
+edition = "2021"
+
+[package.metadata]
+role = "library"
+
+[dependencies]
+veldt-core = { path = "../veldt-core" }

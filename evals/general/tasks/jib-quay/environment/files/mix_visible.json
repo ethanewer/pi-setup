@@ -1,0 +1,17 @@
+{
+  "workers": 3,
+  "ops": [
+    {"op": "transfer", "src": "alice",  "dst": "bob",    "cents": 12000},
+    {"op": "transfer", "src": "bob",    "dst": "alice",  "cents": 8000},
+    {"op": "transfer", "src": "carol",  "dst": "davina", "cents": 5000},
+    {"op": "transfer", "src": "erik",   "dst": "frida",  "cents": 9000},
+    {"op": "transfer", "src": "davina", "dst": "carol",  "cents": 4000},
+    {"op": "transfer", "src": "frida",  "dst": "erik",   "cents": 7000},
+    {"op": "transfer", "src": "alice",  "dst": "frida",  "cents": 11000},
+    {"op": "transfer", "src": "carol",  "dst": "alice",  "cents": 6000},
+    {"op": "transfer", "src": "bob",    "dst": "davina", "cents": 10000},
+    {"op": "transfer", "src": "erik",   "dst": "carol",  "cents": 3000},
+    {"op": "transfer", "src": "davina", "dst": "erik",   "cents": 20000},
+    {"op": "transfer", "src": "frida",  "dst": "bob",    "cents": 15000}
+  ]
+}

@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dutywheel"
+version = "0.6.0"
+description = "Deterministic on-call rotation for service crews"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "BSD-3-Clause" }
+
+[project.scripts]
+dutywheel = "dutywheel.cli:main"
+
+[tool.setuptools]
+packages = ["dutywheel"]

@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 2,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 75,
+  "documented_probe": null,
+  "notes": "Token and cost budgeting (LLM-application gap area): a batch job must summarise a 5000-record dev workload through a billed mock model (1 token per whitespace word, 150-token fixed overhead per request, output billed too). A naive whole-record dump bills 7-10x the declared budget; sending the four judged facts but one request per record still lands 1.5-1.7x over; passing requires field extraction from the record prose plus request batching amortising the per-request overhead, with quality (four exact facts per record, judged by a shipped, public judge) kept above the deployment's floor. resource_pressure=2: the token budget is the measured scarce resource and naive strategies demonstrably bust it. quantitative_correctness=2: the verifier re-derives the bill authoritatively from the ledger prompts and the output file (no trust in job-reported numbers) and enforces cap and floor exactly. hidden_case_generalization=2: three hidden deployments vary record count (1500/2600/4000), budgets (200k/350k/620k tokens), floors (0.88-0.92) and fluff/impact length; the job must read config and size its batching from the deployment it is given. The instruction names the deliverable and the output contract but deliberately leaves the chunking/batching strategy unspecified."
+}

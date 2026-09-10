@@ -1,0 +1,19 @@
+{
+  "name": "lanternwell-clinic",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Lanternwell Community Clinic website (React 18, jsdom-based a11y checks)",
+  "scripts": { "test": "vitest run" },
+  "dependencies": {
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  },
+  "devDependencies": {
+    "@testing-library/dom": "10.4.0",
+    "@testing-library/react": "14.3.1",
+    "axe-core": "4.10.2",
+    "jsdom": "25.0.1",
+    "vitest": "2.1.9"
+  }
+}

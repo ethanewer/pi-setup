@@ -1,0 +1,11 @@
+[project]
+name = "quaydoc"
+version = "0.6.0"
+description = "A self-contained documentation site generator"
+requires-python = ">=3.9"
+
+[project.scripts]
+quaydoc = "quaydoc.cli:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

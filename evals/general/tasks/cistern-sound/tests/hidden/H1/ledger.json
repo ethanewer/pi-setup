@@ -1,0 +1,44 @@
+{
+  "period": "2026-03",
+  "groups": [
+    {
+      "id": "HK01",
+      "name": "Inventory resale",
+      "entries": [
+        {"ref": "H-0101", "amount_cents": 88000, "chargeback_cents": 4000, "status": "adjusted"},
+        {"ref": "H-0102", "amount_cents": 66000, "chargeback_cents": 66000, "status": "adjusted"}
+      ]
+    },
+    {
+      "id": "HK02",
+      "name": "Monthly payroll",
+      "entries": [
+        {"ref": "H-0201", "amount_cents": 210000, "status": "settled"},
+        {"ref": "H-0202", "amount_cents": 174000, "status": "settled"}
+      ]
+    },
+    {
+      "id": "HK03",
+      "name": "Corrections desk",
+      "entries": [
+        {"ref": "H-0301", "amount_cents": 45000, "refund_cents": 5000, "status": "adjusted"},
+        {"ref": "H-0302", "amount_cents": 45000, "refund_cents": 22000, "status": "adjusted"}
+      ]
+    },
+    {
+      "id": "HK04",
+      "name": "SaaS renewals",
+      "entries": [
+        {"ref": "H-0401", "amount_cents": 45000, "status": "settled"}
+      ]
+    },
+    {
+      "id": "HK05",
+      "name": "Payouts reserve",
+      "entries": [
+        {"ref": "H-0501", "amount_cents": 100000, "refund_cents": 10000, "chargeback_cents": 5000, "status": "adjusted"},
+        {"ref": "H-0502", "amount_cents": 60000, "chargeback_cents": 10000, "status": "adjusted"}
+      ]
+    }
+  ]
+}

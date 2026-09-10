@@ -294,6 +294,26 @@ helm-style manifest merge strategies (`ember-spire`).
 Per policy, no upstream source repositories are vendored anywhere in the
 suite — every task ships small self-authored fixture codebases.
 
+## 2026-09-10 addition — v4.1 coverage-expansion wave (47 tasks)
+
+Fifty-three slots (areas A–N of `specs/v41_slots.json`) were authored against
+the gaps measured in `reports/v3.9_skill_gap_review.md`; 47 landed and 6 did
+not (5 abandoned mid-run, 1 not achievable — see the wave report). Same rules
+as the earlier waves: every verifier is binary, every oracle proves its own
+task, no upstream repository is vendored, all tasks claim no tb2.1
+competencies (`claims_no_competencies: true` in `specs/coverage_claims.json`),
+`cpus = 1` everywhere. What changed: the 47 tasks ship 51k source lines in
+`environment/files` (vs 36k across the whole pre-existing 785-task suite),
+23 of them build a real git repository with history at image build time, and
+they add the suite's first Go (5 files), TypeScript/TSX (35 files), Rust (50),
+real CSS, and JVM/Maven deliverable coverage. Full per-task gap area, measured
+property, reviewer changes and the not-landed list are in
+`reports/v41_wave.md`. Registration gates (binary reward, reward guard,
+thread pins, git safe-directory, pip pins, lint, tb2.1 and general coverage)
+all pass on the 832-task tree; the difficulty gate's 494 pre-existing legacy
+problems (208 rubric-bucket drifts + 286 missing legacy oracle times) are
+unchanged by this wave and fail zero of the 47 new tasks.
+
 ## Oracle verification
 
 Every task's oracle solution was run from a pristine container. The original

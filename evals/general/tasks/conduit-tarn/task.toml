@@ -1,0 +1,20 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "hard"
+category = "debugging"
+verifier_kind = "executes-deliverable"
+deliverables = ["/app/conduit"]
+tags = ["conduit-tarn", "debugging", "clean-room"]
+
+[verifier]
+timeout_sec = 600.0
+
+[agent]
+timeout_sec = 2700.0
+
+[environment]
+build_timeout_sec = 900.0
+cpus = 1
+memory_mb = 3072
+storage_mb = 6144

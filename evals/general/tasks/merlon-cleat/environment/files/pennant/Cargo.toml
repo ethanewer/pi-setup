@@ -1,0 +1,17 @@
+[package]
+name = "pennant"
+version = "0.1.0"
+edition = "2021"
+description = "Pennant Frame Protocol: tag- and length-prefixed binary frames"
+license = "MIT"
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "pennpack"
+path = "src/bin/pennpack.rs"
+
+[profile.release]
+opt-level = 3
+lto = "fat"

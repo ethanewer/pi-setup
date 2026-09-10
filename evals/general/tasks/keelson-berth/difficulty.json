@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 2,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 75,
+  "documented_probe": null,
+  "notes": "Medium. Greenfield Java 21 + Maven HTTP catalogue service written from scratch: the agent authors a whole Maven project (pom.xml pinned to the pre-seeded offline dependency set, JDK com.sun.net.httpserver HTTP server, hand-rolled JSON codec, constructor-injected repository layer over SQLite via JDBC, and a JUnit 5 suite) plus an /app/run_server.sh launcher with a defined DB/PORT contract. dependent_stages: the verifier requires the deliverables to exist, runs mvn -q -B -o verify (shipped JUnit suite must be green with the offline /opt/m2repo), starts the packaged jar through the launcher, polls /healthz, then drives the HTTP contract. hidden_case_generalization: 3 hidden SQLite fixtures that genuinely differ (a 14-row catalogue with unicode titles and prefix-colliding skus, an entirely empty store, and a 40-row generated dataset) with every expectation derived from the fixture's own rows. interaction_statefulness: writes go through the JDBC repository into the fixture file so POST then GET (and DELETE then 404) must reflect across requests; the verifier re-reads the file to recompute expectations after each mutation. adversarial_inputs: malformed JSON, well-formed-but-invalid items (empty title, negative price, fractional quantity, string price, missing field), duplicate sku, PUT 405, unknown /api path 404, missing sku 404, content-type checks, prefix sku collision (pr-2 vs pr-202). reasoning_depth: hand-rolled JSON parser/serialiser, constructor wiring, exact-match path routing, query-param decoding. tool_breadth 1: single toolchain (JDK/Maven/JDBC/SQLite). No resource pressure, no unsafe actions, no fixed sleeps."
+}

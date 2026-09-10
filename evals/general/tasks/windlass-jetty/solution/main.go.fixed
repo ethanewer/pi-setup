@@ -1,0 +1,72 @@
+package main
+
+import (
+	"context"
+	"flag"
+	"fmt"
+	"log"
+	"net"
+	"strings"
+
+	"google.golang.org/grpc"
+	pb "windlass.dispatch.v2/dispatch.v2"
+)
+
+var (
+	port = flag.Int("port", 50333, "port to listen on")
+)
+
+func addrSlug(raw string) string {
+	return strings.ReplaceAll(strings.ToLower(strings.TrimSpace(raw)), " ", "-")
+}
+
+func weightClass(grams int32) string {
+	if grams >= 10000 {
+		return "heavy"
+	}
+	return "light"
+}
+
+func packagingFor(order *pb.Order) (string, string) {
+	if b := order.GetBox(); b != nil {
+		return fmt.Sprintf("box%d-%d-%d", b.GetWidthMm(), b.GetHeightMm(), b.GetDepthMm()), "box"
+	}
+	if e := order.GetEnvelope(); e != nil {
+		return fmt.Sprintf("env%d", e.GetThicknessMm()), "envelope"
+	}
+	return "loose", "loose"
+}
+
+type dispatchServer struct {
+	pb.UnimplementedDispatchServiceServer
+}
+
+func (s *dispatchServer) SubmitOrder(_ context.Context, in *pb.Order) (*pb.DispatchReceipt, error) {
+	packaging, kind := packagingFor(in)
+	out := &pb.DispatchReceipt{
+		TrackingId:          in.GetTrackingId(),
+		DeliveryAddress:     in.GetDeliveryAddress(),
+		SpecialInstructions: in.GetSpecialInstructions(),
+		RouteCode:           fmt.Sprintf("ROUTE:%s:%s:%s", packaging, weightClass(in.GetWeightGrams()), addrSlug(in.GetDeliveryAddress())),
+		PackagingKind:       kind,
+	}
+	return out, nil
+}
+
+func (s *dispatchServer) Ping(_ context.Context, in *pb.PingRequest) (*pb.PongReply, error) {
+	return &pb.PongReply{Nonce: in.GetNonce(), ServerTimeMs: 0}, nil
+}
+
+func main() {
+	flag.Parse()
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", *port))
+	if err != nil {
+		log.Fatalf("listen failed: %v", err)
+	}
+	svc := grpc.NewServer()
+	pb.RegisterDispatchServiceServer(svc, &dispatchServer{})
+	log.Printf("dispatch server listening on %v", lis.Addr())
+	if err := svc.Serve(lis); err != nil {
+		log.Fatalf("serve failed: %v", err)
+	}
+}

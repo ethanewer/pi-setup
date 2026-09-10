@@ -1,0 +1,94 @@
+{
+  "orders": [
+    {
+      "order_id": "LIB-101",
+      "fills": [
+        {
+          "seq": 1,
+          "side": "BUY",
+          "instrument": "TARNCORP",
+          "quantity": 400,
+          "price": 7.33,
+          "timestamp": "2025-02-05T08:30:00"
+        }
+      ],
+      "fill_count": 1,
+      "gross": 2932.0,
+      "fee": 4.4,
+      "net": 2927.6,
+      "sides": [
+        "BUY"
+      ]
+    },
+    {
+      "order_id": "LIB-102",
+      "fills": [
+        {
+          "seq": 2,
+          "side": "SELL",
+          "instrument": "ORNX-A",
+          "quantity": 15,
+          "price": 102.1,
+          "timestamp": "2025-02-05T08:31:00"
+        },
+        {
+          "seq": 3,
+          "side": "SELL",
+          "instrument": "ORNX-A",
+          "quantity": 15,
+          "price": 102.1,
+          "timestamp": "2025-02-05T08:31:01"
+        }
+      ],
+      "fill_count": 2,
+      "gross": 3063.0,
+      "fee": 4.59,
+      "net": 3058.41,
+      "sides": [
+        "SELL"
+      ]
+    },
+    {
+      "order_id": "LIB-103",
+      "fills": [
+        {
+          "seq": 4,
+          "side": "BUY",
+          "instrument": "KESTREL-2",
+          "quantity": 1000,
+          "price": 0.77,
+          "timestamp": "2025-02-05T08:32:00"
+        },
+        {
+          "seq": 5,
+          "side": "BUY",
+          "instrument": "KESTREL-2",
+          "quantity": 1000,
+          "price": 0.77,
+          "timestamp": "2025-02-05T08:32:05"
+        },
+        {
+          "seq": 6,
+          "side": "BUY",
+          "instrument": "KESTREL-2",
+          "quantity": 500,
+          "price": 0.77,
+          "timestamp": "2025-02-05T08:32:09"
+        }
+      ],
+      "fill_count": 3,
+      "gross": 1925.0,
+      "fee": 2.89,
+      "net": 1922.11,
+      "sides": [
+        "BUY"
+      ]
+    }
+  ],
+  "warnings": [
+    {
+      "line": 8,
+      "message": "quantity must be a positive integer"
+    }
+  ]
+}

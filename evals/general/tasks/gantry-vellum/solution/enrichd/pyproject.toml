@@ -1,0 +1,12 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "enrichd"
+version = "2.4.1"
+description = "Resilient streaming event-enrichment service"
+requires-python = ">=3.10"
+
+[tool.setuptools]
+packages = ["enrichd"]

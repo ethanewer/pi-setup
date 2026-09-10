@@ -1,0 +1,58 @@
+name: pipeline-alpha
+on: [push]
+
+jobs:
+  compile:
+    name: Compile tiles
+    steps:
+      - name: produce marker
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/out"
+          echo "tiles" > "$GITHUB_WORKSPACE/out/tile.txt"
+          echo "local" > here.txt
+  check:
+    name: Check marker
+    needs: compile
+    if: "needs.compile.outputs.missing == null"
+    steps:
+      - name: verify marker
+        run: |
+          test -s "$GITHUB_WORKSPACE/out/tile.txt"
+          cp "$GITHUB_WORKSPACE/out/tile.txt" checked.txt
+          cp checked.txt "$GITHUB_WORKSPACE/out/checked.txt"
+  ship:
+    name: Ship bundle
+    needs: [compile, check]
+    steps:
+      - name: assemble
+        run: |
+          cat "$GITHUB_WORKSPACE/out/tile.txt" "$GITHUB_WORKSPACE/out/checked.txt" > bundle.txt
+      - name: upload
+        run: |
+          echo "upload failed"
+          exit 7
+      - name: after upload
+        run: echo "should not run"
+  monitor:
+    name: On-call page
+    needs: ship
+    if: "failure()"
+    steps:
+      - name: page
+        run: |
+          echo "paged" > page.txt
+  release-notes:
+    name: Release notes
+    needs: ship
+    steps:
+      - name: notes
+        run: |
+          echo "wrong" > notes.txt
+  postclean:
+    name: Post clean
+    needs: [compile, check]
+    if: "github.ref == 'refs/heads/release'"
+    steps:
+      - name: clean
+        run: |
+          echo "wrong" > clean.txt

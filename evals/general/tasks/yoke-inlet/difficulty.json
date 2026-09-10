@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 3,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 1,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": "The verifier brings up the agent's reverse-proxy stack itself (idempotent /app/start.sh), three separate times with three different route sets (two of them hidden). Each run: real HTTPS calls through nginx using the agent's own /app/tls/ca.crt with verification fully on (certificate chain and hostname; no -k); a 300-request canary-split probe whose share served by the canary must fall in [0.60, 0.72]; a parse of /app/logs/access.log asserting the exact 9-field pipe-delimited YOKE record for every route of that case; then one upstream is killed (stable in two cases, canary in one) and 30 fresh requests must all be HTTP 200 and served by the surviving upstream, and those requests must appear in the same log format. Wrong weights or a pinned single upstream (split out of band), a cert whose chain or SAN does not verify for 127.0.0.1, missing TLS, no retry/failover (5xx after the kill), or a non-compliant log record all fail the relevant case and the whole reward goes to 0.",
+  "notes": "Medium system_administration slot (area H): a real nginx 1.24 reverse proxy with weighted canary split, self-signed CA + server cert generated with openssl, TLS termination, upstream health-based failover exercised by actually killing one of the two live upstreams, and a custom pipe-delimited log format. The interesting design decisions are deliberately left to the agent: nginx config content (weight=2/1, max_fails/fail_timeout, proxy_next_upstream), SAN on the server cert, non-root runtime layout (all pid/temp/log paths under /app, no sudo), and an idempotent startup script the verifier re-runs per case. The upstream app server fixture is a stdlib python HTTP server requiring no pip installs. Hidden cases vary the route set AND the kill direction so the log-format parser and both failover directions are genuinely re-exercised. Rubric totals 15 = medium; dependent_stages=3 (bring up -> TLS+split -> kill -> failover -> log), tool_breadth=3 (nginx, openssl, process control, curl/TLS validation, log parsing), debugging_ambiguity=2 (502s, TLS verify failures, non-root nginx all surface in logs), quantitative_correctness=1 (statistical split band), interaction_statefulness=1 (a live multi-process stack the verifier drives across three restarts), resource_pressure=0, unsafe_action_penalty=0."
+}

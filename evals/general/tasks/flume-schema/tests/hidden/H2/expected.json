@@ -1,0 +1,200 @@
+{
+  "final_state": {
+    "card_limit": 60.0,
+    "menu": [
+      {
+        "item_id": 1,
+        "name": "chocolate-cake",
+        "price": 22.5
+      },
+      {
+        "item_id": 2,
+        "name": "lemon-tart",
+        "price": 12.5
+      },
+      {
+        "item_id": 3,
+        "name": "butter-croissant",
+        "price": 4.5
+      },
+      {
+        "item_id": 4,
+        "name": "sourdough-loaf",
+        "price": 8.0
+      },
+      {
+        "item_id": 5,
+        "name": "star-cookie",
+        "price": 2.25
+      }
+    ],
+    "orders": [
+      {
+        "item_id": 1,
+        "order_id": 1,
+        "qty": 1,
+        "status": "finalized",
+        "total": 22.5,
+        "unit_price": 22.5
+      }
+    ],
+    "outbox": [
+      {
+        "notify_id": 1,
+        "recipient": "carol@example.com",
+        "text": "Receipt for order 1: 22.5"
+      }
+    ],
+    "payments": [
+      {
+        "amount": 22.5,
+        "charge_id": 1,
+        "order_id": 1,
+        "status": "charged"
+      }
+    ],
+    "stock": {
+      "1": 7,
+      "2": 7,
+      "3": 12,
+      "4": 5,
+      "5": 0
+    }
+  },
+  "session": "H2",
+  "steps": [
+    {
+      "arguments": {
+        "item_id": 1,
+        "qty": 1
+      },
+      "error": null,
+      "kind": "tool_call",
+      "outcome": "executed",
+      "result": {
+        "item_id": 1,
+        "order_id": 1,
+        "qty": 1,
+        "status": "finalized",
+        "total": 22.5,
+        "unit_price": 22.5
+      },
+      "retries": 0,
+      "step": 1,
+      "tool": "place_order"
+    },
+    {
+      "arguments": {
+        "amount": 122.5,
+        "order_id": 1
+      },
+      "error": "EXEC_ERROR:CARD_DECLINED:amount 122.5 exceeds card limit 60.0",
+      "kind": "tool_call",
+      "outcome": "error",
+      "result": null,
+      "retries": 0,
+      "step": 2,
+      "tool": "charge_card"
+    },
+    {
+      "arguments": {
+        "amount": 22.5,
+        "order_id": 1
+      },
+      "error": null,
+      "kind": "tool_call",
+      "outcome": "executed",
+      "result": {
+        "amount": 22.5,
+        "charge_id": 1,
+        "order_id": 1,
+        "status": "charged"
+      },
+      "retries": 1,
+      "step": 3,
+      "tool": "charge_card"
+    },
+    {
+      "arguments": {
+        "amount": 22.5,
+        "order_id": 1
+      },
+      "error": null,
+      "kind": "tool_call",
+      "outcome": "replayed",
+      "result": {
+        "amount": 22.5,
+        "charge_id": 1,
+        "order_id": 1,
+        "status": "charged"
+      },
+      "retries": 0,
+      "step": 4,
+      "tool": "charge_card"
+    },
+    {
+      "arguments": {
+        "recipient": "carol@example.com",
+        "text": "Receipt for order 1: 22.5"
+      },
+      "error": null,
+      "kind": "tool_call",
+      "outcome": "executed",
+      "result": {
+        "notify_id": 1,
+        "recipient": "carol@example.com",
+        "text": "Receipt for order 1: 22.5"
+      },
+      "retries": 0,
+      "step": 5,
+      "tool": "send_notification"
+    },
+    {
+      "arguments": {
+        "recipient": "carol@example.com",
+        "text": "Receipt for order 1: 22.5"
+      },
+      "error": null,
+      "kind": "tool_call",
+      "outcome": "replayed",
+      "result": {
+        "notify_id": 1,
+        "recipient": "carol@example.com",
+        "text": "Receipt for order 1: 22.5"
+      },
+      "retries": 0,
+      "step": 6,
+      "tool": "send_notification"
+    },
+    {
+      "arguments": {
+        "order_ids": [
+          1
+        ]
+      },
+      "error": null,
+      "kind": "tool_call",
+      "outcome": "executed",
+      "result": {
+        "finalized": [
+          1
+        ]
+      },
+      "retries": 0,
+      "step": 7,
+      "tool": "finalize_order"
+    },
+    {
+      "answer": "Order 1 complete: paid 22.5, receipt sent, finalized",
+      "arguments": null,
+      "error": null,
+      "kind": "final",
+      "outcome": "final",
+      "result": null,
+      "retries": 0,
+      "step": 8,
+      "tool": null
+    }
+  ],
+  "terminated": "completed"
+}

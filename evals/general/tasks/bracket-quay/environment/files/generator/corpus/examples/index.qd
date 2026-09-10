@@ -1,0 +1,62 @@
+---
+title: Quaydoc Manual
+order: 0
+description: The user manual for quaydoc, a self-contained documentation site generator.
+---
+
+Welcome to the quaydoc manual. This site is built by quaydoc itself: the
+source lives under `examples/` and the rendered output is what you are
+reading.
+
+## What is quaydoc
+
+quaydoc is a documentation site generator written in pure standard-library
+Python. It reads a tree of plain-text pages using a small markup language,
+renders HTML, and publishes a search index, a sitemap and an Atom feed. It
+has no third-party runtime dependencies and no daemons: `quaydoc build`
+produces a static directory you can copy anywhere.
+
+The manual is organised like this:
+
+- [[Installation]] shows how to set up quaydoc,
+- [[Linux & macOS]] lists the supported operating systems,
+- [[FAQ: install location]] covers where the package lands,
+- [[Writing pages]] is the markup reference,
+- [[Links and references]] explains internal links and the table of contents,
+- [[Building a site]] covers configuration and the build pipeline,
+- [[Command-line reference]] documents every command,
+- [[Theming]] describes the default theme and custom themes,
+- [[Search and feeds]] covers the search index, sitemap and Atom feed,
+- [[Troubleshooting]] collects common problems.
+
+## Quick start
+
+```console
+$ cd examples
+$ python3 -m quaydoc.cli build .
+$ python3 -m quaydoc.cli check site
+No issues.
+$ python3 -m quaydoc.cli serve site --port 8000
+```
+
+[tip] The `check` command validates every fragment link in the built site;
+most issues reported in the wild are caught there first.
+
+## Conventions
+
+Pages are plain UTF-8 text. Front matter at the top of a file sets the
+title, order, date, tags and draft state:
+
+```
+---
+title: Installation
+order: 10
+date: 2025-01-08
+tags: [setup, install]
+---
+```
+
+Everything after the closing `---` is page content. Headings are set with
+`#` through `######`; the table of contents panel lists every heading in
+the page, and headings are reachable as `#anchor` fragments whose spelling
+is documented in [[Links and references]].

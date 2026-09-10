@@ -1,0 +1,13 @@
+# quaydoc
+
+quaydoc is a documentation site generator written in pure standard-library
+Python. It turns a tree of plain-text pages into a static HTML site.
+
+## Quick start
+
+```console
+$ python3 -m quaydoc.cli build docs -o site
+$ python3 -m quaydoc.cli serve site
+```
+
+See `docs/` and the CHANGELOG for details.

@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 3,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": null,
+  "notes": "DuckDB analytical warehouse task (the suite has zero DuckDB coverage). The agent writes one reusable pipeline (stdlib + duckdb only, argv-driven) that (a) runs NTILE/SUM window analytics over a ~630 MB, 48M-row Hive-partitioned Parquet fact table while staying inside a self-declared memory ceiling of at most 512 MB -- a default-settings DuckDB session peaks at ~3.5 GB, while a memory_limit + temp_directory out-of-core session peaks near ~360 MB, so the ceiling genuinely discriminates (resource_pressure 3, enforced by the verifier via ru_maxrss sampling on the visible and on each hidden run); (b) materialises a per-(region,day,pct_tile) summary table to CSV and Parquet; (c) derives a report (totals, largest day, top category, top-tile count, ranked leaderboard). The verifier runs the deliverable against the visible warehouse and 3 hidden monthly partitions (different seeds, one partition split across two files) and asserts byte-exact outputs (canonical CSV/JSON) plus a fresh-session query over the materialised Parquet. Difficulty is medium: the analytic work is single-tool (duckdb) and the outputs are exactly specified; the difficulty comes from coordinating the out-of-core strategy with byte-exactness (dependent_stages 2, reasoning 2, quantitative 2, hidden generalization 2), not from prompt length or timeouts. Memory discrimination measured on the reference image: naive/default-session pipeline peak RSS 3,519,812 KB vs out-of-core (256MB limit + temp_directory) 366,688 KB on the same 48M-row warehouse; outputs byte-identical either way. Ceiling usage: the oracle measures its own solve run and declares ceiling = min(512, peak_mb + 96); the verifier re-measures on visible + 3 hidden runs and requires every peak <= declared ceiling, with ceiling in [128, 512]."
+}

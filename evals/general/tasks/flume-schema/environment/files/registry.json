@@ -1,0 +1,76 @@
+{
+  "version": 1,
+  "description": "Baker's-Dozen order console: the 6-tool JSON-schema registry for the flume-schema agent platform. Every tool has a name, a description, an idempotency flag and a JSON-schema parameter contract. Tools labelled idempotent may be re-executed freely; tools not labelled idempotent must never be executed twice with identical arguments.",
+  "tools": [
+    {
+      "name": "search_menu",
+      "description": "Search the menu by name substring; returns matching items ordered by item_id. Idempotent: safe to call repeatedly.",
+      "idempotent": true,
+      "parameters": {
+        "properties": {
+          "query": {"type": "string", "maxLength": 40},
+          "max_results": {"type": "integer", "minimum": 1, "maximum": 10}
+        },
+        "required": ["query", "max_results"]
+      }
+    },
+    {
+      "name": "get_stock",
+      "description": "Look up the current stock, price and name of an item. Idempotent: safe to call repeatedly; returns live stock.",
+      "idempotent": true,
+      "parameters": {
+        "properties": {
+          "item_id": {"type": "integer", "minimum": 1}
+        },
+        "required": ["item_id"]
+      }
+    },
+    {
+      "name": "place_order",
+      "description": "Place an order for qty units of an item. Decrements stock and creates an order. NOT idempotent: a repeated call with the same arguments must not execute again.",
+      "idempotent": false,
+      "parameters": {
+        "properties": {
+          "item_id": {"type": "integer", "minimum": 1},
+          "qty": {"type": "integer", "minimum": 1, "maximum": 5}
+        },
+        "required": ["item_id", "qty"]
+      }
+    },
+    {
+      "name": "charge_card",
+      "description": "Charge an order's total to the customer's card. May be briefly unavailable (retryable transient error). NOT idempotent: a repeated call with the same arguments must not execute again.",
+      "idempotent": false,
+      "parameters": {
+        "properties": {
+          "order_id": {"type": "integer", "minimum": 1},
+          "amount": {"type": "number", "minimum": 0.01}
+        },
+        "required": ["order_id", "amount"]
+      }
+    },
+    {
+      "name": "send_notification",
+      "description": "Send a text notification to a recipient. NOT idempotent: a repeated call with the same arguments must not execute again.",
+      "idempotent": false,
+      "parameters": {
+        "properties": {
+          "recipient": {"type": "string", "maxLength": 64},
+          "text": {"type": "string", "maxLength": 140}
+        },
+        "required": ["recipient", "text"]
+      }
+    },
+    {
+      "name": "finalize_order",
+      "description": "Mark one or more placed orders as finalized. NOT idempotent: a repeated call with the same arguments must not execute again.",
+      "idempotent": false,
+      "parameters": {
+        "properties": {
+          "order_ids": {"type": "array", "items": {"type": "integer"}, "minItems": 1}
+        },
+        "required": ["order_ids"]
+      }
+    }
+  ]
+}

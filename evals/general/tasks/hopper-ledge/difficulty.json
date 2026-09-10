@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 2,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 3,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 2,
+    "unsafe_action_penalty": 1
+  },
+  "expected_expert_time_min": 90,
+  "documented_probe": null,
+  "notes": "Hard repair task on a shipped repository with real git history (7 commits). The org's local CI runner (the wave's local-runner model) executes ci/pipeline.json and is broken in three independent ways that only surface when the whole pipeline runs: (1) downloaded artifacts are materialised under <ws>/artifacts/<job>/ instead of the consumer workspace root, so the dependent verify step cannot find the exported file; (2) the dependency cache is snapshotted at restore time, before the cache-miss-gated install step has populated it, so the warm second run restores an empty cache, skips install, and the build dies on the missing vendored dependency; (3) all jobs share one workspace checkout, so build output remains in the tree when the test job runs and the repo-hygiene test fails. The agent must repair the shared runner without touching any test: the verifier byte-hashes the shipped tests against a manifest, greps for skip/deselect markers, re-runs the pipeline cold then warm (cache hit + install skipped) on the visible repo, and runs the fixed runner twice in a row against three hidden fixture repositories with different job names, artifact dirs, cache paths, lockfiles and job topology (2 and 3 jobs, artifact chain), asserting green + warm-cache semantics + full test counts each time. Reasoning 3 (three interacting defects, warm/cold cache semantics), debugging_ambiguity 3 (no file or bug named, each defect only visible in the composed run), hidden_case_generalization 3 (runner must be fixed generically or hidden repos fail), dependent_stages 3 (needs graph, artifact chain, cache across runs), interaction_statefulness 2 (second run over a warm cache), unsafe_action_penalty 1 (the tempting fix is deleting/weakening tests; that path is detected byte-for-byte)."
+}

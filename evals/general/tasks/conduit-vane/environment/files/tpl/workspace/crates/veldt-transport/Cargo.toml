@@ -1,0 +1,11 @@
+[package]
+name = "veldt-transport"
+version = "0.2.0"
+description = "Veldt byte sources, sinks, frame reader/writer, and sessions"
+edition = "2021"
+
+[package.metadata]
+role = "library"
+
+[dependencies]
+veldt-core = { path = "../veldt-core" }

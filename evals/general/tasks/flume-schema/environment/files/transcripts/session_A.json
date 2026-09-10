@@ -1,0 +1,40 @@
+{
+  "session": "A",
+  "max_steps": 16,
+  "user": "You run the bakery order console. A customer asked for 2 butter-croissants. Look the item up, check it is in stock, place the order, charge the card for the order total, send a confirmation notification to alice@example.com, and finalize the order.",
+  "initial_state": {
+    "menu": [
+      {"item_id": 1, "name": "chocolate-cake", "price": 22.5},
+      {"item_id": 2, "name": "lemon-tart", "price": 12.5},
+      {"item_id": 3, "name": "butter-croissant", "price": 4.5},
+      {"item_id": 4, "name": "sourdough-loaf", "price": 8.0},
+      {"item_id": 5, "name": "star-cookie", "price": 2.25}
+    ],
+    "stock": {"1": 8, "2": 7, "3": 12, "4": 5, "5": 0},
+    "orders": [],
+    "payments": [],
+    "outbox": [],
+    "card_limit": 60.0,
+    "next_order_id": 1,
+    "next_charge_id": 1,
+    "next_notify_id": 1
+  },
+  "transients": [
+    ["charge_card", {"order_id": 1, "amount": 9.0}, 1]
+  ],
+  "decisions": [
+    ["", {"kind": "tool_call", "name": "search_menu", "arguments": {"query": "croissant", "max_results": 3}}],
+    ["K", {"kind": "tool_call", "name": "search_menu", "arguments": {"query": "croissant", "max_results": 99}}],
+    ["KS", {"kind": "tool_call", "name": "get_stock", "arguments": {"item_id": 3}}],
+    ["KSK", {"kind": "tool_call", "name": "get_stock", "arguments": {"item_id": 99}}],
+    ["KSKE", {"kind": "tool_call", "name": "place_order", "arguments": {"item_id": 3, "qty": 9}}],
+    ["KSKES", {"kind": "tool_call", "name": "place_order", "arguments": {"item_id": 3, "qty": 2}}],
+    ["KSKESK", {"kind": "tool_call", "name": "place_order", "arguments": {"item_id": 3, "qty": 2}}],
+    ["KSKESKR", {"kind": "tool_call", "name": "charge_card", "arguments": {"order_id": 1, "amount": 9.0}}],
+    ["KSKESKRK", {"kind": "tool_call", "name": "send_notification", "arguments": {"recipient": "alice@example.com", "text": "Order 1 placed: 2 butter-croissant"}}],
+    ["KSKESKRKK", {"kind": "tool_call", "name": "send_notification"}],
+    ["KSKESKRKKM", {"kind": "tool_call", "name": "finalize_order", "arguments": {"order_ids": [1]}}],
+    ["KSKESKRKKMK", ["place_order", {"item_id": 3, "qty": 2}]],
+    ["KSKESKRKKMKM", {"kind": "final", "answer": "Order 1 complete: 2 butter-croissant charged 9.0; alice@example.com notified; order finalized"}]
+  ]
+}

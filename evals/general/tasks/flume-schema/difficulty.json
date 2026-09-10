@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 1,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 3,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 2,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 90,
+  "documented_probe": null,
+  "notes": "Hard. The agent writes the executor loop of a tool-calling system against a shipped mock platform (6-tool JSON-schema registry, deterministic scripted model, deterministic tool store). Dependent stages 3: every stage feeds the next — shape check -> unknown-tool -> schema validation -> idempotency replay check -> execute-with-retries -> snapshot, and each step's feedback message determines the mock model's next emission, so any reordered or skipped stage derails the whole transcript. Reasoning depth 3: replay semantics must be scoped to non-idempotent tools (idempotent tools return live state and must re-execute), the retry policy must be silent and bounded with backoff read from runtime.protocol, and the exact-error protocol (six feedback types, canonical strings from the shipped validator) must be followed verbatim. Adversarial inputs 3: transcripts deliberately throw malformed emissions, schema type/boundary failures, out-of-range arguments, unknown tools, duplicate non-idempotent calls, and a transient retryable gateway failure; one hidden transcript scripts a model stuck repeating a schema-invalid call to blow past the step budget, so the loop must stop on step_cap. Hidden-case generalization 3: verifier re-runs the loop on the visible transcript and 3 genuinely different hidden transcripts and requires the exact tool-call sequence, exact error strings returned, exact termination reason, and exact final store state. Debugging ambiguity 2: the instruction specifies outcome but not the implementation or where a divergent loop goes wrong. Interaction statefulness 2: the loop must thread a stateful deterministic tool store and a message history across up to 16 turns. No resource pressure, no dangerous actions."
+}

@@ -1,0 +1,30 @@
+---
+title: Search and feeds
+order: 80
+tags: [search, rss, sitemap]
+---
+
+## Search index
+
+Each build writes `search_index.json` — a JSON array, one entry per page,
+with the title, URL, a text summary and the page's top keywords. Terms are
+lowercased, stop words are dropped, and light suffix stemming is applied.
+
+Query the index from the command line:
+
+```console
+$ quaydoc search fragment checker site
+/guide/links/  Links and references
+/guide/building/  Building a site
+```
+
+## Sitemap
+
+`sitemap.xml` lists every built page with its last-modified date where one
+is known.
+
+## Atom feed
+
+When `[build] rss` is enabled, `feed.xml` is an Atom feed with one entry per
+page. Entries use the page's `date` front matter value when present and the
+build time otherwise.

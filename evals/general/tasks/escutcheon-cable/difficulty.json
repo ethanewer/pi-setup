@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 2,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": null,
+  "notes": "Medium. The agent must (a) bring up a live three-process stack (Go backend built from source, Python frontend, span collector) and (b) implement W3C traceparent propagation across two services plus structured JSON logging with a consistent trace_id correlation field and per-request span emission to a local collector. The interesting work is left unspecified: which files to edit and how to wire propagation are up to the agent; the verifier drives single, concurrent fan-out and failing request scenarios with fresh trace ids and asserts parent-child span linkage, trace_id consistency across every relevant log line on both services (proving cross-service propagation), and correct failure-status passthrough. hidden_case_generalization over three distinct request patterns; interaction_statefulness via the live stack and collector state; depends on an ordered bring-up; stdlib-only, so no pip deps and no resource pressure. No destructive surface."
+}

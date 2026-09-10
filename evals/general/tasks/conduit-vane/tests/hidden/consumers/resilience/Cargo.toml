@@ -1,0 +1,10 @@
+[package]
+name = "resilience"
+version = "0.1.0"
+description = "Downstream consumer compiled against the veldt workspace public API"
+edition = "2021"
+
+[dependencies]
+veldt-core = { path = "../deps/veldt-core" }
+veldt-measure = { path = "../deps/veldt-measure" }
+veldt-transport = { path = "../deps/veldt-transport" }

@@ -1,0 +1,264 @@
+{
+  "label": "controlled mode rigour",
+  "renders": [
+    {
+      "label": "controlled prop changes win",
+      "component": "Counter",
+      "props": {
+        "label": "Ticks",
+        "min": 10,
+        "max": 50,
+        "step": 5,
+        "value": 47
+      },
+      "capture": [
+        "onChange"
+      ],
+      "check": [
+        {
+          "kind": "text",
+          "selector": "[data-testid=counter-value]",
+          "eq": "47"
+        }
+      ],
+      "steps": [
+        {
+          "rerender": {
+            "value": 20
+          },
+          "check": [
+            {
+              "kind": "text",
+              "selector": "[data-testid=counter-value]",
+              "eq": "20"
+            }
+          ]
+        },
+        {
+          "actions": [
+            {
+              "kind": "click",
+              "selector": "button[aria-label=increment]"
+            }
+          ],
+          "check": [
+            {
+              "kind": "text",
+              "selector": "[data-testid=counter-value]",
+              "eq": "20"
+            }
+          ],
+          "callback": {
+            "onChange": [
+              [
+                25
+              ]
+            ]
+          }
+        },
+        {
+          "rerender": {
+            "value": -4
+          },
+          "check": [
+            {
+              "kind": "text",
+              "selector": "[data-testid=counter-value]",
+              "eq": "10"
+            }
+          ]
+        },
+        {
+          "actions": [
+            {
+              "kind": "click",
+              "selector": "button[aria-label=decrement]"
+            }
+          ],
+          "check": [
+            {
+              "kind": "text",
+              "selector": "[data-testid=counter-value]",
+              "eq": "10"
+            }
+          ],
+          "callback": {
+            "onChange": [
+              [
+                25
+              ],
+              [
+                10
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "label": "controlled typed commit",
+      "component": "QuantityInput",
+      "props": {
+        "label": "Qty",
+        "min": 5,
+        "max": 10,
+        "value": 8
+      },
+      "capture": [
+        "onChange"
+      ],
+      "check": [
+        {
+          "kind": "attr",
+          "selector": "input",
+          "attr": "value",
+          "eq": "8"
+        }
+      ],
+      "steps": [
+        {
+          "actions": [
+            {
+              "kind": "type",
+              "selector": "input",
+              "text": "3"
+            },
+            {
+              "kind": "blur",
+              "selector": "input"
+            }
+          ],
+          "callback": {
+            "onChange": [
+              [
+                5
+              ]
+            ]
+          }
+        },
+        {
+          "rerender": {
+            "value": 5
+          },
+          "check": [
+            {
+              "kind": "attr",
+              "selector": "input",
+              "attr": "value",
+              "eq": "5"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "controlled never mutates props",
+      "component": "TagPicker",
+      "props": {
+        "options": [
+          {
+            "id": "x",
+            "label": "Xan"
+          },
+          {
+            "id": "y",
+            "label": "Yew"
+          },
+          {
+            "id": "z",
+            "label": "Zed"
+          }
+        ],
+        "value": [
+          "x",
+          "y"
+        ]
+      },
+      "capture": [
+        "onChange"
+      ],
+      "freshProps": {
+        "onChange": "value"
+      },
+      "steps": [
+        {
+          "actions": [
+            {
+              "kind": "click",
+              "selector": "button[data-tag-id=z]"
+            }
+          ],
+          "check": [
+            {
+              "kind": "text",
+              "selector": "[data-testid=tag-summary]",
+              "eq": "2 selected"
+            }
+          ],
+          "callback": {
+            "onChange": [
+              [
+                [
+                  "x",
+                  "y",
+                  "z"
+                ]
+              ]
+            ]
+          }
+        },
+        {
+          "rerender": {
+            "value": [
+              "x",
+              "z"
+            ]
+          },
+          "check": [
+            {
+              "kind": "text",
+              "selector": "[data-testid=tag-summary]",
+              "eq": "2 selected"
+            },
+            {
+              "kind": "class",
+              "selector": "button[data-tag-id=z]",
+              "has": "selected"
+            }
+          ]
+        },
+        {
+          "actions": [
+            {
+              "kind": "click",
+              "selector": "button[data-tag-id=x]"
+            }
+          ],
+          "check": [
+            {
+              "kind": "text",
+              "selector": "[data-testid=tag-summary]",
+              "eq": "2 selected"
+            }
+          ],
+          "callback": {
+            "onChange": [
+              [
+                [
+                  "x",
+                  "y",
+                  "z"
+                ]
+              ],
+              [
+                [
+                  "z"
+                ]
+              ]
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

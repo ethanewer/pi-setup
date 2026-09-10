@@ -1,0 +1,72 @@
+{
+  "label": "keyboard, drafts and odd ranges",
+  "renders": [
+    {
+      "label": "arrows discard the draft",
+      "component": "QuantityInput",
+      "props": { "label": "Gauge", "min": 0, "max": 9, "defaultValue": 4 },
+      "capture": ["onChange"],
+      "steps": [
+        { "actions": [ { "kind": "type", "selector": "input", "text": "0" }, { "kind": "key", "selector": "input", "key": "ArrowUp" } ],
+          "check": [ { "kind": "attr", "selector": "input", "attr": "value", "eq": "5" } ],
+          "callback": { "onChange": [[5]] } },
+        { "actions": [ { "kind": "key", "selector": "input", "key": "ArrowDown" } ],
+          "check": [ { "kind": "attr", "selector": "input", "attr": "value", "eq": "4" } ],
+          "callback": { "onChange": [[5], [4]] } }
+      ]
+    },
+    {
+      "label": "invalid drafts fire nothing",
+      "component": "QuantityInput",
+      "props": { "label": "Gauge", "min": 0, "max": 9, "defaultValue": 4 },
+      "capture": ["onChange"],
+      "steps": [
+        { "actions": [ { "kind": "type", "selector": "input", "text": "abc" }, { "kind": "key", "selector": "input", "key": "Enter" } ],
+          "check": [ { "kind": "attr", "selector": "input", "attr": "value", "eq": "4" } ],
+          "callback": { "onChange": [] } },
+        { "actions": [ { "kind": "type", "selector": "input", "text": "9x" }, { "kind": "blur", "selector": "input" } ],
+          "check": [ { "kind": "attr", "selector": "input", "attr": "value", "eq": "4" } ],
+          "callback": { "onChange": [] } },
+        { "actions": [ { "kind": "type", "selector": "input", "text": "8" }, { "kind": "key", "selector": "input", "key": "Enter" } ],
+          "check": [ { "kind": "attr", "selector": "input", "attr": "value", "eq": "8" } ],
+          "callback": { "onChange": [[8]] } }
+      ]
+    },
+    {
+      "label": "negative range",
+      "component": "Counter",
+      "props": { "label": "Temp", "min": -5, "max": 5, "step": 2, "defaultValue": -4 },
+      "capture": ["onChange"],
+      "check": [ { "kind": "text", "selector": "[data-testid=counter-value]", "eq": "-4" } ],
+      "steps": [
+        { "actions": [ { "kind": "click", "selector": "button[aria-label=decrement]" } ],
+          "check": [ { "kind": "text", "selector": "[data-testid=counter-value]", "eq": "-5" } ],
+          "callback": { "onChange": [[-5]] } },
+        { "actions": [ { "kind": "click", "selector": "button[aria-label=decrement]" } ],
+          "check": [ { "kind": "text", "selector": "[data-testid=counter-value]", "eq": "-5" } ],
+          "callback": { "onChange": [[-5], [-5]] } }
+      ]
+    },
+    {
+      "label": "empty label and multi toggle",
+      "component": "TagPicker",
+      "props": {
+        "options": [ { "id": "a", "label": "Alpha" }, { "id": "b", "label": "Beta" }, { "id": "c", "label": "Gamma" } ],
+        "defaultValue": [], "emptyLabel": "None chosen"
+      },
+      "capture": ["onChange"],
+      "check": [ { "kind": "text", "selector": "[data-testid=tag-summary]", "eq": "None chosen" } ],
+      "steps": [
+        { "actions": [ { "kind": "click", "selector": "button[data-tag-id=a]" } ],
+          "check": [ { "kind": "text", "selector": "[data-testid=tag-summary]", "eq": "1 selected" } ],
+          "callback": { "onChange": [[["a"]]] } },
+        { "actions": [ { "kind": "click", "selector": "button[data-tag-id=c]" } ],
+          "check": [ { "kind": "text", "selector": "[data-testid=tag-summary]", "eq": "2 selected" } ],
+          "callback": { "onChange": [[["a"]], [["a", "c"]]] } },
+        { "actions": [ { "kind": "click", "selector": "button[data-tag-id=a]" } ],
+          "check": [ { "kind": "text", "selector": "[data-testid=tag-summary]", "eq": "1 selected" } ],
+          "callback": { "onChange": [[["a"]], [["a", "c"]], [["c"]]] } }
+      ]
+    }
+  ]
+}

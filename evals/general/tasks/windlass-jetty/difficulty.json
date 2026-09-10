@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 3,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 3,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 100,
+  "documented_probe": null,
+  "notes": "Hard. A two-language gRPC schema-migration repair inside a real generated git repository (Go server in new-Go/modget syntax, Python client, .proto that evolved: renamed field, new oneof, deprecated field still sent). dependent_stages=3: bindings must be regenerated from the authoritative proto before the Go server compiles, the server must build before it can be started, and every hidden client assertion depends on the live service. tool_breadth=3: driving protoc with the Go plugins (protoc-gen-go/protoc-gen-go-grpc) plus grpc_tools.protoc for Python, the go modget build, two gRPC runtimes talking on the wire, the git history, and a production serve script with readiness polling. debugging_ambiguity=3: the only symptom of the real defect is a missing echo in receipts, visible only by exercising old-shaped payloads; compile errors from stale bindings can be misread as a need to write Go, and the new-Go syntax is unfamiliar. adversarial_inputs=2: unicode/emoji instruction payloads, padded addresses, empty deprecated field, heavy/light boundary at weight 10000. hidden_case_generalization=3: three hidden clients with genuinely different shapes (legacy, box, envelope) and data recompute the documented route_code/packaging rules. quantitative_correctness=2: exact echo equality (including deprecated-field preservation) and exact route_code string equality. No resource pressure, no interactive statefulness, no destructive actions available."
+}

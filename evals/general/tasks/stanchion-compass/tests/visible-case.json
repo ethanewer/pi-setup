@@ -1,0 +1,18 @@
+{
+  "label": "visible-charts",
+  "route": "/charts",
+  "ready": [
+    { "selector": "[data-testid=charts-head]", "contains": "scm_9f31_charts" },
+    { "selector": "[data-testid=charts-table]", "contains": "station-" },
+    { "selector": "[data-testid=charts-seed]", "contains": "9f31:" }
+  ],
+  "steps": [
+    {
+      "action": { "kind": "click", "selector": "[data-testid=charts-reseed]" },
+      "checks": [
+        { "selector": "[data-testid=charts-seed]", "changed": true },
+        { "selector": "[data-testid=charts-seed]", "matches": "^9f31:" }
+      ]
+    }
+  ]
+}

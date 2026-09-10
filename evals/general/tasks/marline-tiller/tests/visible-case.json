@@ -1,0 +1,325 @@
+{
+  "label": "visible baseline",
+  "renders": [
+    {
+      "label": "uncontrolled stepping",
+      "component": "Counter",
+      "props": {
+        "label": "Portions",
+        "min": 0,
+        "max": 10,
+        "step": 2,
+        "defaultValue": 4
+      },
+      "capture": [
+        "onChange"
+      ],
+      "check": [
+        {
+          "kind": "text",
+          "selector": "[data-testid=counter-value]",
+          "eq": "4"
+        }
+      ],
+      "steps": [
+        {
+          "actions": [
+            {
+              "kind": "click",
+              "selector": "button[aria-label=increment]"
+            }
+          ],
+          "check": [
+            {
+              "kind": "text",
+              "selector": "[data-testid=counter-value]",
+              "eq": "6"
+            }
+          ],
+          "callback": {
+            "onChange": [
+              [
+                6
+              ]
+            ]
+          }
+        },
+        {
+          "actions": [
+            {
+              "kind": "click",
+              "selector": "button[aria-label=decrement]"
+            }
+          ],
+          "check": [
+            {
+              "kind": "text",
+              "selector": "[data-testid=counter-value]",
+              "eq": "4"
+            }
+          ],
+          "callback": {
+            "onChange": [
+              [
+                6
+              ],
+              [
+                4
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "label": "controlled display",
+      "component": "Counter",
+      "props": {
+        "label": "Slices",
+        "min": 0,
+        "max": 100,
+        "step": 1,
+        "value": 7
+      },
+      "capture": [
+        "onChange"
+      ],
+      "check": [
+        {
+          "kind": "text",
+          "selector": "[data-testid=counter-value]",
+          "eq": "7"
+        }
+      ],
+      "steps": [
+        {
+          "actions": [
+            {
+              "kind": "click",
+              "selector": "button[aria-label=increment]"
+            }
+          ],
+          "check": [
+            {
+              "kind": "text",
+              "selector": "[data-testid=counter-value]",
+              "eq": "7"
+            }
+          ],
+          "callback": {
+            "onChange": [
+              [
+                8
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "label": "typed commit",
+      "component": "QuantityInput",
+      "props": {
+        "label": "Qty",
+        "min": 0,
+        "max": 9,
+        "defaultValue": 4
+      },
+      "capture": [
+        "onChange"
+      ],
+      "check": [
+        {
+          "kind": "attr",
+          "selector": "input",
+          "attr": "value",
+          "eq": "4"
+        }
+      ],
+      "steps": [
+        {
+          "actions": [
+            {
+              "kind": "type",
+              "selector": "input",
+              "text": "7"
+            },
+            {
+              "kind": "blur",
+              "selector": "input"
+            }
+          ],
+          "check": [
+            {
+              "kind": "attr",
+              "selector": "input",
+              "attr": "value",
+              "eq": "7"
+            }
+          ],
+          "callback": {
+            "onChange": [
+              [
+                7
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "label": "controlled typed commit",
+      "component": "QuantityInput",
+      "props": {
+        "label": "Qty",
+        "min": 0,
+        "max": 100,
+        "value": 5
+      },
+      "capture": [
+        "onChange"
+      ],
+      "check": [
+        {
+          "kind": "attr",
+          "selector": "input",
+          "attr": "value",
+          "eq": "5"
+        }
+      ],
+      "steps": [
+        {
+          "actions": [
+            {
+              "kind": "type",
+              "selector": "input",
+              "text": "12"
+            },
+            {
+              "kind": "blur",
+              "selector": "input"
+            }
+          ],
+          "callback": {
+            "onChange": [
+              [
+                12
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "label": "uncontrolled toggling",
+      "component": "TagPicker",
+      "props": {
+        "options": [
+          {
+            "id": "a",
+            "label": "Alpha"
+          },
+          {
+            "id": "b",
+            "label": "Beta"
+          }
+        ],
+        "defaultValue": [
+          "a"
+        ]
+      },
+      "capture": [
+        "onChange"
+      ],
+      "check": [
+        {
+          "kind": "text",
+          "selector": "[data-testid=tag-summary]",
+          "eq": "1 selected"
+        },
+        {
+          "kind": "class",
+          "selector": "button[data-tag-id=a]",
+          "has": "selected"
+        },
+        {
+          "kind": "class-not",
+          "selector": "button[data-tag-id=b]",
+          "has": "selected"
+        }
+      ],
+      "steps": [
+        {
+          "actions": [
+            {
+              "kind": "click",
+              "selector": "button[data-tag-id=b]"
+            }
+          ],
+          "check": [
+            {
+              "kind": "text",
+              "selector": "[data-testid=tag-summary]",
+              "eq": "2 selected"
+            }
+          ],
+          "callback": {
+            "onChange": [
+              [
+                [
+                  "a",
+                  "b"
+                ]
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "label": "controlled fresh array",
+      "component": "TagPicker",
+      "props": {
+        "options": [
+          {
+            "id": "a",
+            "label": "Alpha"
+          },
+          {
+            "id": "b",
+            "label": "Beta"
+          }
+        ],
+        "value": [
+          "a"
+        ]
+      },
+      "capture": [
+        "onChange"
+      ],
+      "freshProps": {
+        "onChange": "value"
+      },
+      "steps": [
+        {
+          "actions": [
+            {
+              "kind": "click",
+              "selector": "button[data-tag-id=b]"
+            }
+          ],
+          "callback": {
+            "onChange": [
+              [
+                [
+                  "a",
+                  "b"
+                ]
+              ]
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

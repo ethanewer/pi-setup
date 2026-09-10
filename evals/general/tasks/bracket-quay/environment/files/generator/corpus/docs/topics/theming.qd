@@ -1,0 +1,40 @@
+---
+title: Theming
+order: 70
+tags: [theme, css]
+---
+
+quaydoc ships one default theme: a single stylesheet, a small script and one
+sidebar template. Custom themes replace any of these by placing files next
+to the documentation root.
+
+## Assets
+
+- `assets/style.css` — everything visual,
+- `assets/quaydoc.js` — the mobile navigation toggle.
+
+The default stylesheet defines semantic classes you can rely on: `sidebar`,
+`toc-panel`, `admonition-*`, `pre.highlight`, `.tok-keyword` and friends,
+and a responsive layout that collapses the sidebar below 860 pixels.
+
+## Templates
+
+The sidebar is rendered from the theme template `nav.html`, a small
+variables-in-curlies template:
+
+```
+{% for item in nav %}
+<a class="nav-link{% if item.url == current %} active{% endif %}"
+   href="{{ item.url|escape }}">{{ item.title|escape }}</a>
+{% endfor %}
+```
+
+The template engine supports `{{ expr }}` interpolation with filters,
+`{% if %}`, `{% for %}`, and `{% include %}`. See the template engine tests
+for the full contract.
+
+## Custom themes
+
+Point `[build] theme` at a directory; any of `assets/style.css`,
+`assets/quaydoc.js` or `templates/nav.html` found there overrides the
+defaults. The build copies the merged asset set into the output.

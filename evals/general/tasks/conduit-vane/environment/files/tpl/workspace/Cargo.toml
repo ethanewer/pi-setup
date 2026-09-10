@@ -1,0 +1,12 @@
+[workspace]
+members = [
+    "crates/veldt-core",
+    "crates/veldt-measure",
+    "crates/veldt-transport",
+    "crates/veldt-cli",
+]
+resolver = "1"
+
+[workspace.metadata]
+org = "veldt-field-net"
+maintainer = "build@veldt.local"

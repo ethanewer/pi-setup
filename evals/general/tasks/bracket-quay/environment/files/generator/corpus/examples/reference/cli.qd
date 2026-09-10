@@ -1,0 +1,63 @@
+---
+title: Command-line reference
+order: 60
+tags: [reference, cli]
+---
+
+Every command takes a documentation root or a build directory and returns a
+zero exit code on success.
+
+## build
+
+```
+quaydoc build [ROOT] [-o OUT] [--archive PATH]
+```
+
+Render the tree at `ROOT` (default `.`) into `OUT` (default the configured
+`output_dir`). With `--archive PATH` the output is also bundled into a gzip
+tar.
+
+## check
+
+```
+quaydoc check [OUTDIR]
+```
+
+Run the integrity checks described in [[Links and references]] over a built
+site. The exit code is nonzero when any error-level issue is found, and a
+`.quay-check.txt` report is written into the build directory.
+
+## serve
+
+```
+quaydoc serve [OUTDIR] [--port PORT] [--host HOST]
+```
+
+Serve `OUTDIR` (default `site`) over HTTP. The default host is
+`127.0.0.1` and the default port is `8000`.
+
+## watch
+
+```
+quaydoc watch [ROOT]
+```
+
+Rebuild the site at `ROOT` whenever a source file changes, until
+interrupted.
+
+## search
+
+```
+quaydoc search TERMS... [OUTDIR]
+```
+
+Query the `search_index.json` of a built site and print matching page URLs
+in rank order.
+
+## init
+
+```
+quaydoc init [ROOT]
+```
+
+Scaffold a documentation tree: a `quaydoc.toml` and an `index.qd`.

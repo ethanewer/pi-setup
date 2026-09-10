@@ -1,0 +1,78 @@
+# Halyard alerting unit-test scenario (visible fixture).
+#
+# This exercises the four fixed alert names on their must-fire conditions.
+# It expects the rules file at /app/alerting/alerts.yml to fire each alert at
+# the stated evaluation time and nowhere else.  Run it with:
+#
+#   promtool test rules monitoring/tests/visible_scenario.yml
+#
+# The hidden acceptance scenarios the evaluation runs are stronger: they also
+# push healthy-but-busy input series that the rules must *not* fire on.
+
+rule_files:
+  - /app/alerting/alerts.yml
+
+evaluation_interval: 1m
+
+tests:
+  - interval: 1m
+    input_series:
+      - series: 'yard_gate_occupancy{lane="north"}'
+        values: '20 20 80 80 80 80 80 80 80 80 80 80 80 80 80'
+      - series: 'yard_lane_drain_total{lane="north"}'
+        values: '5 5 5 5 5 5 5 5 5 5 5 5 5 5 5'
+    alert_rule_test:
+      - eval_time: 14m
+        alertname: GateBacklogFault
+        exp_alerts:
+          - exp_labels:
+              severity: page
+              lane: north
+            exp_annotations:
+              summary: gate lane over ceiling and not draining
+
+  - interval: 1m
+    input_series:
+      - series: 'yard_crane_pickups_total{crane="crane-1"}'
+        values: '10 15 20 25 30 35 40 45 50 55 60 65 70 75 80'
+      - series: 'yard_crane_faults_total{crane="crane-1"}'
+        values: '0 0 5 10 15 20 25 30 35 40 45 50 55 60 65'
+    alert_rule_test:
+      - eval_time: 14m
+        alertname: StackerFaultStorm
+        exp_alerts:
+          - exp_labels:
+              severity: page
+              crane: crane-1
+            exp_annotations:
+              summary: crane above the 20% fault ratio limit
+
+  - interval: 1m
+    input_series:
+      - series: 'reefer_temp_celsius{unit="reefer-03"}'
+        values: '4 4 4 4 4 8 8 8 8 8 8 8 8 8 8'
+      - series: 'reefer_setpoint_celsius{unit="reefer-03"}'
+        values: '4 4 4 4 4 4 4 4 4 4 4 4 4 4 4'
+    alert_rule_test:
+      - eval_time: 14m
+        alertname: ReeferColdChain
+        exp_alerts:
+          - exp_labels:
+              severity: page
+              unit: reefer-03
+            exp_annotations:
+              summary: reefer outside setpoint tolerance
+
+  - interval: 1m
+    input_series:
+      - series: 'yard_dispatch_wait_seconds{depot="main"}'
+        values: '20000 20000 20000 20000 20000 20000 20000 20000 20000 20000 20000 20000 20000 20000 20000 20000 20000 20000 20000 20000 20000'
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: DispatchAgeSLA
+        exp_alerts:
+          - exp_labels:
+              severity: page
+              depot: main
+            exp_annotations:
+              summary: dispatch wait above the 4h SLA

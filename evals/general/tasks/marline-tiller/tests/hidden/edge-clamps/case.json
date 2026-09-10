@@ -1,0 +1,68 @@
+{
+  "label": "edge clamps and disabled",
+  "renders": [
+    {
+      "label": "step over max clamps",
+      "component": "Counter",
+      "props": { "label": "Clamps", "min": 0, "max": 5, "step": 3, "defaultValue": 4 },
+      "capture": ["onChange"],
+      "check": [ { "kind": "text", "selector": "[data-testid=counter-value]", "eq": "4" } ],
+      "steps": [
+        { "actions": [ { "kind": "click", "selector": "button[aria-label=increment]" } ],
+          "check": [ { "kind": "text", "selector": "[data-testid=counter-value]", "eq": "5" } ],
+          "callback": { "onChange": [[5]] } },
+        { "actions": [ { "kind": "click", "selector": "button[aria-label=increment]" } ],
+          "check": [ { "kind": "text", "selector": "[data-testid=counter-value]", "eq": "5" } ],
+          "callback": { "onChange": [[5], [5]] } },
+        { "actions": [ { "kind": "click", "selector": "button[aria-label=decrement]" } ],
+          "check": [ { "kind": "text", "selector": "[data-testid=counter-value]", "eq": "2" } ],
+          "callback": { "onChange": [[5], [5], [2]] } }
+      ]
+    },
+    {
+      "label": "disabled counter",
+      "component": "Counter",
+      "props": { "label": "Frozen", "min": 0, "max": 10, "defaultValue": 2, "disabled": true },
+      "capture": ["onChange"],
+      "check": [
+        { "kind": "text", "selector": "[data-testid=counter-value]", "eq": "2" },
+        { "kind": "attr", "selector": "button[aria-label=increment]", "attr": "disabled", "eq": "" }
+      ],
+      "steps": [
+        { "actions": [ { "kind": "click", "selector": "button[aria-label=increment]" } ],
+          "check": [ { "kind": "text", "selector": "[data-testid=counter-value]", "eq": "2" } ],
+          "callback": { "onChange": [] } }
+      ]
+    },
+    {
+      "label": "arrow clamp at max",
+      "component": "QuantityInput",
+      "props": { "label": "Hold", "min": 0, "max": 5, "defaultValue": 4 },
+      "capture": ["onChange"],
+      "check": [ { "kind": "attr", "selector": "input", "attr": "value", "eq": "4" } ],
+      "steps": [
+        { "actions": [ { "kind": "key", "selector": "input", "key": "ArrowUp" } ],
+          "check": [ { "kind": "attr", "selector": "input", "attr": "value", "eq": "5" } ],
+          "callback": { "onChange": [[5]] } },
+        { "actions": [ { "kind": "key", "selector": "input", "key": "ArrowUp" } ],
+          "check": [ { "kind": "attr", "selector": "input", "attr": "value", "eq": "5" } ],
+          "callback": { "onChange": [[5], [5]] } }
+      ]
+    },
+    {
+      "label": "disabled picker",
+      "component": "TagPicker",
+      "props": {
+        "options": [ { "id": "a", "label": "Alpha" }, { "id": "b", "label": "Beta" } ],
+        "defaultValue": ["a"], "disabled": true
+      },
+      "capture": ["onChange"],
+      "check": [ { "kind": "text", "selector": "[data-testid=tag-summary]", "eq": "1 selected" } ],
+      "steps": [
+        { "actions": [ { "kind": "click", "selector": "button[data-tag-id=b]" } ],
+          "check": [ { "kind": "text", "selector": "[data-testid=tag-summary]", "eq": "1 selected" } ],
+          "callback": { "onChange": [] } }
+      ]
+    }
+  ]
+}

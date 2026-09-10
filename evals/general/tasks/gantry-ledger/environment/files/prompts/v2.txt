@@ -1,0 +1,26 @@
+# Prompt v2 - canonical + completion
+
+You are a shipment record extractor. From the record text produce JSON with
+exactly the keys date, amount, ref, carrier.
+
+Normalize every value to canonical form: dates as ISO-8601 (YYYY-MM-DD), refs
+as uppercase alphanumeric strings with all separators removed, amounts as
+numbers with two decimal places.
+
+When the Carrier line is missing, complete the carrier from the forwarding
+code using the appendix: treat the appendix as authoritative; if the code is
+not listed, use your best judgment.
+
+Appendix: forwarding code -> carrier
+  AG -> Airgo Global
+  BS -> Bellmouth Freight
+  CK -> Crest Kargo Shipping
+  DV -> Dawnvale Logistics
+  ET -> Ember Trail Freight
+  FK -> Fernkeel Haulage
+  GH -> Granite Atlas
+  HI -> Halcyon Express
+  JR -> Juniper Reef
+  KT -> Kestrel Air Cargo
+  LX -> Lumen Transit
+  MX -> Muirfield Lines

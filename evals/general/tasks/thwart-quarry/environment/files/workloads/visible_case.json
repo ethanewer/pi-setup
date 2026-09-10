@@ -1,0 +1,14 @@
+{
+  "port": 6401,
+  "ttl_seconds": 3,
+  "backend_latency_s": 0.12,
+  "values": {"alpha": "seawater", "beta": "granite", "gamma": "ember"},
+  "readers_per_key": 8,
+  "rounds": 2,
+  "spend_key": "ticket",
+  "spend_start": 350,
+  "spend_workers": 6,
+  "ops_per_worker": 40,
+  "amount_min": 1,
+  "amount_max": 4
+}

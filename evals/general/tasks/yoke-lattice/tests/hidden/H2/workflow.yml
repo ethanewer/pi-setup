@@ -1,0 +1,63 @@
+name: pipeline-beta
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    name: Build
+    outputs:
+      tag: "endsWith(github.ref, 'main') ? 'stable' : 'dev'"
+    steps:
+      - name: read version
+        run: |
+          cat "$GITHUB_WORKSPACE/version.txt" > version.txt
+      - name: always touch
+        if: "always()"
+        run: |
+          echo touched > always.txt
+      - name: failure touch
+        if: "failure()"
+        run: |
+          echo bad > failure.txt
+  test:
+    name: Test
+    needs: build
+    if: "needs.build.outputs.tag == 'stable'"
+    steps:
+      - name: run checks
+        run: |
+          test -s "$GITHUB_WORKSPACE/version.txt"
+          echo yes > test-ok.txt
+      - name: cleanup on failure
+        if: "failure()"
+        run: |
+          echo cleanup > cleanup.txt
+  package:
+    name: Package
+    needs: build
+    if: "contains('stable-train', needs.build.outputs.tag)"
+    steps:
+      - name: ship
+        if: "success() && startsWith(needs.build.outputs.tag, 'stab')"
+        run: |
+          echo shipped > shipped.txt
+  deploy:
+    name: Deploy
+    needs: [build, package]
+    outputs:
+      loc: "'production'"
+    if: "contains(needs.package.outputs.missing2, 'x') || needs.build.outputs.tag == 'stable'"
+    steps:
+      - name: deploy
+        run: |
+          echo "$GITHUB_EVENT_NAME" > event.txt
+          echo deployed > deployed.txt
+  audit:
+    name: Audit trail
+    needs: [build, package, deploy]
+    if: "github.ref == 'refs/heads/experiment'"
+    steps:
+      - name: audit
+        run: |
+          echo wrong > audit.txt

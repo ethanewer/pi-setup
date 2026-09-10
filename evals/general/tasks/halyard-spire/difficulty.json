@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 3,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 3,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 3,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 120,
+  "documented_probe": "prometheus 2.45.3+ds apt package verified: scrape manager, rule manager, query API with query= parameter, --enable-feature=native-histograms flag, delimited-protobuf MetricFamily scrape ingestion, rate() requiring a [1m] range selector, cold-start recording-rule loading, summary->count/sum series split.",
+  "notes": "Hard. system_administration around a live Prometheus 2.45.3. The agent must write a metrics exporter that exposes exactly four correctly-typed metrics (counter, gauge, native histogram with schema-0 declared buckets 1ms..1024ms, summary) for a shipped orders service; the exporter must speak the delimited-protobuf MetricFamily wire format (documented in /app/docs/wire.md) or the histogram never survives ingestion as a histogram. Then a scrape config in prometheus.yml (rule_files + scrape_configs), recording rules (rate(app_orders_processed_total[1m])), and three PromQL answers. The verifier starts the app, the exporter, and prometheus from the agent's config with --enable-feature=native-histograms, waits for targets healthy, probes the exporter directly for types/buckets, drives ~120-200 orders, then queries 3 hidden PromQL expressions: rate() over the counter, rate() over the histogram, and the agent's recorded rule series, asserting values within tolerance of the measured processing rate; the agent's answer expressions are also evaluated live against the same references (reference-based tolerances). Calibration (measured in the trial image, single fresh phase): counter rate dev 1.5-6% vs 25% tol; histogram bucket-rate sum dev 2-3.5% vs 35% tol; recording rule dev 1.2-3.8% vs 35% tol; q2/q3 exact. Chained load phases are intentionally avoided: rate() over a histogram is only well-behaved when the 60s query window anchors in the idle prefix of a fresh container. reasoning_depth: must infer the wire format and rate()'s range-selector requirement iteratively against a live server; debugging_ambiguity: a broken exporter or config produces empty queries with type errors; hidden_case_generalization: fresh load phase and the live reference values are the hidden cases. No destructive surface, no wall-clock races beyond bounded polls and the anchored 60s rate window (~20-25s of headroom on the longest profile)."
+}

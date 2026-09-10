@@ -1,0 +1,22 @@
+{
+  "schema": "meridian-cleanup-policy/v1",
+  "host": "cifarm",
+  "budget_bytes": 6291456,
+  "retention_manifest": "RESTORE.manifest",
+  "junk": {
+    "suffixes": [
+      ".log",
+      ".tmp",
+      ".bak"
+    ],
+    "dir_names": [
+      "node_modules",
+      "build",
+      "dist"
+    ],
+    "prefixes": [
+      "core."
+    ],
+    "min_size_bytes": 1024
+  }
+}

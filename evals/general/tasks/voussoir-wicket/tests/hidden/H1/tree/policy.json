@@ -1,0 +1,21 @@
+{
+  "schema": "meridian-cleanup-policy/v1",
+  "host": "loghost",
+  "budget_bytes": 3145728,
+  "retention_manifest": "RESTORE.manifest",
+  "junk": {
+    "suffixes": [
+      ".log",
+      ".tmp",
+      ".pid"
+    ],
+    "dir_names": [
+      "tmp",
+      "cache"
+    ],
+    "prefixes": [
+      "core."
+    ],
+    "min_size_bytes": 0
+  }
+}

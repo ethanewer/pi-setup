@@ -1,0 +1,95 @@
+---
+title: Writing pages
+order: 20
+tags: [markup, authoring]
+---
+
+A page is a plain text file with an optional front matter block followed by
+markup. The lexer is line-oriented; block structure comes from the way lines
+begin.
+
+## Blocks
+
+Headings use from one to six hash marks:
+
+```
+# Document title
+## Section
+### Subsection
+```
+
+Paragraphs are runs of text lines separated from each other by blank lines.
+Lists use `-` or `*` for unordered items and `1.` for ordered items; nesting
+is done with two spaces of indentation:
+
+```
+- alpha
+- beta
+  - beta one
+  - beta two
+1. first
+2. second
+```
+
+Block quotes start each line with `>` and can contain several lines. Code
+blocks are fenced with three backticks, optionally with a language name:
+
+````
+```python
+def greet(name):
+    return f"Hello, {name}"
+```
+````
+
+A thematic break is a standalone `---` line. Admonitions use a bracketed
+kind tag — `[note]`, `[tip]`, `[warn]`, `[danger]`, `[info]` — followed by
+the text of the callout:
+
+```
+[warn] Back up your sources before upgrading quaydoc.
+```
+
+Fragments of another page can be pulled in verbatim:
+
+```
+{% include "guide/writing.qd" %}
+```
+
+## Inline markup
+
+Inline elements live inside paragraphs: `**bold**`, `` `code` ``,
+`[[target]]` internal references, `[[target|label]]` references with a
+custom label, `[label](url)` external links, `![alt](src)` images, and
+backslash escapes for literal markup characters.
+
+Here is bold **text**, a `code span`, a reference to the
+[[Building a site]] page, and an external link to the
+[Python documentation](https://docs.python.org/3/).
+
+## Front matter
+
+The optional front matter block starts the file:
+
+```
+---
+title: Writing pages
+order: 20
+description: The markup reference.
+date: 2025-01-20
+tags: [markup, authoring]
+draft: false
+---
+```
+
+`title` is the page heading in the sidebar and the `<h1>` of the rendered
+page. `order` sorts pages in the navigation and in listings. `draft: true`
+excludes the page from builds. `date` feeds the Atom feed and sitemap.
+
+[note] Unknown front matter keys are kept available to templates and are
+reported as warnings by the checker.
+
+## Escaping
+
+A backslash before any markup character writes that character literally:
+`\[` renders as `[`. Inside code spans and code blocks, no markup is
+interpreted at all.

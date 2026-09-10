@@ -1,0 +1,9 @@
+{
+  "scales": { "temp": 1, "volt": 100, "flow": 50, "press": 20 },
+  "drops": [
+    { "sensor": "temp", "below": 173 },
+    { "sensor": "volt", "above": 150000 },
+    { "sensor": "flow", "above": 52000 }
+  ],
+  "emit": ["ts", "sensor", "site", "value"]
+}

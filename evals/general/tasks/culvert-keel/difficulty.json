@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 2,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": null,
+  "notes": "Medium. Greenfield Go 1.22 HTTP service (stdlib only, no network at trial time so no go get): the agent writes a complete server plus a launcher script, and the verifier starts the server from the launcher against three hidden config fixtures (different bearer keys, principals, token-bucket capacity/refill rates, and registry data) and drives it with real HTTP calls. Correctness comes from dependent_stages (build -> launch -> readiness poll -> contract calls -> log audit), reasoning_depth (middleware ordering, per-principal token-bucket math, hand-rolled HTTP parsing with scheme-agnostic request bodies), interaction_statefulness (the server keeps per-principal buckets and a mutable registry across requests: POST then GET must show the added entry, 429 refills over time), and hidden_case_generalization (3 hidden fixtures; verifier reads each fixture's own limits/keys/entries to derive expectations, nothing hardcoded). adversarial_inputs covers malformed tokens, non-Bearer header, invalid JSON, unknown paths, unsupported methods, and a measured burst with a second principal that must stay unthrottled (per-principal scoping) plus 401 that must take precedence over 429 for unknown tokens. Quantitative_correctness 1: exact JSON bodies, Retry-After presence, log-line schema. No resource pressure; no destructive actions available."
+}

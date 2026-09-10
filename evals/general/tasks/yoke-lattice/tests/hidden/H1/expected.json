@@ -1,0 +1,113 @@
+{
+  "jobs": {
+    "check": {
+      "needs": [
+        "compile"
+      ],
+      "outputs": {},
+      "skip_reason": null,
+      "status": "success",
+      "steps": [
+        {
+          "exit_code": 0,
+          "id": null,
+          "index": 1,
+          "name": "verify marker",
+          "status": "success"
+        }
+      ]
+    },
+    "compile": {
+      "needs": [],
+      "outputs": {},
+      "skip_reason": null,
+      "status": "success",
+      "steps": [
+        {
+          "exit_code": 0,
+          "id": null,
+          "index": 1,
+          "name": "produce marker",
+          "status": "success"
+        }
+      ]
+    },
+    "monitor": {
+      "needs": [
+        "ship"
+      ],
+      "outputs": {},
+      "skip_reason": null,
+      "status": "success",
+      "steps": [
+        {
+          "exit_code": 0,
+          "id": null,
+          "index": 1,
+          "name": "page",
+          "status": "success"
+        }
+      ]
+    },
+    "postclean": {
+      "needs": [
+        "compile",
+        "check"
+      ],
+      "outputs": {},
+      "skip_reason": "if",
+      "status": "skipped",
+      "steps": []
+    },
+    "release-notes": {
+      "needs": [
+        "ship"
+      ],
+      "outputs": {},
+      "skip_reason": "needs",
+      "status": "skipped",
+      "steps": []
+    },
+    "ship": {
+      "needs": [
+        "compile",
+        "check"
+      ],
+      "outputs": {},
+      "skip_reason": null,
+      "status": "failure",
+      "steps": [
+        {
+          "exit_code": 0,
+          "id": null,
+          "index": 1,
+          "name": "assemble",
+          "status": "success"
+        },
+        {
+          "exit_code": 7,
+          "id": null,
+          "index": 2,
+          "name": "upload",
+          "status": "failure"
+        },
+        {
+          "exit_code": null,
+          "id": null,
+          "index": 3,
+          "name": "after upload",
+          "status": "skipped"
+        }
+      ]
+    }
+  },
+  "order": [
+    "compile",
+    "check",
+    "ship",
+    "monitor",
+    "release-notes",
+    "postclean"
+  ],
+  "workflow": "workflow.yml"
+}

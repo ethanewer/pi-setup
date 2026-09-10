@@ -1,0 +1,26 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 1,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 90,
+  "documented_probe": "Cursor-paginated catalogue REST API in TypeScript on Express 4 + zod: (1) GET /api/media with cursor+limit query parameters must page the full dataset in (year, id) ascending order across a multi-page walk with no duplicates, the last page carrying next_cursor=null, total constant, and every cursor a URL-safe opaque token; a non-finite/out-of-range limit must 400 with the typed envelope. (2) POST /api/media must 201 with a server-assigned id, persist (a later GET returns it), and 400 with error.code=validation_failed plus a per-field details array (path/code/message) for each of 10 malformed bodies: missing/empty/oversized title, year below 1900 and above 2100, rating below 0 and above 100, unknown medium, >5 tags, 101-char title, and unknown fields (strict parsing), and must return the same JSON envelope for a body that is not valid JSON. (3) GET /api/media/:id must 200 for seed ids, 404 with error.code=not_found for absent ids, and 400 for non-positive-integer ids. (4) PATCH /api/media/:id must apply partial updates including an id=server-assigned-, reflect on a later GET, 400 for empty/unknown/oversized-field bodies, 404 on missing ids. (5) The delivered /app/openapi.json must be a structurally valid OpenAPI 3.0 document whose paths/methods/status codes match the four routes (200/201/400/404 where the API actually returns them), whose POST request body schema requires exactly title/year/medium/rating (not tags), whose $refs all resolve, which was produced from the zod schemas via a zod-to-openapi generator imported by the shipped TypeScript sources, and which the live server serves byte-for-byte at GET /openapi.json; every documented non-parameterized path+method must be a real route (no 404s).",
+  "notes": "Greenfield multi-file TypeScript web service on bench-base:node-22 (the suite had zero .ts files and zero Express tasks before this wave): four endpoints with zod request validation mapped to a typed 400 envelope, opaque-cursor pagination whose correctness is only checkable over a full multi-page walk, and an OpenAPI 3.0 document generated from the zod schemas rather than hand-typed. The instruction specifies the full HTTP contract but no file layout, no zod error-mapping scheme, and no cursor encoding, so the implementation choices are the agent's. Verifier runs the deliverable start.sh against the visible fixture plus three hidden datasets (48/41/23/97 items with differing year-tie structures) at four ports, each with a fresh server instance so POST/PATCH mutations cannot leak across cases; hidden_case_generalization 2, adversarial_inputs 2, debugging_ambiguity 2 (server must be driven to green over HTTP, strict() rejection of unknown fields is a silent zod footgun, and the served-vs-emitted openapi bytes must match). No exposed safety hazard and no resource pressure: interaction_statefulness 1 (cross-request persistence is asserted, not multi-step state); everything else conservative. cpus=1; no numeric runtime, so no thread pinning needed.",
+  "verified_versions": {
+    "node": "22.23.2",
+    "express": "4.22.1",
+    "zod": "3.25.75",
+    "typescript": "5.9.3",
+    "@asteasolutions/zod-to-openapi": "3.4.0",
+    "@types/express": "4.17.25",
+    "@types/node": "22.20.1"
+  }
+}

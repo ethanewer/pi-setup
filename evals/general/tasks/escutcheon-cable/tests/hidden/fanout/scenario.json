@@ -1,0 +1,6 @@
+{
+  "name": "fanout",
+  "requests": [
+    {"path": "/batch/OR-1002/OR-1003", "expect_status": 200, "backend_spans": 2, "expect_error": false}
+  ]
+}

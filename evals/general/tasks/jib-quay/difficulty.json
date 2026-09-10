@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 3,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 3,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 3,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 90,
+  "documented_probe": null,
+  "notes": "Debugging a threaded FX transfer-hub service with a seeded lock-ordering inversion: two transfers on the same account pair in opposite directions acquire the pair's locks in opposite orders and deadlock when they interleave. The agent must reproduce (the shipped driver's concurrent mode stalls deterministically because the FX latency step is held across the first lock, widening the window), diagnose which operations interleave and why, and repair /app/service.py so every run completes. dependent_stages=3: the diagnosis cannot be written before a successful reproduction, the repair depends on the diagnosis, and the grader's stress harness is the final gate. tool_breadth=3: the agent drives a live TCP service and subprocesses, uses the shipped driver in serial and concurrent modes, reasons about thread scheduling/lock state, and must validate throughput behaviour (concurrency floor) not just correctness. reasoning_depth=3: lock-ordering inversion reasoning, deciding among equivalent valid fix classes while preserving per-account concurrency. debugging_ambiguity=3: an intermittent-looking hang whose trigger is a specific interleaving; the silence of a deadlocked service gives no error text, and naive 'serialize everything' fixes pass correctness but fail the measured concurrency floor. adversarial_inputs=1: hidden cases are stricter-threshold operation mixes, but inputs are well-formed. hidden_case_generalization=2: three hidden mixes with different accounts/currencies/rates/worker counts verify the fix structurally, since the inversion can be triggered on any account pair. quantitative_correctness=3: journal must be exactly the mix's transfer multiset, each converted amount must equal int(round(cents*rate)) per the ledger's own rates, and each account's reported balance must equal a deterministic replay of the journal against the initial ledger. resource_pressure=0, interaction_statefulness=0, unsafe_action_penalty=0."
+}

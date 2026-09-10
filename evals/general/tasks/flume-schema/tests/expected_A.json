@@ -1,0 +1,268 @@
+{
+  "final_state": {
+    "card_limit": 60.0,
+    "menu": [
+      {
+        "item_id": 1,
+        "name": "chocolate-cake",
+        "price": 22.5
+      },
+      {
+        "item_id": 2,
+        "name": "lemon-tart",
+        "price": 12.5
+      },
+      {
+        "item_id": 3,
+        "name": "butter-croissant",
+        "price": 4.5
+      },
+      {
+        "item_id": 4,
+        "name": "sourdough-loaf",
+        "price": 8.0
+      },
+      {
+        "item_id": 5,
+        "name": "star-cookie",
+        "price": 2.25
+      }
+    ],
+    "orders": [
+      {
+        "item_id": 3,
+        "order_id": 1,
+        "qty": 2,
+        "status": "finalized",
+        "total": 9.0,
+        "unit_price": 4.5
+      }
+    ],
+    "outbox": [
+      {
+        "notify_id": 1,
+        "recipient": "alice@example.com",
+        "text": "Order 1 placed: 2 butter-croissant"
+      }
+    ],
+    "payments": [
+      {
+        "amount": 9.0,
+        "charge_id": 1,
+        "order_id": 1,
+        "status": "charged"
+      }
+    ],
+    "stock": {
+      "1": 8,
+      "2": 7,
+      "3": 10,
+      "4": 5,
+      "5": 0
+    }
+  },
+  "session": "A",
+  "steps": [
+    {
+      "arguments": {
+        "max_results": 3,
+        "query": "croissant"
+      },
+      "error": null,
+      "kind": "tool_call",
+      "outcome": "executed",
+      "result": {
+        "matches": [
+          {
+            "item_id": 3,
+            "name": "butter-croissant",
+            "price": 4.5
+          }
+        ]
+      },
+      "retries": 0,
+      "step": 1,
+      "tool": "search_menu"
+    },
+    {
+      "arguments": {
+        "max_results": 99,
+        "query": "croissant"
+      },
+      "error": "SCHEMA_ERROR:search_menu:max_results:maximum:10",
+      "kind": "tool_call",
+      "outcome": "schema_error",
+      "result": null,
+      "retries": 0,
+      "step": 2,
+      "tool": "search_menu"
+    },
+    {
+      "arguments": {
+        "item_id": 3
+      },
+      "error": null,
+      "kind": "tool_call",
+      "outcome": "executed",
+      "result": {
+        "item_id": 3,
+        "name": "butter-croissant",
+        "price": 4.5,
+        "stock": 12
+      },
+      "retries": 0,
+      "step": 3,
+      "tool": "get_stock"
+    },
+    {
+      "arguments": {
+        "item_id": 99
+      },
+      "error": "EXEC_ERROR:ITEM_NOT_FOUND:99",
+      "kind": "tool_call",
+      "outcome": "error",
+      "result": null,
+      "retries": 0,
+      "step": 4,
+      "tool": "get_stock"
+    },
+    {
+      "arguments": {
+        "item_id": 3,
+        "qty": 9
+      },
+      "error": "SCHEMA_ERROR:place_order:qty:maximum:5",
+      "kind": "tool_call",
+      "outcome": "schema_error",
+      "result": null,
+      "retries": 0,
+      "step": 5,
+      "tool": "place_order"
+    },
+    {
+      "arguments": {
+        "item_id": 3,
+        "qty": 2
+      },
+      "error": null,
+      "kind": "tool_call",
+      "outcome": "executed",
+      "result": {
+        "item_id": 3,
+        "order_id": 1,
+        "qty": 2,
+        "status": "finalized",
+        "total": 9.0,
+        "unit_price": 4.5
+      },
+      "retries": 0,
+      "step": 6,
+      "tool": "place_order"
+    },
+    {
+      "arguments": {
+        "item_id": 3,
+        "qty": 2
+      },
+      "error": null,
+      "kind": "tool_call",
+      "outcome": "replayed",
+      "result": {
+        "item_id": 3,
+        "order_id": 1,
+        "qty": 2,
+        "status": "finalized",
+        "total": 9.0,
+        "unit_price": 4.5
+      },
+      "retries": 0,
+      "step": 7,
+      "tool": "place_order"
+    },
+    {
+      "arguments": {
+        "amount": 9.0,
+        "order_id": 1
+      },
+      "error": null,
+      "kind": "tool_call",
+      "outcome": "executed",
+      "result": {
+        "amount": 9.0,
+        "charge_id": 1,
+        "order_id": 1,
+        "status": "charged"
+      },
+      "retries": 1,
+      "step": 8,
+      "tool": "charge_card"
+    },
+    {
+      "arguments": {
+        "recipient": "alice@example.com",
+        "text": "Order 1 placed: 2 butter-croissant"
+      },
+      "error": null,
+      "kind": "tool_call",
+      "outcome": "executed",
+      "result": {
+        "notify_id": 1,
+        "recipient": "alice@example.com",
+        "text": "Order 1 placed: 2 butter-croissant"
+      },
+      "retries": 0,
+      "step": 9,
+      "tool": "send_notification"
+    },
+    {
+      "arguments": null,
+      "error": "MALFORMED:INVALID_ARGUMENTS",
+      "kind": "tool_call",
+      "outcome": "malformed",
+      "result": null,
+      "retries": 0,
+      "step": 10,
+      "tool": "send_notification"
+    },
+    {
+      "arguments": {
+        "order_ids": [
+          1
+        ]
+      },
+      "error": null,
+      "kind": "tool_call",
+      "outcome": "executed",
+      "result": {
+        "finalized": [
+          1
+        ]
+      },
+      "retries": 0,
+      "step": 11,
+      "tool": "finalize_order"
+    },
+    {
+      "arguments": null,
+      "error": "MALFORMED:NOT_OBJECT",
+      "kind": "tool_call",
+      "outcome": "malformed",
+      "result": null,
+      "retries": 0,
+      "step": 12,
+      "tool": null
+    },
+    {
+      "answer": "Order 1 complete: 2 butter-croissant charged 9.0; alice@example.com notified; order finalized",
+      "arguments": null,
+      "error": null,
+      "kind": "final",
+      "outcome": "final",
+      "result": null,
+      "retries": 0,
+      "step": 13,
+      "tool": null
+    }
+  ],
+  "terminated": "completed"
+}

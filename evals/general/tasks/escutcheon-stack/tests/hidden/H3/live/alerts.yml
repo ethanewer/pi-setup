@@ -1,0 +1,5 @@
+groups:
+  - name: runtime
+    rules:
+      - alert: HighLatency
+        expr: latency_p99 > 250

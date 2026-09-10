@@ -1,0 +1,38 @@
+{
+  "session": "H1",
+  "max_steps": 16,
+  "user": "The lemon-tart (that is item 2) needs a re-order. Check its stock, then order three of them, charge the card for the order total, send a confirmation to bob@example.com and finish the order. Do not skip the stock check.",
+  "initial_state": {
+    "menu": [
+      {"item_id": 1, "name": "chocolate-cake", "price": 22.5},
+      {"item_id": 2, "name": "lemon-tart", "price": 12.5},
+      {"item_id": 3, "name": "butter-croissant", "price": 4.5},
+      {"item_id": 4, "name": "sourdough-loaf", "price": 8.0},
+      {"item_id": 5, "name": "star-cookie", "price": 2.25}
+    ],
+    "stock": {"1": 8, "2": 7, "3": 12, "4": 5, "5": 0},
+    "orders": [],
+    "payments": [],
+    "outbox": [],
+    "card_limit": 60.0,
+    "next_order_id": 1,
+    "next_charge_id": 1,
+    "next_notify_id": 1
+  },
+  "transients": [],
+  "decisions": [
+    ["", {"kind": "tool_call", "name": "get_stock", "arguments": {"item_id": 2}}],
+    ["K", {"kind": "tool_call", "name": "get_stock"}],
+    ["KM", {"kind": "tool_call", "name": "get_stock", "arguments": {"item_id": "2"}}],
+    ["KMS", {"kind": "tool_call", "name": "get_stock", "arguments": {"item_id": 2}}],
+    ["KMSK", {"kind": "tool_call", "name": "place_order", "arguments": {"item_id": 2, "qty": 9}}],
+    ["KMSKS", {"kind": "tool_call", "name": "place_order", "arguments": {"item_id": 2, "qty": 3}}],
+    ["KMSKSK", {"kind": "tool_call", "name": "place_order", "arguments": {"item_id": 2, "qty": 3}}],
+    ["KMSKSKR", {"kind": "tool_call", "name": "get_stock", "arguments": {"item_id": 2}}],
+    ["KMSKSKRK", {"kind": "tool_call", "name": "unknown_gadget", "arguments": {"wattage": 900}}],
+    ["KMSKSKRKU", {"kind": "tool_call", "name": "charge_card", "arguments": {"order_id": 1, "amount": 37.5}}],
+    ["KMSKSKRKUK", {"kind": "tool_call", "name": "send_notification", "arguments": {"recipient": "bob@example.com", "text": "Order 1 confirmed: 3 lemon-tart"}}],
+    ["KMSKSKRKUKK", {"kind": "tool_call", "name": "finalize_order", "arguments": {"order_ids": [1]}}],
+    ["KMSKSKRKUKKK", {"kind": "final", "answer": "Order 1 complete: 3 lemon-tart, 37.5 charged, bob notified, finalized"}]
+  ]
+}
