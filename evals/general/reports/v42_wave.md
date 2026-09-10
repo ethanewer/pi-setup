@@ -447,3 +447,50 @@ require the upstream-integrity guard on every clone task, and stop describing th
 suite as offline. Adding `network_mode = "no-network"` to 857 task.toml files
 without first establishing that deny-all works would convert a documented falsehood
 into an unverified one, and could fail tasks that currently pass.
+
+### 9.1 Upstream-integrity coverage across the 20 tasks, measured
+
+Section 9 recommends the upstream-integrity guard for every clone task. Measured
+rather than assumed, and the two protections are different things:
+
+| Guard | Count | What it protects |
+|---|---|---|
+| Build-time pin (`test "$(git rev-parse HEAD)" = "$UPSTREAM_SHA"` in the Dockerfile) | **20/20** | The image was built from the pinned commit |
+| Trial-time git integrity (`rev-parse HEAD` **and** `status --porcelain` in `tests/`) | **3/20** — `ferrule-berth`, `mizzen-summit`, `plinth-wicket` | The agent did not mutate or re-fetch `/app/src` during the trial |
+| Some functional origin proof in `tests/` | 16/20 | The deliverable really came from the upstream project |
+
+The build-time pin does not protect against trial-time mutation, which is the
+vector that matters once egress is available. Only three tasks close it with git.
+
+The other seventeen mostly close it functionally instead, and in several cases
+more strongly than a git check would:
+
+- `tenon-orbit` re-runs every case with a `sitecustomize` monkeypatch that shifts
+  qutip's solver result by +0.10 and requires the printed value to track it. A
+  decorative import fails; so does a hand-rolled solver. A git guard would catch
+  neither.
+- `reeve-gate` runs every replay under `strace -f execve` and attributes each
+  shadow-database write to one of the 30 binaries the agent built.
+- `kedge-lattice` links a hidden C program against the agent-built library and
+  checks 9 pixel results, so a self-contained fake fails.
+- `ingot-flood` requires a real ELF, at least 10 genuine `gcc -c <src>.c -o
+  <obj>.o` lines in the build log, and the engine's own boot self-reports.
+- `clinker-mast` requires `inspect.getsourcefile` of both retry transports to
+  start with `/app/src/`.
+- `plinth-wicket` requires `sanitize()` output byte-identical to the clean
+  clone's `purify.cjs` across 11 payloads, in addition to its git guard.
+
+Four tasks have neither a git guard nor an origin proof a keyword scan can see:
+`kedge-lattice`, `tenon-orbit`, `quoin-vellum`, `trunnel-reach`. Reading them
+rather than scanning them, the first two are covered as described above.
+`quoin-vellum` requires a gensim-serialised model that reloads through gensim's
+own format. `trunnel-reach` has a documented residual from its reviewer: a
+determined agent could re-express the symbolic check in pure z3, which is strictly
+harder than the intended angr path and was accepted rather than closed.
+
+**Concrete follow-up.** Adding the two-line git guard to the seventeen tasks that
+lack it is cheap and closes the mutation vector uniformly instead of relying on
+each verifier happening to prove origin some other way. It is not done here
+because it would touch 17 verified tasks and each would need re-proving in both
+directions, and because it is only worth doing alongside the network decision in
+section 9: if trials are genuinely offline, the vector closes by itself.
