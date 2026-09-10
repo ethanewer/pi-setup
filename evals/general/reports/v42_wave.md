@@ -494,3 +494,32 @@ each verifier happening to prove origin some other way. It is not done here
 because it would touch 17 verified tasks and each would need re-proving in both
 directions, and because it is only worth doing alongside the network decision in
 section 9: if trials are genuinely offline, the vector closes by itself.
+
+## 10. Operator census after registration
+
+The registration agent re-proved both directions on a `git archive` export of one
+randomly drawn task, which proves the family survives a clone but not that all 20
+pass. The full census was run afterwards, by the operator, over every landed task
+with `tools/verify_new_task.sh` in four shards.
+
+Rewards were parsed out of the raw per-task logs rather than read from a summary
+line, because a summary is what a verifier writes about itself:
+
+| | Result |
+|---|---|
+| Tasks censused | 20 |
+| `rc=0` | 20 |
+| oracle reward `1` | 20 |
+| nop reward `0` | 20 |
+| `check_binary_reward.py --task` clean | 20 |
+| static-gate failure attributed to a v4.2 task | 0 |
+
+Combined with section 8, the wave is gate-clean, contamination-clean on a
+verified frozen tree, and proven in both directions by three independent passes:
+the author, the reviewer, and this census.
+
+Still not done and still not claimed: no harbor agent sweep over the 857-task
+suite, so there are no model scores for these 20 tasks and no v4.2 leaderboard;
+nothing published to `eewer/general-agent-bench-results`; no suite-wide negative
+control against a single frozen snapshot. And the network question in section 9
+is open, which is a decision about the whole suite rather than about this wave.
