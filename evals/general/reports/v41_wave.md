@@ -1023,3 +1023,67 @@ The negative control has been run per task as the `nop` half of the acceptance
 gate, but not as a single suite-wide sweep against one frozen snapshot, which is
 what `WORKFLOW.md` asks for before a release. `windlass-harrow` remains deferred
 (section 10.3).
+
+## 12. Clone-integrity defect found after the wave, and the gate for it
+
+Found while committing the wave to branch `v4-eval`, after every gate and both
+harbor directions had already passed on all 52 tasks.
+
+`stanchion-bell` shipped `environment/files/.gitignore` containing
+`scripts/make_repo.sh`. The author's intent was in-container and the script's own
+header comment states it: the Dockerfile copies `files/` to `/app` and runs that
+script to build a two-commit history, and ignoring it there keeps the agent's own
+`git status` clean. The same file also excluded the script from the repository,
+so `RUN bash /app/scripts/make_repo.sh` at Dockerfile line 22 names a path a
+fresh clone does not have. The image would not build.
+
+It passed its oracle and its negative control on the machine that authored it,
+because the file was on disk. Nothing in the existing gate set could see it:
+`lint_tasks.py` checks that required files exist on disk, and
+`check_reproducibility.py` compares disk against `provenance.json`, which also
+records what is on disk. Both were satisfied. `provenance.json` did record the
+path, so a clone would additionally have shown drift pointing at a file that did
+not exist — the same second symptom the first incident of this class produced.
+
+Fix: `git add -f`. A negation in `evals/general/.gitignore` cannot work here,
+because a pattern in a deeper `.gitignore` takes precedence over a shallower one,
+so the task-local file wins. Force-tracking does work, because once git tracks a
+path its ignore rules stop applying to it, and the in-container behaviour the
+author wanted is unchanged.
+
+Proved rather than assumed: `git archive HEAD` of the task exported all 58 files
+including the script, and both harbor directions were run against that export —
+oracle reward 1.0, nop reward 0.0. That is what a clone sees.
+
+`tools/check_task_files_tracked.py` makes the class a gate and is wired into
+`tools/rebuild_and_audit.py`. Every file under `tasks/` must be tracked, or
+declared in `specs/large_assets.json`, or be compiled debris. It prints the
+ignore rule and line number for each offender, because the right fix depends on
+whether the rule was meant to apply only inside the container. Current state:
+13,865 files on disk, 13,864 tracked, 5 declared large assets, 0 problems.
+Verified to catch the defect it was written for by untracking the file again:
+exit 1, `ignored by: .../environment/files/.gitignore:4:scripts/make_repo.sh`.
+
+This is the second time an ignore rule silently dropped task fixtures. The first
+cost 139 files, left `kiln-anchor` and `larch-vane` with an empty `tests/hidden`,
+and was fixed with negations plus a comment in `evals/general/.gitignore`. A
+comment does not stop the next author writing a `.gitignore` for a
+container-side reason, so it is a gate now.
+
+### 12.1 `rebuild_and_audit.py` also ran the difficulty trap unconditionally
+
+While wiring in the new gate: `tools/rebuild_and_audit.py` called
+`tools/build_difficulty.py` with no guard. That is the tool which reassigned 208
+pre-existing buckets during this wave's registration (section 7). Anyone running
+the standard release pipeline would have reproduced the regression silently.
+
+It now snapshots the pre-existing buckets, lets the tool add entries for tasks it
+has not seen, and aborts with `specs/difficulty.json` restored if it moved one
+that was already there, naming the tasks. Tested by running the tool for real:
+the guard detects exactly 208 moves and the restore is byte-identical to the
+committed file, confirmed by `git diff` and by `check_difficulty.py` returning
+567 measured tasks at easy 49 / medium 276 / hard 242 with 0 problems.
+
+Reconciling those 208 is a deliberate act — re-score the rubrics or re-label the
+`task.toml` files — and is not done here. It is now a visible decision instead of
+a side effect of running the pipeline.
