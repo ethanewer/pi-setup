@@ -1,6 +1,6 @@
 {
   "external_sources": [],
-  "generated_at": "2026-09-10T05:26:48.603646+00:00",
+  "generated_at": "2026-09-10T05:48:34.192511+00:00",
   "policy": "clean-room; zero shared source repositories with the frozen reference provenance set",
   "task_files": {
     "agents/p_agent.py": {
@@ -83,10 +83,26 @@
       "source_repository": null,
       "transformation": "derived from private audit records"
     },
+    "specs/tb21_source_repositories.json": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2-spec",
+      "sha256": "3f30e9d9af87888a0023ea9b3816e8e544fe309bed214ef454feba7c06e0f81a",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "derived from private audit records"
+    },
     "specs/v41_slots.json": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2-spec",
       "sha256": "891bdd3499d18dad83b3be0264239c82372e801216ad98fff91768a3b79ba23c",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "derived from private audit records"
+    },
+    "specs/v42_slots.json": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2-spec",
+      "sha256": "b94ede271db7f3ebfc53344ceb7861f289e2fe2677534ac05e4bd593277989d4",
       "source_commit": null,
       "source_repository": null,
       "transformation": "derived from private audit records"
@@ -111179,6 +111195,14 @@
       "source_repository": null,
       "transformation": "authored tooling"
     },
+    "tools/check_upstream_disjointness.py": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2-tooling",
+      "sha256": "0735398ff861bd38841022bd40bbf6639c93749f823bf8e50cf77726f1e846f7",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "authored tooling"
+    },
     "tools/collect_oracle_results.py": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2-tooling",
@@ -111270,7 +111294,7 @@
     "tools/rebuild_and_audit.py": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2-tooling",
-      "sha256": "61410745daf065e60c46e293f23dc225b9906e171e5ab1a764dae170722966fe",
+      "sha256": "2b886ee8873ee7aabd6529f8a1d38e42af1343b65178f5ab097d22a6657a87d3",
       "source_commit": null,
       "source_repository": null,
       "transformation": "authored tooling"
@@ -111326,7 +111350,7 @@
     "tools/update_provenance.py": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2-tooling",
-      "sha256": "106e9d2a25b43fef43ecb710efb3d94daa8f754ef2d59615a615954dd29fcafe",
+      "sha256": "dcbe9c45009cdedc01e8ff7e3e64ad9db2b5dc1fb7345356eba6dc4660699d04",
       "source_commit": null,
       "source_repository": null,
       "transformation": "authored tooling"
@@ -111335,6 +111359,14 @@
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2-tooling",
       "sha256": "7571ef712640363b7dd264e539c53b59f056eb731ea18ed17aa053b37fc9e662",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "authored tooling"
+    },
+    "tools/v42_slots.py": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2-tooling",
+      "sha256": "c1c023b66e6898ef5fa3a02a896fa325c3c2e1ca3b3f1c1197ac2c716d3068e7",
       "source_commit": null,
       "source_repository": null,
       "transformation": "authored tooling"

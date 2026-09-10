@@ -67,16 +67,42 @@ def main() -> int:
                                   else 'authored tooling',
                 'sha256': h,
             }
+    # Upstream repositories cloned at image-build time, if any task declares them.
+    # tools/check_upstream_disjointness.py --apply derives this from the build path
+    # of every task and enforces that none of them is shared with the frozen
+    # reference. Carrying it here is what makes audit_independence_stream.py's
+    # source_repository class mean something: that check intersects our
+    # external_sources with a --reference-provenance list, and until the v4.2
+    # family existed this was always empty, so the class was vacuous rather than
+    # passing.
+    upstream_path = ROOT / 'specs' / 'upstream_sources.json'
+    external = []
+    policy = ('clean-room; zero shared source repositories with the '
+              'frozen reference provenance set')
+    if upstream_path.exists():
+        up = json.loads(upstream_path.read_text())
+        external = [{'repository': r, 'url': f'https://{r}',
+                     'used_by': sorted(e['task'] for e in up.get('tasks', [])
+                                       if r in e.get('repositories', [])),
+                     'fetched_at': 'image build time (environment/Dockerfile); '
+                                   'never committed to this tree'}
+                    for r in up.get('repositories', [])]
+        policy = ('clean-room for every authored fixture; from v4.2 some tasks '
+                  'also clone upstream repositories at image-build time, listed in '
+                  'external_sources. No listed repository is shared with the '
+                  'frozen reference provenance set; '
+                  'tools/check_upstream_disjointness.py enforces that against '
+                  'specs/tb21_source_repositories.json')
     manifest = {
-        'policy': ('clean-room; zero shared source repositories with the '
-                   'frozen reference provenance set'),
-        'external_sources': [],
+        'policy': policy,
+        'external_sources': external,
         'generated_at': datetime.datetime.now(datetime.timezone.utc).isoformat(),
         'task_files': files,
     }
     (ROOT / 'specs/provenance.json').write_text(
         json.dumps(manifest, indent=2, sort_keys=True) + '\n')
-    print(f'recorded {len(files)} files')
+    print(f'recorded {len(files)} files, {len(external)} external source '
+          f'repositories')
     return 0
 
 

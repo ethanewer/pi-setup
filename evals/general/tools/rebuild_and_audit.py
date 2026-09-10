@@ -85,13 +85,27 @@ def main():
     run([py, 'tools/lint_tasks.py'])
     run([py, 'tools/check_difficulty.py', '--allow-unmeasured'])
     run([py, 'tools/check_task_files_tracked.py'])
+    run([py, 'tools/check_upstream_disjointness.py'])
     run([py, 'tools/check_reproducibility.py'])
     run([py, 'tools/check_task_similarity.py'] +
         (['--reference-root', ref] if ref else []))
 
     # 5. byte-level independence audit
+    #
+    # --reference-provenance is what makes the source_repository class mean
+    # something. That class intersects our specs/provenance.json external_sources
+    # with the reference's repository list, and before the v4.2 upstream-clone
+    # family neither side had any entries, so it reported 0 matches because it
+    # compared two empty sets. specs/tb21_source_repositories.json is the
+    # reference side: 68 repositories extracted from every text file under the
+    # frozen reference's original-tasks/. tools/check_upstream_disjointness.py
+    # enforces the same constraint per task and names the offending line, so the
+    # two together cover a repository declared in provenance and one that only
+    # appears in a Dockerfile.
+    refprov = ROOT / 'specs' / 'tb21_source_repositories.json'
     run([py, 'tools/audit_independence.py'] +
-        (['--reference-root', ref] if ref else []))
+        (['--reference-root', ref] if ref else []) +
+        (['--reference-provenance', str(refprov)] if refprov.exists() else []))
 
     # 6. suite-level completion report (archived outside task images)
     run([py, 'tools/suite_report.py'])
