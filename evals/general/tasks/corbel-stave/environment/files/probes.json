@@ -1,0 +1,9 @@
+{
+  "probes": [
+    {"path": "/v1/items/special", "status": 200, "label": "special", "params": {}},
+    {"path": "/v1/items/42", "status": 200, "label": "item", "params": {"item_id": "42"}},
+    {"path": "/v1/items/42/parts", "status": 200, "label": "parts", "params": {"item_id": "42"}},
+    {"path": "/v1/orders/7", "status": 200, "label": "order", "params": {"oid": 7}},
+    {"path": "/v1/unknown", "status": 404, "label": null, "params": null}
+  ]
+}

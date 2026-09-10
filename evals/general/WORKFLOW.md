@@ -314,9 +314,50 @@ all pass on the 832-task tree; the difficulty gate's 494 pre-existing legacy
 problems (208 rubric-bucket drifts + 286 missing legacy oracle times) are
 unchanged by this wave and fail zero of the 47 new tasks.
 
+## 2026-09-11 addition — v4.2 upstream-clone wave (20 tasks)
+
+Twenty slots from `specs/v42_slots.json` landed and are registered in
+`reports/v42_wave.md`. This is the first family that clones a real pinned
+upstream repository at image-build time (`environment/Dockerfile`) and puts the
+agent inside somebody else's codebase — the shape Terminal-Bench 2.1 uses in 42
+of its 241 tasks. Same contract as every wave: binary reward, oracle proves its
+own task, `cpus = 1` (build timeouts are set from measured 1-CPU build times),
+all tasks claim no tb2.1 competencies (`claims_no_competencies: true`),
+`difficulty.json` buckets edited directly by rubric total (never via
+`build_difficulty.py`, whose frozen-reference dependency reassigns 208
+pre-existing tasks).
+
+New gates for the family, all wired into `tools/rebuild_and_audit.py`:
+
+- `tools/check_upstream_disjointness.py` (with `--apply`): every clone must
+  resolve to an immutable 40-hex revision (asserted fail-closed in the
+  Dockerfile), use `--depth 1`, live in the build path (never `tests/` or
+  `solution/`), and be absent from `specs/tb21_source_repositories.json` — the
+  68 repositories the frozen reference touches. Shared upstream with the
+  reference is how a clean-room claim dies even when no bytes ever enter a
+  tree. `--apply` writes `specs/upstream_sources.json`, and
+  `tools/update_provenance.py` copies it into `provenance.json`
+  `external_sources`.
+- `tools/check_task_files_tracked.py`: clone-integrity gate (post-v4.1), which
+deletes the class where a task-local `.gitignore` silently drops a fixture.
+  The v4.2 wave is the first family audited from the start by both gates,
+  and the clone-integrity test is repeated per wave: one task is exported
+  from the index and re-verified in both harbor directions (v4.2:
+  `kedge-lattice`, oracle 1 / nop 0).
+
+Effect on the audit: the `source_repository_matches` class of
+`tools/audit_independence_stream.py --reference-provenance` is no longer
+vacuous. Before this family, `provenance.json` carried an empty
+`external_sources` list, so a source-repository overlap check compared the
+empty set against the reference's 68 repositories and could only ever report
+zero. With the v4.2 wave it compares 21 real upstream identities (20 source
+repositories plus one JDK binary release asset) against the reference set, and
+the frozen-tree run of 2026-09-11 reports 0 overlap.
+
 ## Oracle verification
 
 Every task's oracle solution was run from a pristine container. The original
+204-task v2 suite passed two full sweeps (204/204 ×2). Fleet-authored tasks The original
 204-task v2 suite passed two full sweeps (204/204 ×2). Fleet-authored tasks
 each passed their own oracle during authoring. A spot-check of 17
 WIP-touched tasks passed 17/17 (1 fixed: brisk-kiln ctl.sh syntax bug).

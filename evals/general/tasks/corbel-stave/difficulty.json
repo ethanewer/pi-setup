@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 2,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 3,
+    "adversarial_inputs": 3,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 90,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on a real codebase: falconry/falcon 4.3.1 (pinned e18c27f454b58041c9a48e921f75182aa204d8a9, tag 4.3.1 peeled), one authored regression seeded at build time in falcon/routing/compiled.py (per-level route-node ordering removed, so resolution becomes registration-order dependent; verified to break exactly 13 upstream tests in test_uri_templates/test_default_router while middleware, converters and compiled-router modules stay green). Agent must fix the framework so falcon's own routing/middleware test modules pass and ship /app/app.py, a contract-compliant falcon WSGI app driven by a JSON route table; the verifier starts it with wsgiref and probes visible + 3 hidden route tables over HTTP on 127.0.0.1, including registration-order ambiguous templates, complex-var vs simple-var ambiguity, and a middleware-ordering (X-Chain reverse process_response) case. No network at trial time; nop scores 0 because the seeded tree fails the upstream modules and the app is absent."
+}

@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 1,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 0,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 70,
+  "documented_probe": null,
+  "notes": "In the real gensim codebase (cloned and pip-installed -e from /app/src). The agent must write a generic gensim LDA training pipeline that accepts any corpus directory and serialises a model in gensim's own format. The number of latent topics is not given and differs across corpora, so the agent must discover it by tuning rather than hardcoding; the verifier holds out three unseen corpora of different topic counts and scores c_v coherence plus topic-word purity of the serialised, reloaded model. Naive baselines fail at least one held-out corpus (K=1: coherence collapse on some corpora; fixed K or over-split K=10: purity collapse). Serialisation is asserted by reloading the produced file through gensim.models.LdaModel.load(). Medium bucket via hidden-case generalization and quantitative correctness; single CPU with pinned BLAS threads."
+}

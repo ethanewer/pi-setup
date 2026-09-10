@@ -1,0 +1,10 @@
+{
+  "probes": [
+    {"path": "/v2/nodes/root", "status": 200, "label": "root", "params": {}},
+    {"path": "/v2/nodes/z9", "status": 200, "label": "node", "params": {"node_id": "z9"}},
+    {"path": "/v2/nodes/root/children", "status": 200, "label": "children", "params": {"node_id": "root"}},
+    {"path": "/v2/health", "status": 200, "label": "health", "params": {}},
+    {"path": "/v2/nodes", "status": 404, "label": null, "params": null},
+    {"path": "/v2/nodes/root/extra", "status": 404, "label": null, "params": null}
+  ]
+}

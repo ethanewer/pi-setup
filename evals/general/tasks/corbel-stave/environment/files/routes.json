@@ -1,0 +1,9 @@
+{
+  "routes": [
+    {"template": "/v1/items/{item_id}", "label": "item"},
+    {"template": "/v1/items/special", "label": "special"},
+    {"template": "/v1/items/{item_id}/parts", "label": "parts"},
+    {"template": "/v1/orders/{oid:int}", "label": "order"}
+  ],
+  "middleware": ["alpha", "beta"]
+}

@@ -1,0 +1,68 @@
+{
+  "revision": "2026-09-10",
+  "cleanup": ["/srv/homes", "/srv/data"],
+  "groups": [
+    {"name": "eng", "gid": 5301},
+    {"name": "secops", "gid": 5302},
+    {"name": "lobby", "gid": 5303}
+  ],
+  "users": [
+    {
+      "name": "bob",
+      "uid": 3201,
+      "primary_group": "eng",
+      "home": "/srv/homes/bob",
+      "create_home": true,
+      "home_mode": "0700",
+      "shell": "/bin/bash",
+      "gecos": "Bob Engineering",
+      "password": "b0b-eng#2026!",
+      "locked": false,
+      "supplementary_groups": ["secops", "lobby"],
+      "min_days": 1,
+      "max_days": 60,
+      "warn_days": 7,
+      "inactive_days": 15,
+      "expiry": "2029-06-30"
+    },
+    {
+      "name": "carol",
+      "uid": 3202,
+      "primary_group": "secops",
+      "home": "/srv/homes/carol",
+      "create_home": true,
+      "home_mode": "0750",
+      "shell": "/bin/bash",
+      "gecos": "Carol Security",
+      "password": null,
+      "locked": true,
+      "supplementary_groups": [],
+      "min_days": null,
+      "max_days": null,
+      "warn_days": null,
+      "inactive_days": null,
+      "expiry": null
+    }
+  ],
+  "paths": [
+    {
+      "path": "/srv/data/reports",
+      "kind": "directory",
+      "mode": "0750",
+      "owner": "carol",
+      "group": "secops",
+      "marker": {
+        "file": "critical.txt",
+        "content": "CLASSIFIED-2026",
+        "mode": "0600"
+      }
+    },
+    {
+      "path": "/srv/data/eng",
+      "kind": "directory",
+      "mode": "0775",
+      "owner": "bob",
+      "group": "eng"
+    }
+  ]
+}

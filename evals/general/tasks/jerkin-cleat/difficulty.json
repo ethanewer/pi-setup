@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 75,
+  "documented_probe": null,
+  "notes": "Upstream-clone task (v4.2 family; stands in for TB2.1's lvandeve/lodepng task, which is on the forbidden list and is not used). Clones nothings/stb at pinned commit 2c980bb59875b0d32144a71867fbdebb2f77cd20 at image build time. The agent writes a C image pipeline against stb_image/stb_image_write: decode a directory of real PNG/BMP/TGA fixtures, vertically mirror, re-encode as 4-channel RGBA PNG, and record undecodable inputs as failures with the library's reason. The verifier recompiles the delivered source with gcc and byte-compares its output PNGs against a reference pipeline compiled from the same pinned headers, and checks the failure report exactly matches the library's own decode behaviour on 3 hidden cases (distinct formats, sizes, and corruptions). Byte-exactness requires the same decode-and-encode machinery as the reference, so a self-contained reimplementation that never touches the clone cannot pass. Review tightening (v4.2 wave): the verifier now also requires the agent's FAIL reason to equal the reference library's own stbi_failure_reason() verbatim for every undecodable input, in both REPORT_FILE and stdout (previously only non-empty), verified deterministic across -O0/-O2 compilations and repeated runs before enabling. Build is light (apt build-essential + shallow clone ~25 s); measured compile of the full header is ~2 s, so build_timeout_sec 1800 is comfortable. Offline-clean confirmed by running oracle + verifier inside a container started with --network none."
+}

@@ -1,0 +1,8 @@
+{
+  "probes": [
+    {"path": "/v3/files/abc.jpg", "status": 200, "label": "detail", "params": {"file_id": "abc", "ext": "jpg"}},
+    {"path": "/v3/files/plain", "status": 200, "label": "file", "params": {"file_id": "plain"}},
+    {"path": "/v3/dirs/a/b", "status": 200, "label": "dir", "params": {"dir": "a/b"}},
+    {"path": "/v3/nope", "status": 404, "label": null, "params": null}
+  ]
+}

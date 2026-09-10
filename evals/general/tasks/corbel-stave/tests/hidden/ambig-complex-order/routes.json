@@ -1,0 +1,8 @@
+{
+  "routes": [
+    {"template": "/v3/files/{file_id}", "label": "file"},
+    {"template": "/v3/files/{file_id}.{ext}", "label": "detail"},
+    {"template": "/v3/dirs/{dir:path}", "label": "dir"}
+  ],
+  "middleware": ["alpha", "beta", "gamma"]
+}

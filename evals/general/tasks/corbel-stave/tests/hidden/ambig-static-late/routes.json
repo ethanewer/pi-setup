@@ -1,0 +1,9 @@
+{
+  "routes": [
+    {"template": "/v2/nodes/{node_id}", "label": "node"},
+    {"template": "/v2/nodes/root", "label": "root"},
+    {"template": "/v2/nodes/{node_id}/children", "label": "children"},
+    {"template": "/v2/health", "label": "health"}
+  ],
+  "middleware": ["alpha"]
+}

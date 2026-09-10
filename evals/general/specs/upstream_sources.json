@@ -1,0 +1,254 @@
+{
+ "note": "Upstream source repositories each task clones at image-build time, extracted from the build path of every task. Derived; regenerate with `python3 tools/check_upstream_disjointness.py --apply`. tools/update_provenance.py copies these into specs/provenance.json external_sources so audit_independence_stream.py --reference-provenance can compare them against the reference set.",
+ "policy": "upstream clones are permitted from v4.2 onward provided no repository is shared with the frozen Terminal-Bench 2.1 reference and every clone is pinned to an immutable revision; see specs/tb21_source_repositories.json",
+ "forbidden_repository_count": 68,
+ "forbidden_spec_commit": "1a6ffa9674b571da0ed040c470cb40c4d85f9b9b",
+ "task_count": 20,
+ "repositories": [
+  "github.com/adoptium/temurin25-binaries",
+  "github.com/angr/angr",
+  "github.com/apache/kafka",
+  "github.com/arminbiere/cadical",
+  "github.com/cure53/dompurify",
+  "github.com/encode/httpx",
+  "github.com/falconry/falcon",
+  "github.com/id-software/doom",
+  "github.com/libvips/libvips",
+  "github.com/mikf/gallery-dl",
+  "github.com/nothings/stb",
+  "github.com/official-stockfish/stockfish",
+  "github.com/pallets/click",
+  "github.com/qutip/qutip",
+  "github.com/rare-technologies/gensim",
+  "github.com/redis/redis",
+  "github.com/shadow-maint/shadow",
+  "github.com/sympy/sympy",
+  "github.com/tinycc/tinycc",
+  "github.com/trinodb/trino",
+  "github.com/yt-project/yt"
+ ],
+ "tasks": [
+  {
+   "task": "clinker-mast",
+   "repositories": [
+    "github.com/encode/httpx"
+   ],
+   "urls": [
+    "https://github.com/encode/httpx"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "clinker-quay",
+   "repositories": [
+    "github.com/sympy/sympy"
+   ],
+   "urls": [
+    "https://github.com/sympy/sympy"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "corbel-stave",
+   "repositories": [
+    "github.com/falconry/falcon"
+   ],
+   "urls": [
+    "https://github.com/falconry/falcon"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "corbel-weir",
+   "repositories": [
+    "github.com/pallets/click"
+   ],
+   "urls": [
+    "https://github.com/pallets/click"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "derrick-tarn",
+   "repositories": [
+    "github.com/mikf/gallery-dl"
+   ],
+   "urls": [
+    "https://github.com/mikf/gallery-dl"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "ferrule-berth",
+   "repositories": [
+    "github.com/arminbiere/cadical"
+   ],
+   "urls": [
+    "https://github.com/arminbiere/cadical"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "ferrule-keel",
+   "repositories": [
+    "github.com/tinycc/tinycc"
+   ],
+   "urls": [
+    "https://github.com/tinycc/tinycc"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "hasp-plumb",
+   "repositories": [
+    "github.com/redis/redis"
+   ],
+   "urls": [
+    "https://github.com/redis/redis"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "ingot-flood",
+   "repositories": [
+    "github.com/id-software/doom"
+   ],
+   "urls": [
+    "https://github.com/id-software/doom"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "jerkin-cleat",
+   "repositories": [
+    "github.com/nothings/stb"
+   ],
+   "urls": [
+    "https://github.com/nothings/stb"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "kedge-lattice",
+   "repositories": [
+    "github.com/libvips/libvips"
+   ],
+   "urls": [
+    "https://github.com/libvips/libvips"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "mizzen-summit",
+   "repositories": [
+    "github.com/apache/kafka"
+   ],
+   "urls": [
+    "https://github.com/apache/kafka"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "nock-trestle",
+   "repositories": [
+    "github.com/adoptium/temurin25-binaries",
+    "github.com/trinodb/trino"
+   ],
+   "urls": [
+    "https://github.com/adoptium/temurin25-binaries",
+    "https://github.com/trinodb/trino"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "pawl-bell",
+   "repositories": [
+    "github.com/official-stockfish/stockfish"
+   ],
+   "urls": [
+    "https://github.com/official-stockfish/stockfish"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "plinth-wicket",
+   "repositories": [
+    "github.com/cure53/dompurify"
+   ],
+   "urls": [
+    "https://github.com/cure53/dompurify"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "quoin-vellum",
+   "repositories": [
+    "github.com/rare-technologies/gensim"
+   ],
+   "urls": [
+    "https://github.com/rare-technologies/gensim"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "reeve-gate",
+   "repositories": [
+    "github.com/shadow-maint/shadow"
+   ],
+   "urls": [
+    "https://github.com/shadow-maint/shadow"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "tenon-orbit",
+   "repositories": [
+    "github.com/qutip/qutip"
+   ],
+   "urls": [
+    "https://github.com/qutip/qutip"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "trunnel-reach",
+   "repositories": [
+    "github.com/angr/angr"
+   ],
+   "urls": [
+    "https://github.com/angr/angr"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "turret-moor",
+   "repositories": [
+    "github.com/yt-project/yt"
+   ],
+   "urls": [
+    "https://github.com/yt-project/yt"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  }
+ ]
+}

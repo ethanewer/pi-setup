@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 3,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 3,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 75,
+  "documented_probe": "34MB 857 files 302,775 LOC meson; shallow clone of libvips @ v8.18.6, pinned to 426af3f44246fce9cfa8dd51a353aa4dfd48c553",
+  "notes": "Upstream-clone family task standing in for TB2.1's opencv/opencv build task. The agent gets a clean (unbuilt) clone of the real libvips C image library pinned to 426af3f44246fce9cfa8dd51a353aa4dfd48c553, with apt build dependencies preinstalled, and must drive the project's own meson/ninja build at cpus=1 (measured 93 s of ninja work, ~150 s wall in the image), install to /app/vips, then use the installed vips CLI it built on two RGBA fixtures through a documented 3-step pipeline (rotate 90 CW, crop top-left half, resize 0.5 nearest-neighbour) writing /app/out. The verifier asserts the install is a real build (ELF, SONAME libvips.so.42, vips --version 8.18.6), recomputes the three visible outputs with the agent's own binary and byte-compares against /app/out (rawsaved pixels), runs the same three operations on three hidden images and compares md5-of-raw-pixels against reference constants precomputed from an independent reference build of the same pinned commit, asserts metadata (width/height/bands via vipsheader), and compiles a hidden C program against the agent-installed library (gcc + pkg-config) which reproduces the same pipeline via the vips C API and must match reference FNV constants. The reference pipeline is bit-exact across builds by construction: rotate 90 is a pixel permutation, extract_area is an integer crop, resize with --kernel nearest is integer sampling. A nop container scores 0 (nothing built, no /app/vips, no /app/out). The task cannot be faked by a self-contained script: only a genuine libvips.so.42 build produces the exact hidden pixel bytes and passes the C-link checks. Offline-clean: meson setup/compile/install, the CLI pipeline, and gcc+pkg-config C linking all confirmed inside docker run --network none. Build-time image 1.07 GB, build_timeout_sec 1800 is 10x the measured 150 s."
+}

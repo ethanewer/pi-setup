@@ -1,0 +1,59 @@
+{
+  "revision": "2026-09-10",
+  "cleanup": ["/srv/homes", "/srv/data"],
+  "groups": [
+    {"name": "ops", "gid": 5201},
+    {"name": "audit", "gid": 5202}
+  ],
+  "users": [
+    {
+      "name": "alice",
+      "uid": 3101,
+      "primary_group": "ops",
+      "home": "/srv/homes/alice",
+      "create_home": true,
+      "home_mode": "0700",
+      "shell": "/bin/bash",
+      "gecos": "Alice Ops",
+      "password": "alice-PW-2026!",
+      "locked": false,
+      "supplementary_groups": ["audit"],
+      "min_days": 7,
+      "max_days": 90,
+      "warn_days": 14,
+      "inactive_days": 30,
+      "expiry": "2030-12-31"
+    },
+    {
+      "name": "svc-probe",
+      "uid": 3155,
+      "primary_group": "nogroup",
+      "home": "/var/empty",
+      "create_home": false,
+      "shell": "/usr/sbin/nologin",
+      "gecos": "",
+      "password": null,
+      "locked": true,
+      "supplementary_groups": [],
+      "min_days": null,
+      "max_days": null,
+      "warn_days": null,
+      "inactive_days": null,
+      "expiry": null
+    }
+  ],
+  "paths": [
+    {
+      "path": "/srv/data/audit",
+      "kind": "directory",
+      "mode": "0750",
+      "owner": "alice",
+      "group": "ops",
+      "marker": {
+        "file": "flag.txt",
+        "content": "REV-2026-09",
+        "mode": "0640"
+      }
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 2,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 3,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 30,
+  "documented_probe": "22MB 2033 files 759,918 LOC pyproject+setup+Makefile; shallow clone sympy@1.14.0 pinned to 16fa855354eb7bcabd3fe10993841e03b1382692",
+  "notes": "SWE-bench style task against a real upstream tree: sympy 1.14.0 pinned at 16fa855354eb7bcabd3fe10993841e03b1382692, shallow-cloned in the Dockerfile; git metadata is stripped after the regression patch is applied so no diff archaeology can reveal the intro. The seed: a one-line authored defect in the radix-2 FFT twiddle lookup of sympy/discrete/transforms.py (w[ut * j] collapsed to w[j]) that makes every transform padded to length >= 8 wrong while n=2/n=4 stay correct. The agent gets a naive-DFT reproducer and a failing behaviour, not a file; it must localise the regression in a 760k-LOC tree using sympy's own discrete test suite (~1.3 s at 1 CPU) and repair the source. Deliverables: repaired /app/src and /app/diagnosis.md naming the module and root cause; the verifier checks the diagnosis content, not just existence. Three hidden cases (fft_long up to length 32, convolution_fft on fresh integer vectors, ifft against an independently computed spectrum) use different inputs from the visible reproducer and fail pre-fix / pass post-fix. The nop container scores 0: the regression is baked into the image, so the suite fails, the hidden cases fail and no diagnosisexists. Offline-clean: nothing at trial time fetches from the network; pytest, mpmath, hypothesis are all in the image and the verifier was run with networking explicitly disabled."
+}

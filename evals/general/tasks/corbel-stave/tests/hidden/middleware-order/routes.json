@@ -1,0 +1,8 @@
+{
+  "routes": [
+    {"template": "/v4/a/{x}", "label": "alpha-route"},
+    {"template": "/v4/b/{y:int}", "label": "beta-route"},
+    {"template": "/v4/c", "label": "gamma-route"}
+  ],
+  "middleware": ["first", "second", "third"]
+}

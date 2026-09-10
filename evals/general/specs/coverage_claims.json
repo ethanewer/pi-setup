@@ -7633,5 +7633,125 @@
   "evidence": {},
   "note": "v4.1 coverage-expansion wave RETRY (area N: observability / metrics): claims no tb2.1 competencies. Prometheus 2.45.3 delimited-protobuf MetricFamily scrape ingestion over HTTP with Content-Type-driven parsing; native histogram storage behind --enable-feature=native-histograms with a declared schema-0 bucket structure (10 buckets through 1024 ms); cold-loaded recording rules materializing PromQL into new queryable series; and live PromQL answers evaluated through the HTTP query API against independent measurements under driven application load. The verifier decodes the exporter's protobuf directly (exact names/types/bucket schema, count/sum consistency), drives ~120-200 orders, then asserts three hidden PromQL expressions (rate() over counter, rate() over histogram with per-bucket rates summing to the rate, the agent's recorded rule) plus the agent's three answers against independently measured references. Hidden cases are genuinely different load profiles (L1/L2 with different orders/pace/urgency), not renamed data; one deterministic profile (L1) is exercised per run.",
   "claims_no_competencies": true
+ },
+ "clinker-quay": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.2 upstream-clone wave (SWE-bench shape): claims no tb2.1 competencies. Clones sympy/sympy pinned at 16fa855354eb7bcabd3fe10993841e03b1382692 (tag sympy-1.14.0, asserted 40-hex in the Dockerfile). One small authored regression patch breaks sympy's discrete-FFT submodule; the agent must localise and fix it from a failing behaviour and reproducer without being told the module. Verifier runs sympy's own targeted tests for that submodule plus 3 hidden reproducer scripts exercising the same code path from different inputs, and asserts the rest of the submodule's suite still passes.",
+  "claims_no_competencies": true
+ },
+ "clinker-mast": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.2 upstream-clone wave (library-feature): claims no tb2.1 competencies. Clones encode/httpx pinned at 26d48e0634e6ee9cdc0533996db289ce4b430177 (tag 0.28.1). A retry-transport feature that does not exist at that version must be implemented in the library's own idiom inside the clone. Verifier runs httpx's own relevant tests plus 3 hidden test files exercising edge cases and transport-stack interaction, and rejects any definition that does not live in /app/src (site-packages injection probe scored 0).",
+  "claims_no_competencies": true
+ },
+ "corbel-weir": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.2 upstream-clone wave (packaging-release): claims no tb2.1 competencies. Clones pallets/click pinned at 8b19813f2bfca99f1018a587a8cf54fc959f2e5d (tag 8.5.0). The agent must repair a deliberate defect seeded in the packaging metadata and produce a correct sdist and wheel that install and import in a clean venv. Verifier installs the agent's wheel into a fresh venv and asserts metadata, entry points and 3 hidden behavioural checks against the installed package, not the source tree.",
+  "claims_no_competencies": true
+ },
+ "corbel-stave": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.2 upstream-clone wave (webframework-bugfix): claims no tb2.1 competencies. Clones falconry/falcon pinned at e18c27f454b58041c9a48e921f75182aa204d8a9 (tag 4.3.1). One seeded regression in URL template matching / middleware ordering must be fixed keeping falcon's own suite green. Verifier runs falcon's relevant test modules and drives a live WSGI app across 3 hidden route tables including ambiguous templates and a middleware-ordering case; a no-tree-cheat probe (app-only deliverable) scored 0 in both halves.",
+  "claims_no_competencies": true
+ },
+ "derrick-tarn": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.2 upstream-clone wave (extractor-offline): claims no tb2.1 competencies. Clones mikf/gallery-dl pinned at 2adf2a8e0041ec55afdcc2211fd5c7ca239a9352 (tag v1.32.11), standing in for TB2.1's yt-dlp task. A new extractor for a fictional site must be written against a local mock HTTP server; the verifier starts the mock server and runs the extractor through gallery-dl's own CLI (--list-extractors discovery required) on 3 hidden fixtures differing in slugs, titles, counts and formats; hardcoded/unregistered laziest-deliverable probes all scored 0.",
+  "claims_no_competencies": true
+ },
+ "ferrule-keel": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.2 upstream-clone wave (compiler-from-source): claims no tb2.1 competencies. Clones TinyCC/tinycc pinned at d348a9a51d32cece842b7885d27a411436d7887b (release_0_9_27), with one small authored glibc-compat patch. The agent must build a real C compiler with its own configure/make and use it on C programs including a documented tcc-vs-gcc divergence (C99 complex numbers). Verifier recompiles visible programs with the agent-built binary, runs the upstream make tests2.all gate (84 tests), and asserts the divergence on hidden cases; a gcc-delegating fake died at the upstream suite and scored 0.",
+  "claims_no_competencies": true
+ },
+ "ferrule-berth": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.2 upstream-clone wave (sat-solver): claims no tb2.1 competencies. Clones arminbiere/cadical pinned at c60730422e758ef1cebe7aeddf2dda31c996bf04 (master HEAD, asserted 40-hex). The agent must build the solver, solve DIMACS CNFs including UNSAT instances with incremental assumptions, and emit a proof trail. Verifier validates every UNSAT LRAT proof with the project's own lrat-trim compiled from the pinned clone (a forged proof cannot self-validate; corrupted-proof and fake-no-build probes scored 0).",
+  "claims_no_competencies": true
+ },
+ "pawl-bell": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.2 upstream-clone wave (chess-engine-build): claims no tb2.1 competencies. Clones official-stockfish/Stockfish pinned at 59aae690f91d6f69aac194f447d84b4a2c3be778 (master HEAD). The agent must build the engine with make and drive the UCI protocol to a fixed depth. Verifier runs the agent-built binary on 3 hidden FENs with known exact fixed-depth NNUE outputs plus 2 non-hidden probe positions driven through the raw engine, requiring exact bestmove/score/depth coverage; canned-answer stubs scored 0.",
+  "claims_no_competencies": true
+ },
+ "hasp-plumb": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.2 upstream-clone wave (redis-build-operate): claims no tb2.1 competencies. Clones redis/redis pinned at 3399357e7c17b668289386b8a15a3037bc4527b1 (tag 8.10.1). The agent must build a real server from source, configure eviction and persistence, and operate it from a deliverable script. Verifier drives the agent's server only through the built /app/src/src/redis-cli across 3 hidden workload fixtures, asserts keyspace, AOF/RDB artifacts under /app/data, evicted_keys and used_memory bounds, and SIGKILL-restart lifecycle; a system apt redis fails the version gate.",
+  "claims_no_competencies": true
+ },
+ "ingot-flood": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.2 upstream-clone wave (legacy-c-modernise): claims no tb2.1 competencies. Clones id-Software/DOOM pinned at a77dfb96cb91780ca334d0d4cfd86957558007e0 (linuxdoom-1.10). The agent must make the real legacy C source compile against modern glibc/gcc (fixing, not stubbing) and prove the binary runs a non-interactive timedemo. Verifier recompiles the repaired tree and requires a real ELF deliverable, >=10 genuine gcc -c compile lines in build.log, the engine's own boot self-reports in run.log, and exact gametic counts across 3 hidden build configs (-g / -O2 / -O0) including one where a naive repair dies with glibc fortify; a script-and-copy fake scored 0.",
+  "claims_no_competencies": true
+ },
+ "jerkin-cleat": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.2 upstream-clone wave (single-header-libs): claims no tb2.1 competencies. Clones nothings/stb pinned at 2c980bb59875b0d32144a71867fbdebb2f77cd20, standing in for TB2.1's lodepng task. The agent writes a C image pipeline against stb_image/stb_image_write (decode, mirror, re-encode, failure reporting). Verifier rebuilds the delivered source with gcc and byte-compares outputs against a reference built from the same pinned headers on 3 hidden fixtures, and requires the FAIL reason to equal the library's own stbi_failure_reason verbatim; a pixel-correct self-contained reimplementation scored 0 (byte mismatch).",
+  "claims_no_competencies": true
+ },
+ "kedge-lattice": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.2 upstream-clone wave (meson-c-library): claims no tb2.1 competencies. Clones libvips/libvips pinned at 426af3f44246fce9cfa8dd51a353aa4dfd48c553 (tag v8.18.6), standing in for TB2.1's opencv task. The agent builds the library with meson/ninja at 1 CPU and uses the built vips CLI and C API. Verifier runs the agent-built binary across 3 hidden image operations asserting pixel md5s/dims and links a hidden C program against the agent-built library (constants independently recomputed by the reviewer); a self-contained fake vips scored 0 on all 9 pixel checks.",
+  "claims_no_competencies": true
+ },
+ "reeve-gate": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.2 upstream-clone wave (autotools-privilege): claims no tb2.1 competencies. Clones shadow-maint/shadow pinned at eccf1c569c7ac3b9e3b535c91b6ed3c329e9ec8c (tag v4.11.1), standing in for TB2.1's sudo-project/sudo task. The agent must build the account-suite with autotools and achieve a specific /etc/passwd /etc/shadow /etc/group end state using only its own built binaries. Verifier crypt-verifies $6$ hashes across 3 hidden scenario fixtures and runs every deliverable replay under strace, attributing every DB write to one of the 30 built shadow binaries (a self-contained Python editor that ignored the tools scored 0 after the fix).",
+  "claims_no_competencies": true
+ },
+ "mizzen-summit": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.2 upstream-clone wave (large-jvm-module): claims no tb2.1 competencies. Clones apache/kafka pinned at 26b251a451ce941d3d7a55e6487bcb7f16b5ad48 (peeled commit of tag 4.3.1). The agent must find the right module in 7,232 files and implement a scoped behaviour change. Verifier runs the module's targeted tests plus 3 hidden test classes under gradle --offline, guards the Gradle init.d auto-load surface and content-hashes every tracked file outside the module src vs HEAD (init-script and assume-unchanged sabotage probes scored 0).",
+  "claims_no_competencies": true
+ },
+ "nock-trestle": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.2 upstream-clone wave (large-jvm-maven): claims no tb2.1 competencies. Clones trinodb/trino pinned at 0984974677197ff76bae9fc4f4950eb30a96306a (master, resolved by SHA). The agent must find and fix a real year-month interval parsing bug in the 963k-LOC tree with the fix left as an uncommitted working-tree change. Verifier applies the git-status guard, recompiles with mvn -o from source, and runs the module's suite plus 2 hidden test classes; neither test-tree tampering nor bytecode-only edits pass.",
+  "claims_no_competencies": true
+ },
+ "turret-moor": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.2 upstream-clone wave (scientific-python): claims no tb2.1 competencies. Clones yt-project/yt pinned at f043ac898105a5b87da92226813fda96d76050da (tag yt-4.4.2), standing in for TB2.1's amuse task. The agent must load a simulation dataset and compute a derived quantity using yt's own API. Verifier independently recomputes the expected answer with numpy from the same fixtures across 3 hidden datasets and statically asserts the deliverable imports yt and calls yt.load; a self-contained numpy script that never touches yt scored 0.",
+  "claims_no_competencies": true
+ },
+ "tenon-orbit": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.2 upstream-clone wave (quantum-python): claims no tb2.1 competencies. Clones qutip/qutip pinned at c95e637e0e3f9c0d3279b5fbff2c150e0de6bf9a (tag v5.3.1), standing in for TB2.1's quimb task. The agent must express a Rabi-model dynamics computation in qutip's own objects. Verifier compares the printed observable against an independently computed closed-form reference across 3 hidden parameter sets and re-runs every case with a sitecustomize monkeypatch that shifts qutip's solver result by +0.10, so the printed value must track the solver; a decorative-sesolve spoof scored 0.",
+  "claims_no_competencies": true
+ },
+ "quoin-vellum": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.2 upstream-clone wave (nlp-library): claims no tb2.1 competencies. Clones RaRe-Technologies/gensim pinned at ee2642b4fa26e689ba4595067504668bc7a89016 (tag 4.4.0), standing in for TB2.1's fastText task. The agent must produce a coherence-tuned topic model on an authored corpus through gensim's own API with serialization/reload. Verifier stage-copies each hidden corpus into a dir containing nothing else (so keys.json ground truth is never visible to the deliverable) and enforces coherence/purity thresholds across 3 datasets; fixed-K deliverables from 2..7 all fail at least one case.",
+  "claims_no_competencies": true
+ },
+ "plinth-wicket": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.2 upstream-clone wave (js-security-suite): claims no tb2.1 competencies. Clones cure53/DOMPurify pinned at 1d7460c4f8a27be825c11b1c9d346d79db32c1e5 (tag 3.4.15), standing in for TB2.1's html-sanitizer-testbed task. The agent must run the project's real 1227-case jsdom suite, add a bypass test for an uncovered mutation class, and harden the configuration. Verifier runs the project's own suite plus 4 hidden bypass payloads, asserts git HEAD pristine in /app/src, and adds an 11-payload stock-parity probe so a lazy self-contained sanitizer ignoring the library scores 0.",
+  "claims_no_competencies": true
+ },
+ "trunnel-reach": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.2 upstream-clone wave (binary-analysis): claims no tb2.1 competencies. Clones angr/angr pinned at f4ea23575ecb4802ede51401bb297d1cb3c1610e (tag v9.3.4), standing in for TB2.1's klee task. The agent must solve an authored binary's input constraint with angr's symbolic execution API. Verifier runs the deliverable against 3 hidden binaries built from the same generator with different constants, requires exit 0 + ACCESS GRANTED, and statically asserts angr import and Project usage; hardcoded and brute-force routes fail or time out.",
+  "claims_no_competencies": true
  }
 }

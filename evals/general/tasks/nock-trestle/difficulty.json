@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 3,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 3,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 1,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 90,
+  "documented_probe": "trinodb/trino master @ 0984974677197ff76bae9fc4f4950eb30a96306a (484-SNAPSHOT, resolved 2026-09-10 via git ls-remote refs/heads/master): 58MB shallow, 7,056 files, 963,822 LOC, Maven. Trino 484 requires JDK 25 (air.java.version=25.0.1) so the image downloads Temurin 25.0.4.1 from Adoptium and Maven 3.9.16 (the version the repo's own maven wrapper pins) from repo.maven.apache.org. Cold image build measured 74s (warm ~51s), image 1227MB; trino-parser module suite runs in ~13s at host speed and ~40s at 1 CPU after warm .m2. Note master is a fast-moving branch: the Dockerfile clones shallow and then fetches the pin by 40-hex SHA (server reachability allows it), so the build stays reproducible even after master advances. The Maven fallback from the slot was NOT needed: mvn -o -f core/trino-parser/pom.xml test is fully warm at trial time.",
+  "notes": "Upstream-clone regression task (v4.2 family) on trinodb/trino, the Maven counterpart to the kafka slot. Scoped to ONE plugin module: core/trino-parser (46k LOC, only internal dep trino-grammar, pure JUnit tests). A small authored seed patch (environment/files/seed-interval-fields.patch, applied with git apply at image-build time) swaps the YEAR/MONTH arm of the simple year-month interval-field switch in AstBuilder.visitSimpleYearMonthInterval; that single root cause breaks exactly four upstream test methods in four different classes (TestTypeParser.testInverval, TestSqlParser.testInterval, TestExpressionFormatter.testIntervalLiteral, TestStatementBuilder.testStatementBuilderTpch). The agent must run the module's own suite, correlate the failures, locate the parser code in the 963k-line tree and restore correct behaviour in src/main; the instruction names neither the file nor the bug. The verifier runs the full trino-parser test suite offline via maven, then two authored hidden JUnit cases (space-free decoration variants and parse/format round-trips the upstream tests do not cover), plus a git-diff guard that accepts only modifications under core/trino-parser/src/main/ (a tree with no such change, or any change under src/test or pom.xml, scores 0, defeating both the untouched container and test-deletion cheats). Offline cleanliness proven by running the full trial flow with no network. formatSql/SqlParser public APIs only for hidden tests; no vendored upstream bytes in the task tree."
+}

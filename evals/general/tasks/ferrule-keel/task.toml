@@ -1,0 +1,33 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "hard"
+category = "programming"
+verifier_kind = "executes-deliverable"
+deliverables = [
+    "/app/tccinst/bin/tcc",
+    "/app/outputs/hello.out",
+    "/app/outputs/fib.out",
+    "/app/outputs/strings.out",
+    "/app/outputs/structs.out",
+    "/app/outputs/complex.err",
+    "/app/outputs/complex.gcc.out",
+    "/app/diagnosis.md",
+]
+tags = [
+    "ferrule-keel",
+    "programming",
+    "compiler-build",
+]
+
+[verifier]
+timeout_sec = 600.0
+
+[agent]
+timeout_sec = 2400.0
+
+[environment]
+build_timeout_sec = 1800.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 4096

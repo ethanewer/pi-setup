@@ -1,0 +1,8 @@
+{
+  "probes": [
+    {"path": "/v4/c", "status": 200, "label": "gamma-route", "params": {}},
+    {"path": "/v4/b/99", "status": 200, "label": "beta-route", "params": {"y": 99}},
+    {"path": "/v4/a/some", "status": 200, "label": "alpha-route", "params": {"x": "some"}},
+    {"path": "/v4/missing", "status": 404, "label": null, "params": null}
+  ]
+}

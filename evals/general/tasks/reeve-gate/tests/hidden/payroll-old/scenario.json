@@ -1,0 +1,60 @@
+{
+  "revision": "2026-09-10",
+  "cleanup": ["/srv/homes", "/srv/data"],
+  "groups": [
+    {"name": "fin", "gid": 5501},
+    {"name": "compliance", "gid": 5502}
+  ],
+  "users": [
+    {
+      "name": "erin",
+      "uid": 3401,
+      "primary_group": "fin",
+      "home": "/srv/homes/erin",
+      "create_home": true,
+      "home_mode": "0700",
+      "shell": "/bin/sh",
+      "gecos": "Erin Finance",
+      "password": "Erin!2024",
+      "locked": false,
+      "supplementary_groups": ["compliance"],
+      "min_days": 14,
+      "max_days": 120,
+      "warn_days": 21,
+      "inactive_days": 60,
+      "expiry": "2025-05-31"
+    },
+    {
+      "name": "frank",
+      "uid": 3402,
+      "primary_group": "fin",
+      "home": "/srv/homes/frank",
+      "create_home": true,
+      "home_mode": "0750",
+      "shell": "/usr/sbin/nologin",
+      "gecos": "Frank Auditor",
+      "password": "Fr4nk-audit!",
+      "locked": true,
+      "supplementary_groups": ["compliance"],
+      "min_days": 30,
+      "max_days": 180,
+      "warn_days": 30,
+      "inactive_days": 90,
+      "expiry": "2028-01-31"
+    }
+  ],
+  "paths": [
+    {
+      "path": "/srv/data/payroll",
+      "kind": "directory",
+      "mode": "0700",
+      "owner": "erin",
+      "group": "fin",
+      "marker": {
+        "file": "runbook.txt",
+        "content": "PAYROLL-2025-FROZEN",
+        "mode": "0640"
+      }
+    }
+  ]
+}

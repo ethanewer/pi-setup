@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 3,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 3,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 3,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": "TinyCC/tinycc release_0_9_27 (3MB, 399 files, 91,277 LOC, Makefile+configure); clean clone+configure+make+make install measured at ~5s at 1 CPU; project's own 'make tests2.all' suite passes in ~0.5s on the built compiler (glibc 2.39). Build needs one small authored compat patch: bcheck.c used the __malloc_hook ABI that glibc >= 2.34 removed, so a stock 0.9.27 tree fails its default build on this base image.",
+  "notes": "Compiler-from-source task standing in for TB2.1's gcc/CompCert targets. Agent must build the real tinycc tree with its own configure/make (no prebuilt compiler exists in the image, no network at trial time), install it under /app/tccinst, drive it on five C programs, and identify the one program that tcc handles differently from the system gcc: C99 complex numbers, which tcc-doc.texi documents as missing ('Currently missing items are: complex and imaginary numbers'). tcc rejects glibc's complex.h while gcc runs the program. Verifier re-runs every visible program with the agent-built compiler, byte-compares stdout, asserts the documented divergence on hidden cases in both directions (tcc compiles-and-agrees with gcc on hidden standard-C cases / tcc must fail on a hidden complex-numbers case), checks the diagnosis names the feature and cites tcc-doc.texi, and runs the project's own tests2 suite. Substitution recorded: stock 0.9.27 cannot complete its default build on glibc 2.39, so environment applies a small authored bcheck.c compat patch at build time (glibc>=2.34: #undef CONFIG_TCC_MALLOC_HOOKS, falling back to the file's own static-data path); bounds-checking (-b) is thereby disabled, which nothing in the task uses."
+}

@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 2,
+    "resource_pressure": 2,
+    "interaction_statefulness": 2,
+    "unsafe_action_penalty": 1
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": "redis/redis@8.10.1 shallow clone 3399357e7c17b668289386b8a15a3037bc4527b1 (181 files, ~18.6k LOC, Makefile); measured `make -j1 redis-server redis-cli` in the image: 130 s at 1 CPU incl. bundled jemalloc; full task-image docker build: 56 s; final image 877 MB",
+  "notes": "redis-build-operate: the agent builds the real Redis 8.10.1 from the pinned upstream clone and operates it to a persistence+eviction contract. Bullseyes every gap in the pre-existing 837-task suite: no task there builds a non-self-authored C project, starts and restarts a real network service, or verifies crash-consistency of a datastore. Instruction names outcomes only (acknowledged writes survive SIGKILL+restart; ~120MB of no-TTL 1MB values through a tens-of-MB ceiling must evict oldest-first and stay bounded) and never the config knobs, so the agent must discover appendonly/AOF, maxmemory, and an allkeys-* eviction policy itself; a noeviction or volatile-* setting fails every hidden case. Verifier runs the agent's own /app/start.sh through /app/src/src/redis-cli only, asserts the running server self-reports 8.10.1, then replays 3 hidden workload fixtures (crash-survival, memory-cap eviction, types+TTL across a second restart) written against redis-cli. Nop container scores 0: nothing is built, no /app/redis.conf, no /app/start.sh, no /app/data artifacts. Offline-clean: all build deps baked, make has nothing to fetch, no runtime network use; confirmed by running the full oracle solve + verifier in a container launched with `--network none` (reward 1) and by grepping every test/solution file for network hosts (none)."
+}

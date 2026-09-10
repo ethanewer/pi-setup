@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 75,
+  "documented_probe": null,
+  "notes": "Upstream-clone chess-engine task (v4.2 family), medium. Agent clones nothing itself: the image already carries the official-stockfish/Stockfish checkout pinned to 59aae690f91d6f69aac194f447d84b4a2c3be778 (resolved via git ls-remote on 2026-09-10; it is upstream HEAD), unbuilt. The agent must (1) build the real C++ engine with the project's own Makefile on 1 CPU (measured 39s compile), and (2) author a UCI protocol driver that sets a position, searches a fixed depth, and reports bestmove/score. The verifier drives the agent-built binary directly (checking id name/uciok/readyok, per-depth info lines, score, bestmove) on one hidden position plus two additional non-hidden probe positions at depth 7 (precomputed from this pinned commit), and runs the driver on 3 hidden FEN positions at depth 7, comparing move and score exactly. The two extra probe positions were added in review so a stub that hardcodes only the three hidden answers cannot impersonate the engine; reviewer probes confirmed a stub with the exact hidden values alone scores 0 after this tightening. Determinism of the expectations was verified empirically: identical bestmove, score cp, PV and node counts across 3 separate runs and across two different ARCH builds (x86-64 and x86-64-sse41-popcnt); runner-up moves score at least ~4cp lower (one case) and the verifier additionally requires the exact move token, so a near-miss engine cannot pass. A driver that never touches the clone cannot pass: hidden FENs are unseen at trial time (/tests is uploaded only at verification time) and reproducing Stockfish's exact fixed-depth evaluation is not achievable offline in a session. No fallback was needed (build is fast). No submodules, no git dependencies. The one runtime-network dependency (the default NNUE evaluation network that modern Stockfish embeds at link time) is pre-fetched into the image at build time with the project's own `make net` target; the downloaded file is content-addressed (filename = first 12 hex of its sha256, taken from the pinned commit's evaluate.h) and sha256-validated, so the embedded network is deterministic across rebuilds and a changed upstream net fails the build rather than silently altering search results. This was confirmed by running the complete flow (build + driver + verifier) in a container started with `--network none`; fresh image build measured at 36.6s against build_timeout_sec=1800 (49x margin), image size 958MB."
+}

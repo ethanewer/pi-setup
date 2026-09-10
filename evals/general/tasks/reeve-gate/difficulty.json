@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 3,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 2,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 90,
+  "documented_probe": null,
+  "notes": "Upstream-clone family slot reeve-gate (stand-in for TB2.1 sudo-project/sudo). Pinned shadow-maint/shadow v4.11.1 (commit eccf1c569c7ac3b9e3b535c91b6ed3c329e9ec8c) is cloned, autoreconf/configure/make/make-installed at image build time (measured 1m28s at cpus=1, so build_timeout_sec=1800 has >10x margin); the expensive build is a cached image layer and the agent's work is incremental on top of it. The built suite replaces the distribution's account tools at canonical paths; a build-time sha256 snapshot (and the fact that dpkg -V passwd now flags those files as modified) is how the verifier asserts the agent used its own built binaries rather than the distro's. The agent writes a data-driven state engine /app/setup_accounts.sh; the verifier restores pristine /etc/passwd /etc/shadow /etc/group /etc/gshadow from /opt/reeve-gate/pristine and replays the deliverable against 3 hidden scenario fixtures with exact end-state assertions (uid/gid/gecos/home/shell, sha512 password hashes verified with python crypt, lock state, aging fields, expiry epoch, supplementary memberships, home/path/marker ownership and modes) plus an exact-account-set check. No PAM: built with --without-libpam so classic /etc/shadow auth. gpasswd group-password setups were dropped because they require a tty at runtime. Operating the built toolchain is ENFORCED at runtime (review hardening): each deliverable run is traced with strace and every create/write/rename/unlink of /etc/passwd,/etc/shadow,/etc/group,/etc/gshadow must be attributable to one of the shadow binaries built from the pinned source; a python direct-DB editor scored reward 1 before this and reward 0 after. Gaps closed at review: single-'>' and python open('w') DB writes that the old grep-only scan missed are now caught statically (recursive over /app) and, decisively, at runtime; verifier timeout raised 600->900 so 3x240s replay margin holds. Direct hand-editing of account DBs is forbidden and detected; the instruction never names the tool design or script structure."
+}
