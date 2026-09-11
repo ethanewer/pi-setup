@@ -417,15 +417,15 @@ fetched from openrouter.ai at command time, so it reflects price changes the fou
 catalog refresh has not picked up yet:
 
 ```text
-OpenRouter rates ($/Mtok), live from openrouter.ai
-
   deepseek/deepseek-v4-flash-0731  $0.07 in / $0.18 out / $0.02 cache read
   deepseek/deepseek-v4.1-flash     $0.15 in / $0.60 out / $0.003 cache read
-    peak windows up to $0.30 in / $1.20 out
 ```
 
 The OpenAI GPT models are not listed: they are a different provider and billed outside
-OpenRouter. See [`forks/pi-cost/README.md`](forks/pi-cost/README.md).
+OpenRouter. A spinner covers the sub-second fetch (escape cancels it). Usage-window
+pricing is resolved against the current UTC time, so a peak window shows peak rates
+(`$0.30 in / $1.20 out` for V4.1 Flash); see
+[`forks/pi-cost/README.md`](forks/pi-cost/README.md).
 
 ## Keybindings
 

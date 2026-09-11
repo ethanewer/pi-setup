@@ -12,7 +12,15 @@ export interface OpenRouterPricing {
 	completion?: string | null;
 	input_cache_read?: string | null;
 	input_cache_write?: string | null;
-	overrides?: Array<{ prompt?: string | null; completion?: string | null }> | null;
+	overrides?: Array<{
+		prompt?: string | null;
+		completion?: string | null;
+		input_cache_read?: string | null;
+		input_cache_write?: string | null;
+		utc_days?: string[];
+		utc_start?: number;
+		utc_end?: number;
+	}> | null;
 }
 
 /** Model.cost from Pi's catalog — already dollars per million tokens. */
@@ -49,6 +57,45 @@ function perMtok(rate: number): number {
 	return rate * 1_000_000;
 }
 
+const DAY_NAMES = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"] as const;
+
+/** HHMM (e.g. 1000 = 10:00, 400 = 04:00) to minutes since UTC midnight. */
+function hhmm(value: number): number {
+	return Math.floor(value / 100) * 60 + (value % 100);
+}
+
+/**
+ * The rates that apply right now: OpenRouter models like V4.1 Flash price
+ * usage windows by UTC day and time-of-day (`utc_start`/`utc_end` are HHMM
+ * times — 100 is 01:00, 1000 is 10:00; `utc_end: 0` means through end of
+ * day). The first override whose day and window contain `now` wins, with its
+ * fields applied over the base; when none match, the base rates apply. An
+ * override with days but no window (the weekend entries) covers the whole day.
+ */
+export function effectivePricing(pricing: OpenRouterPricing, now: Date): OpenRouterPricing {
+	const overrides = pricing.overrides;
+	if (!Array.isArray(overrides) || overrides.length === 0) return pricing;
+	const day = DAY_NAMES[now.getUTCDay()];
+	const minute = now.getUTCHours() * 60 + now.getUTCMinutes();
+	for (const override of overrides) {
+		if (override.utc_days && !override.utc_days.includes(day)) continue;
+		if (override.utc_start !== undefined || override.utc_end !== undefined) {
+			const start = hhmm(override.utc_start ?? 0);
+			// utc_end: 0 is OpenRouter's "through end of day" (24:00), not midnight.
+			const end = override.utc_end === undefined || override.utc_end === 0 ? 24 * 60 : hhmm(override.utc_end);
+			if (end > start) {
+				if (minute < start || minute >= end) continue;
+			} else if (minute >= end && minute < start) {
+				// Window wraps midnight, e.g. 2200 → 0030; outside it means between
+				// the wrapped end and the start.
+				continue;
+			}
+		}
+		return { ...pricing, ...override };
+	}
+	return pricing;
+}
+
 /**
  * The row's rate list: "$0.15 in / $0.60 out / $0.25 cache write / $0.03 cache
  * read". Cache write precedes cache read when charged, mirroring how the cost
@@ -79,35 +126,13 @@ export function catalogRateLabel(cost: CatalogCost): string {
 }
 
 /**
- * Tier note for models whose rate depends on a usage window (like V4.1 Flash's
- * off-peak/peak pricing). The row shows the off-peak rates, so name the peak
- * ones instead of silently understating the price. Empty when the overrides
- * all charge the same as the base rates.
- */
-export function tierNote(pricing: OpenRouterPricing): string {
-	const overrides = pricing.overrides;
-	if (!Array.isArray(overrides) || overrides.length === 0) return "";
-	const pairs = new Set<string>();
-	for (const o of overrides) {
-		const input = num(o.prompt);
-		const output = num(o.completion);
-		if (input !== undefined || output !== undefined) {
-			pairs.add(`${fmt(perMtok(input ?? 0))} in / ${fmt(perMtok(output ?? 0))} out`);
-		}
-	}
-	const base = `${fmt(perMtok(num(pricing.prompt) ?? 0))} in / ${fmt(perMtok(num(pricing.completion) ?? 0))} out`;
-	const peak = [...pairs].filter((p) => p !== base);
-	if (peak.length === 0) return "";
-	return `peak windows up to ${[...peak].sort().join(", ")}`;
-}
-
-/**
- * The /cost output: one aligned row per pinned model, tier notes indented on a
- * continuation line (rows are long, and the note belongs to its model).
+ * The /cost output: one line per pinned model at the rates that apply when the
+ * command runs — peak-window pricing during a peak window, off-peak otherwise.
  */
 export function costTable(
 	models: readonly PinnedModel[],
 	openrouter: readonly OpenRouterModel[] | undefined,
+	now: Date = new Date(),
 ): string {
 	const byId = new Map((openrouter ?? []).map((m) => [m.id, m.pricing ?? {}]));
 	const width = Math.max(...models.map((m) => m.id.length));
@@ -115,7 +140,7 @@ export function costTable(
 		const pricing = byId.get(m.id);
 		let rates: string;
 		if (pricing) {
-			rates = rateLabel(pricing) || "free";
+			rates = rateLabel(effectivePricing(pricing, now)) || "free";
 		} else if (m.cost) {
 			// Not in the fetched catalog (renamed, or the fetch fell back to the
 			// cached one) — still show what Pi's own accounting uses.
@@ -123,9 +148,7 @@ export function costTable(
 		} else {
 			rates = "not priced";
 		}
-		const note = pricing ? tierNote(pricing) : "";
-		const label = `  ${m.id.padEnd(width)}  ${rates}`;
-		return note ? `${label}\n    ${note}` : label;
+		return `  ${m.id.padEnd(width)}  ${rates}`;
 	});
 	return lines.join("\n");
 }

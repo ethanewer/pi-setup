@@ -234,7 +234,11 @@ The model list is the session's scoped set (`enabledModels`) filtered to provide
 to `MODEL_SCOPE` in `lib/install.mjs` is the only step needed for it to appear here. The
 OpenAI GPT models are excluded by that filter: they are a different provider and billed
 outside OpenRouter. Rates come from the same `model.cost` metadata Pi's cost accounting
-uses when the fetch fails, with the header saying so.
+uses when the fetch fails, with the header saying so. While the fetch runs a
+`BorderedLoader` spinner ("Fetching latest costs…") covers the editor; escape cancels
+it. Usage-window pricing (V4.1 Flash's weekday/weekend tiers; windows are HHMM times
+by UTC day, resolved in `effectivePricing`) shows the rates in force when the command
+runs — one line per model, no header, no annotation.
 
 This deliberately does **not** retry the reverted `pi-model-prices` picker (`58e80989`,
 reverted by `06dcfe03` 33 minutes later, reason unrecorded): Pi has no hook into the
