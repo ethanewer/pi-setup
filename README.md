@@ -209,7 +209,7 @@ else ships:
 - the `update-pi-setup` maintenance skill
 - compaction handoff briefs that keep a long run going
 - mid-run context folding, so one long run stays inside the context window
-- background process monitoring (`monitor`, `/watch`)
+- background process monitoring (`monitor`)
 - side questions in an ephemeral fork (`/btw`, escape to return)
 - project `AGENTS.md` / `CLAUDE.md` context
 - visible startup resource listing

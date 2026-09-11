@@ -23,15 +23,13 @@
   "files": [
     "extensions",
     "skills",
-    "prompts",
     "README.md",
     "CHANGELOG.md",
     "LICENSE"
   ],
   "pi": {
     "extensions": ["./extensions/monitor/index.js"],
-    "skills": ["./skills"],
-    "prompts": ["./prompts"]
+    "skills": ["./skills"]
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",

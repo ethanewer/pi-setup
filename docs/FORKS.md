@@ -399,16 +399,12 @@ workflow fork, `piwf` loads it:
 pi   (full, without dynamic workflows)
      [Skills]
        agent-browser-cli, monitor, unslop, update-pi-setup
-     [Prompts]
-       /watch
      [Extensions]
        btw, context-handoff, monitor, voice-stt
 
 piwf (full, with dynamic workflows — the historical `pi`)
      [Skills]
        agent-browser-cli, monitor, unslop, update-pi-setup, workflow-authoring, workflow-patterns
-     [Prompts]
-       /watch
      [Extensions]
        btw, context-handoff, monitor, voice-stt, workflow
 ```

@@ -301,16 +301,12 @@ Then start `pi` and `piwf` once interactively and confirm each startup listing i
 pi   (must omit workflow and the workflow skills/commands)
      [Skills]
        agent-browser-cli, monitor, unslop, update-pi-setup
-     [Prompts]
-       /watch
      [Extensions]
        btw, context-handoff, monitor, voice-stt
 
 piwf (must include workflow)
      [Skills]
        agent-browser-cli, monitor, unslop, update-pi-setup, workflow-authoring, workflow-patterns
-     [Prompts]
-       /watch
      [Extensions]
        btw, context-handoff, monitor, voice-stt, workflow
 ```

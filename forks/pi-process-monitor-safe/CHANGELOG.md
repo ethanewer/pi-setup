@@ -22,6 +22,12 @@ monitor-bench evals across four models x three seeds: trust 32/48 -> 38/48).
   work you have now; otherwise end your turn" so multitasking stays natural
   while the anti-blocking rule is preserved.
 
+### Removed
+- The `/watch` prompt template and the package's `prompts/` directory. It only
+  restated what the `monitor` tool and the `monitor` skill already teach, and it
+  was dead weight in the startup resource listing. Watchers are started by
+  calling the `monitor` tool; there is no prompt-template path to maintain.
+
 ## 1.0.0 (2026-07-28)
 
 Initial release of the safety-hardened local fork of `pi-process-monitor@1.2.0`
