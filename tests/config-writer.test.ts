@@ -13,6 +13,7 @@ const REPO = join(import.meta.dir, "..");
 const SCOPE = [
 	"openrouter/deepseek/deepseek-v4-flash-0731",
 	"openrouter/deepseek/deepseek-v4-pro-0813",
+	"openrouter/deepseek/deepseek-v4.1-flash",
 	"openrouter/z-ai/glm-5.3",
 	"openrouter/z-ai/glm-5.3-flash",
 	"openrouter/moonshotai/kimi-k3",
