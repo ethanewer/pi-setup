@@ -16,8 +16,8 @@
  */
 
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { BorderedLoader } from "@earendil-works/pi-coding-agent";
 import type { Model } from "@earendil-works/pi-ai";
+import { CancellableLoader } from "@earendil-works/pi-tui";
 import { costTable } from "./rates.js";
 import type { OpenRouterModel } from "./rates.js";
 
@@ -52,14 +52,20 @@ export default function (pi: ExtensionAPI) {
 			}
 			const models = pinned.map((m) => ({ id: m.id, cost: m.cost }));
 
-			// Spinner while the fetch runs (BorderedLoader handles escape-to-cancel);
-			// a bare fetch with no UI (print/json modes never reach a command, but be
+			// A bare spinner while the fetch runs — no border frame, the editor slot
+			// just shows the spinner line. Escape cancels (CancellableLoader).
+			// A fetch with no UI (print/json modes never reach a command, but be
 			// defensive) falls back to the plain timeout.
 			let catalog: OpenRouterModel[] | undefined;
 			if (ctx.hasUI) {
 				const outcome = await ctx.ui.custom<{ cancelled: boolean; catalog?: OpenRouterModel[] }>(
 					(tui, theme, _kb, done) => {
-						const loader = new BorderedLoader(tui, theme, "Fetching latest costs…");
+						const loader = new CancellableLoader(
+							tui,
+							(s) => theme.fg("accent", s),
+							(s) => theme.fg("muted", s),
+							"Fetching latest costs…",
+						);
 						loader.onAbort = () => done({ cancelled: true });
 						// A failed fetch resolves without a catalog — the fallback below
 						// applies, because the user did not cancel it.

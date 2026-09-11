@@ -20,10 +20,10 @@ Design points:
   OpenRouter. When no scope is set, every available OpenRouter model is listed.
 - **Rates are fetched at command time** from OpenRouter's public
   `/api/v1/models` endpoint (no key needed), so they are current, not up to
-  four hours stale like Pi's cached catalog. While the fetch runs, a
-  `BorderedLoader` spinner says "Fetching latest costs…"; escape cancels it.
-  On fetch failure (not cancellation) it falls back to the catalog metadata
-  Pi's cost accounting uses and says so in the header.
+  four hours stale like Pi's cached catalog. While the fetch runs, the editor
+  slot shows a bare spinner line — "⠋ Fetching latest costs…" — with no border
+  frame; escape cancels it. On fetch failure (not cancellation) it falls back
+  to the catalog metadata Pi's cost accounting uses and says so in the header.
 - **Per-token to per-Mtok conversion** is done here; OpenRouter prices in
   per-token strings. Zero components are omitted; cache write precedes cache
   read when charged. Usage-window pricing (V4.1 Flash's weekday/weekend tiers,
