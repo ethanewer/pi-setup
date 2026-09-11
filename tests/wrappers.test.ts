@@ -29,6 +29,7 @@ describe("lean p wrapper contract", () => {
       "$MAIN_DIR/local/pi-voice-stt-safe/extensions/voice-stt/index.js",
       "$MAIN_DIR/local/pi-context-handoff/extensions/context-handoff/index.js",
       "$MAIN_DIR/local/pi-btw-side/extensions/btw/index.js",
+      "$MAIN_DIR/local/pi-cost/extensions/cost/index.js",
       "$MAIN_DIR/extensions/mlx/index.js",
       "$MAIN_DIR/p/remove-pi-documentation.js",
     ]);

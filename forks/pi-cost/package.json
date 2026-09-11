@@ -1,0 +1,31 @@
+{
+  "name": "pi-cost",
+  "version": "1.0.0",
+  "private": true,
+  "description": "First-party /cost command: live OpenRouter rates ($/Mtok) for the pinned models, fetched from openrouter.ai at command time.",
+  "type": "module",
+  "license": "MIT",
+  "keywords": [
+    "pi-package",
+    "pi",
+    "pi-coding-agent",
+    "cost",
+    "openrouter"
+  ],
+  "files": [
+    "extensions",
+    "README.md"
+  ],
+  "pi": {
+    "extensions": [
+      "./extensions/cost/index.js"
+    ]
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-ai": ">=0.82.0",
+    "@earendil-works/pi-coding-agent": ">=0.82.0"
+  },
+  "engines": {
+    "node": ">=22.18"
+  }
+}

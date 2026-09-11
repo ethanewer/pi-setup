@@ -28,6 +28,7 @@ const FORKS_MINUS_WORKFLOWS = [
 	"local/pi-process-monitor-safe",
 	"local/pi-btw-side",
 	"local/pi-context-handoff",
+	"local/pi-cost",
 ];
 const ALL_FORKS = [
 	"local/pi-voice-stt-safe",
@@ -35,6 +36,7 @@ const ALL_FORKS = [
 	"local/pi-process-monitor-safe",
 	"local/pi-btw-side",
 	"local/pi-context-handoff",
+	"local/pi-cost",
 ];
 const BROWSER_TOOL = "local/pi-agent-browser-native-safe";
 

@@ -108,6 +108,7 @@ Extension forks and the upstream releases they are based on:
 | `pi-process-monitor-safe` | `pi-process-monitor` | rewrite, built on `1.3.0`, `2.0.2` reviewed and declined |
 | `pi-context-handoff` | — | first-party |
 | `pi-btw-side` | — | first-party |
+| `pi-cost` | — | first-party |
 
 `vendor.json` is the machine-readable version of this table and is what the tooling
 reads.
@@ -407,6 +408,24 @@ esc                                                     discard it and return
 The side thread gets read-only tools by default. See
 [`forks/pi-btw-side/README.md`](forks/pi-btw-side/README.md) for configuration and for
 what does and does not match Codex's `/side`.
+
+## Live model pricing: /cost
+
+`/cost` (in `pi`, `piwf`, and `p`) prints the current OpenRouter rates for every
+OpenRouter model in the scoped set — the same pinned list `/model` cycles through —
+fetched from openrouter.ai at command time, so it reflects price changes the four-hour
+catalog refresh has not picked up yet:
+
+```text
+OpenRouter rates ($/Mtok), live from openrouter.ai
+
+  deepseek/deepseek-v4-flash-0731  $0.07 in / $0.18 out / $0.02 cache read
+  deepseek/deepseek-v4.1-flash     $0.15 in / $0.60 out / $0.003 cache read
+    peak windows up to $0.30 in / $1.20 out
+```
+
+The OpenAI GPT models are not listed: they are a different provider and billed outside
+OpenRouter. See [`forks/pi-cost/README.md`](forks/pi-cost/README.md).
 
 ## Keybindings
 

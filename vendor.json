@@ -40,6 +40,14 @@
       "liveTree": "extensions/context-handoff",
       "patch": null,
       "note": "First-party extension, not a fork: replaces pi-continue. Steers Pi's own compaction, cannot abort a turn, and includes a mid-run fold of the request. No upstream to track and nothing to re-vendor."
+    },
+    "pi-cost": {
+      "upstream": null,
+      "version": "1.0.0",
+      "live": "extensions/cost/index.ts",
+      "liveTree": "extensions/cost",
+      "patch": null,
+      "note": "First-party extension, not a fork. Registers /cost: live OpenRouter rates ($/Mtok) for the pinned models, fetched from openrouter.ai's public /models endpoint at command time; falls back to the cached catalog on fetch failure. The model list comes from the session scope filtered to provider openrouter, so MODEL_SCOPE drives it and OpenAI subscription models are excluded. No upstream to track."
     }
   }
 }

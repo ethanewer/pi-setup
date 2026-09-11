@@ -221,6 +221,28 @@ reports whether it is still working, since its transcript is hidden while the vi
 The mid-turn history snapshot is trimmed back to the last resolved tool call so a
 half-finished turn cannot produce an invalid request.
 
+## pi-cost
+
+First-party, not a fork. Registers `/cost`: live OpenRouter rates ($/Mtok) for the
+pinned models, fetched from OpenRouter's public `/models` endpoint at command time so
+they are current rather than up to four hours stale like Pi's cached catalog. No model
+call is made, so the command is free. Interactive-only: print mode sends
+leading-slash prompts to the model instead of running commands.
+
+The model list is the session's scoped set (`enabledModels`) filtered to provider
+`openrouter` — the same list the `/model` picker's scoped view shows — so adding a model
+to `MODEL_SCOPE` in `lib/install.mjs` is the only step needed for it to appear here. The
+OpenAI GPT models are excluded by that filter: they are a different provider and billed
+outside OpenRouter. Rates come from the same `model.cost` metadata Pi's cost accounting
+uses when the fetch fails, with the header saying so.
+
+This deliberately does **not** retry the reverted `pi-model-prices` picker (`58e80989`,
+reverted by `06dcfe03` 33 minutes later, reason unrecorded): Pi has no hook into the
+built-in `/model` selector's rendering, so that attempt re-implemented the whole picker
+against pi-tui primitives and would drift on every upstream selector change. `/cost` is
+a one-shot table instead — no picker to keep in sync — and the stale
+`local/pi-model-prices` settings entry it left behind is pruned on reinstall.
+
 ## pi-voice-stt-safe
 
 Based on `pi-voice-stt@0.6.0`.

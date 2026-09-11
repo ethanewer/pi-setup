@@ -24,6 +24,7 @@ do
       --extension "$MAIN_DIR/local/pi-voice-stt-safe/extensions/voice-stt/index.js" \
       --extension "$MAIN_DIR/local/pi-context-handoff/extensions/context-handoff/index.js" \
       --extension "$MAIN_DIR/local/pi-btw-side/extensions/btw/index.js" \
+      --extension "$MAIN_DIR/local/pi-cost/extensions/cost/index.js" \
       --extension "$MAIN_DIR/extensions/mlx/index.js" \
       --extension "$MAIN_DIR/p/remove-pi-documentation.js" \
       "$@"
