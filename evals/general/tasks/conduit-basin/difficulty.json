@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 30,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on a real codebase: redis/redis checked out at 21ce96878529bf8b31298ec417407c578c1e6278 (parent of upstream fix 669b2a1316f5b35ecf964281b77c054ff28dc934, upstream issue redis/redis#15762). The clone is initialized fresh and a single shallow no-tags fetch of the pinned parent SHA is made, so the fix commit is not reachable from the clone at all; the project's own regression test (tests/integration/redis-cli.tcl from the fix commit, test 'bigkeys reports a zero-size key as the biggest key of its type') is extracted into /opt/golden via a throwaway bare clone that is deleted, and never enters the task tree. The bug is present: in the keyspace big-key scan (redis-cli --bigkeys / --keystats), the biggest-key bookkeeping in findBigKeys() and updateKeyType() only fires on a strictly-larger sampled size (type->biggest starts at 0), so a zero-size key (e.g. SET foo \"\") is counted in the per-type totals but never becomes biggest_key, and the 'Biggest string found ...' summary line (and the --keystats 'Top length and cardinality per type' entry) are silently omitted. Upstream fix (src/redis-cli.c only, three hunks): add '|| (!type->biggest_key && type->sizecmd)' to both strict-< comparisons and change the TTY progress-bar guard 'current_type->biggest > 0' to 'current_type->biggest_key'. The agent must reproduce (provided /app/reproduce.sh driving --bigkeys/--keystats against a scratch server), localise and fix in the real tree, rebuild incrementally with make -j1. Verifier: provenance asserts (HEAD still at parent, fix commit absent, the only tracked change allowed is src/redis-cli.c, no stray untracked files), an incremental make -j1, then the golden test via './runtest --single integration/redis-cli --only <name>' against the fixed binary, then four authored hidden cases run through runtest (zero-size string among list/set/hash/zset keys; three all-empty strings with a regexp over the reported key name; --keystats 'string \"empty\" has 0B' in the length section, which also forces the updateKeyType() hunk; and a non-empty-biggest guard that no zero-size key shadows a larger key), then the project's own pre-existing integration/redis-cli suite must stay green. Difficulty easy: a two-line condition fix in one 11k-line C source file, fully deterministic reproducer, no network, no TTY flakiness in the piped modes used."
+}

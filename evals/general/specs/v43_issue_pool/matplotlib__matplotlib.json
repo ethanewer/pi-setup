@@ -1,0 +1,138 @@
+[
+  {
+    "repository": "matplotlib/matplotlib",
+    "upstream_issue_ref": "#29532",
+    "fix_commit": "05a66bb2a46a67d0bb716239ecafa681b2832ea3",
+    "parent_commit": "91d115ec161286b70da1447f53844b909247741f",
+    "base_image": "bench-base:python-3.12",
+    "source_files_changed": [
+      "lib/matplotlib/ticker.py"
+    ],
+    "golden_test_paths": [
+      "lib/matplotlib/tests/test_ticker.py"
+    ],
+    "golden_test_names": [
+      "TestScalarFormatter::test_set_use_offset_int",
+      "TestScalarFormatter::test_set_use_offset_bool"
+    ],
+    "reproduction": "python - <<'EOF'\nimport matplotlib; matplotlib.use('Agg')\nfrom matplotlib.ticker import ScalarFormatter\nf = ScalarFormatter()\nf.set_useOffset(1)\nassert f.offset == 1 and f.get_useOffset() is False\nEOF\n# parent: AssertionError (offset=0, useOffset=True); fix: passes\npython -m pytest \"lib/matplotlib/tests/test_ticker.py::TestScalarFormatter::test_set_use_offset_int\" \"lib/matplotlib/tests/test_ticker.py::TestScalarFormatter::test_set_use_offset_bool\" -q",
+    "observed_failure_at_parent": "set_useOffset(1) produced offset=0, useOffset=True (the number 1 was matched by 'val in [True, False]' because 1 == True); golden test test_set_use_offset_int FAILED (1 failed, 1 passed for the pair)",
+    "verified": "Both directions observed in the container: at parent_commit the buggy line 'if val in [True, False]:' was confirmed present in lib/matplotlib/ticker.py and the repro AssertionError'd (offset=0, useOffset=1); at fix_commit 'if isinstance(val, bool):' was confirmed and the repro printed offset=1 useOffset=False, with both regression tests passing.",
+    "dependency_pins": {
+      "pyparsing": "<3.2.0"
+    },
+    "install_recipe": "apt-get update && apt-get install -y build-essential pkg-config ninja-build\npip install \"meson-python>=0.13\" pybind11 \"setuptools-scm>=7\" ninja meson setuptools numpy contourpy cycler kiwisolver fonttools packaging certifi pillow pytest \"pyparsing<3.2.0\"\ngit config --global --add safe.directory $(pwd)\npip install --no-build-isolation -e .\nRun target tests with: python -m pytest \"lib/matplotlib/tests/<file>::<node>\" -q  (from repo root)",
+    "issue_paraphrase": "Setting an explicit numeric offset on the scalar tick formatter does not behave as documented when the value is 1: the setter mistakes it for the boolean True, so instead of forcing the tick labels to be written relative to an offset of 1 it resets the offset to zero and switches on automatic offset selection on the axis. Numeric offset values must be treated as numbers, while only actual booleans should toggle whether offset notation is used at all.",
+    "fix_summary": "Changed the check in ScalarFormatter.set_useOffset from 'val in [True, False]' to 'isinstance(val, bool)' so that numeric offsets (including 1 and 0) are not confused with boolean switches, and added regression tests for both the boolean and the integer argument forms.",
+    "difficulty_guess": "easy",
+    "notes": "Verified in a docker container on bench-base:python-3.12 (Debian trixie). The fixes are PURE PYTHON (only lib/matplotlib/*.py changed), so after one editable build, switching between parent/fix needs no recompile. matplotlib vendors freetype/harfbuzz/qhull as meson subprojects (downloaded from network at build time). A fresh editable build at the 2024-06 era (oldest commit in this pool) succeeded with pybind11 3.1.0 + gcc-14, so all five parent commits build with a modern toolchain; numpy 2.5.3 tested. pin pyparsing <3.2.0: matplotlib turns warnings into errors during pytest and pyparsing 3.2.0's resetCache deprecation otherwise aborts collection with a PyparsingDeprecationWarning error. Do NOT run whole test modules - they contain slow/flaky image-comparison tests; invoke only the exact node ids listed. pytest re-runs the meson editable loader (incremental, fast after the first build). Full from-scratch build at 1 CPU is on the order of tens of minutes (compiles freetype/harfbuzz/qhull + 9 C extensions at -O3) - authors should prebuild the task image and install deps at image-build time, the agent only edits .py files. Source delta is a single line (1 insertion/1 deletion in ticker.py, plus 16 lines of tests); below the protocol's 4-line floor but a genuine behavior bug with a regression test."
+  },
+  {
+    "repository": "matplotlib/matplotlib",
+    "upstream_issue_ref": "#28383",
+    "fix_commit": "00cbd9cd3255dcbcb75e3090b144a8e18a900247",
+    "parent_commit": "74c7f9a598c4e32b3f551f75ed965f446d786ab1",
+    "base_image": "bench-base:python-3.12",
+    "source_files_changed": [
+      "lib/matplotlib/transforms.py"
+    ],
+    "golden_test_paths": [
+      "lib/matplotlib/tests/test_transforms.py"
+    ],
+    "golden_test_names": [
+      "TestBasicTransform::test_contains_branch"
+    ],
+    "reproduction": "python - <<'EOF'\nimport matplotlib; matplotlib.use('Agg')\nimport matplotlib.transforms as mtransforms\nfrom matplotlib.transforms import Transform, Affine2D\nclass NonAffineForTest(Transform):\n    is_affine = False\n    output_dims = 2\n    input_dims = 2\n    def __init__(self, real_trans, *a, **k):\n        self.real_trans = real_trans\n        super().__init__(*a, **k)\n    def transform_non_affine(self, values):\n        return self.real_trans.transform(values)\n    def transform_path_non_affine(self, path):\n        return self.real_trans.transform_path(path)\nta1 = Affine2D().rotate(3.14159/2); ta2 = Affine2D().translate(10, 0); ta3 = Affine2D().scale(1, 2)\ntn1 = NonAffineForTest(Affine2D().translate(1, 2))\ntn2 = NonAffineForTest(Affine2D().translate(1, 2))\ntn3 = NonAffineForTest(Affine2D().translate(1, 2))\nstack2 = ta1 + tn1 + ta2 + ta3\nss = tn1 + ta2 + ta3\nblend = mtransforms.BlendedGenericTransform(tn2, stack2)\nx, y = blend.contains_branch_seperately(ss)\nsx, sy = (tn3 + blend).contains_branch_seperately(ss)\nassert x is False and y is True and sx is False and sy is True\nEOF\n# parent: (sx, sy) == (False, False) -> AssertionError; fix: (False, True) -> passes\npython -m pytest \"lib/matplotlib/tests/test_transforms.py::TestBasicTransform::test_contains_branch\" -q",
+    "observed_failure_at_parent": "For a composite transform built by adding a blended transform, contains_branch_seperately returned (False, False) for a y-component that the transform DOES contain (expected (False, True)); golden test test_contains_branch FAILED",
+    "verified": "Both directions observed: at parent_commit, CompositeGenericTransform had no contains_branch_seperately override (confirmed via inspect: 'contains_branch_seperately' not in CompositeGenericTransform.__dict__) and the base implementation returned '[self.contains_branch(other_transform)] * 2' (a list); the direct repro failed with (False, False). At fix_commit the override exists, the base returns a tuple, the repro returned (False, True) and the golden test passes.",
+    "dependency_pins": {
+      "pyparsing": "<3.2.0"
+    },
+    "install_recipe": "apt-get update && apt-get install -y build-essential pkg-config ninja-build\npip install \"meson-python>=0.13\" pybind11 \"setuptools-scm>=7\" ninja meson setuptools numpy contourpy cycler kiwisolver fonttools packaging certifi pillow pytest \"pyparsing<3.2.0\"\ngit config --global --add safe.directory $(pwd)\npip install --no-build-isolation -e .\nRun target tests with: python -m pytest \"lib/matplotlib/tests/<file>::<node>\" -q  (from repo root)",
+    "issue_paraphrase": "The transform method that reports, separately for the x and y components, whether one transform is contained within another returns wrong answers when the transform is a composite that itself contains a blended (per-axis) transform: both components are reported as not-contained even when the y component actually is contained. Code that relies on this per-axis containment check (for example to decide whether two axes share the same y transform) therefore takes the wrong branch. The answer must also be a pair of booleans, not a list, matching the documented return type.",
+    "fix_summary": "Added a contains_branch_seperately override to CompositeGenericTransform that delegates to its right-hand (b) transform, and changed the base Transform.contains_branch_seperately to return a tuple instead of a list; the regression assertions were added to the existing test_contains_branch test.",
+    "difficulty_guess": "medium",
+    "notes": "Verified in a docker container on bench-base:python-3.12 (Debian trixie). The fixes are PURE PYTHON (only lib/matplotlib/*.py changed), so after one editable build, switching between parent/fix needs no recompile. matplotlib vendors freetype/harfbuzz/qhull as meson subprojects (downloaded from network at build time). A fresh editable build at the 2024-06 era (oldest commit in this pool) succeeded with pybind11 3.1.0 + gcc-14, so all five parent commits build with a modern toolchain; numpy 2.5.3 tested. pin pyparsing <3.2.0: matplotlib turns warnings into errors during pytest and pyparsing 3.2.0's resetCache deprecation otherwise aborts collection with a PyparsingDeprecationWarning error. Do NOT run whole test modules - they contain slow/flaky image-comparison tests; invoke only the exact node ids listed. pytest re-runs the meson editable loader (incremental, fast after the first build). Full from-scratch build at 1 CPU is on the order of tens of minutes (compiles freetype/harfbuzz/qhull + 9 C extensions at -O3) - authors should prebuild the task image and install deps at image-build time, the agent only edits .py files."
+  },
+  {
+    "repository": "matplotlib/matplotlib",
+    "upstream_issue_ref": "#30007",
+    "fix_commit": "91740933b658437016063f904030706d84b4502b",
+    "parent_commit": "2d87c9584499f7619b3c84b89121a27c80d2373e",
+    "base_image": "bench-base:python-3.12",
+    "source_files_changed": [
+      "lib/matplotlib/axes/_axes.py"
+    ],
+    "golden_test_paths": [
+      "lib/matplotlib/tests/test_axes.py"
+    ],
+    "golden_test_names": [
+      "test_pie_all_zeros"
+    ],
+    "reproduction": "python - <<'EOF'\nimport matplotlib; matplotlib.use('Agg')\nimport matplotlib.pyplot as plt\nfig, ax = plt.subplots()\nax.pie([0, 0], labels=['A', 'B'])\nEOF\n# parent: ValueError: cannot convert float NaN to integer (crash inside path construction);\n# fix: ValueError: All wedge sizes are zero\npython -m pytest \"lib/matplotlib/tests/test_axes.py::test_pie_all_zeros\" -q",
+    "observed_failure_at_parent": "ax.pie([0, 0]) crashed with 'ValueError: cannot convert float NaN to integer' raised from Path.arc (after a divide-by-zero left NaN wedge angles); golden test test_pie_all_zeros FAILED (expected ValueError matching 'All wedge sizes are zero' got a RuntimeWarning and a different ValueError)",
+    "verified": "Both directions observed: at parent_commit the 'All wedge sizes are zero' guard was absent from Axes.pie and both the direct call and the golden test failed as recorded; at fix_commit the guard 'if sx == 0: raise ValueError(...)' was confirmed present, the direct call raised the clean ValueError, and the golden test passed.",
+    "dependency_pins": {
+      "pyparsing": "<3.2.0"
+    },
+    "install_recipe": "apt-get update && apt-get install -y build-essential pkg-config ninja-build\npip install \"meson-python>=0.13\" pybind11 \"setuptools-scm>=7\" ninja meson setuptools numpy contourpy cycler kiwisolver fonttools packaging certifi pillow pytest \"pyparsing<3.2.0\"\ngit config --global --add safe.directory $(pwd)\npip install --no-build-isolation -e .\nRun target tests with: python -m pytest \"lib/matplotlib/tests/<file>::<node>\" -q  (from repo root)",
+    "issue_paraphrase": "Calling the pie-chart function with wedge sizes that are all zero does not produce an understandable result: internally the sizes are divided by zero, leaving NaN angles, and the call dies deep inside the path-drawing code with an obscure 'cannot convert float NaN to integer' error instead of telling the user what is wrong. Such an input should be detected up front and rejected with a clear error message explaining that every wedge size is zero.",
+    "fix_summary": "Added an explicit guard in Axes.pie that raises ValueError('All wedge sizes are zero') when the sum of the wedge sizes is zero, before any normalization or wedge construction, plus the regression test test_pie_all_zeros.",
+    "difficulty_guess": "easy",
+    "notes": "Verified in a docker container on bench-base:python-3.12 (Debian trixie). The fixes are PURE PYTHON (only lib/matplotlib/*.py changed), so after one editable build, switching between parent/fix needs no recompile. matplotlib vendors freetype/harfbuzz/qhull as meson subprojects (downloaded from network at build time). A fresh editable build at the 2024-06 era (oldest commit in this pool) succeeded with pybind11 3.1.0 + gcc-14, so all five parent commits build with a modern toolchain; numpy 2.5.3 tested. pin pyparsing <3.2.0: matplotlib turns warnings into errors during pytest and pyparsing 3.2.0's resetCache deprecation otherwise aborts collection with a PyparsingDeprecationWarning error. Do NOT run whole test modules - they contain slow/flaky image-comparison tests; invoke only the exact node ids listed. pytest re-runs the meson editable loader (incremental, fast after the first build). Full from-scratch build at 1 CPU is on the order of tens of minutes (compiles freetype/harfbuzz/qhull + 9 C extensions at -O3) - authors should prebuild the task image and install deps at image-build time, the agent only edits .py files."
+  },
+  {
+    "repository": "matplotlib/matplotlib",
+    "upstream_issue_ref": "#28386",
+    "fix_commit": "e90952ffac668bd5115c4009bf20dd6e595c3cd5",
+    "parent_commit": "7722dead68f8de43480f1f58386d03396bd5d58e",
+    "base_image": "bench-base:python-3.12",
+    "source_files_changed": [
+      "lib/matplotlib/lines.py"
+    ],
+    "golden_test_paths": [
+      "lib/matplotlib/tests/test_lines.py"
+    ],
+    "golden_test_names": [
+      "test_axline_small_slope"
+    ],
+    "reproduction": "python - <<'EOF'\nimport matplotlib; matplotlib.use('Agg')\nimport matplotlib.pyplot as plt\nfig, ax = plt.subplots()\nline = ax.axline((0, 0), slope=1e-14)\np1 = line.get_transform().transform_point((0, 0))\np2 = line.get_transform().transform_point((1, 1))\ndy = p2[1] - p1[1]\nassert 0 < dy < 4e-12\nEOF\n# parent: dy = 0.0 -> AssertionError; fix: dy ~= 3.7e-12 -> passes\npython -m pytest \"lib/matplotlib/tests/test_lines.py::test_axline_small_slope\" -q",
+    "observed_failure_at_parent": "ax.axline((0, 0), slope=1e-14) rendered exactly horizontal: the transform gave dy = 0.0 instead of ~1e-14; golden test test_axline_small_slope FAILED",
+    "verified": "Both directions observed: at parent_commit 'if np.isclose(slope, 0):' was confirmed present in lib/matplotlib/lines.py and dy was 0.0 (line rendered horizontal); at fix_commit 'if slope == 0:' was confirmed and dy was 3.69e-12, with the golden test passing.",
+    "dependency_pins": {
+      "pyparsing": "<3.2.0"
+    },
+    "install_recipe": "apt-get update && apt-get install -y build-essential pkg-config ninja-build\npip install \"meson-python>=0.13\" pybind11 \"setuptools-scm>=7\" ninja meson setuptools numpy contourpy cycler kiwisolver fonttools packaging certifi pillow pytest \"pyparsing<3.2.0\"\ngit config --global --add safe.directory $(pwd)\npip install --no-build-isolation -e .\nRun target tests with: python -m pytest \"lib/matplotlib/tests/<file>::<node>\" -q  (from repo root)",
+    "issue_paraphrase": "Drawing a nearly horizontal reference line by giving it a very small slope (smaller than about one part in 10^8) silently renders the line as perfectly horizontal: the requested slope is treated as if it were exactly zero, so the line does not follow the slope the user supplied. Lines with small but non-zero slopes should keep their slight tilt, and only a slope that is exactly zero should produce a horizontal line.",
+    "fix_summary": "Replaced 'np.isclose(slope, 0)' with the exact comparison 'slope == 0' when deciding whether an AxLine is horizontal, so small non-zero slopes are no longer snapped to zero, and added the regression test test_axline_small_slope.",
+    "difficulty_guess": "easy",
+    "notes": "Verified in a docker container on bench-base:python-3.12 (Debian trixie). The fixes are PURE PYTHON (only lib/matplotlib/*.py changed), so after one editable build, switching between parent/fix needs no recompile. matplotlib vendors freetype/harfbuzz/qhull as meson subprojects (downloaded from network at build time). A fresh editable build at the 2024-06 era (oldest commit in this pool) succeeded with pybind11 3.1.0 + gcc-14, so all five parent commits build with a modern toolchain; numpy 2.5.3 tested. pin pyparsing <3.2.0: matplotlib turns warnings into errors during pytest and pyparsing 3.2.0's resetCache deprecation otherwise aborts collection with a PyparsingDeprecationWarning error. Do NOT run whole test modules - they contain slow/flaky image-comparison tests; invoke only the exact node ids listed. pytest re-runs the meson editable loader (incremental, fast after the first build). Full from-scratch build at 1 CPU is on the order of tens of minutes (compiles freetype/harfbuzz/qhull + 9 C extensions at -O3) - authors should prebuild the task image and install deps at image-build time, the agent only edits .py files. Source delta is a single line (1 insertion/1 deletion in lines.py plus 11 lines of tests); below the protocol's 4-line floor but a genuine behavior bug with a regression test."
+  },
+  {
+    "repository": "matplotlib/matplotlib",
+    "upstream_issue_ref": "#31182",
+    "fix_commit": "c72236701f0371d37c8a3232133347d5b350bc59",
+    "parent_commit": "496ae85214a7029d5c8eca320cb45f013b535dfe",
+    "base_image": "bench-base:python-3.12",
+    "source_files_changed": [
+      "lib/matplotlib/axes/_axes.py"
+    ],
+    "golden_test_paths": [
+      "lib/matplotlib/tests/test_axes.py"
+    ],
+    "golden_test_names": [
+      "test_hist_timedelta_raises"
+    ],
+    "reproduction": "python - <<'EOF'\nimport matplotlib; matplotlib.use('Agg')\nimport matplotlib.pyplot as plt\nimport numpy as np\nfig, ax = plt.subplots()\nax.hist(np.array([1, 2, 5, 7], dtype='timedelta64[D]'))\nEOF\n# parent: UFuncTypeError: ufunc 'less' did not contain a loop with signature matching types (<class 'numpy.dtypes.TimeDelta64DType'>, <class 'numpy.dtypes._PyFloatDType'>)\n# fix: TypeError: Axes.hist does not currently support timedelta inputs. Convert to numeric values (e.g., .total_seconds()) first.\npython -m pytest \"lib/matplotlib/tests/test_axes.py::test_hist_timedelta_raises\" -q",
+    "observed_failure_at_parent": "ax.hist of a numpy timedelta64 array died with an opaque 'UFuncTypeError: ufunc 'less' did not contain a loop ...' from inside numpy binning; golden test test_hist_timedelta_raises FAILED (expected a clean TypeError)",
+    "verified": "Both directions observed: at parent_commit no timedelta guard existed in Axes.hist and the direct call raised the UFuncTypeError, and the golden test failed; at fix_commit the explicit TypeError guard was confirmed present and both the direct call and the golden test (which also covers datetime.timedelta lists) behaved as expected.",
+    "dependency_pins": {
+      "pyparsing": "<3.2.0"
+    },
+    "install_recipe": "apt-get update && apt-get install -y build-essential pkg-config ninja-build\npip install \"meson-python>=0.13\" pybind11 \"setuptools-scm>=7\" ninja meson setuptools numpy contourpy cycler kiwisolver fonttools packaging certifi pillow pytest \"pyparsing<3.2.0\"\ngit config --global --add safe.directory $(pwd)\npip install --no-build-isolation -e .\nRun target tests with: python -m pytest \"lib/matplotlib/tests/<file>::<node>\" -q  (from repo root)",
+    "issue_paraphrase": "Calling the histogram function with duration data (numpy timedelta64 values or Python timedelta objects) dies with an opaque internal error from the numeric library instead of a helpful message: the bins are computed with an operation that numpy refuses to perform between durations and floats. Such inputs are not supported by the histogram feature at all, so the call should fail immediately with a clear error telling the caller to convert the durations to plain numbers first.",
+    "fix_summary": "Added an explicit input check in Axes.hist that raises TypeError('Axes.hist does not currently support timedelta inputs. Convert to numeric values (e.g., .total_seconds()) first.') for numpy timedelta64 or datetime.timedelta data, and added regression tests covering both input types.",
+    "difficulty_guess": "easy",
+    "notes": "Verified in a docker container on bench-base:python-3.12 (Debian trixie). The fixes are PURE PYTHON (only lib/matplotlib/*.py changed), so after one editable build, switching between parent/fix needs no recompile. matplotlib vendors freetype/harfbuzz/qhull as meson subprojects (downloaded from network at build time). A fresh editable build at the 2024-06 era (oldest commit in this pool) succeeded with pybind11 3.1.0 + gcc-14, so all five parent commits build with a modern toolchain; numpy 2.5.3 tested. pin pyparsing <3.2.0: matplotlib turns warnings into errors during pytest and pyparsing 3.2.0's resetCache deprecation otherwise aborts collection with a PyparsingDeprecationWarning error. Do NOT run whole test modules - they contain slow/flaky image-comparison tests; invoke only the exact node ids listed. pytest re-runs the meson editable loader (incremental, fast after the first build). Full from-scratch build at 1 CPU is on the order of tens of minutes (compiles freetype/harfbuzz/qhull + 9 C extensions at -O3) - authors should prebuild the task image and install deps at image-build time, the agent only edits .py files."
+  }
+]

@@ -1,0 +1,69 @@
+[
+  {
+    "repository": "tmux/tmux",
+    "upstream_issue_ref": "#5576",
+    "fix_commit": "00f3899aea035666fa9e7bd60bc7c2cf36c8e745",
+    "parent_commit": "557967c36ce4d80412405fb2ac20b599186689ba",
+    "base_image": "bench-base:ubuntu-24.04",
+    "source_files_changed": ["cmd-find.c"],
+    "golden_test_paths": ["regress/targets.sh", "regress/targets-panes.sh"],
+    "golden_test_names": [
+      "check_fail \"can't find window: +0\" (targets.sh)",
+      "check_fail \"can't find window: +foo\" (targets.sh)",
+      "check_fail \"can't find pane: p:0.+0\" (targets-panes.sh)",
+      "check_fail \"can't find pane: p:0.+foo\" (targets-panes.sh)"
+    ],
+    "reproduction": "Build tmux (see install_recipe). Direct repro: TMUX=/path/to/tmux; $TMUX -LtestX -f/dev/null new -d -x20 -y2 -s alpha; $TMUX -LtestX select-window -t alpha:+0; echo $?  (must be 1 with 'can't find window: +0' after the fix; is 0 before). The project's own regression test: (cd regress && TEST_TMUX=/path/to/tmux sh ./targets.sh) and sh ./targets-panes.sh. Note: the GitHub master branch is test-first: commit 73db0a54 adds the failing checks to regress/targets.sh and regress/targets-panes.sh, and merge commit d44bfda2 (whose first parent IS 73db0a54) brings in the openbsd-line fix. Verified trees: bug = d44bfda2^ (=73db0a54), fix = d44bfda2.",
+    "observed_failure_at_parent": "targets.sh exits 1 with 'target '\\''alpha:+0'\\'' resolved (expected failure).'; targets-panes.sh exits 1 with 'target '\\''p:0.+0'\\'' resolved (expected failure).'; direct repro: 'select-window -t alpha:+0' exits 0 (silently selects the first window) and 'select-window -t alpha:+foo' exits 0.",
+    "verified": "Both directions observed on bench-base:ubuntu-24.04. Bug tree (d44bfda2^ == 73db0a54, the project's own test-commit): regress/targets.sh FAILS at the new +0 check and targets-panes.sh FAILS at p:0.+0; fix tree (d44bfda2 == merge of 00f3899a): both tests PASS (rc=0). Fix tree also verified by direct repro: 'select-window -t alpha:+0' -> 'can't find window: +0', exit 1. Buggy code confirmed present at the bug tree by inspection: cmd-find.c still contains 'n = strtonum(window + 1, 1, INT_MAX, NULL)' and 'n = strtonum(pane + 1, 1, INT_MAX, NULL)' (error result discarded), which the fix replaces with '&errstr' plus an error return.",
+    "dependency_pins": {},
+    "install_recipe": "apt-get install -y build-essential autoconf automake libtool pkg-config bison byacc libevent-dev libncurses-dev libutempter-dev; then in the repo root: ./autogen.sh && ./configure && make -j8; the binary is ./tmux at the repo root. Regress tests run with: (cd regress && TEST_TMUX=$PWD/../tmux sh ./targets.sh). No runtime dependency pins beyond the Ubuntu packages.",
+    "issue_paraphrase": "Giving a tmux command a session-relative window or pane target with a malformed numeric offset - for example +foo or -0 - is silently accepted instead of rejected. The command quietly acts on the first (for +) or the wrapped previous (for -) matching window or pane, so the request appears to succeed while applying to the wrong item; a mistyped offset gives no error at all.",
+    "fix_summary": "In cmd_find_get_window_with_session / cmd_find_get_pane_with_window, capture strtonum's error string for the +N/-N offset forms and return 'can't find' (-1) when the offset is not a valid number in [1, INT_MAX], instead of discarding the error and using strtonum's fallback of 1.",
+    "difficulty_guess": "easy",
+    "notes": "Authoring coordinates on the GitHub master branch (Linux-buildable trees; the upstream fix itself is on the openbsd line whose tree uses a BSD Makefile): base = 73db0a54e5ae5abf80bb790829222c9760f60b1d ('Tests from GitHub issue 5576', has the failing checks), oracle = d44bfda2 (merge commit whose only source delta is cmd-find.c 11+/8- plus monitor.c for the separate issue 5575). Tests are small shell scripts in regress/; they spawn detached tmux servers on sockets in /tmp and need no network or display. targets.sh runs in ~5-10s at 1 CPU. Both scripts must be run (window and pane variants). The code under test is reached with any target-aware command (select-window/select-pane/display-message -t)."
+  },
+  {
+    "repository": "tmux/tmux",
+    "upstream_issue_ref": "#5498",
+    "fix_commit": "4714f478fed87ae2c510ecd035aa89c5a90dedf8",
+    "parent_commit": "72c5037f06625f8dff165ea42c660ee696e9015e",
+    "base_image": "bench-base:ubuntu-24.04",
+    "source_files_changed": ["control.c", "spawn.c"],
+    "golden_test_paths": ["regress/respawn-pane-control-lag.sh"],
+    "golden_test_names": [
+      "server must survive respawn-pane with a lagging control client (fifo client)",
+      "server must survive respawn-pane on a window moved out of the clients' session"
+    ],
+    "reproduction": "Build tmux (see install_recipe). Run the project's own regression test: (cd regress && TEST_TMUX=/path/to/tmux sh ./respawn-pane-control-lag.sh). At the parent the tmux server crashes during the test (rc=1, 3/3 runs); at the fix the test passes (rc=0, 3/3 runs). Verified trees on master: bug = 22b36797^ (=da641e4e, the test-adding commit), fix = 22b36797 (merge bringing in the fix; its only source delta is control.c 21+/1- and spawn.c 18+/2-). The test itself takes ~8-10s (it sleeps ~3+1+1+2+1s).",
+    "observed_failure_at_parent": "regress/respawn-pane-control-lag.sh exits 1: run 1 reported 'server exited unexpectedly' (the alive check after the second respawn found the server gone); runs 2 and 3 reported 'no server running on /tmp/tmux-0/test' (a client command found the server already dead). The server process dies (or its sockets go away) within seconds of a pane respawn while a control client is behind.",
+    "verified": "Both directions observed on bench-base:ubuntu-24.04: bug tree (22b36797^ == da641e4e): test fails 3/3 runs with the server dying; fix tree (22b36797 == merge of 4714f478): test passes 3/3 runs. Buggy code confirmed present at the bug tree by inspection: control.c and spawn.c contain no control_reset_pane symbol (grep count 0), i.e. no reset of pane/control offsets or queued output on respawn; the fix tree has control_reset_pane defined in control.c and called from spawn_pane.",
+    "dependency_pins": {},
+    "install_recipe": "apt-get install -y build-essential autoconf automake libtool pkg-config bison byacc libevent-dev libncurses-dev libutempter-dev; then in the repo root: ./autogen.sh && ./configure && make -j8; the binary is ./tmux at the repo root. Test: (cd regress && TEST_TMUX=$PWD/../tmux sh ./respawn-pane-control-lag.sh). The test uses mkfifo, background processes and tmux control mode (-C attach); it needs coreutils 'timeout' only if you wrap it (not needed for the test itself).",
+    "issue_paraphrase": "Restarting a pane's command with respawn-pane while a control-mode client is attached and behind on that pane's output can make the entire tmux server die a few seconds later: client commands start reporting that the server is gone and the session is lost. A client ends up behind when its output is not being drained (for example it is written to a fifo nobody reads), or when the pane's window is moved into another session so the client's read position stops advancing.",
+    "fix_summary": "Add control_reset_pane() and call it from spawn_pane() for all control clients when a pane is respawned: drop any output still queued for control clients from the old buffer and reset each client's and the pane's offsets (used/base/pipe) to the fresh empty buffer, preventing control clients from reading past the end of the new buffer and crashing the server in input_parse.",
+    "difficulty_guess": "medium",
+    "notes": "Authoring coordinates on the GitHub master branch (buildable trees): base = da641e4e8d2b0547487e8c6f28aca0e5981d5a92 ('Add test for GitHub issue 5498', contains the failing test, no fix), oracle = 22b36797 (merge commit; source delta is exactly control.c+spawn.c for this fix). Crash repro is deterministic in practice (3/3) but timing-sensitive (0.01s output loop, 3s lag): do not reduce the sleeps. The test spawns real background processes (while loops, sleep 60) and two control clients; make sure the test user can create fifos and sockets in /tmp. Runs in ~8-10s at 1 CPU. tmux version at these commits: next-3.8."
+  },
+  {
+    "repository": "tmux/tmux",
+    "upstream_issue_ref": "#5511",
+    "fix_commit": "696a16cca27408f7d073d097efa4f763b614aef9",
+    "parent_commit": "95a71707098b1cf60a626adae4b2fbcaa8da4dee",
+    "base_image": "bench-base:ubuntu-24.04",
+    "source_files_changed": ["screen-write.c"],
+    "golden_test_paths": ["regress/tty-draw-line.sh"],
+    "golden_test_names": [
+      "variation-selector-widened character visible in a pane with nonzero x offset (check_line 2 'A<U+270F><U+FE0F>B')"
+    ],
+    "reproduction": "Build tmux (see install_recipe). Run the project's own regression test: (cd regress && TEST_TMUX=/path/to/tmux sh ./tty-draw-line.sh). At the parent it fails at the new check with \"line 2: expected 'A<U+270F><U+FE0F>B', got 'A B'\" (rc=1, 3/3 runs); at the fix it passes (rc=0). Verified trees on master: bug = c1f947a3^ (=936bb6e7, the test-adding commit), fix = c1f947a3 (merge commit whose only source delta is screen-write.c 7+/4-). Needs 'variation-selector-always-wide on', a split pane (nonzero x offset), respawnp with 'printf ...' and 'sleep 100' wrappers; takes ~30-60s because of many sleep 1s.",
+    "observed_failure_at_parent": "regress/tty-draw-line.sh exits 1 with: \"line 2: expected 'A<U+270F><U+FE0F>B', got 'A B'\" - capture-pane of the split (nonzero-x) pane shows a blank where the widened emoji+variation-selector sequence should be; the character is dropped as if off-screen.",
+    "verified": "Both directions observed on bench-base:ubuntu-24.04: bug tree (c1f947a3^ == 936bb6e7): tty-draw-line.sh fails 3/3 runs with exactly the new check's message; fix tree (c1f947a3 == merge of 696a16cc): passes 2/2 runs (plus 1/1 earlier). Buggy code confirmed present at the bug tree by inspection: screen_write_combine still has 'r = window_visible_ranges(wp, cx - n, cy + yoff, n, NULL)' with no xoff term, while the fix tree has 'r = window_visible_ranges(wp, xoff + cx - n, cy + yoff, n, NULL)' and 'xoff = wp->xoff'.",
+    "dependency_pins": {},
+    "install_recipe": "apt-get install -y build-essential autoconf automake libtool pkg-config bison byacc libevent-dev libncurses-dev libutempter-dev; then in the repo root: ./autogen.sh && ./configure && make -j8; the binary is ./tmux at the repo root. Test: (cd regress && TEST_TMUX=$PWD/../tmux sh ./tty-draw-line.sh).",
+    "issue_paraphrase": "When a character widened by a variation selector (an emoji whose display width increases, e.g. a pencil glyph plus VS16) is drawn in a pane that starts at a horizontal offset - such as the right-hand side of a horizontal split - the widened character is judged to be out of view and rendered as a blank. Capturing the pane shows the glyph missing from the line even though it is well within the pane, so lines appear with holes in them for exactly this kind of character.",
+    "fix_summary": "In screen_write_combine, include the pane's horizontal offset (wp->xoff) when computing window_visible_ranges for the character being combined, so the visibility check is done in window coordinates instead of pane-relative screen coordinates and a widened (variation-selector) character in an offset pane is not wrongly treated as obscured.",
+    "difficulty_guess": "medium",
+    "notes": "Authoring coordinates on the GitHub master branch (buildable trees): base = 936bb6e7cdff4fc7700a4f36a6b828b87d9f8241 ('Regress for GitHub issue 5511', contains the failing check), oracle = c1f947a3 (merge commit; its only source delta is screen-write.c for this fix). The test nests a tmux inside tmux (uses a second server TMUX2 inside a pane), sets 'variation-selector-always-wide on', and uses respawnp/sleep 100 to keep panes alive; it is self-contained with no network. It contains ~30 sleep 1 (plus a couple of longer waits) so allow up to ~60s, 1 CPU. The failing check is the first one after 'sleep 1' following the neww/splitw/respawnp block; other checks in the same script are unrelated rendering tests that must keep passing (they do at both trees; the script exits at the first failure, which is the target check on the bug tree)."
+  }
+]

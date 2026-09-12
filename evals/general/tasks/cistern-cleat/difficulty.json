@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 30,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on gin-gonic/gin at parent commit 915e4c90d28ec4cffc6eb146e208ab5a65eac772 (real upstream issue #4472). Context.ClientIP() reads forwarded client-IP headers through a single-value getter, so when a proxy chain appends several X-Forwarded-For header lines the method only ever consults the first line and reports the leftmost address instead of the rightmost untrusted one; IP-based logging, rate limiting and allow/deny logic see the wrong address. Agent must localise the bug in the real tree (the ClientIP() header-reading loop), fix it so every header line is consulted, keep gin's own test suite green, and leave the working tree with only the minimal source change. Verifier runs the project's own regression tests extracted from the fix commit at image build time (TestContextClientIPWithMultipleHeaders/WithSingleHeader in /opt/golden), gin's own full test suite (packages gin, gin/binding, gin/render exactly as the Makefile does), and hidden cases over a three-line proxy chain, X-Real-IP as an alternative trusted header, and malformed leading lines; it also asserts provenance (HEAD still the pinned parent, fix commit object absent, only context.go modified). Toolchain pin: official Go 1.24.0 linux-amd64 tarball (sha256 dea9ca38...), required because gin's go.mod declares go 1.24.0 and its tests run under the new go command; module and build caches are warmed at image build time so the trial is fully offline. Both directions verified inside the task image before shipping: golden multi-header test fails at parent with expected \"5.6.7.8\" actual \"1.2.3.4\" and passes after the fix; full suite green in both states."
+}

@@ -1,0 +1,107 @@
+[
+  {
+    "repository": "python-poetry/poetry",
+    "upstream_issue_ref": "#10807",
+    "fix_commit": "89aaee9d60cae20775d3c40e4f243f9945f718e1",
+    "parent_commit": "b760721672011534ca3607d17e3bf61a4dc6ed90",
+    "base_image": "bench-base:python-3.12",
+    "source_files_changed": ["src/poetry/console/commands/debug/resolve.py"],
+    "golden_test_paths": ["tests/console/commands/debug/test_resolve.py"],
+    "golden_test_names": ["test_debug_resolve_shows_marker_when_present"],
+    "reproduction": "cd /work/poetry && git config --global --add safe.directory /work/poetry && pip install -e . --no-deps with poetry-core pinned (see install_recipe), then:\n# PARENT direction\ngit reset --hard b760721672011534ca3607d17e3bf61a4dc6ed90 && git clean -fd\ngit checkout 89aaee9d60cae20775d3c40e4f243f9945f718e1 -- tests/console/commands/debug/test_resolve.py\n/opt/poetry-venv/bin/pytest tests/console/commands/debug/test_resolve.py -k test_debug_resolve_shows_marker_when_present --no-header -p no:randomly -o addopts=\"\"\n# -> 1 failed: IndexError: list assignment index out of range\n# FIX direction\ngit reset --hard 89aaee9d60cae20775d3c40e4f243f9945f718e1 && git clean -fd\n/opt/poetry-venv/bin/pytest tests/console/commands/debug/test_resolve.py -k test_debug_resolve_shows_marker_when_present --no-header -p no:randomly -o addopts=\"\"\n# -> 1 passed",
+    "observed_failure_at_parent": "IndexError: list assignment index out of range at src/poetry/console/commands/debug/resolve.py:144 (`row[2] = str(pkg.marker)`); test result '1 failed, 3 deselected'",
+    "verified": "both directions observed. At parent: grep confirms `row[2] = str(pkg.marker)` present at resolve.py:144; running the regression test (brought in from the fix commit) fails with the IndexError above. After `git reset --hard <fix>` grep confirms `row.append(str(pkg.marker))`; same pytest command passes (1 passed). Two independent runs of each direction.",
+    "dependency_pins": {
+      "poetry-core": "git+https://github.com/python-poetry/poetry-core.git@b9663e42c808543377ae523611c4cfad68016f30"
+    },
+    "install_recipe": "python3 -m venv /opt/poetry-venv && /opt/poetry-venv/bin/pip install \"poetry-core @ git+https://github.com/python-poetry/poetry-core.git@b9663e42c808543377ae523611c4cfad68016f30\" && /opt/poetry-venv/bin/pip install -e . --no-deps && /opt/poetry-venv/bin/pip install build \"cachecontrol[filecache]\" cleo dulwich fastjsonschema installer keyring packaging pkginfo platformdirs pyproject-hooks requests requests-toolbelt shellingham tomlkit trove-classifiers virtualenv findpython \"pbs-installer[download,install]\" deepdiff pytest pytest-mock \"pytest-xdist[psutil]\" responses",
+    "issue_paraphrase": "Running poetry's debug resolve command on a dependency that is restricted to certain platforms (for example a package that only supports a particular operating system) crashes with an index-out-of-range error right after printing the resolution summary, so the user gets a Python traceback instead of the dependency listing with its platform marker. The crash happens only for packages that carry such an environment marker, because the command mistakenly assumes the result row it builds already has a third column and assigns to it instead of appending.",
+    "fix_summary": "DebugResolveCommand built a two-element row [name, version] and then did `row[2] = str(pkg.marker)` for packages whose marker is not 'any'; assignment to the nonexistent index 2 raised IndexError. The fix appends the marker with row.append(str(pkg.marker)).",
+    "difficulty_guess": "easy",
+    "notes": "Fully offline, ~0.2s per direction. No network needed. Run with `-o addopts=\"\"` because poetry's pyproject.toml sets xdist/randomly addopts. poetry-core MUST be pinned to the exact lock ref or `pip install -e .` will pull poetry-core main and can drift. The regression test uses the tests/console/conftest.py CommandTester fixtures (repo fixture is an in-memory TestRepository; nothing external)."
+  },
+  {
+    "repository": "python-poetry/poetry",
+    "upstream_issue_ref": "#10808",
+    "fix_commit": "e6f1ded9902d1fa17fc74e6562cb423e84fa7752",
+    "parent_commit": "e54180064368c2f9d9ad5ff4771d8b33538cc372",
+    "base_image": "bench-base:python-3.12",
+    "source_files_changed": ["src/poetry/config/config.py"],
+    "golden_test_paths": ["tests/config/test_config.py"],
+    "golden_test_names": ["test_config_process_resolves_falsy_values"],
+    "reproduction": "cd /work/poetry && git config --global --add safe.directory /work/poetry (install per install_recipe), then:\n# PARENT direction\ngit reset --hard e54180064368c2f9d9ad5ff4771d8b33538cc372 && git clean -fd\ngit checkout e6f1ded9902d1fa17fc74e6562cb423e84fa7752 -- tests/config/test_config.py\n/opt/poetry-venv/bin/pytest tests/config/test_config.py -k test_config_process_resolves_falsy_values --no-header -p no:randomly -o addopts=\"\"\n# -> 1 failed: assert '{requests.max-retries}' == '0' (template returned literally)\n# FIX direction\ngit reset --hard e6f1ded9902d1fa17fc74e6562cb423e84fa7752 && git clean -fd\n/opt/poetry-venv/bin/pytest tests/config/test_config.py -k test_config_process_resolves_falsy_values --no-header -p no:randomly -o addopts=\"\"\n# -> 1 passed",
+    "observed_failure_at_parent": "AssertionError: assert '{requests.max-retries}' == '0' at tests/config/test_config.py:61 -- Config.process() returns the literal unresolved template string; test result '1 failed, 82 deselected'",
+    "verified": "both directions observed. At parent grep confirms `if config_value:` at src/poetry/config/config.py:369; the regression test fails with the assertion above. After `git reset --hard <fix>` grep confirms `if config_value is not None`; same pytest command passes. Two independent runs of each direction.",
+    "dependency_pins": {
+      "poetry-core": "git+https://github.com/python-poetry/poetry-core.git@b9663e42c808543377ae523611c4cfad68016f30"
+    },
+    "install_recipe": "python3 -m venv /opt/poetry-venv && /opt/poetry-venv/bin/pip install \"poetry-core @ git+https://github.com/python-poetry/poetry-core.git@b9663e42c808543377ae523611c4cfad68016f30\" && /opt/poetry-venv/bin/pip install -e . --no-deps && /opt/poetry-venv/bin/pip install build \"cachecontrol[filecache]\" cleo dulwich fastjsonschema installer keyring packaging pkginfo platformdirs pyproject-hooks requests requests-toolbelt shellingham tomlkit trove-classifiers virtualenv findpython \"pbs-installer[download,install]\" deepdiff pytest pytest-mock \"pytest-xdist[psutil]\" responses",
+    "issue_paraphrase": "When a poetry configuration value is used inside another config value's string template (a value of the form {some.config.key}), any value that is falsy -- zero, False, or an empty string -- is treated as if the referenced key were unset, so the placeholder is left literally unexpanded in the resolved value. Users who legitimately configure zero or false for things like retry counts see the raw template text where a concrete value should appear.",
+    "fix_summary": "In Config.process(), the interpolation callback tested `if config_value:` (falsy lookup values treated as missing) and returned the non-str value directly; fixed to `if config_value is not None:` plus str(config_value) for re.sub compatibility, and corrected the return annotation.",
+    "difficulty_guess": "easy",
+    "notes": "Fully offline, ~0.1s per direction. Hidden test dependency: the deepdiff package must be installed (the suite's CI installs it; poetry does not list it in pyproject.toml) or the config tests fail at collection with ModuleNotFoundError: No module named 'deepdiff'. The config fixture in the tests/conftest chain sets requests.max-retries to 0 via the environment, exercising exactly the falsy interpolation path. Run with `-o addopts=\"\"` and `-p no:randomly`. poetry-core pin as in install_recipe."
+  },
+  {
+    "repository": "python-poetry/poetry",
+    "upstream_issue_ref": "#10809",
+    "fix_commit": "3f7feee6985853ee3bda6c92465273738a94b628",
+    "parent_commit": "b8383e3cda4e7336eb9048b1e7388b5b914a4653",
+    "base_image": "bench-base:python-3.12",
+    "source_files_changed": ["src/poetry/vcs/git/backend.py"],
+    "golden_test_paths": ["tests/vcs/git/test_backend.py"],
+    "golden_test_names": ["test_clone_legacy_strips_ref_prefixes"],
+    "reproduction": "cd /work/poetry && git config --global --add safe.directory /work/poetry (install per install_recipe), then:\n# PARENT direction\ngit reset --hard b8383e3cda4e7336eb9048b1e7388b5b914a4653 && git clean -fd\ngit checkout 3f7feee6985853ee3bda6c92465273738a94b628 -- tests/vcs/git/test_backend.py\n/opt/poetry-venv/bin/pytest tests/vcs/git/test_backend.py -k test_clone_legacy_strips_ref_prefixes --no-header -p no:randomly -o addopts=\"\"\n# -> 2 failed, 2 passed (the refs/heads/main and refs/tags/v1.0 params fail)\n# FIX direction\ngit reset --hard 3f7feee6985853ee3bda6c92465273738a94b628 && git clean -fd\n/opt/poetry-venv/bin/pytest tests/vcs/git/test_backend.py -k test_clone_legacy_strips_ref_prefixes --no-header -p no:randomly -o addopts=\"\"\n# -> 4 passed",
+    "observed_failure_at_parent": "2 failed / 2 passed for test_clone_legacy_strips_ref_prefixes: for inputs 'refs/heads/main' and 'refs/tags/v1.0' mock assertion fails with \"assert ('refs/heads/main', PosixPath(...)) == ('main', PosixPath(...))\" (and 'refs/tags/v1.0' != 'v1.0') -- the ref prefix is passed through unchanged to git checkout; the plain 'abc123' and 'HEAD' params pass",
+    "verified": "both directions observed. At parent grep confirms `revision.replace(\"refs/head/\", \"\")` at src/poetry/vcs/git/backend.py:304 (result discarded AND prefix misspelled 'refs/head/' instead of 'refs/heads/'); regression test reports 2 failed/2 passed. After `git reset --hard <fix>` grep confirms `revision = revision.removeprefix(\"refs/heads/\")` and `...removeprefix(\"refs/tags/\")`; same pytest command passes 4/4. Note there are two caveats: the parent pytest result is partial (2 pass), and the misspelled prefix in the old code is itself invisible to the mock test for 'refs/head/'-style input -- but the FAIL/PASS inversion is sharp across the parametrization.",
+    "dependency_pins": {
+      "poetry-core": "git+https://github.com/python-poetry/poetry-core.git@b9663e42c808543377ae523611c4cfad68016f30"
+    },
+    "install_recipe": "python3 -m venv /opt/poetry-venv && /opt/poetry-venv/bin/pip install \"poetry-core @ git+https://github.com/python-poetry/poetry-core.git@b9663e42c808543377ae523611c4cfad68016f30\" && /opt/poetry-venv/bin/pip install -e . --no-deps && /opt/poetry-venv/bin/pip install build \"cachecontrol[filecache]\" cleo dulwich fastjsonschema installer keyring packaging pkginfo platformdirs pyproject-hooks requests requests-toolbelt shellingham tomlkit trove-classifiers virtualenv findpython \"pbs-installer[download,install]\" deepdiff pytest pytest-mock \"pytest-xdist[psutil]\" responses",
+    "issue_paraphrase": "When a git dependency is specified by an explicit ref such as refs/heads/somebranch or refs/tags/v1.0, poetry's legacy clone routine runs `git checkout` with the raw ref unchanged instead of with the plain branch or tag name. The intended normalization never happens because the code stored the result of the string-stripping call nowhere and also looked for the refs prefix under a misspelled name, so the checkout either fails or lands on the wrong revision for such dependencies.",
+    "fix_summary": "Git._clone_legacy() called revision.replace('refs/head/', '') twice without assigning the result (so no stripping ever happened) and used the misspelled refs/head/ path; fixed by assigning revision = revision.removeprefix('refs/heads/') and revision = revision.removeprefix('refs/tags/') before SystemGit.checkout.",
+    "difficulty_guess": "easy",
+    "notes": "Fully offline, ~0.1s per direction, all git calls mocked (no network, no real git needed). The other 30 tests in tests/vcs/git/test_backend.py are also offline but some exercise real local git repos and take longer; run only the -k selection. Run with `-o addopts=\"\"` and `-p no:randomly`. poetry-core pin as in install_recipe."
+  },
+  {
+    "repository": "python-poetry/poetry",
+    "upstream_issue_ref": "#10804",
+    "fix_commit": "35eb5025dc7374db74ef26ce32a0e70f54d2e3b6",
+    "parent_commit": "378c693f0e63da2c4669b2158c31ecadfa619587",
+    "base_image": "bench-base:python-3.12",
+    "source_files_changed": ["src/poetry/installation/executor.py"],
+    "golden_test_paths": ["tests/installation/test_executor.py"],
+    "golden_test_names": ["test_build_backend_error_includes_config_settings_in_pip_command"],
+    "reproduction": "cd /work/poetry && git config --global --add safe.directory /work/poetry (install per install_recipe), then:\n# PARENT direction\ngit reset --hard 378c693f0e63da2c4669b2158c31ecadfa619587 && git clean -fd\ngit checkout 35eb5025dc7374db74ef26ce32a0e70f54d2e3b6 -- tests/installation/test_executor.py\n/opt/poetry-venv/bin/pytest tests/installation/test_executor.py -k test_build_backend_error_includes_config_settings_in_pip_command --no-header -p no:randomly -o addopts=\"\"\n# -> 1 failed: assert \"--config-settings='CC=gcc'\" in output (flags garbled per-character)\n# FIX direction\ngit reset --hard 35eb5025dc7374db74ef26ce32a0e70f54d2e3b6 && git clean -fd\n/opt/poetry-venv/bin/pytest tests/installation/test_executor.py -k test_build_backend_error_includes_config_settings_in_pip_command --no-header -p no:randomly -o addopts=\"\"\n# -> 1 passed",
+    "observed_failure_at_parent": "AssertionError at tests/installation/test_executor.py:1610: assert \"--config-settings='CC=gcc'\" in '... --config-settings=\\'C=C\\' --config-settings=\\'C=C\\' ...-build-option=--one ...' -- the single-character iteration of the string 'gcc' produces per-character --config-settings flags in the printed pip command; test result '1 failed, 79 deselected'",
+    "verified": "both directions observed, twice per direction, including with http_proxy/https_proxy pointed at a dead port (127.0.0.1:9) to prove no network is used. At parent grep confirms `for setting in config_settings:` with direct per-char iteration at src/poetry/installation/executor.py:355; test fails with the assertion above. After `git reset --hard <fix>` grep confirms `if isinstance(values, str):` wrapping; same pytest command passes in ~0.5s.",
+    "dependency_pins": {
+      "poetry-core": "git+https://github.com/python-poetry/poetry-core.git@b9663e42c808543377ae523611c4cfad68016f30"
+    },
+    "install_recipe": "python3 -m venv /opt/poetry-venv && /opt/poetry-venv/bin/pip install \"poetry-core @ git+https://github.com/python-poetry/poetry-core.git@b9663e42c808543377ae523611c4cfad68016f30\" && /opt/poetry-venv/bin/pip install -e . --no-deps && /opt/poetry-venv/bin/pip install build \"cachecontrol[filecache]\" cleo dulwich fastjsonschema installer keyring packaging pkginfo platformdirs pyproject-hooks requests requests-toolbelt shellingham tomlkit trove-classifiers virtualenv findpython \"pbs-installer[download,install]\" deepdiff pytest pytest-mock \"pytest-xdist[psutil]\" responses",
+    "issue_paraphrase": "If an install fails during the build step and the project defines single-string build settings (for example an environment-variable-style setting like CC=gcc) under the build-config-settings configuration, the remediation pip command that poetry prints in the error message is garbled: the string value is treated as a list of its individual characters, producing a run of nonsensical options like a flag per letter instead of one option for the whole setting. Arrays of settings survive, only plain-string settings are mangled, so the user cannot copy the shown command to retry the build.",
+    "fix_summary": "In Executor's error-path pip command construction, iterate `config_settings[setting]` only after wrapping a plain str value in a list (`values = config_settings[setting]; if isinstance(values, str): values = [values]`), so string values are rendered as one --config-settings=<key>=<value> flag instead of one per character.",
+    "difficulty_guess": "easy",
+    "notes": "Offline and deterministic: verified with http/https proxy pointed at a dead port -- the test creates a temporary virtualenv (local, ~0.5s) and the mocked ProjectBuilder.build raises immediately; no external fetch. Test output contains benign RuntimeWarnings about a poetry_core wheel's __pycache__ (noise). The fixture config merge puts the settings under installer.build-config-settings.simple-project; the package is installed from the local tests/fixtures/simple_project directory. Run with `-o addopts=\"\"`. poetry-core pin as in install_recipe."
+  },
+  {
+    "repository": "python-poetry/poetry",
+    "upstream_issue_ref": "#10805",
+    "fix_commit": "b8383e3cda4e7336eb9048b1e7388b5b914a4653",
+    "parent_commit": "35eb5025dc7374db74ef26ce32a0e70f54d2e3b6",
+    "base_image": "bench-base:python-3.12",
+    "source_files_changed": ["src/poetry/puzzle/provider.py"],
+    "golden_test_paths": ["tests/puzzle/test_provider.py"],
+    "golden_test_names": ["test_indicator_context_resets_on_exception"],
+    "reproduction": "cd /work/poetry && git config --global --add safe.directory /work/poetry (install per install_recipe), then:\n# PARENT direction\ngit reset --hard 35eb5025dc7374db74ef26ce32a0e70f54d2e3b6 && git clean -fd\ngit checkout b8383e3cda4e7336eb9048b1e7388b5b914a4653 -- tests/puzzle/test_provider.py\n/opt/poetry-venv/bin/pytest tests/puzzle/test_provider.py -k test_indicator_context_resets_on_exception --no-header -p no:randomly -o addopts=\"\"\n# -> 1 failed: assert 'downloading something' is None (Indicator.CONTEXT not reset)\n# FIX direction\ngit reset --hard b8383e3cda4e7336eb9048b1e7388b5b914a4653 && git clean -fd\n/opt/poetry-venv/bin/pytest tests/puzzle/test_provider.py -k test_indicator_context_resets_on_exception --no-header -p no:randomly -o addopts=\"\"\n# -> 1 passed",
+    "observed_failure_at_parent": "AssertionError at tests/puzzle/test_provider.py:1082: assert 'downloading something' is None -- after an exception inside the Indicator.context() with-block, the class-level Indicator.CONTEXT still holds the stale operation context ('downloading something'); test result '1 failed, 49 deselected'",
+    "verified": "both directions observed. At parent grep confirms `yield _set_context` followed directly by `_set_context(None)` with no try/finally at src/poetry/puzzle/provider.py:96-98; regression test fails with the stale-context assertion. After `git reset --hard <fix>` grep confirms the try:/finally: wrapper; same pytest command passes. Two independent runs of each direction.",
+    "dependency_pins": {
+      "poetry-core": "git+https://github.com/python-poetry/poetry-core.git@b9663e42c808543377ae523611c4cfad68016f30"
+    },
+    "install_recipe": "python3 -m venv /opt/poetry-venv && /opt/poetry-venv/bin/pip install \"poetry-core @ git+https://github.com/python-poetry/poetry-core.git@b9663e42c808543377ae523611c4cfad68016f30\" && /opt/poetry-venv/bin/pip install -e . --no-deps && /opt/poetry-venv/bin/pip install build \"cachecontrol[filecache]\" cleo dulwich fastjsonschema installer keyring packaging pkginfo platformdirs pyproject-hooks requests requests-toolbelt shellingham tomlkit trove-classifiers virtualenv findpython \"pbs-installer[download,install]\" deepdiff pytest pytest-mock \"pytest-xdist[psutil]\" responses",
+    "issue_paraphrase": "Poetry's dependency resolver shows a small progress indicator with a stack of 'operation' contexts while it works. If resolving a dependency fails mid-operation (for instance a network or resolution error inside the indicator's scope), the label of the aborted operation is never removed, so the stale context leaks out of its with-block and keeps being displayed on later, unrelated progress lines. The cleanup only runs on the happy path.",
+    "fix_summary": "Indicator.context() cleaned up the Indicator.CONTEXT class variable only after a normal yield-return; wrapped the yield in try/finally so the context is always cleared, including when the body raises.",
+    "difficulty_guess": "easy",
+    "notes": "Fully offline, ~0.1s per direction. The regression test exercises Indicator.context() directly with a raise inside the with-block; no solver run, no network. tests/puzzle/test_provider.py's other tests are offline too but some are slow; run only the -k selection. Run with `-o addopts=\"\"`. poetry-core pin as in install_recipe. NOTE: the parent commit of this fix (35eb5025) is itself the fix commit of the #10804 entry; that is fine -- each entry is verified against its own parent/fix pair."
+  }
+]

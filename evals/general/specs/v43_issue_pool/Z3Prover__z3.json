@@ -1,0 +1,77 @@
+[
+  {
+    "repository": "Z3Prover/z3",
+    "upstream_issue_ref": "#10621",
+    "fix_commit": "8fd4b73ab5359395965311b0bb275fe78a2da9b0",
+    "parent_commit": "5fcd89bf8c4f37141f5f31a6bfc05b89f55d7e4d",
+    "base_image": "bench-base:ubuntu-24.04",
+    "source_files_changed": [
+      "src/ast/rewriter/seq_rewriter.cpp"
+    ],
+    "golden_test_paths": [
+      "src/test/seq_rewriter.cpp"
+    ],
+    "golden_test_names": [
+      "test-z3 seq_rewriter"
+    ],
+    "reproduction": "File A_seq_extract.smt2:\n(declare-const x Bool)\n(declare-const y (Seq Int))\n(assert (= y (seq.extract (seq.++ (seq.++ (seq.unit (seq.len y)) (seq.unit (ite x 0 1))) (seq.++ (seq.unit 1) (seq.unit 0))) 2 2)))\n(check-sat)\n\nRun: <z3-binary> A_seq_extract.smt2\nAt parent_commit: prints \"unsat\".  At fix_commit: prints \"sat\" (expected; model x=true, y=seq.unit(1)++seq.unit(0) exists).",
+    "observed_failure_at_parent": "z3 reports `unsat` on a satisfiable (Seq Int) formula: `(assert (= y (seq.extract (seq.++ (seq.++ (seq.unit (seq.len y)) (seq.unit (ite x 0 1))) (seq.++ (seq.unit 1) (seq.unit 0))) 2 2)))` followed by (check-sat) answers unsat instead of sat.",
+    "verified": "Both directions observed in a container on bench-base:ubuntu-24.04 (built at each commit with cmake, ccache warm). At parent 5fcd89bf8: z3 binary prints `unsat` for the formula above (run twice, same result). At fix 8fd4b73ab5: prints `sat`. Buggy code confirmed present at parent by inspection: src/ast/rewriter/seq_rewriter.cpp::mk_seq_nth_i contains `if (offset == i) {` (line ~1408) comparing the absolute target offset against the loop index instead of a cumulative character position, and has no `pos` counter; the fix introduces `unsigned pos = 0;` and compares `offset == pos`. The project's own unit test (new case 27 in tst_seq_rewriter, asserting l_true via smt::context on the same equality) was built and passes at the fix commit (`test-z3 seq_rewriter` -> PASS).",
+    "dependency_pins": {},
+    "install_recipe": "apt-get update && apt-get install -y g++ cmake make && cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build --target shell -j$(nproc)   # binary at build/z3; unit-test binary: cmake --build build --target test-z3 -j$(nproc)",
+    "issue_paraphrase": "Z3 reports `unsat` for a satisfiable formula about integer sequences. When a sequence variable is constrained to equal a `seq.extract` (a.k.a. `seq.substr`) slice of a concatenation that contains a conditional element (an if-then-else selecting between different integer elements), the solver claims the constraints are contradictory even though a valid model exists, e.g. one where the conditional takes one branch and the sequence equals two concrete unit elements. The formula can be written so that the concatenation's first element is the length of the very sequence being solved, which should not affect the extracted region. The wrong verdict is a spurious `unsat`; the satisfiable instance should be answered `sat` with a model.",
+    "fix_summary": "In seq_rewriter::mk_seq_nth_i, when flattening a concatenation into pieces, the rewriter compared the target offset against the array loop index i instead of the true cumulative character position. When a skipped ite-branch element had length != 1, the offset decremented by its min length while i advanced by only 1, so the rewriter resolved the wrong element and asserted a false equality (e.g. seq.unit(1) = seq.at(...)), poisoning the solver into UNSAT. Fix introduces a `pos` counter incremented by 1 per unit and by min_length per skipped ite element, compares against pos, and fixes an off-by-one in the ite-skip boundary (< -> <=).",
+    "difficulty_guess": "medium",
+    "notes": "Deterministic, no network needed. Default z3 CLI path (plain check-sat) exercises the bug; only the smt2 file plus the z3 binary is required. Golden unit test lives in src/test/seq_rewriter.cpp (module `seq_rewriter`, case 27). Full Release build is the only heavy step: ~5 min at 64 cores with ccache, expect roughly 30-60 min at 1 CPU; consider ccache and -j. The same formula with smt.bv.solver=2 gives the same verdict. Self-referential seq.len is important to the repro - do not simplify it away: verify at parent that the formula reports unsat before building the task."
+  },
+  {
+    "repository": "Z3Prover/z3",
+    "upstream_issue_ref": "#10609",
+    "fix_commit": "384d2d881f544e0f3abfa21e0e3ebe6beb9821d7",
+    "parent_commit": "d1f10234c50a49ee1cc7d08c87a680daf430017c",
+    "base_image": "bench-base:ubuntu-24.04",
+    "source_files_changed": [
+      "src/ast/fpa/fpa2bv_converter.cpp"
+    ],
+    "golden_test_paths": [
+      "src/test/fpa.cpp"
+    ],
+    "golden_test_names": [
+      "test-z3 fpa"
+    ],
+    "reproduction": "File B_fp_rem.smt2:\n(declare-const x (_ FloatingPoint 5 11))\n(declare-const y (_ FloatingPoint 5 11))\n(assert (= x ((_ to_fp 5 11) #b1110100000101010)))\n(assert (= y ((_ to_fp 5 11) #b1000000000010101)))\n(assert (not (= ((_ fp.to_ieee_bv 16) (fp.rem x y)) #x000a)))\n(check-sat-using (then fpa2bv simplify bit-blast smt))\n\nRun: <z3-binary> B_fp_rem.smt2\nAt parent_commit: prints \"sat\".  At fix_commit: prints \"unsat\".  (All operands are pinned to concrete bit patterns, so the only free decision is the value Z3 computes for fp.rem; unsat means it is exactly #x000a.)",
+    "observed_failure_at_parent": "z3 prints `sat` for a query where binary16 x=#b1110100000101010 and y=#b1000000000010101 are pinned and the IEEE encoding of (fp.rem x y) is asserted to be #x000a; satisfiable means the solver computed a different remainder (it produces -0.0, encoded #x8000, instead of the correct positive subnormal #x000a).",
+    "verified": "Both directions observed in a container on bench-base:ubuntu-24.04 (built at each commit with cmake, ccache warm). At parent d1f10234c: z3 prints `sat` for the query above. At fix 384d2d88: prints `unsat`. Buggy code confirmed present at parent by inspection: src/ast/fpa/fpa2bv_converter.cpp::mk_rem has `m_mpz_manager.set(remaining, max_exp_diff);` (line ~1322) and no `sig_ext_amount` anywhere; the fix adds `sig_ext_amount = max_exp_diff + sbits - 1` and sizes the shift operands against the widened significand. The project's own regression test (src/test/fpa.cpp, module `fpa`, test_rem_subnormal_divisor) is exactly this smtlib string through Z3_eval_smtlib2_string; it exists only from the fix commit onward.",
+    "dependency_pins": {},
+    "install_recipe": "apt-get update && apt-get install -y g++ cmake make && cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build --target shell -j$(nproc)   # binary at build/z3; unit-test binary: cmake --build build --target test-z3 -j$(nproc)",
+    "issue_paraphrase": "Z3 computes an incorrect IEEE 754 remainder for the `fp.rem` operation when the divisor is a subnormal (denormalized) floating-point number. Given binary16 operands fixed to concrete bit patterns, the solver's value for `fp.rem` differs from the true rounded remainder: instead of the correct positive subnormal result it returns a negative zero, so a query that asserts the exact IEEE encoding of the remainder equals the expected value is answered `sat` (the operands fully determine the operation, so it should be `unsat`). The bug shows up for two's-complement half-precision exponents where the normalized exponent difference between dividend and divisor exceeds what the conversion machinery widens the significands by.",
+    "fix_summary": "In fpa2bv_converter::mk_rem, when the divisor is subnormal the normalized exponent difference can exceed max_exp_diff, and the dividend significand was only widened by max_exp_diff, so high bits shifted out before the remainder computation. Fix computes sig_ext_amount = max_exp_diff + sbits - 1, extends dividend and divisor significands by that amount, sizes the bvshl shift operand against the widened vector, and adjusts max_exp_diff_adj accordingly so the encoded remainder is correct (returns #x000a instead of -0.0).",
+    "difficulty_guess": "medium",
+    "notes": "Deterministic, no network needed. The repro must use `(check-sat-using (then fpa2bv simplify bit-blast smt))` exactly as the project's own regression test does; this forces the fpa2bv conversion path where the bug lives (a plain default check-sat may take a different route and is not what was verified). Golden unit test: src/test/fpa.cpp (module `fpa`), added by the fix commit. Build cost is the only heavy step (~5 min at 64 cores, order of 30-60 min at 1 CPU). First entry in this pool that verifies an FP (floating-point) wrong-value bug, complementing the seq UNSAT one."
+  },
+  {
+    "repository": "Z3Prover/z3",
+    "upstream_issue_ref": "#10608",
+    "fix_commit": "8d32b2b02ab31c5cd293362866fa32f6eab75e09",
+    "parent_commit": "e950cd371c3ca16823079feded145bc6ce3feb95",
+    "base_image": "bench-base:ubuntu-24.04",
+    "source_files_changed": [
+      "src/ast/fpa/fpa2bv_converter.cpp"
+    ],
+    "golden_test_paths": [
+      "src/test/smt_context.cpp"
+    ],
+    "golden_test_names": [
+      "test-z3 smt_context"
+    ],
+    "reproduction": "File C_fp_fma.smt2:\n(declare-const x (_ FloatingPoint 5 11))\n(declare-const y (_ FloatingPoint 5 11))\n(declare-const xb (_ BitVec 16))\n(declare-const yb (_ BitVec 16))\n(assert (= x ((_ to_fp 5 11) xb)))\n(assert (= y ((_ to_fp 5 11) yb)))\n(assert (= xb #b1000001111000111))\n(assert (= yb #b0011110111000000))\n(assert (not (= ((_ fp.to_ieee_bv 16) (fp.fma RNE x y x)) #x889b)))\n(check-sat-using (then fpa2bv simplify bit-blast smt))\n\nRun: <z3-binary> C_fp_fma.smt2\nAt parent_commit: prints \"sat\".  At fix_commit: prints \"unsat\".  (Operands and rounding mode are fixed, so unsat means fp.fma RNE x y x is exactly #x889b.)",
+    "observed_failure_at_parent": "z3 prints `sat` for a query pinning binary16 x=#b1000001111000111, y=#b0011110111000000 and asserting ((_ fp.to_ieee_bv 16) (fp.fma RNE x y x)) != #x889b; satisfiable means the fused multiply-add produces an encoding other than the correctly rounded #x889b (one ulp off).",
+    "verified": "Both directions observed in a container on bench-base:ubuntu-24.04 (built at each commit with cmake, ccache warm). At parent e950cd37: z3 prints `sat` for the query above. At fix 8d32b2b0: prints `unsat`. Buggy code confirmed present at parent by inspection: src/ast/fpa/fpa2bv_converter.cpp::mk_fma line ~1772 computes `sticky_h2_red = m_bv_util.mk_zero_extend(sbits+4, m.mk_app(m_bv_util.get_fid(), OP_BREDOR, sticky_h1.get()));` -- it folds sticky_h1 (the h1 discarded-bit range) into the h2 rounding, truncating the real h2 sticky bits; the fix reduces sticky_h2 instead, and the equivalent test-z3 smt_context module PASSes at the fix commit.",
+    "dependency_pins": {},
+    "install_recipe": "apt-get update && apt-get install -y g++ cmake make && cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build --target shell -j$(nproc)   # binary at build/z3; unit-test binary: cmake --build build --target test-z3 -j$(nproc)",
+    "issue_paraphrase": "Z3's fused multiply-add `fp.fma` can round a result one unit in the last place (ulp) away from the true IEEE 754 value for binary16 (`(_ FloatingPoint 5 11)`) operands. In the cases affected, the result of `fp.fma RNE x y x` with all operands given as fixed bit patterns and a fixed rounding mode is not the correct rounded encoding: a query asserting the exact IEEE encoding equals the expected value is answered `sat`, meaning the solver computed a different (wrong) encoding. The wrong rounding appears on the path where the intermediate product needs a sticky-bit reduction for the second rounding step, making some inexact results look like exact ties.",
+    "fix_summary": "In fpa2bv_converter::mk_fma, the h2 rounding path computed sticky_h2 (extract of the discarded low bits) but erroneously reduced sticky_h1 (the h1 discarded-bit range) when building sticky_h2_red, so one sticky bit was dropped and some inexact products rounded as exact ties. Fix changes that one zero-extended BREDOR input from sticky_h1 to sticky_h2; the h1 path is untouched.",
+    "difficulty_guess": "medium",
+    "notes": "Deterministic, no network needed. The repro must use `(check-sat-using (then fpa2bv simplify bit-blast smt))` exactly as the project's own regression test does (forces the fpa2bv conversion path). Golden unit test: new block in src/test/smt_context.cpp (module `smt_context`) asserting l_false with the fpa2bv->simplify->bit-blast->smt pipeline. The fix itself is a one-line variable swap, but locating it requires reading the fp.fma conversion code. Build cost is the only heavy step (~5 min at 64 cores, order of 30-60 min at 1 CPU)."
+  }
+]

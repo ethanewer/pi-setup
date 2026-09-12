@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 30,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on aio-libs/aiohttp at parent commit 58bae08b7e4831c6c184fe22233bfc19941c700b (real upstream bug, issue #13278). The RFC 6265 cookie Expires date parser matches non-ASCII decimal digits (Arabic-Indic, fullwidth, Devanagari) because its regexes rely on the Unicode meaning of \\d; a Set-Cookie Expires value with such digits is accepted as a real expiry timestamp and the cookie is scheduled to expire instead of being rejected and stored as a session cookie. Agent must localise the bug in the real tree (regex flags in aiohttp/cookiejar.py), fix it, keep the repo's own cookie-jar tests green, and only modify the minimal source file; verifier also runs the upstream regression test extracted from the fix commit, and hidden cases over digit scripts and an end-to-end session-cookie scenario the upstream test does not cover. Pure-Python (AIOHTTP_NO_EXTENSIONS=1), no network, no event loop, ~1s test suite. Fixed directions verified inside the task image before shipping."
+}

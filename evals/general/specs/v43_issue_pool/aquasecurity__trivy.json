@@ -1,0 +1,122 @@
+[
+  {
+    "repository": "aquasecurity/trivy",
+    "upstream_issue_ref": "#10955",
+    "fix_commit": "f964fa2bb61e1b59088d2b35397ca8fd39045b00",
+    "parent_commit": "3dc5f8768b343a07694ba1cc09425f485d4c1b0f",
+    "base_image": "bench-base:ubuntu-24.04",
+    "source_files_changed": [
+      "pkg/dependency/parser/conda/environment/parse.go"
+    ],
+    "golden_test_paths": [
+      "pkg/dependency/parser/conda/environment/parse_test.go",
+      "pkg/dependency/parser/conda/environment/testdata/operator-only-dep.yaml"
+    ],
+    "golden_test_names": [
+      "TestParse/dependency_line_contains_only_operators"
+    ],
+    "reproduction": "In /work/trivy (git config --global --add safe.directory /work/trivy; export PATH=/opt/go/bin:$PATH; export CGO_ENABLED=0 GOEXPERIMENT=jsonv2):\n  git reset --hard <PARENT> && git clean -fd\n  git checkout <FIX> -- pkg/dependency/parser/conda/environment/parse_test.go pkg/dependency/parser/conda/environment/testdata/operator-only-dep.yaml\n  go test -v -short ./pkg/dependency/parser/conda/environment/...\nAt parent: FAIL. At fix (no overlay, plain checkout): PASS. testdata/operator-only-dep.yaml has a conda environment.yml whose dependencies list is [\"=\", \"==\", \"numpy=1.26.4\"]; the all-operator lines become empty strings after operator replacement and the old parser indexes parts[0]." ,
+    "observed_failure_at_parent": "=== RUN TestParse/dependency_line_contains_only_operators -> 'panic: runtime error: index out of range [0] with length 0 [recovered, repanicked]' -> FAIL: TestParse/dependency_line_contains_only_operators (0.00s); 'FAIL github.com/aquasecurity/trivy/pkg/dependency/parser/conda/environment' and non-zero exit. Buggy code confirmed at parent: 'grep -c \"len(parts) == 0\" pkg/dependency/parser/conda/environment/parse.go' = 0 (no guard after the operator replacement split).",
+    "verified": "Both directions observed in container bench-base:ubuntu-24.04 (trivy-miner) with Go 1.26.3 toolchain, CGO_ENABLED=0 GOEXPERIMENT=jsonv2. Parent 3dc5f8768: buggy code present (guard absent, grep count 0); overlay of fix parse_test.go + operator-only-dep.yaml -> TestParse FAILS with runtime panic 'index out of range [0] with length 0'. Fix f964fa2bb: guard present (grep count 1); same test PASSES (7 passed, exit 0, incl. TestParse/dependency_line_contains_only_operators).",
+    "dependency_pins": {
+      "go toolchain": "1.26.3 (go.mod 'go 1.26.3'; any 1.26.x works, CI check-latest uses 1.26.8)",
+      "go.sum": "all transitive deps hash-pinned by the repo's committed go.sum against sum.golang.org"
+    },
+    "install_recipe": "apt-get update && apt-get install -y git && curl -sSL -o /tmp/go.tgz https://github.com/actions/go-versions/releases/download/1.26.3-25533533231/go-1.26.3-linux-x64.tar.gz && mkdir -p /opt/go && tar -xzf /tmp/go.tgz -C /opt/go --strip-components=1 && rm /tmp/go.tgz && export PATH=/opt/go/bin:$PATH && export CGO_ENABLED=0 GOEXPERIMENT=jsonv2 && cd /work/trivy && git config --global --add safe.directory /work/trivy && git reset --hard <SHA> && git clean -fd && go test -v -short ./pkg/dependency/parser/conda/environment/...",
+    "issue_paraphrase": "When an Anaconda environment definition lists a dependency as a bare version operator (a line that is only an equals sign or similar constraint with no package name), scanning the project aborts with a runtime index-out-of-range panic instead of skipping the meaningless entry, so the whole scan fails on a malformed-but-harmless input file.",
+    "fix_summary": "After replacing version operators with spaces, if the split produces no fields at all the parser now returns an empty name/version pair early instead of indexing parts[0]; added a regression fixture where dependencies are just '=' and '=='.",
+    "difficulty_guess": "easy",
+    "notes": "The source delta of this fix is only 3 lines (parse.go); it is still a genuine crash fix with the project's own regression test (21 lines of test + a new 9-line fixture). Run via `go test` on the single module - do NOT use `mage test:unit`/`go test ./...` at 1 CPU (whole-repo compile takes very long). The GOEXPERIMENT=jsonv2 env var is mandatory: without it the module setup fails with 'build constraints exclude all Go files in /opt/go/src/encoding/json/jsontext'. First `go test` downloads the whole pinned dependency set from proxy.golang.org (~1GB, network egress needed, a few minutes at 1 CPU); afterwards everything is cached in /root/go/pkg/mod. Test runs in ~0.01s. Logs from my verification runs are saved in container trivy-miner: /tmp/conda_parent2.log and /tmp/conda_fix2.log."
+  },
+  {
+    "repository": "aquasecurity/trivy",
+    "upstream_issue_ref": "#10954",
+    "fix_commit": "3c6a1a2aca33893f231412a34d3dfddc4f64b456",
+    "parent_commit": "f06520353fc632e69eaf9d669ecdd785e770305a",
+    "base_image": "bench-base:ubuntu-24.04",
+    "source_files_changed": [
+      "pkg/dependency/parser/dotnet/core_deps/parse.go"
+    ],
+    "golden_test_paths": [
+      "pkg/dependency/parser/dotnet/core_deps/parse_test.go",
+      "pkg/dependency/parser/dotnet/core_deps/testdata/ambiguous-root.deps.json",
+      "pkg/dependency/parser/dotnet/core_deps/testdata/multi-project.deps.json"
+    ],
+    "golden_test_names": [
+      "TestParse/multi-project_solution",
+      "TestParse/ambiguous_root"
+    ],
+    "reproduction": "In /work/trivy (git config --global --add safe.directory /work/trivy; export PATH=/opt/go/bin:$PATH; export CGO_ENABLED=0 GOEXPERIMENT=jsonv2):\n  git reset --hard <PARENT> && git clean -fd\n  git checkout <FIX> -- pkg/dependency/parser/dotnet/core_deps/parse_test.go pkg/dependency/parser/dotnet/core_deps/testdata/ambiguous-root.deps.json pkg/dependency/parser/dotnet/core_deps/testdata/multi-project.deps.json\n  go test -v -short ./pkg/dependency/parser/dotnet/core_deps/...\nAt parent: FAIL (the two new testcases). At fix (plain checkout): PASS.",
+    "observed_failure_at_parent": "FAIL: TestParse/multi-project_solution and FAIL: TestParse/ambiguous_root. For ambiguous_root (two sibling projects Web and Worker both depending on Newtonsoft.Json/13.0.3): 'Not equal: expected ... (len=3) {Newtonsoft.Json/13.0.3 Relationship=0, Web/1.0.0 Relationship=0, Worker/1.0.0 Relationship=0} ... actual (len=2) {Web/1.0.0 Relationship=1(Root), Newtonsoft.Json/13.0.3 Relationship=3(Workspace)}' - the first-listed project Web is chosen as root and the second project Worker is dropped entirely from the reported packages. Buggy code confirmed at parent: 'grep -c \"func (p *Parser) rootProject\" parse.go' = 0; the old code picks the first 'type: project' library as root and skips all later projects, and computes direct deps from the first project only.",
+    "verified": "Both directions observed in container bench-base:ubuntu-24.04 (trivy-miner) with Go 1.26.3, CGO_ENABLED=0 GOEXPERIMENT=jsonv2. Parent f06520353: rootProject function absent (grep count 0); fix-version parse_test.go + both .deps.json fixtures overlaid -> TestParse/multi-project_solution and TestParse/ambiguous_root FAIL with the 2-vs-3 package diff above. Fix 3c6a1a2aca: rootProject present (grep count 1); same module test PASSES (9 passed, exit 0).",
+    "dependency_pins": {
+      "go toolchain": "1.26.3 (go.mod 'go 1.26.3'; any 1.26.x works, CI check-latest uses 1.26.8)",
+      "go.sum": "all transitive deps hash-pinned by the repo's committed go.sum against sum.golang.org"
+    },
+    "install_recipe": "apt-get update && apt-get install -y git && curl -sSL -o /tmp/go.tgz https://github.com/actions/go-versions/releases/download/1.26.3-25533533231/go-1.26.3-linux-x64.tar.gz && mkdir -p /opt/go && tar -xzf /tmp/go.tgz -C /opt/go --strip-components=1 && rm /tmp/go.tgz && export PATH=/opt/go/bin:$PATH && export CGO_ENABLED=0 GOEXPERIMENT=jsonv2 && cd /work/trivy && git config --global --add safe.directory /work/trivy && git reset --hard <SHA> && git clean -fd && go test -v -short ./pkg/dependency/parser/dotnet/core_deps/...",
+    "issue_paraphrase": "When a .NET application's dependency graph file contains several sibling projects (typical for solutions where the root app and multiple helper projects are all recorded as libraries, and nothing but the reference graph distinguishes them), the scanner treats the first-listed project as the root application and silently omits every other project and its transitive dependencies from the reported packages. The root should be identified as the project no other library references, not by its position in the file.",
+    "fix_summary": "Replaced 'first project wins' root selection with rootProject(): collects all libraries of type project, builds the set of all package IDs referenced from any library's targets/dependencies, and marks as root the single unreferenced project (RelationshipRoot), all other projects RelationshipWorkspace; if zero or multiple candidates exist it logs and returns a non-root parse instead of guessing. Direct dependencies are then looked up under the resolved root project ID.",
+    "difficulty_guess": "medium",
+    "notes": "Solid mid-size fix (~+36 source lines incl. helper + two fixtures). Same env caveats as the other entries: GOEXPERIMENT=jsonv2 mandatory, run the single module with `go test`, first run downloads ~1GB of pinned deps. Verification logs in container trivy-miner: /tmp/dotnet_parent.log and /tmp/dotnet_fix.log."
+  },
+  {
+    "repository": "aquasecurity/trivy",
+    "upstream_issue_ref": "#11050",
+    "fix_commit": "0012281c8a8adad2eff1889f12fe08a0ca5a7bfc",
+    "parent_commit": "748a639b1d436a0566d325a4233ca13baf4cbd60",
+    "base_image": "bench-base:ubuntu-24.04",
+    "source_files_changed": [
+      "pkg/dependency/parser/python/pyproject/pyproject.go"
+    ],
+    "golden_test_paths": [
+      "pkg/dependency/parser/python/pyproject/pyproject_test.go",
+      "pkg/dependency/parser/python/pyproject/testdata/happy_v2.toml"
+    ],
+    "golden_test_names": [
+      "TestParser_Parse/happy_path_v2"
+    ],
+    "reproduction": "In /work/trivy (git config --global --add safe.directory /work/trivy; export PATH=/opt/go/bin:$PATH; export CGO_ENABLED=0 GOEXPERIMENT=jsonv2):\n  git reset --hard <PARENT> && git clean -fd\n  git checkout <FIX> -- pkg/dependency/parser/python/pyproject/pyproject_test.go pkg/dependency/parser/python/pyproject/testdata/happy_v2.toml\n  go test -v -short ./pkg/dependency/parser/python/pyproject/...\nAt parent: FAIL. At fix (plain checkout): PASS. The fix-version fixture lists dependencies as 'Flask(>=1.0,<2.0)', 'typing_extensions>=4' and 'ruamel.yaml (>=0.18)'.",
+    "observed_failure_at_parent": "FAIL: TestParser_Parse/happy_path_v2. 'Not equal: expected ... {\"check-wheel-contents\", \"flask\", \"pluggy\", \"ruamel-yaml\", \"typing-extensions\"} ... actual ... {\"Flask\", \"check-wheel-contents\", \"pluggy\", \"ruamel.yaml\", \"typing_extensions\"}' - PEP 621 dependency names are kept exactly as written instead of normalized. Buggy code confirmed at parent: pyproject.go line 78 is 'd.Set.Append(strings.Fields(dep)[0]) // Save only name' (no NormalizePkgName call; grep for the normalized call at that spot = 0).",
+    "verified": "Both directions observed in container bench-base:ubuntu-24.04 (trivy-miner) with Go 1.26.3, CGO_ENABLED=0 GOEXPERIMENT=jsonv2. Parent 748a639b1: unnormalized append present (grep shows '// Save only name' with Strings.Fields(dep)[0]); overlay of fix pyproject_test.go + testdata/happy_v2.toml -> TestParser_Parse/happy_path_v2 FAILS (5 tests, 1 failed). Fix 0012281c8: 'd.Set.Append(python.NormalizePkgName(strings.Fields(dep)[0], true))' present; same test PASSES (7 passed, exit 0).",
+    "dependency_pins": {
+      "go toolchain": "1.26.3 (go.mod 'go 1.26.3'; any 1.26.x works, CI check-latest uses 1.26.8)",
+      "go.sum": "all transitive deps hash-pinned by the repo's committed go.sum against sum.golang.org"
+    },
+    "install_recipe": "apt-get update && apt-get install -y git && curl -sSL -o /tmp/go.tgz https://github.com/actions/go-versions/releases/download/1.26.3-25533533231/go-1.26.3-linux-x64.tar.gz && mkdir -p /opt/go && tar -xzf /tmp/go.tgz -C /opt/go --strip-components=1 && rm /tmp/go.tgz && export PATH=/opt/go/bin:$PATH && export CGO_ENABLED=0 GOEXPERIMENT=jsonv2 && cd /work/trivy && git config --global --add safe.directory /work/trivy && git reset --hard <SHA> && git clean -fd && go test -v -short ./pkg/dependency/parser/python/pyproject/...",
+    "issue_paraphrase": "Dependency names declared in the PEP 621 style of a Python pyproject.toml are recorded exactly as typed (e.g. 'Flask' instead of 'flask', 'typing_extensions' instead of 'typing-extensions', 'ruamel.yaml' instead of 'ruamel-yaml'), so the names do not line up with the normalized names produced by other Python lockfiles. A package can therefore be reported under different spellings in different parts of the same scan, breaking dependency-name matching between the project manifest and the lockfile.",
+    "fix_summary": "The PEP 621 'dependencies' name extraction now passes each parsed name through python.NormalizePkgName(name, true) (PEP 503 normalization: lowercase, runs of non-alphanumerics -> '-') before storing it in the dependency set, matching the normalization the poetry/pylock parsers already apply; the fixture now uses non-normalized spellings to prove the match.",
+    "difficulty_guess": "easy",
+    "notes": "Small fix (2 source lines) but a real, user-visible correctness bug with the project's own regression coverage. Same env caveats as the other entries (GOEXPERIMENT=jsonv2, single-module `go test`, ~1GB first download). Verification logs in container trivy-miner: /tmp/pyp_parent.log and /tmp/pyp_fix.log."
+  },
+  {
+    "repository": "aquasecurity/trivy",
+    "upstream_issue_ref": "#10861",
+    "fix_commit": "a10291be6f44a512977e887180faab3f3dd240c5",
+    "parent_commit": "a2777aed340e4bb11c6cea6d7cf5d4bf137587ec",
+    "base_image": "bench-base:ubuntu-24.04",
+    "source_files_changed": [
+      "pkg/dependency/parser/nodejs/pnpm/parse.go",
+      "pkg/dependency/parser/nodejs/pnpm/types.go"
+    ],
+    "golden_test_paths": [
+      "pkg/dependency/parser/nodejs/pnpm/parse_test.go",
+      "pkg/dependency/parser/nodejs/pnpm/parse_testcase.go",
+      "pkg/dependency/parser/nodejs/pnpm/testdata/pnpm-lock_v9_multiple_documents.yaml"
+    ],
+    "golden_test_names": [
+      "TestParse/v9_with_multiple_documents"
+    ],
+    "reproduction": "In /work/trivy (git config --global --add safe.directory /work/trivy; export PATH=/opt/go/bin:$PATH; export CGO_ENABLED=0 GOEXPERIMENT=jsonv2):\n  git reset --hard <PARENT> && git clean -fd\n  git checkout <FIX> -- pkg/dependency/parser/nodejs/pnpm/parse_test.go pkg/dependency/parser/nodejs/pnpm/parse_testcase.go pkg/dependency/parser/nodejs/pnpm/testdata/pnpm-lock_v9_multiple_documents.yaml\n  go test -v -short ./pkg/dependency/parser/nodejs/pnpm/...\nAt parent: FAIL. At fix (plain checkout): PASS. The fixture is a pnpm v9 YAML lockfile with two documents separated by '---' (first = pnpm's own environment lockfile, second = the project under /app).",
+    "observed_failure_at_parent": "FAIL: TestParse/v9_with_multiple_documents. 'Not equal: expected (len=1) {is-number@7.0.0 Relationship=3(Workspace)} ... actual (len=19) {pnpm@11.9.0, @pnpm/exe@11.9.0, @pnpm/linux-x64@11.9.0, @pnpm/win-x64@11.9.0, @reflink/reflink@0.1.19, ... (all Dev=true)}' - only the first YAML document is decoded, so the pnpm package-manager environment (pnpm and its platform binaries) is reported as the project's own dependencies and the real project dependency is missing. Buggy code confirmed at parent: parse.go has a single 'if err := yaml.NewDecoder(r).Decode(&lockFile); err != nil' with no document loop; 'grep -c isEnvLockfile pkg/dependency/parser/nodejs/pnpm/types.go' = 0.",
+    "verified": "Both directions observed in container bench-base:ubuntu-24.04 (trivy-miner) with Go 1.26.3, CGO_ENABLED=0 GOEXPERIMENT=jsonv2. Parent a2777aed: single-document Decode present, isEnvLockfile count 0; fix-version test+testcase+fixture overlaid -> TestParse/v9_with_multiple_documents FAILS with the 19-vs-1 package diff above. Fix a10291be: multi-document decode loop + types.go isEnvLockfile (count 2) present; same test PASSES (35 passed, exit 0).",
+    "dependency_pins": {
+      "go toolchain": "1.26.3 (go.mod 'go 1.26.3'; any 1.26.x works, CI check-latest uses 1.26.8)",
+      "go.sum": "all transitive deps hash-pinned by the repo's committed go.sum against sum.golang.org"
+    },
+    "install_recipe": "apt-get update && apt-get install -y git && curl -sSL -o /tmp/go.tgz https://github.com/actions/go-versions/releases/download/1.26.3-25533533231/go-1.26.3-linux-x64.tar.gz && mkdir -p /opt/go && tar -xzf /tmp/go.tgz -C /opt/go --strip-components=1 && rm /tmp/go.tgz && export PATH=/opt/go/bin:$PATH && export CGO_ENABLED=0 GOEXPERIMENT=jsonv2 && cd /work/trivy && git config --global --add safe.directory /work/trivy && git reset --hard <SHA> && git clean -fd && go test -v -short ./pkg/dependency/parser/nodejs/pnpm/...",
+    "issue_paraphrase": "For projects managed by a pnpm release that writes its YAML lockfile as multiple documents - the first holding the package manager's own environment (pnpm itself and its per-platform binary packages), a later one the actual project dependencies - the scanner decodes only the first document, so it reports the package manager's internal packages as if they were the project's dependencies, flooding the SBOM with pnpm's machinery while the real project dependency is missing from the report.",
+    "fix_summary": "The pnpm YAML parser now loops over all YAML documents, skipping any document that is the pnpm environment lockfile (detected via the new isEnvLockfile() on the lockfile's importers, which checks for configDependencies/packageManagerDependencies fields) and parsing the first non-environment document; an empty/env-only file returns no packages.",
+    "difficulty_guess": "medium",
+    "notes": "Good size (~44 source/test lines + 221-line fixture). Fixture produced by real pnpm 11.7.0 output as documented in the testcase comment. Same env caveats as the other entries (GOEXPERIMENT=jsonv2, single-module `go test`, ~1GB first download; the pnpm module test suite runs in ~0.05s after build). Verification logs in container trivy-miner: /tmp/pnpm_parent.log and /tmp/pnpm_fix.log."
+  }
+]

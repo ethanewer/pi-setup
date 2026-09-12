@@ -1,0 +1,89 @@
+[
+  {
+    "repository": "starship/starship",
+    "upstream_issue_ref": "#7426",
+    "fix_commit": "d455255e7bc5ae5e96ac5a3e2610458a9f213b49",
+    "parent_commit": "d0e246802c85d5aa956f536f9ab7ead282dbab7a",
+    "base_image": "bench-base:ubuntu-24.04",
+    "source_files_changed": [
+      "src/modules/maven.rs",
+      "src/configs/maven.rs"
+    ],
+    "golden_test_paths": [
+      "src/modules/maven.rs"
+    ],
+    "golden_test_names": [
+      "folder_with_maven_config_does_not_trigger_module"
+    ],
+    "reproduction": "cd <repo>\n# buggy code confirmed at parent: src/configs/maven.rs default has detect_folders = vec![\".mvn\"]\nmkdir -p /tmp/proj/.mvn && touch /tmp/proj/.mvn/maven.config\nprintf 'format = \"$maven\"\\nadd_newline = false\\n[maven]\\ndisabled = false\\n' > /tmp/mvn.cfg\n# CLI direction:\nSTARSHIP_CONFIG=/tmp/mvn.cfg ./target/debug/starship prompt --path /tmp/proj   # PARENT: prints 'via \\x1b[1;96m\\uf4c0 \\x1b[0m' ; FIX: prints nothing\n# Unit-test direction (starship keeps unit tests inline in the source):\ncargo test --locked -- folder_with_maven_config_does_not_trigger_module   # at parent the test must be copied in from the fix commit first (see notes)",
+    "observed_failure_at_parent": "CLI: 'STARSHIP_CONFIG=/tmp/mvn.cfg ./target/debug/starship prompt --path /tmp/proj' outputs 'via \\x1b[1;96m\\uf4c0 \\x1b[0m' for a directory that contains only .mvn/maven.config (false positive). Unit test (fix's test copied into parent tree): 'assertion `left == right` failed; left: None; right: Some(\"via \\u{1b}[1;96m\\uf4c0 \\u{1b}[0m\")'.",
+    "verified": "Both directions observed in bench-base:ubuntu-24.04 (rustc 1.98.1, cargo --locked). FIX (d455255e): 'cargo test --locked -- folder_with_maven_config_does_not_trigger_module' -> '1 passed; 1254 filtered out'; CLI prompt with format=$maven in an .mvn-only dir outputs nothing. PARENT (d0e246802): same CLI prints 'via \u001b[1;96m \u001b[0m'; with the fix commit's test fn copied into src/modules/maven.rs `mod tests` (the only change from the fix), 'cargo test --locked -- folder_with_maven_config_does_not_trigger_module' -> 'FAILED (0 passed; 1 failed)'. Buggy code confirmed present at parent by inspection: src/configs/maven.rs Default has 'detect_folders: vec![\".mvn\"]' and src/modules/maven.rs does not gate detection on wrapper properties.",
+    "dependency_pins": {
+      "rust-toolchain": "rustup stable (1.98.1 used); needs >=1.85 for edition 2024; fixed commit declares MSRV 1.90",
+      "lockfile": "-locked required; Cargo.lock is committed, everything else fetched from crates.io"
+    },
+    "install_recipe": "apt-get update && apt-get install -y build-essential\ncurl -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal\n. \"$HOME/.cargo/env\"\ncd starship\ncargo test --locked -- folder_with_maven_config_does_not_trigger_module",
+    "issue_paraphrase": "Rendering the prompt inside a directory that merely contains an .mvn folder (for example a user-level Maven config directory holding only .mvn/maven.config, with no pom.xml or wrapper properties anywhere) wrongly activates the Maven module, so an empty version tag with the Maven symbol appears in the prompt. The Maven segment should only show for real Maven projects, i.e. when a pom.xml or Maven wrapper properties file is found.",
+    "fix_summary": "Removed '.mvn' from the maven module's default detect_folders and made detection also require/match maven-wrapper properties files, so an .mvn directory alone no longer triggers the maven module.",
+    "difficulty_guess": "easy",
+    "notes": "AUTHORING HAZARD: starship keeps unit tests INLINE in the source file, so there is no separate test file to `git show <fix>:<path>` from. Do NOT paste the whole fixed file over the parent tree (it contains the fix). For maven #7426 the golden test is only the single function `folder_with_maven_config_does_not_trigger_module` (void, io::Result-based) that the fix commit adds inside `mod tests` in src/modules/maven.rs; copy just that function (with the two lines above it: '#[test] fn ... -> io::Result<()> {') into the parent's `mod tests` block after `folder_without_maven_files`; it compiles unchanged on the parent tree (uses only tempfile::tempdir, fs::create_dir_all, File::create, ModuleRenderer::new(\"maven\").path(...).collect()). Snapshot: parent commit d0e24680. The buggy line to confirm at parent: src/configs/maven.rs default detect_folders = vec![\".mvn\"]. Build: cold build ~10-11 min on 64 cores (deps + 2.8GB target/), 60-90 min at 1 CPU; incremental bin rebuild ~2-15 min; the target unit test runs in <1s. No pty/shell/network needed for this test. Avoid other module integration tests that shell out to git/svn. Verified 2026-09-11 on bench-base:ubuntu-24.04 (rustc 1.98.1), both directions."
+  },
+  {
+    "repository": "starship/starship",
+    "upstream_issue_ref": "#7201",
+    "fix_commit": "91861886a779805cd8265a85c629e579d513aa75",
+    "parent_commit": "0dd5a4f402c8d94524aaaa5632b2d0cba7fe1630",
+    "base_image": "bench-base:ubuntu-24.04",
+    "source_files_changed": [
+      "src/formatter/string_formatter.rs"
+    ],
+    "golden_test_paths": [
+      "src/formatter/string_formatter.rs"
+    ],
+    "golden_test_names": [
+      "test_empty_textgroup_with_style",
+      "test_empty_textgroup_without_style",
+      "test_empty_textgroup_propagates_prev_bg"
+    ],
+    "reproduction": "cd <repo>\n# CLI direction:\nprintf 'format = \"[](bg:red)[X](bg:prev_bg)\"\\nadd_newline = false\\n' > /tmp/fmt.cfg\nSTARSHIP_CONFIG=/tmp/fmt.cfg ./target/debug/starship prompt | od -An -c   # PARENT: 'X' only (no escape codes); FIX: '\\233 4 1 m X \\233 0 m' (\\x1b[41mX\\x1b[0m)\n# Unit-test direction (tests are inline in the source file):\ncargo test --locked -- test_empty_textgroup   # 3 tests; at parent the test fns must be copied in from the fix commit first (see notes)",
+    "observed_failure_at_parent": "CLI: prompt with format '[](bg:red)[X](bg:prev_bg)' outputs the single byte 'X' with no background color escape. Unit tests (fix's test fns copied into parent tree): 'test_empty_textgroup_with_style' -> 'assertion `left == right` failed; left: 0; right: 1'; 'test_empty_textgroup_without_style' -> 'left: 0; right: 1'; 'test_empty_textgroup_propagates_prev_bg' -> 'left: 1; right: 2'.",
+    "verified": "Both directions observed in bench-base:ubuntu-24.04 (rustc 1.98.1). FIX (91861886): 'cargo test --locked -- test_empty_textgroup' -> 3 passed; CLI prompt outputs '\\x1b[41mX\\x1b[0m' (10 bytes). PARENT (0dd5a4f402): CLI prompt outputs 'X' (1 byte, no background); with the fix commit's three test fns copied into src/formatter/string_formatter.rs mod tests, the same cargo test filter reports FAILED (0 passed; 3 failed) with the assertion failures above. Buggy code present at parent by inspection: the textgroup parse path calls parse_format(textgroup.format, ...) directly, so an empty format yields an empty segment list instead of a style-carrying empty segment.",
+    "dependency_pins": {
+      "rust-toolchain": "rustup stable (1.98.1 used); needs >=1.85 for edition 2024; fixed commit declares MSRV 1.90",
+      "lockfile": "-locked required; Cargo.lock is committed"
+    },
+    "install_recipe": "apt-get update && apt-get install -y build-essential\ncurl -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal\n. \"$HOME/.cargo/env\"\ncd starship\ncargo test --locked -- test_empty_textgroup",
+    "issue_paraphrase": "In prompt format strings, an empty textgroup whose only purpose is to set a color, such as [](bg:#9A348E), is discarded entirely, so it cannot establish the style that later segments should inherit through prev_fg/prev_bg references. Concretely, [](bg:red)[X](bg:prev_bg) renders the X with no background at all, because the preceding empty group produced no segment for prev_bg to refer back to.",
+    "fix_summary": "When a textgroup's format is empty, the formatter now still emits one empty segment that carries the textgroup's style, so prev_fg/prev_bg references resolve against it and the rest of the prompt inherits the intended foreground/background.",
+    "difficulty_guess": "medium",
+    "notes": "AUTHORING HAZARD: starship keeps unit tests INLINE in the source file; do NOT paste the whole fixed src/formatter/string_formatter.rs over the parent tree (it contains the fix). The golden tests are the three functions test_empty_textgroup_with_style, test_empty_textgroup_without_style and test_empty_textgroup_propagates_prev_bg that the fix commit adds inside the existing `mod tests` block; copy just those three functions (with their '#[test]' attribute lines) into the parent's mod tests, e.g. right before the pre-existing test_nested_conditional; they compile unchanged on the parent tree (they use only StringFormatter::new, .parse(None, None), Segment value()/style()/ansi_string(None)/style_ref() and nu_ansi_term::Color::Rgb, all present at parent). Snapshot: parent commit 0dd5a4f402. Buggy code to confirm at parent: the textgroup parse path in parse_textgroup calls parse_format(textgroup.format, ...) directly so an empty format yields zero segments. Build: cold ~10-11 min at 64 cores, 60-90 min at 1 CPU; incremental bin rebuild ~2-15 min; tests <1s. No pty/shell needed. The CLI check: format \"[](bg:red)[X](bg:prev_bg)\" renders plain 'X' (1 byte) at parent vs '\\x1b[41mX\\x1b[0m' at fix. Verified 2026-09-11 on bench-base:ubuntu-24.04."
+  },
+  {
+    "repository": "starship/starship",
+    "upstream_issue_ref": "#6861",
+    "fix_commit": "2c11c086b8da5ea43ae795fa0e71a621e983ebcc",
+    "parent_commit": "109a6811cee1faae677a24a7d92fa8ed39397485",
+    "base_image": "bench-base:ubuntu-24.04",
+    "source_files_changed": [
+      "src/print.rs"
+    ],
+    "golden_test_paths": [
+      "src/print.rs"
+    ],
+    "golden_test_names": [
+      "test_grapheme_aware_width"
+    ],
+    "reproduction": "cd <repo>\ncargo test --locked -- test_grapheme_aware_width\n# The golden version of the test (from the fix commit) includes the line:\n#   assert_eq!(11, \"\\x1B[35;6mnormal text\".width_graphemes());\n# At the parent commit, apply the fix commit's version of src/print.rs (or add only that assertion) so the test compiles, then run the command.",
+    "observed_failure_at_parent": "'assertion `left == right` failed; left: 11; right: 17' for the assertion 'assert_eq!(11, \"\\x1B[35;6mnormal text\".width_graphemes())' - width_graphemes() counts each printable character of the ANSI CSI sequence (\"[35;6m\") as one column of width, so a 11-char visible string measures 17.",
+    "verified": "Both directions observed in bench-base:ubuntu-24.04 (rustc 1.98.1). FIX (2c11c086): 'cargo test --locked -- test_grapheme_aware_width' -> 1 passed. PARENT (109a6811): with the fix commit's added assertion injected into the existing inline test (the test fn already exists at parent, only its body lacks the magenta assertion), the same command reports 'FAILED (0 passed; 1 failed)' with left: 11 right: 17. Buggy code present at parent by inspection: width_graphemes() measures self.as_ref().graphemes(true)... directly with no stripping of ANSI escapes. Note: the starship explain column misalignment itself needs pre-colored module output (e.g. colored custom-command output) and is hard to reproduce headless inside a pty at default widths; the maintainers' own regression test (the grapheme-width unit test) is the authoritative check and it fails at parent / passes at fix as recorded.",
+    "dependency_pins": {
+      "rust-toolchain": "rustup stable (1.98.1 used); needs >=1.85 for edition 2024; fixed commit declares MSRV 1.85",
+      "lockfile": "-locked required; Cargo.lock is committed"
+    },
+    "install_recipe": "apt-get update && apt-get install -y build-essential\ncurl -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal\n. \"$HOME/.cargo/env\"\ncd starship\ncargo test --locked -- test_grapheme_aware_width",
+    "issue_paraphrase": "The width function used to lay out the 'starship explain' breakdown table measures a module's value by its raw byte length, so ANSI color escape sequences embedded in the value are counted as if they were printable characters. Whenever a module's output contains color codes (for example pre-colored text emitted by a custom command), explain pads the columns with the wrong number of spaces and the module value and description columns end up misaligned.",
+    "fix_summary": "Pre-compiling a regex for ANSI CSI color sequences ('\\x1B\\[[0-9;]*m') and stripping those codes inside width_graphemes() before measuring grapheme widths, so non-printing escape sequences no longer inflate the measured width.",
+    "difficulty_guess": "easy",
+    "notes": "AUTHORING HAZARD: the golden test is an INLINE unit test in src/print.rs, and it is a MODIFICATION of a pre-existing test function: the fix commit changes test_grapheme_aware_width (which exists at the parent too) by adding the single line assert_eq!(11, \"\\x1B[35;6mnormal text\".width_graphemes()); after the existing 'normal text' assertion. Do NOT paste the whole fixed src/print.rs (it contains the fix); patch the parent's test function with that added assertion only. With the assertion added, the test compiles and FAILS at parent (left: 11, right: 17) and PASSES at fix. Snapshot: parent commit 109a6811. Buggy code to confirm at parent: width_graphemes() in src/print.rs measures the raw string (no ANSI stripping). Build: cold ~10-11 min at 64 cores, 60-90 min at 1 CPU; incremental bin rebuild ~2-15 min; test <1s. No pty/shell needed. The user-visible symptom (explain column misalignment) requires pre-colored module output and a terminal; it is hard to reproduce headless, the width unit test is the authoritative check (the maintainers' own regression test). Verified 2026-09-11 on bench-base:ubuntu-24.04."
+  }
+]

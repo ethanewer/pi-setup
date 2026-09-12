@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 30,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on pallets/jinja at parent commit 37f5b058ee4aaa01994ae4d378fc015bde484933 (real upstream bug, issue #1858, fixed upstream in 051df10c7b95b735ee53eeb1e9c8de1eb48ead14). The parser's required-block body check iterated child.nodes of every body statement, assuming every node has a .nodes attribute (true only for Output/TemplateData); statement nodes such as If or Block inside a '{% block x required %}' raise AttributeError ('If' object has no attribute 'nodes') instead of the intended TemplateSyntaxError 'Required blocks can only contain comments or whitespace'. Agent must localise the bug in the real tree (block-body check in the parser), fix it, keep the repo's own inheritance tests green, and only modify the minimal source file; the verifier also runs the upstream regression test for this bug extracted from the fix commit into /opt/golden/, plus hidden cases over statement kinds the upstream test does not use (for/set/expr/comment+statement), the exact error contract (class+message+parse-time, non-required-block guard), and required blocks inside an inheritance hierarchy through a real FileSystemLoader. Pure Python, no network, ~2s test suite at 1 CPU. Fixed directions verified inside the task image before shipping."
+}

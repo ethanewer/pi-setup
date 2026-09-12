@@ -1,0 +1,83 @@
+[
+ {
+  "repository": "encode/httpx",
+  "upstream_issue_ref": "#3412",
+  "fix_commit": "47f4a96ffaaaa07dca1614409549b5d7a6e7af49",
+  "parent_commit": "189fc4bcbe5f314128775dec66a616ac9a31ad48",
+  "base_image": "bench-base:python-3.12",
+  "source_files_changed": [
+   "httpx/_decoders.py"
+  ],
+  "golden_test_paths": [
+   "tests/test_decoders.py"
+  ],
+  "golden_test_names": [
+   "test_zstd_empty",
+   "test_zstd_truncated"
+  ],
+  "reproduction": "python3 -c \"import httpx; r = httpx.Response(200, headers=[(b'Content-Encoding', b'zstd')], content=b''); print(repr(r.content))\"\nRequires `pip install zstandard` (the extra is not pulled by the core install). At parent_commit this raises `DecodingError: Zstandard data is incomplete` and exits non-zero; at fix_commit it prints b''.",
+  "observed_failure_at_parent": "httpx.Response(200, headers=[(b'Content-Encoding', b'zstd')], content=b'').content raises httpx.DecodingError: Zstandard data is incomplete (observed: \"RAISED DecodingError: Zstandard data is incomplete\"). Project regression test test_zstd_empty FAILS against the overlay of the fix's test file (golden run at parent: '1 failed, 1 passed, 38 deselected'), while test_zstd_truncated already passes at parent. Buggy code confirmed at parent: ZStandardDecoder.flush() unconditionally checks decompressor.eof, and ZStandardDecoder has no seen_data flag (awk-scoped count 0).",
+  "verified": "Both directions observed in container bench-base:python-3.12 (Python 3.12, httpx installed editable, zstandard installed). Parent 189fc4b: repro raises DecodingError (exit 1); golden tests 1 failed / 1 passed. Fix 47f4a96: repro prints b'' (exit 0); golden tests 2 passed. Code presence: ZStandardDecoder-scoped 'seen_data' count is 0 at parent and 3 at fix.",
+  "dependency_pins": {
+   "zstandard": ">=0.18.0"
+  },
+  "install_recipe": "git config --global --add safe.directory /work/httpx && cd /work/httpx && git reset --hard <sha> && git clean -fd && python3 -m pip install -e '.[brotli,cli,http2,socks,zstd]' chardet pytest trio trustme uvicorn cryptography",
+  "issue_paraphrase": "An HTTP response that comes back with an empty body but declares a zstd content encoding makes httpx raise an unexpected decoding error whenever the body is read: the library complains that the compressed data is incomplete even though the server deliberately sent no bytes at all. Clients that talk to endpoints which return zero-length responses carrying that header crash on reading the body instead of getting an empty result. The failure shows up the moment the empty body is materialized, whether through response.content, iter_bytes, or a plain read.",
+  "fix_summary": "Added a `seen_data` flag to ZStandardDecoder: when no data has ever been fed (empty body) its flush() returns b'' immediately instead of consulting decompressor.eof and raising DecodingError. Added regression tests cover both the empty-body and the truncated-stream cases.",
+  "difficulty_guess": "easy",
+  "notes": "Fast and fully offline (<1s). CRITICAL environment trap: if the zstandard package is not installed, httpx silently falls back to an identity decoder for Content-Encoding: zstd, and the bug does NOT reproduce (the repro would pass even at the parent). The task image must install zstandard. Verified with zstandard 0.23.x on Python 3.12. test_zstd_truncated is a pre-existing passing test; test_zstd_empty is the regression signal."
+ },
+ {
+  "repository": "encode/httpx",
+  "upstream_issue_ref": "#2998",
+  "fix_commit": "1e110964736a95d822144390b99d7ecf17fca527",
+  "parent_commit": "90538a3b4610ba49ce16c997bcfdb9101f9503be",
+  "base_image": "bench-base:python-3.12",
+  "source_files_changed": [
+   "httpx/_decoders.py",
+   "httpx/_models.py"
+  ],
+  "golden_test_paths": [
+   "tests/test_decoders.py"
+  ],
+  "golden_test_names": [
+   "test_streaming_text_decoder"
+  ],
+  "reproduction": "python3 -c \"import httpx; print(list(httpx.Response(200, content=iter((b'Hello,', b' world!'))).iter_text()))\"\nAt parent_commit this prints ['Hello,', ' world!', ''] (a spurious trailing empty string); at fix_commit it prints ['Hello,', ' world!']. Script exits non-zero at parent when asserting no empty chunk is present.",
+  "observed_failure_at_parent": "iter_text() over a body delivered in multiple chunks yields a spurious trailing '' chunk: observed chunks = ['Hello,', ' world!', '']. Project regression test test_streaming_text_decoder FAILS against the overlay of the fix's test file (golden run at parent: '1 failed, 34 deselected'). Buggy code confirmed at parent: within TextChunker, decode() contains the bare 'return [content]' (scoped count 1 in the parent blob); Response.iter_text flushes an empty string through it.",
+  "verified": "Both directions observed in container bench-base:python-3.12 (Python 3.12, httpx installed editable). Parent 90538a3: repro prints ['Hello,', ' world!', ''] (exit 1); golden test FAILS. Fix 1e11096: repro prints ['Hello,', ' world!'] (exit 0); golden test PASSES. Code presence: TextChunker-scoped bare 'return [content]' present at parent, replaced by 'return [content] if content else []' at fix.",
+  "dependency_pins": {
+   "chardet": "5.2.0"
+  },
+  "install_recipe": "git config --global --add safe.directory /work/httpx && cd /work/httpx && git reset --hard <sha> && git clean -fd && python3 -m pip install -e '.[brotli,cli,http2,socks]' chardet pytest trio trustme uvicorn cryptography",
+  "issue_paraphrase": "Streaming the decoded text of an HTTP response in chunks produces a spurious empty piece at the end: iterating over the text of a response whose body arrives as multiple chunks yields an extra empty string after the actual content. Code that joins the yielded chunks to rebuild a document ends up with a trailing empty element that is not part of the response, and assertions over the exact chunk sequence fail. The extra piece appears only when the body is split across more than one chunk; single-piece bodies are unaffected.",
+  "fix_summary": "TextChunker.decode() now returns an empty list instead of a list containing one empty string when the input text is empty, so Response.iter_text()/iter_lines() no longer emit a spurious '' chunk after the final flush. The now-unreachable yield paths in Response.iter_text and iter_lines were marked pragma: no cover, and a streaming regression test was added.",
+  "difficulty_guess": "easy",
+  "notes": "Fast and fully offline (<1s). Works with contemporary dependencies (verified with modern httpcore/anyio on Python 3.12). chardet is only needed because tests/test_decoders.py imports it at module scope (any test in that file needs it). The repro is pure in-memory; no server or network involved."
+ },
+ {
+  "repository": "encode/httpx",
+  "upstream_issue_ref": "#3116",
+  "fix_commit": "6d852d319acd5d97caf14037dff15ede04b37542",
+  "parent_commit": "df5345140e09ac6c2de0d9589bcd6f3e31c6aa3f",
+  "base_image": "bench-base:python-3.12",
+  "source_files_changed": [
+   "httpx/_client.py"
+  ],
+  "golden_test_paths": [
+   "tests/test_timeouts.py"
+  ],
+  "golden_test_names": [
+   "test_async_client_new_request_send_timeout"
+  ],
+  "reproduction": "python3 /tmp/repro.py  where repro.py is:\nimport http.server, socketserver, threading, time, httpx\nclass Handler(http.server.BaseHTTPRequestHandler):\n    def do_GET(self):\n        time.sleep(0.25)\n        self.send_response(200); self.send_header('Content-Length','2'); self.end_headers(); self.wfile.write(b'ok')\n    def log_message(self, *a): pass\nsrv = socketserver.TCPServer(('127.0.0.1', 0), Handler); threading.Thread(target=srv.serve_forever, daemon=True).start()\nclient = httpx.Client(timeout=0.05)\nt0 = time.time()\ntry:\n    r = client.send(httpx.Request('GET', f'http://127.0.0.1:{srv.server_address[1]}/'))\n    print('SENT OK status=%s elapsed=%.3f' % (r.status_code, time.time()-t0))\nexcept httpx.TimeoutException as e:\n    print('TIMEOUT raised: %s after %.3f' % (type(e).__name__, time.time()-t0)); raise SystemExit(1)\nAt parent_commit: 'SENT OK status=200 elapsed=0.252s' (the client's 0.05s timeout is IGNORED and the send succeeds). At fix_commit: 'TIMEOUT raised: ReadTimeout after 0.051s' (SystemExit 1).",
+  "observed_failure_at_parent": "client.send() with a manually constructed httpx.Request ignores the client-level Timeout(0.05): observed 'SENT OK status=200 elapsed=0.252s' against a localhost server that takes 0.25s to answer. Project regression test test_async_client_new_request_send_timeout FAILS against the overlay of the fix's test file with 'Failed: DID NOT RAISE TimeoutException' (golden run at parent: 2 failed = one per anyio backend, 8 deselected; uvicorn access log shows the /slow_response request completed 200). Buggy code confirmed at parent: httpx/_client.py contains no _set_timeout (grep -c == 0) and neither Client.send nor AsyncClient.send writes the client timeout into request.extensions.",
+  "verified": "Both directions observed in container bench-base:python-3.12 (Python 3.12, httpx installed editable, plus uvicorn, trustme, cryptography, trio, pytest for the golden test). Parent df53451: repro SENT OK ~0.25s (exit 1), golden test fails both anyio-backend runs. Fix 6d852d3: repro raises ReadTimeout after ~0.051s (exit 0), golden test passes both runs ('2 passed, 8 deselected in 0.22s'). Code presence: '_set_timeout' grep count 0 at parent, 3 at fix.",
+  "dependency_pins": {},
+  "install_recipe": "git config --global --add safe.directory /work/httpx && cd /work/httpx && git reset --hard <sha> && git clean -fd && python3 -m pip install -e '.[brotli,cli,http2,socks]' chardet pytest trio trustme uvicorn cryptography",
+  "issue_paraphrase": "The per-client timeout is silently ignored when a request is created directly as an httpx.Request instance instead of through the client's own request builder: sending a manually constructed request via client.send(...) runs with the default timeout even though the client was configured with a much smaller one, so operations that should be aborted almost immediately instead hang for the full default period and eventually succeed anyway. The same gap affects both the synchronous and the asynchronous client APIs. Programs that rely on a strict timeout to fail fast are left waiting regardless of their configured value.",
+  "fix_summary": "Added BaseClient._set_timeout(request), which copies the client's configured timeout into request.extensions when the request does not already carry a timeout, and called it from both Client.send and AsyncClient.send before authentication handling. Manually built Request instances passed to send() now honor the client-level timeout instead of falling back to the default.",
+  "difficulty_guess": "medium",
+  "notes": "Repro needs only loopback networking (localhost socket server), no external network; golden test spins an in-process uvicorn ASGI server (conftest fixture), also loopback-only. Test run takes ~2.2s at parent (server slow path sleeps 1.0s) and ~0.2s at fix. The golden test is @pytest.mark.anyio and runs once per backend (asyncio + trio) when both are installed, hence 2 failed/2 passed lines. Not flaky in local runs. The sync Client.send is fixed by the same commit, so a sync direct repro is the simplest oracle."
+ }
+]

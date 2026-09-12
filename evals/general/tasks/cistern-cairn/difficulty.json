@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 30,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on expressjs/express at parent commit 160b91cbf79b595712b694c3513c347551d17fbe (express 5.0.0-beta.3 era, real upstream bug, issue #5792). res.clearCookie builds its options with merge({expires:new Date(1),path:'/'}, options), so a caller's maxAge or explicit expires date overrides the forced past expiry: clearing with a keep-alive maxAge emits a Set-Cookie carrying Max-Age plus a future Expires, and clearing with an explicit expires emits that future date instead of 1 Jan 1970 - the cookie survives/re-creates instead of being removed. Agent must localise the bug in the real tree (lib/response.js), force the past expiry and drop maxAge while keeping unrelated passthrough options, keep the repo's own cookie tests green, and only modify the minimal source file; verifier also runs the upstream regression test extracted from fix commit 82fc12a40b3e6694e9a2c9b1376e7548d95779f6 into /opt/golden, and authored hidden cases over a large maxAge+domain/httpOnly, a far-future expires, a negative maxAge and secure/sameSite combos. Pure-JS, node 22, no network, ~18ms mocha golden. node_modules warmed at build time (gitignored upstream, survives git reset). Both directions re-confirmed inside the task image before shipping. REVIEW (v4 wave): independently re-verified both directions in a fresh build of the task image; confirmed the fix commit is the direct child of the parent and the golden sha 83d883ab equals the genuine upstream file at 82fc12a40b3e6694e9a2c9b1376e7548d95779f6:test/res.clearCookie.js. Two real bypasses found and closed: (1) an untracked .mocharc.js in /app/src can inject a require() hook monkey-patching res.clearCookie so every golden+hidden test passes with the tracked bug intact (scored 1); (2) patching the gitignored node_modules/cookie serializer (invisible to git status --porcelain) to force-expire empty-value cookies also scored 1 with the tracked source untouched. Tightening: all mocha runs now use --no-config --no-package; test.sh asserts the tracked lib/response.js clearCookie body forces a past expiry (new Date(0)/new Date(1)) and strips maxAge (delete/undefined), asserts node_modules/cookie/index.js matches the pinned 0.6.0 sha 9fd02358, and asserts /opt/golden/res.clearCookie.js matches the upstream sha 83d883ab (agent runs as root and can otherwise rewrite the golden). All three attacks now score 0; oracle scores 1; nop scores 0. Note: acceptance containers have network egress on this host (observed NET_OK 200 to registry.npmjs.org from the agent phase), so the './no network' framing in the instruction holds only under the sweep's network_mode none."
+}

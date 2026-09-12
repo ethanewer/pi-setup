@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 30,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on pallets/click at parent commit 7f7bbe4569ea68e8dabee232eade069ef3310aea (real upstream bug, issue pallets/click#3084, fix commit 91de59c6c8abc8251e7af551cd4546cc964288af). An option declared is_flag=False together with an explicit flag_value and a default is refused when passed with no value ('Option '--name' requires an argument.', exit 2): in Option.__init__ the resolved _flag_needs_value only considered self.default is UNSET, so a set default turned off the valueless-flag (FLAG_NEEDS_VALUE) path entirely even though flag_value was set. The upstream fix makes the option resolution use 'flag_value is not UNSET or self.default is UNSET'. Agent must localise and fix it in the real checkout, keeping the project's own option/argument/basic test suites green; verifier runs the project's own regression tests extracted from the fix commit into /opt/golden (test_flag_value_optional_behavior and test_flag_value_with_type_conversion from tests/test_options.py), the parent-era tests/test_options.py + tests/test_arguments.py + tests/test_basic.py, and three authored hidden cases the upstream test does not cover (short-option/attached-value forms with options not swallowed, type-converted flag_value incl. multiple=True mixing bare and explicit values, and a valueless flag among positional arguments), and asserts tree provenance (HEAD pinned at parent, fix commit unreachable from the clone, only src/click/core.py modified, no new files under src/). Pure Python editable install (flit), pytest==8.4.2 pinned, no network at trial time; both directions re-confirmed inside the task image before shipping. Reviewer hardening (review:bracket-cleat): verifier now (a) re-checks the sha256 of /opt/golden/test_options.py against the fix-commit extraction (a root trial could otherwise replace the golden regression tests with trivially-passing stubs), (b) runs a decisive probe with `python3 -S` + PYTHONPATH=/app/src/src from a pristine /tests fixture so sitecustomize.py/.pth runtime shims cannot fake the fix; (c) sweeps stray conftest.py from the harness dirs. Instruction network claim corrected: trials on this host have egress (git fetch/curl verified inside a harbor run), so the 'fix commit unreachable' provenance check is what enforces no-fetch. Both acceptance directions re-confirmed after hardening."
+}

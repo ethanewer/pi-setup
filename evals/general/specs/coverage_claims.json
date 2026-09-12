@@ -7753,5 +7753,305 @@
   "evidence": {},
   "note": "v4.2 upstream-clone wave (binary-analysis): claims no tb2.1 competencies. Clones angr/angr pinned at f4ea23575ecb4802ede51401bb297d1cb3c1610e (tag v9.3.4), standing in for TB2.1's klee task. The agent must solve an authored binary's input constraint with angr's symbolic execution API. Verifier runs the deliverable against 3 hidden binaries built from the same generator with different constants, requires exit 0 + ACCESS GRANTED, and statically asserts angr import and Project usage; hardcoded and brute-force routes fail or time out.",
   "claims_no_competencies": true
+ },
+ "bracket-anchor": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3 real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository aio-libs/aiohttp, parent 58bae08b7e4831c6c184fe22233bfc19941c700b, fix d5d068cb541ab7df5ecca14515475f9d4a379c5e, upstream issue reference #13278 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. RFC 6265 cookie-expiry parser in aiohttp matches Unicode digits (no re.ASCII); the agent must make the date parser reject non-ASCII digits. Reviewer closed two verifier bypasses (golden-test rewrite via the shared filesystem; sitecustomize wrapper around CookieJar._parse_date) with a golden SHA-256 digest pin and an isolated `python3 -I -S` interpreter with a module-origin check; golden extracted at build time from the fix commit.",
+  "claims_no_competencies": true
+ },
+ "bracket-basin": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3 real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository clap-rs/clap, parent 62da8f94b9aef9f08679e72190f222c84c974af4, fix 473cf175a2fa973b62c79dabf00892d6feff453a, upstream issue reference clap-rs/clap#4710 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. clap's --help layout: should_long lacks the is_hide_set guard, so a possible-value hidden option still forces the long two-line layout; agent must make -h/--help use the short layout for hidden options. Reviewer proved all bypasses score 0 (fake builder binary, deleted builder, /opt/golden overwrite, fix fetch) and hardened test.sh to delete stale/planted build artifacts and the reward file; golden extracted from the fix commit at build time.",
+  "claims_no_competencies": true
+ },
+ "bracket-beacon": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3 real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository cure53/DOMPurify, parent 591c429c8db48797bdbd90a44f90d7ea5a88fbf7, fix 6bc35973f0c6e7fa2344037af024fe0cf9cfa6e2, upstream issue reference #1320 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. DOMPurify's ADD_ATTR function-form callback bypasses URI validation because the attributeCheck branch returns before IS_ALLOWED_URI; agent must make javascript:/vbscript: URIs added via function-form callback get stripped. Reviewer closed two live bypasses (golden-test replacement; node_modules/rollup build-chain hijack) with fix-commit golden sha256 + full node_modules tree sha256 anchors; golden extracted from the fix commit.",
+  "claims_no_competencies": true
+ },
+ "bracket-bell": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3 real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository curl/curl, parent fd8c409d6ab7367051d04646a31e976e3db0c6ed, fix 1143bc9ac6912743a0fef78d5ac81426b172976d, upstream issue reference #22889 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. curl segfaults on a comment-only .netrc file without trailing newline (netrc_scan dereferences a NULL content pointer); agent must make curl survive comment-only netrc files. Reviewer fixed the instruction's accuracy (only comment-only files without trailing newline crash), forced a clean rebuild + ELF check + golden sha256 pin, and closed a src/curl wrapper-swap bypass; golden test2429 pulled from the fix commit at build time.",
+  "claims_no_competencies": true
+ },
+ "bracket-berth": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3 real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository encode/httpx, parent 189fc4bcbe5f314128775dec66a616ac9a31ad48, fix 47f4a96ffaaaa07dca1614409549b5d7a6e7af49, upstream issue reference #3412 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. httpx's zstd decoder: ZStandardDecoder.flush() unconditionally checks decompressor.eof and crashes on empty zstd responses; agent must handle empty zstd bodies. Reviewer closed hardcoding (new tail-truncation hidden case), a sitecustomize wrapper, and forged .pyc injection; golden test_decoders.py extracted from the fix commit at build time.",
+  "claims_no_competencies": true
+ },
+ "bracket-bight": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3 real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository expressjs/express, parent 59e205a57a04fced6bb7b8ec0b5dec29461a9996, fix 18e5985b8a9d5e8423db0a9121f22bdaecd5b120, upstream issue reference #4893 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. express res.send()/clearCookie-style Content-Length collision: 'Content-Length' is emitted even when Transfer-Encoding is present, tripping the HTTP parser; agent must guard Content-Length against Transfer-Encoding. Reviewer found the mocha/supertest symlink-wrapper bypass scoring 1 and closed it with a build-time node_modules manifest + trusted.sha256 + non-empty lib/response.js diff requirement; golden test/res.send.js extracted from the fix commit.",
+  "claims_no_competencies": true
+ },
+ "bracket-bridge": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3 real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository falconry/falcon, parent bc01a2b0a62415a562430fe590a798c1042ab3f5, fix a54317c7f8ec51a7fec8ce83df6b9f4852113253, upstream issue reference #2583 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. falcon's ASGI Request.remote_addr raises TypeError when scope['client'] is None (only KeyError guarded); agent must return the documented default. Reviewer closed two reward-1 holes (golden/hidden test trivialisation; site-packages .pth import-hook patch) with a probe_isolated.py behavior contract under python3 -S plus sha256 of every harness-owned fixture; golden extracted from the fix commit.",
+  "claims_no_competencies": true
+ },
+ "bracket-buoy": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3 real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository giampaolo/psutil, parent 8a5d53df33e28831f4833803b89e40e857d5632d, fix ef3d9af1062e3e5d59e431e957b75fd4287b053e, upstream issue reference #2964 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. psutil broadcast_addr() mishandles a single-host /32 network, returning 127.255.255.255-style nonsense; agent must make net_if_addrs/broadcast_addr handle /32 single hosts. Reviewer closed a sitecustomize monkeypatch bypass with a module-provenance bytecode check, sha256-pinned the golden, and added a new hidden case against net_if_addrs; golden extracted from the fix commit.",
+  "claims_no_competencies": true
+ },
+ "bracket-cable": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3 real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository gin-gonic/gin, parent 2e4d4f38962a6f15ae496d59b294f307eef95429, fix 293ad7edebb3ae30369288bd6416ca0d78474727, upstream issue reference #4695 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. gin Copy() of a request with attached cp.Errors context loses them (Regression context copied twice + missing cp.Errors/cp.Accepted); agent must make context copies carry the errors. Reviewer added golden + hidden fixture sha256 pins and made /opt/golden read-only; golden context_test.go extracted from the fix commit at build time.",
+  "claims_no_competencies": true
+ },
+ "bracket-cairn": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3 real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository junit-team/junit5, parent 8307cd49221d90413c66918c7b094274078a6809, fix cb577cf95050cd7b2f64090261fe5a48acb326bc, upstream issue reference #4839 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. JUnit 5's ReflectionUtils visits nested classes in raw getDeclaredClasses order; agent must sort nested classes deterministically by FQCN hash. Reviewer pinned sha256 of golden + hidden fixtures and replaced the weak 'production changed' gate with absence of the unsorted loop; golden extracted from the fix commit at build time.",
+  "claims_no_competencies": true
+ },
+ "bracket-channel": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3 real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository libvips/libvips, parent 92b95531d198abf9ca40aaa3f67dd6d7f4cfa2bd, fix dbf559add2807037d89a16b7a9e371e8267c0f63, upstream issue reference #5182 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. libvips unpremultiply has no UCHAR_MAX clamp, so alpha=5 premultiply overflows to 254/255 etc.; agent must clamp. Reviewer closed a sitecustomize .pth wrapper plus the no-rebuild hole with a buggy-statement absence check, a shipped-build byte-identity snapshot that must differ after rebuild, and golden sha256 pin; golden extracted from the fix commit.",
+  "claims_no_competencies": true
+ },
+ "bracket-cinder": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3 real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository mikf/gallery-dl, parent f77c330d83018b25924d219f96aaf4f064bd3eaf, fix 098fbba8d7eef0e164b1dadbbf459002c68347e8, upstream issue reference #9113 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. gallery-dl formatter.format_map_safe crashes on int values ('sequence item', %d format args); agent must make template formatting tolerate int/datetime values. Reviewer closed a site-packages sitecustomize.py forcing pytest exit 0 with a build-time interpreter-tree manifest + golden hash pin + strict untracked-file check; golden extracted from the fix commit.",
+  "claims_no_competencies": true
+ },
+ "bracket-cleat": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3 real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository pallets/click, parent 7f7bbe4569ea68e8dabee232eade069ef3310aea, fix 91de59c6c8abc8251e7af551cd4546cc964288af, upstream issue reference #3084 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. click Option flag_value: without an explicit flag_value, `--name` without an argument is misparsed (flag-needs-value); agent must make -n/--name=value behave when default is UNSET. Reviewer closed golden-test tampering (sha256 pin) and runtime shims (python3 -S decisive probe) and corrected a false no-network claim; golden extracted from the fix commit.",
+  "claims_no_competencies": true
+ },
+ "bracket-compass": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3 real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository pallets/jinja, parent 37f5b058ee4aaa01994ae4d378fc015bde484933, fix 051df10c7b95b735ee53eeb1e9c8de1eb48ead14, upstream issue reference #1858 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. jinja2 required blocks: '{% required %}' validation crashes with AttributeError (node.nodes) instead of TemplateSyntaxError; agent must raise the documented parse error. Reviewer closed a /app/src/conftest.py monkeypatch hole (exactly-one-change provenance + PYTHONNOUSERSITE) and corrected instruction wording; golden extracted from the fix commit.",
+  "claims_no_competencies": true
+ },
+ "bracket-coral": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3 real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository pallets/werkzeug, parent 2a2e371f41aba5d83ca575e65a6409aaa7dc1097, fix 89ce5e5a4c59bc9d51d360fd5c205b344ecf06c8, upstream issue reference #2761 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. werkzeug multipart streaming decoder appends an extra newline to binary file uploads (data_end miscomputed); agent must return uploaded bytes exactly. Reviewer added golden sha256 pin, /opt/golden unexpected-file guard, and module-source assertion; golden extracted from the fix commit.",
+  "claims_no_competencies": true
+ },
+ "bracket-crest": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3 real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository prettier/prettier, parent 45a4a75ea639e69d35f885224818e6698561fc11, fix 07184252aa4a84fcc542f34e5e70291a08b5de3a, upstream issue reference #19878 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. prettier markdown: blockquote paragraphs match only when the parent is the exact Paragraph node, breaking multi-line blockquote formatting; agent must fix the ancestor check. Reviewer closed three reward-1 bypasses (assume-unchanged + jest shim, wrong-change + shim, /usr/local/bin wrappers) with flag-clearing provenance, node_modules jest manifest, golden sha256, and a trusted-binary PATH; golden extracted from the fix commit.",
+  "claims_no_competencies": true
+ },
+ "bracket-dune": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3 real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository prometheus/prometheus, parent 297523f69825b59e5e9afc121fd0263c4d0248e5, fix f075de91d03d59f3d5996f1662eb9f0d6de7c40e, upstream issue reference #19045 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. prometheus model/labels Matcher.Prefix() returns the raw prefix for case-insensitive regexes, breaking downstream prefix pruning; agent must return '' when caseInsensitivePrefix is set. Reviewer closed a /opt/go/bin/go shim bypass with a semantic Prefix() source gate; golden matcher_test.go extracted from the fix commit.",
+  "claims_no_competencies": true
+ },
+ "bracket-ember": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3 real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository psf/requests, parent 96b22fa18c00831656ee4b286bf1c9062459b00a, fix 3ff3ff21dd45957c9e143cd500291959bb15f690, upstream issue reference #6628 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. requests JSONDecodeError can't be pickled (missing args), breaking multiprocessing; agent must add signal-appropriate __reduce__. Reviewer closed a sitecustomize __reduce__ wrapper (reward 1 with bug intact) with a literal python-library-tree + golden fingerprint manifest in test.sh; golden extracted from the fix commit.",
+  "claims_no_competencies": true
+ },
+ "bracket-fathom": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3 real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository psycopg/psycopg, parent 7c9b6bee4ea6d7a4da5ce8e4bed9e4cba0c74012, fix 66e4b33fe271780d0bd02f15e94c66d52ed69cba, upstream issue reference #1348 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. psycopg rows._make_nt crashes with bare ValueError on duplicate field names; agent must raise psycopg.DataError. Reviewer closed a python3 wrapper forcing pytest exit 0 with four layers (golden sha256 pins, rows.py semantic diff gate, python3 -S randomized behavioral checks, real-'N passed' log requirement) and corrected a false no-network claim; golden extracted from the fix commit.",
+  "claims_no_competencies": true
+ },
+ "bracket-ferry": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3 real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository pypa/pip, parent b98096615dc25fb9438f87bacfa446589d34e97d, fix 4ab145f7b7e3c4e4617cbff3743fde7dff802ebd, upstream issue reference #14057 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. pip show crashes on a dist without Metadata-Version (ValueError from int() on ''); agent must survive missing metadata. Reviewer closed a sitecustomize print_results/write_output monkeypatch with a build-time byte manifest of /app/src, /usr/local and /opt/golden re-verified against host-reuploaded tests/; golden extracted from the fix commit.",
+  "claims_no_competencies": true
+ },
+ "bracket-flint": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3 real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository pytest-dev/pytest, parent dde81b1948d1592b0156c2fdb79522ade6b4b857, fix 3fc824a62cd5f724ff2ae9a3aff721cee7cb4cbf, upstream issue reference #719 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. pytest parametrize marks: a single argument name without trailing comma is treated as a string (not a tuple); agent must implement has_trailing_comma detection. Reviewer closed untracked-conftest and wheel-swap bypasses (reject any untracked file, require pytest.__file__ under /app/src/src, blob-diff structures.py, --confcutdir, golden sha256); golden extracted from the fix commit.",
+  "claims_no_competencies": true
+ },
+ "bracket-flood": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3 real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository redis/redis, parent 3d15ede58ad862996f9b23d3500cad2a5c7fb0f4, fix 48cc562064dbb52ef3f9cc1a5aa32db6811f5871, upstream issue reference #15756 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. redis RESTORE with a TTL that overflows when added to the current time silently succeeds and drops the key; agent must reject the invalid expire time. Reviewer closed a swapped/fake redis-server binary bypass with touch+rm+make relink and ELF check, plus golden sha256 pin; golden unit/dump.tcl extracted from the fix commit.",
+  "claims_no_competencies": true
+ },
+ "bracket-forge": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3 real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository rust-lang/regex, parent 5ea3eb1e95f0338e283f5f0b4681f0891a1cd836, fix 4733e28ba4f281f643ce93e4089eccbb9a9d5a5a, upstream issue reference rust-lang/regex#1327 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. rust-lang/regex onepass DFA panics (range end index out of range) for nested captures / zero-repetition groups with many slots; agent must clamp the slot cache. Reviewer closed a fake-cargo shim printing 'ok' lines by rebuilding, locating the newest integration binary, and executing it directly with filters; golden regression.rs pinned and extracted from the fix commit.",
+  "claims_no_competencies": true
+ },
+ "bracket-gate": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3 real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository serde-rs/serde, parent bb99b31eb0a55393101f9c80cd959b3a739ad70f, fix 1d6ef76cfb339df48232b59cc2ce8568fd19660c, upstream issue reference #1468 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. serde derive serializes the wrong tag for an internally tagged struct with a flattened internally/adjacently tagged enum; agent must fix serialize_struct_tag_field. Reviewer closed two reward-1 bypasses (test-machinery sabotage under assume-unchanged; fake cargo) with content provenance (every tracked file vs HEAD blob), /opt/harness toolchain manifests, artifact scrubbing, and hidden-case marker checks; golden extracted from the fix commit.",
+  "claims_no_competencies": true
+ },
+ "cistern-anchor": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3 real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository spf13/cobra, parent cc7e235fc26cfd0b5ae36c960f399eea4badaa3e, fix 6b0bd3076cfafd1c108264ed1e4aa0c0fe3f8537, upstream issue reference #1781 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. cobra argsMinusFirstX misorders arguments when --flag has a value and a separate positional (subcommand) is present; agent must preserve command/flag ordering. Reviewer closed a /opt/go/bin/go shim with a sha256 pin + absolute-path invocation; golden command_test.go extracted from the fix commit at build time.",
+  "claims_no_competencies": true
+ },
+ "cistern-basin": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3 real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository sqlalchemy/sqlalchemy, parent 42ddb1fd5f1e29682bcd6ccc7b835999aafec12e, fix 48ad8c81115bd01d733fe1a4f78c8c30d7c2abbb, upstream issue reference #12368 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. SQLAlchemy SQLite DDL renders 'WITHOUT ROWID\\n STRICT' without a comma; agent must emit 'WITHOUT ROWID, STRICT'. Reviewer closed a sitecustomize post_create_table patch and golden tamper (python3 -S + PYTHONPATH=/app/src/lib, golden sha256 pin, -S behavioral probe) and fixed solution/solve.sh invocation flags; golden extracted from the fix commit.",
+  "claims_no_competencies": true
+ },
+ "cistern-beacon": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3 real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository sympy/sympy, parent 6a968f7201e5d9187b50dbdc2cc66b17594a59ac, fix 66ee6e06934fede513c7504413baacbf80917186, upstream issue reference #29368 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. sympy linprog crashes with 'must give A and B' when A is omitted (simplex A,b unpacking); agent must make A optional. Reviewer hardened golden + hidden sha256 pins and PYTHONNOUSERSITE; golden extracted from the fix commit.",
+  "claims_no_competencies": true
+ },
+ "cistern-bell": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3 real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository tmux/tmux, parent 73db0a54e5ae5abf80bb790829222c9760f60b1d, fix d44bfda26d2468b5f474087b56f93eda34c541b6, upstream issue reference #5576 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. tmux select-window/has-session accept malformed +0/+foo pane/window targets because strtonum errors are discarded and they are treated as signed offsets; agent must reject malformed offsets (can't find window/pane). Reviewer closed golden-script tampering hidden by assume-unchanged (git ls-files -v flag check) and /opt/golden rewrite (sha256 pins); golden regress scripts pulled from the fix merge at build time.",
+  "claims_no_competencies": true
+ },
+ "cistern-berth": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3 real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository aio-libs/aiohttp, parent 956f140095b21a88e11def934d42de85cc0b2b6b, fix b2b2bce03c17521dc454cdd4a6e19ab0a08bce6b, upstream issue reference #13229 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. aiohttp web_request.forwarded() hangs (infinite loop) on a malformed Forwarded header ('; a'); agent must skip malformed entries. Reviewer closed golden rewrite + sitecustomize wrapper bypasses with a golden sha256 pin, site-hygiene gate, and a python3 -S contract probe in /tests; golden extracted from the fix commit.",
+  "claims_no_competencies": true
+ },
+ "cistern-bight": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3 real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository clap-rs/clap, parent fb9435d026ab011c9071ca92eeab738b9b30ca13, fix 8c92ef6c76686a642e748919f33587561c2a0280, upstream issue reference #4712 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. clap long-help edge case again: possible_values leaking into the long two-line layout for hidden options; agent must honour is_hide_possible_values_set. Reviewer pinned golden help.rs sha256 and fixed an environment README that leaked both commit SHAs ('the fix commit'); golden extracted from the fix commit.",
+  "claims_no_competencies": true
+ },
+ "cistern-bridge": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3 real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository cure53/DOMPurify, parent 8cc5ae1388587f7a08cc099ff2a5e985f85d77c5, fix 083bb8aead7f6aba8cba30a9f954ade51f141c33, upstream issue reference #1577 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. DOMPurify case-preservation: attribute removal by name keeps the ORIGINAL bytes of a second attribute with an uppercase variant, re-enabling handler attributes; agent must remove by Attr object. Reviewer closed the artifact-forgery hole (fixed src + hand-patched dist) by making the verifier rebuild from source before grading; golden extracted from the fix commit.",
+  "claims_no_competencies": true
+ },
+ "cistern-buoy": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3 real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository curl/curl, parent b8172ada19b1211aeed64f473b4a53e941c6fabe, fix 08d50a791b3197a3d0a4fc2f778e243f5501c67e, upstream issue reference #22878 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. curl hsts: an extreme max-age is parsed beyond TIME_T_MAX and destroys the whole HSTS cache on save; agent must cap the max-age and skip unformattable entries. Reviewer closed a src/curl libtool-artifact wrapper (reward 1 with lib/hsts.c untouched) with forced binary regeneration + ELF probe + golden sha256; golden test1862 pinned from the fix commit.",
+  "claims_no_competencies": true
+ },
+ "cistern-cable": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3 real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository encode/httpx, parent 90538a3b4610ba49ce16c997bcfdb9101f9503be, fix 1e110964736a95d822144390b99d7ecf17fca527, upstream issue reference #2998 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. httpx text streaming appends an empty string on every final chunk/flush ('iter_text' empty suffix); agent must drop the empty chunk. Reviewer closed the untracked /app/src/conftest.py interception hole (any untracked conftest/sitecustomize/.pth fails); golden extracted from the fix commit.",
+  "claims_no_competencies": true
+ },
+ "cistern-cairn": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3 real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository expressjs/express, parent 160b91cbf79b595712b694c3513c347551d17fbe, fix 82fc12a40b3e6694e9a2c9b1376e7548d95779f6, upstream issue reference #5792 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. express res.clearCookie ignores its own forced past expiry when caller options provide expires/maxAge, leaving cookies undeleted; agent must force expires+strip maxAge. Reviewer closed two reward-1 bypasses (.mocharc require hook; gitignored node_modules/cookie serializer patch) with --no-config, a tracked-source assertion, and a node_modules/cookie sha pin, plus golden sha pin; golden extracted from the fix commit.",
+  "claims_no_competencies": true
+ },
+ "cistern-channel": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3 real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository falconry/falcon, parent 1f914c5143250c1113089868f30eed67697dc40d, fix cae50da40454a361fec84e58d4b44bedc5b6c0cd, upstream issue reference #2293 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. falcon multipart MultipartParseOptions shares _DEFAULT_HANDLERS by reference between parsers; agent must copy per-parser. Reviewer closed a site-packages monkeypatch and golden tamper (python3 -S pytest + golden sha256 pin) and rewrote the repro to the public API so no file is named; golden extracted from the fix commit.",
+  "claims_no_competencies": true
+ },
+ "cistern-cinder": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3 real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository giampaolo/psutil, parent afaaf9f340ff6561541f9f4781c58268b59abdac, fix 8d8ffe516627c024ccd216485b5920e8ffa8a88e, upstream issue reference #2809 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. psutil _pslinux meminfo parse crashes on 'kB' when a field has no space after the colon (ValueError int(b'kB')); agent must split on the first colon. Reviewer found the task sound with no edits; golden extracted from the fix commit at build time.",
+  "claims_no_competencies": true
+ },
+ "cistern-cleat": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3 real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository gin-gonic/gin, parent 915e4c90d28ec4cffc6eb146e208ab5a65eac772, fix 9914178584e42458ff7d23891463a880f58c9d86, upstream issue reference #4472 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. gin ClientIP reads only the first X-Forwarded-For value (single-value getter); agent must join all header values. Reviewer closed go-toolchain and module-cache manifest bypasses (sha256 pin of /opt/go/bin/go + /opt/gomodcache tree) plus golden hidden sha256 pins; golden extracted from the fix commit.",
+  "claims_no_competencies": true
+ },
+ "cistern-compass": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3 real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository junit-team/junit5, parent f8513cbd8b867f0c4252d4d9625d77edc45820cb, fix 2a52a0643fba15b52fcf13dd553758fcbc1d0458, upstream issue reference #4692 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. JUnit 5 @CsvSource trims with String.strip() (Unicode-aware), keeping U+0000 and other controls; agent must implement ASCII-only trim. Reviewer closed two reward-1 paths (16-entry hardcode table; root forge of golden+hidden) by generating fresh random hidden classes per run and sha256-pinning the golden; golden extracted from the fix commit.",
+  "claims_no_competencies": true
+ },
+ "cistern-coral": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3 real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository libvips/libvips, parent ea7e608844b85f4d296821e59b2483369b301b53, fix 7cfd70a869de8fe3f3a22b32f755e382130b716c, upstream issue reference #4877 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. libvips vips_draw_flood1 does not reject out-of-image start points at the C level; agent must add the bounds check. Reviewer closed a draw_flood C-wrapper-plus-pyvips-patch bypass with a build-time binding-tree hash snapshot and a new ctypes hidden case driving the C boundary directly; golden extracted from the fix commit.",
+  "claims_no_competencies": true
+ },
+ "cistern-crest": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3 real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository mikf/gallery-dl, parent a879e5d468e43fac9daf6bdc4726f853a9c85567, fix 12e2113a80eb4bf557dff4aba6e1775d74d8afc0, upstream issue reference #8918 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. gallery-dl mtime postprocessor leaks a stale _mtime_meta from a previous file when the new file has no usable date (and emits year-0 garbage for invalid dates); agent must reset metadata on invalid values. Reviewer closed a sitecustomize wrapper (restore pristine sitecustomize from host-uploaded copy + removal of the buggy early-return construct); golden extracted from the fix commit.",
+  "claims_no_competencies": true
+ },
+ "cistern-dune": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3 real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository pallets/click, parent 5b9630f50fde938b72ad8c99542efe3a6f5717e2, fix fc6c7c47edd6110b6bd5a1a5297b2035214b0cd1, upstream issue reference #3105 (PR #3211) \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. click FuncParamType swallows the conversion error message (except ValueError: without as exc), reporting bare 'nope'; agent must surface the underlying message. Reviewer closed the sitecustomize intercept with a python3 -S semantic check importing click straight from /app/src/src and a golden sha256 pin; golden extracted from the fix commit.",
+  "claims_no_competencies": true
+ },
+ "cistern-ember": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3 real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository pallets/jinja, parent 079e8312c3ceee54066d2dc887da83867f2db68a, fix 1655128cfc0e8b598d5b3f361a3983f82098276b, upstream issue reference #1960 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. jinja2 async generators leak warnings ('Async generator ... was garbage collected before exhausted') under trio because auto_aiter lacks __aiter__ forwarding; agent must implement __aiter__ on auto_aiter. Reviewer closed four warning-suppression bypasses (sitecustomize asyncgen-hook no-op, trio _asyncgens edit, warnings wrappers) with a leak-channel-liveness probe inside every hidden case; golden extracted from the fix commit.",
+  "claims_no_competencies": true
+ },
+ "cistern-fathom": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3 real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository pallets/werkzeug, parent 4c09d1b3b08deb939803a4beb53483cbc54dfb8d, fix f516c4005c7c4510b61ae07969450771b929809d, upstream issue reference #2842 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. werkzeug TypeConversionDict.get(type=int) crashes with TypeError when the value is None ('int() argument must be ... not NoneType'); agent must return the default. Reviewer closed the sitecustomize monkeypatch with a static in-source except-clause assertion and python3 -S hidden checks; golden extracted from the fix commit.",
+  "claims_no_competencies": true
+ },
+ "cistern-ferry": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3 real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository prettier/prettier, parent 7c5872f7a27b3eb249d0347fcfac989eca2cb70b, fix bfb1eacd89ba5b3b6fd5f2faf7908da8bbd558a2, upstream issue reference #19709 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. prettier HTML: uppercase attribute names (and other elements) aren't lowercased for HTML tags without attribute data; agent must fix the tag gate. Reviewer added a 13-file in-image integrity sha256 gate and removed the parent SHA from the instruction (public egress observed); golden lowercase suite extracted from the fix commit.",
+  "claims_no_competencies": true
+ },
+ "cistern-flint": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3 real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository prometheus/prometheus, parent 7d1195258cb1702d958361deab455059fdebc08e, fix 7450865dcd1f7a521b96c5c9dad01e5eb2c66be0, upstream issue reference #18653 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. prometheus relabel config: empty separator/replacement are dropped from marshalled YAML (omitempty), so reloading loses them; agent must keep empty values and nil-check the regex. Reviewer closed a go-binary stub bypass with a go/golden sha256 integrity gate and corrected false no-network wording; golden extracted from the fix commit.",
+  "claims_no_competencies": true
+ },
+ "cistern-flood": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3 real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository psf/requests, parent 3816cfa1abd42dca21b9e837f26c59b246016aaf, fix a4f9a5999bdb9bf2d6e7c8aa973b28cacb17134f, upstream issue reference #7427 (CPython bpo-39057) \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. requests should_bypass_proxies matches dotted hosts with wire-format ports incorrectly ('.svc.internal:9443' not matched), and the bare endswith matcher over-matches localhost-like names; agent must fix host matching. Reviewer closed the /app/src/pytest.py shim (reward 1 with bug intact) with golden sha256 auth, untracked-auto-import-shim rejection, and pytest-independent assertions; golden extracted from the fix commit.",
+  "claims_no_competencies": true
+ },
+ "cistern-forge": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3 real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository psycopg/psycopg, parent f9078032c2ccd64ec351b3ab7bdeb257b2480977, fix b9f196895eb6d3973437102fb50802266dedafea, upstream issue reference #1327 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. psycopg waiting.wait_selector KeyErrors ('FD ... is already registered') on socketpairs when the selector re-registers; agent must unregister/re-register. Reviewer closed an out-of-tree sitecustomize monkeypatch (python3 -S -P provenance gate with PYTHONPATH=/app/src/psycopg:/opt/checkdeps); golden extracted from the fix commit.",
+  "claims_no_competencies": true
+ },
+ "cistern-gate": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3 real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository pypa/pip, parent 9d0e2601f8c82765b0fe92001540e9a7ddd4fdf1, fix 95ef105f4eea913c09170dab3f4b6efebddf2843, upstream issue reference #6385 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. pip crashes with a raw InvalidMarker traceback on an invalid requirement marker; agent must raise InstallationError. Reviewer closed the sitecustomize/.pth call-interceptor with a python3 -S isolated behavioural check; golden extracted from the fix commit.",
+  "claims_no_competencies": true
+ },
+ "conduit-anchor": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3 real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository pytest-dev/pytest, parent fbab7c5dfe63a22f545207e8dc163ed61ad51d98, fix 2c555d62fa2c51ccb0c4c1cdd6243149ce4ffa97, upstream issue reference pytest-dev/pytest#14466 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. pytest approx relative tolerance for timedelta is required to be a timedelta (TypeError on float) and rel*expected is not computed; agent must accept float rel and multiply. Reviewer closed the /app/src/src/sitecustomize.pyc runtime-patch bypass (pyc purge + sitecustomize scan + blob-diff of python_api.py); golden testing/python/approx.py extracted from the fix commit.",
+  "claims_no_competencies": true
+ },
+ "conduit-basin": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3 real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository redis/redis, parent 21ce96878529bf8b31298ec417407c578c1e6278, fix 669b2a1316f5b35ecf964281b77c054ff28dc934, upstream issue reference redis/redis#15762 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. redis-cli --bigkeys crashes the 'Biggest string found' line and --keystats for empty keys because sizecmd results on keys with 0 bytes are skipped; agent must report empty keys. Reviewer closed golden tampering (/opt/golden/redis-cli.tcl sha256 + every hidden case pinned); golden extracted from the fix commit.",
+  "claims_no_competencies": true
  }
 }

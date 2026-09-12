@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 30,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on junit-team/junit5 at parent commit f8513cbd8b867f0c4252d4d9625d77edc45820cb (real upstream issue #4692, fix commit 2a52a0643fba15b52fcf13dd553758fcbc1d0458). The CSV reader shared by @CsvSource and @CsvFileSource trims unquoted columns with String.strip() instead of String.trim(), so Unicode White_Space above U+0020 (thin space U+2009, ideographic space U+3000, line separator U+2028, ...) is silently removed from argument values while non-whitespace control characters below U+0020 (NUL U+0000, U+0001, U+000E, ...) are no longer trimmed at all — values a parameterized test receives changed between releases with no test change (referenced upstream: junit-team/junit-framework#3824). Note: in this JDK (24.0.2) String.strip() keeps U+00A0 NBSP while removing the other White_Space characters, and the regression test's observable failure at the parent is the NUL column; both discriminating families are still exercised by the authored hidden cases and the golden test fails at parent / passes at fix. The fix is one line in the shared reader (field.strip() -> field.trim()) plus a one-sentence Javadoc clarification in both annotations. The image clones junit5 fetching ONLY the parent SHA (fix commit and default-branch tip unreachable), overlays the project's own regression test (trimsSpacesUsingStringTrim, extracted from the fix commit at build time into /opt/golden) onto the working tree exactly like the mining reproduction, warms the full :jupiter-tests closure online and proves it reruns --offline failing with the mined symptom. Toolchain pinned: JDK 24.0.2+12 compile toolchain + Gradle daemon (gradle-daemon-jvm.properties toolchainVersion=24), JDK 25.0.4.1+1 and apt JDK 21 exported as JDK24/JDK25/JDK21 for org.gradle.java.installations.fromEnv; Gradle 8.14.2-bin wrapper SHA256-pinned in the tree. Verifier: tree provenance (HEAD=parent, fix commit unreachable, only the three junit-jupiter-params main sources plus the overlaid test file differ, test file byte-identical to golden), the golden regression class green, the tree's own CsvFileArgumentsProviderTests green, and two authored hidden cases (a Unicode-whitespace/control-character family through @CsvSource and a trimming family through the @CsvFileSource reader) that both fail at the parent and pass with the fix. Both directions re-confirmed inside the task image before shipping: at parent, 6 tests fail (golden trimsSpacesUsingStringTrim + 5 authored: U+3000/U+1680/U+2009/U+202F/U+205F/U+2028/29 preservation and control-char trimming through both sources); with the fix applied, the same run is BUILD SUCCESSFUL with 0 failures."
+}

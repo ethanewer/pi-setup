@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 30,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on falconry/falcon at parent commit bc01a2b0a62415a562430fe590a798c1042ab3f5 (real upstream bug, issue #2583, fix a54317c7f8ec51a7fec8ce83df6b9f4852113253). The ASGI access_route cache in falcon/asgi/request.py unpacks scope['client'] and only catches KeyError; a server (e.g. uvicorn on a Unix socket) that explicitly sets scope['client'] = None makes Request.remote_addr raise TypeError ('cannot unpack non-iterable NoneType object') instead of falling back to the documented '127.0.0.1' default used when the field is missing. Agent must localise the bug in the real tree, fix it (widen the except clause), keep the repo's own ASGI request tests green, and only modify the minimal source file; verifier also runs the upstream regression test (test_client_none_in_scope) extracted from the fix commit, and hidden cases the upstream test does not cover: client=None combined with X-Forwarded-For / X-Real-IP proxy headers, an end-to-end app-level request with a null client driven through falcon.testing.simulate_get(extras={'client': None}), and a guard that a normal client address behaves unchanged. Pure Python (FALCON_DISABLE_CYTHON=1), no network, no extra deps beyond pinned pytest, ~5s test suite. Both directions re-confirmed inside the task image before shipping."
+}

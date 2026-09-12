@@ -354,6 +354,40 @@ zero. With the v4.2 wave it compares 21 real upstream identities (20 source
 repositories plus one JDK binary release asset) against the reference set, and
 the frozen-tree run of 2026-09-11 reports 0 overlap.
 
+## 2026-09-12 addition — v4.3 real-issue wave (50 tasks)
+
+Fifty tasks from the verified-issue pool (`specs/v43_issue_pool/`, one JSON
+file per upstream repository — 60 repositories, 218 verified entries) landed
+and are registered in `reports/v43_wave.md`. This is the first family whose
+tasks are built from **real bugs in real upstream projects** instead of seeded
+regressions. A task may only be built from an entry that reproduces in both
+directions against the project's own history (`reports/MINING_PROTOCOL_v43.md`):
+at the parent commit the reproduction FAILS; at the fix commit it PASSES, with
+the buggy code confirmed present/absent by inspection. The provenance chain —
+repository, parent commit, fix commit, upstream issue reference — is recorded
+in each task's note in `specs/coverage_claims.json` (and repeated in the wave
+report because it exists nowhere else in the specs). The golden regression
+test is extracted at image-build time from the fix commit with
+`git show <fix>:<path>` in a throwaway clone; no upstream source or test
+bytes are committed under any task directory.
+
+**Egress caveat (from `reports/v42_wave.md` section 9).** Trials have
+unrestricted outbound network in this harness (harbor's default network mode
+is PUBLIC; no task declares otherwise), so an agent can look a real issue up.
+That is why this wave's instructions must never name the issue number, PR,
+fix commit or the upstream-touched source file — a leaked issue number turns a
+debugging task into a lookup. The functional backstop is each task's
+upstream-integrity guard: the fix commit must stay unreachable
+(`git cat-file -e` fails), HEAD must stay pinned to the parent, and the fix
+must live in the tree, so egress at worst lets an agent fetch and implement
+the real fix, which the verifier scores correctly.
+
+The wave-proofing gate from the v4.2 family (`check_task_files_tracked.py`
+plus one `git archive` export re-verified in both harbor directions) was
+repeated; the v4.3 export was `bracket-forge`, oracle 1 / nop 0 / exit 0.
+Difficulty buckets were again edited directly by rubric total, never via
+`build_difficulty.py`.
+
 ## Oracle verification
 
 Every task's oracle solution was run from a pristine container. The original

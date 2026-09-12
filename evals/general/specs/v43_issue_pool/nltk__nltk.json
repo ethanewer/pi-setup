@@ -1,0 +1,134 @@
+[
+  {
+    "repository": "nltk/nltk",
+    "upstream_issue_ref": "#3604",
+    "fix_commit": "06c0e2cc94f763d43320812ee9d2a7b6bff68f9b",
+    "parent_commit": "a167389c027a02a9d1f019630ed827f4069b3353",
+    "base_image": "bench-base:python-3.12",
+    "source_files_changed": [
+      "nltk/translate/ribes_score.py"
+    ],
+    "golden_test_paths": [
+      "nltk/test/unit/test_ribes.py"
+    ],
+    "golden_test_names": [
+      "test_ribes_empty_hypothesis",
+      "test_ribes_empty_references",
+      "test_ribes_empty_corpus",
+      "test_ribes_rejects_mismatched_corpus_lengths"
+    ],
+    "reproduction": "python3 -c \"from nltk.translate.ribes_score import sentence_ribes, corpus_ribes; print(sentence_ribes([['a']], [])); print(corpus_ribes([], []))\"  OR: python3 -m pytest nltk/test/unit/test_ribes.py -k empty",
+    "observed_failure_at_parent": "ZeroDivisionError: division by zero at nltk/translate/ribes_score.py:57 in sentence_ribes (bp = min(1.0, math.exp(1.0 - len(reference) / len(hypothesis)))) with empty hypothesis; corpus path divides by len(list_of_references) similarly",
+    "verified": "Both directions observed. At parent a167389c (grep 'if not references or not hypothesis' -> 0 hits, so the guard is absent): direct repro raises ZeroDivisionError and the 4 regression tests fail (test_ribes_empty_hypothesis -> ZeroDivisionError). At fix 06c0e2cc9: direct repro prints 0.0 0.0 0.0 0.0 and all 4 regression tests pass; full test_ribes.py runs 10 passed.",
+    "dependency_pins": {},
+    "install_recipe": "pip install -e . && pip install numpy pytest pytest-mock regex pyyaml click tqdm joblib defusedxml",
+    "issue_paraphrase": "The RIBES machine-translation quality metric crashes with a ZeroDivisionError when the candidate translation is empty, when the list of references for a sentence is empty, or when the entire corpus is empty: the scoring code divides by the hypothesis token count and by the number of reference sets without guarding against zero. Empty inputs should simply yield a score of 0.0, and reference/hypothesis lists of unequal length should be rejected with a clear error instead of silently mis-scoring.",
+    "fix_summary": "sentence_ribes now returns 0.0 when references or hypothesis is empty; corpus_ribes raises ValueError on mismatched reference/hypothesis list lengths and returns 0.0 for an empty corpus.",
+    "difficulty_guess": "easy",
+    "notes": "Pure function, no corpus data or network needed. Test file already exists at parent (the fix only appends tests), so no test-file checkout is needed for the parent direction."
+  },
+  {
+    "repository": "nltk/nltk",
+    "upstream_issue_ref": "#3693 (closes #1883)",
+    "fix_commit": "27b8ad6cd50a484590cb9409e5d2a891ab56e16c",
+    "parent_commit": "52227d2afe764648864e59c851e991cf1d6cb77e",
+    "base_image": "bench-base:python-3.12",
+    "source_files_changed": [
+      "nltk/tree/transforms.py"
+    ],
+    "golden_test_paths": [
+      "nltk/test/unit/test_treetransforms.py"
+    ],
+    "golden_test_names": [
+      "test_chomsky_normal_form_with_terminal_siblings",
+      "test_chomsky_normal_form_with_nonstring_terminal"
+    ],
+    "reproduction": "python3 -c \"from nltk.tree import Tree; from nltk.tree.transforms import chomsky_normal_form; chomsky_normal_form(Tree.fromstring('(S (S 1) + (S 2))'), factor='right')\"  OR: python3 -m pytest nltk/test/unit/test_treetransforms.py -k 'terminal_sibling or nonstring_terminal'",
+    "observed_failure_at_parent": "AttributeError: 'str' object has no attribute 'label' at nltk/tree/transforms.py:148 (childNodes = [child.label() for child in node]); with a non-string terminal (e.g. int 7) the same line raises AttributeError: 'int' object has no attribute 'label'",
+    "verified": "Both directions observed. At parent 52227d2a (grep 'isinstance(child, Tree)' -> 0 hits, buggy list comprehension confirmed): direct repro raises AttributeError and both regression tests fail ('str' has no label / 'int' has no label). At fix 27b8ad6cd: direct repro completes (all subtrees length <= 2) and both tests pass; full test_treetransforms.py passes at fix.",
+    "dependency_pins": {},
+    "install_recipe": "pip install -e . && pip install numpy pytest pytest-mock regex pyyaml click tqdm joblib defusedxml",
+    "issue_paraphrase": "Converting a parse tree to Chomsky normal form crashes whenever an internal node with more than two children has at least one plain terminal among its children (a word, a punctuation mark such as '+', or even a non-string value like an integer) sitting alongside full subtrees. The binarization step assumes every child is a subtree and reads a label from it, raising an AttributeError. Terminals should be treated as leaf nodes and their own string value carried into the intermediate node names.",
+    "fix_summary": "chomsky_normal_form now builds childNodes with str(child.label()) for Tree children and str(child) for plain terminals, so mixed terminal/subtree nodes binarize instead of crashing; str() also handles non-string terminals.",
+    "difficulty_guess": "easy",
+    "notes": "Pure tree transformation, no data or network. The test file exists at parent (the fix modifies it in place), so the parent direction only needs the source tree at parent. The underlying request is old upstream issue #1883; never name that number in instruction.md."
+  },
+  {
+    "repository": "nltk/nltk",
+    "upstream_issue_ref": "#3694",
+    "fix_commit": "bd49f9011d7dc8c6a36b3c4ae71f04060c9b3fb9",
+    "parent_commit": "27b8ad6cd50a484590cb9409e5d2a891ab56e16c",
+    "base_image": "bench-base:python-3.12",
+    "source_files_changed": [
+      "nltk/tree/tree.py"
+    ],
+    "golden_test_paths": [
+      "nltk/test/unit/test_tree.py"
+    ],
+    "golden_test_names": [
+      "test_fromstring_allows_escaped_brackets",
+      "test_fromstring_escaped_bracket_leaf_and_label",
+      "test_fromstring_roundtrips_escaped_bracket_leaf",
+      "test_fromstring_normal_parsing_unaffected"
+    ],
+    "reproduction": "python3 -c \"from nltk.tree import Tree; t = Tree.fromstring(r'(S \\\\))'); assert str(t) == r'(S \\\\)'\"  (raises ValueError at parent; asserts round-trip at fix)  OR: python3 -m pytest nltk/test/unit/test_tree.py -q  (check the test file out from the fix commit when running at parent)",
+    "observed_failure_at_parent": "ValueError: Tree.read(): expected 'end-of-string' but got ')' at index 5 for sample r'(S \\\\)'; 'expected \\')\\' but got end-of-string' for open-paren-escaped samples; 3 of the 4 regression tests in the fix's test file fail at parent",
+    "verified": "Both directions observed. At parent 27b8ad6cd with the fix's test file checked out (grep 'token_char' -> 0 hits in tree.py, old regex confirmed): direct repro raises ValueError and the new test file fails 3, passes 1. At fix bd49f9011: direct round-trips pass for r'(S \\\\)', r'(EMOJI :\\\\)', r'(S (NP \\\\) (VP ok))', r'(S (\\\\( x))' and the file passes 4/4. Full test_tree.py + test_treetransforms.py pass at fix.",
+    "dependency_pins": {},
+    "install_recipe": "pip install -e . && pip install numpy pytest pytest-mock regex pyyaml click tqdm joblib defusedxml",
+    "issue_paraphrase": "Parsing trees in standard labeled-bracket notation fails whenever a leaf or label contains a parenthesis escaped with a backslash - for example a smiley ':)' written as ':\\)' or a literal '(' written as '\\(\\('. The parser raises a ValueError about an unexpected parenthesis or unexpected end-of-string, and even partially-parseable inputs never round-trip: printing the tree does not reproduce the original string. Backslash-escaped brackets should be treated as literal characters and preserved exactly.",
+    "fix_summary": "The fromstring tokenizer regex now accepts a backslash-escaped opening/closing bracket as a single verbatim token character (token_char = backslash-bracket or any char that is not whitespace/bracket), so escaped brackets parse as literal leaves/labels instead of being confused with structural brackets; the existing str() escaping already handled output.",
+    "difficulty_guess": "easy",
+    "notes": "CAUTION: nltk/test/unit/test_tree.py is a NEW file in the fix commit; when checking the buggy parent use 'git reset --hard <parent> && git clean -fd && git checkout <fix> -- nltk/test/unit/test_tree.py' and never a bare 'git checkout .' afterwards (it would silently restore the staged fix). No data or network needed."
+  },
+  {
+    "repository": "nltk/nltk",
+    "upstream_issue_ref": "#3785",
+    "fix_commit": "5c4c0d3fe65912fce05dae78dc76553b9e2bec85",
+    "parent_commit": "47e236e9505c6f552d6712a21c6d960879ba7f1e",
+    "base_image": "bench-base:python-3.12",
+    "source_files_changed": [
+      "nltk/stem/snowball.py"
+    ],
+    "golden_test_paths": [
+      "nltk/test/unit/test_snowball.py"
+    ],
+    "golden_test_names": [
+      "TestSnowballStemmer::test_empty_string_handling"
+    ],
+    "reproduction": "python3 -c \"from nltk.stem.snowball import SnowballStemmer; print(repr(SnowballStemmer('hungarian').stem('')))\"  (IndexError at parent, '' at fix)  OR: python3 -m pytest nltk/test/unit/test_snowball.py -q  (test file is new at fix; checkout from fix when running at parent)",
+    "observed_failure_at_parent": "IndexError: string index out of range at nltk/stem/snowball.py:3159 in __r1_hungarian (if word[0] in vowels:) with word == ''; the project's regression test fails for language='hungarian' while all other languages pass",
+    "verified": "Both directions observed. At parent 47e236e95 with the fix's test file checked out (grep for the guard shows only unrelated endswith guards, i.e. fix absent): direct repro raises IndexError and pytest test_snowball.py fails for hungarian. At fix 5c4c0d3fe: SnowballStemmer('hungarian').stem('') -> '' and SnowballStemmer('hungarian').stem('sarki') -> 'sar' (normal stemming intact); pytest test_snowball.py passes 1 test + 16 subtests.",
+    "dependency_pins": {},
+    "install_recipe": "pip install -e . && pip install numpy pytest pytest-mock regex pyyaml click tqdm joblib defusedxml",
+    "issue_paraphrase": "Stemming an empty string with the Hungarian flavor of the Snowball stemmer crashes with an 'IndexError: string index out of range', because its r1-region detection reads the first character of the word before checking whether the word is empty. Stemming '' should simply return '' - every other supported Snowball language already handles it - and ordinary non-empty words must still stem normally.",
+    "fix_summary": "Added an early 'if not word: return word' guard at the top of HungarianStemmer.stem() (the only stemmer that crashed on the empty string).",
+    "difficulty_guess": "easy",
+    "notes": "CAUTION: nltk/test/unit/test_snowball.py is a NEW file in the fix commit; at the parent, reset --hard to parent, git clean -fd, then checkout the test file from the fix commit. The regression test exercises all ~16 snowball languages against ''; only hungarian fails at parent, so the golden assertion should target the hungarian stemmer. No data or network needed."
+  },
+  {
+    "repository": "nltk/nltk",
+    "upstream_issue_ref": "#3687 (closes #1995)",
+    "fix_commit": "1929bf9e365faa9e476b3abbccb72a74351d647e",
+    "parent_commit": "c86229d218978628eb4e6e100ff266d2a939b7f0",
+    "base_image": "bench-base:python-3.12",
+    "source_files_changed": [
+      "nltk/tokenize/destructive.py"
+    ],
+    "golden_test_paths": [
+      "nltk/test/unit/test_tokenize.py"
+    ],
+    "golden_test_names": [
+      "TestTokenize::test_word_tokenize_opening_single_quote_padding"
+    ],
+    "reproduction": "python3 -c \"from nltk.tokenize import NLTKWordTokenizer; print(NLTKWordTokenizer().tokenize(\\\"'hello'\\\"))\"  (no data download needed)  OR: python3 -m pytest 'nltk/test/unit/test_tokenize.py::TestTokenize::test_word_tokenize_opening_single_quote_padding' -q  after nltk.download('punkt_tab')",
+    "observed_failure_at_parent": "NLTKWordTokenizer().tokenize(\"'hello'\") -> [\"'hello\", \"'\"] (opening quote glued to the word) and tokenize(\"'tis a fine day'\") -> [\"'t\", 'is', 'a', 'fine', 'day', \"'\"] (word split mid-way); the project's regression test fails with assert [\"'Hard\", \"'\", 'to', 'tell'] == [\"'\", 'Hard', \"'\", 'to', 'tell']",
+    "verified": "Both directions observed. At parent c86229d21 with the fix's test file checked out (grep shows the old regex '(\\')(?!re|ve|ll|m|t|s|d|n)(\\w)\\b' still present in destructive.py): direct repro shows glued opening quotes and mid-word splits; pytest test_word_tokenize_opening_single_quote_padding FAILS. At fix 1929bf9e3: tokenize(\"'hello'\") -> [\"'\", 'hello', \"'\"], tokenize(\"'tis a fine day'\") -> [\"'\", 'tis', 'a', 'fine', 'day', \"'\"], tokenize(\"o'clock\") -> ['o'clock'], tokenize(\"O'Connor\") -> [\"O'Connor\"]; regression test PASSES (full file 84 passed, 1 unrelated point-model failure).",
+    "dependency_pins": {},
+    "install_recipe": "pip install -e . && pip install numpy pytest pytest-mock regex pyyaml click tqdm joblib defusedxml && python3 -c \"import nltk; nltk.download('punkt_tab', quiet=True)\"  (punkt_tab only needed for the pytest path through word_tokenize)",
+    "issue_paraphrase": "Tokenizing text that starts with a single-quoted multi-letter word (for example 'Hard' or 'hello') leaves the opening quote glued to the word, producing tokens like \"'Hard\" instead of a separate quote token, and for words that happen to match a short pattern (as in 'tis) the word itself is split in two. Words with intra-word apostrophes such as o'clock or O'Connor must stay intact. The tokenizer should separate an opening single quote whenever it is followed by a word, without disturbing clitic contractions like 're or 's.",
+    "fix_summary": "Replaced the opening-quote padding regex '(\\')(?!re|ve|ll|m|t|s|d|n)(\\w)\\b' (which only fired before single-letter words) with '(?<!\\w)(\\')(?!(?:re|ve|ll|m|t|s|d|n)\\b)(?=\\w)', a lookbehind/lookahead form that pads the quote before any word while the clitic lookahead and the (?<!\\w) guard keep contractions and intra-word apostrophes untouched.",
+    "difficulty_guess": "medium",
+    "notes": "Direct repro via NLTKWordTokenizer needs no data. The project's regression test calls word_tokenize, which needs nltk.download('punkt_tab') (small download; trials have egress) - either pre-seed it in the task image or use the direct repro as the oracle. The one unrelated tokenize failure (test_legality_principle_syllable_tokenizer, needs another punkt model) should be excluded from any full-file run."
+  }
+]

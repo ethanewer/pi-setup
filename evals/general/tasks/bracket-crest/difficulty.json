@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 40,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on the real prettier/prettier tree (pinned pre-fix parent 45a4a75ea639e69d35f885224818e6698561fc11 of upstream issue #19878). The bug: when a Markdown setext heading (one or more text lines followed by a line of = or -) is written inside a blockquote, formatting collapses the heading's continuation lines onto the first line and prints the blockquote markers inline between the words, so '> Multi' '> Line' '> ===' becomes '> Multi > Line' and the reformatted source no longer means the same thing. The agent gets the real repo (only the parent commit ever enters its object store; the fix commit is only fetched into a scratch clone at build time to extract the project's own regression fixture tests/format/markdown/heading/setext/ (format.test.js + blockquote.md + snapshot) into /opt/golden, then deleted), repros with the project's own CLI (node bin/prettier.js <file>), localises the cause inside src/ (instruction names no file, issue or commit), and fixes it. Verifier: leak guard (fix object absent from /app/src) + provenance audit (only src/language-markdown/print/preprocess.js may differ from the parent) + CLI repro (output must equal input) + the upstream regression setext suite run with the project's own jest runner (10/10 at fix, blockquote.md format 1 fails at parent) + the project's own full markdown format suite tests/format/markdown (~1500 tests, ~3s at 1 CPU) still green + 4 authored hidden cases through the CLI (3-line '=' headings, '-'-underlined headings, nested '> >' blockquotes, very long text lines — all inputs the upstream blockquote.md fixture does not use). nop scores 0 (repro, golden, markdown suite and all hidden cases fail on the untouched tree). Medium: the bug is immediately visible in the CLI output but the agent must navigate a real ~10k-file tree unassisted and the golden suite only exists at the fix commit (hidden until grading)."
+}

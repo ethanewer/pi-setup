@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 30,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on prometheus/prometheus at parent commit 7d1195258cb1702d958361deab455059fdebc08e (real upstream bug, issue #18653, fixed upstream in commit 7450865dcd1f7a521b96c5c9dad01e5eb2c66be0). The Go model/relabel Config struct marks Separator and Replacement with omitempty in their yaml/json marshal attributes, so a rule that deliberately configures an empty separator (\"\") or empty regex replacement (\"\") loses those empty values on any serialize/reload cycle; the reloaded rule silently applies the built-in defaults (';' separator, '$1' replacement) and rewrites label names differently. The regexp YAML marshaller also drops any regex whose source string is empty, so 'regex: \"\"' round-trips as null. Agent must localise and fix the bug in the real Go tree, keep the project's own model/relabel package tests green, and only modify the minimal source file; the verifier runs the upstream regression test extracted from the fix commit (/opt/golden/relabel_test.go, TestConfig_UnmarshalThenMarshal and TestRegexp_JSONUnmarshalThenMarshal) and the whole model/relabel package suite under that same fix-revision test file (the parent's test file encodes the pre-fix JSON round-trip expectation and would contradict a correct fix), plus four authored hidden cases (empty separator only, empty replacement only, empty regex, and a functional after-reload semantics case) that the upstream test does not cover. Go toolchain 1.26.0, leaf package, ~5-20s test cycles once the go module/build caches are warm at /opt/gocache; no network at trial time. Both directions re-confirmed inside the task image before shipping (golden test fails at parent with 'regex: null', passes after the fix)."
+}

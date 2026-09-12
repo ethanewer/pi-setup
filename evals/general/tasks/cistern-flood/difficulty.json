@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on psf/requests at parent commit 3816cfa1abd42dca21b9e837f26c59b246016aaf (real upstream bug, issue #7427 / CPython bpo-39057). should_bypass_proxies matches a no_proxy entry against any host that merely endswith the entry string (prelocalhost vs localhost, badexample.com vs example.com). The upstream fix ports bpo-39057: exact hostname/host:port match first, then dot-prefixed endswith so only genuine subdomains match, and dotted entries are normalized by stripping the leading dot before the exact match. Agent must reproduce in the real tree, localise the matcher in src/requests/utils.py and fix it. Verifier runs the upstream regression test extracted from the fix commit into /opt/golden/ (test_should_bypass_proxies_no_proxy_domain_boundary, 9 params, fails on the prelocalhost case at parent) plus the project's own proxy tests in tests/test_utils.py, and three hidden cases over inputs the upstream test does not use (suffix-lookalike hosts, dotted/port-pinned entries through the argument and the NO_PROXY environment channel, and the end-to-end get_environ_proxies/resolve_proxies path). Note: this image's CPython 3.12.13 already carries the bpo-39057 fix in urllib.request, so for hosts the requests matcher misses, the stdlib proxy_bypass fallthrough rescues the plain dotted-entry direction at parent; the greedy-endswith direction is unaffected (the wrong match happens inside requests' own loop before the fallthrough) and is what visibly breaks the repro and the golden test. The task image checks out only the parent SHA (fix commit and newer trees are unreachable from /app/src/.git), and the fix is deliberately not named anywhere the agent can read. Both directions re-confirmed inside the task image before shipping."
+}

@@ -1,0 +1,153 @@
+[
+ {
+  "repository": "scipy/scipy",
+  "upstream_issue_ref": "#25893",
+  "fix_commit": "324a300aff45a6d702fb87c1f20d8b4234050aa6",
+  "parent_commit": "fb96fc6e396bc18fd1bfe29bfcd75966b5258e61",
+  "base_image": "bench-base:python-3.12",
+  "source_files_changed": [
+   "scipy/_lib/_util.py"
+  ],
+  "golden_test_paths": [
+   "scipy/optimize/tests/test_optimize.py"
+  ],
+  "golden_test_names": [
+   "TestOptimizeResultAttributes.test_repr_with_empty_dict_value"
+  ],
+  "reproduction": "python - <<'EOF'\nfrom scipy.optimize import OptimizeResult\nprint(repr(OptimizeResult(x=1, options={})))\nEOF",
+  "observed_failure_at_parent": "ValueError: max() iterable argument is empty (raised from _dict_formatter while computing repr)",
+  "verified": "both directions observed in bench-base:python-3.12. At parent fb96fc6e3 (git reset --hard + git clean -fd, source inspected: `_dict_formatter` still had `max(map(len, list(d.keys()))) + mplus` with no default) the repro raises ValueError; at fix 324a300af (source has `max(..., default=0)`) the same repro prints the result and pytest test_repr_with_empty_dict_value passes (ran via pytest, 1 passed).",
+  "dependency_pins": {},
+  "install_recipe": "pip install . --no-build-isolation (needs full toolchain; see notes)",
+  "issue_paraphrase": "Printing or repr-ing the result object returned by an optimizer crashes with a ValueError about an empty iterable whenever one of its fields holds an empty dict, such as an empty options map. Any code that displays a solver result, for example a notebook cell that echoes the returned object, blows up instead of showing the result.",
+  "fix_summary": "Added `default=0` to the `max(map(len, list(d.keys())))` call in the dict-repr helper so an empty dict value is formatted instead of crashing.",
+  "difficulty_guess": "easy",
+  "notes": "Pure-Python, 4-line source delta (borderline trivia; included because the crash is user-visible and the golden test is unambiguous). Build of whole scipy dominates task cost, see the general notes in the last entry's notes field. SHARED BUILD NOTES (all scipy entries): scipy must be built from source; a full build takes ~35-45 min on 64 cores (bench-base:python-3.12 is Debian 13 trixie). Toolchain: apt-get install -y gcc g++ gfortran pkg-config libopenblas0-pthread libblas3 liblapack3 (OpenBLAS 0.3.29). OpenBLAS is discovered via pkg-config: write a shim openblas.pc (prefix=/usr/lib/x86_64-linux-gnu/openblas-pthread, Libs: -L${prefix} -lopenblas), symlink libopenblas.so -> libopenblas.so.0 in that dir, add the dir to /etc/ld.so.conf.d + ldconfig. Then: pip install numpy cython meson meson-python ninja pybind11 pythran pytest hypothesis pooch pytest-xdist pytest-timeout mpmath; git submodule update --init --depth 1 (submodules: data-apis/array-api-compat, data-apis/array-api-extra, boostorg/math ~122MB, cobyqa, scipy/HiGHs, scipy/unuran, scipy/xsf); then PKG_CONFIG_PATH=<pc dir> python -m pip install . --no-build-isolation. For iteration use a persistent build dir: python -m pip install . --no-build-isolation --config-settings=builddir=/work/sci-build and re-run after every git reset --hard <sha> (meson/ninja incremental: pure-Python commits ~2-4 min, _qhull.pyx ~5-8 min at 64 jobs, several times longer at 1 CPU). Re-run `git submodule update --init --depth 1` after each reset in case pinned submodule pointers moved. Never move the tree with `git checkout <sha> -- <path>` (staging trap); use git reset --hard <sha> && git clean -fd. Run pytest from inside the repo with a dev/editable install so scipy/conftest.py provides the 'xp' fixture and custom marks used by stats/spatial regression tests (a bare site-packages install lacks them). At 1 CPU the full build is the dominant cost; authors may prefer one of the pure-Python entries over the Cython one."
+ },
+ {
+  "repository": "scipy/scipy",
+  "upstream_issue_ref": "#25880",
+  "fix_commit": "b92b297a5a0c372600bffffd4dc83513be9bfd39",
+  "parent_commit": "68942fb357ee133e75709e91959d322325fffb90",
+  "base_image": "bench-base:python-3.12",
+  "source_files_changed": [
+   "scipy/optimize/_minimize.py"
+  ],
+  "golden_test_paths": [
+   "scipy/optimize/tests/test_optimize.py"
+  ],
+  "golden_test_names": [
+   "test_minimize_does_not_mutate_bounds",
+   "test_minimize_bounds_reusable_across_sizes"
+  ],
+  "reproduction": "python - <<'EOF'\nimport numpy as np\nfrom scipy import optimize\nbounds = optimize.Bounds(0., np.inf)\nlb, ub = bounds.lb, bounds.ub\noptimize.minimize(optimize.rosen, [0.5, 0.5], method='trust-constr', bounds=bounds)\nassert bounds.lb is lb and bounds.ub is ub, 'mutated'\nEOF",
+  "observed_failure_at_parent": "AssertionError: caller's Bounds was mutated (lb is lb: False, ub is ub: False) for every tested method (nelder-mead, powell, l-bfgs-b, tnc, slsqp, cobyla, trust-constr); scalar lb/ub were silently replaced with arrays broadcast to x0.shape inside the caller's object",
+  "verified": "both directions observed in bench-base:python-3.12. At parent 68942fb35 (git reset --hard + git clean -fd; source inspected: `_validate_bounds` wrote `bounds.lb = np.broadcast_to(...)` directly onto the caller's object with no copy) the identity checks fail for all 7 methods; at fix b92b297a5 (adds `bounds = copy.copy(bounds)` before broadcasting) the repro passes and both upstream pytest tests pass (10 passed in that file selection).",
+  "dependency_pins": {},
+  "install_recipe": "pip install . --no-build-isolation (needs full toolchain; see notes)",
+  "issue_paraphrase": "Passing a bounds object built from scalar limits into minimize() silently rewrites that object in place: the scalar lower and upper limits are replaced with arrays broadcast to the size of the current optimization problem, and the flag recording whether bounds may be violated is left in a state tied to the first call. A caller who creates one dimension-agnostic bounds object and reuses it for problems of different sizes gets corrupted limits from the second call onward, and any code that inspects the object afterwards sees data it never assigned.",
+  "fix_summary": "Shallow-copies the Bounds object in `_validate_bounds` before broadcasting lb/ub onto it, so the caller's instance is never mutated and can be reused across problems of different sizes.",
+  "difficulty_guess": "easy",
+  "notes": "Pure-Python, 23-line delta. Golden tests cover many minimizer methods; at parent the mutation occurs for all of them. No test data downloads. Build of whole scipy dominates task cost, see general notes. SHARED BUILD NOTES (all scipy entries): scipy must be built from source; a full build takes ~35-45 min on 64 cores (bench-base:python-3.12 is Debian 13 trixie). Toolchain: apt-get install -y gcc g++ gfortran pkg-config libopenblas0-pthread libblas3 liblapack3 (OpenBLAS 0.3.29). OpenBLAS is discovered via pkg-config: write a shim openblas.pc (prefix=/usr/lib/x86_64-linux-gnu/openblas-pthread, Libs: -L${prefix} -lopenblas), symlink libopenblas.so -> libopenblas.so.0 in that dir, add the dir to /etc/ld.so.conf.d + ldconfig. Then: pip install numpy cython meson meson-python ninja pybind11 pythran pytest hypothesis pooch pytest-xdist pytest-timeout mpmath; git submodule update --init --depth 1 (submodules: data-apis/array-api-compat, data-apis/array-api-extra, boostorg/math ~122MB, cobyqa, scipy/HiGHs, scipy/unuran, scipy/xsf); then PKG_CONFIG_PATH=<pc dir> python -m pip install . --no-build-isolation. For iteration use a persistent build dir: python -m pip install . --no-build-isolation --config-settings=builddir=/work/sci-build and re-run after every git reset --hard <sha> (meson/ninja incremental: pure-Python commits ~2-4 min, _qhull.pyx ~5-8 min at 64 jobs, several times longer at 1 CPU). Re-run `git submodule update --init --depth 1` after each reset in case pinned submodule pointers moved. Never move the tree with `git checkout <sha> -- <path>` (staging trap); use git reset --hard <sha> && git clean -fd. Run pytest from inside the repo with a dev/editable install so scipy/conftest.py provides the 'xp' fixture and custom marks used by stats/spatial regression tests (a bare site-packages install lacks them). At 1 CPU the full build is the dominant cost; authors may prefer one of the pure-Python entries over the Cython one."
+ },
+ {
+  "repository": "scipy/scipy",
+  "upstream_issue_ref": "#26026",
+  "fix_commit": "6dbd21acb0ab2ad22a06b6351f83a47743d8b0b5",
+  "parent_commit": "d9b45feb89659479d666e1818bc1aa556292659e",
+  "base_image": "bench-base:python-3.12",
+  "source_files_changed": [
+   "scipy/stats/_wilcoxon.py"
+  ],
+  "golden_test_paths": [
+   "scipy/stats/tests/test_morestats.py"
+  ],
+  "golden_test_names": [
+   "TestWilcoxon.test_gh26026"
+  ],
+  "reproduction": "python - <<'EOF'\nimport numpy as np\nfrom scipy import stats\nx = np.array([23,75,79,31,71,-39,16,51,17,32,46,77,69,5,12,66,40,14,7,20,97,65,11,90,81,-2,19,6,-98,83,-56,50,70,95,96,-68,87,72,44,91,13,10,35,21,53,36,47,89,55,45,22,92,61,33,84,18,76,24,88,57,1,25,94,30,-60,73,85,59,52,62,48,49,29,15,43,42,-9,26,58,4,78,3,64,67,37,41,86,27,28,63,93,-34,74,8,80,100,99,82,38,54])\nres = stats.wilcoxon(x, method='exact')\nref = 51499060970173 / 633825300114114700748351602688\nassert res.pvalue > 0 and abs(res.pvalue - ref)/ref < 1e-14\nprint(res.pvalue)\nEOF",
+  "observed_failure_at_parent": "AssertionError: p-value is exactly zero (bug); got 0.0 -- the exact Wilcoxon p-value for this strongly one-sided sample was reported as exactly 0.0 while the true value is ~8.125e-17",
+  "verified": "both directions observed in bench-base:python-3.12. At parent d9b45feb8 (git reset --hard + git clean -fd; source inspected: `_wilcoxon.py` sf() used `apply_where(k <= mn, ...)` choosing the small tail branch incorrectly) the repro reports pvalue == 0.0 exactly; at fix 6dbd21acb (`k > mn`) it returns 8.12511917099255e-17 which matches ref within 1e-14 relative. Upstream pytest test_gh26026 passes at fix (ran directly); note it needs the repo-root scipy/conftest.py 'xp' fixture, see general notes.",
+  "dependency_pins": {},
+  "install_recipe": "pip install . --no-build-isolation (needs full toolchain; see notes)",
+  "issue_paraphrase": "For strongly one-sided samples, the two-sample Wilcoxon rank test run with method='exact' returns a p-value of exactly zero even though the true probability is small but nonzero (on the order of 1e-16). Reporting a flat zero for a merely tiny probability is wrong and misleading, since an exact-zero p-value normally denotes an impossibility.",
+  "fix_summary": "Flipped the branch condition in the survival-function tail logic of the exact Wilcoxon distribution so the correct tail formula is selected, avoiding catastrophic cancellation that collapsed the tiny p-value to 0.",
+  "difficulty_guess": "medium",
+  "notes": "Pure-Python, 17-line delta; the actual fix is a one-character condition flip but understanding which tail is correct requires care, and the golden test asserts closeness to a specific rational reference value. pvalue must remain > 0; a fix that 'simply' returns something nonzero but wrong will fail. Build of whole scipy dominates task cost, see general notes. SHARED BUILD NOTES (all scipy entries): scipy must be built from source; a full build takes ~35-45 min on 64 cores (bench-base:python-3.12 is Debian 13 trixie). Toolchain: apt-get install -y gcc g++ gfortran pkg-config libopenblas0-pthread libblas3 liblapack3 (OpenBLAS 0.3.29). OpenBLAS is discovered via pkg-config: write a shim openblas.pc (prefix=/usr/lib/x86_64-linux-gnu/openblas-pthread, Libs: -L${prefix} -lopenblas), symlink libopenblas.so -> libopenblas.so.0 in that dir, add the dir to /etc/ld.so.conf.d + ldconfig. Then: pip install numpy cython meson meson-python ninja pybind11 pythran pytest hypothesis pooch pytest-xdist pytest-timeout mpmath; git submodule update --init --depth 1 (submodules: data-apis/array-api-compat, data-apis/array-api-extra, boostorg/math ~122MB, cobyqa, scipy/HiGHs, scipy/unuran, scipy/xsf); then PKG_CONFIG_PATH=<pc dir> python -m pip install . --no-build-isolation. For iteration use a persistent build dir: python -m pip install . --no-build-isolation --config-settings=builddir=/work/sci-build and re-run after every git reset --hard <sha> (meson/ninja incremental: pure-Python commits ~2-4 min, _qhull.pyx ~5-8 min at 64 jobs, several times longer at 1 CPU). Re-run `git submodule update --init --depth 1` after each reset in case pinned submodule pointers moved. Never move the tree with `git checkout <sha> -- <path>` (staging trap); use git reset --hard <sha> && git clean -fd. Run pytest from inside the repo with a dev/editable install so scipy/conftest.py provides the 'xp' fixture and custom marks used by stats/spatial regression tests (a bare site-packages install lacks them). At 1 CPU the full build is the dominant cost; authors may prefer one of the pure-Python entries over the Cython one."
+ },
+ {
+  "repository": "scipy/scipy",
+  "upstream_issue_ref": "#25448",
+  "fix_commit": "0f0a3dd37f88ecd8c4d83a5913df56471274fefa",
+  "parent_commit": "0f7f9b2a3121102394c36e8d97bcd3ea7d5da1a1",
+  "base_image": "bench-base:python-3.12",
+  "source_files_changed": [
+   "scipy/stats/_stats_py.py"
+  ],
+  "golden_test_paths": [
+   "scipy/stats/tests/test_stats.py"
+  ],
+  "golden_test_names": [
+   "TestKSTest.test_gh25448"
+  ],
+  "reproduction": "python - <<'EOF'\nimport numpy as np\nfrom scipy import stats\nfrom scipy.special import ndtr\nrng = np.random.default_rng(254482544825448)\nx = rng.normal(size=100)\nloc, scale = stats.norm.fit(x)\nref = stats.kstest(x, lambda t: ndtr((t-loc)/scale)).statistic\nres = stats.kstest(x, \"norm\", args=(loc, scale)).statistic\nassert abs(res - ref)/abs(ref) < 1e-12\nprint(res, ref)\nEOF",
+  "observed_failure_at_parent": "TypeError: ndtr() takes from 1 to 2 positional arguments but 3 were given -- calling the one-sample KS test with the null as the string name of a distribution together with distribution parameters (loc, scale) crashed instead of running the test",
+  "verified": "both directions observed in bench-base:python-3.12. At parent 0f7f9b2a3 (git reset --hard + git clean -fd; source inspected: `_parse_kstest_args` still had `special_distributions = {'norm': special.ndtr}` and picked `special.ndtr` for the string 'norm', which ignores the args) the repro raises TypeError; at fix 0f0a3dd37 (string is resolved via `getattr(distributions, data2).cdf`) the repro prints statistic 0.07754671841366417 matching the reference, and upstream pytest test_gh25448 passes.",
+  "dependency_pins": {},
+  "install_recipe": "pip install . --no-build-isolation (needs full toolchain; see notes)",
+  "issue_paraphrase": "A one-sample Kolmogorov-Smirnov goodness-of-fit test crashes with a TypeError when the null distribution is given by its string name and the distribution's parameters are passed separately, because the named-distribution path cannot accept the parameters. Users who fit a distribution and then pass its name plus the fitted location and scale to the test get an exception instead of a test result.",
+  "fix_summary": "Removed the special-case mapping from the string distribution name 'norm' to a raw special-function CDF, so string names are always resolved through the full distribution class hierarchy and accept location/scale args like callable CDFs do.",
+  "difficulty_guess": "easy",
+  "notes": "Pure-Python, 18-line delta. Golden test compares the string-cdf statistic against a fitted-reference lambda cdf with tight tolerance; also exercises the callable-cdf-with-args path. Build of whole scipy dominates task cost, see general notes. SHARED BUILD NOTES (all scipy entries): scipy must be built from source; a full build takes ~35-45 min on 64 cores (bench-base:python-3.12 is Debian 13 trixie). Toolchain: apt-get install -y gcc g++ gfortran pkg-config libopenblas0-pthread libblas3 liblapack3 (OpenBLAS 0.3.29). OpenBLAS is discovered via pkg-config: write a shim openblas.pc (prefix=/usr/lib/x86_64-linux-gnu/openblas-pthread, Libs: -L${prefix} -lopenblas), symlink libopenblas.so -> libopenblas.so.0 in that dir, add the dir to /etc/ld.so.conf.d + ldconfig. Then: pip install numpy cython meson meson-python ninja pybind11 pythran pytest hypothesis pooch pytest-xdist pytest-timeout mpmath; git submodule update --init --depth 1 (submodules: data-apis/array-api-compat, data-apis/array-api-extra, boostorg/math ~122MB, cobyqa, scipy/HiGHs, scipy/unuran, scipy/xsf); then PKG_CONFIG_PATH=<pc dir> python -m pip install . --no-build-isolation. For iteration use a persistent build dir: python -m pip install . --no-build-isolation --config-settings=builddir=/work/sci-build and re-run after every git reset --hard <sha> (meson/ninja incremental: pure-Python commits ~2-4 min, _qhull.pyx ~5-8 min at 64 jobs, several times longer at 1 CPU). Re-run `git submodule update --init --depth 1` after each reset in case pinned submodule pointers moved. Never move the tree with `git checkout <sha> -- <path>` (staging trap); use git reset --hard <sha> && git clean -fd. Run pytest from inside the repo with a dev/editable install so scipy/conftest.py provides the 'xp' fixture and custom marks used by stats/spatial regression tests (a bare site-packages install lacks them). At 1 CPU the full build is the dominant cost; authors may prefer one of the pure-Python entries over the Cython one."
+ },
+ {
+  "repository": "scipy/scipy",
+  "upstream_issue_ref": "#26044",
+  "fix_commit": "34d57a75ac3a7afa07266fb1e5b34cac19e9fd76",
+  "parent_commit": "a804efa6ece58f62f5b4af667eec70234c160276",
+  "base_image": "bench-base:python-3.12",
+  "source_files_changed": [
+   "scipy/optimize/_trustregion.py"
+  ],
+  "golden_test_paths": [
+   "scipy/optimize/tests/test_trustregion.py"
+  ],
+  "golden_test_names": [
+   "TestTrustRegionSolvers.test_trust_exact_rejects_nan_trial_point"
+  ],
+  "reproduction": "python - <<'EOF'\nimport numpy as np\nfrom scipy.optimize import minimize\ndef fun(x): return x[0] - np.log(x[0]) if x[0] > 0 else np.nan\ndef jac(x): return np.array([1 - 1/x[0]])\ndef hess(x):\n    if x[0] <= 0: raise ValueError('Hessian evaluated outside domain')\n    return np.array([[1/x[0]**2]])\nr = minimize(fun, [2.1], jac=jac, hess=hess, method='trust-exact', tol=1e-8,\n             options={'initial_trust_radius': 10, 'maxiter': 10})\nprint(r.success, r.x)\nEOF",
+  "observed_failure_at_parent": "ValueError: Hessian evaluated outside domain -- trust-exact constructed and evaluated a full local model (including the Hessian) at the proposed trial point before accepting it, so an out-of-domain trial point aborted the whole optimization instead of shrinking the trust radius",
+  "verified": "both directions observed in bench-base:python-3.12. At parent a804efa6e (git reset --hard + git clean -fd; source inspected: `_minimize_trust_region` built `m_proposed = subproblem(x_proposed, fun, jac, hess, ...)` and called `m_proposed.fun` before the acceptance ratio) the repro raises ValueError from the Hessian; at fix 34d57a75a (objective evaluated directly at the trial point first, NaN treated as inf/rejected, model built only on acceptance) the repro prints 'True [1.]' and upstream pytest test_trust_exact_rejects_nan_trial_point passes.",
+  "dependency_pins": {},
+  "install_recipe": "pip install . --no-build-isolation (needs full toolchain; see notes)",
+  "issue_paraphrase": "The trust-region family of minimizers (e.g. trust-exact) evaluates the objective, gradient and Hessian at a proposed trial point before deciding whether to accept the step, and treats a NaN objective at the trial point as an ordinary value. When the objective is only defined on part of the domain, optimization aborts with an exception thrown by an out-of-domain Hessian evaluation instead of rejecting the step and shrinking the search radius, and domain-undefined (NaN) trial values are not handled as rejections either.",
+  "fix_summary": "Moved the local-model construction to after the trial point is accepted, evaluating the raw objective at the candidate first, and maps NaN objective values at trial points to +inf so the step is rejected and the trust radius shrinks (also cutting wasted Hessian evaluations on rejected steps).",
+  "difficulty_guess": "medium",
+  "notes": "Pure-Python, 26-line delta; requires understanding the trust-region accept/reject iteration. The golden test asserts convergence to x=[1] with tol=1e-8 and success; a fix must both avoid evaluating the Hessian out of domain and reject NaN trials. Optimize tests import cleanly. Build of whole scipy dominates task cost, see general notes. SHARED BUILD NOTES (all scipy entries): scipy must be built from source; a full build takes ~35-45 min on 64 cores (bench-base:python-3.12 is Debian 13 trixie). Toolchain: apt-get install -y gcc g++ gfortran pkg-config libopenblas0-pthread libblas3 liblapack3 (OpenBLAS 0.3.29). OpenBLAS is discovered via pkg-config: write a shim openblas.pc (prefix=/usr/lib/x86_64-linux-gnu/openblas-pthread, Libs: -L${prefix} -lopenblas), symlink libopenblas.so -> libopenblas.so.0 in that dir, add the dir to /etc/ld.so.conf.d + ldconfig. Then: pip install numpy cython meson meson-python ninja pybind11 pythran pytest hypothesis pooch pytest-xdist pytest-timeout mpmath; git submodule update --init --depth 1 (submodules: data-apis/array-api-compat, data-apis/array-api-extra, boostorg/math ~122MB, cobyqa, scipy/HiGHs, scipy/unuran, scipy/xsf); then PKG_CONFIG_PATH=<pc dir> python -m pip install . --no-build-isolation. For iteration use a persistent build dir: python -m pip install . --no-build-isolation --config-settings=builddir=/work/sci-build and re-run after every git reset --hard <sha> (meson/ninja incremental: pure-Python commits ~2-4 min, _qhull.pyx ~5-8 min at 64 jobs, several times longer at 1 CPU). Re-run `git submodule update --init --depth 1` after each reset in case pinned submodule pointers moved. Never move the tree with `git checkout <sha> -- <path>` (staging trap); use git reset --hard <sha> && git clean -fd. Run pytest from inside the repo with a dev/editable install so scipy/conftest.py provides the 'xp' fixture and custom marks used by stats/spatial regression tests (a bare site-packages install lacks them). At 1 CPU the full build is the dominant cost; authors may prefer one of the pure-Python entries over the Cython one."
+ },
+ {
+  "repository": "scipy/scipy",
+  "upstream_issue_ref": "#26139",
+  "fix_commit": "d42bc45c3ffecb0f76398b3f23eeba78a2dc13ac",
+  "parent_commit": "4fe05c739b70795b595e1aee3bed87068463123f",
+  "base_image": "bench-base:python-3.12",
+  "source_files_changed": [
+   "scipy/spatial/_qhull.pyx"
+  ],
+  "golden_test_paths": [
+   "scipy/spatial/tests/test_qhull.py"
+  ],
+  "golden_test_names": [
+   "TestConvexHull.test_points_wrong_dim_fails"
+  ],
+  "reproduction": "python - <<'EOF'\nimport numpy as np\nfrom scipy.spatial import ConvexHull\ntry:\n    ConvexHull(np.ones((5,)))\nexcept ValueError as e:\n    print('ValueError:', e)\nEOF",
+  "observed_failure_at_parent": "IndexError: tuple index out of range for 1-D input (called ConvexHull(np.ones((5,)))); for 3-D input (np.ones((5,1,3))) the process SEGFAULTED (exit code 139, core dumped) inside the Qhull C code",
+  "verified": "both directions observed in bench-base:python-3.12. At parent 4fe05c739 (git reset --hard + git clean -fd; source inspected: `ConvexHull.__init__` in _qhull.pyx had no ndim check and immediately indexed `points.shape[1]` / handed the array to the C Qhull wrapper) the repro raises IndexError and the 3-D shape segfaults the interpreter; at fix d42bc45c3 (adds `if points.ndim != 2: raise ValueError(\"Input `points` array must be of shape (npoints, ndim).\")`) both shapes raise clean ValueErrors and pytest test_points_wrong_dim_fails passes (3 passed in test_qhull selection).",
+  "dependency_pins": {},
+  "install_recipe": "pip install . --no-build-isolation (needs full toolchain; see notes)",
+  "issue_paraphrase": "Constructing a convex hull from a points array whose shape is not a 2-D matrix of samples crashes the process: a flat 1-D array raises an internal IndexError about tuple indexing, and a 3-D array can trigger an outright segmentation fault deep in the geometry library. A user with misshapen input gets a hard crash instead of a usable error message.",
+  "fix_summary": "Added an explicit dimensionality validation at the top of the ConvexHull constructor raising ValueError unless the input has exactly two dimensions.",
+  "difficulty_guess": "medium",
+  "notes": "Cython source change: the fix and the test are tiny (8-line delta), but at the task's 1-CPU build the scipy.spatial submodule must be recompiled (Cython 3.3 + C compile of _qhull, minutes at 64 jobs, longer at 1 CPU). CAUTION for the author: at the parent commit the golden test's 3-D shape segfaults the interpreter, which is the expected 'fail' direction. Prefer a direct repro (IndexError) for the fail baseline in CI. See general notes below. SHARED BUILD NOTES (all scipy entries): scipy must be built from source; a full build takes ~35-45 min on 64 cores (bench-base:python-3.12 is Debian 13 trixie). Toolchain: apt-get install -y gcc g++ gfortran pkg-config libopenblas0-pthread libblas3 liblapack3 (OpenBLAS 0.3.29). OpenBLAS is discovered via pkg-config: write a shim openblas.pc (prefix=/usr/lib/x86_64-linux-gnu/openblas-pthread, Libs: -L${prefix} -lopenblas), symlink libopenblas.so -> libopenblas.so.0 in that dir, add the dir to /etc/ld.so.conf.d + ldconfig. Then: pip install numpy cython meson meson-python ninja pybind11 pythran pytest hypothesis pooch pytest-xdist pytest-timeout mpmath; git submodule update --init --depth 1 (submodules: data-apis/array-api-compat, data-apis/array-api-extra, boostorg/math ~122MB, cobyqa, scipy/HiGHs, scipy/unuran, scipy/xsf); then PKG_CONFIG_PATH=<pc dir> python -m pip install . --no-build-isolation. For iteration use a persistent build dir: python -m pip install . --no-build-isolation --config-settings=builddir=/work/sci-build and re-run after every git reset --hard <sha> (meson/ninja incremental: pure-Python commits ~2-4 min, _qhull.pyx ~5-8 min at 64 jobs, several times longer at 1 CPU). Re-run `git submodule update --init --depth 1` after each reset in case pinned submodule pointers moved. Never move the tree with `git checkout <sha> -- <path>` (staging trap); use git reset --hard <sha> && git clean -fd. Run pytest from inside the repo with a dev/editable install so scipy/conftest.py provides the 'xp' fixture and custom marks used by stats/spatial regression tests (a bare site-packages install lacks them). At 1 CPU the full build is the dominant cost; authors may prefer one of the pure-Python entries over the Cython one."
+ }
+]

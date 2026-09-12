@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on a real codebase: curl/curl checked out at b8172ada19b1211aeed64f473b4a53e941c6fabe (parent of upstream fix 08d50a791b3197a3d0a4fc2f778e243f5501c67e, upstream issue #22878). The clone is initialized fresh and a single shallow fetch of the pinned parent SHA is made, so the fix commit is not reachable from the clone at all; the upstream regression test tests/data/test1862 is extracted from the fix commit as a raw file into /opt/golden and never enters the tree. The real bug is present: Curl_hsts_parse() caps max-age at TIME_T_MAX and stores it raw, so a Strict-Transport-Security header with max-age=2^60 lands an expiry that curlx_gmtime() cannot format; hsts_out() then returns an error and Curl_hsts_save() aborts the whole write after Curl_fopen already truncated the target file to zero bytes, destroying the user's HSTS cache. Upstream fix caps max-age at 2*365*24*3600 on parse (overflow clamps to the cap) and makes hsts_out() skip an unformattable entry instead of aborting the save. The agent must reproduce (loopback HTTP server on 127.0.0.1:8891 serving the extreme max-age header; CURL_HSTS_HTTP=yes CURL_TIME=1920582000 are honoured only by the checked-in debug build), localise (gdb/strace, or reason from the cache-file format), fix the real tree, rebuild incrementally, write /app/diagnosis.md, and keep the project's own HSTS tests green (runtests 1, 1660, 1674). Verifier: provenance asserts (HEAD still at parent, fix commit not present, only lib/hsts.c may be modified, no stray untracked files), incremental make, then the instruction's exact reproducer against the fixed binary with exact 228-byte three-entry cache content, then TWO authored hidden cases the upstream test does not use (max-age=63072001 with includeSubDomains at CURL_TIME=1600000000 expecting exactly '20220913 12:26:40'; max-age=2147483647 at CURL_TIME=1700000000 expecting exactly '20251113 22:13:20' instead of the parent's 2091 date), then the golden test 1862 via tests/runtests.pl, then the existing-suite selection. Oracle reward 1, untouched-tree nop reward 0 (shipped binary truncates the cache to 0 bytes: hidden checks, golden test and CLI repro all FAIL). Difficulty is medium: real ~50k-LOC C codebase, deterministic repro, small well-contained fix with two coupled changes."
+}

@@ -1,0 +1,77 @@
+[
+  {
+    "repository": "cure53/DOMPurify",
+    "upstream_issue_ref": "#1320",
+    "fix_commit": "6bc35973f0c6e7fa2344037af024fe0cf9cfa6e2",
+    "parent_commit": "591c429c8db48797bdbd90a44f90d7ea5a88fbf7",
+    "base_image": "bench-base:node-22",
+    "source_files_changed": ["src/purify.ts"],
+    "golden_test_paths": ["test/test-suite.js"],
+    "golden_test_names": [
+      "ADD_ATTR function must not bypass URI validation: javascript: should be stripped",
+      "ADD_ATTR function must preserve safe URIs after URI validation"
+    ],
+    "reproduction": "node repro_1320.js  (script below; needs only jsdom + the committed dist/purify.cjs.js at the checked-out commit; no build step)\nconst { JSDOM, VirtualConsole } = require('jsdom');\nconst createDOMPurify = require('./dist/purify.cjs');\nconst virtualConsole = new VirtualConsole();\nconst { window } = new JSDOM('<html><head></head><body></body></html>', { virtualConsole, runScripts: 'dangerously' });\nconst DOMPurify = createDOMPurify(window);\nconst out = DOMPurify.sanitize('<a href=\"javascript:alert(1)\">x</a>', {\n  ADD_ATTR: (attr) => attr === 'href',\n});\nconsole.log('OUT:', JSON.stringify(out));\nif (out.indexOf('javascript:') !== -1) { console.log('RESULT: FAIL'); process.exit(1); }\nconsole.log('RESULT: PASS');",
+    "observed_failure_at_parent": "sanitize('<a href=\"javascript:alert(1)\">x</a>', {ADD_ATTR: (attr) => attr === 'href'}) returns '<a href=\"javascript:alert(1)\">x</a>' — the javascript: URI rides through untouched (exit 1). Safe https: href preserved either way. Buggy code confirmed at parent: the attributeCheck early-exit branch `EXTRA_ELEMENT_HANDLING.attributeCheck(lcName, lcTag)` exists in src/purify.ts and the 'nameIsPermitted' symbol introduced by the fix is absent (grep scoped count 0).",
+    "verified": "Both directions observed in container bench-base:node-22 (node 22.23.2, jsdom 29.1.1, jquery 3.7.1, qunit 2.26.0, qunit-tap 1.5.1). Parent 591c429: repro prints OUT: \"<a href=\\\"javascript:alert(1)\\\">x</a>\" and exits 1 (FAIL). Fix 6bc3597: repro prints OUT: \"<a>x</a>\" and exits 0 (PASS). Code presence: 'nameIsPermitted' grep scoped count 0 at parent, 2 at fix. Full project jsdom suite at the fix commit: 982 ok / 0 not ok, exit 0, ~31 s.",
+    "dependency_pins": {
+      "jsdom": "29.1.x",
+      "jquery": "3.7.1"
+    },
+    "install_recipe": "git config --global --add safe.directory /work/DOMPurify && cd /work/DOMPurify && git reset --hard <sha> && git clean -fd && npm install --no-audit --no-fund  (installs jsdom 29.1.x, jquery 3.7.1, qunit 2.26.0, qunit-tap 1.5.1). The reproduction needs only jsdom plus the committed dist/purify.cjs.js; dist/ is committed at every commit, so the checked-out dist matches that commit's source exactly.",
+    "issue_paraphrase": "When the sanitizer is configured to accept extra attribute names through a function callback rather than a plain list, the usual URI scheme filtering is skipped for the values of those attributes. A link whose href carries a javascript: URL is returned with that dangerous value intact, while the same attribute pressed through the array form or the built-in defaults is cleaned properly. Safe https: URLs continue to pass through either way.",
+    "fix_summary": "Folded the function-form ADD_ATTR check into the name-permitted condition (nameIsPermitted) before the value-level URI validation runs, so a callback-allowed attribute still has to pass IS_ALLOWED_URI. Added regression tests for javascript: stripping and https: preservation through the function form.",
+    "difficulty_guess": "easy",
+    "notes": "Fully offline, deterministic, ~1 s per run. The repro depends on 'nameIsPermitted/is-allowed-uri checking' being applied even when the attribute name comes from the callback; the HTTPS control case is a good oracle discriminator versus just dropping ADD_ATTR support. Golden tests live in test/test-suite.js (whole-suite file shared by every QUnit-era commit); extracting them requires care, or the author can use the direct repro as instruction oracle. Full jsdom suite: ~31 s at 1 CPU, 982 tests."
+  },
+  {
+    "repository": "cure53/DOMPurify",
+    "upstream_issue_ref": "#1577",
+    "fix_commit": "083bb8aead7f6aba8cba30a9f954ade51f141c33",
+    "parent_commit": "8cc5ae1388587f7a08cc099ff2a5e985f85d77c5",
+    "base_image": "bench-base:node-22",
+    "source_files_changed": ["src/purify.ts"],
+    "golden_test_paths": ["test/test-suite.js"],
+    "golden_test_names": [
+      "uppercase event-handler attribute on a node is removed (no XML needed)",
+      "mixed-case ONCLICK on a node is removed",
+      "uppercase HREF carrying javascript: on a node is removed",
+      "lowercase control attribute is still removed (node input)"
+    ],
+    "reproduction": "node repro_1577.js  (script below; needs jsdom + committed dist/purify.cjs.js; exits 1 iff any of the four built nodes keeps a forbidden attribute in the sanitized output)\nconst { JSDOM, VirtualConsole } = require('jsdom');\nconst createDOMPurify = require('./dist/purify.cjs');\nconst { window } = new JSDOM('<html><head></head><body></body></html>', { virtualConsole: new VirtualConsole(), runScripts: 'dangerously' });\nconst DOMPurify = createDOMPurify(window);\nconst d = window.document;\nfunction check(name, build, failIf) {\n  const out = DOMPurify.sanitize(build(d));\n  const bad = failIf.test(out);\n  console.log(name, '=>', JSON.stringify(out), bad ? 'VIOLATION' : 'ok');\n  return bad ? 1 : 0;\n}\nlet rc = check('ONERROR', (d) => { const i = d.createElement('img'); i.setAttribute('src','x'); i.setAttributeNS(null,'ONERROR','alert(1)'); const w = d.createElement('div'); w.appendChild(i); return w; }, /onerror/i);\nrc += check('ONCLICK', (d) => { const a = d.createElement('a'); a.setAttribute('href','#'); a.setAttributeNS(null,'ONCLICK','alert(1)'); const w = d.createElement('div'); w.appendChild(a); return w; }, /onclick/i);\nrc += check('HREF-js', (d) => { const a = d.createElement('a'); a.setAttributeNS(null,'HREF','javascript:alert(1)'); a.textContent='x'; const w = d.createElement('div'); w.appendChild(a); return w; }, /javascript:/i);\nrc += check('ctrl', (d) => { const i = d.createElement('img'); i.setAttribute('src','x'); i.setAttribute('onerror','alert(1)'); const w = d.createElement('div'); w.appendChild(i); return w; }, /onerror/i);\nconsole.log('VIOLATIONS:', rc); process.exit(rc ? 1 : 0);",
+    "observed_failure_at_parent": "DOM-node input built with setAttributeNS (which keeps the case the caller chose) comes out of sanitize() with live case-preserved handler attributes: observed outputs '<div><img src=\"x\" ONERROR=\"alert(1)\"></div>', '<div><a href=\"#\" ONCLICK=\"alert(1)\"></a></div>' and '<div><a HREF=\"javascript:alert(1)\">x</a></div>'; the lowercase onerror control is stripped fine. Buggy code confirmed at parent: src/purify.ts has no removeAttributeNode usage (grep scoped count 0) — removal was name-based, so a case-preserved qualified name was missed; the fix introduces an exact removeAttributeNode(attr) removal (src/purify.ts:1293).",
+    "verified": "Both directions observed in container bench-base:node-22 (node 22.23.2, jsdom 29.1.1). Parent 8cc5ae1: 3 VIOLATIONS (ONERROR, ONCLICK, HREF=javascript: all survive), exit 1. Fix 083bb8a: 0 VIOLATIONS, exit 0; lowercase control behaves identically on both sides, showing the change targets exactly the case-preservation bypass.",
+    "dependency_pins": {
+      "jsdom": "29.1.x"
+    },
+    "install_recipe": "git config --global --add safe.directory /work/DOMPurify && cd /work/DOMPurify && git reset --hard <sha> && git clean -fd && npm install --no-audit --no-fund. Needs only jsdom + committed dist/purify.cjs.js; no build step.",
+    "issue_paraphrase": "Input supplied as an already-parsed DOM node keeps attribute names exactly as they were created, and cleaning such a node fails to remove event-handler attributes that were inserted with uppercase or mixed-case names: ONCLICK, ONERROR and even an uppercase HREF carrying a javascript: URL survive the sanitizer and can re-arm when the subtree is later serialized back into HTML, because the removal step silently misses the case-preserved name. The same payload given as an HTML string is cleaned normally, so the defect depends on how the input is handed to the sanitizer.",
+    "fix_summary": "Replaced name-based attribute removal with exact Attr-node removal (removeAttributeNode) on the attribute-teardown paths, so case- and namespace-preserved names are matched exactly; added an mXSS test module covering uppercase event handlers and uppercase javascript: hrefs on DOM-node input, with lowercase string-input controls.",
+    "difficulty_guess": "medium",
+    "notes": "Fully offline, deterministic, ~1 s. The setAttributeNS trick preserves attribute case without needing an XML parser and works identically in jsdom and real browsers. String input must remain a control: a fix that breaks normal string sanitization would still pass all four checks only if the payload path differs. Full jsdom suite ~31 s at 1 CPU; browser-only tests in the same module (DOMParser guards) self-skip under jsdom."
+  },
+  {
+    "repository": "cure53/DOMPurify",
+    "upstream_issue_ref": "#1560",
+    "fix_commit": "0332fe7cd45ad7971935e78c210c4714be4662ad",
+    "parent_commit": "2c8ca25ef3cec05e12a50bd456f57a816eaa5998",
+    "base_image": "bench-base:node-22",
+    "source_files_changed": ["src/purify.ts"],
+    "golden_test_paths": ["test/test-suite.js"],
+    "golden_test_names": [
+      "IN_PLACE: a clobbered ownerDocument does not skip the fail-closed scrub",
+      "IN_PLACE: form with a natural ownerDocument-clobbering child stays safe"
+    ],
+    "reproduction": "node repro_1560.js  (script below; needs jsdom + committed dist/purify.cjs.js; exits 1 iff the armed onerror attr survives)\nconst { JSDOM, VirtualConsole } = require('jsdom');\nconst createDOMPurify = require('./dist/purify.cjs');\nconst { window } = new JSDOM('<html><head></head><body></body></html>', { virtualConsole: new VirtualConsole(), runScripts: 'dangerously' });\nconst DOMPurify = createDOMPurify(window);\nconst doc = window.document;\nconst root = doc.createElement('form');\nconst img = doc.createElement('img');\nimg.setAttribute('onerror', 'alert(1)');\nroot.appendChild(img);\ndoc.body.appendChild(root);\nconst fake = doc.createElement('input');\nObject.defineProperty(root, 'ownerDocument', { get() { return fake; }, configurable: true });\ntry { DOMPurify.sanitize(root, { IN_PLACE: true }); console.log('THREW: no'); }\ncatch (e) { console.log('THREW:', e.constructor.name, '-', e.message); }\nconst survived = img.getAttribute('onerror') !== null;\nconsole.log('onerror survived:', survived);\nprocess.exit(survived ? 1 : 0);",
+    "observed_failure_at_parent": "sanitize(formWithClobberedOwnerDocument, {IN_PLACE: true}) throws 'TypeError: \\'createNodeIterator\\' called on an object that is not a valid instance of Document' before the fail-closed barrier, and the descendant <img onerror=\"alert(1)\"> keeps its handler in the caller's live tree (onerror survived: true, exit 1). Buggy code confirmed at parent: 'getOwnerDocument' symbol absent from src/purify.ts (grep scoped count 0) and _createNodeIterator is called with `root.ownerDocument || root` outside the try barrier; the fix introduces the cached Node.prototype getter (count 3) and moves iterator construction inside the barrier.",
+    "verified": "Both directions observed in container bench-base:node-22 (node 22.23.2, jsdom 29.1.1). Parent 2c8ca25: THREW TypeError, onerror survived: true, exit 1. Fix 0332fe7: THREW: no, onerror survived: false, exit 0. The clobber was reproduced portably with an own accessor on the root element (jsdom does not implement the real form named-getter); the natural-child variant in the project's second test is engine-dependent and just documents the invariant, so the own-accessor shape is the reliable oracle.",
+    "dependency_pins": {
+      "jsdom": "29.1.x"
+    },
+    "install_recipe": "git config --global --add safe.directory /work/DOMPurify && cd /work/DOMPurify && git reset --hard <sha> && git clean -fd && npm install --no-audit --no-fund. Needs only jsdom + committed dist/purify.cjs.js; no build step.",
+    "issue_paraphrase": "Sanitizing a live DOM subtree in place can abort part-way through when the root element shadows the document property the cleaner reads to build its traversal, for example a form element whose own property lookup is intercepted by a child element named after that property. The exception escapes before the cleanup barrier runs, so the caller gets control back with event-handler attributes still attached to surviving descendants of the tree that was supposed to be scrubbed. The same in-place sanitization on an un-shadowed element completes and strips such handlers normally.",
+    "fix_summary": "Read ownerDocument through the cached Node.prototype getter (immune to own-property shadowing / LegacyOverrideBuiltIns clobbers) in _createNodeIterator and _scrubTemplateExpressions, moved iterator construction inside the fail-closed exception barrier, and added a helper that forks the hook-mutable allowlist off its shared binding before lazily-installed uponSanitize* hooks can mutate it. Regression tests use an own accessor to reproduce the clobber in any engine and assert the armed handler is gone whether the call returns or fails closed.",
+    "difficulty_guess": "hard",
+    "notes": "Fully offline, deterministic, ~1 s. The tell-tale symptom is the exception + surviving handler, so the oracle can accept either a clean successful scrub or a fail-closed throw (handler stripped) — but a fix that merely wraps the call in try/catch without scrubbing would still fail the handler check. IMPORTANT: the fix commit also contains a hook-allowlist hardening sub-fix; the ownerDocument regression is the part that reproduces here, do not scope the task by demanding all sub-fixes. Full jsdom suite ~31 s at 1 CPU."
+  }
+]

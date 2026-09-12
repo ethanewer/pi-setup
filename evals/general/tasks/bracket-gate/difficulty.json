@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 90,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on serde-rs/serde at parent commit bb99b31eb0a55393101f9c80cd959b3a739ad70f (real upstream bug, issue #1468: a struct given an internal #[serde(tag=...)] whose field is #[serde(flatten)] and whose flattened field's type is an internally/adjacently tagged enum serializes the wrong tag: the flattened enum's own tag is replaced with the outer struct's tag and the struct's own tag is missing, so the stream does not round-trip). Agent must localize the bug in the real tree (the Serialize derive code generator in serde_derive/src/ser.rs), fix it so internally tagged structs emit their own tag field before flattened fields, keep the project's own test_macros integration suite green, and only modify the minimal source surface (verifier enforces that the only modified tracked files are serde_derive/src/ser.rs and/or test_suite/tests/test_macros.rs). Verifier runs the upstream regression test extracted from the fix commit into /opt/golden, the full test_macros binary, and three authored hidden cases (internally tagged enum with unit variants + extra field; adjacently tagged enum with multiple newtype/unit variant shapes + extra field; two flattened tagged enums in one struct). Toolchain pinned to rustc 1.88.0 via rustup (newer rustc hard-errors on this era's derive code and the bug was only reproduced on 1.88.0); cargo fully offline with a warmed registry cache and a prebuilt target/. Both directions verified inside the task image before shipping. Verifier hardened by independent review (2026-09-11): content-based provenance (hashes every tracked file vs its HEAD blob, so git update-index --assume-unchanged cannot mask tampering), build-time harness manifests in /opt/harness (golden test, cargo/rustc binaries incl. /opt/cargo/config.toml, crates.io registry sources), a scrub of prebuilt serde crate artifacts so the verifier recompiles the in-repo crates from source, and per-user cargo config removal. Both directions re-verified inside the task image (parent fails: expected Token::Str(\"tag_enum\") but serialized as Str(\"tag_struct\") at serde_test/src/ser.rs:154; fixed: golden + full suite + 3 hidden cases pass)."
+}

@@ -1,0 +1,87 @@
+[
+ {
+  "repository": "pylint-dev/pylint",
+  "upstream_issue_ref": "#6663",
+  "fix_commit": "16faa29d6bc6ba6533efe426038da62a81ca272b",
+  "parent_commit": "2ef1766c3923ee7753cea771959227a35e74972c",
+  "base_image": "bench-base:python-3.12",
+  "source_files_changed": [
+   "pylint/checkers/strings.py"
+  ],
+  "golden_test_paths": [
+   "tests/functional/i/implicit/implicit_str_concat.py",
+   "tests/functional/i/implicit/implicit_str_concat.txt"
+  ],
+  "golden_test_names": [
+   "test_functional[implicit_str_concat]"
+  ],
+  "reproduction": "printf 'MIXED_RAW1 = [r\"\\\\d\" \"\\\\n\"]\\nMIXED_RAW2 = \"\\\\n\" r\"\\\\d\"\\nprint(MIXED_RAW1, MIXED_RAW2)\\n' > /tmp/repro.py && python3 -m pylint /tmp/repro.py --disable=all --enable=implicit-str-concat --score=n\nAt parent_commit: W1404 emitted for both lines, exit code 4. At fix_commit: no output, exit code 0.",
+  "observed_failure_at_parent": "python3 -m pylint on 'MIXED_RAW1 = [r\"\\d\" \"\\n\"]' and 'MIXED_RAW2 = \"\\n\" r\"\\d\"' with only implicit-str-concat enabled reports 'W1404: Implicit string concatenation found in list (implicit-str-concat)' on line 1 and 'W1404: ... in assignment' on line 2 and exits 4 (observed exactly). Project golden test: pytest tests/test_functional.py -k implicit_str_concat FAILS at parent with 'Unexpected in testdata: 48: implicit-str-concat (times 1), 49: implicit-str-concat (times 1), 50: implicit-str-concat (times 1)' (1 failed, 3 passed, 894 deselected). Buggy code confirmed at parent: pylint/checkers/strings.py has no _is_raw_string_token (grep -c == 0) and self.string_tokens records 2-tuples (str_eval(token), next_token) without the raw token text.",
+  "verified": "Both directions observed in container bench-base:python-3.12 (Python 3.12.13, pylint installed editable, full test deps installed, astroid==4.2.0b3 per project test-min pin). Parent 2ef1766c3: repro exits 4 with W1404 on both mixed raw/non-raw lines; golden test FAILS (unexpected W1404 x3 at lines 48-50). Fix 16faa29d6: repro prints nothing and exits 0; golden test PASSES (4 passed, 894 deselected). Code presence: _is_raw_string_token count 0 at parent, 2 at fix. Also re-verified at parent with unpinned astroid 4.3.0 (still W1404, exit 4), so no dependency pin is needed.",
+  "dependency_pins": {
+   "astroid": "==4.2.0b3 (project test pin; repro also holds with 4.3.0)"
+  },
+  "install_recipe": "git config --global --add safe.directory /work/pylint && cd /work/pylint && git reset --hard <sha> && git clean -fd && python3 -m pip install -e . && python3 -m pip install -U astroid==4.2.0b3 typing-extensions==4.15.* py~=1.11.0 pytest>=8.4,<10 pytest-benchmark~=5.1 pytest-timeout~=2.4 towncrier~=26.0 requests pytest-cov>=6.2,<8 pytest-xdist~=3.8 six coverage~=7.10",
+  "issue_paraphrase": "Writing an implicit string concatenation that mixes a raw string literal with a regular one trips a false-positive warning: an expression such as a raw escape pattern followed by a normal string inside a list or an assignment is flagged as if a comma had been forgotten. The concatenation is in fact deliberate, because raw and non-raw literals cannot be merged into a single string anyway. The warning should be suppressed whenever the two adjacent literals differ in whether they are raw, but the linter currently reports it regardless.",
+  "fix_summary": "StringConstantChecker now stores the raw token text alongside the evaluated value for every string token, and a new helper _is_raw_string_token() inspects the token prefix; when adjacent STRING tokens differ in rawness the implicit-str-concat branch is skipped. The functional test gains three mixed raw/non-raw cases (no expected messages).",
+  "difficulty_guess": "easy",
+  "notes": "Fully offline, <1s. The project's own regression signal is the functional test tests/functional/i/implicit/implicit_str_concat.py checked out from the fix commit: run 'python3 -m pytest tests/test_functional.py -k implicit_str_concat -q' (the test ids with 4 passes come from test_functional's parametrization). The oracle can also just diff pylint stdout/exit code on the 2-line repro. The repro must be written into a file (pylint only checks files, not stdin)."
+ },
+ {
+  "repository": "pylint-dev/pylint",
+  "upstream_issue_ref": "#11160",
+  "fix_commit": "0f39f39e04a3114900877e08a8310a1aaf2e8237",
+  "parent_commit": "9242406e364f537f91e99564400944f685f8b079",
+  "base_image": "bench-base:python-3.12",
+  "source_files_changed": [
+   "pylint/checkers/classes/class_checker.py"
+  ],
+  "golden_test_paths": [
+   "tests/functional/a/access/access_to_protected_members.py",
+   "tests/functional/a/access/access_to_protected_members.txt"
+  ],
+  "golden_test_names": [
+   "test_functional[access_to_protected_members]"
+  ],
+  "reproduction": "printf 'class Issue11160:\\n    _attr = None\\n    def access_via_self_class(self):\\n        if self.__class__._attr is None:\\n            return self.__class__._attr\\n        return None\\n    def access_via_other_object_class(self, other):\\n        return other.__class__._attr\\n' > /tmp/repro.py && python3 -m pylint /tmp/repro.py --disable=all --enable=protected-access --score=n\nAt parent_commit: W0212 emitted on lines 5, 6 (self.__class__._attr) AND 10 (other.__class__._attr), exit 4. At fix_commit: W0212 emitted ONLY on line 10 (other.__class__._attr); the self.__class__ accesses are clean.",
+  "observed_failure_at_parent": "python3 -m pylint on the class above reports three 'W0212: Access to a protected member _attr of a client class (protected-access)' entries, including lines 5 and 6 which access the member via self.__class__ (observed exactly). Project golden test: pytest tests/test_functional.py -k access_to_protected_members FAILS at parent with 'Unexpected in testdata: 286: protected-access (times 1), 287: protected-access (times 1)' (1 failed, 1 passed, 899 deselected). Buggy code confirmed at parent: pylint/checkers/classes/class_checker.py has no _is_self_class_access (grep -c == 0) and no self.__class__ special case in _check_protected_access.",
+  "verified": "Both directions observed in container bench-base:python-3.12 (Python 3.12.13, pylint installed editable, full test deps, astroid==4.2.0b4 per project test-min pin). Parent 9242406e3: repro exits 4 with W0212 x3 (false positives on self.__class__ lines included); golden test FAILS. Fix 0f39f39e0: repro exits 4 with W0212 ONLY on the other.__class__ line; golden test PASSES (2 passed, 899 deselected). Code presence: _is_self_class_access count 0 at parent, 2 at fix. Also re-verified at parent with unpinned astroid 4.3.0 (still W0212 x3), so no dependency pin is needed.",
+  "dependency_pins": {
+   "astroid": "==4.2.0b4 (project test pin; repro also holds with 4.3.0)"
+  },
+  "install_recipe": "git config --global --add safe.directory /work/pylint && cd /work/pylint && git reset --hard <sha> && git clean -fd && python3 -m pip install -e . && python3 -m pip install -U astroid==4.2.0b4 typing-extensions==4.15.* py~=1.11.0 pytest>=8.4,<10 pytest-benchmark~=5.1 pytest-timeout~=2.4 towncrier~=26.0 requests pytest-cov>=6.2,<8 pytest-xdist~=3.8 six coverage~=7.10",
+  "issue_paraphrase": "Reading a protected member through self.__class__ inside an instance method is reported as a protected-access violation, even though self.__class__ is just another spelling of type(self) and that form is already accepted by the same check. Any method that reads a class attribute through self.__class__ gets a spurious warning and therefore fails a clean lint run, while the identical access written as type(self) passes. The warning should only fire when the member is reached through some other object's class, and that case must keep warning.",
+  "fix_summary": "class_checker's protected-access visitor now returns early (no warning) when the expression being accessed is '<first method param>.__class__', treating it as equivalent to type(self) via a new _is_self_class_access() helper. The functional test adds an Issue11160 class: self.__class__._attr accesses must be silent, while other.__class__._attr keeps the protected-access message (one new line appended to the .txt).",
+  "difficulty_guess": "easy",
+  "notes": "Fully offline, <1s with the -k selection. The PASS condition is not 'no output': the other.__class__ warning legitimately remains, so an oracle asserting a silent run would be wrong. Best oracle: assert the self.__class__ lines produce no W0212 while line 10 still does, or use the golden functional test which encodes the exact expected message set. The full pylint test suite is large; always select with -k."
+ },
+ {
+  "repository": "pylint-dev/pylint",
+  "upstream_issue_ref": "#11357",
+  "fix_commit": "5e00da601a4c14f8321494db4dcdb4a9e42e92d7",
+  "parent_commit": "92b631fac22e503e9520fb5280929499b6787093",
+  "base_image": "bench-base:python-3.12",
+  "source_files_changed": [
+   "pylint/extensions/typing.py"
+  ],
+  "golden_test_paths": [
+   "tests/functional/ext/typing/unnecessary_default_type_args.py",
+   "tests/functional/ext/typing/unnecessary_default_type_args.txt",
+   "tests/functional/ext/typing/unnecessary_default_type_args.rc"
+  ],
+  "golden_test_names": [
+   "test_functional[unnecessary_default_type_args]"
+  ],
+  "reproduction": "printf '# pylint: disable=missing-docstring,deprecated-typing-alias\\nimport collections.abc as ca\\nx1: ca.Generator[()]\\nx2: ca.AsyncGenerator[()]\\n' > /tmp/repro.py && python3 -m pylint /tmp/repro.py --disable=all --enable=unnecessary-default-type-args --load-plugins=pylint.extensions.typing --score=n\nAt parent_commit: internal IndexError traceback ('Exception on node <Subscript ...>' / 'IndexError: list index out of range' in visit_subscript) followed by 'F0002: Fatal error while checking' and exit code 1. At fix_commit: no output, exit code 0.",
+  "observed_failure_at_parent": "python3 -m pylint on 'x1: ca.Generator[()]' with the typing extension loaded crashes with 'IndexError: list index out of range' at pylint/extensions/typing.py:289 in visit_subscript (node.slice.elts[0] on an empty tuple slice), pylint emits 'F0002 ... Fatal error while checking' and exits 1 (observed exactly). Project golden test: pytest tests/test_functional.py -k unnecessary_default_type_args FAILS at parent with the same IndexError traceback during the run. Buggy code confirmed at parent: the visit_subscript guard is 'isinstance(node.slice, nodes.Tuple) and all(... for el in node.slice.elts[1:])' with no emptiness check on node.slice.elts, so for Generator[()] (empty tuple subscript) all([]) is True and elts[0] raises.",
+  "verified": "Both directions observed in container bench-base:python-3.12 (Python 3.12.13, pylint installed editable, full test deps, astroid==4.2.0b5 per project test-min pin). Parent 92b631fac: repro crashes with IndexError + F0002, pylint exit code 1; golden test FAILS (1 failed, 939 deselected). Fix 5e00da601: repro produces no output, exit code 0; golden test PASSES (1 passed, 939 deselected). Code presence: 'and node.slice.elts' guard added at fix (line 283 in typing.py), absent at parent. Also re-verified at parent with unpinned astroid 4.3.0 (still IndexError + F0002, exit 1), so no dependency pin is needed.",
+  "dependency_pins": {
+   "astroid": "==4.2.0b5 (project test pin; repro also holds with 4.3.0)"
+  },
+  "install_recipe": "git config --global --add safe.directory /work/pylint && cd /work/pylint && git reset --hard <sha> && git clean -fd && python3 -m pip install -e . && python3 -m pip install -U astroid==4.2.0b5 typing-extensions==4.15.* py~=1.11.0 pytest>=8.4,<10 pytest-benchmark~=5.1 pytest-timeout~=2.4 towncrier~=26.0 requests pytest-cov>=6.2,<8 pytest-xdist~=3.8 six coverage~=7.10",
+  "issue_paraphrase": "A type annotation that subscripts Generator or AsyncGenerator with an empty tuple, such as Generator[()], makes the linter crash with an internal IndexError instead of producing a report, so the whole file fails to be checked. The check that suggests dropping redundant default type arguments assumes a subscript always carries at least one element and reaches past the end of the list on the empty case. Any source file containing such an annotation ends up unusable by the tool, with only a fatal-error notice to show for it.",
+  "fix_summary": "visit_subscript in pylint/extensions/typing.py now requires node.slice.elts to be non-empty (added 'and node.slice.elts' to the guard) before building the suggested replacement, so an empty tuple subscript skips the check and never reaches elts[0]. The functional test adds Generator[()] / AsyncGenerator[()] cases for both collections.abc and typing aliases.",
+  "difficulty_guess": "medium",
+  "notes": "Fully offline, <1s. The subtlety: the check lives in the typing extension, so the direct CLI repro (and any task instruction) must pass --load-plugins=pylint.extensions.typing (or run the functional test under tests/functional/ext, which loads extensions automatically). On Python 3.12 the .313.txt variant of the golden test is ignored; the base .txt was NOT updated by the fix (the new lines expect no message), which is what makes the golden test fail at parent (crash) and pass at fix. Do not assert 'exit 0 and empty stdout' without the plugin flag, otherwise the check simply never runs."
+ }
+]

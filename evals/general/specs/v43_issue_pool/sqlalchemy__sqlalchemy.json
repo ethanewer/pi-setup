@@ -1,0 +1,108 @@
+[
+  {
+    "repository": "sqlalchemy/sqlalchemy",
+    "upstream_issue_ref": "#12368",
+    "fix_commit": "48ad8c81115bd01d733fe1a4f78c8c30d7c2abbb",
+    "parent_commit": "42ddb1fd5f1e29682bcd6ccc7b835999aafec12e",
+    "base_image": "bench-base:python-3.12",
+    "source_files_changed": [
+      "lib/sqlalchemy/dialects/sqlite/base.py"
+    ],
+    "golden_test_paths": [
+      "test/dialect/test_sqlite.py"
+    ],
+    "golden_test_names": [
+      "SQLTest::test_create_table_without_rowid_strict"
+    ],
+    "reproduction": "docker exec <container> bash -lc 'cd /work/sqlalchemy && git reset --hard 42ddb1fd5f1e29682bcd6ccc7b835999aafec12e && git clean -fdq && python - <<\"EOF\"\nfrom sqlalchemy import MetaData, Table, Column, Integer, create_engine\nfrom sqlalchemy.schema import CreateTable\nfrom sqlalchemy.dialects import sqlite\nm = MetaData()\nt = Table(\"atable\", m, Column(\"id\", Integer, primary_key=True), sqlite_with_rowid=False, sqlite_strict=True)\nddl = str(CreateTable(t).compile(dialect=sqlite.dialect()))\nprint(ddl)\ne = create_engine(\"sqlite://\")\nwith e.begin() as c:\n    c.exec_driver_sql(ddl)\n    print(\"EXECUTED OK\")\nEOF'",
+    "observed_failure_at_parent": "generated DDL is 'CREATE TABLE atable (\n\tid INTEGER\n)\n WITHOUT ROWID\n STRICT' (clauses joined without comma); sqlite3.OperationalError: near \"STRICT\": syntax error when the emitted DDL is executed. Golden test fails: AssertionError: 'CREATE TABLE atable (id INTEGER) WITHOUT ROWID STRICT' != 'CREATE TABLE atable (id INTEGER) WITHOUT ROWID, STRICT'",
+    "verified": "both directions observed in bench-base:python-3.12 container (Python 3.12.13, sqlite 3.46.1). PARENT 42ddb1fd: golden test test_create_table_without_rowid_strict FAILED and direct DDL repro raised sqlite3.OperationalError near \"STRICT\"; buggy code confirmed present by inspection (post_create_table concatenates '\\n WITHOUT ROWID' + '\\n STRICT' without a comma). FIX 48ad8c81: golden test PASSED, emitted DDL 'CREATE TABLE atable (id INTEGER) WITHOUT ROWID, STRICT' executed OK and table was created.",
+    "dependency_pins": {},
+    "install_recipe": "pip install -e '.[asyncio]' 'pytest>=7,<10' pytest-xdist   # from repo root; verified with greenlet 3.5.5, pytest 9.1.1, pytest-xdist 3.8.0, typing-extensions 4.16.0",
+    "issue_paraphrase": "When a SQLite table is defined with the two table options that disable rowid storage and enable strict mode at the same time, the generated CREATE TABLE statement joins the two extension clauses without a comma separator. Executing the generated DDL then fails with a syntax error at the second clause instead of creating the table.",
+    "fix_summary": "SQLiteDDLCompiler.post_create_table was rewritten to collect the WITH-ROWID and STRICT extension clauses into a list and join them with ', \\n', so multiple extension clauses are emitted comma-separated ('WITHOUT ROWID, STRICT') instead of being blindly concatenated with newlines.",
+    "difficulty_guess": "easy",
+    "notes": "No external DB or network needed; sqlite bundled with Python 3.12 supports STRICT (>= 3.37). Single golden test runs in ~0.06s. The fix commit message references the issue as 'Fixes: #12368' / PR #12369."
+  },
+  {
+    "repository": "sqlalchemy/sqlalchemy",
+    "upstream_issue_ref": "#11832",
+    "fix_commit": "44be2ef4484345298825f547e21d2881cc4921a9",
+    "parent_commit": "e51ff826b9374cadb8eded370a808bc4dcbe56ba",
+    "base_image": "bench-base:python-3.12",
+    "source_files_changed": [
+      "lib/sqlalchemy/dialects/sqlite/base.py"
+    ],
+    "golden_test_paths": [
+      "test/dialect/test_sqlite.py"
+    ],
+    "golden_test_names": [
+      "ConstraintReflectionTest::test_check_constraint",
+      "ConstraintReflectionTest::test_unique_constraint_mixed_into_ck",
+      "ConstraintReflectionTest::test_primary_key_constraint_mixed_into_ck"
+    ],
+    "reproduction": "docker exec <container> bash -lc 'cd /work/sqlalchemy && git reset --hard e51ff826b9374cadb8eded370a808bc4dcbe56ba && git clean -fdq && python - <<\"EOF\"\nfrom sqlalchemy import (create_engine, MetaData, Table, Column, Integer, String,\n                        CheckConstraint, UniqueConstraint, PrimaryKeyConstraint, inspect)\ne = create_engine(\"sqlite://\")\nm = MetaData()\nr = Table(\"r\", m,\n    Column(\"id\", Integer), Column(\"value\", Integer), Column(\"prefix\", String),\n    CheckConstraint(\"id > 0\"),\n    UniqueConstraint(\"prefix\", name=\"prefix_named\"),\n    CheckConstraint(\"((value > 0) AND \\n\\t(value < 100) AND \\n\\t(value != 50))\", name=\"ck_r_value_multiline\"),\n    UniqueConstraint(\"value\"),\n    CheckConstraint(\"value IS NOT NULL\", name=\"check-constrained\"),\n    PrimaryKeyConstraint(\"id\", name=\"pk_name\"),\n    CheckConstraint(\"prefix NOT GLOB '*[^-. /#,]*'\"),\n)\nwith e.begin() as c:\n    r.create(c)\n    for ck in inspect(c).get_check_constraints(\"r\"):\n        print(repr(ck[\"name\"]), repr(ck[\"sqltext\"]))\nEOF'",
+    "observed_failure_at_parent": "reflected CHECK constraint 'ck_r_value_multiline' has corrupted sqltext: '((value > 0) AND \\n\\t(value < 100) AND \\n\\t(value != 50))), \\n\\tUNIQUE (value' instead of the pure check expression (the regex also consumed the trailing comma and the following UNIQUE clause). Project golden test ConstraintReflectionTest::test_check_constraint FAILED at parent (1 failed, 58 passed in the class).",
+    "verified": "both directions observed in bench-base:python-3.12 container. PARENT e51ff826: whole ConstraintReflectionTest class = 1 failed (test_check_constraint, with the '...value != 50))), \\n\\tUNIQUE (value' corruption) / 58 passed; direct repro shows the corrupted sqltext; buggy regex ',)[\\s\\n]*(?=CONSTRAINT|CHECK)' confirmed present by inspection. FIX 44be2ef4: class = 59 passed; direct repro shows clean sqltext. NOTE: the two fix-added tests (unique/pk mixed-into-ck) pass at the parent too; the discriminating golden test is the pre-existing test_check_constraint.",
+    "dependency_pins": {},
+    "install_recipe": "pip install -e '.[asyncio]' 'pytest>=7,<10' pytest-xdist   # verified with greenlet 3.5.5, pytest 9.1.1, pytest-xdist 3.8.0",
+    "issue_paraphrase": "Reflecting table constraints from a SQLite database returns corrupted definitions for CHECK constraints whenever a CHECK constraint is followed by another kind of constraint, such as a UNIQUE or PRIMARY KEY clause, within the same CREATE TABLE statement. The reflected check-constraint text ends up with a trailing comma and the beginning of the following constraint appended to it, so the stored condition is no longer the pure check expression.",
+    "fix_summary": "One-line regex fix in SQLiteDialect.get_check_constraints: the clause-boundary pattern was extended so that after a comma the lookahead also accepts UNIQUE, FOREIGN and PRIMARY keywords (not only CONSTRAINT/CHECK), preventing over-consumption of the following constraint clause. This repaired a regression introduced by the earlier fix for #11677.",
+    "difficulty_guess": "medium",
+    "notes": "No external DB needed (sqlite:// in-memory). Full ConstraintReflectionTest class runs in <1s at 1 CPU. Fix commit: 'Fixes: #11832, Closes: #11834' (PR by a contributor). The pre-existing test_check_constraint is the one that fails at parent, so an author must run that test (the two new tests added by the fix pass on both ends)."
+  },
+  {
+    "repository": "sqlalchemy/sqlalchemy",
+    "upstream_issue_ref": "#13439",
+    "fix_commit": "bd0da4263052b4571f3b16eda3552e134b9b1689",
+    "parent_commit": "16177b8c73e492e5adaad8f51095f9981831da41",
+    "base_image": "bench-base:python-3.12",
+    "source_files_changed": [
+      "lib/sqlalchemy/orm/bulk_persistence.py"
+    ],
+    "golden_test_paths": [
+      "test/orm/dml/test_orm_upd_del_assorted.py"
+    ],
+    "golden_test_names": [
+      "CacheAdaptReturningOrderTest::test_returning_keymap_stable_across_cache_hit[update]",
+      "CacheAdaptReturningOrderTest::test_returning_keymap_stable_across_cache_hit[delete]"
+    ],
+    "reproduction": "docker exec <container> bash -lc 'cd /work/sqlalchemy && git reset --hard 16177b8c73e492e5adaad8f51095f9981831da41 && git clean -fdq && python - <<\"EOF\"\nfrom sqlalchemy import create_engine, update, Integer\nfrom sqlalchemy.orm import Session, DeclarativeBase, mapped_column, Mapped\nengine = create_engine(\"sqlite://\")\nclass Base(DeclarativeBase): pass\nclass T(Base):\n    __tablename__ = \"t\"\n    id: Mapped[int] = mapped_column(Integer, primary_key=True)\n    b: Mapped[int] = mapped_column(Integer)\n    a: Mapped[int] = mapped_column(Integer)\nBase.metadata.create_all(engine)\nwith engine.begin() as c:\n    c.execute(T.__table__.insert(), [dict(id=i, a=i*10, b=i*100) for i in range(1, 5)])\nopts = {\"synchronize_session\": \"fetch\"}\nfor n, ident in enumerate((1, 2), 1):\n    stmt = update(T).where(T.id == ident).values(b=999).returning(T.id, T.a, T.b)\n    with Session(engine) as sess:\n        result = sess.execute(stmt, execution_options=opts)\n        raw = result.raw.mappings().first()\n        print(\"call %d: raw[T.a]=%s raw[T.b]=%s  (expect a=%d, b=999)\" % (n, raw[T.__table__.c.a], raw[T.__table__.c.b], ident*10))\nEOF'\n(also: python -m pytest \"test/orm/dml/test_orm_upd_del_assorted.py::CacheAdaptReturningOrderTest\" -q)",
+    "observed_failure_at_parent": "second (compiled-cache hit) execution of the same ORM UPDATE..RETURNING statement shape returns wrong column values from the result metadata: raw[T.a] == 999 (the value of column b) and raw[T.b] == 20 (the value of column a); expected raw[T.a] == 20, raw[T.b] == 999. Golden test fails: \"execution 2 (cache HIT): column 'a' resolves to index 1 by Column object but 2 by string name\". Only the [update] variant fails at parent; the [delete] variant passes at parent.",
+    "verified": "both directions observed in bench-base:python-3.12 container (sqlite 3.46.1). PARENT 16177b8c: golden test test_returning_keymap_stable_across_cache_hit[update] FAILED ([delete] passed); direct repro shows call 2 (cache HIT): raw[T.a]=999 raw[T.b]=20. FIX bd0da426: golden tests 2/2 PASSED; direct repro shows call 2: raw[T.a]=20 raw[T.b]=999. Buggy code confirmed present at parent by inspection (bulk_persistence.py has no adapt_to_context-disable / no ORM-load-exec-options merge for the RETURNING execution path).",
+    "dependency_pins": {},
+    "install_recipe": "pip install -e '.[asyncio]' 'pytest>=7,<10' pytest-xdist   # verified with greenlet 3.5.5, pytest 9.1.1, pytest-xdist 3.8.0",
+    "issue_paraphrase": "When an ORM-enabled UPDATE statement that uses RETURNING is executed with the option that re-fetches changed objects from the database after the statement, the first execution returns correct values but on the next execution of an equivalent statement the returned columns are mislabeled: looking up a column object returns the value of a different column, so for example the value of the last RETURNING column is returned where the first was requested. The corruption occurs when the order of the columns in the .returning() clause differs from the order of the columns as declared on the mapped table, and it appears on any execution served from the ORM's compiled statement cache.",
+    "fix_summary": "In _BulkUDCompileState._or_create_orm_setting (ORM bulk UPDATE/DELETE compile state), the ORM's load execution options (which include a flag disabling result-level adapt_to_context) are now merged into the effective execution options that are part of the cached construct. On a cache hit the ORM UPDATE/DELETE RETURNING statement is a 'two level' statement whose cached core level returns columns in mapper order while the ORM level carries the user's .returning() order; skipping the positional core adaptation keeps the cursor keymap consistent (Column-object index == string-name index) across cache hits.",
+    "difficulty_guess": "hard",
+    "notes": "No external DB needed (sqlite supports UPDATE..RETURNING). Both golden tests run in ~0.05s. Only the [update] variant discriminates; an author should target CacheAdaptReturningOrderTest::test_returning_keymap_stable_across_cache_hit[update]. The direct repro checks result.raw (the underlying core result) because ORM-level row access re-processes positions and can mask the corruption. Requires sqlite >= 3.35 (Python 3.12 bundles 3.4x)."
+  },
+  {
+    "repository": "sqlalchemy/sqlalchemy",
+    "upstream_issue_ref": "#13176",
+    "fix_commit": "d466d375889ee266ef928b6fbb6d673bda6beeb1",
+    "parent_commit": "a49a4f021ad9c9ff69f5482881b00f831d523a22",
+    "base_image": "bench-base:python-3.12",
+    "source_files_changed": [
+      "lib/sqlalchemy/orm/session.py"
+    ],
+    "golden_test_paths": [
+      "test/orm/test_session.py"
+    ],
+    "golden_test_names": [
+      "SessionUtilTest::test_get_with_for_update_use[false]",
+      "SessionUtilTest::test_get_with_for_update_use[true]",
+      "SessionUtilTest::test_get_with_for_update_use[none]",
+      "SessionUtilTest::test_get_with_for_update_use[omitted]"
+    ],
+    "reproduction": "docker exec <container> bash -lc 'cd /work/sqlalchemy && git reset --hard a49a4f021ad9c9ff69f5482881b00f831d523a22 && git clean -fdq && python - <<\"EOF\"\nfrom sqlalchemy import create_engine, Integer, event\nfrom sqlalchemy.orm import Session, DeclarativeBase, mapped_column, Mapped\nengine = create_engine(\"sqlite://\")\nclass Base(DeclarativeBase): pass\nclass T(Base):\n    __tablename__ = \"t\"\n    id: Mapped[int] = mapped_column(Integer, primary_key=True)\nBase.metadata.create_all(engine)\nwith Session(engine) as s:\n    s.add(T(id=7)); s.commit()\n    seen = []\n    @event.listens_for(engine, \"before_cursor_execute\")\n    def cnt(conn, cur, stmt, params, ctx, exe): seen.append(stmt)\n    with Session(engine) as s:\n        u = s.get(T, 7)\n        s.get(T, 7, with_for_update=False)\n        print(\"SELECTs emitted after the initial get (should be 0):\", len(seen))\nEOF'\n(also: python -m pytest \"test/orm/test_session.py::SessionUtilTest::test_get_with_for_update_use\" -q)",
+    "observed_failure_at_parent": "passing with_for_update=False to Session.get() for an already-loaded object triggers an extra SELECT (2 statements total) instead of returning from the identity map; golden test fails: FAILED test_get_with_for_update_use[false] (assert_sql_count expected 0 queries; the other three variants [true]/[none]/[omitted] pass at parent).",
+    "verified": "both directions observed in bench-base:python-3.12 container. PARENT a49a4f02: golden test test_get_with_for_update_use[false] FAILED (1 failed, 3 passed); direct repro prints 'SELECTs emitted: 2' where fix prints 1; buggy condition 'with_for_update is None' confirmed present at session.py:3910 by inspection. FIX d466d375: golden test 4/4 PASSED; direct repro prints 1 SELECT.",
+    "dependency_pins": {},
+    "install_recipe": "pip install -e '.[asyncio]' 'pytest>=7,<10' pytest-xdist   # verified with greenlet 3.5.5, pytest 9.1.1, pytest-xdist 3.8.0",
+    "issue_paraphrase": "Calling the session lookup method for a primary key on an object that is already present in the session's identity map issues a real SELECT against the database when the locking flag is passed as False rather than being omitted or passed as None. The same call without the flag, or with the flag explicitly None, short-circuits to the identity map and performs no query at all, so the False value defeats the intended no-database fast path.",
+    "fix_summary": "Session.get() eligibility check for the identity-map fast path changed from 'with_for_update is None' to 'with_for_update in (None, False)', matching ForUpdateArg._from_argument which already treats False and None identically; passing False now also bypasses the database when the object is already loaded.",
+    "difficulty_guess": "easy",
+    "notes": "No external DB needed (sqlite://). Whole parametrized golden test runs in ~0.13s. Only the [false] variant discriminates at the parent; the others pass on both ends, so a task oracle should run test_get_with_for_update_use[false]. The direct repro uses a before_cursor_execute counter."
+  }
+]

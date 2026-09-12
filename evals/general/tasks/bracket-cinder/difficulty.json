@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 30,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on mikf/gallery-dl at parent commit f77c330d83018b25924d219f96aaf4f064bd3eaf (real upstream bug, issue #9113). With metadata keyword evaluation enabled, a configured keyword value that combines literal text with a {placeholder} (e.g. a URL template such as 'https://.../{filename}') crashes with 'TypeError: sequence item N: expected str instance, X found' whenever the placeholder resolves to a non-text value (number, date/time, None): the formatter joins per-field results with ''.join() which requires str, while a custom fmt (util.identity for keywords-eval, or int) can return non-str values. Values consisting of a single placeholder (no surrounding text) work fine, which makes the crash input-dependent and hard to localise by eye. Agent must reproduce, localise and fix it in the real tree; the upstream fix adds a str()-wrapping path selected whenever a non-default fmt is passed and the format string has multiple parts. Verifier runs the upstream regression test extracted from the fix commit plus three authored hidden cases (keywords-eval-style URL templates with int/None/datetime placeholders; custom fmt returning int/float/bool; regression guards) and the project's own existing test_formatter.py suite. Pure Python, no network, no optional deps; test_formatter.py runs standalone (jinja2 fallback built in). Both directions re-verified inside the task image before shipping. Reviewer hardening: verifier now also (a) re-checks a build-time manifest of the Python interpreter tree, the python binaries and /opt/golden shipped in tests/system-manifest.sha256 (tests/ is uploaded only after the agent phase, so it is the one tree the root-running agent cannot tamper with), blocking a confirmed sitecustomize.py/_pytest interception bypass that scored reward 1 with the bug untouched; (b) pins the /opt/golden test file to its hash at the fix commit; (c) rejects untracked files inside the clone except inert caches. Instruction no longer names the parent commit SHA."
+}

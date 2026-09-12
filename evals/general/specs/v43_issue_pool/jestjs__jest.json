@@ -1,0 +1,93 @@
+[
+  {
+    "repository": "jestjs/jest",
+    "upstream_issue_ref": "#16345",
+    "fix_commit": "74bd550d15e53b16e2970139da31d90f406b78c6",
+    "parent_commit": "9ab14feccd6c15fec1334dbcb03a53a079d153d3",
+    "base_image": "bench-base:node-22",
+    "source_files_changed": [
+      "packages/jest-each/src/table/interpolation.ts"
+    ],
+    "golden_test_paths": [
+      "packages/jest-each/src/__tests__/template.test.ts",
+      "e2e/each/__tests__/specialCharacterKeys.test.js"
+    ],
+    "golden_test_names": [
+      "interpolates a heading that contains regex metacharacters"
+    ],
+    "reproduction": "Extract the files at the commit under test (git show <sha>:packages/jest-each/src/table/array.ts and packages/jest-each/src/table/interpolation.ts), then:\n  npm install typescript @types/node @jest/get-type pretty-format jest-regex-util\n  npx tsc --module commonjs --target es2022 --esModuleInterop --skipLibCheck --outDir out src/*.ts\n  node -e \"const array=require('./out/array.js').default; console.log(JSON.stringify(array('rows: $count(*) is $expected',[{'count(*)':1,expected:'one'}]).map(r=>r.title)))\"\nAt parent_commit this throws SyntaxError (Nothing to repeat); at fix_commit it prints [\"rows: 1 is one\"].",
+    "observed_failure_at_parent": "SyntaxError: Invalid regular expression: /\\$(count(*)|expected)[.\\w]*/g: Nothing to repeat (thrown at collection time, so the whole .each table fails)",
+    "verified": "both directions observed in bench-base:node-22: parent throws SyntaxError, fix prints [\"rows: 1 is one\"]; parent source confirmed to build the alternation with Object.keys(template).join('|') (no escaping, no sort) and fix source confirmed to use escapeStrForRegex + longest-first sort",
+    "dependency_pins": {
+      "@jest/get-type": "30.5.0",
+      "pretty-format": "30.5.1",
+      "jest-regex-util": "30.5.0"
+    },
+    "install_recipe": "For the monorepo oracle: corepack enable && yarn install && yarn build; then yarn jest packages/jest-each. Verified lightweight route (used here): npm install typescript @types/node '@jest/get-type' pretty-format jest-regex-util; extract the two src files at the commit; npx tsc --module commonjs --target es2022 --esModuleInterop --skipLibCheck --outDir out src/*.ts",
+    "issue_paraphrase": "Writing a table-driven test whose column heading contains characters that are special in regular expressions (for example a heading like count(*)) makes the whole table blow up with a SyntaxError about an invalid regular expression before any test can run, and headings containing a dot or a pipe interpolate the wrong value instead of the column's text. Column headings should be usable literally inside $variable test titles.",
+    "fix_summary": "Sort template keys longest-first and escape every key with jest-regex-util's escapeStrForRegex before joining them into the $variable alternation, so headers like 'count(*)' and 'a|b' are matched literally; when the template has no keys, fall back to only replacing $#.",
+    "difficulty_guess": "easy",
+    "notes": "Verified with a two-file direct repro (packages/jest-each/src/table/array.ts + table/interpolation.ts, tsc-compiled) without building the monorepo. The e2e test (e2e/each/__tests__/specialCharacterKeys.test.js) needs a full build; the unit test packages/jest-each/src/__tests__/template.test.ts is the golden one. Node >= 22 used (node:util behavior irrelevant here; error is from the RegExp constructor)."
+  },
+  {
+    "repository": "jestjs/jest",
+    "upstream_issue_ref": "#16381",
+    "fix_commit": "4a65c5aa40e31cd0aa377c33540891bc03572b16",
+    "parent_commit": "69b089574f10e607a93ad1b3eb56b4876e2a43fb",
+    "base_image": "bench-base:node-22",
+    "source_files_changed": [
+      "packages/jest-util/src/globsToMatcher.ts"
+    ],
+    "golden_test_paths": [
+      "packages/jest-util/src/__tests__/globsToMatcher.test.ts"
+    ],
+    "golden_test_names": [
+      "works like micromatch when options are passed after the same glob was used without them",
+      "works like micromatch when the same glob is used with different options",
+      "works like micromatch when a glob is used without options after being used with them",
+      "works like micromatch when dot is passed as undefined"
+    ],
+    "reproduction": "Extract packages/jest-util/src/globsToMatcher.ts and packages/jest-util/src/replacePathSepForGlob.ts at the commit under test, then:\n  npm install typescript @types/node picomatch@4\n  npx tsc --module commonjs --target es2022 --esModuleInterop --skipLibCheck --outDir out src/*.ts\n  node -e \"const g=require('./out/globsToMatcher.js').default; console.log(g(['*.dotoption.js'])('.hidden.dotoption.js'), g(['*.dotoption.js'],{dot:false})('.hidden.dotoption.js'))\"\nAt parent_commit this prints 'true true'; at fix_commit it prints 'true false' (the dot:false call must not match a dotfile). Both calls must happen in the same process because the stale matcher lives in the module-level cache.",
+    "observed_failure_at_parent": "true true \u2014 the second call, made with {dot:false}, still returns true because the glob was cached during the first call (default dot:true) and the cache is keyed on the glob string only",
+    "verified": "both directions observed in bench-base:node-22 with picomatch 4.0.7: parent returns true for the dot:false call, fix returns false; parent source confirmed to have the unconditional cache test 'if (!globsToMatchersMap.has(glob))' with no option-awareness, fix source confirmed to introduce 'const cacheable = picomatchOptions === undefined' and only serve/populate the cache when no options are passed",
+    "dependency_pins": {
+      "picomatch": "4.0.7"
+    },
+    "install_recipe": "Monorepo oracle: corepack enable && yarn install && yarn build; then yarn jest packages/jest-util. Verified lightweight route (used here): npm install typescript @types/node picomatch@4; extract globsToMatcher.ts + replacePathSepForGlob.ts at the commit; npx tsc --module commonjs --target es2022 --esModuleInterop --skipLibCheck --outDir out src/*.ts",
+    "issue_paraphrase": "File-selection behavior that depends on glob-matching options can silently stop working after the first time a pattern is seen: matchers are cached per pattern, so a glob first compiled with one option set (for example dotfile matching on) keeps behaving that way for every later request even when different options such as dot:false are passed. Patterns used for excluding or including files therefore match stale sets within the same run, depending on call order.",
+    "fix_summary": "Only reuse or populate the module-level matcher cache when the caller passed no picomatchOptions; whenever options are given, build a fresh picomatch matcher with the caller's options (with the dot default = true preserved when dot is explicitly undefined). This makes globsToMatcher behave like micromatch across repeated calls with differing options.",
+    "difficulty_guess": "medium",
+    "notes": "The module-level cache means the reproduction must do the two calls in one process (exactly what the golden tests do). The four new tests in packages/jest-util/src/__tests__/globsToMatcher.test.ts use distinct glob names so they are order-independent. globsToMatcher feeds jest-config normalize, SearchSource, shouldInstrument and HasteFS, i.e. test selection and coverage/transform inclusion. Verified with the two-file direct repro at picomatch 4.0.7 (= jest's ^4.0.3 pin)."
+  },
+  {
+    "repository": "jestjs/jest",
+    "upstream_issue_ref": "#16338",
+    "fix_commit": "73f64cd2a234886060b089c8cf711ff2e75314d4",
+    "parent_commit": "30b0642f7c1a88b40e4d32726e8be0dee9dc0eb2",
+    "base_image": "bench-base:node-22",
+    "source_files_changed": [
+      "packages/jest-each/src/table/array.ts",
+      "packages/jest-core/src/lib/serializeToJSON.ts"
+    ],
+    "golden_test_paths": [
+      "packages/jest-each/src/__tests__/array.test.ts"
+    ],
+    "golden_test_names": [
+      "calls global test with title containing bigint param values",
+      "calls global test with title containing a cyclic %j param value",
+      "calls global test with title containing param values holding replacement patterns"
+    ],
+    "reproduction": "Extract packages/jest-each/src/table/array.ts and packages/jest-each/src/table/interpolation.ts at the commit under test, then:\n  npm install typescript @types/node @jest/get-type pretty-format\n  npx tsc --module commonjs --target es2022 --esModuleInterop --skipLibCheck --outDir out src/*.ts\n  node -e \"const array=require('./out/array.js').default; console.log(JSON.stringify(array('expected string: %j %j %j %s',[[1n,{nested:2n},[3n],-4n]]).map(r=>r.title)))\"\nAt parent_commit this throws TypeError (Do not know how to serialize a BigInt); at fix_commit it prints [\"expected string: \\\"1n\\\" {\\\"nested\\\":\\\"2n\\\"} [\\\"3n\\\"] -4n\"].",
+    "observed_failure_at_parent": "TypeError: Do not know how to serialize a BigInt (thrown by util.format('%j', 1n); the whole .each definition fails)",
+    "verified": "both directions observed in bench-base:node-22 (node v22.23.2): parent throws the BigInt TypeError when %j meets a bigint row value, fix renders the exact title the upstream regression test asserts; parent source confirmed to route %j through 'return util.format(formattedTitle, normalisedValue)' with no stringifyJson/interpolateJsonPlaceholder, fix source confirmed to intercept JSON_PLACEHOLDER with a custom stringifier that renders bigint as '${value}n' and cycles as '[Circular]'",
+    "dependency_pins": {
+      "@jest/get-type": "30.5.0",
+      "pretty-format": "30.5.1"
+    },
+    "install_recipe": "Monorepo oracle: corepack enable && yarn install && yarn build; then yarn jest packages/jest-each (note this commit also touched packages/jest-core/src/lib/serializeToJSON.ts for --json bigint output; the golden jest-each tests only exercise packages/jest-each/src/table/array.ts). Verified lightweight route (used here): npm install typescript @types/node '@jest/get-type' pretty-format; extract table/array.ts + table/interpolation.ts at the commit; npx tsc --module commonjs --target es2022 --esModuleInterop --skipLibCheck --outDir out src/*.ts",
+    "issue_paraphrase": "A table-driven test whose title uses the JSON placeholder %j crashes with TypeError: Do not know how to serialize a BigInt as soon as one of the row values is a bigint, so the whole test definition fails instead of producing a title. Titles should render bigint values as readable literals (like \"1n\"), and %j/%p titles should also not choke on cyclic values or on values that look like substitution patterns.",
+    "fix_summary": "Intercept the %j placeholder inside jest-each's title formatter and serialize the value with a JSON stringifier that turns bigint into '<value>n' and cyclic structures into '[Circular]', instead of falling through to util.format which throws on bigint. Also switched %p (and %j) replacement from string patterns to replacer functions so values containing '$&', '$`', \"$'\" or '$$' are rendered literally. Symmetrically, jest-core's serializeToJSON gained a bigint converter for --json open-handles output.",
+    "difficulty_guess": "easy",
+    "notes": "Verified with the two-file direct repro at node v22.23.2: the failure comes from util.format('%j', bigint) which throws on all modern Node (>= 18 behaves this way). The cyclic-%j and replacement-pattern tests in array.test.ts guard the same stringifier. The jest-core serializeToJSON half is only needed for --json CLI output, not for the golden jest-each tests. Full monorepo build (yarn install + yarn build) takes several minutes at 1 CPU; the targeted tsc repro avoids it entirely."
+  }
+]

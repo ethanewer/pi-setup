@@ -1,0 +1,80 @@
+[
+ {
+  "repository": "eslint/eslint",
+  "upstream_issue_ref": "#21275",
+  "fix_commit": "8e2cb142217f2efee1d10dcc02bfb75145ae775d",
+  "parent_commit": "2417cad57d7d1bc4cf3ecf0f0575cfb10ff2011c",
+  "base_image": "bench-base:node-22",
+  "source_files_changed": [
+   "lib/rules/new-cap.js"
+  ],
+  "golden_test_paths": [
+   "tests/lib/rules/new-cap.js"
+  ],
+  "golden_test_names": [
+   "foo.UTC();",
+   "foo?.UTC();",
+   "const b = a.Date.UTC();"
+  ],
+  "reproduction": "cd <repo-root> && cat > /tmp/repro.js <<'EOF'\n\"use strict\";\nconst rule = require(process.cwd() + \"/lib/rules/new-cap\");\nconst RuleTester = require(process.cwd() + \"/lib/rule-tester/rule-tester\");\nnew RuleTester().run(\"new-cap\", rule, {\n  valid: [\n    { code: \"foo.UTC();\", options: [{ properties: false }] },\n    { code: \"foo?.UTC();\", options: [{ properties: false }] },\n    { code: \"const b = a.Date.UTC();\", options: [{ properties: false }] },\n  ],\n  invalid: [],\n});\nEOF\nnode /tmp/repro.js\nAt parent_commit the script exits 1 with 'FAIL: Should have no errors but had 1' (each case reports messageId \"upper\"); at fix_commit it exits 0.",
+  "observed_failure_at_parent": "Repro: FAIL 'Should have no errors but had 1'; direct Linter run on 'foo.UTC();' and 'foo?.UTC();' with {properties:false} yields messageId \"upper\" ('A function with a name starting with an uppercase letter should only be used as a constructor.'). Golden test overlay of the fix's tests/lib/rules/new-cap.js: 3 failing / 94 passing, failing cases exactly foo.UTC(); foo?.UTC(); const b = a.Date.UTC();. Buggy code confirmed at parent: lib/rules/new-cap.js line 187 contains 'return skipProperties && callee.type === \"MemberExpression\";' (the UTC special-case branch runs before the skipProperties check).",
+  "verified": "Both directions observed in container bench-base:node-22 (Node v22.23.2, eslint repo checked out, npm install of full dependency set). Parent 2417cad5: repro exit 1 with the false positive; golden 3 failing / 94 passing. Fix 8e2cb142: repro exit 0; golden 97 passing. Code presence: buggy 'return skipProperties && callee.type === \"MemberExpression\";' grep count 1 at parent, 0 at fix; fix introduces 'if (skipProperties) return true;' inside the MemberExpression branch.",
+  "dependency_pins": {},
+  "install_recipe": "docker run from bench-base:node-22; git config --global --add safe.directory <repo>; cd <repo>; git reset --hard <sha>; git clean -fd; npm install --no-audit --no-fund  (installs runtime + dev deps incl. mocha; eslint ships no lock file, .npmrc sets package-lock=false). Node engines: ^20.19.0 || ^22.13.0 || >=24 (image has v22.23.2).",
+  "issue_paraphrase": "A lint rule that flags capitalized function names used as ordinary functions, when configured with the option that says not to check property accesses, still reports method calls whose name ends in 'UTC': code like `foo.UTC()` or `a.Date.UTC()`, including spelled with optional chaining as `foo?.UTC()`, is flagged as misuse even though the configuration explicitly turned property checking off. Users who only want bare capitalized calls checked get spurious errors on ordinary member calls, and the same false positive hits deeper chains such as `a.Date.UTC()`.",
+  "fix_summary": "Moved the skipProperties check ahead of the UTC special case: when the callee is a MemberExpression and properties:false is set, isCapAllowed now returns true immediately, so only the UTC/Date.UTC exemption logic runs when property checking is enabled. Added three valid regression cases (foo.UTC(); foo?.UTC(); const b = a.Date.UTC();).",
+  "difficulty_guess": "easy",
+  "notes": "Fully offline, no network. Single rule test file runs in ~120ms under npx mocha. The repro script must run from the repo root (it requires via process.cwd()). Golden test / repro both self-contained. Keep bench-base:node-22 (Node 22.23.2 satisfies engines). eslint 10.9.1 era, flat config; Linter-driven repros need the plugins: {...} config shape in this version, RuleTester is the simplest oracle."
+ },
+ {
+  "repository": "eslint/eslint",
+  "upstream_issue_ref": "#21251",
+  "fix_commit": "1e641c919fc1421493bf913feb607896982451a3",
+  "parent_commit": "ad74a8dada2aaa17bfd0b8cc7b4119ff7a8ac04b",
+  "base_image": "bench-base:node-22",
+  "source_files_changed": [
+   "lib/rules/no-loss-of-precision.js"
+  ],
+  "golden_test_paths": [
+   "tests/lib/rules/no-loss-of-precision.js"
+  ],
+  "golden_test_names": [
+   "var x = 0.",
+   "var x = 9007199254740993."
+  ],
+  "reproduction": "cd <repo-root> && cat > /tmp/repro.js <<'EOF'\n\"use strict\";\nconst rule = require(process.cwd() + \"/lib/rules/no-loss-of-precision\");\nconst RuleTester = require(process.cwd() + \"/lib/rule-tester/rule-tester\");\nnew RuleTester().run(\"no-loss-of-precision\", rule, {\n  valid: [\"var x = 0.\"],\n  invalid: [{ code: \"var x = 9007199254740993.\", errors: [{ messageId: \"noLossOfPrecision\" }] }],\n});\nEOF\nnode /tmp/repro.js\nAt parent_commit the script exits 1 with 'FAIL: Should have no errors but had 1' (the valid case 'var x = 0.' is falsely flagged); at fix_commit it exits 0.",
+  "observed_failure_at_parent": "Repro: FAIL 'Should have no errors but had 1'; direct Linter run shows 'var x = 0.' yields messageId \"noLossOfPrecision\" while 'var x = 9007199254740993.' is (correctly) flagged as well. Golden test overlay of the fix's tests/lib/rules/no-loss-of-precision.js: 1 failing / 130 passing, failing case exactly 'var x = 0.'. Buggy code confirmed at parent: lib/rules/no-loss-of-precision.js line 181 is 'const rawNumber = getRaw(node).toLowerCase();' with no trailing-dot stripping; fix adds '.replace(/\\.$/u, \"\")'.",
+  "verified": "Both directions observed in container bench-base:node-22 (Node v22.23.2, npm install full deps). Parent ad74a8da: repro exit 1 on 'var x = 0.'; golden 1 failing / 130 passing. Fix 1e641c91: repro exit 0; golden 131 passing. Code presence: line 181 without '.replace(...)' at parent, with '.replace(/\\.$/u, \"\")' at fix.",
+  "dependency_pins": {},
+  "install_recipe": "docker run from bench-base:node-22; git config --global --add safe.directory <repo>; cd <repo>; git reset --hard <sha>; git clean -fd; npm install --no-audit --no-fund  (installs runtime + dev deps incl. mocha; eslint ships no lock file, .npmrc sets package-lock=false). Node engines: ^20.19.0 || ^22.13.0 || >=24 (image has v22.23.2).",
+  "issue_paraphrase": "A lint rule that warns when a numeric literal would lose precision when parsed as a JavaScript number reports literals written with a trailing decimal point and no fractional digits: code like `var x = 0.` triggers a 'loss of precision' error even though the value is exact and the same number written as `0` or `0.0` passes. The message is confusing because the literal is exactly representable. Genuinely lossy literals in the same shape, such as `9007199254740993.`, must continue to be reported.",
+  "fix_summary": "In baseTenLosesPrecision, strip a single trailing '.' from the raw literal (rawNumber.toLowerCase().replace(/\\.$/u, '')) before comparing against the parsed scientific-notation form, so trailing-dot literals normalize to the same form as their plain spellings. Added valid case 'var x = 0.' and invalid case 'var x = 9007199254740993.'.",
+  "difficulty_guess": "easy",
+  "notes": "Fully offline. Single rule test file runs in ~150ms under npx mocha. Repro script must run from the repo root (process.cwd()-relative requires). Regression signal is the valid case 'var x = 0.'; the invalid case already passed at parent."
+ },
+ {
+  "repository": "eslint/eslint",
+  "upstream_issue_ref": "#21116",
+  "fix_commit": "90910715011211a20d011d807d398a7005127f35",
+  "parent_commit": "044a627fa3e28ee1410d515acc5378eb4b49f8ba",
+  "base_image": "bench-base:node-22",
+  "source_files_changed": [
+   "lib/rules/no-unreachable-loop.js"
+  ],
+  "golden_test_paths": [
+   "tests/lib/rules/no-unreachable-loop.js"
+  ],
+  "golden_test_names": [
+   "while (a) break;"
+  ],
+  "reproduction": "cd <repo-root> && cat > /tmp/repro.js <<'EOF'\n\"use strict\";\nconst rule = require(process.cwd() + \"/lib/rules/no-unreachable-loop\");\nconst RuleTester = require(process.cwd() + \"/lib/rule-tester/rule-tester\");\nnew RuleTester().run(\"no-unreachable-loop\", rule, {\n  valid: [{\n    code: \"while (a) break;\",\n    options: [{ ignore: [\"WhileStatement\",\"DoWhileStatement\",\"ForStatement\",\"ForInStatement\",\"ForOfStatement\"] }],\n  }],\n  invalid: [],\n});\nEOF\nnode /tmp/repro.js\nAt parent_commit the script exits 1 with 'FAIL/CRASH: Cannot read properties of undefined (reading 'type')'; at fix_commit it exits 0.",
+  "observed_failure_at_parent": "Repro: CRASH TypeError 'Cannot read properties of undefined (reading 'type')' raised while linting (at lib/linter/esquery.js analyzeSelector when parsing the selector built from the rule's options). Golden test overlay of the fix's tests/lib/rules/no-unreachable-loop.js: 1 failing / 1628 passing, failing case exactly 'while (a) break;' (crash, not an assertion). Buggy code confirmed at parent: lib/rules/no-unreachable-loop.js create() computes loopSelector as loopTypesToCheck.join(',') with no empty-selector guard before building the visitor that lists selectors.",
+  "verified": "Both directions observed in container bench-base:node-22 (Node v22.23.2, npm install full deps). Parent 044a627f: repro exit 1 with the TypeError crash; golden 1 failing / 1628 passing. Fix 90910715: repro exit 0 ('PASS: no crash, no errors'); golden 1629 passing. Code presence: parent has the original 4-declaration const block with no guard; fix adds 'if (!loopSelector) { return {}; }' before using the selector.",
+  "dependency_pins": {},
+  "install_recipe": "docker run from bench-base:node-22; git config --global --add safe.directory <repo>; cd <repo>; git reset --hard <sha>; git clean -fd; npm install --no-audit --no-fund  (installs runtime + dev deps incl. mocha; eslint ships no lock file, .npmrc sets package-lock=false). Node engines: ^20.19.0 || ^22.13.0 || >=24 (image has v22.23.2).",
+  "issue_paraphrase": "A lint rule that flags loops whose body can only ever run once crashes the linter outright when its configuration lists every loop kind under 'ignore': linting any file that contains a loop, such as `while (a) break;`, throws an internal error about reading property 'type' of undefined and returns no result at all. Setting the rule to ignore all loop categories is a legitimate way to silence it selectively, but instead of simply reporting nothing, the whole lint run blows up on the first loop it sees.",
+  "fix_summary": "When the set of loop types to check is empty (all loop types listed in ignore), create() now returns {} immediately, so the rule registers no visitors and never builds the empty CSS-like selector that crashed selector parsing. Added a valid regression case with all five loop types ignored.",
+  "difficulty_guess": "easy",
+  "notes": "Fully offline. Single rule test file runs in ~1s under npx mocha (1629 cases). Repro script must run from the repo root (process.cwd()-relative requires). Crash is deterministic: empty loopSelector is passed to the visitor/selector machinery at parent. This is the only entry of the three where the rule's own golden file exercises a crash rather than an assertion at parent."
+ }
+]

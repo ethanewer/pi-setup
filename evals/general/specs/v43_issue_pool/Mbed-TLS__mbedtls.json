@@ -1,0 +1,77 @@
+[
+  {
+    "repository": "Mbed-TLS/mbedtls",
+    "upstream_issue_ref": "#9314",
+    "fix_commit": "7b6ddfcd25d95a1c6a452158db9205a6372b4426",
+    "parent_commit": "dd48f0f23f8b5189031d6f3ac519b2b6113bd9e7",
+    "base_image": "bench-base:ubuntu-24.04",
+    "source_files_changed": ["library/psa_crypto.c"],
+    "golden_test_paths": ["tests/suites/test_suite_psa_crypto.data", "tests/suites/test_suite_psa_crypto.function"],
+    "golden_test_names": [
+      "PSA symmetric decrypt: CCM*-no-tag, NIST DVPT AES-128 #15, 0 bytes",
+      "PSA symmetric decrypt: CCM*-no-tag, NIST DVPT AES-128 #15, 2 bytes"
+    ],
+    "reproduction": "git reset --hard dd48f0f23f8b5189031d6f3ac519b2b6113bd9e7 && git clean -fdx && git submodule update --init framework && git checkout 7b6ddfcd25d95a1c6a452158db9205a6372b4426 -- tests/suites/test_suite_psa_crypto.data && git checkout 7b6ddfcd25d95a1c6a452158db9205a6372b4426 -- tests/suites/test_suite_psa_crypto.function && make -j8 lib && make -C tests test_suite_psa_crypto && ./tests/test_suite_psa_crypto   (run the suite, observe the two failing CCM* cases; then rebuild at the fix commit and rerun until the suite prints PASSED (1949 / 1949 tests (309 skipped)))",
+    "observed_failure_at_parent": "PSA symmetric decrypt: CCM*-no-tag, NIST DVPT AES-128 #15, 0 bytes  FAILED / ... 2 bytes FAILED: psa_cipher_decrypt returned PSA_ERROR_INVALID_ARGUMENT (-135) where PSA_SUCCESS (0) was expected; suite exits 'FAILED (1947 / 1949 tests (309 skipped))'",
+    "verified": "both directions observed. Parent dd48f0f23f: grep of library/psa_crypto.c shows the buggy extra check 'if (alg == PSA_ALG_CCM_STAR_NO_TAG && input_length < PSA_BLOCK_CIPHER_BLOCK_LENGTH(slot->attr.type))' (line 4635); running tests/test_suite_psa_crypto gives exactly 2 FAILED cases (the 0-byte and 2-byte CCM* decrypt cases) and nothing else. Fix 7b6ddfcd25: the extra check is gone (only 'input_length < PSA_CIPHER_IV_LENGTH' remains), all 1949 tests pass (PASSED (1949 / 1949 tests (309 skipped))).",
+    "dependency_pins": {
+      "framework submodule": "04847216ab964b9bdce41f1e61ccc6d8f5d2a139 (same at parent and fix)",
+      "note": "3.6-era tree: tf-psa-crypto is an in-tree directory (not a submodule) at this commit",
+      "toolchain": "gcc 13.3 / make from Ubuntu 24.04; perl + python3 + python3-jsonschema + python3-jinja2 required (psa_crypto_driver_wrappers and test generation scripts use them)"
+    },
+    "install_recipe": "apt-get update with https:// rewritten in /etc/apt/sources.list.d/ubuntu.sources (plain http is blocked on this host); DEBIAN_FRONTEND=noninteractive apt-get install -y build-essential perl python3 python3-jsonschema python3-jinja2; git config --global --add safe.directory '*'; git submodule update --init framework; make -j8 lib; make -C tests test_suite_psa_crypto",
+    "issue_paraphrase": "Decrypting with the PSA crypto API using AES in CCM* mode without a separate tag rejects short but perfectly valid messages. When the nonce-plus-ciphertext input is shorter than one AES block (16 bytes), the call fails with an invalid-argument error even though CCM* only needs the input to be at least as long as the nonce it is given. A ciphertext of 2 bytes or even 0 bytes after the nonce is rejected, while the identical message a couple of bytes longer decrypts fine, so saved or relayed packets of 1-3 bytes are spuriously dropped.",
+    "fix_summary": "psa_cipher_decrypt() had a special-case error check that rejected any CCM*-without-tag input shorter than one cipher block (16 bytes for AES), on top of the generic check that enforces the nonce/IV length (13 bytes for CCM*). The fix deletes the block-size special case and keeps only the IV-length check, so decrypting a message as short as the nonce length works.",
+    "difficulty_guess": "easy",
+    "notes": "Default config enables MBEDTLS_PSA_CRYPTO_C and PSA_WANT_ALG_CCM_STAR_NO_TAG so the new tests are compiled in. The suite runs in a few seconds once built; library build ~2 min at -j8 (~15-20 min at 1 CPU). All other 1947 suite cases pass at the parent, so any failure is unambiguous. The eventual task image must pin the framework submodule (git submodule update --init framework) and use the https apt rewrite; both observed in this run."
+  },
+  {
+    "repository": "Mbed-TLS/mbedtls",
+    "upstream_issue_ref": "#1582 (PR; no dedicated issue was filed)",
+    "fix_commit": "67e696b430716f95ed714f2c1404681697251438",
+    "parent_commit": "5ca2218a28a49cfdcc8cebe8953f6cb07bf7084f",
+    "base_image": "bench-base:ubuntu-24.04",
+    "source_files_changed": ["library/pkcs7.c"],
+    "golden_test_paths": ["tests/suites/test_suite_pkcs7.data", "tests/suites/test_suite_pkcs7.function"],
+    "golden_test_names": ["PKCS7 Signed Data Parse reused object after multiple signers"],
+    "reproduction": "git reset --hard 5ca2218a28a49cfdcc8cebe8953f6cb07bf7084f && git clean -fdx && git submodule update --init framework && git -C tf-psa-crypto submodule update --init framework (nested submodule) && git checkout 67e696b430716f95ed714f2c1404681697251438 -- tests/suites/test_suite_pkcs7.data tests/suites/test_suite_pkcs7.function && cmake -B build -DENABLE_TESTING=ON . && cmake --build build --target test_suite_pkcs7 -j8 && ./build/tests/test_suite_pkcs7",
+    "observed_failure_at_parent": "suite aborts with 'free(): double free detected in tcache 2' (SIGABRT, exit 134) on the case 'PKCS7 Signed Data Parse reused object after multiple signers'; only the 4 preceding cases run before the process dies",
+    "verified": "both directions observed. Parent 5ca2218a28: library/pkcs7.c still ends mbedtls_pkcs7_free() with 'pkcs7->raw.p = NULL;' and no mbedtls_platform_zeroize call (grep confirms; the object's signer list is left dangling after free); running the suite aborts with the double-free message. Fix 67e696b43: the same spot reads 'mbedtls_platform_zeroize(pkcs7, sizeof(*pkcs7));' and the suite prints PASSED (815 / 815 tests (5 skipped)) with the reuse case PASS.",
+    "dependency_pins": {
+      "framework submodule": "e92a81996656d82941a9afce843453c57e1d51f5 (same at parent and fix)",
+      "tf-psa-crypto submodule": "93fa04691f6d5628f51a369953856bf5bf75d31f, which itself pins framework e92a81996656d82941a9afce843453c57e1d51f5 (nested submodule)",
+      "note": "2026 4.x-era tree: GNU makefiles were removed, the build is CMake-only"
+    },
+    "install_recipe": "apt-get update with https:// rewritten in /etc/apt/sources.list.d/ubuntu.sources (plain http is blocked on this host); DEBIAN_FRONTEND=noninteractive apt-get install -y build-essential perl python3 python3-jsonschema python3-jinja2 cmake; git config --global --add safe.directory '*'; git submodule update --init framework; git -C tf-psa-crypto submodule update --init framework; cmake -B build -DENABLE_TESTING=ON .; cmake --build build --target test_suite_pkcs7 -j8",
+    "issue_paraphrase": "An application that reuses the same PKCS#7 structure object to parse a second message after freeing the first one crashes with a double free. The parser's cleanup routine only nulls one internal field, so the linked list of signer records still points at memory that has already been handed back; parsing a follow-up message that carries no signers leaves that stale link in place, and the next cleanup attempt frees the same record twice. The library aborts the whole process with a glibc double-free error instead of parsing the new message.",
+    "fix_summary": "mbedtls_pkcs7_free() previously set only pkcs7->raw.p = NULL after releasing the certificate/CRL and signer records, leaving the signer linked list and other fields as dangling pointers. The fix replaces that with mbedtls_platform_zeroize() over the whole mbedtls_pkcs7 structure so the object is cleanly reinitialized and safe to parse into again.",
+    "difficulty_guess": "medium",
+    "notes": "Default config enables MBEDTLS_PKCS7_C and MBEDTLS_FS_IO so the new test compiles and runs. The double-free abort is deterministic (glibc tcache check) in the Ubuntu 24.04 toolchain. The two framework checkouts (top-level and nested inside tf-psa-crypto) are mandatory for configure to succeed ('framework/CMakeLists.txt not found' otherwise). Suite build is a few minutes at -j8; the suite itself runs in seconds."
+  },
+  {
+    "repository": "Mbed-TLS/mbedtls",
+    "upstream_issue_ref": "#1247 (PR; upstream security advisory CVE-2024-45157)",
+    "fix_commit": "6bba0a8355db632f7287905ec577483979c47905",
+    "parent_commit": "d1615b814af7136595927ec98d20f5f873a9f729",
+    "base_image": "bench-base:ubuntu-24.04",
+    "source_files_changed": ["library/psa_util.c"],
+    "golden_test_paths": ["tests/suites/test_suite_psa_crypto_util.data"],
+    "golden_test_names": [
+      "ECDSA Raw -> DER, very large input (544-bit)",
+      "ECDSA DER -> Raw, very large input (544-bit)"
+    ],
+    "reproduction": "git reset --hard d1615b814af7136595927ec98d20f5f873a9f729 && git clean -fdx && git submodule update --init framework && git checkout 6bba0a8355db632f7287905ec577483979c47905 -- tests/suites/test_suite_psa_crypto_util.data && make -j8 lib && make -C tests test_suite_psa_crypto_util && ./tests/test_suite_psa_crypto_util",
+    "observed_failure_at_parent": "the very first new case 'ECDSA Raw -> DER, very large input (544-bit)' aborts the suite: '*** buffer overflow detected ***: terminated' (glibc _FORTIFY_SOURCE detection of the memcpy overflow in mbedtls_ecdsa_raw_to_der, SIGABRT exit 134)",
+    "verified": "both directions observed. Parent d1615b814a: library/psa_util.c has no bound check before 'memcpy(r, raw, coordinate_len)' / 'memcpy(s, raw + coordinate_len, coordinate_len)' (grep shows no 'coordinate_len > sizeof(r)'); running the suite aborts with the fortify buffer-overflow message. Fix 6bba0a8355: the checks 'if (coordinate_len > sizeof(r))' and 'if (2 * coordinate_size > sizeof(raw_tmp))' return MBEDTLS_ERR_ASN1_BUF_TOO_SMALL are present (lines 446/567) and the suite prints PASSED (43 / 43 tests (0 skipped)) with both 544-bit cases PASS.",
+    "dependency_pins": {
+      "framework submodule": "750634d3a51eb9d61b59fd5d801546927c946588 (same at parent and fix)",
+      "note": "3.6-era tree: tf-psa-crypto is an in-tree directory (not a submodule) at this commit; PSA_VENDOR_ECC_MAX_CURVE_BITS default is 521 (66-byte coordinates) so 544-bit input overflows",
+      "toolchain": "gcc 13.3 on Ubuntu 24.04 enables _FORTIFY_SOURCE by default, which is what turns the overflow into a deterministic abort (still a hard failure without it: stack corruption)"
+    },
+    "install_recipe": "apt-get update with https:// rewritten in /etc/apt/sources.list.d/ubuntu.sources (plain http is blocked on this host); DEBIAN_FRONTEND=noninteractive apt-get install -y build-essential perl python3 python3-jsonschema python3-jinja2; git config --global --add safe.directory '*'; git submodule update --init framework; make -j8 lib; make -C tests test_suite_psa_crypto_util",
+    "issue_paraphrase": "Converting ECDSA signatures between the raw (r||s) and DER (ASN.1) encodings crashes or corrupts memory when the caller supplies a curve bit size larger than the biggest curve the library supports (521 bits). The conversion routine copies each coordinate into a fixed-size internal stack buffer that only fits the largest supported curve, without checking the size of the incoming value, so a 544-bit value overflows the buffer. On hardened glibc builds the process is aborted with a buffer-overflow error; without that protection the stack is silently corrupted and the routine returns a misleading status or crashes later.",
+    "fix_summary": "mbedtls_ecdsa_raw_to_der() and mbedtls_ecdsa_der_to_raw() now verify that the coordinate length (PSA_BITS_TO_BYTES(bits)) fits their fixed-size local buffers (MBEDTLS_ECP_MAX_BYTES) before copying, returning MBEDTLS_ERR_ASN1_BUF_TOO_SMALL instead of overflowing the stack.",
+    "difficulty_guess": "medium",
+    "notes": "Security fix (CVE-2024-45157): the advisory title itself hints at the two functions, so the paraphrase above deliberately omits the function names. The test cases have no depends_on guard, so they always run; the rest of the suite (43 cases) passes untouched. Suite compiles in under a minute and runs in seconds; library build is the long pole (~2 min at -j8, ~15-20 min at 1 CPU). Fail-at-parent is deterministic on Ubuntu 24.04 gcc due to FORTIFY_SOURCE."
+  }
+]

@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": "clap-rs/clap pinned at parent fb9435d026ab011c9071ca92eeab738b9b30ca13 (shallow single-commit clone; the fix commit 8c92ef6c76686a642e748919f33587561c2a0280 is never fetched into /app/src and is provably absent from its object store). rustup toolchain 1.98.1 pinned. Probe (measured inside the task image): full offline `cargo test --no-run -p clap` rebuild as uid 1000 takes ~13 s wall on 64 cores; incremental one-file rebuild a minute or two at 1 vCPU; the builder test binary run is 0.0-0.2 s. At the parent commit the planted upstream regression test hidden_possible_vals FAILS (exit 101, 'Eq failed' diff: expected one line '  -h, --help  Print help', actual two-line long layout with '(see a summary with '-h')'); after the one-clause fix the same test passes and the full builder suite is 812/812 green. Image size: 3260 MB. Offline-clean confirmed by running the oracle+verifier with no network.",
+  "notes": "v4.2 upstream-clone task. The agent gets the REAL clap-rs/clap tree (Rust-dialect codebase, ~1.4k source files) at the parent commit, sees only the user-visible help-layout symptom, and must reproduce, localise and fix the bug in src/builder/command.rs's long/short-help decision without being told the file, function, issue number or commit (the fix commit is not reachable from the clone and there is no network). The verifier plants the project's OWN regression test (help.rs as at the fix commit, extracted at image build time into /opt/golden, never vendored into this task tree) plus 3 authored hidden modules (a hidden-possible-values named option checked on both -h and --help alongside a visible option; hide_possible_values combined with a long help text which must STILL select the long layout, locking the fix's boundary; and visible-argument controls with helped possible values on both a positional and a named option that must keep the long layout), rebuilds offline and runs every builder-* suite binary end to end, also grepping per-test 'ok' lines so skipped/neutralised runs fail. Provenance is enforced at the blob level (every tracked file except the one allowed source file must hash to the pinned commit's blob; no untracked non-ignored files; object store holds nothing beyond the pinned commit) so a scratch file left behind, a reformat commit, or a sabotaged test file all fail. The over-fix direction is guarded: deleting the possible-value/long-help triggers to make the hidden tests pass collapses the visible-argument tests. Nop container scores 0 (regression test and hidden cases fail at parent; summary.md missing)."
+}

@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 30,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on giampaolo/psutil at parent commit 8a5d53df33e28831f4833803b89e40e857d5632d (real upstream bug, issue #2964, fix commit ef3d9af1062e3e5d59e431e957b75fd4287b053e). On POSIX an interface with a /32 IPv4 address has no broadcast address by definition, but broadcast_addr() (psutil/_common.py) computed the IPv4Network broadcast with strict=False and returned the host's own address, and psutil/__init__.py net_if_addrs() left that bogus value in the address tuple's broadcast field. The agent must localise the bug in the real tree and fix it; verifier runs the project's own upstream regression test (TestCommonModule::test_broadcast_addr_single_host, extracted from the fix commit into /opt/golden at build time and digest-checked), hidden cases over inputs the upstream test does not use (/32 variants, IPv6 /128 single-host nets, a guard that normal /8-/31 IPv4 and /64 IPv6 broadcasts are unchanged and no-netmask entries stay None, and a net_if_addrs() assembly case that feeds a getifaddrs()-style /32 entry through the public API), the project's own tests/test_misc.py plus the net_if_addrs/net_if_stats slice of tests/test_system.py, and a module-provenance check proving the loaded psutil functions execute exactly the code compiled from /app/src (an interception wrapper such as sitecustomize.py or a shadow package is detected). Provenance asserts HEAD is still the pinned parent, the fix commit is unreachable from the working clone, only psutil/_common.py and/or psutil/__init__.py are modified, and no other files are added to /app/src (inert cache dirs excepted). Pure Python repro plus a C extension that must compile once at build time (gcc + linux-libc-dev), no external deps at trial time. Both directions re-confirmed inside the task image before shipping, and all four bypass classes (fetch-fix, golden-hardcode, golden-file edit, wrapper interception) were probed and rejected."
+}

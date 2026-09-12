@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 25,
+  "documented_probe": null,
+  "notes": "Upstream-clone regression task (v4.2/v4.3 family) on cure53/DOMPurify, issue #1320. Real checkout given at the PARENT commit 591c429c (buggy): a function-form ADD_ATTR callback lets URI-valued attributes skip the IS_ALLOWED_URI whitelist entirely (attributeCheck early-exit in src/purify.ts), so href=\"javascript:alert(1)\" comes out intact while the array form and defaults clean it. The fix commit 6bc35973 folds the callback check into a nameIsPermitted condition evaluated before the value-level URI tail. The fix-era test/test-suite.js (the full project suite: parent suite plus the ADD_ATTR-function regression asserts, 982 cases) is extracted at image-build time into /opt/golden/ from an ephemeral repository that is deleted immediately, so the fix commit object is never reachable from /app/src/.git (only the parent SHA is fetched, shallow, history severed at depth 1). The verifier requires HEAD==parent, severed history, fix-commit object absent, tracked diff confined to src/purify.ts + dist/ rebuild outputs and non-empty; rebuilds dist with the project's own `npm run build` (byte-identical to committed dist, ~3.5s); runs the golden regression suite via the project's own jsdom runner (must be 982 ok / 0 not ok and contain the two ADD_ATTR-function asserts); then runs 4 authored hidden cases (vbscript: href, img src=javascript, callback-still-honored mixed case, safe #fragment control) through the rebuilt dist under jsdom. Both directions measured during authoring: parent reproduces the failure in-image; the fix (oracle) flips repro to PASS with the suite green. Full jsdom suite ~31s at 1 CPU; hidden cases ~1s. Difficulty easy: deterministic loud failure, single localized control-flow bug."
+}

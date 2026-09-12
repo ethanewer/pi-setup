@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 35,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on the real expressjs/express tree (pinned pre-fix parent 59e205a57a04fced6bb7b8ec0b5dec29461a9996 of upstream issue #4893). The bug: res.send() populates Content-Length even when the response already carries a Transfer-Encoding header, so Node's own HTTP client rejects streaming responses with 'Content-Length can't be present with Transfer-Encoding' and the body never arrives. The agent gets the real repo (only the parent commit ever enters its object store; master-with-fix is never cloned, and the fix commit is only fetched into a scratch clone at build time to extract the project's own regression test test/res.send.js into /opt/golden, then deleted). Agent must reproduce with /app/reproduce.js, localise the cause inside lib/ (which file is for the agent to find; instruction names no file, issue or commit), and fix it so the framework stops emitting both headers. Verifier: provenance check (only lib/response.js may differ from the parent), runs the upstream regression file (res.send.js at the fix commit, 4 TE cases) + the project's own full test/ suite with its own mocha runner + 3 authored hidden specs exercising res.send from inputs the upstream test does not use (JSON bodies, Buffer bodies, short/long strings, route-scoped TE with per-response controls that Content-Length is still sent without Transfer-Encoding), plus the reproducer. nop scores 0 (golden group fails with the Parse Error). Medium: the failure message names both headers so localisation is a read of one function, but the agent must navigate a real ~17k-line tree unassisted."
+}

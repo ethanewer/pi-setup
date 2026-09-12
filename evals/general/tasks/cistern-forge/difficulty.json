@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 0,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 0,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 40,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task: real psycopg/psycopg checkout at commit f9078032, the parent of upstream fix b9f19689 (issue #1327). The selector-based wait loop (waiting.wait_selector) unconditionally re-registers the connection fd after every wake-up, but never unregisters it first, so any generator that waits twice on the same connection (e.g. connect: first EVENT_WRITE, then EVENT_READ) dies with KeyError 'FD n is already registered' on the second wake. The agent must reproduce (included socketpair two-phase repro), localise and fix in the real tree (upstream's own fix: keep the last registration mask and only unregister+reregister when the mask changed). The verifier swaps the fix-branch regression test tests/test_waiting.py (nevents form, commit 5369bbc9; extracted into /opt/golden from a deleted scratch clone so the fix is unreachable from /app/src) over the repo copy and requires the whole wait_selector slice of test_wait_r to pass (16 tests; the four nevents=2/ready=R combos are the ones that fail at the parent), runs the project's own untouched waiting test modules as the no-regression subset, runs three authored hidden cases (socketpair two-phase with a changing wait mask, a real TCP connect-style write-then-read flow, and a 3-phase mixed-mask flow at interval 0 -- inputs the upstream test never uses), and asserts provenance: HEAD pinned at the parent, fix and regression commits absent from the object store, only psycopg/psycopg/waiting.py modified, no stray untracked files, and the installed psycopg resolving into /app/src. Easy: small one-function fix with a direct repro script and a fast, self-contained project test slice."
+}

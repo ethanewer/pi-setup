@@ -1,0 +1,81 @@
+[
+  {
+    "repository": "apache/commons-lang",
+    "upstream_issue_ref": "#1775",
+    "fix_commit": "1d6ef29ce004309e50bd91e27f0f5e80e1a57a76",
+    "parent_commit": "596269f16d33cd4a20223978c245a15c898c5084",
+    "base_image": "bench-base:ubuntu-24.04",
+    "source_files_changed": [
+      "src/main/java/org/apache/commons/lang3/CharRange.java"
+    ],
+    "golden_test_paths": [
+      "src/test/java/org/apache/commons/lang3/CharRangeTest.java"
+    ],
+    "golden_test_names": [
+      "testContains_Charrange_negatedArgumentTouchingBounds"
+    ],
+    "reproduction": "cd $REPO && git reset --hard <sha> && git clean -fd && mvn -B -q test -Dtest='CharRangeTest#testContains_Charrange_negatedArgumentTouchingBounds' -DfailIfNoTests=false -Dspotless.check.skip=true -Dcheckstyle.skip=true -Drat.skip=true -Denforcer.skip=true\nDirect repro (package-private class, so the main must live in package org.apache.commons.lang3):\ncat > /tmp/CharRangeMain.java <<'JAVA'\npackage org.apache.commons.lang3;\npublic class CharRangeMain {\n    public static void main(String[] args) {\n        boolean ok = true;\n        ok &= CharRange.is('x').contains(CharRange.isNotIn((char) 0, Character.MAX_VALUE));\n        ok &= CharRange.isIn('a', Character.MAX_VALUE).contains(CharRange.isNotIn((char) 0, (char) ('a' - 1)));\n        ok &= CharRange.isIn((char) 0, 'a').contains(CharRange.isNotIn('b', Character.MAX_VALUE));\n        System.out.println(\"RESULT=\" + ok);\n        if (!ok) System.exit(1);\n    }\n}\nJAVA\njavac -cp target/classes -d /tmp /tmp/CharRangeMain.java && java -cp target/classes:/tmp org.apache.commons.lang3.CharRangeMain\nRequires one prior `mvn -q test-compile` so target/classes matches the checkout. At parent_commit prints RESULT=false and exits 1; at fix_commit prints RESULT=true and exits 0.",
+    "observed_failure_at_parent": "Golden test: CharRangeTest.testContains_Charrange_negatedArgumentTouchingBounds:268 expected: <true> but was: <false> (Tests run: 1, Failures: 1, Errors: 0; mvn exit 1). Direct repro: RESULT=false, exit code 1.",
+    "verified": "Both directions observed in container bench-base:ubuntu-24.04 (JDK 21.0.12, Maven 3.9.9). Parent 596269f: buggy code present ({lowEmpty} count 0 in CharRange.java; old unconditional 'return start == 0 && end == Character.MAX_VALUE;' present at line 272), fix regression test overlayed from fix commit via `git show <fix>:src/test/... > ...`, golden test FAILS (1 failed), direct repro RESULT=false exit 1. Fix 1d6ef29: 'lowEmpty' present 3 times, golden test PASSES (tests=1 failures=0), direct repro RESULT=true exit 0.",
+    "dependency_pins": {},
+    "install_recipe": "apt-get install -y openjdk-21-jdk git curl && curl -fsSL -o /opt/mvn.tgz https://archive.apache.org/dist/maven/maven-3/3.9.9/binaries/apache-maven-3.9.9-bin.tar.gz && tar xzf /opt/mvn.tgz -C /opt && git config --global --add safe.directory $REPO && cd $REPO && /opt/apache-maven-3.9.9/bin/mvn -B -q test -Dtest='CharRangeTest#testContains_Charrange_negatedArgumentTouchingBounds' -DfailIfNoTests=false -Dspotless.check.skip=true -Dcheckstyle.skip=true -Drat.skip=true -Denforcer.skip=true",
+    "issue_paraphrase": "A character set expressed as a complement - 'every character except those in [a, b]' - is mishandled by a containment query in a character-range utility. When the excluded segment touches the start or end of the whole character domain, the complement collapses to a trivial set (the empty set, everything from a boundary on, or everything up to a boundary), and the utility answers that a plain range does not contain it even when it logically does. Only ranges that explicitly span the entire domain get the right answer; subset checks at the domain bounds return false incorrectly.",
+    "fix_summary": "CharRange.contains(CharRange) gained handling for the boundary cases of a negated argument range: an excluded range covering [0, MAX_VALUE] denotes the empty set (always contained), an excluded range starting at 0 leaves a single high interval, and one ending at MAX_VALUE leaves a single low interval; containment is then decided by interval comparison instead of the previous blanket answer which only accepted ranges spanning the full domain.",
+    "difficulty_guess": "easy",
+    "notes": "Pure-logic fix, no network at test time (maven needs network only for first dependency download). One mvn test run at 1 CPU takes ~1.5-3 min (full recompile on first visit to a commit; only changed files after that). CharRange is package-private, so any direct repro main must be placed in package org.apache.commons.lang3. Golden test text is the one the fix commit itself added; at the parent it must be overlayed from the fix commit because the method does not exist there."
+  },
+  {
+    "repository": "apache/commons-lang",
+    "upstream_issue_ref": "#1769",
+    "fix_commit": "10f4421456b891d5a426348511383f387c99f3e1",
+    "parent_commit": "9d1f110190081801754a8a0b447693ad2407a502",
+    "base_image": "bench-base:ubuntu-24.04",
+    "source_files_changed": [
+      "src/main/java/org/apache/commons/lang3/math/Fraction.java"
+    ],
+    "golden_test_paths": [
+      "src/test/java/org/apache/commons/lang3/math/FractionTest.java"
+    ],
+    "golden_test_names": [
+      "testMultiply",
+      "testDivide"
+    ],
+    "reproduction": "cd $REPO && git reset --hard <sha> && git clean -fd && mvn -B -q test -Dtest='FractionTest#testMultiply' -DfailIfNoTests=false -Dspotless.check.skip=true -Dcheckstyle.skip=true -Drat.skip=true -Denforcer.skip=true\nDirect repro:\ncat > /tmp/FractionMain.java <<'JAVA'\nimport org.apache.commons.lang3.math.Fraction;\npublic class FractionMain {\n    public static void main(String[] args) {\n        try {\n            Fraction f = Fraction.getFraction(-1, 46341).multiplyBy(Fraction.getFraction(100, 1000000));\n            String s = f.getNumerator() + \"/\" + f.getDenominator();\n            System.out.println(\"RESULT=\" + s);\n            if (!\"-1/463410000\".equals(s)) System.exit(1);\n        } catch (Throwable t) {\n            System.out.println(\"THREW \" + t.getClass().getName() + \": \" + t.getMessage());\n            System.exit(1);\n        }\n    }\n}\nJAVA\njavac -cp target/classes -d /tmp /tmp/FractionMain.java && java -cp target/classes:/tmp FractionMain\nAt parent_commit prints THREW java.lang.ArithmeticException: overflow: mulPos and exits 1; at fix_commit prints RESULT=-1/463410000 and exits 0.",
+    "observed_failure_at_parent": "Golden test: FractionTest.testMultiply errored with java.lang.ArithmeticException: overflow: mulPos at Fraction.mulPosAndCheck(Fraction.java:434) called from multiplyBy(Fraction.java:771), triggered from the new assert at FractionTest.java:757 (Tests run: 1, Failures: 0, Errors: 1; mvn exit 1). Direct repro: THREW java.lang.ArithmeticException: overflow: mulPos, exit code 1.",
+    "verified": "Both directions observed in container bench-base:ubuntu-24.04 (JDK 21.0.12, Maven 3.9.9). Parent 9d1f110: buggy code present ('thisGcd' count 0; single-line Knuth cross-gcd at Fraction.java:771 'return getReducedFraction(mulAndCheck(numerator / d1, fraction.numerator / d2), ...);' with no operand pre-reduction), fix regression test overlayed from fix commit, golden testMultiply FAILS with ArithmeticException, direct repro THREW ArithmeticException exit 1. Fix 10f4421: 'thisGcd' present 3 times, golden testMultiply PASSES (tests=1 failures=0), direct repro RESULT=-1/463410000 exit 0.",
+    "dependency_pins": {},
+    "install_recipe": "apt-get install -y openjdk-21-jdk git curl && curl -fsSL -o /opt/mvn.tgz https://archive.apache.org/dist/maven/maven-3/3.9.9/binaries/apache-maven-3.9.9-bin.tar.gz && tar xzf /opt/mvn.tgz -C /opt && git config --global --add safe.directory $REPO && cd $REPO && /opt/apache-maven-3.9.9/bin/mvn -B -q test -Dtest='FractionTest#testMultiply' -DfailIfNoTests=false -Dspotless.check.skip=true -Dcheckstyle.skip=true -Drat.skip=true -Denforcer.skip=true",
+    "issue_paraphrase": "Multiplying two fractions throws an arithmetic overflow error even when the correct result fits comfortably in a 32-bit int, whenever either operand has not been reduced to lowest terms. The library cancels common factors only across the two operands and assumes both are already reduced, so a fraction like 100/1000000 (one hundredth of one hundredth... i.e. 1/10000) combined with a fraction whose denominator is close to the int limit overflows an intermediate product that the reduced result would never need. Callers get a spurious ArithmeticException from a perfectly valid computation; division and power operations route through the same code path.",
+    "fix_summary": "Fraction.multiplyBy now reduces both operands into locals first (greatestCommonDivisor of each numerator/denominator pair) before applying the Knuth 4.5.1 cross-gcd cancellation, so an internal factor shared inside a single operand cannot overflow the intermediate int products. Added regression assertions for multiply and divide using 100/1000000 with denominator 46341, asserting the exact reduced results.",
+    "difficulty_guess": "easy",
+    "notes": "Pure-logic fix, no network at test time. Uses the public org.apache.commons.lang3.math.Fraction API. One mvn run at 1 CPU ~1.5-3 min. Golden method names: the new asserts live in testMultiply (multiply case) and testDivide (divideBy case); testMultiply alone is sufficient as the regression signal. The same class later received a follow-up fix for add/subtract (#1784) - do not mix the two; they are independent commits."
+  },
+  {
+    "repository": "apache/commons-lang",
+    "upstream_issue_ref": "LANG-1828 (#1736)",
+    "fix_commit": "ae85262f04df19b6307de18758cfdcc31cae733d",
+    "parent_commit": "170e9f28ad2667a9b0c80480c2a5a13cb4a53257",
+    "base_image": "bench-base:ubuntu-24.04",
+    "source_files_changed": [
+      "src/main/java/org/apache/commons/lang3/StringUtils.java"
+    ],
+    "golden_test_paths": [
+      "src/test/java/org/apache/commons/lang3/StringUtilsTest.java"
+    ],
+    "golden_test_names": [
+      "testLeftPad_StringIntChar",
+      "testLeftPad_StringInt",
+      "testLeftPad_StringIntString",
+      "testRightPad_StringIntChar"
+    ],
+    "reproduction": "Direct repro (primary, deterministic):\ncat > /tmp/PadMain.java <<'JAVA'\nimport org.apache.commons.lang3.StringUtils;\npublic class PadMain {\n    public static void main(String[] args) {\n        String s = StringUtils.leftPad(\"abc\", Integer.MIN_VALUE, ' ');\n        System.out.println(\"RESULT=\" + s);\n        if (!\"abc\".equals(s)) System.exit(1);\n    }\n}\nJAVA\ncd $REPO && git reset --hard <sha> && git clean -fd && mvn -B -q test-compile -Dspotless.check.skip=true -Dcheckstyle.skip=true -Drat.skip=true -Denforcer.skip=true && javac -cp target/classes -d /tmp /tmp/PadMain.java && java -Xmx256m -cp target/classes:/tmp PadMain\nAt parent_commit this aborts with java.lang.OutOfMemoryError: Java heap space and a non-zero exit; at fix_commit it prints RESULT=abc and exits 0. The -Xmx cap keeps the OOM fast and deterministic on any host.\nGolden test: mvn -B -q test -Dtest='StringUtilsTest#testLeftPad_StringIntChar' -DfailIfNoTests=false -Dspotless.check.skip=true -Dcheckstyle.skip=true -Drat.skip=true -Denforcer.skip=true (parent-side run crashes the forked JVM - see observed_failure_at_parent).",
+    "observed_failure_at_parent": "Golden test run: the surefire test fork crashed and maven exited 1; dump at target/surefire-reports/<ts>-jvmRun1.dump reads 'java.lang.OutOfMemoryError: Java heap space at org.apache.commons.lang3.StringUtils.leftPad(StringUtils.java:5256) at org.apache.commons.lang3.StringUtils.leftPad(StringUtils.java:5205) at org.apache.commons.lang3.StringUtilsTest.testLeftPad_StringIntChar(StringUtilsTest.java:1337)' (StringUtilsTest.java:1337 is the new assert with Integer.MIN_VALUE). Direct repro with -Xmx256m: 'Exception in thread \"main\" java.lang.OutOfMemoryError: Java heap space ... at PadMain.main', exit code 1.",
+    "verified": "Both directions observed in container bench-base:ubuntu-24.04 (JDK 21.0.12, Maven 3.9.9). Parent 170e9f2: buggy code present ('size <= str.length()' count 0; leftPad(String,int,char) starts 'if (str == null) { return null; }' with no size guard; pads = size - str.length() overflows to +2147483645 for size=Integer.MIN_VALUE), overlay of the fix's StringUtilsTest in place, golden testLeftPad_StringIntChar run crashes the fork with OutOfMemoryError and mvn exits 1; direct repro OOMs at leftPad(StringUtils.java:5256) and exits 1. Fix ae85262: 'size <= str.length()' present 4 times (leftPad x2, rightPad x2), golden testLeftPad_StringIntChar PASSES (tests=1 failures=0), direct repro prints RESULT=abc and exits 0.",
+    "dependency_pins": {},
+    "install_recipe": "apt-get install -y openjdk-21-jdk git curl && curl -fsSL -o /opt/mvn.tgz https://archive.apache.org/dist/maven/maven-3/3.9.9/binaries/apache-maven-3.9.9-bin.tar.gz && tar xzf /opt/mvn.tgz -C /opt && git config --global --add safe.directory $REPO && cd $REPO && /opt/apache-maven-3.9.9/bin/mvn -B -q test -Dtest='StringUtilsTest#testLeftPad_StringIntChar' -DfailIfNoTests=false -Dspotless.check.skip=true -Dcheckstyle.skip=true -Drat.skip=true -Denforcer.skip=true",
+    "issue_paraphrase": "Padding a string to a very large target size can exhaust the Java heap and kill the whole process instead of returning the input unchanged. Passing Integer.MIN_VALUE as the desired length makes the padding routines subtract the current string length from that minimum int, which overflows into a huge positive pad count; the code then attempts to materialize a multi-gigabyte character array and the JVM dies with an OutOfMemoryError that no application code can catch. Any server that pads values based on untrusted lengths crashes outright, where a size no larger than the string's own length should simply be a no-op returning the original string.",
+    "fix_summary": "leftPad and rightPad (both the char-padChar and String-padStr overloads) now return the input string immediately when the requested size is not greater than the current string length, so the pad-count arithmetic can never overflow into a giant allocation. Previously only the str == null case was short-circuited. Added regression asserts calling leftPad(\"abc\", Integer.MIN_VALUE, ...) and rightPad(...) expecting the string unchanged.",
+    "difficulty_guess": "easy",
+    "notes": "DoS/OOM class bug, very user-visible, public StringUtils API. The parent-side failure is an uncaught OutOfMemoryError that crashes the fork, which makes the golden test run report a surefire dump + mvn exit 1 rather than an ordinary assertion failure - do not mistake that for an environment problem. Keep the direct repro under -Xmx256m so the OOM is fast and deterministic. The `mvn test-compile` before the direct repro builds target/classes for the checkout being tested. Test runs are offline; only the first maven invocation needs network."
+  }
+]

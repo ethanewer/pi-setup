@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 30,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on a real codebase: redis/redis checked out at 3d15ede58ad862996f9b23d3500cad2a5c7fb0f4 (parent of upstream fix 48cc562064dbb52ef3f9cc1a5aa32db6811f5871, upstream issue redis/redis#15756). The clone is initialized fresh and a single shallow no-tags fetch of the pinned parent SHA is made, so the fix commit is not reachable from the clone at all; the project's own regression test (tests/unit/dump.tcl from the fix commit, test 'RESTORE with a TTL that overflows when added to the current time') is extracted into /opt/golden via a throwaway bare clone that is deleted, and never enters the task tree. The bug is present: restoreCommand() computes `if (!absttl) ttl+=commandTimeSnapshot();` unchecked, so RESTORE with ttl~INT64_MAX overflows int64, the key gets a negative 'already expired' timestamp, the command replies OK and the key is silently dropped (with REPLACE the old value is deleted and expired_keys increments). Upstream fix: guard the addition with add_overflow_ll() (already defined in src/util.h) and reply 'ERR invalid expire time in 'restore' command'; only src/cluster.c changes. The agent must reproduce (provided /app/reproduce.sh + Tcl reproducer), localise and fix in the real tree, rebuild incrementally, and write /app/diagnosis.md. Verifier: provenance asserts (HEAD still at parent, fix commit absent, the only tracked change allowed is src/cluster.c, no stray untracked files), an incremental `make -j1`, then the golden test via `./runtest --single unit/dump --only <name>` against the fixed binary, then two authored hidden cases (fresh-key no-REPLACE with INT64_MAX-807, REPLACE of an existing key with INT64_MAX-5807, huge ABSTTL validity guard, list-typed payload) that fail at parent / pass at fix, then the project's own existing unit/dump suite must stay green. Measured at 1 CPU in the task image: incremental make ~95s, full unit/dump ~22s, golden-only run ~10s. Oracle reward 1; untouched-tree nop reward 0 (golden test fails with buggy binary: 'Expected an error matching \"ERR invalid expire time in 'restore' command\" but got OK'). Difficulty easy: one-line fix in a 30k-line C tree, unambiguous error contract, deterministic reproducer."
+}

@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 25,
+  "documented_probe": "15MB 700 files 300k LOC meson; shallow clone of libvips @ parent 92b95531d198abf9ca40aaa3f67dd6d7f4cfa2bd, prebuilt+installed at image build",
+  "notes": "v4.2/v4.3 upstream-clone debugging task on the real libvips tree (libvips/libvips #5182, fix landed as #5183 in dbf559add; parent 92b95531d). The image carries a shallow clone pinned to the parent commit, already built with meson/ninja and installed system-wide, with pyvips==3.2.0 + pytest==8.4.2 bound to it, so the agent's work is: reproduce (a pyvips reproducer shipped as /app/reproduce.py shows unpremultiply([20,10]) -> [254.0, 10.0] instead of [255.0, 10.0], a 510 value wrapping mod 256 in the uchar->uchar fast path), localise, fix the missing clamp in the real source, and redo only `ninja -C build install`. The upstream fix commit is deliberately unreachable from the clone (shallow fetch pins only the parent; the golden fix-era test_conversion.py is extracted into /opt/golden from a throwaway clone whose sha256 is pinned in the Dockerfile, and the verifier asserts `git cat-file -e <fix>` fails). The verifier runs the project's own conversion suite (the fix-era test_conversion.py = parent suite + regression assertion, overlaid at verify time), requires the working tree to be otherwise unmodified vs baseline (only unpremultiply.c), and adds 3 authored hidden uchar unpremultiply cases (alpha 5/0 with heavy overflow, RGBA bands=4 with mixed overflow, a 3x2 grid with alphas 5..255 including identity-at-255) whose expectations are computed independently in pure Python; every hidden case fails on the buggy parent build and passes on the fixed build (verified both directions in-image). The nop container scores 0: reproducer and suite fail and no diagnosis exists. Original upstream bug confirmed in-image: parent build prints [254.0, 10.0] and the golden regression test fails (assert [254.0, 10.0] == [255, 10]); after applying the clamp and rebuilding, [255.0, 10.0] and the full suite passes. Offline-clean: ninja rebuild, ldconfig, pytest and pyvips all run with no network; soname is unchanged between parent and the agent's rebuild (same 8.19.0 tree + one line), so no stale-.so shadowing can occur."
+}

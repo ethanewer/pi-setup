@@ -1,0 +1,77 @@
+[
+ {
+  "repository": "sympy/sympy",
+  "upstream_issue_ref": "#29368",
+  "fix_commit": "66ee6e06934fede513c7504413baacbf80917186",
+  "parent_commit": "6a968f7201e5d9187b50dbdc2cc66b17594a59ac",
+  "base_image": "bench-base:python-3.12",
+  "source_files_changed": [
+   "sympy/solvers/simplex.py"
+  ],
+  "golden_test_paths": [
+   "sympy/solvers/tests/test_simplex.py"
+  ],
+  "golden_test_names": [
+   "test_29368"
+  ],
+  "reproduction": "Container bench-base:python-3.12 (Python 3.12.13), repo mounted at /work/sympy; install once: `pip install -e .` (pulls mpmath automatically) then `pip install pytest hypothesis`.\nrepro29368.py:\n  from sympy.solvers.simplex import linprog\n  print(linprog([1]))\n  print(linprog([1, 1]))\n  from sympy.solvers.simplex import UnboundedLPError\n  try:\n      linprog([-1])\n  except UnboundedLPError as e:\n      print('unbounded:', str(e)[:30])\n# --- parent direction ---\ngit config --global --add safe.directory /work/sympy\ngit reset --hard 6a968f7201e5d9187b50dbdc2cc66b17594a59ac && git clean -fd\ngit checkout 66ee6e06934fede513c7504413baacbf80917186 -- sympy/solvers/tests/test_simplex.py\n# prove buggy code present: grep -n 'zeros(C.cols, 1)' sympy/solvers/simplex.py  => 967: A, b = zeros(0, C.cols), zeros(C.cols, 1)  (also 1034)\npython repro29368.py        # => ValueError: must give A and B (before any UnboundedLPError branch)\npython -m pytest 'sympy/solvers/tests/test_simplex.py::test_29368' -p no:cacheprovider\n# => 1 failed; FAILED test_29368 - ValueError: must give A and B\n# --- fix direction ---\ngit reset --hard 66ee6e06934fede513c7504413baacbf80917186 && git clean -fd\n# prove fix present: grep -n 'zeros(0, 1)' sympy/solvers/simplex.py => 967: A, b = zeros(0, C.cols), zeros(0, 1)\npython repro29368.py        # => (0, [0]) / (0, [0, 0]) / unbounded: Objective function can assume arbitrarily large values!\npython -m pytest 'sympy/solvers/tests/test_simplex.py::test_29368' -p no:cacheprovider  # => 1 passed",
+  "observed_failure_at_parent": "python repro29368.py: linprog([1]) raises 'ValueError: must give A and B' from _simplex (simplex.py:279); the no-constraints case is never solved. Golden test test_29368 FAILED with the same ValueError ('must give A and B') on its first assertion. At the fix commit linprog([1]) returns (0, [0]), linprog([1,1]) returns (0, [0, 0]), linprog([-1]) raises UnboundedLPError, and the golden test passes.",
+  "verified": "Both directions observed in bench-base:python-3.12 container. Parent (6a968f72, fix's own test file overlaid): buggy line 'A, b = zeros(0, C.cols), zeros(C.cols, 1)' confirmed present at simplex.py:967 (and 1034) by grep; repro crashed with ValueError: must give A and B; golden test 1 failed. Fix (66ee6e06): 'zeros(0, 1)' present at line 967 by grep; repro returns (0,[0])/(0,[0,0]) and UnboundedLPError for [-1]; golden test 1 passed.",
+  "dependency_pins": {},
+  "install_recipe": "cd <checkout> && pip install -e . && pip install pytest hypothesis   (sympy's only runtime dependency, mpmath>=1.1.0, is installed by the -e .; pytest and hypothesis are the minimal test deps from the project's requirements-dev.txt and are needed so conftest.py imports cleanly). Resolved at verify time: mpmath 1.3.0, pytest 9.1.1, hypothesis 6.168.0, Python 3.12.13.",
+  "issue_paraphrase": "Calling linprog with only the objective row and none of the constraint matrices crashes with a misleading 'ValueError: must give A and B' instead of solving or even recognizing the unconstrained problem. A tolerable objective such as [1] with no constraints should come back with the trivial optimum of value 0, and a cost row like [-1] that can be minimized without bound should be reported as unbounded; instead both paths die on the spurious error deep inside the solver.",
+  "fix_summary": "In linprog's no-constraints branch the right-hand side was built as a C.cols x 1 zero column vector (zeros(C.cols, 1)) while A was 0 x C.cols; the mismatched row count made the internal _simplex routine see a truthy B next to a falsy A and raise ValueError('must give A and B'). The fix builds b as a 0 x 1 zero matrix (zeros(0, 1)) so the unconstrained LP flows through as a 0-row problem and yields the unconstrained optimum or UnboundedLPError.",
+  "difficulty_guess": "easy",
+  "notes": "No network needed at test time. Whole verification (both directions plus golden test) takes about 1 minute at 1 CPU. IMPORTANT: at these commits the name linprog is NOT exported at top level (sympy.linprog appears only later); the correct import is `from sympy.solvers.simplex import linprog`, and the golden test file uses it. Run only the single nodeid 'sympy/solvers/tests/test_simplex.py::test_29368'; the whole test_simplex.py module is fine too (fast) but test_29368 alone is the golden test. pyproject.toml addopts '-m not slow and not tooslow' applies: the golden test is unmarked so it runs."
+ },
+ {
+  "repository": "sympy/sympy",
+  "upstream_issue_ref": "#28744",
+  "fix_commit": "f1b4be1bf83baee7e9ac116e81cdae1f30c5d1cd",
+  "parent_commit": "648f6cfb88b83e58655499523fb6cede213d10c2",
+  "base_image": "bench-base:python-3.12",
+  "source_files_changed": [
+   "sympy/core/mod.py"
+  ],
+  "golden_test_paths": [
+   "sympy/core/tests/test_arit.py"
+  ],
+  "golden_test_names": [
+   "test_Mod"
+  ],
+  "reproduction": "Container bench-base:python-3.12 (Python 3.12.13), repo mounted at /work/sympy; install once: `pip install -e .` then `pip install pytest hypothesis`.\nrepro28744.py:\n  from sympy import Symbol, Mod, floor\n  x0 = Symbol('x0'); x0_int = Symbol('x0', integer=True)\n  expr = Mod(2*Mod(x0, 3), 5)\n  expr_int = Mod(2*Mod(x0_int, 3), 5).xreplace({x0_int: x0})\n  print(expr == expr_int)\n  print(expr_int)\n  x1 = Symbol('x1'); x1_int = Symbol('x1', integer=True)\n  e1 = 8*Mod(floor(x1/64), 4)\n  e2 = 8*Mod(floor(x1_int/64), 4).xreplace({x1_int: x1})\n  print(e1 == e2)\n# --- parent direction ---\ngit config --global --add safe.directory /work/sympy\ngit reset --hard 648f6cfb88b83e58655499523fb6cede213d10c2 && git clean -fd\ngit checkout f1b4be1bf83baee7e9ac116e81cdae1f30c5d1cd -- sympy/core/tests/test_arit.py\n# prove buggy code present: grep -n 'for i in p.args\\]' sympy/core/mod.py => 168: non_mod_l = [i % q if i.is_Integer else i for i in p.args]\npython repro28744.py   # => False / Mod(2*(Mod(x0, 3))**2, 5) / False\npython -m pytest 'sympy/core/tests/test_arit.py::test_Mod' -p no:cacheprovider\n# => 1 failed; FAILED test_Mod - assert Mod(2*(Mod(x0, 3)), 5) == Mod(2*(Mod(x0, 3))**2, 5)\n# --- fix direction ---\ngit reset --hard f1b4be1bf83baee7e9ac116e81cdae1f30c5d1cd && git clean -fd\n# prove fix present: grep -n 'for i in non_mod_l\\]' sympy/core/mod.py => 168: non_mod_l = [i % q if i.is_Integer else i for i in non_mod_l]\npython repro28744.py   # => True / Mod(2*(Mod(x0, 3)), 5) / True\npython -m pytest 'sympy/core/tests/test_arit.py::test_Mod' -p no:cacheprovider  # => 1 passed",
+  "observed_failure_at_parent": "python repro28744.py: the integer-assumed form simplifies to Mod(2*(Mod(x0, 3))**2, 5) - the inner Mod gets SQUARED - so expr == expr_int is False while the plain-symbol expression is Mod(2*(Mod(x0, 3)), 5); the floor-based second equality is also False. Golden test test_Mod FAILED with 'assert Mod(2*(Mod(x0, 3)), 5) == Mod(2*(Mod(x0, 3))**2, 5)'. At the fix commit both equalities are True and test_Mod passes.",
+  "verified": "Both directions observed in bench-base:python-3.12 container. Parent (648f6cfb, fix's own test file overlaid): buggy line 'for i in p.args' confirmed present at sympy/core/mod.py:168 by grep; repro showed the inner Mod squared and unequal forms; golden test_Mod 1 failed. Fix (f1b4be1b): 'for i in non_mod_l' present at line 168 by grep; repro equalities True; golden test_Mod 1 passed.",
+  "dependency_pins": {},
+  "install_recipe": "cd <checkout> && pip install -e . && pip install pytest hypothesis. Resolved at verify time: mpmath 1.3.0, pytest 9.1.1, hypothesis 6.168.0, Python 3.12.13.",
+  "issue_paraphrase": "A modulo expression inside another modulo can silently change when integer-typed symbols are involved: if a symbol is declared integer, simplifying an expression such as (2 * (x mod 3)) mod 5 squares the inner residue, producing a different expression than the same code with an ordinary symbol. Comparing the two forms after normalizing the symbol gives inequality even though they describe the same arithmetic, and a second family built with floor shows the same discrepancy. The integer assumption is supposed to only add simplifications, never alter the value.",
+  "fix_summary": "In Mod.number_eval, the list of non-mod factors was rebuilt by iterating over p.args and reducing only the Integer factors, so factors of p that were themselves Mod expressions were duplicated into BOTH the mod list and the non-mod list; with p containing an integer-assumed symbol both copies survived, which made the inner Mod appear twice (squared). The fix iterates over the already-filtered non_mod_l list so Mod factors are not duplicated. (.mailmap change in the same commit is irrelevant.)",
+  "difficulty_guess": "easy",
+  "notes": "No network needed at test time. Whole verification (both directions plus golden test) takes about 2 minutes at 1 CPU (import sympy dominates). Run only the single nodeid 'sympy/core/tests/test_arit.py::test_Mod' - the whole test_arit.py module takes minutes. sympy prints a 'DO *NOT* COMMIT!' banner via its conftest at pytest startup; harmless. pyproject.toml addopts '-m not slow and not tooslow' does not exclude the golden test."
+ },
+ {
+  "repository": "sympy/sympy",
+  "upstream_issue_ref": "#28970",
+  "fix_commit": "d696c93fbb25f062f963b58a98c0ac1a07fec3fc",
+  "parent_commit": "08e73e6bd6a5227e9382ea313715b363c06e88ad",
+  "base_image": "bench-base:python-3.12",
+  "source_files_changed": [
+   "sympy/solvers/solveset.py"
+  ],
+  "golden_test_paths": [
+   "sympy/solvers/tests/test_solveset.py"
+  ],
+  "golden_test_names": [
+   "test_nonlinsolve_sign"
+  ],
+  "reproduction": "Container bench-base:python-3.12 (Python 3.12.13), repo mounted at /work/sympy; install once: `pip install -e .` then `pip install pytest hypothesis`.\nrepro28970.py:\n  from sympy import nonlinsolve, sign, symbols\n  x, y = symbols('x y')\n  try:\n      print(nonlinsolve([sign(x) - 1, x*y - 4], [x, y]))\n  except Exception as e:\n      print('EXC1:', type(e).__name__, str(e)[:60])\n  try:\n      print(nonlinsolve([sign(x) - 1, x - y], [x, y]))\n  except Exception as e:\n      print('EXC2:', type(e).__name__, str(e)[:60])\n  r = nonlinsolve([sign(x) - 1], [x])\n  print('single:', type(r).__name__)\n# --- parent direction ---\ngit config --global --add safe.directory /work/sympy\ngit reset --hard 08e73e6bd6a5227e9382ea313715b363c06e88ad && git clean -fd\ngit checkout d696c93fbb25f062f963b58a98c0ac1a07fec3fc -- sympy/solvers/tests/test_solveset.py\n# prove buggy code present: grep -n 'except (NotImplementedError, ValueError)' sympy/solvers/solveset.py => 3606: except (NotImplementedError, ValueError):\npython repro28970.py   # => EXC1: TypeError unsupported operand type(s) for /: 'Integer' and 'Interval'  (both 2-eq cases crash)\npython -m pytest 'sympy/solvers/tests/test_solveset.py::test_nonlinsolve_sign' -p no:cacheprovider\n# => 1 failed; FAILED test_nonlinsolve_sign - TypeError: unsupported operand type(s) for /: 'Integer' and 'Interval'\n# --- fix direction ---\ngit reset --hard d696c93fbb25f062f963b58a98c0ac1a07fec3fc && git clean -fd\n# prove fix present: grep -n 'nonlinsolve cannot handle solution of type' sympy/solvers/solveset.py => line 3609 (raise inside _solve_using_known_values)\npython repro28970.py   # => EXC1: NotImplementedError nonlinsolve cannot handle solution of type Interval for symbol x. Got Interval.open(0, oo); single: FiniteSet\npython -m pytest 'sympy/solvers/tests/test_solveset.py::test_nonlinsolve_sign' -p no:cacheprovider  # => 1 passed",
+  "observed_failure_at_parent": "python repro28970.py: both two-equation systems (sign(x)-1 with x*y-4 and with x-y) crash with 'TypeError: unsupported operand type(s) for /: 'Integer' and 'Interval'' - a raw arithmetic error because the sign equation reduced to an interval of x values that the solver then divided other terms by; the singleton case returns a ConditionSet tuple rather than a proper FiniteSet. Golden test test_nonlinsolve_sign FAILED with that TypeError (raises(NotImplementedError, ...) never saw NotImplementedError). At the fix commit the two-equation calls raise NotImplementedError with a clear 'cannot handle solution of type Interval' message, the singleton returns a FiniteSet, and the golden test passes.",
+  "verified": "Both directions observed in bench-base:python-3.12 container. Parent (08e73e6b, fix's own test file overlaid): 'except (NotImplementedError, ValueError)' confirmed present at solveset.py:3606 by grep; repro crashed with TypeError on both 2-eq systems; golden test 1 failed. Fix (d696c93f): the NotImplementedError raise with message 'nonlinsolve cannot handle solution of type' present at line 3609 by grep; repro raises NotImplementedError (Interval.open(0, oo) reported); singleton returns FiniteSet; golden test 1 passed.",
+  "dependency_pins": {},
+  "install_recipe": "cd <checkout> && pip install -e . && pip install pytest hypothesis. Resolved at verify time: mpmath 1.3.0, pytest 9.1.1, hypothesis 6.168.0, Python 3.12.13.",
+  "issue_paraphrase": "Solving a system of equations in which one equation involves the sign function crashes with a low-level arithmetic TypeError (something like 'unsupported operand type(s) for /: Integer and Interval'), because the equation sign(x) - 1 = 0 is turned into an interval of x values that the solver then tries to divide other expressions by. Instead of the crash the call should either produce the solution or fail with a clear solver-level error, and a lone sign equation should still yield a proper answer set rather than being reported as an unsolvable condition set.",
+  "fix_summary": "In _solve_using_known_values (used by nonlinsolve), once one equation has given a solution for a variable the solver combined it with solveset_complex of another equation and kept going, and later died of a raw TypeError when that accumulated solution was an Interval (as produced by sign(x)-1=0). The fix raises NotImplementedError immediately after the combine step when the result is not a FiniteSet/ImageSet/ConditionSet/Union/EmptySet, and narrows the except clause to only ValueError so an introduced NotImplementedError propagates instead of being silently swallowed and re-attempted. Result: a clear 'nonlinsolve cannot handle solution of type Interval' error instead of the crash, and the single sign equation now returns a FiniteSet.",
+  "difficulty_guess": "medium",
+  "notes": "No network needed at test time. Whole verification (both directions plus golden test) takes about 2-3 minutes at 1 CPU. Run only the single nodeid 'sympy/solvers/tests/test_solveset.py::test_nonlinsolve_sign'; the whole test_solveset.py module takes many minutes. The golden test requires the fix's semantics (NotImplementedError for the two-equation cases, FiniteSet for the single case); a naive implementation that only special-cases the sign function in a different place can still satisfy it, which is fine for a task. sympy prints a 'DO *NOT* COMMIT!' banner via conftest at pytest startup; harmless. The lint/doctest addopts in pyproject.toml do not affect the marked node."
+ }
+]

@@ -1,0 +1,100 @@
+[
+ {
+  "repository": "junit-team/junit5",
+  "upstream_issue_ref": "#4839",
+  "fix_commit": "cb577cf95050cd7b2f64090261fe5a48acb326bc",
+  "parent_commit": "8307cd49221d90413c66918c7b094274078a6809",
+  "base_image": "bench-base:ubuntu-24.04",
+  "source_files_changed": [
+   "junit-platform-commons/src/main/java/org/junit/platform/commons/util/ReflectionUtils.java",
+   "junit-platform-commons/src/main/java/org/junit/platform/commons/support/ReflectionSupport.java"
+  ],
+  "golden_test_paths": [
+   "platform-tests/src/test/java/org/junit/platform/commons/util/ReflectionUtilsTests.java"
+  ],
+  "golden_test_names": [
+   "findNestedClassesWithMultipleNestedClasses"
+  ],
+  "reproduction": "cd /work/junit5 && git config --global --add safe.directory /work/junit5\nexport JDK24=/opt/jdk-24.0.2+12 JDK25=/opt/jdk-25.0.4.1+1 JDK21=/usr/lib/jvm/java-21-openjdk-amd64  # JDK24 is this era's default compile toolchain\ngit reset --hard <PARENT_OR_FIX> && git clean -fd\n# at parent only, overlay the regression test from the fix commit:\ngit checkout <FIX> -- platform-tests/src/test/java/org/junit/platform/commons/util/ReflectionUtilsTests.java\n./gradlew :platform-tests:test --tests \"org.junit.platform.commons.util.ReflectionUtilsTests\" -Ptesting.enableJaCoCo=false\n# parent: BUILD FAILED, '121 tests completed, 1 failed', the only failure is findNestedClassesWithMultipleNestedClasses\n# fix: BUILD SUCCESSFUL",
+  "observed_failure_at_parent": "ReflectionUtilsTests > NestedClassTests > findNestedClassesWithMultipleNestedClasses() FAILED with org.opentest4j.AssertionFailedError: '- element at index 0: expected \"Beta\" but was \"Theta\" - element at index 1: expected \"Zeta\" but was \"Eta\" - element at index 2: expected \"Eta\" but was \"Zeta\" - element at index 3: expected \"Alpha\" but was \"Epsilon\" ...' (assertion expects the deterministic hash-sorted order; parent returns the JVM reflection order). Full class run: 121 tests completed, 1 failed. Buggy code confirmed at parent: ReflectionUtils.findNestedClasses iterates clazz.getDeclaredClasses() directly with no sorting and the defaultClassSorter / toSortedMutableList(Class[]) helpers are absent (grep for defaultClassSorter returns nothing).",
+  "verified": "Both directions observed in container 'mine-junit5' on bench-base:ubuntu-24.04 with adoptium JDK 24.0.2+12 and 25.0.4.1+1 installed and exposed via org.gradle.java.installations.fromEnv (JDK24/JDK25/JDK21 env vars). Parent 8307cd492 + fix test file overlaid: gradle 9.0.0 run of ReflectionUtilsTests reports '121 tests completed, 1 failed', failure is exactly findNestedClassesWithMultipleNestedClasses (order mismatch, real stdout captured). Fix cb577cf95: same command, BUILD SUCCESSFUL (whole class green). Buggy code presence proven at parent: 'defaultClassSorter' absent, line 1185 reads 'for (Class<?> nestedClass : clazz.getDeclaredClasses())'; at fix it reads 'toSortedMutableList(clazz.getDeclaredClasses())' and defaultClassSorter is present (count 2).",
+  "dependency_pins": {
+   "JDK (compile+test toolchain)": "24 (default JavaLanguageVersion at this commit; must be discoverable, e.g. org.gradle.java.installations.fromEnv=JDK24)",
+   "Gradle": "9.0.0-bin (wrapper-distribution pinned by gradle/wrapper/gradle-wrapper.properties at this commit; auto-downloaded)",
+   "gradle daemon jvm": "toolchainVersion=24 per gradle/gradle-daemon-jvm.properties"
+  },
+  "install_recipe": "apt-get update && apt-get install -y openjdk-21-jdk git curl (JDK21 only used for env-var plumbing; the daemon+toolchain need 24). Download adoptium tarballs: curl -sL -o /opt/jdk24.tar.gz 'https://api.adoptium.net/v3/binary/latest/24/ga/linux/x64/jdk/hotspot/normal/eclipse?archiveType=tar.gz' and the same URL with /25/ for JDK 25 (needed by gradle-daemon-jvm.properties defaultLanguageVersion in some commits), extract to /opt. Then export JDK24=<path>; JDK25=<path>; JDK21=/usr/lib/jvm/java-21-openjdk-amd64 and run the gradlew command above. Do NOT pass -PjavaToolchain.version: overriding the era's default toolchain (24) breaks the build (NullAway -Werror failure in junit-platform-launcher).",
+  "issue_paraphrase": "Test suites that declare several nested test classes inside the same enclosing test class are executed in an order taken straight from the JVM's reflection API, which is unspecified and differs between JDK versions and between machines. The same suite can therefore run its nested classes in different orders on different Java versions, which makes output-based comparisons and any order-sensitive test logic non-deterministic. The framework now orders nested classes declared in the same enclosing type using a deterministic (intentionally non-obvious) ordering algorithm.",
+  "fix_summary": "ReflectionUtils.findNestedClasses (and ReflectionSupport wrappers) now sort classes returned by getDeclaredClasses() with a new defaultClassSorter that compares Class.getName().hashCode() first and falls back to lexicographic comparison on hashCode collision, applied through the existing toSortedMutableList helper. Result: same-enclosing-class nested classes always come out in the same deterministic order regardless of JVM. Javadoc updated to state the deterministic-but-nonobvious ordering contract.",
+  "difficulty_guess": "easy",
+  "notes": "Only the full class-level --tests filter worked for JUnit Platform tests under Gradle 9.0.0 (the 'Class.methodName' form matches nothing: 'No tests found for given includes'); the class-level filter is fine because at the parent exactly one method of the 121 in the class fails. No network needed at test runtime. First Gradle run per working tree downloads the 9.0.0 distribution and Maven deps (~3 min); test task afterwards is seconds. The other test in the same class (findNestedClassesWithInvalidNestedClassFile) needs groovy on the classpath, which the module already declares, so it runs fine."
+ },
+ {
+  "repository": "junit-team/junit5",
+  "upstream_issue_ref": "#4692",
+  "fix_commit": "2a52a0643fba15b52fcf13dd553758fcbc1d0458",
+  "parent_commit": "f8513cbd8b867f0c4252d4d9625d77edc45820cb",
+  "base_image": "bench-base:ubuntu-24.04",
+  "source_files_changed": [
+   "junit-jupiter-params/src/main/java/org/junit/jupiter/params/provider/CsvReaderFactory.java",
+   "junit-jupiter-params/src/main/java/org/junit/jupiter/params/provider/CsvSource.java",
+   "junit-jupiter-params/src/main/java/org/junit/jupiter/params/provider/CsvFileSource.java"
+  ],
+  "golden_test_paths": [
+   "jupiter-tests/src/test/java/org/junit/jupiter/params/provider/CsvArgumentsProviderTests.java"
+  ],
+  "golden_test_names": [
+   "trimsSpacesUsingStringTrim"
+  ],
+  "reproduction": "cd /work/junit5 && git config --global --add safe.directory /work/junit5\nexport JDK24=/opt/jdk-24.0.2+12 JDK25=/opt/jdk-25.0.4.1+1 JDK21=/usr/lib/jvm/java-21-openjdk-amd64\ngit reset --hard <PARENT_OR_FIX> && git clean -fd\n# at parent only, overlay the regression test from the fix commit:\ngit checkout <FIX> -- jupiter-tests/src/test/java/org/junit/jupiter/params/provider/CsvArgumentsProviderTests.java\n./gradlew :jupiter-tests:test --tests \"org.junit.jupiter.params.provider.CsvArgumentsProviderTests\" -Ptesting.enableJaCoCo=false\n# parent: BUILD FAILED, only trimsSpacesUsingStringTrim FAILED\n# fix: BUILD SUCCESSFUL",
+  "observed_failure_at_parent": "CsvArgumentsProviderTests > trimsSpacesUsingStringTrim() FAILED with org.opentest4j.AssertionFailedError: 'Expecting actual: [[\"\u0000foo\", \"\u00A0bar\"], ...] to contain exactly (and in same order): [[\"foo\", \"\u00A0bar\"], ...] but some elements were not found: [[\"foo\", \"\u00A0bar\"]] and others were not expected: [[\"\u0000foo\", \"\u00A0bar\"]]' at CsvArgumentsProviderTests.java:137. Root cause confirmed at parent: CsvReaderFactory line 168 reads 'String modifiedField = (!quoted && ignoreLeadingAndTrailingWhitespaces) ? field.strip() : field;' — strip() removes Unicode whitespace (so U+00A0 NBSP is dropped) but keeps U+0000 NUL (so it was not trimmed).",
+  "verified": "Both directions observed in container 'mine-junit5' on bench-base:ubuntu-24.04 (adoptium JDK 24.0.2+12 default toolchain, JDK 25.0.4.1+1 for the daemon criteria file, gradle 8.14.2 wrapper). Parent f8513cbd8 + fix test file overlaid: gradle run of CsvArgumentsProviderTests FAILS on trimsSpacesUsingStringTrim with the NUL/NBSP mis-trim output above (real stderr captured). Fix 2a52a0643: same command, BUILD SUCCESSFUL. Buggy code presence proven: at parent line 168 is 'field.strip()'; at fix it is 'field.trim()'.",
+  "dependency_pins": {
+   "JDK (compile+test toolchain)": "24 (default JavaLanguageVersion at this commit)",
+   "Gradle": "8.14.2-bin (wrapper-distribution pinned at this commit; auto-downloaded)",
+   "gradle daemon jvm": "toolchainVersion=24 per gradle/gradle-daemon-jvm.properties"
+  },
+  "install_recipe": "Same container recipe as the other junit5 entries: apt-get install openjdk-21-jdk git curl, download adoptium JDK 24 and 25 tarballs from api.adoptium.net (latest/24/ga and latest/25/ga, linux x64 hotspot) into /opt, export JDK24/JDK25/JDK21 env vars (org.gradle.java.installations.fromEnv=JDK17,JDK21,JDK24,JDK25 is hardcoded in gradle.properties), then: git reset --hard <sha> && git clean -fd && git checkout <FIX> -- <golden test file> && ./gradlew :jupiter-tests:test --tests \"org.junit.jupiter.params.provider.CsvArgumentsProviderTests\" -Ptesting.enableJaCoCo=false.",
+  "issue_paraphrase": "Parameters passed to a parameterized test through CSV data sources have their leading and trailing whitespace trimmed by default. After a change in the whitespace handling, that trimming started using Unicode-aware whitespace detection, so non-ASCII whitespace such as non-breaking spaces was silently removed from argument values, and some other control characters were no longer trimmed at all. The values a test actually receives therefore changed between releases without any code change in the test, silently altering or breaking suites. Trimming should only apply to ASCII whitespace, matching the original behavior.",
+  "fix_summary": "CsvReaderFactory's field-trimming line for unquoted CSV columns was changed from field.strip() (Unicode whitespace) back to field.trim() (ASCII controls/spaces <= U+0020), restoring pre-5.8-compatible trimming semantics. Javadoc on CsvSource.ignoreLeadingAndTrailingWhitespaces and CsvFileSource.ignoreLeadingAndTrailingWhitespaces documents that 'whitespace' means code points <= U+0020 as defined by String.trim().",
+  "difficulty_guess": "easy",
+  "notes": "Class-level --tests filter used (method-name filter matches nothing under JUnit Platform + Gradle 8.14). Whole CsvArgumentsProviderTests class is green except the regression test at parent. No network at test runtime; build-time network only (wrapper + Maven deps). First run downloads gradle 8.14.2 and compiles jupiter-tests dependency graph (~3 min); subsequent runs seconds. Also note the referenced upstream context: junit-team/junit-framework#3824 comment, indicating users hit this as a silent behavior change after upgrading."
+ },
+ {
+  "repository": "junit-team/junit5",
+  "upstream_issue_ref": "#5098",
+  "fix_commit": "1866c0c21b177f10364aafb17d6b61dd7c80e476",
+  "parent_commit": "f5b43ce4e82796d225fe6ecbbfe8a0ad1bed27c4",
+  "base_image": "bench-base:ubuntu-24.04",
+  "source_files_changed": [
+   "junit-jupiter-engine/src/main/java/org/junit/jupiter/engine/discovery/ClassSelectorResolver.java",
+   "junit-jupiter-engine/src/main/java/org/junit/jupiter/engine/discovery/DeclaredMethodSelector.java",
+   "junit-jupiter-engine/src/main/java/org/junit/jupiter/engine/discovery/MethodSelectorResolver.java",
+   "junit-jupiter-engine/src/main/java/org/junit/jupiter/engine/discovery/MethodSegmentResolver.java",
+   "junit-platform-commons/src/main/java/org/junit/platform/commons/util/ReflectionUtils.java",
+   "junit-platform-engine/src/main/java/org/junit/platform/engine/discovery/MethodSelector.java",
+   "junit-jupiter-engine/src/main/java/org/junit/jupiter/engine/discovery/MethodFinder.java (deleted)"
+  ],
+  "golden_test_paths": [
+   "jupiter-tests/src/test/java/org/junit/jupiter/engine/TestMethodOverridingTests.java",
+   "jupiter-tests/src/test/java/org/junit/jupiter/engine/subpackage/SuperClassWithPackagePrivateLifecycleMethodInDifferentPackageTestCase.java"
+  ],
+  "golden_test_names": [
+   "bothPackagePrivateTestMethodsAreDiscovered",
+   "bothPackagePrivateTestMethodsAreExecuted"
+  ],
+  "reproduction": "cd /work/junit5 && git config --global --add safe.directory /work/junit5\nexport JDK25=/opt/jdk-25.0.4.1+1 JDK24=/opt/jdk-24.0.2+12 JDK21=/usr/lib/jvm/java-21-openjdk-amd64  # this commit's era defaults to JDK 25\ngit reset --hard <PARENT_OR_FIX> && git clean -fd\n# at parent only, overlay the two regression test files from the fix commit:\ngit checkout <FIX> -- jupiter-tests/src/test/java/org/junit/jupiter/engine/TestMethodOverridingTests.java jupiter-tests/src/test/java/org/junit/jupiter/engine/subpackage/SuperClassWithPackagePrivateLifecycleMethodInDifferentPackageTestCase.java\n./gradlew :jupiter-tests:test --tests \"org.junit.jupiter.engine.TestMethodOverridingTests\" -Ptesting.enableJaCoCo=false\n# parent: BUILD FAILED, both methods FAILED (1 discovered / 1 executed instead of 2)\n# fix: BUILD SUCCESSFUL",
+  "observed_failure_at_parent": "Both tests in TestMethodOverridingTests failed. bothPackagePrivateTestMethodsAreExecuted: 'org.opentest4j.AssertionFailedError: started ==> expected: <2> but was: <1>' and 'succeeded ==> expected: <2> but was: <1>'. bothPackagePrivateTestMethodsAreDiscovered: 'Expected size: 2 but was: 1 in:<...>' (only the subclass's own method is discovered). Buggy code confirmed at parent: ClassSelectorResolver.selectMethod branches to DiscoverySelectors.selectMethod(classes.get(0), method) for a single class / selectNestedMethod otherwise, and the DeclaredMethodSelector class does not exist (file absent); the resolution thus silently picks a single declaring class for a method signature.",
+  "verified": "Both directions observed in container 'mine-junit5' on bench-base:ubuntu-24.04 (adoptium JDK 25.0.4.1+1; this commit's default compile toolchain is 25 and gradle-daemon-jvm.properties demands 25, gradle 9.2.0 wrapper). Parent f5b43ce4e with the two fix-commit test files overlaid: gradle run of TestMethodOverridingTests fails both test methods with the exact 'expected 2 but was 1' symptoms above (real output captured). Fix 1866c0c21: same command, BUILD SUCCESSFUL. Buggy code presence proven: at parent ls of DeclaredMethodSelector.java fails (absent) and selectMethod contains the selectNestedMethod branch; at fix DeclaredMethodSelector.java exists and selectMethod returns new DeclaredMethodSelector(classes, method).",
+  "dependency_pins": {
+   "JDK (compile+test toolchain)": "25 (default JavaLanguageVersion at this commit; gradle-daemon-jvm.properties also demands toolchainVersion=25)",
+   "Gradle": "9.2.0-bin (wrapper-distribution pinned at this commit; auto-downloaded)",
+   "gradle daemon jvm": "toolchainVersion=25 per gradle/gradle-daemon-jvm.properties"
+  },
+  "install_recipe": "Same container recipe as the other junit5 entries (apt openjdk-21-jdk + adoptium JDK 24 and 25 in /opt, export JDK24/JDK25/JDK21 matching gradle.properties fromEnv=JDK17,JDK21,JDK24,JDK25), then: git reset --hard <sha> && git clean -fd && git checkout <FIX> -- <the two golden test files> && ./gradlew :jupiter-tests:test --tests \"org.junit.jupiter.engine.TestMethodOverridingTests\" -Ptesting.enableJaCoCo=false.",
+  "issue_paraphrase": "When a superclass declared in a different package defines a test method, and a subclass declares a method with the same name and parameter list, the framework treats the inherited package-private method as overridden even though Java visibility rules mean it is not an override. As a result, the superclass's package-private test method is silently skipped, and only the subclass's method is discovered and executed. Tests that used to run therefore disappear from the results without any error or warning as soon as a subclass adds a method with the same signature.",
+  "fix_summary": "Method selection was reworked so that a discovered method is always reported against the class that actually declares it. ClassSelectorResolver.selectMethod now builds a new DeclaredMethodSelector carrying the full list of candidate classes; MethodSelectorResolver/MethodSegmentResolver use it to resolve the declaring class via ReflectionUtils.findDeclaredMethods instead of the deleted MethodFinder heuristic (which decomposed the method segment and picked a single class). MethodSelector grew constructor/logic support for this. Net effect: a package-private superclass method in another package plus an unrelated same-signature subclass method are now both discovered and executed (with the same display name).",
+  "difficulty_guess": "medium",
+  "notes": "Both golden tests are integration-style (JUnit Platform launcher + testkit) but completely offline. Class-level --tests filter used. First run per tree downloads gradle 9.2.0 and builds the jupiter-tests dependency graph (~3 min); subsequent runs seconds. The two displayed statistic assertions make this a robust oracle. The commit message references PR #5100 but the underlying issue it fixes is #5098."
+ }
+]

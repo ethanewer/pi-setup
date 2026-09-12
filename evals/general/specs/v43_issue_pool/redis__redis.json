@@ -1,0 +1,86 @@
+[
+ {
+  "repository": "redis/redis",
+  "upstream_issue_ref": "#15756",
+  "fix_commit": "48cc562064dbb52ef3f9cc1a5aa32db6811f5871",
+  "parent_commit": "3d15ede58ad862996f9b23d3500cad2a5c7fb0f4",
+  "base_image": "bench-base:ubuntu-24.04",
+  "source_files_changed": [
+   "src/cluster.c"
+  ],
+  "golden_test_paths": [
+   "tests/unit/dump.tcl"
+  ],
+  "golden_test_names": [
+   "RESTORE with a TTL that overflows when added to the current time"
+  ],
+  "reproduction": "Container: bench-base:ubuntu-24.04 (gcc 13.3.0, tcl 8.6.14), repo cloned at /work/redis.\nInstall once: apt-get update && apt-get install -y build-essential tcl tcl-dev; cd /work/redis && make -j64  (default build, bundled jemalloc; BUILD_TLS not needed).\nParent direction:\n  git config --global --add safe.directory /work/redis\n  git reset --hard 3d15ede58ad862996f9b23d3500cad2a5c7fb0f4 && git clean -fd\n  git checkout 48cc562064dbb52ef3f9cc1a5aa32db6811f5871 -- tests/unit/dump.tcl\n  # prove buggy code present: grep -c add_overflow_ll src/cluster.c => 0 (no overflow guard in restoreCommand)\n  ./runtest --single unit/dump\n  # => *** [err]: RESTORE with a TTL that overflows when added to the current time ... Expected an error matching 'ERR invalid expire time in 'restore' command' but got 'OK'\nFix direction:\n  git reset --hard 48cc562064dbb52ef3f9cc1a5aa32db6811f5871 && git clean -fd  (then make -j64 again)\n  # prove fix present: grep -n add_overflow_ll src/cluster.c => 287: if (!absttl && add_overflow_ll(ttl, commandTimeSnapshot(), &ttl)) {\n  ./runtest --single unit/dump\n  # => [ok]: RESTORE with a TTL that overflows when added to the current time (0 ms); All tests passed without errors!",
+  "observed_failure_at_parent": "*** [err]: RESTORE with a TTL that overflows when added to the current time in tests/unit/dump.tcl\nExpected an error matching 'ERR invalid expire time in 'restore' command' but got 'OK'. The overflowed absolute timestamp wraps negative, so the key is silently treated as already expired and dropped (with REPLACE the existing key is deleted) and the expired_keys counter is bumped.",
+  "verified": "FAIL at parent observed (runtest single unit/dump, with the fix-commit test file checked out) with the buggy code confirmed present by inspection (grep add_overflow_ll src/cluster.c -> 0 matches at parent); PASS at fix observed ([ok] on the same test, make rebuilt only cluster.c) with add_overflow_ll confirmed present at line 287.",
+  "dependency_pins": {
+   "tcl": "8.6.14 (Ubuntu 24.04 distro)",
+   "note": "redis bundles jemalloc/lua/openssl in deps/; no pip dependencies"
+  },
+  "install_recipe": "apt-get update && apt-get install -y build-essential tcl tcl-dev; cd <repo> && make -j$(nproc); tests run with ./runtest --single unit/dump (requires tclsh and the built src/redis-server)",
+  "issue_paraphrase": "When a key is re-created from its serialized dump while passing an extremely large relative time-to-live, the command replies OK but the freshly re-created key is treated as already expired and silently vanishes; when an existing key is being replaced, the old value is deleted too, and the server's expired-keys counter increments even though nothing aged. The command should refuse the out-of-range TTL instead of succeeding and then dropping the key.",
+  "fix_summary": "In restoreCommand, add the command-time snapshot to a relative TTL with add_overflow_ll() and reply 'invalid expire time' before touching the key when the addition would overflow; ABSTTL values are unaffected.",
+  "difficulty_guess": "easy",
+  "notes": "unit/dump.tcl takes ~24 s at 64 cores (includes slow MIGRATE tests); can be filtered with --only '<exact test name>'. No network needed. DEBUG command is enabled by the test framework's default.conf. Deterministic, no flakiness observed in 2 runs."
+ },
+ {
+  "repository": "redis/redis",
+  "upstream_issue_ref": "#15762",
+  "fix_commit": "669b2a1316f5b35ecf964281b77c054ff28dc934",
+  "parent_commit": "21ce96878529bf8b31298ec417407c578c1e6278",
+  "base_image": "bench-base:ubuntu-24.04",
+  "source_files_changed": [
+   "src/redis-cli.c"
+  ],
+  "golden_test_paths": [
+   "tests/integration/redis-cli.tcl"
+  ],
+  "golden_test_names": [
+   "bigkeys reports a zero-size key as the biggest key of its type"
+  ],
+  "reproduction": "Container: bench-base:ubuntu-24.04 (gcc 13.3.0, tcl 8.6.14), repo cloned at /work/redis.\nInstall once: apt-get update && apt-get install -y build-essential tcl tcl-dev; cd /work/redis && make -j64.\nParent direction:\n  git config --global --add safe.directory /work/redis\n  git reset --hard 21ce96878529bf8b31298ec417407c578c1e6278 && git clean -fd\n  git checkout 669b2a1316f5b35ecf964281b77c054ff28dc934 -- tests/integration/redis-cli.tcl\n  # prove buggy code present: grep -n 'biggest_key && type->sizecmd' src/redis-cli.c => no matches\n  ./runtest --single integration/redis-cli --only \"bigkeys reports a zero-size key as the biggest key of its type\"\n  # => assertion error: expected output to match '*Biggest string found \"foo\" has 0 bytes*'; observed output has only the per-type counts, no biggest-key line\nFix direction:\n  git reset --hard 669b2a1316f5b35ecf964281b77c054ff28dc934 && git clean -fd (then make -j64 again)\n  # prove fix present: grep -c 'biggest_key && type->sizecmd' src/redis-cli.c => 2\n  same runtest command => All tests passed without errors!\n\nThe test itself runs: r set foo \"\"; src/redis-cli -h <host> -p <port> --bigkeys; and asserts the summary contains: Biggest string found \"foo\" has 0 bytes.",
+  "observed_failure_at_parent": "runtest integration/redis-cli: Expected ... '1 strings with 0 bytes (100.00% of keys, avg size 0.00) ...' to match '*Biggest string found \"foo\" has 0 bytes*'. The scanned key is counted (Sampled 1 keys, 1 strings with 0 bytes) but the 'Biggest string...' summary line is missing because type->biggest starts at 0 and the strict '<' comparison never fires for a zero-size key.",
+  "verified": "FAIL at parent observed (runtest --single integration/redis-cli with the fix-commit test file) with the buggy strict-'<' condition confirmed present by inspection (no 'biggest_key && type->sizecmd' in src/redis-cli.c at parent); PASS at fix observed (same runtest => All tests passed) with the new condition present (2 matches), redis-cli.c rebuilt.",
+  "dependency_pins": {
+   "tcl": "8.6.14 (Ubuntu 24.04 distro)",
+   "note": "redis bundles jemalloc/lua/openssl in deps/; no pip dependencies"
+  },
+  "install_recipe": "apt-get update && apt-get install -y build-essential tcl tcl-dev; cd <repo> && make -j$(nproc) (builds src/redis-server and src/redis-cli); tests run with ./runtest --single integration/redis-cli --only \"<exact test name>\"",
+  "issue_paraphrase": "The keyspace big-key scanner prints how many strings, lists, sets and other types it found, but when the biggest key of a type has size zero - for example an empty string - that key is counted in the totals yet never appears in the 'biggest key' summary, so the report silently omits it. A zero-size key should be reported as the biggest of its type just like any non-empty key.",
+  "fix_summary": "In redis-cli.c findBigKeys()/updateKeyType(), track the first sampled key of each type even when its size is 0 (adds condition !type->biggest_key && type->sizecmd) and gate the summary output on biggest_key being set instead of biggest > 0.",
+  "difficulty_guess": "easy",
+  "notes": "integration/redis-cli.tcl full file run takes a few minutes; use --only with the exact test name (1 s). The helper `rediscli` in tests/support/cli.tcl wraps src/redis-cli. No network needed. Deterministic."
+ },
+ {
+  "repository": "redis/redis",
+  "upstream_issue_ref": "#15489",
+  "fix_commit": "4f20cb48934463db5970bd476461b2d57af3f38d",
+  "parent_commit": "8f365337d48c8a264bc9f3381c7b8cc12ffb51d2",
+  "base_image": "bench-base:ubuntu-24.04",
+  "source_files_changed": [
+   "src/t_stream.c"
+  ],
+  "golden_test_paths": [
+   "tests/unit/type/stream-cgroups.tcl"
+  ],
+  "golden_test_names": [
+   "XSETID ENTRIESADDED clamps group entries_read and keeps the RDB loadable"
+  ],
+  "reproduction": "Container: bench-base:ubuntu-24.04 (gcc 13.3.0, tcl 8.6.14), repo cloned at /work/redis.\nInstall once: apt-get update && apt-get install -y build-essential tcl tcl-dev; cd /work/redis && make -j64.\nParent direction:\n  git config --global --add safe.directory /work/redis\n  git reset --hard 8f365337d48c8a264bc9f3381c7b8cc12ffb51d2 && git clean -fd\n  git checkout 4f20cb48934463db5970bd476461b2d57af3f38d -- tests/unit/type/stream-cgroups.tcl\n  # prove buggy code present: grep -c prev_entries_added src/t_stream.c => 0\n  ./runtest --single unit/type/stream-cgroups --only \"XSETID ENTRIESADDED clamps group entries_read and keeps the RDB loadable\"\n  # => *** [err]: ... Expected '10' to be equal to '2' (XINFO GROUPS entries-read is not clamped)\nFix direction:\n  git reset --hard 4f20cb48934463db5970bd476461b2d57af3f38d && git clean -fd (then make -j64 again)\n  # prove fix present: grep -c prev_entries_added src/t_stream.c => 2\n  same runtest command => All tests passed without errors!\n\nTest scenario: XADD 10 entries; XGROUP CREATE grp 0; XREADGROUP COUNT 10 (group reads all, entries-read=10); XTRIM MAXLEN 2; then lower entries_added to 2. At parent XINFO GROUPS still reports entries-read=10 and lag=-8, and the resulting RDB fails to load (DEBUG RELOAD); at fix entries-read is clamped to 2 and DEBUG RELOAD succeeds.",
+  "observed_failure_at_parent": "*** [err]: XSETID ENTRIESADDED clamps group entries_read and keeps the RDB loadable in tests/unit/type/stream-cgroups.tcl\nExpected '10' to be equal to '2' (context: type eval line 13 cmd {assert_equal [dict get $ginfo entries-read] 2} ...). XINFO GROUPS reports a negative lag, and the saved RDB is rejected by the loader ('Stream cgroup entries_read inconsistent with entries_added') so a DEBUG RELOAD / server restart / replica full-sync fails.",
+  "verified": "FAIL at parent observed (runtest --single unit/type/stream-cgroups with the fix-commit test file checked out, --only filter) with the buggy code confirmed present by inspection (no prev_entries_added handling in xsetidCommand at parent); PASS at fix observed (same command => All tests passed, including the DEBUG RELOAD half) with the clamping loop confirmed present (grep prev_entries_added src/t_stream.c => 2 matches).",
+  "dependency_pins": {
+   "tcl": "8.6.14 (Ubuntu 24.04 distro)",
+   "note": "redis bundles jemalloc/lua/openssl in deps/; no pip dependencies"
+  },
+  "install_recipe": "apt-get update && apt-get install -y build-essential tcl tcl-dev; cd <repo> && make -j$(nproc); tests run with ./runtest --single unit/type/stream-cgroups --only \"<exact test name>\" (needs DEBUG command, enabled by tests/assets/default.conf)",
+  "issue_paraphrase": "After trimming a stream and then lowering its total entry counter, existing consumer groups keep reporting a read position higher than the stream's counter: group information shows a negative lag, and a database snapshot taken at that point can no longer be loaded back into the server, so restarts, failovers and backups break. Lowering the stream's counter should also pull the groups' read positions back so the snapshot stays loadable.",
+  "fix_summary": "In xsetidCommand, when ENTRIESADDED lowers entries_added below its previous value, clamp every consumer group's entries_read down to the new entries_added (skipping SCG_INVALID_ENTRIES_READ), matching what XGROUP CREATE/SETID already do, so the entries_read <= entries_added invariant holds and saved RDBs remain loadable.",
+  "difficulty_guess": "medium",
+  "notes": "stream-cgroups.tcl is a huge file (4800+ lines, would take very long to run whole); always use --only with the exact test name (2 s run). Deterministic; DEBUG RELOAD works because the framework's default.conf sets enable-debug-command yes. No network needed."
+ }
+]

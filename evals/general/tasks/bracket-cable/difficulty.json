@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 30,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on gin-gonic/gin (upstream issue #4695). Real bug at parent commit 2e4d4f38962a6f15ae496d59b294f307eef95429: Context.Copy() copies only Keys and Params, so attached errors (c.Errors) and the negotiated media-type list (c.Accepted) are nil on the copy; code that snapshots a context for a background goroutine sees a context that behaves as if nothing had been recorded. Agent must reproduce (probe ship in /app), localise the bug in the real tree, and fix Copy() to duplicate Errors and Accepted; verifier runs the project's own regression test extracted from fix commit 293ad7edebb3ae30369288bd6416ca0d78474727 into /opt/golden at image build time (throwaway clone, fix commit never reachable from /app/src), the project's existing TestContext* suite, and 3 authored hidden cases (rich error metadata + reverse-direction isolation, 3-format accepted negotiation with original-side renegotiation plus errors-without-accepted, and copy-of-copy chaining) whose inputs differ from the upstream tests. Toolchain go1.26.8 + make, all gopkg deps pinned by go.sum and warmed at build time; safe.directory set. Test suite is sub-second; delta compiles ~3s at 1 CPU. Root-only unrelated failures exist elsewhere in the suite (chmod permission tests) so the verifier gates only on context behaviour. Both directions re-confirmed inside the task image before shipping."
+}
