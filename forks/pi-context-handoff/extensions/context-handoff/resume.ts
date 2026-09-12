@@ -57,9 +57,9 @@ export const RESUME_TEXT =
 	"from where you were interrupted.";
 
 export const GAVE_UP_TEXT =
-	`The run has been resumed ${MAX_CONSECUTIVE_RESUMES} times in a row and each attempt ended ` +
-	"unfinished. Stopping the automatic resume so this cannot loop. Summarise what you have " +
-	"done and what is left, then stop, rather than continuing to retry.";
+	`[context-handoff] Automatic resume stopped after ${MAX_CONSECUTIVE_RESUMES} unfinished ` +
+	"attempts in a row. The context is still too full to finish and it will not be retried " +
+	"automatically; a human should take over from here.";
 
 interface AssistantLike {
 	role?: string;
@@ -101,24 +101,81 @@ export function lastAssistantWasTruncated(entries: readonly EntryLike[] | undefi
 export class ResumeGuard {
 	private consecutive = 0;
 	private issuedThisRun = false;
+	/**
+	 * Set when Pi's compaction was cancelled from outside (the user pressing Esc). The
+	 * `agent_settled` backstop reads a stop reason captured at `agent_end`, *before* the
+	 * compaction ran, so an aborted compaction would otherwise look like the truncation that
+	 * triggered it and resurrect a run the user just tried to stop.
+	 */
+	private compactionAborted = false;
+
+	/**
+	 * Record that the current run's compaction was cancelled, not merely slow or failed. A
+	 * manual `/compact` is ignored: it runs outside a run, so no `agent_settled` follows to
+	 * clear the latch, and it would then suppress a legitimate resume much later.
+	 */
+	noteCompactionAborted(reason?: "manual" | "threshold" | "overflow"): void {
+		if (reason === "manual") return;
+		this.compactionAborted = true;
+	}
+
+	/**
+	 * A new agent loop is in flight (fired at `agent_end`). A queued-message continuation runs
+	 * as another loop inside the same `agent_settled`, so the lazy clear in `endRun` is too late:
+	 * without this, a cancel would suppress the backstop for the entire continued sequence
+	 * rather than for the loop it was issued in.
+	 */
+	noteAgentBoundary(): void {
+		this.compactionAborted = false;
+	}
 
 	/** `session_compact`: cheapest resume point, inside the run Pi is about to end. */
-	decide(truncated: boolean, willRetry: boolean): "resume" | "give-up" | "ignore" {
+	decide(
+		truncated: boolean,
+		willRetry: boolean,
+		reason?: "manual" | "threshold" | "overflow",
+		enabled = true,
+	): "resume" | "give-up" | "ignore" {
+		// A deliberate /compact is not a rescue: a stale truncated turn must not make it resume.
+		// The streak is left alone rather than cleared, so a resume loop cannot be reset by it.
+		if (reason === "manual") return "ignore";
 		// Pi already resumes when it will retry, and a compaction after a finished turn is
 		// supposed to end the run.
 		if (!truncated || willRetry) {
 			this.consecutive = 0;
 			return "ignore";
 		}
+		// A healthy compaction above still clears the streak while the half is disabled, but a
+		// truncated one must not inflate a count of resumes that never happened.
+		if (!enabled) return "ignore";
 		return this.take();
 	}
 
 	/**
 	 * `agent_settled`: the backstop. Pi has stopped for good, so anything unfinished that no
-	 * earlier hook rescued is resumed here.
+	 * earlier hook rescued is resumed here. `userAborted` is the run's own signal having been
+	 * aborted, which matters because a user Esc during a tool call makes the next provider call
+	 * settle as `error` ("The operation was aborted"), not `aborted`. That would otherwise look
+	 * like unfinished work and be resumed.
 	 */
-	decideOnSettled(stopReason: string | undefined, forceUnfinished = false): "resume" | "give-up" | "ignore" {
+	decideOnSettled(
+		stopReason: string | undefined,
+		forceUnfinished = false,
+		userAborted = false,
+	): "resume" | "give-up" | "ignore" {
 		if (this.issuedThisRun) return "ignore"; // session_compact already handled it
+		if (this.compactionAborted) {
+			// A user cancel is a healthy turn: clear the streak so a later unfinished stop cannot
+			// inherit an old count and hit the give-up cap early.
+			this.consecutive = 0;
+			return "ignore";
+		}
+		if (userAborted && !forceUnfinished) {
+			// A deliberate stop, like a healthy turn: clear the streak so it cannot inherit an
+			// old count, and never resume.
+			this.consecutive = 0;
+			return "ignore";
+		}
 		if (!forceUnfinished && !isUnfinishedStop(stopReason)) {
 			this.consecutive = 0;
 			return "ignore";
@@ -136,12 +193,21 @@ export class ResumeGuard {
 	/** Called once a run is fully over, so the next run starts with a clean slate. */
 	endRun(): void {
 		this.issuedThisRun = false;
+		this.compactionAborted = false;
+	}
+
+	/** A fresh session must not inherit the previous session's streak or latches. */
+	reset(): void {
+		this.consecutive = 0;
+		this.issuedThisRun = false;
+		this.compactionAborted = false;
 	}
 
 	/** A turn that finished normally clears the streak. */
 	noteHealthyTurn(): void {
 		this.consecutive = 0;
 		this.issuedThisRun = false;
+		this.compactionAborted = false;
 	}
 
 	get consecutiveResumes(): number {

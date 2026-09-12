@@ -56,6 +56,7 @@ import {
 	type Metrics,
 	type MessageLike,
 	dropOldest,
+	isSummaryTruncationError,
 	looksLikeSizeError,
 	planFoldUnderPressure,
 	plainSummaryMessage,
@@ -65,7 +66,7 @@ import {
 	trustUsageFrom,
 } from "./fold.js";
 import { buildFoldFocus } from "./instructions.js";
-import { createOnceNotifier, describe, statusSetter } from "./util.js";
+import { boundedSignal, createOnceNotifier, describe, interceptEscape, judgeSummary, statusSetter, withAuthBaseUrl, workingMessageSetter } from "./util.js";
 
 /**
  * Test seam. A 245,000-token conversation cannot be produced on demand, so this overrides
@@ -140,6 +141,12 @@ export function registerFold(pi: ExtensionAPI, getConfig: (ctx: ExtensionContext
 	let foldsSinceUnderTrigger = 0;
 	let lastRung: number | "latest" | null = null;
 	/**
+	 * Set when the user pressed Esc to cancel a fold. The request should go out unfolded for
+	 * the rest of this run rather than immediately re-prompting a fold the user just refused;
+	 * reset when the run ends.
+	 */
+	let foldCancelledForRun = false;
+	/**
 	 * The model in use before the most recent switch, for the downshift case below. Held whole
 	 * rather than as a stripped copy: both `getApiKeyAndHeaders` and `generateSummary` need the
 	 * provider, base URL and token limits, not just the id and window.
@@ -150,6 +157,9 @@ export function registerFold(pi: ExtensionAPI, getConfig: (ctx: ExtensionContext
 
 	const status = (ctx: ExtensionContext, message: string | undefined) => {
 		statusSetter(ctx, "context-handoff")(message);
+		// Also surface it in the streaming loader, so a long summarization does not look like a
+		// frozen TUI. `undefined` restores the default message.
+		workingMessageSetter(ctx, message);
 	};
 
 	/**
@@ -157,102 +167,163 @@ export function registerFold(pi: ExtensionAPI, getConfig: (ctx: ExtensionContext
 	 * itself too big. That retry is Codex's (compact.rs:215-225, `remove_first_item()` in a
 	 * loop) and is the case Pi has no answer for: its compaction either fits or fails.
 	 */
+	type SummarizeResult = { summary: string } | { failed: true; countFailure: boolean };
+
 	const summarize = async (
 		ctx: ExtensionContext,
 		cfg: FoldConfig,
 		prefix: MessageLike[],
 		previousSummary: string | undefined,
 		pinned: boolean,
-	): Promise<string | null> => {
+	): Promise<SummarizeResult> => {
 		const active = ctx.model;
-		if (!active) return null;
+		if (!active) return { failed: true, countFailure: true };
 
-		// Codex compacts with the *previous* model when the session has just moved to one with a
-		// smaller window (maybe_run_previous_model_inline_compact, turn.rs:749). The reason is
-		// exact: the history was accumulated under the old window, so the new model may be
-		// unable to read it at all, and the summarization would fail for a reason no amount of
-		// retrying fixes. Same gate as Codex's — different model, and the old window was larger.
-		let model = active;
-		if (
-			previousModel &&
-			previousModel.id !== active.id &&
-			typeof previousModel.contextWindow === "number" &&
-			previousModel.contextWindow > active.contextWindow
-		) {
-			const downshiftAuth = await ctx.modelRegistry.getApiKeyAndHeaders(previousModel);
-			if (downshiftAuth.ok) {
-				model = previousModel;
-				notifyOnce(
-					ctx,
-					`pi-context-handoff: folding with ${previousModel.id}, the wider window this history was written under.`,
-					"info",
-				);
-			}
-			// If its credential is gone, fall through to the active model: the trim ladder below
-			// is then the only defence, which is still better than not folding.
-		}
+		// Bound the call and intercept Escape for its duration. Pi's global undici idle timeout
+		// only fires on inactivity, so a slow-but-flowing stream or the retry schedule can
+		// outlast it; this caps the whole call. The fold also has no `compaction_start` event to
+		// hang Pi's "Esc cancels only this compaction" handler on. Doing both here is what keeps
+		// a slow fold from looking like a hang and keeps Esc from killing the whole run.
+		const bound = boundedSignal(ctx.signal, cfg.summarizeTimeoutMs);
+		let cancelledByUser = false;
+		const escape = interceptEscape(ctx, () => {
+			cancelledByUser = true;
+			foldCancelledForRun = true;
+			bound.abort(new Error("fold cancelled by user"));
+		});
 
-		const auth = await ctx.modelRegistry.getApiKeyAndHeaders(model);
-		if (!auth.ok) {
-			notifyOnce(ctx, "pi-context-handoff: no usable credential; leaving the request unfolded.", "warning");
-			return null;
-		}
-		const focus = buildFoldFocus({ pinned, extra: cfg.focus });
-		let current = prefix;
-		for (let attempt = 0; attempt <= cfg.maxTrimAttempts; attempt++) {
-			try {
-				status(ctx, attempt === 0 ? "folding context" : `folding context (trimmed ${attempt})`);
-				const summary = await generateSummary(
-					current as never,
-					model,
-					cfg.summaryReserveTokens,
-					auth.apiKey,
-					// Pi's own exported types disagree here (ProviderHeaders vs Record<string, string>);
-					// the runtime value is one headers object passed through unchanged.
-					auth.headers as Record<string, string> | undefined,
-					ctx.signal,
-					focus,
-					previousSummary,
-					ctx.thinkingLevel,
-					undefined,
-					// Provider-scoped environment: gateway ids, regions, endpoints, proxies.
-					// Dropping it would point this call at a differently configured provider
-					// than the session's own.
-					auth.env,
-					cfg.retry,
-					{
-						onRetryScheduled: (a: number, max: number, delayMs: number) =>
-							status(ctx, `folding context: retry ${a}/${max} in ${Math.round(delayMs / 1000)}s`),
-						onRetryAttemptStart: () => status(ctx, "folding context: retrying"),
-						onRetryFinished: () => status(ctx, "folding context"),
-					},
-				);
-				if (typeof summary === "string" && summary.trim().length > 0) return summary;
-				return null;
-			} catch (error) {
-				// An abort is the user stopping the run, not a fault: leave the counters alone
-				// and let the request go out unfolded. Codex propagates Interrupted the same way.
-				if (ctx.signal?.aborted) return null;
-				// Trim only for the error trimming can fix. Codex branches on a typed
-				// ContextWindowExceeded here; anything else has already exhausted the retry
-				// policy passed to generateSummary, so shrinking the prefix would just spend the
-				// remaining budget on a fault that is not about size.
-				if (!looksLikeSizeError(error)) {
-					notifyOnce(ctx, `pi-context-handoff: could not fold (${describe(error)}).`, "warning");
-					return null;
-				}
-				if (attempt >= cfg.maxTrimAttempts || current.length <= 1) {
+		const timedOut = (): SummarizeResult => {
+			notifyOnce(
+				ctx,
+				`pi-context-handoff: fold timed out after ${Math.round(cfg.summarizeTimeoutMs / 1000)}s; leaving the request unfolded.`,
+				"warning",
+			);
+			return { failed: true, countFailure: true };
+		};
+
+		try {
+			// Codex compacts with the *previous* model when the session has just moved to one with a
+			// smaller window (maybe_run_previous_model_inline_compact, turn.rs:749). The reason is
+			// exact: the history was accumulated under the old window, so the new model may be
+			// unable to read it at all, and the summarization would fail for a reason no amount of
+			// retrying fixes. Same gate as Codex's — different model, and the old window was larger.
+			let model = active;
+			if (
+				previousModel &&
+				previousModel.id !== active.id &&
+				typeof previousModel.contextWindow === "number" &&
+				previousModel.contextWindow > active.contextWindow
+			) {
+				const downshiftAuth = await ctx.modelRegistry.getApiKeyAndHeaders(previousModel);
+				if (downshiftAuth.ok) {
+					model = previousModel;
 					notifyOnce(
 						ctx,
-						`pi-context-handoff: prefix still too large after ${attempt} trim(s) (${describe(error)}).`,
-						"warning",
+						`pi-context-handoff: folding with ${previousModel.id}, the wider window this history was written under.`,
+						"info",
 					);
-					return null;
 				}
-				current = dropOldest(current, 0.25, metrics);
+				// If its credential is gone, fall through to the active model: the trim ladder below
+				// is then the only defence, which is still better than not folding.
 			}
+
+			const auth = await ctx.modelRegistry.getApiKeyAndHeaders(model);
+			if (!auth.ok) {
+				notifyOnce(ctx, "pi-context-handoff: no usable credential; leaving the request unfolded.", "warning");
+				return { failed: true, countFailure: true };
+			}
+			// Pi's own summarization path applies the auth-resolved base URL
+			// (`_getSummarizationRequestAuth`); without it a gateway/region/Azure endpoint would
+			// be dropped and the summary sent somewhere else.
+			const requestModel = withAuthBaseUrl(model, auth.baseUrl);
+			const focus = buildFoldFocus({ pinned, extra: cfg.focus });
+			let current = prefix;
+			for (let attempt = 0; attempt <= cfg.maxTrimAttempts; attempt++) {
+				try {
+					status(
+						ctx,
+						attempt === 0
+							? escape.active
+								? "folding context (Esc cancels)"
+								: "folding context"
+							: `folding context (trimmed ${attempt})`,
+					);
+					const summary = await generateSummary(
+						current as never,
+						requestModel,
+						cfg.summaryReserveTokens,
+						auth.apiKey,
+						// Pi's own exported types disagree here (ProviderHeaders vs Record<string, string>);
+						// the runtime value is one headers object passed through unchanged.
+						auth.headers as Record<string, string> | undefined,
+						bound.signal,
+						focus,
+						previousSummary,
+						ctx.thinkingLevel,
+						undefined,
+						// Provider-scoped environment: gateway ids, regions, endpoints, proxies.
+						// Dropping it would point this call at a differently configured provider
+						// than the session's own.
+						auth.env,
+						cfg.retry,
+						{
+							onRetryScheduled: (a: number, max: number, delayMs: number) =>
+								status(ctx, `folding context: retry ${a}/${max} in ${Math.round(delayMs / 1000)}s`),
+							onRetryAttemptStart: () => status(ctx, "folding context: retrying"),
+							onRetryFinished: () => status(ctx, "folding context"),
+						},
+					);
+					// A user cancel must not count toward the failure cap; it is a choice, not a fault.
+					// The deadline is checked before the text: an aborted stream resolves with the
+					// partial summary, so a fired bound makes whatever streamed untrustworthy.
+					const verdict = judgeSummary({
+						text: summary,
+						timedOut: bound.timedOut(),
+						userAborted: cancelledByUser || ctx.signal?.aborted === true,
+					});
+					if (verdict.use) return { summary: verdict.text };
+					if (verdict.reason === "timed-out") return timedOut();
+					if (verdict.reason === "aborted") return { failed: true, countFailure: false };
+					return { failed: true, countFailure: true };
+				} catch (error) {
+					// A user cancel or an agent abort is a choice, not a fault: leave the counters alone
+					// and let the request go out unfolded. Codex propagates Interrupted the same way.
+					if (cancelledByUser || ctx.signal?.aborted) return { failed: true, countFailure: false };
+					if (bound.timedOut()) return timedOut();
+					// The summary hit its own output cap; trimming the input cannot help, so name the
+					// knob that can instead of spending the trim budget.
+					if (isSummaryTruncationError(error)) {
+						notifyOnce(
+							ctx,
+							`pi-context-handoff: summary hit its output cap; raise fold.summaryReserveTokens (${describe(error)}).`,
+							"warning",
+						);
+						return { failed: true, countFailure: true };
+					}
+					// Trim only for the error trimming can fix. Codex branches on a typed
+					// ContextWindowExceeded here; anything else has already exhausted the retry
+					// policy passed to generateSummary, so shrinking the prefix would just spend the
+					// remaining budget on a fault that is not about size.
+					if (!looksLikeSizeError(error)) {
+						notifyOnce(ctx, `pi-context-handoff: could not fold (${describe(error)}).`, "warning");
+						return { failed: true, countFailure: true };
+					}
+					if (attempt >= cfg.maxTrimAttempts || current.length <= 1) {
+						notifyOnce(
+							ctx,
+							`pi-context-handoff: prefix still too large after ${attempt} trim(s) (${describe(error)}).`,
+							"warning",
+						);
+						return { failed: true, countFailure: true };
+					}
+					current = dropOldest(current, 0.25, metrics);
+				}
+			}
+			return { failed: true, countFailure: true };
+		} finally {
+			escape.dispose();
+			bound.dispose();
 		}
-		return null;
 	};
 
 	pi.on("context", async (event, ctx) => {
@@ -296,10 +367,19 @@ export function registerFold(pi: ExtensionAPI, getConfig: (ctx: ExtensionContext
 			return fold ? { messages: applied as never } : undefined;
 		}
 
+		// The user cancelled a fold earlier in this run. Keep applying any fold already in force,
+		// but do not immediately re-prompt a fold they just refused; the run gets to finish
+		// unfolded until it ends. Checked after the measurement so `lastTokens` and the
+		// under-trigger reset stay honest for /context-handoff.
+		if (foldCancelledForRun) return fold ? { messages: applied as never } : undefined;
+
 		// The agent loop is serial, so this should be unreachable; if some other path ever
 		// re-enters, the existing fold is still the right answer and a second concurrent
-		// summarization is not.
-		if (summarizing) return fold ? { messages: applied as never } : undefined;
+		// summarization is not. Say so rather than silently reusing a stale fold.
+		if (summarizing) {
+			notifyOnce(ctx, "pi-context-handoff: a fold is already in flight; reusing the current fold.", "warning");
+			return fold ? { messages: applied as never } : undefined;
+		}
 
 		// Folding is meant to get the request under the trigger. If it has not managed that after
 		// a couple of attempts, more folding is not the answer and continuing would keep eating
@@ -347,16 +427,16 @@ export function registerFold(pi: ExtensionAPI, getConfig: (ctx: ExtensionContext
 		}
 
 		summarizing = true;
-		let summary: string | null;
+		let result: Awaited<ReturnType<typeof summarize>>;
 		try {
-			summary = await summarize(ctx, cfg, plan.prefix, fold?.summary, plan.pinned.length > 0);
+			result = await summarize(ctx, cfg, plan.prefix, fold?.summary, plan.pinned.length > 0);
 		} finally {
 			summarizing = false;
 			status(ctx, undefined);
 		}
 
-		if (summary === null) {
-			if (!ctx.signal?.aborted) {
+		if ("failed" in result) {
+			if (result.countFailure) {
 				consecutiveFailures++;
 				if (consecutiveFailures >= cfg.maxFailures) {
 					abandoned = true;
@@ -369,6 +449,7 @@ export function registerFold(pi: ExtensionAPI, getConfig: (ctx: ExtensionContext
 			}
 			return fold ? { messages: applied as never } : undefined;
 		}
+		const summary = result.summary;
 		consecutiveFailures = 0;
 
 		const next: FoldState = {
@@ -469,6 +550,11 @@ export function registerFold(pi: ExtensionAPI, getConfig: (ctx: ExtensionContext
 	pi.on("session_tree", () => {
 		fold = null;
 	});
+	// A user fold-cancel lasts for the run, not the session: once the run ends the next one may
+	// fold again. `agent_end` fires on every stopping path, including aborts.
+	pi.on("agent_end", () => {
+		foldCancelledForRun = false;
+	});
 	// Belt and braces. isFoldValid's fingerprints already reject a fold computed against another
 	// session's history, but if a runtime is ever reused across a session replacement the next
 	// request is measured honestly rather than against a fold about to be discarded.
@@ -486,6 +572,8 @@ export function registerFold(pi: ExtensionAPI, getConfig: (ctx: ExtensionContext
 		lastTokens = null;
 		summaryShapeChecked = false;
 		usePlainSummary = false;
+		foldCancelledForRun = false;
+		notifyOnce.reset();
 	});
 
 	pi.on("model_select", (event) => {

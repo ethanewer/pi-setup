@@ -1,21 +1,30 @@
 /**
- * Unified configuration for pi-context-handoff's two halves:
+ * Unified configuration for pi-context-handoff's three halves:
  *
  *   - `handoff`: shaping Pi's native between-runs compaction into a handoff brief.
  *     Reads the top-level keys of pi-context-handoff.json, exactly as the standalone
  *     pi-context-handoff package always has.
  *   - `fold`: the mid-run Codex-style fold. Reads the optional `fold` object in
  *     pi-context-handoff.json only.
+ *   - `resume`: restarting a run Pi abandoned. Reads the optional `resume` key; defaults to
+ *     the top-level `enabled`, so the package-wide switch turns it off too.
  *
- * Never throws. Both consumers are on critical paths (before every LLM call; during a
- * compaction), so a malformed config must degrade to defaults rather than disturb a
- * request or a compaction.
+ * Never throws. All three are on critical paths (before every LLM call; during a
+ * compaction; when a run is about to end), so a malformed config must degrade to defaults
+ * rather than disturb a request or a compaction.
  */
 
 import { join } from "node:path";
 
 import { DEFAULT_FOLD_SETTINGS, type FoldSettings } from "./fold.js";
-import { asBoolean, asCount, type RetryPolicy, readJsonFile, resolveAgentDir } from "./util.js";
+import {
+	asBoolean,
+	asCount,
+	DEFAULT_SUMMARIZE_TIMEOUT_MS,
+	type RetryPolicy,
+	readJsonFile,
+	resolveAgentDir,
+} from "./util.js";
 
 export interface HandoffConfig {
 	enabled: boolean;
@@ -24,6 +33,23 @@ export interface HandoffConfig {
 	retry: RetryPolicy;
 	/** Warn once per session when a handoff brief could not be produced. */
 	notifyOnFallback: boolean;
+	/**
+	 * Upper bound on the handoff summarization call, retries included. Pi's global undici idle
+	 * timeout only covers inactivity, so a slow-but-flowing stream or the retry schedule can
+	 * outlast it; this caps the whole call. 0 disables the bound. See `summarizeTimeoutMs` in
+	 * `FoldConfig` for the fold half.
+	 */
+	summarizeTimeoutMs: number;
+}
+
+/**
+ * The resume half restarts runs Pi abandoned, so it is the most intrusive thing this
+ * package does. It gets its own switch because it is the behaviour a user is most likely to
+ * want off while keeping briefs and folding. It defaults to the handoff's own `enabled`, so
+ * the package-wide kill switch still turns it off.
+ */
+export interface ResumeConfig {
+	enabled: boolean;
 }
 
 export interface FoldConfig extends FoldSettings {
@@ -49,11 +75,18 @@ export interface FoldConfig extends FoldSettings {
 	maxTrimAttempts: number;
 	/** Announce each fold. On by default: a run silently sending a quarter of its history is worse. */
 	notify: boolean;
+	/**
+	 * Upper bound on one fold summarization call, retries included. Pi's global undici idle
+	 * timeout covers inactivity, not total duration, so a slow-but-flowing stream or the retry
+	 * schedule can outlast it; this caps the whole call. 0 disables the bound.
+	 */
+	summarizeTimeoutMs: number;
 }
 
 export interface ExtensionConfig {
 	handoff: HandoffConfig;
 	fold: FoldConfig;
+	resume: ResumeConfig;
 }
 
 const DEFAULT_RETRY: RetryPolicy = { enabled: true, maxRetries: 3, baseDelayMs: 2000 };
@@ -66,7 +99,10 @@ export const DEFAULT_HANDOFF_CONFIG: HandoffConfig = {
 	// brief, so retries are on unless deliberately disabled.
 	retry: { ...DEFAULT_RETRY },
 	notifyOnFallback: true,
+	summarizeTimeoutMs: DEFAULT_SUMMARIZE_TIMEOUT_MS,
 };
+
+export const DEFAULT_RESUME_CONFIG: ResumeConfig = { enabled: true };
 
 export const DEFAULT_FOLD_CONFIG: FoldConfig = {
 	...DEFAULT_FOLD_SETTINGS,
@@ -80,6 +116,10 @@ export const DEFAULT_FOLD_CONFIG: FoldConfig = {
 	maxFoldsWithoutProgress: 2,
 	maxTrimAttempts: 5,
 	notify: true,
+	// Baseline only: `loadExtensionConfig` normally overrides this with the handoff's value so
+	// the fold inherits a top-level `summarizeTimeoutMs`. It stays here because `FoldConfig`
+	// requires the field for callers that build a config directly.
+	summarizeTimeoutMs: DEFAULT_SUMMARIZE_TIMEOUT_MS,
 };
 
 export function handoffConfigPath(): string {
@@ -104,7 +144,16 @@ function parseHandoff(raw: Record<string, unknown>): HandoffConfig {
 		focus: typeof raw.focus === "string" ? raw.focus.trim() : d.focus,
 		retry: parseRetry(raw.retry, d.retry),
 		notifyOnFallback: asBoolean(raw.notifyOnFallback, d.notifyOnFallback),
+		summarizeTimeoutMs: asCount(raw.summarizeTimeoutMs, d.summarizeTimeoutMs, 0, 3_600_000),
 	};
+}
+
+function parseResume(raw: unknown, fallbackEnabled: boolean): ResumeConfig {
+	if (raw === false) return { enabled: false };
+	if (typeof raw === "object" && raw !== null) {
+		return { enabled: asBoolean((raw as Record<string, unknown>).enabled, fallbackEnabled) };
+	}
+	return { enabled: asBoolean(raw, fallbackEnabled) };
 }
 
 /**
@@ -121,7 +170,11 @@ function asTriggerPercent(value: unknown, fallback: number): number {
 	return Math.min(value, DEFAULT_FOLD_SETTINGS.triggerPercent);
 }
 
-function parseFold(raw: Record<string, unknown>, fallbackEnabled: boolean): FoldConfig {
+function parseFold(
+	raw: Record<string, unknown>,
+	fallbackEnabled: boolean,
+	fallbackTimeoutMs: number,
+): FoldConfig {
 	const d = DEFAULT_FOLD_CONFIG;
 	return {
 		// The fallback chains top-level enabled, so a pre-merge {"enabled": false}
@@ -138,6 +191,7 @@ function parseFold(raw: Record<string, unknown>, fallbackEnabled: boolean): Fold
 		maxFoldsWithoutProgress: asCount(raw.maxFoldsWithoutProgress, d.maxFoldsWithoutProgress, 1, 20),
 		maxTrimAttempts: asCount(raw.maxTrimAttempts, d.maxTrimAttempts, 0, 10),
 		notify: asBoolean(raw.notify, d.notify),
+		summarizeTimeoutMs: asCount(raw.summarizeTimeoutMs, fallbackTimeoutMs, 0, 3_600_000),
 		retry: parseRetry(raw.retry, d.retry),
 	};
 }
@@ -161,12 +215,26 @@ export function loadExtensionConfig(): { config: ExtensionConfig; warnings: stri
 	let fold: FoldConfig;
 	if (mainRaw.fold === false) {
 		// Explicit kill switch for just the mid-run half.
-		fold = { ...DEFAULT_FOLD_CONFIG, enabled: false, retry: { ...DEFAULT_FOLD_CONFIG.retry } };
+		fold = {
+			...DEFAULT_FOLD_CONFIG,
+			enabled: false,
+			summarizeTimeoutMs: handoff.summarizeTimeoutMs,
+			retry: { ...DEFAULT_FOLD_CONFIG.retry },
+		};
 	} else if (typeof mainRaw.fold === "object" && mainRaw.fold !== null) {
-		fold = parseFold(mainRaw.fold as Record<string, unknown>, handoff.enabled);
+		fold = parseFold(mainRaw.fold as Record<string, unknown>, handoff.enabled, handoff.summarizeTimeoutMs);
 	} else {
-		fold = { ...DEFAULT_FOLD_CONFIG, enabled: handoff.enabled, retry: { ...DEFAULT_FOLD_CONFIG.retry } };
+		fold = {
+			...DEFAULT_FOLD_CONFIG,
+			enabled: handoff.enabled,
+			summarizeTimeoutMs: handoff.summarizeTimeoutMs,
+			retry: { ...DEFAULT_FOLD_CONFIG.retry },
+		};
 	}
 
-	return { config: { handoff, fold }, warnings };
+	// Top-level enabled is the package-wide switch, so resume follows it unless it is set
+	// explicitly (`resume: false` or `resume: { enabled: ... }`).
+	const resume = parseResume(mainRaw.resume, handoff.enabled);
+
+	return { config: { handoff, fold, resume }, warnings };
 }

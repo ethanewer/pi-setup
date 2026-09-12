@@ -33,6 +33,7 @@ import {
 	type FoldState,
 	isCutPoint,
 	isFoldValid,
+	isSummaryTruncationError,
 	looksLikeSizeError,
 	measure,
 	mergePinned,
@@ -50,8 +51,11 @@ import {
 } from "../forks/pi-context-handoff/extensions/context-handoff/fold";
 import {
 	DEFAULT_FOLD_CONFIG,
+	DEFAULT_HANDOFF_CONFIG,
+	DEFAULT_RESUME_CONFIG,
 	loadExtensionConfig,
 } from "../forks/pi-context-handoff/extensions/context-handoff/config";
+import { DEFAULT_SUMMARIZE_TIMEOUT_MS } from "../forks/pi-context-handoff/extensions/context-handoff/util";
 import { buildFoldFocus } from "../forks/pi-context-handoff/extensions/context-handoff/instructions";
 
 /**
@@ -440,6 +444,31 @@ describe("looksLikeSizeError", () => {
 	});
 });
 
+describe("isSummaryTruncationError", () => {
+	test("recognises Pi's own summary-length failure", () => {
+		// `getSummarizationFailure` throws this exact text when the summary hits maxTokens.
+		expect(
+			isSummaryTruncationError(
+				new Error("Summarization failed: generation hit the token cap and the summary is incomplete"),
+			),
+		).toBe(true);
+		expect(isSummaryTruncationError(new Error("the summary is incomplete"))).toBe(true);
+	});
+
+	test("is deliberately not a size error, so the input-trim ladder is not spent on it", () => {
+		// Trimming the prefix cannot make a too-long *output* fit; the fold names the knob that
+		// can (summaryReserveTokens) instead of burning its trim budget.
+		const summaryTooLong = new Error("Summarization failed: generation hit the token cap");
+		expect(isSummaryTruncationError(summaryTooLong)).toBe(true);
+		expect(looksLikeSizeError(summaryTooLong)).toBe(false);
+	});
+
+	test("does not fire on unrelated faults", () => {
+		expect(isSummaryTruncationError(new Error("socket hang up"))).toBe(false);
+		expect(isSummaryTruncationError(undefined)).toBe(false);
+	});
+});
+
 describe("findLatestCut", () => {
 	test("folds up to the newest valid boundary", () => {
 		const messages = [user("a"), assistant("b"), toolResult("c")];
@@ -626,6 +655,51 @@ describe("config", () => {
 				expect(loaded.config.handoff.focus).toBe("handoff note");
 				expect(loaded.config.fold.keepRecentTokens).toBe(5000);
 				expect(loaded.config.fold.notify).toBe(false);
+			},
+		);
+	});
+
+	test("the summarization timeout defaults and is configurable for both halves", () => {
+		expect(DEFAULT_HANDOFF_CONFIG.summarizeTimeoutMs).toBe(DEFAULT_SUMMARIZE_TIMEOUT_MS);
+		expect(DEFAULT_FOLD_CONFIG.summarizeTimeoutMs).toBe(DEFAULT_SUMMARIZE_TIMEOUT_MS);
+
+		withAgentDir(
+			{ "pi-context-handoff.json": { summarizeTimeoutMs: 60_000, fold: { summarizeTimeoutMs: 90_000 } } },
+			() => {
+				const loaded = loadExtensionConfig();
+				expect(loaded.config.handoff.summarizeTimeoutMs).toBe(60_000);
+				expect(loaded.config.fold.summarizeTimeoutMs).toBe(90_000);
+			},
+		);
+	});
+
+	test("the fold inherits the handoff timeout when it sets none of its own", () => {
+		withAgentDir({ "pi-context-handoff.json": { summarizeTimeoutMs: 45_000 } }, () => {
+			const loaded = loadExtensionConfig();
+			expect(loaded.config.fold.summarizeTimeoutMs).toBe(45_000);
+		});
+	});
+
+	test("resume has its own switch and follows the package-wide kill switch", () => {
+		expect(DEFAULT_RESUME_CONFIG.enabled).toBe(true);
+
+		// Top-level enabled:false turns all three halves off, as the config comment promises.
+		withAgentDir({ "pi-context-handoff.json": { enabled: false } }, () => {
+			expect(loadExtensionConfig().config.resume.enabled).toBe(false);
+		});
+
+		// A dedicated kill switch, for keeping briefs/fold but stopping the run-resurrection.
+		withAgentDir({ "pi-context-handoff.json": { enabled: true, resume: false } }, () => {
+			const loaded = loadExtensionConfig();
+			expect(loaded.config.handoff.enabled).toBe(true);
+			expect(loaded.config.resume.enabled).toBe(false);
+		});
+
+		// An explicit object can re-enable it even under enabled:false.
+		withAgentDir(
+			{ "pi-context-handoff.json": { enabled: false, resume: { enabled: true } } },
+			() => {
+				expect(loadExtensionConfig().config.resume.enabled).toBe(true);
 			},
 		);
 	});

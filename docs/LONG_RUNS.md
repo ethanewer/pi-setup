@@ -248,6 +248,29 @@ resumed** — the first is the model deliberately finishing, the second is you c
 resuming either would talk over you. That gating is what stops `agent_settled`, which fires
 after *every* run, from making the agent chatter.
 
+There is one subtlety the first version missed: `agent_settled` reads the stop reason
+captured at `agent_end`, which fires *before* the post-run compaction. Pressing Esc to
+cancel that compaction therefore looked identical to the truncation that triggered it, and
+the backstop resumed the run. A `session_compact_failed{aborted:true}` handler now records
+the cancel so the backstop stays out of the way, a manual `/compact` never resumes, and
+`resume: false` turns the whole half off.
+
+A second subtlety, caught in a live reproduction (`01a091d2`): Esc during a tool call
+aborts the run signal, the tool returns `Command aborted`, and the post-abort provider call
+settles as `stopReason: "error"` with `errorMessage: "The operation was aborted."` rather
+than as `aborted`. That is indistinguishable from a real provider fault by stop reason
+alone, so the backstop resumed the run and each Esc bought another resume. The guard now
+reads the run's own aborted signal, and never resumes a run the user cancelled.
+
+A third, found while reviewing the timeout bound: a provider resolves an aborted stream with
+whatever text it had already produced, and `getSummarizationFailure` only rejects `error`
+and `length`. So when `summarizeTimeoutMs` fired, the fold and the handoff briefly accepted
+the partial fragment instead of discarding it. For the handoff that was worse than it
+sounds, because `compact()` appends `<read-files>`/`<modified-files>` to the summary, so an
+aborted call with no brief at all could still look non-empty and be saved as the session
+checkpoint. Both now judge the deadline before the text and discard the result, leaving the
+request unfolded and letting Pi's own compaction retry.
+
 Verified end to end in tmux rather than only in unit tests: with the
 `PI_CONTEXT_HANDOFF_FORCE_RESUME=1` seam the transcript shows the first turn, the injected
 `[context-handoff-resume]` message, and then a genuinely new model turn. Normal runs were

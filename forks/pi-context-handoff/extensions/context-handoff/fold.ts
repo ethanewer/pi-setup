@@ -419,6 +419,22 @@ export function looksLikeSizeError(error: unknown): boolean {
 	return SIZE_ERROR_PATTERNS.some((pattern) => pattern.test(message));
 }
 
+/**
+ * The summary itself hit its output cap (Pi's `getSummarizationFailure` throws
+ * "generation hit the token cap and the summary is incomplete"). Trimming the *input* cannot
+ * fix that, so it is deliberately kept out of `looksLikeSizeError`; the fold reports it as
+ * an actionable configuration problem instead of spending the trim budget on it.
+ */
+const SUMMARY_TRUNCATION_PATTERNS: readonly RegExp[] = [
+	/generation hit the token cap/i,
+	/summary is incomplete/i,
+];
+
+export function isSummaryTruncationError(error: unknown): boolean {
+	const message = error instanceof Error ? error.message : String(error ?? "");
+	return SUMMARY_TRUNCATION_PATTERNS.some((pattern) => pattern.test(message));
+}
+
 /** Existing pins are older than fresh ones; trim from the front when over budget. */
 export function mergePinned(
 	existing: readonly string[],

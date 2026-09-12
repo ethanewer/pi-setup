@@ -45,8 +45,8 @@ known rather than unnoticed.
 | `pi-btw-side` | `view.ts:298` | truncate() slices ANSI-colored text by raw string index |
 | `pi-btw-side` | `view.ts:87` | Side view ignores the user's outputPad / hideThinkingBlock / codeBlockIndent settings |
 | `pi-btw-side` | `view.ts:281` | Terminals 10 rows or shorter render a 40-row view, pushing the composer off screen |
-| `pi-context-handoff` | `index.ts:96` | notifyOnFallback: false does not suppress the empty-brief warning |
-| `pi-context-handoff` | `index.ts:71` | getApiKeyAndHeaders result is used without narrowing its ok discriminant |
+| ~~`pi-context-handoff`~~ | ~~`index.ts:96`~~ | **Fixed 2026-09-11.** The empty-brief warning now honours `notifyOnFallback`; found again during the pi-context-handoff audit below. |
+| ~~`pi-context-handoff`~~ | ~~`index.ts:71`~~ | **Stale.** Both callers narrow the `ok` discriminant (`if (!auth.ok) return` / `if (downshiftAuth.ok)`), so the finding was already fixed when this pass reached it. Re-verified during the audit below. |
 | `pi-dynamic-workflows-safe` | `workflow-capability-contract.ts:465` | Model-facing capability contract and README still state a 15-minute agent timeout |
 | `pi-dynamic-workflows-safe` | `workflow-ui.ts:1516` | Undocumented destructive single keys (x stop, r restart, s save) are live in the detail pager |
 | ~~`pi-process-monitor-safe`~~ | ~~`runtime.ts:286`~~ | **Fixed 2026-08-02.** Spawn's partial-line buffer was unbounded, and a carriage-return-only process could never match. Ranking it low was wrong: the workload on `mk` is EvalScope/Slurm, whose output is full of carriage returns. Both modes now bound the partial line and emit one `NO LINE BREAK` warning, so a blind watcher is visible instead of silent. Splitting on `\r` was rejected — see [`FORKS.md`](FORKS.md#pi-process-monitor-safe). |
@@ -84,6 +84,42 @@ the author of the code are not an adversarial read, which is the whole point of 
 Include it in the next one, and give the fold half the harder look: it rewrites what the
 model sees on every call, so a defect there is a defect in every request rather than in
 one feature.
+
+## pi-context-handoff audit, 2026-09-11
+
+A focused read of the whole extension against Pi 0.85.1's hook dispatch, abort/Esc
+handling, and compaction events. Twelve issues were found and fixed; the two that matter
+most were both in the wiring (`index.ts` / `fold-hook.ts`), which the pure-logic suites did
+not cover.
+A follow-up review corrected the timeout rationale (Pi's global undici idle timeout *does*
+reach `completeSimple`) and tightened the abort latch so it clears at the next agent
+boundary. A live reproduction then found the tool-abort case, and a final review found that
+a fired timeout was checked after the text, so a partial summary could be accepted and
+persisted.
+
+| Where | Finding | Fix |
+|---|---|---|
+| `index.ts` (`agent_settled`) | Esc during a native auto-compaction cancelled the compaction but not the run: the backstop read the `length` captured at `agent_end` (before the compaction) and resumed. Up to four Escs needed. | A `session_compact_failed{aborted}` handler records the cancel in `ResumeGuard`; `agent_settled` then stays out of the way. The latch clears at the next `agent_end`, so a queued continuation is not suppressed too. |
+| `index.ts` / `fold-hook.ts` | Both summarization calls passed `streamFn: undefined`, using `completeSimple` instead of the agent `streamFunction`. Pi's global undici idle timeout still reaches them, but it only fires on inactivity, so a slow-but-flowing stream or the retry schedule could run unbounded. | A local `boundedSignal(parent, summarizeTimeoutMs)` caps total duration, configurable, 15 min default. |
+| `index.ts` | `enabled: false` did not disable the resume half, and `/compact` after a truncated turn auto-resumed. | `resume.enabled` (defaulting to the top-level switch) plus a `reason === "manual"` gate in `ResumeGuard.decide`. |
+| `index.ts` / `fold-hook.ts` | `auth.baseUrl` from `getApiKeyAndHeaders` was dropped, so a gateway/Azure/region endpoint summarised somewhere else. | Pass `{ ...model, baseUrl: auth.baseUrl }`, mirroring Pi's `_getSummarizationRequestAuth`. |
+| `fold-hook.ts` | Esc during the mid-run fold has no `compaction_start` event to install Pi's "cancel only this compaction" handler, so the default Esc aborted the whole run; only a footer status hinted anything was happening. | `interceptEscape` consumes a bare Esc for the duration of a fold and cancels only the fold; `workingMessage`/status show progress. A cancelled fold is not retried until the run ends. |
+| `fold.ts` / `resume.ts` | A summary that hit its output cap fell through `looksLikeSizeError`, so the input-trim ladder spent its budget on an error trimming cannot fix; the give-up notice was addressed to the model while sent with `triggerTurn: false`. | `isSummaryTruncationError` names `summaryReserveTokens`; the give-up text is an operator-status note. |
+| `package.json` | The peer floor `>=0.82.0` predated `session_compact_failed` (added in 0.84.3). Pi's loader stores handlers without validating them, so on 0.82-0.84.2 the Esc fix registered but never ran. | Floor raised to `>=0.84.3`. |
+| `util.ts` / `index.ts` | The `session_start` handler reset `configWarned` for a fresh config read, but `createOnceNotifier` deduped for the extension's lifetime, so a still-broken config never re-warned. | `createOnceNotifier` exposes `reset()`, called from both `session_start` handlers. A headless run also no longer consumes a warning it could not show. |
+| `index.ts` / `resume.ts` | Esc during a tool call aborts the run signal, the tool returns `Command aborted`, and the post-abort provider call settles as `error` with "The operation was aborted". The guard read `error` as unfinished and resumed, so one Esc bought one resume. Reproduced live in session `01a091d2`. | `agent_end` records whether the run's own signal was aborted, and `ResumeGuard.decideOnSettled` takes a `userAborted` argument. A cancelled run is never resumed and its streak is cleared. |
+| `fold-hook.ts` / `index.ts` | A provider resolves an aborted stream with its partial text, and a fired `summarizeTimeoutMs` was checked after the text, so a truncated fragment was accepted. For the handoff it was worse: `compact()` appends `<read-files>`/`<modified-files>`, so even a zero-token abort looked non-empty and was persisted as the session checkpoint. | `judgeSummary` judges the deadline before the text and discards the result. The handoff also strips file lists before deciding the brief is empty. |
+| `resume.ts` / `index.ts` | `decide` inflated the streak while `resume` was off, the guard survived into a new session, and `lastRunStopReason` survived a run that produced no assistant message. | `decide` takes an `enabled` argument, `ResumeGuard.reset()` runs at `session_start`, and `agent_end` clears `lastRunStopReason` before scanning. |
+| `util.ts` | A bare `\x1b` was treated as Escape immediately, which a first pass assumed could misfire on an arrow key split across reads. | The extension-side deferral was **reverted**: `StdinBuffer` (`terminal.js:144`) already reassembles sequences and holds a lone Escape for a 10 ms local / 100 ms SSH window that `PI_TUI_ESC_TIMEOUT` overrides. A bare `\x1b` at this layer is a confirmed Escape. |
+
+The wiring fixes are pinned by `tests/context-handoff-wiring.test.ts` (the `util.ts`
+helpers), `tests/resume.test.ts` (the abort latch and manual gate), and `tests/fold.test.ts`
+(config parsing and the summary-length classifier). The remaining structural limitation is
+the handoff fallback: a failed extension summarization is re-run by Pi's own compaction.
+Bounding the whole summarization and fixing the auth-resolved base URL removes the common causes of
+that failure, but a genuine size error still fails twice by design, because Pi's own path
+has no trim ladder and the extension's only safe-looking fix would drop history from the
+persistent transcript.
 
 ## Repeating it
 

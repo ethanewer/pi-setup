@@ -25,7 +25,9 @@ behavior:
 - The fold sends the original messages on any failure — byte-for-byte the behaviour of not
   installing this package.
 - The resume sends one queued nudge, and only where Pi has already decided to end the
-  run. Cap on consecutive resumes is 3, after which it says why and stops.
+  run. Cap on consecutive resumes is 3, after which it says why and stops. It has its own
+  kill switch (`resume: false`), and any run whose own signal was aborted is left alone, so
+  Esc stops it whether the abort settles as `aborted` or as `error`.
 
 ## Handoff briefs (between runs)
 
@@ -54,6 +56,23 @@ Pi's own compaction fires (native supersedes it, by design). Guards stand down a
 folds without getting under the trigger, or after three consecutive summarization
 failures. `fold.ts` holds every decision and is pure; `fold-hook.ts` is the plumbing.
 
+Unlike Pi's own compaction, the fold has no `compaction_start` event, so it installs its
+own Escape handler for the duration of a summarization: **Esc cancels the fold and lets the
+run continue**, exactly as it does for native compaction. No sequence handling is needed in
+the extension: `StdinBuffer` reassembles an arrow key delivered as `\x1b` then `[A` before any
+input listener sees it, and holds a lone Escape for a window already scaled for SSH and
+configurable with `PI_TUI_ESC_TIMEOUT`. A cancelled fold is not retried again until the run
+ends. The listener consumes a bare Esc globally for that window, so during the fold it also
+never reaches the editor and one Esc cannot abort the run; the shortcut returns to normal as
+soon as summarization finishes.
+
+Each summarization is bounded by `summarizeTimeoutMs`. Pi's global undici idle timeout
+(`httpIdleTimeoutMs`) also reaches these calls, but it only fires on inactivity; a
+slow-but-flowing stream or the retry schedule can outlast it, so this is a total-duration
+cap. A provider resolves an aborted stream with whatever text streamed, so when the bound
+fires the result is discarded rather than trusted: a partial fragment must never replace
+the folded-away history or be persisted as the handoff checkpoint.
+
 ## Resuming a run Pi abandoned
 
 When context leaves no room to generate, the reply is truncated (`stopReason "length"`),
@@ -64,7 +83,12 @@ resume kept a run going for another 600 entries while an identical compaction sa
 for 64 minutes. `agent_settled` is the backstop for end-of-run paths that never emit
 `session_compact` (thrown compaction, nothing to compact, aborted compaction, spent
 overflow retry). Only `length`/`error` count as unfinished; `stop` and `aborted` are
-never resumed. Resume logic is in
+never resumed. **A run whose own signal was aborted is never resumed either**, whatever stop
+reason it settled with: Esc during a tool call makes the next provider call settle as
+`error` with "The operation was aborted", and that used to be read as unfinished work. Esc
+during a compaction is recorded through `session_compact_failed`, and a manual `/compact`
+never resumes. The whole half is controlled by `resume.enabled`; the guard resets at session
+start and does not inflate its streak while the half is off. Resume logic is in
 [`extensions/context-handoff/resume.ts`](extensions/context-handoff/resume.ts).
 
 ## Configuration
@@ -80,6 +104,8 @@ One file, read relative to `PI_CODING_AGENT_DIR`:
   "focus": "",
   "retry": { "enabled": true, "maxRetries": 3, "baseDelayMs": 2000 },
   "notifyOnFallback": true,
+  "summarizeTimeoutMs": 900000,
+  "resume": { "enabled": true },
   "fold": {
     "enabled": true,
     "focus": "",
@@ -93,13 +119,17 @@ One file, read relative to `PI_CODING_AGENT_DIR`:
     "maxFoldsWithoutProgress": 2,
     "maxTrimAttempts": 5,
     "notify": true,
+    "summarizeTimeoutMs": 900000,
     "retry": { "enabled": true, "maxRetries": 3, "baseDelayMs": 2000 }
   }
 }
 ```
 
 Top-level keys configure the handoff half; the optional `fold` object configures the
-mid-run fold. 
+mid-run fold; `resume: false` (or `resume: { "enabled": false }`) turns off the resume
+backstop alone. `enabled: false` turns off all three. `summarizeTimeoutMs` bounds one
+summarization call, retries included; `0` disables the bound. The fold inherits the
+top-level value when it sets none of its own.
 Any `customInstructions` Pi was already going to use (a `/compact` argument, or another
 extension's contribution) are preserved and appended, not overridden.
 
