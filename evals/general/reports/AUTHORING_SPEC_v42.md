@@ -175,3 +175,65 @@ bash tools/verify_new_task.sh <name>             # must exit 0: oracle 1, nop 0
 Report the upstream repository, the exact 40-hex commit you pinned, the measured
 image build time, the measured image size, and how you confirmed the trial runs
 with no network.
+
+## Image size budget (added after the v4.3 waves produced 20-32 GB images)
+
+Aim under 6 GB. Hard limit 12 GB. `tools/check_image_size_hygiene.py` enforces the
+cause statically and reports measured sizes where an image exists locally.
+
+Nothing else catches an oversized image. `storage_mb` in task.toml is advisory in
+harbor 0.22.0: it is parsed, carried into telemetry and mapped for terminal-bench
+format, but there is no `storage_opt` or `--storage-opt` anywhere in harbor, so it
+is never passed to docker as a limit. A 30 GB task image passes every gate and
+still makes the suite undistributable.
+
+### The one habit that causes most of it
+
+Docker layers are copy-on-write. `RUN chown -R 1000:1000 /app/src` in its own layer,
+after a `RUN make` filled `/app/src`, writes a second copy of every file into a new
+layer. Measured on this host with a 400 MB blob: the image went from 1.07 GB to
+1.49 GB, exactly the blob size. In `tasks/gunwale-tideway`, which builds git from
+source, `docker history` shows two layers of exactly 2.74 GB each, because line 38
+runs `make -j1` and line 58 chowns the tree in a separate RUN. Half of that 6.73 GB
+image is the same bytes stored twice.
+
+Three ways to avoid it, in order of preference:
+
+1. Create the tree with the right ownership in the first place. `git init` and the
+   build as the user that will own it, or `install -d -o 1000 -g 1000` before
+   anything writes into it.
+2. Put the ownership change in the SAME `RUN` as the build that produced the files.
+   A layer is written once, so a chown at the end of the build RUN costs nothing.
+3. `COPY --chown=1000:1000` for anything you copy in.
+
+The same applies to `chmod -R a+rwX /opt/cargo` after installing a Rust toolchain:
+the toolchain plus the registry cache is copied a second time.
+
+### The rest
+
+- `rustup toolchain install --profile minimal` unless the task genuinely needs
+  clippy, rustfmt or the docs. The default profile pulls all three.
+- Delete build byproducts the trial does not need, in the same RUN that made them:
+  `target/` for Rust, `_build` for meson, `node_modules/.cache`, `__pycache__`,
+  `*.o` if the task does not relink. If the agent DOES need incremental relinking,
+  keep them, but then never chown them in a later layer.
+- Use a multi-stage build when the task only needs the resulting binary: compile in
+  a builder stage, copy the artifact into a slim final stage. This is the single
+  biggest reduction available for a C, C++ or Rust project.
+- `--no-install-recommends` on apt, and `rm -rf /var/lib/apt/lists/*` in the same
+  RUN. Most tasks already do this.
+- Do not install a full toolchain when the project ships a prebuilt release the task
+  could use instead, unless building from source IS the task.
+
+### Check before you finish
+
+```bash
+docker build -t <name>-size tasks/<name>/environment
+docker system df -v | grep <name>          # UNIQUE SIZE is the honest number
+docker history --format '{{.Size}}\t{{.CreatedBy}}' <name>-size | head -15
+```
+
+`docker images` reports total size including layers shared with other images, so it
+overstates what your task costs and understates what removing it frees. `docker
+system df -v` gives unique size. If `docker history` shows two layers of the same
+size, that is the duplication pattern above.
