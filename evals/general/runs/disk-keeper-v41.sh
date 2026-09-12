@@ -32,34 +32,58 @@ set -uo pipefail
 FLOOR=${1:-90}
 HOURS=${2:-24}
 SCRATCH_MIN=${3:-90}
+SCRATCH_MAX_H=${4:-72}
 SENTINEL=/tmp/v41-wave-done
-# Never removed: the suite's own base images, and images belonging to other work
-# on this host that this script has no business touching.
-PROTECT='^(texlive/|bench-base:|847366387031\.|nvcr\.io|arc-)'
+# Never removed:
+#   - anything with a RepoDigest, which means it was PULLED from a registry and
+#     is therefore somebody's base image, not agent scratch;
+#   - the suite's own bases and harbor's own prebuilt infrastructure;
+#   - images belonging to other work on this host;
+#   - anything older than SCRATCH_MAX_H hours, which predates the waves this
+#     guard was started for and is therefore by definition not their scratch.
+# That last bound is the one that was missing. The first version of the scratch
+# prune had a minimum age and no maximum, so on its first firing it walked
+# straight back through twelve months of unrelated images on this host, including
+# python:3.12-slim (the upstream parent of bench-base:python-3.12), alpine:3.19,
+# busybox, the v1 alexgshaw/* task images, and about twenty locally built images
+# from earlier exploratory work. An age window, not just an age floor, is what
+# makes "agent scratch" mean the current agents.
+PROTECT='^(texlive/|bench-base:|harbor|arc-|847366387031\.|nvcr\.)'
 end=$(( $(date +%s) + HOURS * 3600 ))
 rm -f "$SENTINEL"
 
+in_window() {  # $1 = docker CreatedSince string; true only if inside the window
+  local created=$1 mins
+  case "$created" in
+    *"second"*|*"About a minute"*) return 1 ;;
+    *"minute"*)
+      mins=$(echo "$created" | grep -oE '^[0-9]+' || echo 0)
+      [ "$mins" -ge "$SCRATCH_MIN" ] && return 0
+      return 1 ;;
+    *"hour"*|*"About an hour"*)
+      case "$created" in *"About an hour"*) mins=60 ;; *) mins=$(( $(echo "$created" | grep -oE '^[0-9]+') * 60 )) ;; esac
+      [ "$mins" -ge "$SCRATCH_MIN" ] && [ "$mins" -le $(( SCRATCH_MAX_H * 60 )) ] && return 0
+      return 1 ;;
+    *"day"*)
+      [ "$(echo "$created" | grep -oE '^[0-9]+')" -le $(( SCRATCH_MAX_H / 24 )) ] && return 0
+      return 1 ;;
+    *) return 1 ;;   # weeks / months / years: predates the waves
+  esac
+}
+
 prune_scratch() {
-  # Tagged images, older than SCRATCH_MIN, with no container attached.
+  # Tagged, locally built, inside the age window, with no container attached.
   docker ps -a --format '{{.Image}}' | sort -u > /tmp/v41-inuse.txt
-  docker images --format '{{.Repository}}:{{.Tag}}\t{{.ID}}\t{{.CreatedSince}}' |
-  while IFS=$'\t' read -r rt id created; do
+  docker images --digests --format '{{.Repository}}:{{.Tag}}\t{{.ID}}\t{{.CreatedSince}}\t{{.Digest}}' |
+  while IFS=$'\t' read -r rt id created digest; do
     case "$rt" in '<none>:<none>') continue ;; esac
+    # a real digest means it was pulled from a registry: not scratch, ever
+    case "$digest" in sha256:*) continue ;; esac
     echo "$rt" | grep -qE "$PROTECT" && continue
-    case "$created" in
-      *"second"*) continue ;;
-    esac
-    # keep anything newer than SCRATCH_MIN minutes. Docker renders ages as
-    # "N seconds/minutes ago", "About an hour ago", then "N hours ago" and up, so
-    # "About an hour" has to be converted rather than lumped in with the hours.
-    case "$created" in
-      *"About an hour"*) [ 60 -lt "$SCRATCH_MIN" ] && continue ;;
-      *"minute"*)
-        mins=$(echo "$created" | grep -oE '^[0-9]+' || echo 0)
-        [ "$mins" -lt "$SCRATCH_MIN" ] && continue ;;
-      *"hour"*|*"day"*|*"week"*|*"month"*|*"year"*) ;;
-      *) continue ;;
-    esac
+    # registry-qualified repo (contains a dot or port before the first slash):
+    # pulled from somewhere, even if the digest is not recorded locally
+    case "${rt%%/*}" in *.*|*:*) continue ;; esac
+    in_window "$created" || continue
     repo=${rt%%:*}
     grep -qxF "$repo" /tmp/v41-inuse.txt && continue
     grep -qxF "$rt" /tmp/v41-inuse.txt && continue
