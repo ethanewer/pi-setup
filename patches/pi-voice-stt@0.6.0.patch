@@ -1,6 +1,6 @@
 diff -ruN --exclude=node_modules a/README.md b/README.md
 --- a/README.md	1985-10-26 03:15:00
-+++ b/README.md	2026-08-29 13:11:05
++++ b/README.md	2026-09-12 21:49:49
 @@ -4,29 +4,34 @@
  
  Provider-agnostic speech-to-text dictation for the [Pi coding agent](https://github.com/earendil-works/pi-coding-agent) TUI.
@@ -126,7 +126,7 @@ diff -ruN --exclude=node_modules a/README.md b/README.md
  On macOS, list devices with:
  
  ```bash
-@@ -480,27 +494,46 @@
+@@ -480,27 +494,47 @@
     ```
     List ALSA devices with `arecord -L` (common inputs: `default`, `hw:0`, `plughw:0`).
  4. **macOS** — confirm the device with `ffmpeg -f avfoundation -list_devices true -i ""` and set `capture.input` (e.g. `":1"`).
@@ -161,6 +161,7 @@ diff -ruN --exclude=node_modules a/README.md b/README.md
 +| the voice key while idle | Start recording |
 +| the voice key while recording | Stop; the transcript lands in the prompt where the cursor was |
 +| `Enter` while recording | Stop and send; the whole prompt goes with it, transcript included |
++| `Enter` while a transcript is outstanding | Hold the whole message until the transcript lands; the `[⠏ transcribing]` placeholder is never sent as text |
 +| the follow-up key while recording | Stop and queue the whole prompt as a follow-up |
 +| any other key while recording | Stop, keep the transcript in the prompt, then apply that key |
 +| `Esc` while recording | Cancel the recording. A transcription already under way is not interrupted; use `/stt cancel` |
@@ -180,7 +181,7 @@ diff -ruN --exclude=node_modules a/README.md b/README.md
  ## Secret handling
  
  Prefer environment variables:
-@@ -514,6 +547,8 @@
+@@ -514,6 +548,8 @@
  export GLADIA_API_KEY=...
  export ASSEMBLYAI_API_KEY=...
  ```
@@ -404,7 +405,7 @@ diff -ruN --exclude=node_modules a/extensions/voice-stt/index.ts b/extensions/vo
 +export { default } from "../../src/index.js";
 diff -ruN --exclude=node_modules a/package.json b/package.json
 --- a/package.json	1985-10-26 03:15:00
-+++ b/package.json	2026-08-29 13:11:05
++++ b/package.json	2026-08-29 23:20:37
 @@ -1,6 +1,7 @@
  {
    "name": "pi-voice-stt",
@@ -445,7 +446,7 @@ diff -ruN --exclude=node_modules a/src/audio/bridge-recorder.ts b/src/audio/brid
        const body = await response.text().catch(() => "");
 diff -ruN --exclude=node_modules a/src/audio/ffmpeg-recorder.ts b/src/audio/ffmpeg-recorder.ts
 --- a/src/audio/ffmpeg-recorder.ts	1985-10-26 03:15:00
-+++ b/src/audio/ffmpeg-recorder.ts	2026-08-29 13:11:05
++++ b/src/audio/ffmpeg-recorder.ts	2026-08-29 23:20:37
 @@ -1,13 +1,16 @@
 -import { spawn, type ChildProcess } from "node:child_process";
 +import { spawn, spawnSync, type ChildProcess } from "node:child_process";
@@ -616,7 +617,7 @@ diff -ruN --exclude=node_modules a/src/audio/ffmpeg-recorder.ts b/src/audio/ffmp
      };
 diff -ruN --exclude=node_modules a/src/audio/windows-dshow-probe.ts b/src/audio/windows-dshow-probe.ts
 --- a/src/audio/windows-dshow-probe.ts	1969-12-31 18:00:00
-+++ b/src/audio/windows-dshow-probe.ts	2026-08-29 13:11:05
++++ b/src/audio/windows-dshow-probe.ts	2026-08-29 23:20:37
 @@ -0,0 +1,69 @@
 +import { spawn, spawnSync } from "node:child_process";
 +import { parseDshowAudioDevices, pickWindowsMicrophone, toDshowInput } from "./windows-dshow.ts";
@@ -689,7 +690,7 @@ diff -ruN --exclude=node_modules a/src/audio/windows-dshow-probe.ts b/src/audio/
 +};
 diff -ruN --exclude=node_modules a/src/audio/windows-dshow.ts b/src/audio/windows-dshow.ts
 --- a/src/audio/windows-dshow.ts	1969-12-31 18:00:00
-+++ b/src/audio/windows-dshow.ts	2026-08-29 13:11:05
++++ b/src/audio/windows-dshow.ts	2026-08-29 23:20:37
 @@ -0,0 +1,39 @@
 +/**
 + * DirectShow device listing for Windows ffmpeg capture.
@@ -765,7 +766,7 @@ diff -ruN --exclude=node_modules a/src/cleanup/openai-compatible.ts b/src/cleanu
          max_tokens: config.maxTokens,
 diff -ruN --exclude=node_modules a/src/config/defaults.ts b/src/config/defaults.ts
 --- a/src/config/defaults.ts	1985-10-26 03:15:00
-+++ b/src/config/defaults.ts	2026-08-29 13:11:05
++++ b/src/config/defaults.ts	2026-08-29 23:20:37
 @@ -15,6 +15,8 @@
  
  const platformCaptureDefaults = (): Pick<FfmpegCaptureConfig, "inputFormat" | "input"> => {
@@ -1040,7 +1041,7 @@ diff -ruN --exclude=node_modules a/src/config/endpoint.ts b/src/config/endpoint.
  export const endpointRequiresAuth = (endpoint: string): boolean => {
 diff -ruN --exclude=node_modules a/src/config/load-config.ts b/src/config/load-config.ts
 --- a/src/config/load-config.ts	1985-10-26 03:15:00
-+++ b/src/config/load-config.ts	2026-08-29 13:11:05
++++ b/src/config/load-config.ts	2026-08-29 23:20:37
 @@ -13,7 +13,7 @@
    defaultOutputConfig,
    defaultVoiceCommandsConfig,
@@ -1839,6 +1840,339 @@ diff -ruN --exclude=node_modules a/src/core/keybind.ts b/src/core/keybind.ts
 + * settings, and listing them all is noise.
 + */
 +export const describeKeybinds = (keybinds: readonly string[]): string => keybinds[0] ?? "";
+diff -ruN --exclude=node_modules a/src/core/parked.ts b/src/core/parked.ts
+--- a/src/core/parked.ts	1969-12-31 18:00:00
++++ b/src/core/parked.ts	2026-09-13 12:48:06
+@@ -0,0 +1,329 @@
++/**
++ * Holding a composed message until every transcript placeholder inside it has landed.
++ *
++ * A placeholder normally lives in the editor and is replaced there. But the user can submit
++ * the editor while a transcript is still in flight — Enter after stopping with the voice
++ * key, or Enter while recording when the composer already held an older placeholder. The
++ * sentinel must never reach the model, so the whole composed message moves above the editor,
++ * every placeholder inside it is re-homed to a batch, and `deliver` runs once the last
++ * transcript lands.
++ *
++ * The coordinator is deliberately free of Pi and config: the editor, the pending-message
++ * widget, and slot accounting are all hooks, so the state machine that decides where a
++ * transcript lands can be exercised on its own.
++ */
++
++import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
++
++import type { Delivery } from "./dictation-controller";
++import { placeholderText, replacePlaceholder } from "../ui/transcribing";
++
++export type ParkedBatch = {
++  ctx: ExtensionContext;
++  id: number;
++  text: string;
++  remaining: Set<string>;
++  done: boolean;
++  deliver(text: string): void | Promise<void>;
++};
++
++/** The mutable destination of one marker: the editor, or a parked message. */
++type OpenTranscript = {
++  park(batch: ParkedBatch): void;
++  unpark(): void;
++  /** True when this marker already belongs to a parked batch. */
++  isParked(): boolean;
++};
++
++export type ParkingHooks = {
++  claimSlot(): number;
++  releaseSlot(slot: number): void;
++  /** Insert the marker where the cursor is. */
++  insertMarker(ctx: ExtensionContext, marker: string): void;
++  getEditorText(ctx: ExtensionContext): string;
++  setEditorText(ctx: ExtensionContext, text: string): void;
++  rewriteEditor(ctx: ExtensionContext, rewrite: (text: string) => { text: string; replaced: boolean }): boolean;
++  beginPending(ctx: ExtensionContext, intent: "send" | "queue", text: string): number;
++  resolvePending(ctx: ExtensionContext, id: number): void;
++  failPending(ctx: ExtensionContext, id: number, message: string): void;
++  notifyDiscarded(ctx: ExtensionContext): void;
++  notifyError(ctx: ExtensionContext, message: string): void;
++  reportError(ctx: ExtensionContext, error: unknown): void;
++};
++
++export type Parking = {
++  beginEditorDelivery(ctx: ExtensionContext): Delivery;
++  beginMessageDelivery(
++    ctx: ExtensionContext,
++    outcome: "send" | "queue",
++    deliver: (text: string) => void | Promise<void>,
++  ): Delivery;
++  parkEditorSubmission(
++    ctx: ExtensionContext,
++    text: string,
++    submit: (text: string) => void,
++    intent?: "send" | "queue",
++  ): boolean;
++};
++
++export const createParking = (hooks: ParkingHooks): Parking => {
++  /** Every transcript holding a placeholder, keyed by its exact marker. */
++  const openTranscripts = new Map<string, OpenTranscript>();
++
++  /**
++   * A marker string is reserved for its own transcript, so every occurrence in text that is
++   * being cleared or substituted goes, not just the first. A duplicate can only have come
++   * from someone copying the rendered placeholder, and leaving one behind would put the
++   * sentinel back on the path to the model.
++   */
++  const substituteAll = (text: string, replacement: string, marker: string): string => {
++    let out = text;
++    let replaced = true;
++    while (replaced) {
++      ({ text: out, replaced } = replacePlaceholder(out, replacement, marker));
++    }
++    return out;
++  };
++
++  /**
++   * Remove the literal text of markers already owned by a parked batch. A marker string is
++   * reserved: it may only ever stand in for its own transcript, so a copy that arrives in
++   * some other submit — someone pasted the rendered `[⠿ transcribing]`, say — is stripped
++   * rather than carried to the model. Unparked markers are left for the caller to re-home.
++   */
++  const scrubParkedMarkers = (text: string): string => {
++    let out = text;
++    for (const [marker, handle] of openTranscripts) {
++      if (handle.isParked()) out = substituteAll(out, "", marker);
++    }
++    return out;
++  };
++
++  /** Run a submit/deliver and surface a synchronous throw or rejected promise. */
++  const runSafely = (ctx: ExtensionContext, deliver: (text: string) => void | Promise<void>, text: string): void => {
++    try {
++      const result = deliver(text);
++      if (result && typeof (result as Promise<void>).catch === "function") {
++        void (result as Promise<void>).catch((error) => hooks.reportError(ctx, error));
++      }
++    } catch (error) {
++      hooks.reportError(ctx, error);
++    }
++  };
++
++  const runDelivery = (batch: ParkedBatch, text: string): void => runSafely(batch.ctx, batch.deliver, text);
++
++  const completeParkedMarker = (batch: ParkedBatch, marker: string, replacement: string): void => {
++    if (batch.done) return;
++    batch.text = substituteAll(batch.text, replacement, marker);
++    batch.remaining.delete(marker);
++    if (batch.remaining.size > 0) return;
++    batch.done = true;
++    hooks.resolvePending(batch.ctx, batch.id);
++    const prompt = batch.text.trim();
++    if (prompt) runDelivery(batch, prompt);
++  };
++
++  /** Drop one marker and hand whatever is still outstanding back to the editor. */
++  const abandonParkedBatch = (batch: ParkedBatch, marker: string, message?: string): void => {
++    if (batch.done) return;
++    batch.done = true;
++    if (message === undefined) hooks.resolvePending(batch.ctx, batch.id);
++    else hooks.failPending(batch.ctx, batch.id, message);
++    batch.text = substituteAll(batch.text, "", marker);
++    batch.remaining.delete(marker);
++    for (const outstanding of [...batch.remaining]) openTranscripts.get(outstanding)?.unpark();
++    batch.remaining.clear();
++    const text = batch.text;
++    if (text.trim().length === 0) return;
++    const current = hooks.getEditorText(batch.ctx);
++    hooks.setEditorText(batch.ctx, current.length > 0 ? `${text}${current}` : text);
++  };
++
++  const beginEditorDelivery = (ctx: ExtensionContext): Delivery => {
++    const slot = hooks.claimSlot();
++    const marker = placeholderText(slot);
++    hooks.insertMarker(ctx, marker);
++
++    let settled = false;
++    let parked: ParkedBatch | undefined;
++    const handle: OpenTranscript = {
++      park(batch) {
++        parked = batch;
++        batch.remaining.add(marker);
++      },
++      unpark() {
++        parked = undefined;
++      },
++      isParked: () => parked !== undefined,
++    };
++    openTranscripts.set(marker, handle);
++
++    const settle = (): boolean => {
++      if (settled) return false;
++      settled = true;
++      hooks.releaseSlot(slot);
++      if (openTranscripts.get(marker) === handle) openTranscripts.delete(marker);
++      return true;
++    };
++
++    const deliverToEditor = (replacement: string): boolean =>
++      hooks.rewriteEditor(ctx, (text) => ({ text: substituteAll(text, replacement, marker), replaced: text.includes(marker) }));
++
++    return {
++      resolve: (text) => {
++        if (!settle()) return;
++        if (parked) {
++          completeParkedMarker(parked, marker, text);
++          return;
++        }
++        // A placeholder the user deleted while waiting means the transcript has nowhere to
++        // go; appending it to whatever they typed instead would be worse than losing it.
++        if (!deliverToEditor(text)) hooks.notifyDiscarded(ctx);
++      },
++      fail: (message) => {
++        if (!settle()) return;
++        if (parked) {
++          abandonParkedBatch(parked, marker, message);
++          return;
++        }
++        deliverToEditor("");
++        hooks.notifyError(ctx, message);
++      },
++      cancel: () => {
++        if (!settle()) return;
++        if (parked) abandonParkedBatch(parked, marker);
++        else deliverToEditor("");
++      },
++    };
++  };
++
++  const beginMessageDelivery = (
++    ctx: ExtensionContext,
++    outcome: "send" | "queue",
++    deliver: (text: string) => void | Promise<void>,
++  ): Delivery => {
++    // Insert at the cursor first, then take the line: the transcript lands where the
++    // cursor was, keeping whatever was typed on either side of it.
++    const slot = hooks.claimSlot();
++    const marker = placeholderText(slot);
++    hooks.insertMarker(ctx, marker);
++    const composed = hooks.getEditorText(ctx);
++    hooks.setEditorText(ctx, "");
++    // A copy of a marker already owned by another parked batch must not ride along; this
++    // marker is not registered yet, so the scrub cannot touch it.
++    const cleaned = scrubParkedMarkers(composed);
++
++    const batch: ParkedBatch = {
++      ctx,
++      id: hooks.beginPending(ctx, outcome, cleaned),
++      text: cleaned,
++      remaining: new Set(),
++      done: false,
++      deliver,
++    };
++
++    let settled = false;
++    let parked: ParkedBatch | undefined = batch;
++    const handle: OpenTranscript = {
++      park(next) {
++        parked = next;
++        next.remaining.add(marker);
++      },
++      unpark() {
++        parked = undefined;
++      },
++      isParked: () => parked !== undefined,
++    };
++    openTranscripts.set(marker, handle);
++    batch.remaining.add(marker);
++
++    // Any placeholder already in the composer travels with the message: its transcript
++    // must land in this message, not in an editor that no longer holds it.
++    for (const [openMarker, openHandle] of openTranscripts) {
++      if (openMarker !== marker && cleaned.includes(openMarker) && !openHandle.isParked()) openHandle.park(batch);
++    }
++
++    const settle = (): boolean => {
++      if (settled) return false;
++      settled = true;
++      hooks.releaseSlot(slot);
++      if (openTranscripts.get(marker) === handle) openTranscripts.delete(marker);
++      return true;
++    };
++
++    // Once this marker has been unparked by a sibling's failure, its text is back in the
++    // editor and the message it was composed into no longer exists. Rewrite the editor in
++    // place, exactly as an insert delivery does, instead of restoring the frozen composed
++    // text: that string still holds the failed sibling's sentinel and the original typing,
++    // so restoring it would leak the sentinel and duplicate everything.
++    const deliverToEditor = (replacement: string): boolean =>
++      hooks.rewriteEditor(ctx, (text) => ({ text: substituteAll(text, replacement, marker), replaced: text.includes(marker) }));
++
++    return {
++      resolve: (text) => {
++        if (!settle()) return;
++        if (parked) {
++          completeParkedMarker(parked, marker, text);
++          return;
++        }
++        if (!deliverToEditor(text)) hooks.notifyDiscarded(ctx);
++      },
++      fail: (message) => {
++        if (!settle()) return;
++        if (parked) {
++          abandonParkedBatch(parked, marker, message);
++          return;
++        }
++        deliverToEditor("");
++        // A sibling's failure already failed the batch; this transcript's own error would
++        // otherwise vanish with its text, so report it too.
++        hooks.notifyError(ctx, message);
++      },
++      cancel: () => {
++        if (!settle()) return;
++        if (parked) abandonParkedBatch(parked, marker);
++        else deliverToEditor("");
++      },
++    };
++  };
++
++  /**
++   * Enter pressed with a placeholder still in the editor. The model must never see the
++   * sentinel, so the message is parked above the editor and the original submit runs once
++   * the last transcript has replaced its marker.
++   */
++  const parkEditorSubmission = (
++    ctx: ExtensionContext,
++    text: string,
++    submit: (text: string) => void,
++    intent: "send" | "queue" = "send",
++  ): boolean => {
++    const present = [...openTranscripts.entries()].filter(([marker]) => text.includes(marker));
++    if (present.length === 0) return false;
++
++    // Literal copies of markers another parked batch already owns are stripped first, so
++    // they can never be delivered as text by this batch or passed through below.
++    const cleaned = scrubParkedMarkers(text);
++    const unparked = present.filter(([, handle]) => !handle.isParked());
++    hooks.setEditorText(ctx, "");
++    if (unparked.length === 0) {
++      // Nothing new to wait on: hand the scrubbed remainder straight to the caller's submit.
++      if (cleaned.trim().length > 0) runSafely(ctx, submit, cleaned);
++      return true;
++    }
++
++    const batch: ParkedBatch = {
++      ctx,
++      id: hooks.beginPending(ctx, intent, cleaned),
++      text: cleaned,
++      remaining: new Set(),
++      done: false,
++      deliver: submit,
++    };
++    for (const [marker] of unparked) openTranscripts.get(marker)?.park(batch);
++    return true;
++  };
++
++  return { beginEditorDelivery, beginMessageDelivery, parkEditorSubmission };
++};
 diff -ruN --exclude=node_modules a/src/core/replacements.ts b/src/core/replacements.ts
 --- a/src/core/replacements.ts	1985-10-26 03:15:00
 +++ b/src/core/replacements.ts	2026-08-18 11:02:06
@@ -1914,7 +2248,7 @@ diff -ruN --exclude=node_modules a/src/core/voice-commands.ts b/src/core/voice-c
            return { command, text: stripped.slice(0, start).replace(TRAILING_PUNCTUATION, "") };
 diff -ruN --exclude=node_modules a/src/index.ts b/src/index.ts
 --- a/src/index.ts	1985-10-26 03:15:00
-+++ b/src/index.ts	2026-08-18 11:03:28
++++ b/src/index.ts	2026-09-13 00:31:00
 @@ -1,4 +1,5 @@
  import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 +import type { EditorComponent } from "@earendil-works/pi-tui";
@@ -1929,8 +2263,8 @@ diff -ruN --exclude=node_modules a/src/index.ts b/src/index.ts
 +import { containsPasteMarker, formatError } from "./utils/text";
 +import type { AppKeybinding, KeybindingsManager } from "@earendil-works/pi-coding-agent";
 +import type { KeyId } from "@earendil-works/pi-tui";
-+import type { Delivery } from "./core/dictation-controller";
-+import { nextFreeSlot, placeholderText, replacePlaceholder } from "./ui/transcribing";
++import { nextFreeSlot } from "./ui/transcribing";
++import { createParking } from "./core/parked";
 +import { createPendingStore } from "./ui/pending-message";
  import { textFrom } from "./utils/coerce";
  import { kittyCtrlShiftLetterRegex } from "./utils/keybind";
@@ -1954,7 +2288,7 @@ diff -ruN --exclude=node_modules a/src/index.ts b/src/index.ts
  
    // Apply the persisted last-selection (sidecar state) once loaded; env and
    // the config `profile` key are already folded into startup.profile.
-@@ -60,28 +72,207 @@
+@@ -60,28 +72,139 @@
  
    const getConfig = () => loadConfig({ configPath: startup.configPath, mode: activeMode, profile: activeProfile });
  
@@ -2032,103 +2366,29 @@ diff -ruN --exclude=node_modules a/src/index.ts b/src/index.ts
 +    return next.replaced;
 +  };
 +
-+  /** The transcript is destined for the prompt: hold its place with a placeholder. */
-+  const beginEditorDelivery = (ctx: ExtensionContext): Delivery => {
-+    const slot = claimSlot();
-+    const marker = placeholderText(slot);
-+    if (activeEditor?.insertTextAtCursor) activeEditor.insertTextAtCursor(marker);
-+    else ctx.ui.setEditorText(`${ctx.ui.getEditorText()}${marker}`);
-+
-+    let settled = false;
-+    const finish = (replacement: string) => {
-+      if (settled) return false;
-+      settled = true;
-+      releaseSlot(slot);
-+      return rewriteEditor(ctx, (text) => replacePlaceholder(text, replacement, marker));
-+    };
-+
-+    return {
-+      resolve: (text) => {
-+        // A placeholder the user deleted while waiting means the transcript has nowhere to
-+        // go; appending it to whatever they typed instead would be worse than losing it.
-+        // Say that plainly rather than reporting an insertion that did not happen.
-+        if (!finish(text)) {
-+          notify(ctx, {
-+            title: "Pi Voice STT",
-+            message: "Transcript discarded: its placeholder was removed from the prompt.",
-+            variant: "warning",
-+          });
-+        }
-+      },
-+      fail: (message) => {
-+        finish("");
-+        notify(ctx, { title: "Pi Voice STT", message, variant: "error" });
-+      },
-+      cancel: () => {
-+        finish("");
-+      },
-+    };
-+  };
-+
-+  /**
-+   * The user already committed to sending or queueing, so the whole message leaves the
-+   * composer now — anything already typed included, with the placeholder standing where
-+   * the cursor was. It waits above the editor until the transcript exists, and only then
-+   * is a message sent for the first time; the model sees nothing before that.
-+   *
-+   * On failure the composed text goes back into the editor. Taking someone's typing and
-+   * then losing it because a provider timed out is not an acceptable way to fail.
-+   */
-+  const beginMessageDelivery = (ctx: ExtensionContext, outcome: "send" | "queue"): Delivery => {
-+    // Insert at the cursor first, then take the line: the transcript lands where the
-+    // cursor was, keeping whatever was typed on either side of it.
-+    const slot = claimSlot();
-+    const marker = placeholderText(slot);
-+    if (activeEditor?.insertTextAtCursor) activeEditor.insertTextAtCursor(marker);
-+    else ctx.ui.setEditorText(`${ctx.ui.getEditorText()}${marker}`);
-+    // The expanded text, so pasted content travels with the message rather than as a
-+    // marker that no longer has anything to expand to once the editor is cleared.
-+    const composed = ctx.ui.getEditorText();
-+    ctx.ui.setEditorText("");
-+
-+    const id = pendingMessages.begin(ctx, outcome, composed);
-+    let settled = false;
-+    const settle = () => {
-+      if (settled) return false;
-+      settled = true;
-+      releaseSlot(slot);
-+      return true;
-+    };
-+
-+    const restore = () => {
-+      const { text } = replacePlaceholder(composed, "", marker);
-+      if (text.trim().length === 0) return;
-+      const current = ctx.ui.getEditorText();
-+      ctx.ui.setEditorText(current.length > 0 ? `${text}${current}` : text);
-+    };
-+
-+    return {
-+      resolve: (text) => {
-+        if (!settle()) return;
-+        pendingMessages.resolve(ctx, id);
-+        const { text: full, replaced } = replacePlaceholder(composed, text, marker);
-+        const prompt = (replaced ? full : `${composed} ${text}`).trim();
-+        if (!prompt) return;
-+        if (outcome === "queue" || !ctx.isIdle()) pi.sendUserMessage(prompt, { deliverAs: "followUp" });
-+        else pi.sendUserMessage(prompt);
-+      },
-+      fail: (message) => {
-+        if (!settle()) return;
-+        pendingMessages.fail(ctx, id, message);
-+        restore();
-+      },
-+      cancel: () => {
-+        if (!settle()) return;
-+        pendingMessages.resolve(ctx, id);
-+        restore();
-+      },
-+    };
-+  };
++  const parking = createParking({
++    claimSlot,
++    releaseSlot,
++    insertMarker: (ctx, marker) => {
++      if (activeEditor?.insertTextAtCursor) activeEditor.insertTextAtCursor(marker);
++      else ctx.ui.setEditorText(`${ctx.ui.getEditorText()}${marker}`);
++    },
++    getEditorText: (ctx) => ctx.ui.getEditorText(),
++    setEditorText: (ctx, text) => ctx.ui.setEditorText(text),
++    rewriteEditor: (ctx, rewrite) => rewriteEditor(ctx, rewrite),
++    beginPending: (ctx, intent, text) => pendingMessages.begin(ctx, intent, text),
++    resolvePending: (ctx, id) => pendingMessages.resolve(ctx, id),
++    failPending: (ctx, id, message) => pendingMessages.fail(ctx, id, message),
++    notifyDiscarded: (ctx) => {
++      notify(ctx, {
++        title: "Pi Voice STT",
++        message: "Transcript discarded: its placeholder was removed from the prompt.",
++        variant: "warning",
++      });
++    },
++    notifyError: (ctx, message) => notify(ctx, { title: "Pi Voice STT", message, variant: "error" }),
++    reportError,
++  });
 +
    const controller = createDictationController({
      keybind,
@@ -2174,11 +2434,17 @@ diff -ruN --exclude=node_modules a/src/index.ts b/src/index.ts
 +      };
      },
 +    createCleanup: (config) => createCleanup(config.cleanup),
-+    beginDelivery: (ctx, outcome) => (outcome === "insert" ? beginEditorDelivery(ctx) : beginMessageDelivery(ctx, outcome)),
++    beginDelivery: (ctx, outcome) =>
++      outcome === "insert"
++        ? parking.beginEditorDelivery(ctx)
++        : parking.beginMessageDelivery(ctx, outcome, (text) => {
++            if (outcome === "queue" || !ctx.isIdle()) pi.sendUserMessage(text, { deliverAs: "followUp" });
++            else pi.sendUserMessage(text);
++          }),
      notify,
      onModeChange: (mode) => inputIndicator.setMode(mode),
      onError: reportError,
-@@ -198,13 +389,18 @@
+@@ -198,13 +321,18 @@
          try {
            const config = await getConfig();
            assertProviderReady(config.provider);
@@ -2198,7 +2464,7 @@ diff -ruN --exclude=node_modules a/src/index.ts b/src/index.ts
          } catch (error) {
            reportError(ctx, error);
          }
-@@ -217,7 +413,17 @@
+@@ -217,7 +345,17 @@
        }
  
        const configPath = startup.configPath || "defaults only (set PI_STT_CONFIG or ~/.pi/agent/stt.json)";
@@ -2217,7 +2483,7 @@ diff -ruN --exclude=node_modules a/src/index.ts b/src/index.ts
      },
    });
  
-@@ -250,28 +456,21 @@
+@@ -250,28 +388,21 @@
  
      const previousEditor = ctx.ui.getEditorComponent();
      ctx.ui.setEditorComponent(createVoiceEditorFactory(previousEditor, {
@@ -2255,7 +2521,7 @@ diff -ruN --exclude=node_modules a/src/index.ts b/src/index.ts
        },
        onCancel: (handlerCtx) => {
          void controller.cancel(handlerCtx).catch((error: unknown) => reportError(handlerCtx, error));
-@@ -279,6 +478,17 @@
+@@ -279,16 +410,37 @@
        onSend: (handlerCtx) => {
          void controller.stopAndSubmit(handlerCtx).catch((error: unknown) => reportError(handlerCtx, error));
        },
@@ -2273,7 +2539,15 @@ diff -ruN --exclude=node_modules a/src/index.ts b/src/index.ts
        onShowProfileMenu: (handlerCtx) => {
          void showProfileMenu(handlerCtx).catch((error: unknown) => reportError(handlerCtx, error));
        },
-@@ -286,9 +496,11 @@
++      onParkSubmit: (handlerCtx, text, submit) => parking.parkEditorSubmission(handlerCtx, text, submit),
++      onParkFollowUp: (handlerCtx) =>
++        parking.parkEditorSubmission(
++          handlerCtx,
++          handlerCtx.ui.getEditorText(),
++          (prompt) => pi.sendUserMessage(prompt, { deliverAs: "followUp" }),
++          "queue",
++        ),
+     }));
    });
  
    pi.on("session_shutdown", async () => {
@@ -2562,7 +2836,7 @@ diff -ruN --exclude=node_modules a/src/ui/cursor-cell.ts b/src/ui/cursor-cell.ts
 +};
 diff -ruN --exclude=node_modules a/src/ui/input-indicator.ts b/src/ui/input-indicator.ts
 --- a/src/ui/input-indicator.ts	1985-10-26 03:15:00
-+++ b/src/ui/input-indicator.ts	2026-08-18 11:03:05
++++ b/src/ui/input-indicator.ts	2026-09-13 11:15:07
 @@ -1,5 +1,6 @@
  import { CustomEditor, type AppKeybinding, type ExtensionContext, type KeybindingsManager, type Theme } from "@earendil-works/pi-coding-agent";
  import {
@@ -2570,7 +2844,7 @@ diff -ruN --exclude=node_modules a/src/ui/input-indicator.ts b/src/ui/input-indi
    matchesKey,
    truncateToWidth,
    visibleWidth,
-@@ -9,21 +10,40 @@
+@@ -9,21 +10,50 @@
    type TUI,
  } from "@earendil-works/pi-tui";
  import type { DictationMode } from "../core/dictation-controller";
@@ -2596,6 +2870,16 @@ diff -ruN --exclude=node_modules a/src/ui/input-indicator.ts b/src/ui/input-indi
 +  /** Stop recording, leave the transcript in the editor, then apply this keystroke. */
 +  onInsertThen(ctx: ExtensionContext, data: string): void;
    onShowProfileMenu(ctx: ExtensionContext): void;
++  /**
++   * A submit while the editor still holds a transcript placeholder. Return true when it
++   * was parked; the extension calls `submit` itself once every transcript has landed.
++   */
++  onParkSubmit?(ctx: ExtensionContext, text: string, submit: (text: string) => void): boolean;
++  /**
++   * The follow-up key is consumed by Pi above the editor's submit path, so a parked
++   * composer would otherwise be queued as a literal sentinel. Return true when parked.
++   */
++  onParkFollowUp?(ctx: ExtensionContext): boolean;
  };
  
 +/**
@@ -2612,7 +2896,35 @@ diff -ruN --exclude=node_modules a/src/ui/input-indicator.ts b/src/ui/input-indi
  const injectRightLabel = (line: string, width: number, label: string): string => {
    const labelWidth = visibleWidth(label);
    if (width <= 0) return "";
-@@ -44,7 +64,6 @@
+@@ -37,14 +67,33 @@
+ };
+ 
+ class VoiceEditorWrapper implements EditorComponent {
+-  onSubmit?: (text: string) => void;
++  private guardedSubmit?: (text: string) => void;
+   onChange?: (text: string) => void;
+   borderColor?: (str: string) => string;
+ 
++  /**
++   * A submit is the one moment a placeholder in the editor can leave it. Pi calls this
++   * both from the editor's own Enter handling and directly for Alt+Enter, so the guard
++   * lives here rather than in `handleInput`. The extension is asked whether the text
++   * still holds a placeholder; when it does, the submit is parked until the transcript
++   * arrives instead of handing the sentinel to the model.
++   */
++  get onSubmit(): ((text: string) => void) | undefined {
++    return this.guardedSubmit;
++  }
++  set onSubmit(handler: ((text: string) => void) | undefined) {
++    this.guardedSubmit = handler
++      ? (text: string) => {
++          if (this.options.onParkSubmit?.(this.options.ctx, text, handler)) return;
++          handler(text);
++        }
++      : undefined;
++    this.base.onSubmit = this.guardedSubmit;
++  }
++
    constructor(
      private readonly base: EditorComponent,
      private readonly options: VoiceEditorOptions,
@@ -2620,7 +2932,48 @@ diff -ruN --exclude=node_modules a/src/ui/input-indicator.ts b/src/ui/input-indi
    ) {}
  
    // Proxy CustomEditor action handlers and app-level callbacks to the base
-@@ -105,58 +124,95 @@
+@@ -88,15 +137,37 @@
+   }
+ 
+   private syncBase(): void {
+-    if (this.onSubmit) this.base.onSubmit = this.onSubmit;
+-    else delete this.base.onSubmit;
+-
+     if (this.onChange) this.base.onChange = this.onChange;
+     else delete this.base.onChange;
+ 
+     if (this.borderColor) this.base.borderColor = this.borderColor;
++
++    this.wrapFollowUpAction();
+   }
+ 
++  /**
++   * `handleInput` matches `app.message.followUp` per keystroke, which misses a binding that
++   * is a multi-key sequence: no single chunk carries the whole chord. Pi dispatches the
++   * action through this map once the sequence resolves, and its streaming branch queues the
++   * editor text without ever calling `onSubmit` — so the guard has to live on the handler
++   * itself, not only on the key. Wrapping is idempotent and leaves a handler that is not
++   * ours alone.
++   */
++  private wrapFollowUpAction(): void {
++    const handlers = this.actionHandlers;
++    if (!handlers) return;
++    const existing = handlers.get("app.message.followUp");
++    if (!existing || (existing as { __voiceWrapped?: boolean }).__voiceWrapped) return;
++    const onPark = this.options.onParkFollowUp;
++    if (!onPark) return;
++    const wrapped = () => {
++      if (onPark(this.options.ctx)) return;
++      existing();
++    };
++    (wrapped as { __voiceWrapped?: boolean }).__voiceWrapped = true;
++    handlers.set("app.message.followUp", wrapped);
++  }
++
+   get focused(): boolean {
+     return Boolean((this.base as EditorComponent & { focused?: boolean }).focused);
+   }
+@@ -105,58 +176,97 @@
      (this.base as EditorComponent & { focused?: boolean }).focused = value;
    }
  
@@ -2737,11 +3090,13 @@ diff -ruN --exclude=node_modules a/src/ui/input-indicator.ts b/src/ui/input-indi
 -    }
 -
 +    // Transcribing is not a modal state: the placeholder holds the spot and everything
-+    // typed around it behaves normally.
++    // typed around it behaves normally. The exception is the follow-up key, which Pi
++    // resolves before the editor's submit handler and would queue the sentinel verbatim.
++    if (this.options.keybindings.matches(data, "app.message.followUp" as AppKeybinding) && this.options.onParkFollowUp?.(this.options.ctx)) return;
      this.base.handleInput(data);
    }
  
-@@ -177,8 +233,15 @@
+@@ -177,8 +287,15 @@
      this.base.addToHistory?.(text);
    }
  
@@ -2758,7 +3113,7 @@ diff -ruN --exclude=node_modules a/src/ui/input-indicator.ts b/src/ui/input-indi
    }
  
    getExpandedText(): string {
-@@ -202,13 +265,12 @@
+@@ -202,13 +319,12 @@
    }
  }
  
@@ -2773,7 +3128,7 @@ diff -ruN --exclude=node_modules a/src/ui/input-indicator.ts b/src/ui/input-indi
    let timer: ReturnType<typeof setInterval> | undefined;
  
    const requestRender = () => tui?.requestRender();
-@@ -219,8 +281,10 @@
+@@ -219,8 +335,10 @@
      timer = undefined;
    };
  
@@ -2785,7 +3140,7 @@ diff -ruN --exclude=node_modules a/src/ui/input-indicator.ts b/src/ui/input-indi
      timer = setInterval(() => {
        tick += 1;
        requestRender();
-@@ -228,8 +292,8 @@
+@@ -228,8 +346,8 @@
    };
  
    const syncAnimation = () => {
@@ -2796,7 +3151,7 @@ diff -ruN --exclude=node_modules a/src/ui/input-indicator.ts b/src/ui/input-indi
    };
  
    return {
-@@ -244,27 +308,20 @@
+@@ -244,27 +362,20 @@
        syncAnimation();
        requestRender();
      },
@@ -2833,7 +3188,7 @@ diff -ruN --exclude=node_modules a/src/ui/input-indicator.ts b/src/ui/input-indi
        const label = activeProfile && activeProfile !== DEFAULT_PROFILE ? `${strings.indicator.idle} · ${activeProfile}` : strings.indicator.idle;
        return `${theme.fg("dim", label)} ${theme.fg("accent", keybind)}`;
      },
-@@ -279,12 +336,21 @@
+@@ -279,12 +390,21 @@
  
  export const createVoiceEditorFactory = (
    previousFactory: ((tui: TUI, theme: EditorTheme, keybindings: KeybindingsManager) => EditorComponent) | undefined,

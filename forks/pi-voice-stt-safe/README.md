@@ -518,6 +518,7 @@ same grey, either in the prompt or just above it when the message is already on 
 | the voice key while idle | Start recording |
 | the voice key while recording | Stop; the transcript lands in the prompt where the cursor was |
 | `Enter` while recording | Stop and send; the whole prompt goes with it, transcript included |
+| `Enter` while a transcript is outstanding | Hold the whole message until the transcript lands; the `[⠏ transcribing]` placeholder is never sent as text |
 | the follow-up key while recording | Stop and queue the whole prompt as a follow-up |
 | any other key while recording | Stop, keep the transcript in the prompt, then apply that key |
 | `Esc` while recording | Cancel the recording. A transcription already under way is not interrupted; use `/stt cancel` |

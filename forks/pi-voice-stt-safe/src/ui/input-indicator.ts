@@ -31,6 +31,16 @@ type VoiceEditorOptions = {
   /** Stop recording, leave the transcript in the editor, then apply this keystroke. */
   onInsertThen(ctx: ExtensionContext, data: string): void;
   onShowProfileMenu(ctx: ExtensionContext): void;
+  /**
+   * A submit while the editor still holds a transcript placeholder. Return true when it
+   * was parked; the extension calls `submit` itself once every transcript has landed.
+   */
+  onParkSubmit?(ctx: ExtensionContext, text: string, submit: (text: string) => void): boolean;
+  /**
+   * The follow-up key is consumed by Pi above the editor's submit path, so a parked
+   * composer would otherwise be queued as a literal sentinel. Return true when parked.
+   */
+  onParkFollowUp?(ctx: ExtensionContext): boolean;
 };
 
 /**
@@ -57,9 +67,29 @@ const injectRightLabel = (line: string, width: number, label: string): string =>
 };
 
 class VoiceEditorWrapper implements EditorComponent {
-  onSubmit?: (text: string) => void;
+  private guardedSubmit?: (text: string) => void;
   onChange?: (text: string) => void;
   borderColor?: (str: string) => string;
+
+  /**
+   * A submit is the one moment a placeholder in the editor can leave it. Pi calls this
+   * both from the editor's own Enter handling and directly for Alt+Enter, so the guard
+   * lives here rather than in `handleInput`. The extension is asked whether the text
+   * still holds a placeholder; when it does, the submit is parked until the transcript
+   * arrives instead of handing the sentinel to the model.
+   */
+  get onSubmit(): ((text: string) => void) | undefined {
+    return this.guardedSubmit;
+  }
+  set onSubmit(handler: ((text: string) => void) | undefined) {
+    this.guardedSubmit = handler
+      ? (text: string) => {
+          if (this.options.onParkSubmit?.(this.options.ctx, text, handler)) return;
+          handler(text);
+        }
+      : undefined;
+    this.base.onSubmit = this.guardedSubmit;
+  }
 
   constructor(
     private readonly base: EditorComponent,
@@ -107,13 +137,35 @@ class VoiceEditorWrapper implements EditorComponent {
   }
 
   private syncBase(): void {
-    if (this.onSubmit) this.base.onSubmit = this.onSubmit;
-    else delete this.base.onSubmit;
-
     if (this.onChange) this.base.onChange = this.onChange;
     else delete this.base.onChange;
 
     if (this.borderColor) this.base.borderColor = this.borderColor;
+
+    this.wrapFollowUpAction();
+  }
+
+  /**
+   * `handleInput` matches `app.message.followUp` per keystroke, which misses a binding that
+   * is a multi-key sequence: no single chunk carries the whole chord. Pi dispatches the
+   * action through this map once the sequence resolves, and its streaming branch queues the
+   * editor text without ever calling `onSubmit` — so the guard has to live on the handler
+   * itself, not only on the key. Wrapping is idempotent and leaves a handler that is not
+   * ours alone.
+   */
+  private wrapFollowUpAction(): void {
+    const handlers = this.actionHandlers;
+    if (!handlers) return;
+    const existing = handlers.get("app.message.followUp");
+    if (!existing || (existing as { __voiceWrapped?: boolean }).__voiceWrapped) return;
+    const onPark = this.options.onParkFollowUp;
+    if (!onPark) return;
+    const wrapped = () => {
+      if (onPark(this.options.ctx)) return;
+      existing();
+    };
+    (wrapped as { __voiceWrapped?: boolean }).__voiceWrapped = true;
+    handlers.set("app.message.followUp", wrapped);
   }
 
   get focused(): boolean {
@@ -212,7 +264,9 @@ class VoiceEditorWrapper implements EditorComponent {
     }
 
     // Transcribing is not a modal state: the placeholder holds the spot and everything
-    // typed around it behaves normally.
+    // typed around it behaves normally. The exception is the follow-up key, which Pi
+    // resolves before the editor's submit handler and would queue the sentinel verbatim.
+    if (this.options.keybindings.matches(data, "app.message.followUp" as AppKeybinding) && this.options.onParkFollowUp?.(this.options.ctx)) return;
     this.base.handleInput(data);
   }
 

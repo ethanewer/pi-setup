@@ -15,8 +15,8 @@ import { resolveStrings } from "./i18n/strings";
 import { containsPasteMarker, formatError } from "./utils/text";
 import type { AppKeybinding, KeybindingsManager } from "@earendil-works/pi-coding-agent";
 import type { KeyId } from "@earendil-works/pi-tui";
-import type { Delivery } from "./core/dictation-controller";
-import { nextFreeSlot, placeholderText, replacePlaceholder } from "./ui/transcribing";
+import { nextFreeSlot } from "./ui/transcribing";
+import { createParking } from "./core/parked";
 import { createPendingStore } from "./ui/pending-message";
 import { textFrom } from "./utils/coerce";
 import { kittyCtrlShiftLetterRegex } from "./utils/keybind";
@@ -146,103 +146,29 @@ export default function piVoiceSttExtension(pi: ExtensionAPI) {
     return next.replaced;
   };
 
-  /** The transcript is destined for the prompt: hold its place with a placeholder. */
-  const beginEditorDelivery = (ctx: ExtensionContext): Delivery => {
-    const slot = claimSlot();
-    const marker = placeholderText(slot);
-    if (activeEditor?.insertTextAtCursor) activeEditor.insertTextAtCursor(marker);
-    else ctx.ui.setEditorText(`${ctx.ui.getEditorText()}${marker}`);
-
-    let settled = false;
-    const finish = (replacement: string) => {
-      if (settled) return false;
-      settled = true;
-      releaseSlot(slot);
-      return rewriteEditor(ctx, (text) => replacePlaceholder(text, replacement, marker));
-    };
-
-    return {
-      resolve: (text) => {
-        // A placeholder the user deleted while waiting means the transcript has nowhere to
-        // go; appending it to whatever they typed instead would be worse than losing it.
-        // Say that plainly rather than reporting an insertion that did not happen.
-        if (!finish(text)) {
-          notify(ctx, {
-            title: "Pi Voice STT",
-            message: "Transcript discarded: its placeholder was removed from the prompt.",
-            variant: "warning",
-          });
-        }
-      },
-      fail: (message) => {
-        finish("");
-        notify(ctx, { title: "Pi Voice STT", message, variant: "error" });
-      },
-      cancel: () => {
-        finish("");
-      },
-    };
-  };
-
-  /**
-   * The user already committed to sending or queueing, so the whole message leaves the
-   * composer now — anything already typed included, with the placeholder standing where
-   * the cursor was. It waits above the editor until the transcript exists, and only then
-   * is a message sent for the first time; the model sees nothing before that.
-   *
-   * On failure the composed text goes back into the editor. Taking someone's typing and
-   * then losing it because a provider timed out is not an acceptable way to fail.
-   */
-  const beginMessageDelivery = (ctx: ExtensionContext, outcome: "send" | "queue"): Delivery => {
-    // Insert at the cursor first, then take the line: the transcript lands where the
-    // cursor was, keeping whatever was typed on either side of it.
-    const slot = claimSlot();
-    const marker = placeholderText(slot);
-    if (activeEditor?.insertTextAtCursor) activeEditor.insertTextAtCursor(marker);
-    else ctx.ui.setEditorText(`${ctx.ui.getEditorText()}${marker}`);
-    // The expanded text, so pasted content travels with the message rather than as a
-    // marker that no longer has anything to expand to once the editor is cleared.
-    const composed = ctx.ui.getEditorText();
-    ctx.ui.setEditorText("");
-
-    const id = pendingMessages.begin(ctx, outcome, composed);
-    let settled = false;
-    const settle = () => {
-      if (settled) return false;
-      settled = true;
-      releaseSlot(slot);
-      return true;
-    };
-
-    const restore = () => {
-      const { text } = replacePlaceholder(composed, "", marker);
-      if (text.trim().length === 0) return;
-      const current = ctx.ui.getEditorText();
-      ctx.ui.setEditorText(current.length > 0 ? `${text}${current}` : text);
-    };
-
-    return {
-      resolve: (text) => {
-        if (!settle()) return;
-        pendingMessages.resolve(ctx, id);
-        const { text: full, replaced } = replacePlaceholder(composed, text, marker);
-        const prompt = (replaced ? full : `${composed} ${text}`).trim();
-        if (!prompt) return;
-        if (outcome === "queue" || !ctx.isIdle()) pi.sendUserMessage(prompt, { deliverAs: "followUp" });
-        else pi.sendUserMessage(prompt);
-      },
-      fail: (message) => {
-        if (!settle()) return;
-        pendingMessages.fail(ctx, id, message);
-        restore();
-      },
-      cancel: () => {
-        if (!settle()) return;
-        pendingMessages.resolve(ctx, id);
-        restore();
-      },
-    };
-  };
+  const parking = createParking({
+    claimSlot,
+    releaseSlot,
+    insertMarker: (ctx, marker) => {
+      if (activeEditor?.insertTextAtCursor) activeEditor.insertTextAtCursor(marker);
+      else ctx.ui.setEditorText(`${ctx.ui.getEditorText()}${marker}`);
+    },
+    getEditorText: (ctx) => ctx.ui.getEditorText(),
+    setEditorText: (ctx, text) => ctx.ui.setEditorText(text),
+    rewriteEditor: (ctx, rewrite) => rewriteEditor(ctx, rewrite),
+    beginPending: (ctx, intent, text) => pendingMessages.begin(ctx, intent, text),
+    resolvePending: (ctx, id) => pendingMessages.resolve(ctx, id),
+    failPending: (ctx, id, message) => pendingMessages.fail(ctx, id, message),
+    notifyDiscarded: (ctx) => {
+      notify(ctx, {
+        title: "Pi Voice STT",
+        message: "Transcript discarded: its placeholder was removed from the prompt.",
+        variant: "warning",
+      });
+    },
+    notifyError: (ctx, message) => notify(ctx, { title: "Pi Voice STT", message, variant: "error" }),
+    reportError,
+  });
 
   const controller = createDictationController({
     keybind,
@@ -272,7 +198,13 @@ export default function piVoiceSttExtension(pi: ExtensionAPI) {
       };
     },
     createCleanup: (config) => createCleanup(config.cleanup),
-    beginDelivery: (ctx, outcome) => (outcome === "insert" ? beginEditorDelivery(ctx) : beginMessageDelivery(ctx, outcome)),
+    beginDelivery: (ctx, outcome) =>
+      outcome === "insert"
+        ? parking.beginEditorDelivery(ctx)
+        : parking.beginMessageDelivery(ctx, outcome, (text) => {
+            if (outcome === "queue" || !ctx.isIdle()) pi.sendUserMessage(text, { deliverAs: "followUp" });
+            else pi.sendUserMessage(text);
+          }),
     notify,
     onModeChange: (mode) => inputIndicator.setMode(mode),
     onError: reportError,
@@ -492,6 +424,14 @@ export default function piVoiceSttExtension(pi: ExtensionAPI) {
       onShowProfileMenu: (handlerCtx) => {
         void showProfileMenu(handlerCtx).catch((error: unknown) => reportError(handlerCtx, error));
       },
+      onParkSubmit: (handlerCtx, text, submit) => parking.parkEditorSubmission(handlerCtx, text, submit),
+      onParkFollowUp: (handlerCtx) =>
+        parking.parkEditorSubmission(
+          handlerCtx,
+          handlerCtx.ui.getEditorText(),
+          (prompt) => pi.sendUserMessage(prompt, { deliverAs: "followUp" }),
+          "queue",
+        ),
     }));
   });
 

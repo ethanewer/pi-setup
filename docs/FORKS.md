@@ -295,7 +295,10 @@ becomes an error line and returns the text to the composer rather than losing it
 There is only ever one recording: a second press during the seconds a recorder can take to
 start is ignored rather than opening a second microphone. Transcriptions, though, can
 overlap, so each placeholder carries its own slot — a concurrent one reads
-`[⠏ transcribing 2]` — and each transcript replaces its own marker by exact text. Upstream's
+`[⠏ transcribing 2]` — and each transcript replaces its own marker by exact text. A submit
+made while a transcript is still outstanding is held, exactly as a send-while-recording is,
+and the original Enter or follow-up runs once the last marker has been replaced, so the
+sentinel can never reach the model as message text. Upstream's
 `output.submitOnStop` is dropped: it made the voice key send instead of insert, which now
 has its own key. `PI_STT_FAKE_TRANSCRIPT` / `PI_STT_FAKE_FAIL` /
 `PI_STT_FAKE_DELAY_MS` replace the provider with a fixed answer so this lifecycle can be
