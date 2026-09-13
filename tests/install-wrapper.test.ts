@@ -191,5 +191,13 @@ test("occ and ocdx launch the real CLIs on OpenRouter with closed-weight refusal
 		// The launcher execs the real CLI, not pi.
 		expect(sh).toContain(`exec ${cli} `);
 		expect(sh).not.toContain("pi-coding-agent");
+
+		// The Windows .cmd shim must exec the same filename the installer writes
+		// (~/.local/bin/<name>, no extension). It once pointed at <name>.sh, which
+		// does not exist, and the installer's own verify step failed on Windows.
+		const cmd = readFileSync(join(wrappers, `${name}.cmd`), "utf8");
+		expect(cmd).toContain(`\\.local\\bin\\${name}" %*`);
+		expect(cmd).not.toContain(`${name}.sh`);
+		expect(installer).toContain(`writeExec(join(localBin, "${name}"), readTemplate("${name}.sh"))`);
 	}
 });

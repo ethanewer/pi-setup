@@ -18,5 +18,5 @@ if not defined BASH_BIN (
   echo occ: Git Bash not found; install Git for Windows 1>&2
   exit /b 1
 )
-"%BASH_BIN%" "%USERPROFILE%\.local\bin\occ.sh" %*
+"%BASH_BIN%" "%USERPROFILE%\.local\bin\occ" %*
 exit /b %ERRORLEVEL%

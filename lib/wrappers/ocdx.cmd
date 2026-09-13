@@ -18,5 +18,5 @@ if not defined BASH_BIN (
   echo ocdx: Git Bash not found; install Git for Windows 1>&2
   exit /b 1
 )
-"%BASH_BIN%" "%USERPROFILE%\.local\bin\ocdx.sh" %*
+"%BASH_BIN%" "%USERPROFILE%\.local\bin\ocdx" %*
 exit /b %ERRORLEVEL%
