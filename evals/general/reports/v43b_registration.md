@@ -136,10 +136,37 @@ tree: oracle reward 1.0, nop reward 0.0. That is what a fresh clone sees, and it
 the check that caught a real defect in the v4.1 wave, where a task-local
 `.gitignore` excluded a build script the Dockerfile needed.
 
-**Census, in progress.** The both-directions census over all 62 tasks runs
-separately and its result is appended below when it finishes, with the observed
-rewards parsed out of the raw per-task logs rather than read from a summary line,
-because a summary is what a verifier writes about itself.
+**Census, complete.** Both directions over all 62 tasks in four shards, with the
+observed rewards parsed out of the raw per-task logs rather than read from a
+summary line, because a summary is what a verifier writes about itself.
+
+| | Result |
+|---|---|
+| Tasks censused | 62 |
+| oracle reward `1` and nop reward `0` on the first pass | **61** |
+| Static-gate failure attributed to a wave-2 task | 0 |
+| Failed, then fixed and re-verified | 1 (`capstan-boom`) |
+| Final | **62 / 62** |
+
+`capstan-boom` (semgrep/semgrep) scored oracle 0 because
+`tests/manifest/pytest.sha256` pinned 70 `_pytest/__pycache__/*.pyc` entries out of
+142 files, and Python rewrites bytecode caches at runtime, so `sha256sum -c` could
+never match on a run after the bake. Every check that mattered still passed,
+including `fix commit not present in the working clone` and `exactly one commit
+object reachable`. Fixed by dropping the 70 bytecode entries and keeping the 72
+real source files, which is what the manifest exists for; `sha256sum -c` only
+verifies listed files, so the tamper check on source is unchanged. Re-verified
+oracle 1 / nop 0 and committed separately.
+
+Three other tasks use the same manifest pattern and were checked rather than
+assumed: `lighter-boom` and `nock-meridian` skip `__pycache__` when walking and the
+latter sets `PYTHONDONTWRITEBYTECODE=1`; `bracket-ferry` had the equivalent fix
+during the v4.3 registration.
+
+This is the third both-directions census in this project to catch a task that had
+passed its author and its independent reviewer; the v4.3 census caught three the
+same way. It is also a defect class that can only appear on a second run, since the
+first run in a freshly built container can have matching bytecode.
 
 ## Not done
 
