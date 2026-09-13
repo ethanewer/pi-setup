@@ -129,9 +129,17 @@ everything registered and the exit code is nonzero because of tasks that are not
 
 ## Census and export proof
 
-The both-directions census over all 62 tasks was started before this file was
-written and runs separately; its result is appended below when it finishes, parsed
-from the raw per-task logs rather than a summary line.
+**Export proof, done.** `ballast-bollard` (PyCQA/bandit) was exported from the
+registration commit with `git archive HEAD` — 12 files, matching the 12 on disk —
+and both harbor directions were run against the export rather than the working
+tree: oracle reward 1.0, nop reward 0.0. That is what a fresh clone sees, and it is
+the check that caught a real defect in the v4.1 wave, where a task-local
+`.gitignore` excluded a build script the Dockerfile needed.
+
+**Census, in progress.** The both-directions census over all 62 tasks runs
+separately and its result is appended below when it finishes, with the observed
+rewards parsed out of the raw per-task logs rather than read from a summary line,
+because a summary is what a verifier writes about itself.
 
 ## Not done
 
