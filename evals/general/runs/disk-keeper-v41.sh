@@ -33,6 +33,12 @@ FLOOR=${1:-90}
 HOURS=${2:-24}
 SCRATCH_MIN=${3:-90}
 SCRATCH_MAX_H=${4:-72}
+# Two thresholds. FLOOR is when pruning starts. ALERT is when the operator should
+# be woken up. Below FLOOR but above ALERT the guard is doing its job and the
+# oscillation is normal, so it logs quietly; the steady state observed during the
+# v4.3 waves was free space cycling between about 72G and 129G with a prune every
+# couple of hours, which needs no action and was waking the operator for nothing.
+ALERT=${5:-50}
 SENTINEL=/tmp/v41-wave-done
 # Never removed:
 #   - anything with a RepoDigest, which means it was PULLED from a registry and
@@ -94,7 +100,13 @@ while true; do
   free=$(df --output=avail -BG /var/lib/docker 2>/dev/null | tail -1 | tr -dc '0-9')
   [ -z "$free" ] && free=999
   if [ "$free" -lt "$FLOOR" ]; then
-    echo "[disk] $(date +%H:%M:%S) free=${free}G below ${FLOOR}G -> pruning"
+    if [ "$free" -lt "$ALERT" ]; then
+      # matches the watcher's notifyOn pattern: this one is worth waking for
+      echo "[disk] $(date +%H:%M:%S) free=${free}G below ${ALERT}G ALERT -> pruning"
+    else
+      # routine: still prunes, but does not match the alert pattern
+      echo "[disk] $(date +%H:%M:%S) free=${free}G under ${FLOOR}G floor, reclaiming"
+    fi
     docker image prune -f --filter "until=20m" >/tmp/v41-disk-keeper-img.log 2>&1
     echo "[disk]   untagged: $(tail -1 /tmp/v41-disk-keeper-img.log)"
     prune_scratch
