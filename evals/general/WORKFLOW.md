@@ -559,3 +559,55 @@ upstream per `specs/large_assets.json` (SHA-256 verified):
 - `node-v20.19.3-linux-x64.tar.xz` (harbor-gasket)
 - `vosk_model.zip` (zephyr-orchid)
 - `Gr.fst`, `HCLr.fst` (raven-orchid)
+
+## 2026-09-13 addition — v4.3b diversity wave (62 tasks)
+
+62 more tasks built from verified real upstream issues, bringing the suite to 969
+registered tasks, across 32 repositories that the v4.3 wave did not use and 14
+domains chosen to mirror Terminal-Bench 2.1's spread: scientific-python 8,
+rust-cli 6, security-tooling 6, program-analysis 6, jvm-systems 6,
+packaging-release 6, systems-c 4, computer-vision 4, go-infrastructure 4,
+js-tooling 3, nlp 3, solvers 2, data-engine 2, speech-audio 2.
+
+Combined with the v4.2 and v4.3 waves, 180 tasks now clone a real upstream
+repository at image-build time, across 79 distinct repositories, with zero
+intersection against the 68 repositories the frozen Terminal-Bench 2.1 reference
+uses (`specs/tb21_source_repositories.json`, enforced by
+`tools/check_upstream_disjointness.py`).
+
+Difficulty of the 62: 30 easy, 32 medium, 0 hard, mean rubric total 10.3 — the
+same skew as the v4.3 wave. A real upstream bug with a known reproduction is
+narrow by nature. The v4.3c wave therefore withholds the reproduction from the
+instruction and requires the agent to write its own, which is the available lever
+for difficulty without giving up real issues.
+
+Registered by the operator while the v4.3c wave was still authoring, so every
+suite-wide gate is read by attributing failures to task names rather than counting
+them; all failures were v4.3c directories mid-authoring, none wave-2. Details,
+including the independent leak and structural checks, are in
+`reports/v43b_registration.md`.
+
+Two tool fixes came out of registering it:
+
+- `tools/update_provenance.py` enumerated `specs/` with `glob('*.json')` while
+  `check_reproducibility.py` walks it with `rglob('*')`. The recorder was
+  non-recursive and json-only, the checker recursive and file-agnostic, so any
+  subdirectory under `specs/` was recorded by neither and demanded by one.
+  `specs/v43_issue_pool/` exposed it with 61 errors. Both now agree.
+- `tools/check_image_size_hygiene.py` is new. Real upstream builds made three task
+  images exceed 11 GB and one exceed 30 GB. The dominant cause is `chown -R` or
+  `chmod -R` in a RUN of its own after a compile filled the tree: layers are
+  copy-on-write, so every object file is stored twice. `tasks/gunwale-tideway`
+  shows it as two layers of exactly 2.74 GB in `docker history`. Measured on this
+  host with a 400 MB blob, a separate `chmod -R` grew an image from 1.07 GB to
+  1.49 GB. The gate is static and severity-aware: only ownership changes on trees
+  a COMPILE step filled are errors, because duplicating a cloned source tree costs
+  megabytes while duplicating a build directory costs gigabytes. Budget is 6 GB
+  with a 12 GB hard limit, recorded in `reports/AUTHORING_SPEC_v42.md`. It is not
+  yet wired into `rebuild_and_audit.py`, because it currently fails 33 tasks that
+  are mostly mid-authoring.
+
+Nothing else catches an oversized image: `storage_mb` is advisory in harbor 0.22.0.
+It is parsed, carried into telemetry and mapped for terminal-bench format, but
+there is no `storage_opt` or `--storage-opt` anywhere in harbor, so it never
+reaches docker as a limit.

@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 90,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on astral-sh/uv at parent commit 64c73b115b544e8424a8c69f44131e21d66e629c (real upstream bug, issue #21261; fix fab2c0c0d2992217ff8768d11558f4b668d02501). Domain: packaging-release. `uv cache clean`/`uv cache prune` report the logical byte length of removed entries as the reclaimed space: hard-linked files (a surviving link elsewhere keeps the storage, so 0 bytes are freed) and sparse files (holes are charged as data) are both misreported, and nothing is printed when the reclaimed figure is 0. Agent must localise the bug in the real tree (Removal::add_file in crates/uv-cache/src/removal.rs uses metadata.len(); the cache_clean/cache_prune call sites gate the printed figure on the byte total), fix it so the CLI '(X)' suffix is blocks*512 when the file is the last hard link and 0 otherwise, and always print a figure when files/directories were removed. The upstream fix additionally RENAMED the internal accounting API (logical_bytes/physical_bytes -> coarse_bytes/fine_bytes, RemovalMode -> RemovalAccounting), so the extracted golden test crates/uv-cache/tests/removal.rs only compiles against a tree reproducing that rename; the verifier accepts EITHER the exact upstream-style rename (extracted golden) or a name-preserving functional fix (sed-translated golden variant, coarse_bytes->logical_bytes), and falls back between the two. The CLI-observable '(X)' suffix is the common oracle via three authored hidden end-to-end cases (retained hardlink -> 0B; mixed hardlink+regular -> 1.0MiB; sparse 512MiB -> tiny) that the upstream CLI tests do not use. Rust 1.98.0 pinned by in-tree rust-toolchain.toml; Cargo.lock committed. Full debug CLI build (~1 min at 64 cores in the Dockerfile, ~20-45 min at 1 CPU) is pre-warmed into the image so the agent's rebuild is incremental. Both directions verified inside the task image before shipping: parent reports (1.0MiB) for the retained-hardlink scenario, fixed tree reports (0B), golden crate tests 4/4 pass on the fixed tree."
+}

@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 1,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": null,
+  "notes": "Upstream-clone bugfix in BurntSushi/ripgrep (v4.2 family), upstream issue #2990. Image clones the real repository SHALLOW at the parent commit ba23ced8178496263af013117b70c09ce39c18e5 with the bug present; the agent must localise and fix it in the real tree. Bug: globset's file_name() in crates/globset/src/pathutil.rs returns None whenever a path's last byte is '.', so the candidate basename (and, via basename, the extension) becomes the empty string for any file or directory whose name ends in a dot (e.g. a directory literally named 'asdf.' or a file 'foo.'). Glob matching strategies that compare against the candidate basename/ext (BasenameLiteral / Extension / RequiredExtension, i.e. globs whose final component is a literal ending in a dot, with no embedded slash so the '**/' prefix applies) then silently stop matching: a negation glob '-g !asdf./' excludes nothing (files under the trailing-dot directory still appear in --files and in search results) and an inclusion glob selects nothing. Fix (4df1298127695ed1e76937f16de1a0135677ccf5): only an empty path or a final component of exactly '..' has no file name; a trailing dot is a perfectly normal file name. Re-confirmed both directions in this author's own build: at the parent commit the reproduction (mkdir asdf asdf.; touch asdf/foo asdf./foo; rg --files -g '!asdf./') lists both files; with the one-file fix it lists only asdf/foo. Verifier: provenance (HEAD is the pinned parent, every tracked file except pathutil.rs byte-identical to the parent blobs, no untracked files, /app/summary.md non-empty) + rebuild of rg and the project's own test harness + the project's own upstream regression test r2990_trip_over_trailing_dot (extracted from the fix commit at image build time into /opt/golden, sha256 48708bd6aa3534e703a11b101de09a66794206ffc043be966abba3cfde07801e; never part of this task tree) + eight of the project's own existing glob integration tests (misc::glob, glob_negate, glob_case_insensitive, glob_case_sensitive, glob_always_case_insensitive, include_zero, include_zero_override, preprocessing_glob) + four static hidden CLI cases with fixture names (mubla., nxq., grxv.) that appear in NO agent-visible artifact and fail at the parent / pass at the fix: a negated literals-glob on a FILE named 'mubla.', an inclusion literals-glob selecting 'mubla.', a '**/'-prefixed negation against a nested trailing-dot directory 'nxq.', and a search-mode run -g '!grxv./' over a tree with a trailing-dot directory, plus four DYNAMIC hidden cases whose trailing-dot name is generated from $RANDOM at verifier time (same four shapes), so no fixed name can be hardcoded even by an agent that could read /tests. Oracle applies the authored one-file patch (a copy of the upstream diff). Toolchain: rustup 1.98.1 (same recipe as the sibling ripgrep #3180 task), reproduction observed both directions in the author's own build of the exact parent/fix commits; image smoke step fails the golden test at build time to prove the image ships the bug."
+}

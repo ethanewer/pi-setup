@@ -1,0 +1,6 @@
+# hidden case 4: eight parameters p1..p8 -- a larger missing set than the
+# upstream test's three -- and an all-supplied success-path sanity check
+# (the missing-parameter error must not fire, and every value must come back
+# in declaration order).
+PREPARE s AS SELECT $p1, $p2, $p3, $p4, $p5, $p6, $p7, $p8; EXECUTE s(p2 := 2, p5 := 5);	ERROR:Values were not provided for the following parameters: p1, p3, p4, p6, p7, p8
+PREPARE s AS SELECT $p1, $p2, $p3, $p4, $p5, $p6, $p7, $p8; EXECUTE s(p1 := 1, p2 := 2, p3 := 3, p4 := 4, p5 := 5, p6 := 6, p7 := 7, p8 := 8);	VALUE:1,2,3,4,5,6,7,8

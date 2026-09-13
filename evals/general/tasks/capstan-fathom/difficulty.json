@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on PyCQA/flake8 at parent commit d25cc10e382bcbd59cea47e0172f1e35cd3ee90d (real upstream issue #1372, fixed by 85c2be3b5291a73a2e737219c040019c14cf3eee, flake8 3.9.2 era). On Python 3.10+ the parser attaches end-position fields to the SyntaxError detail tuple; src/flake8/checker.py::FileChecker._extract_syntax_information assumed the old 4-element layout and read token[-1] (now an integer end-offset) as the physical line, then called .rstrip on it, so any file that failed to parse crashed with AttributeError: 'int' object has no attribute 'rstrip' instead of reporting E999. The image clones the repo at the parent with a single-commit shallow fetch (fix commit unreachable), extracts the fix commit's tests/integration/test_checker.py into /opt/golden through a deleted throwaway bare clone, overlays it into the working tree exactly as the mining reproduction did, and the build end-to-end re-runs the regression test requiring the mined AttributeError. Repro/pass confirmed inside the image with era deps pyflakes 2.3.1 / pycodestyle 2.7.0 / mccabe 0.6.1 / pytest 6.2.5: at parent the golden test fails (1 failed, AttributeError at checker.py:463), at fix 1 passed; note the era CLI cannot start on 3.12 (importlib.metadata EntryPoints has no .get), so the task is driven purely through pytest/imports. Oracle applies the minimal upstream-equivalent fix (guard the adjustment block on len(token)==4 and read token[3]); verifier asserts provenance (HEAD, single commit, fix commit absent, golden file byte-identical, porcelain exactly checker.py + test_checker.py), runs the golden test plus a 135-test slice of the project's own suite, and 4 authored hidden cases: real 3.12 parse failures of multi-line modules ((5,20),(6,9),(5,9) crash at parent, exact positions at fix), six-element tuples with text=None or offset end-fields (crash at parent, exact positions at fix), the legacy 4-element layout ((3,8),(7,0),(1,3) unchanged), and TokenError/fallback branches ((4,12),(1,0) unchanged). Whole check <2s at 1 CPU on the host."
+}

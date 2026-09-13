@@ -36,7 +36,15 @@ def main() -> int:
     spec_runtime = {'provenance.json', 'independence_report.json',
                     'similarity_report.json', 'oracle_report.json',
                     'oracle_times.json'}
-    for p in sorted((ROOT / 'specs').glob('*.json')):
+    # rglob over every file, not just *.json: check_reproducibility.py walks
+    # OWNED with rglob('*'), so a narrower pattern here silently omits anything
+    # else and the two tools disagree. specs/ held only .json files until
+    # specs/v43_issue_pool/ added a subdirectory with a README.md, which exposed
+    # both gaps at once -- 60 json files missed by a non-recursive glob, then the
+    # README missed by a json-only one.
+    for p in sorted((ROOT / 'specs').rglob('*')):
+        if not p.is_file() or '__pycache__' in p.parts:
+            continue
         if p.name in spec_runtime:
             continue
         rel = str(p.relative_to(ROOT))

@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on semgrep/semgrep at parent commit a8b650dffe910d7b8903fe05ceeb75fdc7983197 (real upstream issue #9849, fixed by e3062fc251448ffcf16a38245e5e6a8dca894df5). get_project_url() returns git ls-remote --get-url verbatim, so when GitLab CI injects a job-token remote URL (https://gitlab-ci-token:glcbt-...@host/...), the whole token is copied into published rule metadata; the upstream fix routes get_project_url() through a new clean_project_url() (urlsplit + re.sub stripping the user:pass@ part of netloc). The image clones the repo with ONLY the parent commit in the object store (fix commit unreachable, rev-list --all --count == 1), checks out the cli/src/semgrep/semgrep_interfaces submodule, installs the CLI editable so edits to /app/src are live, and extracts the upstream regression test cli/tests/unit/test_clean_project_url.py::test_git_url_clean from the fix commit into /opt/golden at build time (sha256 7d1f46c1e26081e0c2655ecc9e1de6f8ad8c7f475f87922f512603715aa87e8b). Build-time smoke asserts the mined failing state: get_project_url() still leaks the token and the golden test cannot collect (ImportError: cannot import name clean_project_url). Verifier: provenance (HEAD==parent, exactly one commit, fix commit absent, tracked working tree differs only in cli/src/semgrep/git.py, editable import resolves to /app/src), runs the golden test via the project's own pytest, runs the project's existing tests/unit/test_baseline.py (exercises BaselineHandler/git_check_output/get_git_root_path/worktree from semgrep.git), and runs two authored hidden cases: end-to-end get_project_url() against real throwaway git repos with GitLab job-token/PAT/port URLs the golden test does not use, and direct clean_project_url() contract vectors (password containing @, percent-encoded chars in password, bare IPv4 host, explicit port kept, clean URLs untouched, ssh:// git@host form untouched). All hidden expectations computed from the upstream implementation's exact behavior (regex ^.*:.*@(.+) on urlsplit netloc). Typical run: pytest golden ~1s, baseline ~2s at 1 CPU; no network needed at trial time."
+}

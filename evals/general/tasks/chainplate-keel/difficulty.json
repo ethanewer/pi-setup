@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on syncthing/syncthing at parent commit ee275fee65b37ea75802c8fc3c9decd5a66cb065 (real upstream issue #10743, fixed by f1d631d66e1c3101a8968e0713fac29e67329134, minimal 8-line change). checkFileInfoConsistency() in lib/protocol/protocol.go rejected ANY non-file entry with nonzero Size ('non-file type with nonzero size'), but scanning nodes of other Syncthing versions stamp directories with the fixed SyntheticDirectorySize constant (128), so the receiving node's consistency checker flagged those directory index entries as invalid protocol data and mixed-version synchronization of directory entries broke. The fix splits the check: directories may carry size 0 or SyntheticDirectorySize; symlinks stay size 0. The image clones the repo shallow at the parent, overlays the fix commit's lib/protocol/protocol_test.go (which adds six table cases to TestCheckConsistency: directory 0/synthetic/42 and symlink 0/synthetic/42) exactly as the mining reproduction did, keeps the fix commit unreachable (throwaway bare clone), and pre-warms the Go module cache and test-build so the agent's cycle is a one-file incremental recompile. Agent must localise in lib/protocol and let directory entries with the synthetic size pass while keeping size-0 directories and symlinks valid and all other rejections intact. Hidden cases: two authored Go test files driving checkFileInfoConsistency with inputs the upstream test does not use (nested directory name with synthetic size + mtime/permissions; deleted directory with synthetic size; directory at synthetic-1 and at 1 MiB; symlink with multi-component target at size 0; symlink at size 1 and at synthetic-1). Whole ./lib/protocol/ package suite passes after the fix, ~1-2 min total incremental rebuild at 1 CPU, first clone+module fetch at build time only."
+}

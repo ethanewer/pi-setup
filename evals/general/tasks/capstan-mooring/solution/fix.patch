@@ -1,0 +1,12 @@
+diff --git a/lib/rules/no-loss-of-precision.js b/lib/rules/no-loss-of-precision.js
+--- a/lib/rules/no-loss-of-precision.js
++++ b/lib/rules/no-loss-of-precision.js
+@@ -178,7 +178,7 @@
+  * @returns {boolean} true if they do not match
+  */
+ function baseTenLosesPrecision(node) {
+-	const rawNumber = getRaw(node).toLowerCase();
++	const rawNumber = getRaw(node).toLowerCase().replace(/\.$/u, "");
+ 	const normalizedRawNumber = convertNumberToScientificNotation(
+ 		rawNumber,
+ 		false,

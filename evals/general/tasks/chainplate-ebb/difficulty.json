@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 0,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on scipy/scipy at parent commit 68942fb357ee133e75709e91959d322325fffb90 (real upstream issue #25880, fixed upstream by commit b92b297a5a0c372600bffffd4dc83513be9bfd39 with a 2-line change to scipy/optimize/_minimize.py: `import copy` and `bounds = copy.copy(bounds)` in `_validate_bounds`, which had been broadcasting lb/ub onto the caller's Bounds object in place). The bug: minimize() silently rewrites a caller's dimension-agnostic Bounds object built from scalar limits - the scalar lb/ub are replaced with np.broadcast_to arrays sized to the current problem, so a Bounds reused across problem sizes is corrupted from the second call onward and inspection afterwards shows data the caller never assigned. Image: shallow clone with only the parent commit in the object store (fix commit unreachable; rev-list --all --count == 1), meson submodules (array_api_compat, array_api_extra, cobyqa, HiGHs, unuran, xsf, boost_math, scipy-mathjax) fetched at build time at the parent-pinned SHAs, full scipy 2.0.0.dev0 source build + `pip install --no-build-isolation -e .` (system libopenblas-dev provides BLAS/LAPACK; build toolchain pinned: numpy 2.5.3, meson-python 0.21.1, meson 1.12.0, ninja 1.13.2, Cython 3.3.0, pybind11 3.1.0, pythran 0.19.0, setuptools 84.0.0, pytest 9.1.1; OMP/OPENBLAS/MKL/NUMEXPR threads pinned to 1). The golden regression file (fix-commit scipy/optimize/tests/test_optimize.py, containing test_minimize_does_not_mutate_bounds parametrized over 8 methods and test_minimize_bounds_reusable_across_sizes) is extracted from the fix commit at build time into /opt/golden, never into this tree. Verifier: tree provenance (HEAD == parent, fix commit absent, exactly one commit, every tracked file except scipy/optimize/_minimize.py byte-identical to the parent blobs - gitlink submodule entries skipped - no untracked non-ignored files, import scipy resolves to /app/src), the project's own existing tests (test_bounds_with_list, test_all_bounds_equal, test_all_bounds_equal_writable, test_minimize_maxiter_noninteger), the golden regression node ids run against the agent's tree, the exact issue reproduction, three authored hidden cases with inputs the upstream test never uses (reuse across sizes with l-bfgs-b, five methods with keep_feasible plus scalar-state shape checks, a mixed three-call sequence across methods/sizes ending with value+shape assertions), and the /app/explanation.md deliverable. Hidden cases fail on the parent tree (identity asserts raise or the second call raises ValueError on stale broadcast shapes) and pass only with the fix. Both directions were re-confirmed inside the task image (see report). Typical verifier runtime: pytest collection of test_optimize.py ~20-40s at 1 CPU plus the quick node ids. Verified env: python 3.12.13 on Debian trixie, bench-base:python-3.12."
+}

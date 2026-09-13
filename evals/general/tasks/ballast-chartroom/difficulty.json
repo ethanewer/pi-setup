@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 0,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 0,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 30,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on aquasecurity/trivy at parent commit 3dc5f8768b343a07694ba1cc09425f485d4c1b0f (real upstream bug #10955, fixed by f964fa2bb61e1b59088d2b35397ca8fd39045b00). The conda environment.yml parser replaces version operators with spaces and then indexes the first field of the split; a dependency line made up only of operators ('=', '==') leaves an empty split and the parser panics with 'index out of range [0] with length 0', aborting the whole scan on a harmless malformed entry. The image ships the parent tree with the fix commit's regression test (parse_test.go case 'dependency line contains only operators' and testdata/operator-only-dep.yaml) overlaid exactly as the mining reproduction did, so the failing state is present from the first `go test` run; the fix commit itself is never reachable from /app/src (single shallow parent commit, golden bytes extracted via a throwaway clone that is deleted). The agent must reproduce, localise and fix in the real tree; the verifier asserts provenance (HEAD still the pinned parent, single commit, fix commit absent, only the conda environment parser source modified, nothing deleted, regression test and fixture byte-identical to the golden copies), runs the project's own conda parser test scope (environment + meta packages, the upstream regression test included), and runs two authored hidden cases with operator-only dependency lines the upstream test does not use ('===', '===' interspersed entries, '= =' and ' = ' spacing forms, mixed pins) asserting exact parsed package lists. Toolchain is go 1.26.3 from actions/go-versions with CGO_ENABLED=0 GOEXPERIMENT=jsonv2 (mandatory), deps pinned by the repo's committed go.sum and cached at image build; fully offline at trial. Both directions re-confirmed inside the task image before shipping: parent fails with the mined panic, fix passes the whole conda parser scope. Review (v4 wave): issue re-confirmed from a fresh clone in a container on the base image (parent FAILs with 'index out of range [0] with length 0', fix f964fa2b PASSes, guard grep 0->1); hidden cases proven to panic at the parent without the golden test present; verifier hardened after a root-trial bypass was demonstrated (a stub /opt/go/bin/go that reported success earned reward 1 on the buggy tree): the go binary and the two golden regression files are now sha256-pinned in test.sh and asserted again at Dockerfile build, assume-unchanged/skip-worktree bits are cleared before a git-diff-based blob provenance check, and nothing may be staged; fake-go, assume-unchanged hiding and golden tampering are all rejected (reward 0), honest oracle still 1, nop still 0."
+}

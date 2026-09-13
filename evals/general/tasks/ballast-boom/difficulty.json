@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on PyCQA/flake8 at parent commit 2a811cc4d2aaed3e8eb5a9f04f08ccc8af7c0791 (real upstream bug, issue #1948). On Python 3.12, when a source line contains an f-string that uses escaped (doubled) curly braces, flake8's string-content redaction step in the logical-line construction path miscounts the braces: an FSTRING_MIDDLE token's parsed text is shorter than the raw token span, so the line handed to logical-line plugins is misaligned, with raw characters leaking in where filler text should be and filler text where code should be. A plugin that reports content extracted from the linted line therefore prints a corrupted snippet. Agent must reproduce, localise and fix the real tree; the verifier asserts provenance (HEAD still the pinned parent, fix commit not reachable from the clone, only source files under src/flake8/ modified, nothing deleted), runs the upstream regression test extracted from fix commit bdcd5c2c0afadaf7c92a4b26d96055cecdd38cf3 into /opt/golden at image build time, runs the project's own full test suite, and runs authored hidden cases over f-string escaped-brace shapes the upstream test does not use (escaped braces alone, adjacent to fields, inside call args, two f-strings on one line, format-spec braces) plus a non-f-string regression guard. Pure Python, offline; ~65 s full suite at 1 CPU in-image. Both directions re-confirmed inside the task image before shipping."
+}

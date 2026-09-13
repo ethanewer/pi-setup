@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 0,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 0,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": null,
+  "notes": "Upstream-clone bugfix in google/guava (v4.2 family), issue #3501: SlicedByteSource.slice() recurses into ByteSource.this.slice(offset+offset, min(length, maxLength)) with a negative length when the requested offset is past the current slice's length, tripping the public length>=0 precondition and throwing IllegalArgumentException ('length (-1) may not be negative') where the javadoc promises an empty source. Direct repro: ByteSource.concat().slice(0,3).slice(4,3) crashes at parent, prints 'no exception; isEmpty=true' at fix. Agent must reproduce (javac-only pipeline, no Maven, no network), localise (bug is in the private SlicedByteSource.slice inside guava/src/com/google/common/io/ByteSource.java, discovered, not named), and fix the mechanism (return ByteSource.empty() when maxLength <= 0). Verifier: provenance (HEAD == pinned parent, only the bug's source file may differ), /app/summary.md, full recompile of guava/src + guava-testlib/src, the project's own regression test testSlice_returnEmptySource planted from /opt/golden (extracted from fix commit 82b3e980 at build time) and run via a JUnit3 harness, the whole fixed-version ByteSourceTest class (project's own existing suite) run green, the direct reproduction, and three authored hidden cases with inputs the upstream test does not use (wrap() non-empty source, 3-level nesting, ByteStreams.readAll consumption). Oracle applies an authored two-line patch matching upstream's fix. Sibling android/guava copy allowed in scope but not required (never compiled)."
+}

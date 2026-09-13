@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": null,
+  "notes": "Upstream-clone bugfix in networkx/networkx (v4.2 family, Python): the internal `_hits_numpy(G, normalized=False)` scales hub/authority scores by the largest component of the dominant eigenvector returned by np.linalg.eigh; for several small undirected graphs (path_graph(3), path_graph(5), path_graph(8), disjoint path unions) eigh returns that vector negated with a zero maximum, so h /= h.max() divides by zero (RuntimeWarning) and yields inf/NaN or negative scores. The fix (upstream gh-8899, commit 31ab6f) canonicalizes the eigenvector sign with np.abs before the max-scaling. Agent must reproduce (deterministic under numpy 2.5.3 / bundled LAPACK), localise in the real tree, fix with the smallest change, and keep the project's own link-analysis tests green; the verifier plants the upstream regression test from the fix commit (golden bytes, never in this tree) plus three authored hidden cases on other graphs that also fail at parent. Verifier: provenance (HEAD == parent, every tracked file except the bug's source file byte-identical, no untracked files) + /app/summary.md + golden regression test and full test_hits.py + test_pagerank.py + hidden cases. Oracle applies an authored one-hunk patch."
+}

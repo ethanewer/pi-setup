@@ -1,0 +1,13 @@
+diff --git a/guava/src/com/google/common/collect/ImmutableSet.java b/guava/src/com/google/common/collect/ImmutableSet.java
+index 7506c30..fe8a5f2 100644
+--- a/guava/src/com/google/common/collect/ImmutableSet.java
++++ b/guava/src/com/google/common/collect/ImmutableSet.java
+@@ -813,6 +813,8 @@ public abstract class ImmutableSet<E> extends ImmutableCollection<E> implements
+       int targetTableSize = chooseTableSize(distinct);
+       if (targetTableSize * 2 < hashTable.length) {
+         hashTable = rebuildHashTable(targetTableSize, dedupedElements, distinct);
++        maxRunBeforeFallback = maxRunBeforeFallback(targetTableSize);
++        expandTableThreshold = (int) (DESIRED_LOAD_FACTOR * targetTableSize);
+       }
+       return hashFloodingDetected(hashTable) ? new JdkBackedSetBuilderImpl<E>(this) : this;
+     }

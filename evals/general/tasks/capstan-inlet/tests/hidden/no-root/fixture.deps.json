@@ -1,0 +1,54 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v14.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v14.0": {
+      "Engine/1.0.0": {
+        "dependencies": {
+          "Config": "0.5.0",
+          "Scheduler": "1.0.0"
+        },
+        "runtime": {
+          "Engine.dll": {}
+        }
+      },
+      "Scheduler/1.0.0": {
+        "dependencies": {
+          "Engine": "1.0.0"
+        },
+        "runtime": {
+          "Scheduler.dll": {}
+        }
+      },
+      "Config/0.5.0": {
+        "runtime": {
+          "lib/net7.0/Config.dll": {
+            "assemblyVersion": "0.5.0.0"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "Engine/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "Scheduler/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "Config/0.5.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-x9y8z7w6v5u4t3s2r1q0pOnMlKjIhGfEdCbAa3B?=",
+      "path": "config/0.5.0",
+      "hashPath": "config.0.5.0.nupkg.sha512"
+    }
+  }
+}

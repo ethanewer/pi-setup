@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 0,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 40,
+  "documented_probe": null,
+  "notes": "v4.2 upstream-clone bugfix in pypa/setuptools: the MANIFEST.in matching machinery compares a rule's text against candidate file paths byte-for-byte with no Unicode normalization, so a rule authored in one normalization form (NFC, as editors write) misses a file whose on-disk name is the other form (NFD, as macOS APFS/HFS+ stores it) and the excluded file leaks into the built sdist. Agent gets the real tree at the pinned parent commit with the bug live (editable install so edits are immediately live, pytest pinned to 8.4.2 because the repo's error-on-warnings config breaks collection under newer pytest), must reproduce (the shipped one-python-invocation repro prints MATCH: False), localise the single matching primitive all four exclusion kinds route through, fix it so matching is normalization-insensitive in both directions, and keep the project's own test_manifest.py green. Verifier: provenance (HEAD still pinned; every file byte-identical to the parent commit except the matching module and an optional new normalization helper module; generated egg-info/pycache/pytest-cache tolerated), the project's own regression tests for the bug planted from the fix commit at image-build time and run whole-file, and five authored hidden cases (other diacritic sets, wildcard-adjacent non-ASCII literal, decomposed-rule-against-composed-name direction, prune/recursive-exclude of non-ASCII directories, and an end-to-end sdist build whose archive must not contain the excluded file) all of which fail at parent and pass at fix. Oracle applies the real upstream fix as an authored patch. 100% offline at trial time, 1 vCPU, no compiler needed."
+}

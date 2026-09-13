@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on matplotlib/matplotlib at parent commit 91d115ec161286b70da1447f53844b909247741f (real upstream issue #29532, fixed upstream by commit 05a66bb2a46a67d0bb716239ecafa681b2832ea3). ScalarFormatter.set_useOffset dispatches on `val in [True, False]`, which matches the numeric values 0 and 1 by value equality (1 == True), so set_useOffset(1) silently sets _useOffset=True and offset=0 instead of forcing a numeric offset of 1. The upstream fix is one line: `if isinstance(val, bool):`. The image clones the repo with only the parent commit in the object store (fix commit unreachable, rev-list --all --count == 1), builds and installs it editable with meson-python (freetype/harfbuzz/qhull vendored as meson subprojects, fetched at build time), and extracts the upstream regression tests TestScalarFormatter::test_set_use_offset_int and test_set_use_offset_bool (fix-commit lib/matplotlib/tests/test_ticker.py) into /opt/golden at build time, never into this tree. Dependency pins: pyparsing 3.1.4 (must stay < 3.2.0: matplotlib's pytest config turns warnings into errors and pyparsing 3.2.0's resetCache deprecation otherwise aborts collection), pytest 8.4.2, numpy 2.5.3, pybind11 3.1.0, meson-python 0.16.0, meson 1.12.0, ninja 1.13.2, contourpy 1.3.3, kiwisolver 1.5.1, cycler 0.12.1, fonttools 4.65.0, packaging 26.3, certifi 2026.7.22, pillow 12.3.0, python-dateutil 2.9.0.post0, setuptools-scm 10.2.3, setuptools 84.0.0. Verifier: tree provenance (HEAD==parent, fix commit absent, exactly one commit, only lib/matplotlib/ticker.py modified, no new files under lib/matplotlib/ apart from __pycache__), imports matplotlib from /app/src, copies the golden test over the tree and requires test_set_use_offset_int AND test_set_use_offset_bool to pass, runs ~45 of the project's own existing TestScalarFormatter node ids (test_use_offset, test_set_use_offset_float, test_useMathText, test_offset_value x31, test_scilimits x10) to prove nothing else broke, runs the issue reproduction, and runs three authored hidden cases with inputs the upstream tests never use: numpy numeric scalars equal to 0/1 (np.int64(1), np.float64(1.0), ...) which trigger the same value-equality trap, a stateful zero/1.0/3.5 bool-vs-number toggling sequence on one formatter, and functional label formatting relative to a forced offset of 1 via the formatter's set_locs machinery. The hidden cases fail against the parent tree (offset=0/useOffset=True for the value 1) and pass only with the isinstance fix. Typical trial runtime: pytest ~15-30s at 1 CPU, no image comparisons involved. Verified env: python 3.12.13, bench-base:python-3.12."
+}

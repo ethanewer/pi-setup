@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on python/mypy at parent commit 5bb72b788d5c031244f04f30f571f6fa199871ad (real upstream bug, issue python/mypy#21830, fixed upstream in 0221c8018430c27607ff5e41d3127bd48a3e6170). When the rvalue of a multiple-assignment statement (`a, b = f(...)`) is a call to an overloaded function and the assignment-target context makes mypy re-infer the callee's return type with a different overload selected, the re-inferred type is not always a fixed-length tuple. The code at the parent asserts `isinstance(reinferred_rvalue_type, TupleType)` unconditionally (mypy/checker.py in check_multi_assignment_from_tuple); when the context selects an overload whose return type is e.g. a homogeneous `tuple[Any, ...]` instance or a non-tuple, the assert fires and the whole type-check run aborts with 'INTERNAL ERROR' (exit 2, mypy/checker.py:4412 AssertionError), so the file under check gets no diagnostics at all. The upstream fix replaces the hard assert with a guarded `if isinstance(..., TupleType):` that keeps the originally inferred tuple in the fallthrough. Agent must reproduce, localise and fix the real tree; the verifier asserts provenance (HEAD still the pinned parent, exactly one commit reachable, fix commit not present in the working clone, only source files under mypy/ modified, nothing deleted, nothing under mypy/test or test-data touched), runs the user-visible repro (no INTERNAL ERROR, exit 1 with the real 'Incompatible types in assignment' diagnostic), copies in and runs the project's own regression test extracted from the fix commit into /opt/golden at image build time (testMultipleAssignmentWithOverloadReinferredAsHomogeneousTuple, testMultipleAssignmentWithOverloadReinferredAsNonTuple), runs a meaningful slice of the project's own existing checker suite from the tree to prove nothing else broke, and runs authored hidden cases exercising the same reinference path from inputs the upstream regression test does not use (method receivers, star/unpacked targets, non-tuple overload returns). Pure Python, offline; ~2s per CLI mypy run, single-digit seconds for the golden pytest run at 1 CPU in-image. Both directions re-confirmed inside the task image before shipping."
+}

@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 30,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on networkx/networkx at parent commit 5d160909eeb42e9844496dd2bbd19b826d2242d7 (real upstream bug, issue #8584 / PR fix 46a639aeb9bd4db8da444bd6a532df567b9a73cc). nx.SpanningTreeIterator advertises itself as an iterator but initialises its internal partition priority queue only inside __iter__; calling next() directly without iter() (both spellings are legal per the protocol) raises AttributeError: partition_queue on the first call, so the first spanning tree is unobtainable. The fix moves the one-time initialisation into __next__ behind a lazy 'if self.partition_queue is None' guard (partition_queue is pre-set to None in __init__) and keeps the StopIteration + cleanup behaviour. The pre-existing mst test file is fully green at the parent (all its iterator tests go through for loops) so the agent must reproduce with the given one-liner, read mst.py's iterator class, and reason about the protocol contract. Verifier: provenance (HEAD == parent, fix commit unreachable from the clone, every tracked file except networkx/algorithms/tree/mst.py byte-identical to parent blobs, no untracked files) + /app/summary.md + module-origin check + golden regression test extracted from the fix commit (digest-checked) planted over test_mst.py with the whole file green + three authored hidden cases (cycle_graph(4) exhausted via direct next() counted against Kirchhoff, weighted wheel_graph(6) in min and max directions, MultiGraph input). Pure Python, no numpy/scipy, no network; whole suite ~0.3s at 1 CPU. Both directions verified inside the task image before shipping: golden 1 failed at parent / 1 passed at fix, hidden cases exit 1 at parent / 0 at fix."
+}

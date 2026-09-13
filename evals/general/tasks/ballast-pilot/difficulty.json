@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 30,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on nltk/nltk at parent commit a167389c027a02a9d1f019630ed827f4069b3353 (real upstream bug, issue #3604, fixed upstream in 06c0e2cc94f763d43320812ee9d2a7b6bff68f9b). sentence_ribes divides by len(hypothesis) (brevity penalty and unigram precision) and corpus_ribes divides by len(hypotheses) without guarding zero, so an empty hypothesis raises ZeroDivisionError, an empty reference list silently returns the -1.0 sentinel, an empty corpus raises ZeroDivisionError, and a corpus whose reference-set count differs from its hypothesis count is silently mis-scored. Agent must localise the bug in the real tree (the RIBES scorer module), add empty-input guards returning 0.0 and a ValueError for mismatched corpus lengths, keep the repo's own test_ribes.py green, and only modify the minimal source file; the verifier also runs the upstream regression tests for this bug extracted from the fix commit into /opt/golden/, plus hidden cases over empty shapes the upstream tests do not use (multi-token refs + empty hypothesis, fully empty sentence call, empty reference list inside a corpus sentence, reverse-direction mismatch, multi-token mismatch) and a genuine-scoring regression set (identical pair == 1.0, no overlap == 0.0, partial overlap in (0,1), corpus-as-mean, repetition-invariant corpus mean). Pure Python, no network, ~5s test suite at 1 CPU. Both directions (bug present at parent, gone at fix) re-confirmed inside the task image before shipping.\nREVIEW (v4 wave, ballast-pilot): issue re-verified independently in a fresh container: reset --hard to parent a167389c reproduces ZeroDivisionError at ribes_score.py:57 (sentence_ribes empty hypothesis) and :119 (corpus_ribes empty), silent -1.0 for empty references and silent 0.0 for mismatched corpus; reset --hard to fix 06c0e2cc returns 0.0 for all three empty shapes and raises the mandated ValueError; the fix-commit regression test fails 4/6 at parent and passes 10/10 at fix; in-tree test_ribes.py stays 6/6 at both. /opt/golden/test_ribes.py byte-identical (sha be5c54fce...) to the fix-commit file. One real bypass found and closed: with the trial agent running as root in a persistent container, a sitecustomize.py planted on sys.path (plus a one-blank-line edit of the tracked ribes_score.py) satisfied every behaviour gate and scored 1 while the buggy scoring code was untouched; pth/finder injection and dead-code guard stubs were also live. Tightening: test.sh now pins the golden sha and the editable-install pth/finder shas, rejects sitecustomize/usercustomize anywhere on sys.path, rejects extra files in /opt/golden, and requires the empty-input guards plus the mandated error text inside the tracked ribes_score.py itself. After tightening: sitecustomize, pthhook, combowrap, hardcode, goldenedit, fetchfix and trivial attacks all score 0; oracle still scores 1; nop still 0 with clean in-tree tests at parent. Acceptance containers on this host have egress (github reachable from a trial container), but fetch-fix is caught by the cat-file provenance check; the sweep runs network_mode none."
+}

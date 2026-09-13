@@ -1,0 +1,54 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v11.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v11.0": {
+      "LibA/1.0.0": {
+        "dependencies": {
+          "Jackson.Core": "2.18.2"
+        },
+        "runtime": {
+          "LibA.dll": {}
+        }
+      },
+      "Jackson.Core/2.18.2": {
+        "runtime": {
+          "lib/net6.0/Jackson.Core.dll": {
+            "assemblyVersion": "2.18.2.0"
+          }
+        }
+      },
+      "App/4.0.0": {
+        "dependencies": {
+          "Jackson.Core": "2.18.2",
+          "LibA": "1.0.0"
+        },
+        "runtime": {
+          "App.dll": {}
+        }
+      }
+    }
+  },
+  "libraries": {
+    "LibA/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "App/4.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "Jackson.Core/2.18.2": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-1a2b3c4d5e6f7g8h9i0jK1l2M3n4O5p6Q7r8s9t0UvWxYz=",
+      "path": "jackson.core/2.18.2",
+      "hashPath": "jackson.core.2.18.2.nupkg.sha512"
+    }
+  }
+}

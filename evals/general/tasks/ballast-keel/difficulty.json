@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on librosa/librosa at parent commit a0d0374370183d93ad7a4a348da034ab5b3e1687 (real upstream issue #1945, fixed by 86d728a4fae31c5e80ef112f895c70af228d1637). librosa.note_to_hz passes **kwargs straight to note_to_midi, whose round_midi kwarg defaults to True, so a note spelled with a cents deviation such as 'C2-30' is silently quantized to the nearest equal-tempered semitone and note_to_hz('C2-30') returns exactly note_to_hz('C2') (65.40639132514966); the upstream fix adds a keyword-only round_midi: bool = False parameter to note_to_hz and forwards it, so the default call preserves the -30-cent deviation (64.2827486708685). The image clones the repo with only the parent commit in the object store (fix commit unreachable, rev-list --all --count == 1), installs the project editable so edits to /app/src are live, and extracts the upstream regression test tests/test_convert.py::test_note_to_hz_default from the fix commit into /opt/golden at build time. Hash of the golden (fix-commit) test file: 3b5b30a5adb54fb8ed39a86073d7ec906e0f8071497dd5db576591ceac5beb97. Verifier: provenance (HEAD==parent, fix commit absent, exactly one commit, only librosa/core/convert.py modified, import resolves to /app/src), then copies golden test over the tree and requires it to pass, runs the project's own tests/test_convert.py in full, and runs three authored hidden cases (deviated single notes across octaves/accidentals/flats, list-typed inputs mixing deviated and plain notes, and the round_midi=True legacy quantization path plus the default==round_midi=False identity); all hidden expectations computed from the independent formula 440*2**((midi-69)/12). Typical run: pytest on test_convert.py ~2s at 1 CPU. Verified env: numpy 2.5.3, scipy 1.18.1, numba 0.67.0, python 3.12.13, setuptools 72 (setup.cfg-era project; newer setuptools dropped setup.cfg). pytest collection of the tree's test suite needs a pre-import of librosa.core.convert under lazy_loader>=0.4 ('No librosa.core attribute convert'), applied in both oracle and verifier."
+}

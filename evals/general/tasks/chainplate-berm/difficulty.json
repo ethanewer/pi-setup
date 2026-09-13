@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 0,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 90,
+  "documented_probe": null,
+  "notes": "Upstream-clone bugfix in netty/netty (v4.2 family, real repository, shallow clone of pinned parent commit 87d2f750, JDK 21 + maven 3.8.7, warm /opt/m2, fully offline trial). The bug: JdkZlibDecompressor sizes every output buffer from the number of input bytes still unread (inflater.getRemaining() << 1); for highly compressible raw-deflate streams the inflater pulls the final input bytes into its internal state while a large run of decoded output is still pending, getRemaining() hits zero, the decompressor reports NEED_INPUT and endOfInput() then rejects the complete stream with 'Compressed stream ended before the end-of-stream marker', silently dropping the tail. Upstream issue #17191, fixed by commit 7681affc (min 512-byte output buffer + inflaterHasPendingOutput state tracked in status()). The project's own regression test (testHighlyCompressibleStreamIsFullyDecompressed) was added with the fix and is extracted into /opt/golden at image build time, never committed to the task tree. Both directions observed inside the task image at build time: parent fails on the NONE-wrapped run of the planted regression test with the 'End of stream marker not found' style DecompressionException (BUILD FAILURE); the fixed tree passes the whole parameterized class offline. Agent must reproduce via the public Decompressor/JdkZlibDecompressor API, localise the sizing/state logic, make the smallest source change, and verify through the project's own Maven tooling. Verifier: working-tree provenance (HEAD pinned; every tracked file except the single JdkZlibDecompressor source file byte-identical to the parent blobs; no untracked non-ignored files), /app/summary.md, the planted upstream regression test run together with six authored hidden cases (250k/500k byte streams of other repeated bytes, chunked input feeding in 128- and 7-byte chunks, and ZLIB_OR_NONE wrapper resolving to raw deflate -- all inputs the upstream test does not use) plus the project's own JdkZlibTest/ByteBufChecksumTest/DefensiveDecompressorTest/InputBufferingDecompressorTest staying green. Binary reward on every exit path."
+}

@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 0,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on semgrep/semgrep at parent commit bb89271f8418167b9d4cee2668e3d38a36003978 (real upstream bug, issue #1503). semgrep's forked git URL parser (cli/src/semgrep/external/git_url_parser.py) cannot parse scp-like remotes (user@host:owner/repo, no protocol prefix, no trailing .git) when owner or repo contains a dash: every POSSIBLE_REGEXES entry fails or matches only the user@host: prefix with an empty pathname, owner/name come back None, and get_url_from_sstp_url() returns the raw scp form, so report links are broken. Agent must reproduce, localise and fix the real tree; the verifier asserts provenance (HEAD still the pinned parent, exactly one commit, fix commit not reachable from the clone, only source files under cli/src/semgrep/ modified, submodule pinned, import semgrep resolves to the tree), runs the upstream regression test extracted from fix commit 483878b242d5217844af8b71068b60b495f34614 into /opt/golden at image build time (test_git_url_parser and test_get_url_from_sstp_url, which both fail at parent), runs the project's own pre-existing test_clean_project_url.py and the parent's e2e-pro test_meta.py::test_git_url_parser, and runs authored hidden cases over scp-like dash shapes and working-shape guards the upstream test does not use (vcs.somecorp.example, gitlab.example.com data-team/etl-pipelines, org-a/sub-group-b/repo-c, qa-org/release-1.0, ssh-with-port, tilde, azure _git). Pure Python regex fix, no OCaml build or network needed; both directions re-confirmed inside the task image before shipping."
+}

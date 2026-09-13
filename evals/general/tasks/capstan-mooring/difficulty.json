@@ -1,0 +1,18 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 0,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": null,
+  "notes": "Upstream-clone bugfix in eslint/eslint (v4.2/v4.3 family, upstream issue #21251, parent ad74a8dada..., fix 1e641c919fc...): the no-loss-of-precision rule reports literals written with a trailing decimal point and no fractional digits (e.g. `var x = 0.` is falsely flagged although 0, 0.0 and -0 are all accepted) because baseTenLosesPrecision feeds getRaw(node).toLowerCase() (which keeps the trailing '.') into convertNumberToScientificNotation, so '0.' normalizes to the empty coefficient and a literal that is exactly representable reports 'This number literal will lose precision at runtime.'. The upstream fix strips a single trailing '.' from rawNumber before normalizing; genuinely lossy trailing-dot literals (9007199254740993.) must still report. Agent gets the real repo at the parent commit, a repro (valid 'var x = 0.' / invalid 'var x = 9007199254740993.') that exits 1, and mocha + RuleTester; must localise the one function and change one line in the one source file. Verifier: provenance byte-check (only lib/rules/no-loss-of-precision.js may differ from the pinned blob) + planted upstream regression test (the rule's own test file as of the fix commit: 131 cases incl. valid 'var x = 0.' and invalid 'var x = 9007199254740993.') + a 8-file selection of the project's existing rule/rule-tester tests + three authored hidden RuleTester cases (trailing-dot literals in array/object/call/expression positions, unary-minus and numeric-separator forms, and still-lossy trailing-dot literals) whose inputs the upstream test does not use. Oracle applies an authored one-hunk patch (the one-line .replace fix). Review hardening (independent reviewer pass): node_modules (gitignored, hence invisible to the tracked-file scope check) is locked read-only in the image, a full-tree sha256 manifest is recorded at build time (/opt/node_modules.sha256) and replayed by the verifier, espree/mocha are version-pinned and their entrypoints additionally tripwired with embedded sha256 constants (a proved bypass that swapped a patched espree into node_modules to make every test pass with the rule untouched now fails with reward 0); /opt/golden, /app/repro.js and the hidden-case scripts are sha256-asserted before use; an inline copy of the repro is run so tampering /app/repro.js cannot satisfy step 4; git provenance checks run with GIT_NO_REPLACE_OBJECTS=1.",
+  "probe_note": "entry.difficulty_guess was 'easy'; rubric total 9 lands in the easy bucket (0-9). This is an easy task by design: the fix is a one-line change in one function and the agent is spoon-fed a repro; the work is offline navigation of a real 80k-line upstream codebase."
+}

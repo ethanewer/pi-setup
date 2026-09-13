@@ -8053,5 +8053,377 @@
   "evidence": {},
   "note": "v4.3 real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository redis/redis, parent 21ce96878529bf8b31298ec417407c578c1e6278, fix 669b2a1316f5b35ecf964281b77c054ff28dc934, upstream issue reference redis/redis#15762 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. redis-cli --bigkeys crashes the 'Biggest string found' line and --keystats for empty keys because sizecmd results on keys with 0 bytes are skipped; agent must report empty keys. Reviewer closed golden tampering (/opt/golden/redis-cli.tcl sha256 + every hidden case pinned); golden extracted from the fix commit.",
   "claims_no_competencies": true
+ },
+ "ballast-anchorage": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3b real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository BurntSushi/ripgrep, parent 916415857f084e63efda03cf25a67fe7f6d24244, fix de2567a4c76fa671005538d6cd841abc44932b9a, upstream issue reference #3180 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. Domain: rust-cli. Adversarial-agent shim bypass: a root trial agent could (and, proven, DID) score 1 on an untouched tree by planting a stub /opt/cargo/bin/cargo, a fake integration harness under git-ignored target/debug/deps printing the demanded ok-lines, and a content-keyed fake target/debug/rg, plus a summary. The pre-hardening verifier awarded reward 1 to exactly that attack (harbor run: Mean 1.000, reward 1, PASS). Hardened so the same attack scores 0 (fails at the new toolchain/golden integrity check), and oracle/nop re-verified: oracle=1, nop=0, verify_new_task.sh exit 0, check_upstream_disjointness.py problems=0.",
+  "claims_no_competencies": true
+ },
+ "ballast-berm": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3b real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository Mbed-TLS/mbedtls, parent dd48f0f23f8b5189031d6f3ac519b2b6113bd9e7, fix 7b6ddfcd25d95a1c6a452158db9205a6372b4426, upstream issue reference #9314 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. Domain: systems-c. network-egress leak + fake-artifact rebuild hardening",
+  "claims_no_competencies": true
+ },
+ "ballast-bollard": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3b real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository PyCQA/bandit, parent 7e6f580d6ad1b35be91046e591526602327a388d, fix 72fa5a7496caa89f21ace353d038754dbddf9a91, upstream issue reference #880 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. Domain: security-tooling. no gaps found; no changes made",
+  "claims_no_competencies": true
+ },
+ "ballast-boom": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3b real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository PyCQA/flake8, parent 2a811cc4d2aaed3e8eb5a9f04f08ccc8af7c0791, fix bdcd5c2c0afadaf7c92a4b26d96055cecdd38cf3, upstream issue reference #1948 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. Domain: program-analysis. Closed 3 verifier gaps found during review. (1) Full bypass: a site-packages sitecustomize.py dropping a monkeypatch of FileProcessor.build_logical_line_tokens scored reward 1 while the on-disk src/flake8/processor.py still contained the buggy line (git provenance cannot see site-packages). Closed with a source-shape check in tests/test.sh: the buggy 'text = \"x\" * len(text)' line must be gone and brace-accounting (.count(\"{\")/.count(\"}\")) must be present in the actual source file. (2) A correct fix that the agent merely staged (git add) was rejected as 'unexpected working-tree change: M ' by the old parser; the provenance loop is now column-aware (staged/worktree M both count, deletes/adds fail in either column). (3) The build-baked /opt/golden/test_plugins.py could be silently retouched (agent runs as root in the same container) to assert the buggy output; golden is now pinned by sha256 (0d3181b38b4795bcf791a4463bd1897872a828e931548b1e1becbc16dce0ebc5, matching git show bdcd5c2:tests/integration/test_plugins.py) in both the Dockerfile (build-time fail-closed) and test.sh (verify-time FAIL). Also added --confcutdir isolation to the golden and hidden pytest invocations so a tree-root conftest.py wrapper cannot participate. Re-verified after hardening: oracle 1, nop 0, staged-honest-fix 1, golden-tamper 0 (explicit integrity FAIL), visible-input hardcoding 0 (hidden cases), conftest wrapper 0, site-packages wrapper 0.",
+  "claims_no_competencies": true
+ },
+ "ballast-brackish": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3b real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository Z3Prover/z3, parent 5fcd89bf8c4f37141f5f31a6bfc05b89f55d7e4d, fix 8fd4b73ab5359395965311b0bb275fe78a2da9b0, upstream issue reference #10621 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. Domain: theorem-proving-or-solvers. yes",
+  "claims_no_competencies": true
+ },
+ "ballast-caboose": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3b real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository apache/commons-lang, parent 596269f16d33cd4a20223978c245a15c898c5084, fix 1d6ef29ce004309e50bd91e27f0f5e80e1a57a76, upstream issue reference #1775 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. Domain: jvm-systems. Original verifier was bypassable with the bug fully intact (REWARD=1): /app/probe.sh and Probe.java are world-writable (chmod -R a+rwX /app) and their integrity was never checked, and an untracked gitignored /app/src/.mvn/maven.config with -Dmaven.test.skip=true made every verifier mvn step exit 0 without running a single test. Proven end-to-end: neutered probe + .mvn skip -> REWARD=1 while the real compiled CharRange.java still failed 6 probe checks. Closed by: (1) Dockerfile now stores root-owned 444 pristine copies of probe.sh and Probe.java at /opt/*.pristine; (2) step 1 byte-compares them before running the probe; (3) step 0 fails on any .mvn directory in the clone and on any assume-unchanged('h')/skip-worktree('S') flag in git ls-files -v (which hides pom.xml sabotage from git status); (4) every mvn step deletes the surefire reports dir first and after a green exit requires at least one fresh report with 'Tests run: [1-9]' and no Failures>0/Errors>0, so skipped runs (no reports), failure-ignored runs (Failures>0) and stale build-time reports can no longer pass vacuously. Re-tested both bypass variants against the hardened verifier with the bug intact: both now score 0 (each fired 2+ of the new checks). Honest oracle still scores 1 and nop still 0 in the final acceptance run.",
+  "claims_no_competencies": true
+ },
+ "ballast-chartroom": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3b real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository aquasecurity/trivy, parent 3dc5f8768b343a07694ba1cc09425f485d4c1b0f, fix f964fa2bb61e1b59088d2b35397ca8fd39045b00, upstream issue reference #10955 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. Domain: security-tooling. yes",
+  "claims_no_competencies": true
+ },
+ "ballast-current": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3b real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository astral-sh/uv, parent 6353b242d2774244ae2c6b4be1b95c70f84e97ab, fix 48c4357fe2517cce464ffa040d75c92be6a7dc71, upstream issue reference #19799 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. Domain: packaging-release. yes",
+  "claims_no_competencies": true
+ },
+ "ballast-deepwater": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3b real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository duckdb/duckdb, parent 8616efa9da9921b9111fe46373af7936a5d96d16, fix b94555b59e58941bf42da1aeb8f3251850b85e8f, upstream issue reference #25084 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. Domain: data-engine. yes",
+  "claims_no_competencies": true
+ },
+ "ballast-drift": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3b real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository eslint/eslint, parent 2417cad57d7d1bc4cf3ecf0f0575cfb10ff2011c, fix 8e2cb142217f2efee1d10dcc02bfb75145ae775d, upstream issue reference #21275 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. Domain: js-tooling. true",
+  "claims_no_competencies": true
+ },
+ "ballast-fathom": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3b real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository git/git, parent 7b556aa4b80ddfedb3de25e8787acd6c69d8799c, fix 1366c78c239e7abb24d5b74cedf237f82125492d, upstream issue reference git-for-windows/git#2037 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. Domain: systems-c. One verifier defect found and fixed: the 'upstream fix commit object absent from /app/src' provenance check was an unconditional fail. In the current runtime the trial container has full network egress (verified: curl https://github.com from a live harbor trial container = 200) and runs as root, and the image ships no fix bytes (verified fix object absent from the image's /app/src), so that check could only ever fire as a FALSE NEGATIVE \u2014 an agent that legitimately fetched upstream history while repairing would score 0. Demonstrated: honest oracle fix + `git fetch origin 1366c78c\u2026` left the object present -> old verifier reward 0, updated verifier reward 1. Changed tests/test.sh so the object check fails only when the object is present AND builtin/stash.c still pushes `ps.items[i].match`; otherwise it prints a note. Re-verified: CHEAT-1 (root, doctored golden test 26 + fake diagnosis, unfixed source) -> reward 0; CHEAT-2 (planted bug-free /usr/bin/git as /app/src/git, verifier relinks over it) -> reward 0; fresh nop -> 0; oracle -> 1; both acceptance commands clean (disjointness 0 problems; verify_new_task.sh exit 0).",
+  "claims_no_competencies": true
+ },
+ "ballast-foresheet": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3b real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository gohugoio/hugo, parent 5f0d88b8a3652bbee992f4cbba2b018527f16a15, fix 24d5e42ffa33eebdf906c495713f0d2bae30c0cb, upstream issue reference #15285 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. Domain: go-infrastructure. wrapper-intercept bypass: a fake /usr/local/go/bin/go plus a trivial whitespace edit to securityConfig.go scored reward 1 with the bug fully intact, because the verifier trusted an unauthenticated test runner. Tightened tests/test.sh to pin the go1.27.1 binary by sha256 (computed from the pinned tarball) and version string before any other check, and to invoke $GO_BIN by absolute path. Proved the tightening bites (same attack now scores 0 with a clear FAIL) and that the honest oracle still scores 1 (simulation REWARD=1 and full harbor oracle=1 after the edit).",
+  "claims_no_competencies": true
+ },
+ "ballast-hull": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3b real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository google/guava, parent 7ab65d08c22fa95adb987d3b3849e5cab60a1c72, fix 0007cb257b593400097f37cf5fa9c8d5fb598c62, upstream issue reference #3570 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. Domain: jvm-systems. golden-test tamper gap: /opt/golden was root-writable in the trial container and the verifier never re-fingerprinted it, so an agent could replace the upstream regression test (and the 12-method selection, which compiles from the same files) with trivial fakes and hide golden-only failures behind a partial fix. test.sh now fails fast unless /opt/golden/ImmutableSetTest.java and AbstractImmutableSetTest.java are byte-identical (sha256) to their bytes at the fix commit; proved the tightened check bites (simulated tamper -> FAIL, reward 0) and the honest oracle still scores 1.",
+  "claims_no_competencies": true
+ },
+ "ballast-keel": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3b real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository librosa/librosa, parent a0d0374370183d93ad7a4a348da034ab5b3e1687, fix 86d728a4fae31c5e80ef112f895c70af228d1637, upstream issue reference #1945 (fixed by PR #1947, \"Remove default quantization for note_to_hz\"; fix commit is the direct child of the pinned parent) \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. Domain: speech-audio. instruction.md no longer names the pinned commit SHA (a lookup key for the fix through public GitHub history when egress exists) and now marks /opt/golden, /solution and /tests as harness-owned with an explicit 'do not read or modify' (was: 'do not touch /solution or /tests'). No verifier change was needed: every bypass I attempted (hardcoded visible-input fake, tree test-file doctoring, untracked root conftest monkeypatch, site-packages .pth and sitecustomize wrappers) scored 0 against the existing verifier.",
+  "claims_no_competencies": true
+ },
+ "ballast-longshore": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3b real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository matplotlib/matplotlib, parent 91d115ec161286b70da1447f53844b909247741f, fix 05a66bb2a46a67d0bb716239ecafa681b2832ea3, upstream issue reference #29532 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. Domain: scientific-python. Found and fixed a real verifier hole: with the bug still in ticker.py, a cosmetic change to the tree plus a sitecustomize wrapper in site-packages (monkeypatching ScalarFormatter.set_useOffset with the fixed behavior) scored REWARD=1 against the original verifier. Tightened tasks/ballast-longshore/tests/test.sh: (1) provenance now asserts ScalarFormatter.set_useOffset.__code__.co_filename == /app/src/lib/matplotlib/ticker.py AND that the live-code dispatch (regex ^\\s*if\\s+val\\s+in\\s+\\[True,\\s*False\\]\\s*:) is gone from the file (comment-tolerant, so an honest fix that quotes the old line in a comment still passes); (2) golden gate now requires both node ids present in `pytest --collect-only` AND each test to run individually with '1 passed' and no 'skipped' (defeats a conftest that drops/skips a test - previously the golden pytest gate alone could be flipped green with the bug in place); (3) own suite must collect exactly 43 and report '43 passed' with nothing skipped. Proved the tightening bites: the wrapper adversary now scores 0 with the provenance check naming the violation (before: 1); the conftest adversary now fails the golden collection gate (before: golden gate green, saved only by hidden cases). Honest oracle still scores 1, including a variant that documents the old line in a comment. Bypasses that did NOT achieve reward 1 (documented): tampering /opt/golden (hash check), pre-placing golden test / editing the tracked tree test file (provenance), fetching the fix commit (no network at trial; fix commit absent from the single-commit object store and provenance asserts it stays unreachable), hardcoding (any dispatch separating 1 from True requires type discrimination; narrower hacks fail the numpy/stateful/functional hidden cases - all verified failing at parent, passing at fix). No other changes outside tasks/ballast-longshore/. Final acceptance: check_upstream_disjointness.py problems=0; verify_new_task.sh ballast-longshore exit 0 (oracle=1, nop=0) run twice, the final run on the final verifier state.",
+  "claims_no_competencies": true
+ },
+ "ballast-mooring": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3b real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository netty/netty, parent ba8e9e64f89fc91b5085cd8bc21bd9ef83264ba1, fix 692d23f9899c34e9fed537e28ba940bfc952a763, upstream issue reference #16958 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. Domain: jvm-systems. Two verifier holes found and closed. (1) Input-trimming wrapper cheat: changing the 3-arg parseHttpDate to parse a subSequence copy passed every behavioural gate of the original verifier (reward 1) while leaving the buggy line untouched \u2014 the instruction explicitly forbids this. Closed with a mechanism check in tests/test.sh that requires the trailing-token finalisation to use the parse range `end` and the `txt.length()` overrun call to be gone. (2) Same-container binary tampering: a fake `mvn` planted by a root agent scored reward 1 on a fixed tree. Closed with a build-time toolchain hash tripwire (sha256sum of mvn/git/javac/java recorded in the Dockerfile, verified by the verifier before anything else). Also added a 4th hidden case class (DateFormatterOtherDatesSliceTest) with epoch-1970 and y2038 expected VALUES so the hidden cases no longer all share the golden date 784111777000L. Verified in-container: nop 0, trim-cheat 0, hardcode-cheat 0, fake-mvn 0, honest oracle 1; final acceptance: check_upstream_disjointness.py 0 problems, verify_new_task.sh exit 0 (oracle reward 1, nop reward 0, all static gates rc=0)",
+  "claims_no_competencies": true
+ },
+ "ballast-overtake": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3b real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository networkx/networkx, parent 675034adb14a790336121e4e0f9d8097b880ec41, fix 31ab6fd7e1e149e887282b83a91752c486d071b6, upstream issue reference #8899 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. Domain: scientific-python. A sitecustomize.py interpreter wrapper (planted in site-packages; agent phase runs as root and site-packages is writable, /tests is NOT mounted in the agent phase) intercepted _hits_numpy and earned reward 1 with /app/src completely untouched. Closed by running every decisive Python step of tests/test.sh under python3 -S with explicit PYTHONPATH=site-packages:/app/src (site/sitecustomize never executes; networkx resolves straight from /app/src), adding a fix-in-tree check (the h= and a= assignments in _hits_numpy in the graded tree must go through np.abs), and integrity-grepping /opt/golden/test_hits.py (regression name + isfinite + v>=0 assertions) so a root agent cannot vacuate the golden seed. After the change: wrapper re-attack reward 0 (bites exactly as intended), honest oracle 1, nop 0, full verify_new_task.sh exit 0.",
+  "claims_no_competencies": true
+ },
+ "ballast-pilot": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3b real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository nltk/nltk, parent a167389c027a02a9d1f019630ed827f4069b3353, fix 06c0e2cc94f763d43320812ee9d2a7b6bff68f9b, upstream issue reference #3604 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. Domain: nlp. One real bypass found and closed. The trial runs as root in a container whose filesystem persists into the verifier phase: planting /usr/local/lib/python3.12/site-packages/sitecustomize.py (imported by every verifier python) with monkeypatches of nltk.translate.ribes_score plus one blank-line edit of the tracked ribes_score.py satisfied every behaviour gate and scored REWARD=1 while the buggy scorer was untouched (also live: pth-import hook via __editable__.nltk-3.10.0.pth, and dead-code guard stubs in the source with a wrapper supplying behaviour). Closed by adding an interpreter-hygiene section to tests/test.sh: (a) rejects sitecustomize.py/usercustomize.py on any sys.path dir; (b) sha256-pins the editable-install pth and finder; (c) sha256-pins /opt/golden/test_ribes.py and rejects extra files in /opt/golden; (d) requires the empty-input guards and the mandated error text to be present in the tracked nltk/translate/ribes_score.py itself. Post-tightening, all attacks (sitecustomize, pthhook, combowrap, hardcode, goldenedit, goldenedit+fix, fetchfix, trivial) score 0, verified through the real harness (verify_new_task.sh: oracle 1, nop 0) and the task is accepted.",
+  "claims_no_competencies": true
+ },
+ "ballast-quay": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3b real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository pylint-dev/pylint, parent 2ef1766c3923ee7753cea771959227a35e74972c, fix 16faa29d6bc6ba6533efe426038da62a81ca272b, upstream issue reference #6663 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. Domain: program-analysis. Tightened verifier: added a provenance check that fails on any non-H `git ls-files -v` index flag, closing the assume-unchanged ('h')/skip-worktree ('S') blind spot I proved (a tracked modification outside pylint/ is fully hidden from `git status --porcelain`). Proved the tightening bites (honest fix + one assume-unchanged bit -> reward 0 with the file named) and that the honest oracle still scores 1 and nop still 0. Also empirically confirmed the hidden cases are load-bearing: a tracked pylint/testutils/lint_module_test.py harness-skip hack (allowed by provenance since it is under pylint/) makes the golden test pass at parent with the real bug in place, yet case-chains and case-raw-prefixes still fail, so reward is 0; no further change needed there.",
+  "claims_no_competencies": true
+ },
+ "ballast-reach": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3b real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository pypa/setuptools, parent 84ed5913724df5a12dc804e1d5efe12508e706d2, fix dd9f436a36486b4cb8a4c70a2321548b0be09b8f, upstream issue reference GHSA-h35f-9h28-mq5c \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. Domain: packaging-release. yes",
+  "claims_no_competencies": true
+ },
+ "ballast-roadstead": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3b real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository python-poetry/poetry, parent b760721672011534ca3607d17e3bf61a4dc6ed90, fix 89aaee9d60cae20775d3c40e4f243f9945f718e1, upstream issue reference #10807 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. Domain: packaging-release. Independent reviewer found and closed a real bypass: an agent that hardcoded the expected rows in resolve.py keyed on the exact (name,version) inputs of the golden+own+hidden tests scored 1 against the author's verifier with the bug still on disk (all pytest-based checks passed; only unlisted inputs still crashed). Fixed by tightening tasks/ballast-roadstead/tests/test.sh only: (T1) a randomized direct-execution probe generated at verify time (fresh mktemp dir, random package name/version/marker strings, run under `python -S`, NOT pytest) that drives the real debug-resolve machinery and asserts both a marked row with the random marker and a plain row with exactly two columns - the bypass now scores 0 (probe crashes at row[2] on random input); (T2) provenance now requires src/poetry/console/commands/debug/resolve.py itself to be the (>=1) modified src/poetry/ file, closing conftest-wrapper/unrelated-edit passes; (T3) sha256 pin of /opt/golden/test_resolve.py (281411d7ab... matches upstream fix-commit bytes), closing golden tampering by a root agent (real trials run as root and /opt/golden is writable, /tests is read-only so the pin binds). Re-verified matrix on the final tree: pristine=0, hardcode=0, conftest-skip=0, wrapper=0, honest one-token fix=1 (docker replication AND real harbor oracle), harbor nop=0, full gates all rc=0, verify_new_task exit 0, disjointness problems=0.",
+  "claims_no_competencies": true
+ },
+ "ballast-rudder": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3b real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository python/mypy, parent 5bb72b788d5c031244f04f30f571f6fa199871ad, fix 0221c8018430c27607ff5e41d3127bd48a3e6170, upstream issue reference #21830 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. Domain: program-analysis. Two hardening edits to tests/test.sh only. (1) run_pytest now takes an expected-summary egrep ('2 passed' golden, '3 passed' hidden, 'passed.*deselected' slice) and fails the verifier if the pytest run exits 0 but the intended tests did not actually execute -- exit status alone is no longer accepted. (2) The provenance untracked-file rule previously allowed ANY untracked file outside mypy/; it now whitelists only test-data/, .pytest_cache/, .mypy_cache/, __pycache__/ and fails any other untracked entry, closing the door on new repo-root files (e.g. a future conftest/pytest.ini-style hook). No bypass was found to succeed: root conftest.py is a tracked upstream file (modification caught), sitecustomize.py not loaded, root pytest.ini and test-data/conftest.py empirically cannot deselect the verifier's pytest runs (tests still collected and failed at parent). Re-ran acceptance from a fresh build of the committed Dockerfile after the edit: exit 0, oracle=1, nop=0.",
+  "claims_no_competencies": true
+ },
+ "capstan-anchorage": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3b real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository pytorch/vision, parent df421b423f714eb3ae22cab2b0e6e7a6f6bb29be, fix b32ce3d020f77155de4ffb1fd8868a0880f03dbc, upstream issue reference #9357 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. Domain: computer-vision. The verifier was vulnerable to an installed-package wrapper: because the agent and verifier run as root (no USER in the image, harbor user=None), an agent could append `from ._fix import m2b_fixed as masks_to_boxes` to /opt/venv/.../torchvision/ops/__init__.py, put a correct implementation in a private site-packages module, add a trivial whitespace change to /app/src/torchvision/ops/boxes.py, and score REWARD=1 while the deliverable stayed buggy. The module-origin check only verified boxes.py still resolved (symlink) to /app/src, not that the imported function originated there. Fixed tests/test.sh step 0.5 to additionally assert (under python -I -S) that `torchvision.ops.boxes.masks_to_boxes is torchvision.ops.masks_to_boxes` (no import override in effect) and that `os.path.realpath(inspect.getsourcefile(masks_to_boxes)) == /app/src/torchvision/ops/boxes.py`. Proved the tightening bites (wheel-init wrapper now REWARD=0 with the violation message) and the honest oracle still scores 1 (source file: /app/src/torchvision/ops/boxes.py). Full acceptance rerun clean.",
+  "claims_no_competencies": true
+ },
+ "capstan-berm": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3b real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository scikit-image/scikit-image, parent 6baff20f0fe4c3bee859447f77f0014ec25f820b, fix ff3dd9468bd10461363e1f7fdba9b12409fba216, upstream issue reference #7469 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. Domain: computer-vision. true",
+  "claims_no_competencies": true
+ },
+ "capstan-bollard": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3b real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository scipy/scipy, parent fb96fc6e396bc18fd1bfe29bfcd75966b5258e61, fix 324a300aff45a6d702fb87c1f20d8b4234050aa6, upstream issue reference #25893 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. Domain: scientific-python. yes",
+  "claims_no_competencies": true
+ },
+ "capstan-boom": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3b real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository semgrep/semgrep, parent bb89271f8418167b9d4cee2668e3d38a36003978, fix 483878b242d5217844af8b71068b60b495f34614, upstream issue reference #1503 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. Domain: security-tooling. yes",
+  "claims_no_competencies": true
+ },
+ "capstan-brackish": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3b real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository sharkdp/fd, parent fb0426fed164c5fa9cd04b5e4aa8d8c375efa1d0, fix 5becb9d52cb532c35b68421075e4d8ee8d6c77cd, upstream issue reference #2081 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. Domain: rust-cli. yes",
+  "claims_no_competencies": true
+ },
+ "capstan-caboose": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3b real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository starship/starship, parent d0e246802c85d5aa956f536f9ab7ead282dbab7a, fix d455255e7bc5ae5e96ac5a3e2610458a9f213b49, upstream issue reference #7426 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. Domain: rust-cli. The verifier was bypassable by a wrapper intercepting the call, and that bypass is now closed and proven to bite.",
+  "claims_no_competencies": true
+ },
+ "capstan-chartroom": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3b real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository statsmodels/statsmodels, parent 52f10d214d4dc02e9b521b9f9a83c5e3d4880f94, fix e30aa8337deebbb902d886b291ab206c3ce4e639, upstream issue reference #9891 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. Domain: scientific-python. true",
+  "claims_no_competencies": true
+ },
+ "capstan-current": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3b real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository syncthing/syncthing, parent 119d5e72efcf7d4c003664640ca0db6f472edfa4, fix 703b185982e5cdcff26a119bfa932165d60bda19, upstream issue reference #10834 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. Domain: go-infrastructure. none",
+  "claims_no_competencies": true
+ },
+ "capstan-deepwater": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3b real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository BurntSushi/ripgrep, parent ba23ced8178496263af013117b70c09ce39c18e5, fix 4df1298127695ed1e76937f16de1a0135677ccf5, upstream issue reference #2990 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. Domain: rust-cli. 1",
+  "claims_no_competencies": true
+ },
+ "capstan-drift": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3b real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository Mbed-TLS/mbedtls, parent 5ca2218a28a49cfdcc8cebe8953f6cb07bf7084f, fix 67e696b430716f95ed714f2c1404681697251438, upstream issue reference none in commit message; pool entry's \"#1582\" is incorrect (PR #1582 is unrelated; fix reached master via PR #10817 mergeback) \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. Domain: systems-c. Two verifier holes closed: (1) build-artifact spoofing \u2014 buggy source + fixed .a/.o left in gitignored build/ passed the original verifier with reward 1; test.sh now touches library/pkcs7.c before the pkcs7 rebuild so the planted golden test runs against the true working tree (proven: same spoofed tree now aborts, reward 0; honest tree stays 1). (2) /opt/golden tampering by root trials \u2014 test.sh now verifies sha256 of both golden files against the fix-commit blob hashes, which live in test.sh on the harness /tests mount (proven: tampered golden -> reward 0 on a fixed tree). Hidden-case discrimination was already adequate: buggy tree fails h1/h2/h3, null-signers.next partial fix passes the golden 815/815 but fails h1/h3 staleness assertions, full fix passes all.",
+  "claims_no_competencies": true
+ },
+ "capstan-ebb": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3b real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository PyCQA/bandit, parent b790ce22f0a69f53468c1755e9d37e6349a2c8c2, fix 3c56109061524f5907cc4d475b7370bac47a451b, upstream issue reference #1336 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. Domain: security-tooling. yes",
+  "claims_no_competencies": true
+ },
+ "capstan-fathom": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3b real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository PyCQA/flake8, parent d25cc10e382bcbd59cea47e0172f1e35cd3ee90d, fix 85c2be3b5291a73a2e737219c040019c14cf3eee, upstream issue reference #1372 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. Domain: program-analysis. Found and closed a real verifier bypass: a user-site `.pth` + `builtins.__import__` wrapper (planted via `~/.local/lib/python3.12/site-packages`) that reinstalled a fixed `_extract_syntax_information` at every interpreter start, plus a trivial whitespace edit to checker.py to satisfy the provenance \"differs\" check. This scored REWARD=1 with the actual bug (`physical_line = token[-1]`) still in the tree source. An earlier naive .pth that imported flake8 at startup failed only accidentally (hidden checks set sys.path at runtime after site processing), so I strengthened it with the __import__ wrapper and it beat the original verifier. Fixed tests/test.sh (only file changed, 3 hunks): (1) all verdict-relevant interpreters now run with `python3 -S` (site processing disabled -- kills .pth, user-site, sitecustomize) with the real site-packages restored via PYTHONPATH; (2) `rm -f /logs/verifier/reward.txt` at start so a pre-written reward file cannot short-circuit the EXIT trap on a crashed run; (3) comments documenting the rationale. After the change: the same E2 cheat now scores REWARD=0 (fails with the genuine AttributeError under -S), all other cheats still fail, the honest oracle still scores REWARD=1 (root and uid-1000 end-to-end), nop still 0.",
+  "claims_no_competencies": true
+ },
+ "capstan-foresheet": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3b real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository Z3Prover/z3, parent d1f10234c50a49ee1cc7d08c87a680daf430017c, fix 384d2d881f544e0f3abfa21e0e3ebe6beb9821d7, upstream issue reference #10609 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. Domain: theorem-proving-or-solvers. egress fetch-lookup bypass closed by declaring network_mode = \"no-network\" in task.toml [environment] (was defaulting to PUBLIC egress; with egress an agent could clone upstream inside the trial and git log -S \"sig_ext_amount\" finds the fix commit \"Fix fp.rem truncation with subnormal divisors\", apply its diff to /app/src without touching /app/src/.git, and score 1 - I demonstrated this end-to-end: reward 1 via pure lookup). All other tested bypass families were already defeated by the verifier.",
+  "claims_no_competencies": true
+ },
+ "capstan-hull": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3b real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository apache/commons-lang, parent 9d1f110190081801754a8a0b447693ad2407a502, fix 10f4421456b891d5a426348511383f387c99f3e1, upstream issue reference #1769 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. Domain: jvm-systems. Rewrote tests/test.sh (only file changed) to close a real, empirically-demonstrated bypass: the original verifier scored REWARD=1 on a wrapper attack - as root in the shared trial container the agent could replace /opt/apache-maven-3.9.9/bin/mvn with an exit-0 shim (plus a fake /app/probe.sh, a cosmetic Fraction.java edit to satisfy saw_mod, and a summary) and every JUnit gate (golden, own classes, hidden) 'passed' while the bug stayed in the tree. Proven by replaying the reconstructed original test.sh: reward=1. Hardening added to tests/test.sh: (1) byte-identity gates (embedded sha256) for /app/probe.sh, /app/FractionProbe.java and /opt/golden/FractionTest.java; (2) golden step re-validates the sha before use; (3) hidden-case loop now iterates a fixed spec dir:class:sha256, rejects missing dirs, extra *.java files in a case dir, and content drift, and removed the find|head-1 selection ambiguity. Post-hardening the same wrapper attack scores 0 (the real probe is byte-locked, so reward 1 now requires a genuine source fix); stub-golden+fake-probe scores 0 (new gates name exactly which file was modified); tampered or additional hidden files score 0 (sha and extra-file gates). Honest oracle still 1 and nop still 0 under harbor; bash tools/verify_new_task.sh capstan-hull exits 0; python3 tools/check_upstream_disjointness.py reports 0 problems.",
+  "claims_no_competencies": true
+ },
+ "capstan-inlet": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3b real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository aquasecurity/trivy, parent f06520353fc632e69eaf9d669ecdd785e770305a, fix 3c6a1a2aca33893f231412a34d3dfddc4f64b456, upstream issue reference #10954 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. Domain: security-tooling. yes",
+  "claims_no_competencies": true
+ },
+ "capstan-keel": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3b real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository astral-sh/uv, parent 64c73b115b544e8424a8c69f44131e21d66e629c, fix fab2c0c0d2992217ff8768d11558f4b668d02501, upstream issue reference #21261 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. Domain: packaging-release. yes",
+  "claims_no_competencies": true
+ },
+ "capstan-longshore": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3b real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository duckdb/duckdb, parent 9c21294d984dfe9a1da5d055b5fce3e8a0d634b2, fix c306b47b18095823f22774a972e7cda1170f87a0, upstream issue reference #25299 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. Domain: data-engine. yes \u2014 wrapper/fake class closed and proven in both directions: verifier now rm -f's build/release/duckdb and build/release/test/unittest before its ninja rebuild and requires both to be ELF executables afterwards. Honest fixed tree (task-faithful single-commit .git, real fix, real ninja) scores 1 end-to-end; the strongest feasible rig (staged fakes re-created at the runtime paths by a cooperating build, all provenance+behavior checks green through the fakes) is now rejected 0 with 'FAIL: ... is not an ELF executable (it looks like a wrapper script or a fake)'. verifier timeout raised 1800->3000 (>=3x measured ~978s one-CPU rebuild); instruction no longer discloses the 'hash' mechanism and no longer over-promises duplicate-name dedup; full acceptance re-run after edits: oracle=1, nop=0, PASS, disjointness 0 problems.",
+  "claims_no_competencies": true
+ },
+ "capstan-mooring": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3b real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository eslint/eslint, parent ad74a8dada2aaa17bfd0b8cc7b4119ff7a8ac04b, fix 1e641c919fc1421493bf913feb607896982451a3, upstream issue reference #21251 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. Domain: js-tooling. yes (closed a full verifier bypass that let an agent score 1 with the bug untouched)",
+  "claims_no_competencies": true
+ },
+ "capstan-overtake": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3b real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository explosion/spaCy, parent f5d04868e1e66d0acd6417b1c8099bcd4068fff7, fix 94d6be8a9b1dbecc92820bd7996cd8c75e186320, upstream issue reference #13876 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. Domain: nlp. wrapper-shim-bypass-closed via wrapper-free python3 -S probe",
+  "claims_no_competencies": true
+ },
+ "capstan-pilot": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3b real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository git/git, parent 39bf06adf96da25b87c9aa7d35a32ef3683eb4a4, fix 8b426c84f376657e1e10839f3f5dafd9ba99593d, upstream issue reference ddiss/icyci#12 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. Domain: systems-c. medium (rubric total 12, bucket 10-17; metadata.difficulty=medium; gate problems=0)",
+  "claims_no_competencies": true
+ },
+ "capstan-quay": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3b real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository gohugoio/hugo, parent a7b93e6564e6a4a7a3043b431e255ba716940408, fix 3a8aad6b190bb3d7cecc8ec6bc8379a01ec547cb, upstream issue reference #11406 (fix PR #11407) \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. Domain: go-infrastructure. yes",
+  "claims_no_competencies": true
+ },
+ "capstan-reach": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3b real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository google/guava, parent 931e83f969de433f6f0cad9f09eafe0c1d44325e, fix 82b3e9806dc3422e51ecb9400d8f50404b083dde, upstream issue reference #3501 (PR \"Fixed double slicing ByteSource (#3501)\", body \"Fixes #3829\"; pool entry's recorded ref) \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. Domain: jvm-systems. yes",
+  "claims_no_competencies": true
+ },
+ "capstan-roadstead": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3b real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository jestjs/jest, parent 69b089574f10e607a93ad1b3eb56b4876e2a43fb, fix 4a65c5aa40e31cd0aa377c33540891bc03572b16, upstream issue reference #16381 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. Domain: js-tooling. true",
+  "claims_no_competencies": true
+ },
+ "capstan-rudder": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3b real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository librosa/librosa, parent 86d728a4fae31c5e80ef112f895c70af228d1637, fix 025ef7d1c7ad6d8593b959c41bf12eb7c945c6eb, upstream issue reference #1944 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. Domain: speech-audio. Found and closed a real verifier hole: a site-packages sitecustomize.py wrapper (agent runs as root in these containers) that implemented the four sentinel guards, plus a comment-only edit to librosa/core/convert.py, scored REWARD=1 through the shipped verifier with the genuine bug still in the source. Hardened the verifier (environment/Dockerfile + tests/test.sh, both bootstrapped in a fresh book-keeping commit by the central process later): (1) build-time sha256 manifests of the entire python tree incl. site-packages,/usr/local/bin and /opt/golden -- the verifier re-derives them and fails on any added/removed/modified file outside /app/src; (2) all verifier interpreters run under python -S (sitecustomize/usercustomize/.pth inert); (3) pytest pinned with --rootdir=/opt/golden --confcutdir=/opt/golden so no conftest outside the manifest-hashed golden dir can load. Re-proved: same wrapper exploit now REWARD=0 (pylib manifest diff), golden-file tamper REWARD=0, honest oracle still REWARD=1, whole oracle+verifier flow passes under docker run --network none.",
+  "claims_no_competencies": true
+ },
+ "chainplate-anchorage": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3b real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository matplotlib/matplotlib, parent 74c7f9a598c4e32b3f551f75ed965f446d786ab1, fix 00cbd9cd3255dcbcb75e3090b144a8e18a900247, upstream issue reference #28383 (fixed by PR #28486 = commit 00cbd9cd, whose parent is exactly the pinned parent 74c7f9a) \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. Domain: scientific-python. none-needed. I independently confirmed the issue is real, all acceptance gates pass, all 6 bypass families fail, the golden test is extracted from the fix commit at image build time, no upstream bytes are committed in the task tree, the instruction does not leak issue/commit/file, and the hidden cases are genuinely load-bearing. No task files required changes; I edited nothing under tasks/chainplate-anchorage/.",
+  "claims_no_competencies": true
+ },
+ "chainplate-berm": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3b real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository netty/netty, parent 87d2f7506cee4100d765be62c481dbd22c9501dc, fix 7681affcf120fca1de8554095216ddea20b408c5, upstream issue reference #17191 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. Domain: jvm-systems. 3 verifier bypasses confirmed live and closed. (1) THE GROUND-TRUTH ANSWER WAS SHIPPED IN THE TRIAL IMAGE: /tmp/JdkZlibDecompressor.fixed.java (the complete upstream fixed source, 19KB) plus the warm build logs persisted after the fix-direction build step. Copying it into codec-compression/src/main/java/io/netty/handler/codec/compression/JdkZlibDecompressor.java passed the entire old verifier (EXP B: Tests run: 36 green). Dockerfile now scrubs /tmp (fixed source + warm-*.log) in the restore step, with a test ! -e guard. (2) SYMLINK: making the allowed path a symlink to the fixed source compiled as fixed while provenance (which hashes every tracked path but skips the allowed one) passed (EXP D: 36 green). Verifier now fails a symlink at the allowed path. (3) PRECOMPILED-CLASSES/INCREMENTAL-SKIP: an agent could compile the fixed class into codec-compression/target/classes, age all source mtimes, and mvn test would skip the main-lifecycle compile and run the fixed classes while the on-disk source stayed byte-identical to the buggy parent (EXP C2: 36 green, getRemaining() << 1 still present). Verifier now (a) requires the allowed file's bytes to differ from the parent blob and (b) rm -rf's codec-compression/target before the graded runs so the module MUST recompile from the on-disk source. All three were re-proven to bite (reward 0) against the hardened verifier, and the honest oracle state still earns 1 with the full 42-test run plus the existing-suite selection green.",
+  "claims_no_competencies": true
+ },
+ "chainplate-bollard": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3b real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository networkx/networkx, parent 5d160909eeb42e9844496dd2bbd19b826d2242d7, fix 46a639aeb9bd4db8da444bd6a532df567b9a73cc, upstream issue reference #8584 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. Domain: scientific-python. true",
+  "claims_no_competencies": true
+ },
+ "chainplate-boom": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3b real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository nltk/nltk, parent 52227d2afe764648864e59c851e991cf1d6cb77e, fix 27b8ad6cd50a484590cb9409e5d2a891ab56e16c, upstream issue reference #3693 (closes #1883) \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. Domain: nlp. One genuine verifier hole found and closed. An agent running as root could `git update-index --assume-unchanged nltk/tree/__init__.py`, hide a full runtime fix-injection there, and token-edit transforms.py with a trailing comment: the verifier's git status/diff checks honour the assume-unchanged bit, so provenance showed \"exactly one modified file\" and the container scored reward=1 while the deliverable file was functionally untouched. Demonstrated pass before fix, reward 0 after. Fix: (a) new provenance check rejecting any tracked file with assume-unchanged/skip-worktree index flags (`git ls-files -v` lowercase/S); (b) module-location assertion at the start of the direct-reproduction step requiring `nltk.tree.transforms.__file__` under /app/src (kills site-packages/.pth shadow/wrapper plants, which I verified would otherwise win the cwd=/app steps). Also removed stale committed __pycache__ dirs under tests/hidden. Re-ran full acceptance after the change: exit 0, oracle 1, nop 0; disjointness 0 problems.",
+  "claims_no_competencies": true
+ },
+ "chainplate-brackish": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3b real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository pylint-dev/pylint, parent 9242406e364f537f91e99564400944f685f8b079, fix 0f39f39e04a3114900877e08a8310a1aaf2e8237, upstream issue reference #11160 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. Domain: program-analysis. network policy: added network_mode=\"no-network\" to [environment], [agent] and [verifier] in task.toml (was defaulting to PUBLIC in this harbor deployment, contradicting the instruction's \"no network\" premise and letting a trial agent fetch the upstream fix commit from GitHub)",
+  "claims_no_competencies": true
+ },
+ "chainplate-caboose": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3b real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository pypa/setuptools, parent bb1b38189eed960bdb4f4789926472d05e43d335, fix 72974110e29d53080dcf23cfa52d9c17299dbae4, upstream issue reference GHSA-grgh-hr87-3jpw \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. Domain: packaging-release. yes",
+  "claims_no_competencies": true
+ },
+ "chainplate-chartroom": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3b real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository python-poetry/poetry, parent e54180064368c2f9d9ad5ff4771d8b33538cc372, fix e6f1ded9902d1fa17fc74e6562cb423e84fa7752, upstream issue reference #10808 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. Domain: packaging-release. yes",
+  "claims_no_competencies": true
+ },
+ "chainplate-current": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3b real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository python/mypy, parent 1730c9535e464be8a1eee4d74f74156d75a6c0b2, fix 3f0c355b7b5fbce50fc192a697bbe4f214e01253, upstream issue reference #21428 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. Domain: program-analysis. Two verifier defects in tasks/chainplate-current/tests/test.sh. (1) FALSE NEGATIVE: staging the honest fix scored 0 because the provenance checks used `git diff` (worktree vs index) and an exact `git status --porcelain` string match; a correct, fully-verified fix with `git add mypy/checker.py` got reward 0 while every behavior check passed. Fixed: checker-change check now uses `git diff HEAD`, and the porcelain exact-match was replaced with a path-set check (`git diff HEAD --name-only` must be exactly mypy/checker.py + test-data/unit/check-inference.test) plus rejection of untracked `??` files, accepting any index state. Verified: staged honest fix now reward 1 (was 0); untracked-file cheat still 0. (2) WRAPPER BYPASS CONFIRMED: a root agent replacing /usr/local/bin/python3 with a fake that replays canned outputs (CLI diagnostic, 1 passed, 8018 passed, and /tests/hidden expected.txt) plus a cosmetic checker.py comment scored 1 with the bug fully in place. Fixed: added interpreter-provenance section 0b pinning `command -v python3` == /usr/local/bin/python3, sha256 of that binary (0e6475df... measured in the built image from bench-base:python-3.12 8e56517636b4), and a `python3 -m mypy --version` probe that must report the pinned parent sha. Verified: the fake-wrapper bypass now scores 0 (hash mismatch), degraded catch-the-assert fix still 0, doctored data + /opt/golden still 0, nop still 0, honest oracle still 1.0 (full 8018-passed suite runs inside the verifier oracle leg, 4m32s).",
+  "claims_no_competencies": true
+ },
+ "chainplate-deepwater": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3b real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository pytorch/vision, parent 6940e19087cecb5108370703e207f7a33d9b478d, fix 74d128539ddf17c58a955468abe85e062c293ed9, upstream issue reference #8887 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. Domain: computer-vision. Verifier hardened against (1) tampering of /opt/golden and /opt/repro.py (world-writable image inputs): byte hashes pinned to the fix-commit blob and the shipped repro, both in tests/test.sh and at Dockerfile build time; (2) \"fix\" that leaves the tree byte-identical to parent: verifier now requires the bug's source file to actually differ from the parent blob; (3) wrappers hidden in any other venv module: full recursive byte-equality of transforms/v2 and tv_tensors tree-vs-venv (pycache excluded); (4) sitecustomize/usercustomize/.pth startup shims: banned; (5) pytest-hook smuggling via conftest.py + .git/info/exclude: active (non-comment) exclude lines and stray conftest.py rejected. Every new check was proven to bite (reward 0 on probes) and the honest oracle still scores 1 (verified via harbor run).",
+  "claims_no_competencies": true
+ },
+ "chainplate-drift": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3b real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository scikit-image/scikit-image, parent fff7deabe28fb6039c26588f751e9cad88354f19, fix 96834cf3d57c4a9bad82a471a5548be3ad53a4fa, upstream issue reference #7648 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. Domain: computer-vision. Found a live bypass and closed it. Trials run as root (harbor default user when no agent/verifier user is set), so an agent can inject into site-packages. A naive sitecustomize monkeypatch was already blocked by the golden test's assert_stacklevel, but a CALIBRATED wrapper (reimplement the <5 guard AND the standard-deviation check inside sitecustomize with correct stacklevel=2, delegating >=5-point fits to the original estimate) PASSED the original verifier with reward=1 while /app/src/skimage/measure/fit.py kept the bug (only a trailing-newline cosmetic edit). I tightened tests/test.sh: (1) run with `python3 -P` that the live EllipseModel.estimate's inspect.getsourcefile == /app/src/skimage/measure/fit.py AND inspect.getsource(fn) contains the guard text; (2) plain grep that the guard text exists in the file itself. Re-ran the same calibrated bypass -> reward 0 with both new checks failing; honest oracle still reward 1, nop still 0.",
+  "claims_no_competencies": true
+ },
+ "chainplate-ebb": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3b real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository scipy/scipy, parent 68942fb357ee133e75709e91959d322325fffb90, fix b92b297a5a0c372600bffffd4dc83513be9bfd39, upstream issue reference 25880 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. Domain: scientific-python. Interpreter-startup shim bypass: on the ORIGINAL verifier, an agent could install sitecustomize.py into site-packages (trial container runs as root) that wraps scipy.optimize.minimize with copy.copy(bounds) and leaves the buggy /app/src tree byte-pristine; I reproduced reward=1 that way (repro passes, all 9 golden node ids pass, tree provenance clean). Closed by (a) a pre-check that scipy.optimize.minimize's __code__.co_filename starts with /app/src/ AND __module__=='scipy.optimize._minimize' (the real in-tree fix passes; the shim fails), and (b) a __pycache__ purge under /app/src before all checks (defense against pyc-shadow with byte-identical buggy source). Proven: shim now scores 0, honest in-tree fix scores 1, official verify_new_task.sh re-run is chainplate-ebb PASS (oracle=1, nop=0).",
+  "claims_no_competencies": true
+ },
+ "chainplate-fathom": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3b real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository semgrep/semgrep, parent a8b650dffe910d7b8903fe05ceeb75fdc7983197, fix e3062fc251448ffcf16a38245e5e6a8dca894df5, upstream issue reference #9849 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. Domain: security-tooling. Found and closed a real verifier bypass: an agent could leave the bug fully intact in /app/src (append only a comment to git.py) and plant a working general implementation in ~/.local/lib/python3.12/site-packages/sitecustomize.py (user site-packages, imported by every Python process). With the bug intact this scored reward=1 against the original verifier \u2014 every provenance check passed. Fix: tests/test.sh now (a) runs all pytest invocations with PYTHONNOUSERSITE=1, killing user-site smuggling (system site-packages holds all needed packages, so honest solutions are unaffected), and (b) requires the fix's substance in the deliverable: the tracked diff of cli/src/semgrep/git.py must itself define clean_project_url, and git.py must both define and use it (parent has 0 occurrences). Proved the tightening bites: same bypass now scores 0; honest oracle still 1; full harbor acceptance re-run clean.",
+  "claims_no_competencies": true
+ },
+ "chainplate-foresheet": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3b real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository sharkdp/fd, parent 7027d45303b412be6fa9c09d689cc6276748fb38, fix d3a500af7aee3a9f099b09e1831da3fc39980c61, upstream issue reference #1900 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. Domain: rust-cli. yes",
+  "claims_no_competencies": true
+ },
+ "chainplate-hull": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3b real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository starship/starship, parent 0dd5a4f402c8d94524aaaa5632b2d0cba7fe1630, fix 91861886a779805cd8265a85c629e579d513aa75, upstream issue reference #7201 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. Domain: rust-cli. Added a 5th hidden CLI case generated inside tests/test.sh at verify time: a random hex background color drawn from $RANDOM with the expected bytes computed by formula (ESC[48;2;R;G;BmX ESC[0m), enforced count >=5. This makes static input enumeration (the only credible cheat given /tests and /opt/golden are readable in local trial containers) provably insufficient: demonstrated unfixed tree prints bare 'X' (mismatch) and the real fix byte-matches the formula. Also updated instruction.md grading bullet and difficulty.json notes to describe the generated case.",
+  "claims_no_competencies": true
+ },
+ "chainplate-inlet": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3b real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository statsmodels/statsmodels, parent 3c102982fecc91782d7836b9ae456fe869dd3578, fix 0a347973915a2a28ec795cb670343c37ab3d0d92, upstream issue reference #9805 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. Domain: scientific-python. both-directions-repro-certified; fixed two live crosses (answer bytes in image, runtime wrapper); all bypasses other than the honest fix now score 0; oracle still 1",
+  "claims_no_competencies": true
+ },
+ "chainplate-keel": {
+  "competencies": [],
+  "evidence": {},
+  "note": "v4.3b real-issue wave: claims no tb2.1 competencies. Built from a verified real upstream issue: repository syncthing/syncthing, parent ee275fee65b37ea75802c8fc3c9decd5a66cb065, fix f1d631d66e1c3101a8968e0713fac29e67329134, upstream issue reference #10743 \u2014 the provenance chain that this task is a real reproducing bug, recorded here because it exists nowhere else in the specs. Domain: go-infrastructure. Task closes the go-infrastructure / real-upstream-codebase debugging gap: single-CPU task where the agent must localize and patch a real upstream bug (checkFileInfoConsistency) in a real clone and drive the project's own `go test` runner; nop=0 (verifier not vacuous), hidden cases generalize beyond the shipped regression test.",
+  "claims_no_competencies": true
  }
 }

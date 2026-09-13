@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 40,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on librosa/librosa at parent commit 86d728a4fae31c5e80ef112f895c70af228d1637 (real upstream issue #1944, fixed by 025ef7d1c7ad6d8593b959c41bf12eb7c945c6eb). midi_to_note/midi_to_svara_h/midi_to_svara_c crash (ValueError/OverflowError from int(np.round(nan))) on non-finite MIDI values and note_to_midi('') raises ParameterError; the fix adds four guards: `if note == '': return np.nan` in note_to_midi and `if not np.isfinite(midi): return ''` in the three midi->note functions. The image clones the repo at the parent (fix commit fetched only into a throwaway bare clone for golden extraction, then deleted, so it is unreachable from /app/src), extracts the project's own tests/test_convert.py at the fix commit to /opt/golden/test_convert_fix.py with an authored conftest pre-importing librosa.core.convert (lazy_loader>=0.4 collection workaround from the mining pass), and imports librosa straight from /app/src via PYTHONPATH (no install step, pure-Python package). Pinned env (verified by mining): python 3.12.13, numpy 2.5.3, scipy 1.18.1, numba 0.67.0, lazy_loader 0.5, msgpack 1.2.2, joblib 1.6.0, decorator 5.3.1, typing_extensions 4.16.0, pytest 9.1.1. Verifier requires pytest on the golden file (the fix-commit version of the whole conversion-module suite: 10 upstream regression cases + the module's full pre-existing suite) to exit 0, plus provenance (HEAD pinned, fix commit absent, imported librosa from /app/src, git status exactly ' M librosa/core/convert.py') and two authored hidden cases: scalar/kwargs variants (float32 dtypes, octave/cents/key/unicode/abbr args, custom Sa, mela 8/29, hz_to_note round trips) and vectorised/list inputs (arrays interleaving nan/+inf/-inf, note_to_midi(['C4','','D4']), hz_to_note array); at parent all hidden vectors raise, at fix all return sentinels. Agent must localise the conversions in the real tree and add the guards without touching anything else; no network at trial time."
+}

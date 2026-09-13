@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 0,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 30,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on statsmodels/statsmodels at parent commit 3c102982fecc91782d7836b9ae456fe869dd3578 (real upstream bug #9805, fixed by 0a347973915a2a28ec795cb670343c37ab3d0d92). MixedLMResults.summary() documents a title argument ('If not None, then this replaces the default title') but hardcodes the heading: it calls smry.add_title('Mixed Linear Model Regression Results') unconditionally, so every caller's title is silently ignored. The tiny upstream fix keeps the default title only when title is None and passes the caller's title through. The image ships the parent tree built and installed non-editable into site-packages from a warmed meson build dir (/opt/sm-build); the fix commit is unreachable (single shallow parent commit, golden bytes extracted via a throwaway clone that is deleted). The agent must reproduce, localise and fix in the real tree; the verifier asserts provenance (HEAD still pinned parent, single commit, fix commit absent in the object store, only the library source for the summary path modified, nothing deleted/added/staged), rebuilds and reinstalls from the repaired tree (incremental, ~6-10s at 1 CPU), runs the project's own test_lme.py module exactly as extracted from the fix commit (data fixtures and the results package reconstructed next to it so the module runs standalone: the 30+ existing tests plus the upstream regression test_summary_title must all pass), and three authored hidden cases from inputs the upstream test does not use (unequal group sizes with punctuation/whitespace title strings and the title=None default, the fit_regularized public path, and title combined with yname/xname_fe/xname_re including a table assertion), plus the raw reproduction snippet asserting title.__eq__. Trial is fully offline: pinned deps (numpy 2.5.3, scipy 1.18.1, pandas 3.0.5, patsy 1.0.3, formulaic 1.2.2, pytest 9.1.1, meson-python 0.21.1, meson 1.12.0, ninja 1.13.2, cython 3.3.0, setuptools_scm 9.2.2, packaging 26.3) are preinstalled; the source tree itself is not importable (generated statsmodels/_version.py lives in the installed build), which the instruction explains. Both directions re-confirmed inside the task's own image at build time (parent: probe shows title ignored and the golden module fails exactly test_summary_title; fix: swapping the installed module for the fix-commit bytes makes the entire golden module green, then the installed file is restored byte-identically). Both directions re-confirmed inside the task's own image at build time; the fix-bytes scratch dir /opt/fixcheck is removed again at the end of the build so no shipped answer bytes exist (the golden test /opt/golden/test_lme.py stays for the verifier). The verifier runs every library-touching python invocation with -S (no site/sitecustomize/.pth) plus PYTHONPATH into the installed package, so a runtime wrapper (sitecustomize.py, .pth hook, conftest) cannot stand in for a real tree fix; the installed module is additionally byte-identity-checked against the repaired tree after a fresh reinstall from it."
+}

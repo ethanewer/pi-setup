@@ -1,0 +1,13 @@
+diff --git a/skimage/morphology/_skeletonize.py b/skimage/morphology/_skeletonize.py
+index fa47924..87a57ea 100644
+--- a/skimage/morphology/_skeletonize.py
++++ b/skimage/morphology/_skeletonize.py
+@@ -321,7 +321,7 @@ def thin(image, max_num_iter=None):
+     check_nD(image, 2)
+ 
+     # convert image to uint8 with values in {0, 1}
+-    skel = np.asanyarray(image, dtype=bool).view(np.uint8)
++    skel = np.asanyarray(image, dtype=bool).copy().view(np.uint8)
+ 
+     # neighborhood mask
+     mask = np.array([[8, 4, 2], [16, 0, 1], [32, 64, 128]], dtype=np.uint8)

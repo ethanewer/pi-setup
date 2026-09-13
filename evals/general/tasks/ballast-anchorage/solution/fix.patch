@@ -1,0 +1,17 @@
+diff --git a/crates/printer/src/util.rs b/crates/printer/src/util.rs
+index 4fd96cc..b72d991 100644
+--- a/crates/printer/src/util.rs
++++ b/crates/printer/src/util.rs
+@@ -575,7 +575,11 @@ where
+         last_match = m.end();
+         append(caps, dst)
+     })?;
+-    let end = std::cmp::min(bytes.len(), range.end);
++    let end = if last_match > range.end {
++        bytes.len()
++    } else {
++        std::cmp::min(bytes.len(), range.end)
++    };
+     dst.extend(&bytes[last_match..end]);
+     // Add back any line terminator
+     dst.extend(line_terminator);

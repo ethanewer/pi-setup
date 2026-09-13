@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": "Real upstream tree PyCQA/bandit@7e6f580d (parent of the upstream fix 72fa5a7 for issue #880), shallow-fetched in the Dockerfile, installed editable via pbr, git metadata stripped",
+  "notes": "SWE-bench-shaped debugging task on a real upstream security tool. The seed is the actual upstream bug: bandit/core/tester.py only consults nosec_lines.get(context['lineno']) so a # nosec comment on a non-first line of a multi-line construct is ignored, even though context['linerange'] already carries the whole region. The upstream fix (three small edits: utils.get_nosec scanning the linerange, the tester lookup switched to it, and the blanket-nosec bookkeeping moved from the pre-visit phase to the test phase so the metrics stay exact) is what the oracle ports; a fix that only widens the lookup still fails the golden test's nosec/skipped metrics. The agent gets a repro file, a failing behavior, and the project's own test suites as oracle guides, but no file names and no issue/commit reference. The verifier runs the project's own golden regression test extracted from the fix commit, the project's own unit suite (179 tests) and functional suite (72 tests), plus 4 authored hidden cases that put the nosec on the closing line of % -built SQL, on the closing line inside a sqlite conn.execute call, on the closing paren line of exec(), and on a middle line of eval() -- each case also stripped of its nosec to prove the construct is genuinely flagged. Verified both directions inside the built image (and with no network). difficulty_guess from the issue pool was 'medium'."
+}

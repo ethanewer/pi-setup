@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 0,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 0,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on python-poetry/poetry at parent commit e54180064368c2f9d9ad5ff4771d8b33538cc372 (real upstream issue #10808, fixed by e6f1ded9902d1fa17fc74e6562cb423e84fa7752). Config.process() resolves {dotted.config.key} templates inside string config values by looking up the referenced key and substituting its value, but guards the substitution with `if config_value:`, so falsy referenced values (int 0, False, empty string) are treated as unset and the placeholder is returned literally; the fix checks `if config_value is not None` and substitutes str(config_value). The image clones the repo at the parent with no git remotes, overlays the fix commit's tests/config/test_config.py byte-for-byte (sha256 3f93019026b8546d337b53ba2dd264ff145dec187196d66b23d54d728f16359a), keeps the fix commit unreachable (extracted via a deleted throwaway bare clone), and installs the project editable into /opt/poetry-venv with all deps pinned at the versions resolvable on bench-base:python-3.12. Agent must reproduce, localise and fix in the real tree: the failing golden case asserts config.process('{requests.max-retries}') == '0' where the default config holds max-retries=0. Hidden cases: (a) falsy booleans (installer.parallel=False, virtualenvs.options.always-copy=False) and a zero int (installer.max-workers=0) plus a zero injected through the POETRY_INSTALLER_MAX_WORKERS environment route, and a surrounding-text template; (b) empty-string values (installer.no-binary='', cache-dir=''). Both directions re-confirmed inside the task image: parent gives '1 failed, 82 deselected' with the mined AssertionError at tests/config/test_config.py:61; fix gives golden 1 passed and the whole tests/config dir 102 passed in ~0.6s. Build measured at ~4.5 min cold on the host (venv install of ~30 pinned deps dominates); image ~2.2 GB. deepdiff is required at collection of the config tests and is installed."
+}

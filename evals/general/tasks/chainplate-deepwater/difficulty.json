@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 0,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on pytorch/vision at parent commit 6940e19087cecb5108370703e207f7a33d9b478d (real upstream bug, issue #8887, fixed upstream in 74d128539ddf17c58a955468abe85e062c293ed9). torchvision.transforms.v2.functional._meta._cxcywh_to_xyxy computes half-extents on integer tensors with div(-2, rounding_mode='floor'), which rounds the half of an odd dimension up (away from zero), so an int64 CXCYWH box whose height is odd converts to XYXY with y1 = -1 even though the box lies inside the canvas; the float path and torchvision.ops._box_convert._box_cxcywh_to_xyxy (true division + truncation back to the integer dtype) are correct. Agent must reproduce via the public convert_bounding_box_format API with the pinned torch 2.10.0+cpu / torchvision 0.25.0+cpu venv (whose transforms/v2/functional modules are overlaid from the checkout), localise the integer-division rounding in the real tree, fix it (float arithmetic then cast back), reflect the fix into the installed package, prove it with the project's own pytest and the upstream regression test (extracted from the fix commit into /opt/golden, never committed), and write /app/summary.md. Both directions re-confirmed inside the task image at build time: golden test + direct repro fail at parent (y1=-1) and pass at fix ([[0,0,10,12]]). Verifier: HEAD pin, working-tree provenance (every tracked file except the single fixed _meta.py byte-identical to parent blobs, no untracked non-ignored files), venv mirrors the fixed source file, golden upstream regression test plus the project's own TestConvertBoundingBoxFormat class (reference-compared against torchvision.ops.box_convert) stay green, and four authored hidden cases the upstream test does not use (odd width, odd width+height in a batch, inplace=True on int tensors, float/int16/int32 dtype preservation and ops-equivalence). Binary reward on every exit path."
+}

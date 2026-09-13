@@ -1,0 +1,18 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on python/mypy at parent commit 1730c9535e464be8a1eee4d74f74156d75a6c0b2 (real upstream issue #21428, fixed by 3f0c355b7b5fbce50fc192a697bbe4f214e01253). With --allow-redefinition on, a module-level unannotated empty-list assignment (a partial type) combined with a function that names the variable in a `global` declaration makes the TypeChecker crash with INTERNAL ERROR (exit 2): visit_global_decl unconditionally calls self.binder.assign_type(n, sym.node.type, sym.node.type) with sym.node.type still a PartialType, and the binder's is_subtype path asserts on the partial type ('Unexpectedly encountered partial type'); the fix guards with typ = get_declaration(n); if typ is not None, which is None exactly for partial types. Verified in-image both directions: parent gives 'INTERNAL ERROR' exit 2 on the CLI repro and 1 failed golden test; fix gives exit 1 with 'Need type annotation for \"x\" (hint: \"x: list[<type>] = ...\")' and 1 passed golden test; full mypy/test/testcheck.py suite 8018 passed / 26 skipped / 7 xfailed in ~234s at 1 CPU after the fix. The image clones the repo at the parent (fix commit unreachable, asserted at build), overlays the fix commit's test-data/unit/check-inference.test so the regression case exists and fails as mined, and pins the project's own shipped dependency versions (typing_extensions 4.15.0, mypy-extensions 1.1.0, pathspec 1.0.0, librt 0.10.0, ast-serialize 0.3.0, pytest 8.4.2, pytest-xdist 3.8.0, lxml 6.0.2). CAVEAT verified: sibling case ...Redefine1 (no global declaration, added by the same fix commit) passes at BOTH parent and fix, so only Redefine2 is an oracle. Hidden cases (each crashes with INTERNAL ERROR at parent, clean need-annotation output at fix): global x, y with list+dict partials and a method call on x; dict partial with subscript assignment after global; nested function declaring global x with a bare use. All pytest invocations clear mypy's -nauto addopts with -o addopts=\"\" so xdist cannot fan out inside the one-CPU container.",
+  "domain": "program-analysis"
+}

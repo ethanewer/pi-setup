@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on sharkdp/fd v10.4.2 (2026-era tree: rust 2024 edition, jiff time handling) at parent commit fb0426fed164c5fa9cd04b5e4aa8d8c375efa1d0 (real upstream bug, issue #2081). When --changed-before/--changed-within is given a well-formed but out-of-range '@' Unix timestamp, TimeFilter::from_str computes `UNIX_EPOCH + Duration::from_secs(timestamp_secs)` in src/filter/time.rs, which overflows the SystemTime representation and panics the whole process (exit 101, 'overflow when adding duration to SystemTime') instead of flowing into the existing graceful parse-failure path. The parent commit is the test-first commit, so upstream's own regression test out_of_range_unix_timestamp_is_rejected is already present in the tree and failing. The fix (upstream 5becb9d52cb532c35b68421075e4d8ee8d6c77cd) replaces the addition with UNIX_EPOCH.checked_add(...), which returns None and lets the value be rejected like any other unparseable date. Agent must reproduce via the CLI panic, localise and fix the real tree without being told the file or the line. The verifier asserts provenance (HEAD still the pinned parent, exactly one commit object, fix commit not reachable, only tracked source files under src/ modified, at least one such modification, nothing deleted, the embedded upstream regression test left byte-identical to the fix-commit golden copy extracted into /opt/golden at image build time), runs the golden test with the project's own cargo test runner, runs the full project test suite (unit + integration, both self-contained and offline), and runs three authored hidden CLI cases exercising inputs the upstream test does not use: --changed-before with @9223372036854775808, --changed-within with @18446744073709551614, and an in-range huge timestamp guard (@9223372036854775807 must keep working). Toolchain pinned to rust 1.98.1 via rustup at build time (MSRV 1.90.0); Cargo.lock committed upstream pins all crates; prebuilt in the Dockerfile so trial builds are incremental; CARGO_NETWORK=off bakes offline behaviour into the image. Both directions re-confirmed inside the task image before shipping. fd's own integration test `test_exec_nulls` (exercising --exec output interleaving, unrelated to time filters) is timing-sensitive and fails spuriously on the mandated 1-CPU trial quota (measured: fails ~always under cpus=1, passes on multi-core), so the verifier runs the full suite with exactly that one test skipped via `cargo test -- --skip test_exec_nulls`; the instruction documents this for the agent."
+}

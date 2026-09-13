@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on python-poetry/poetry at parent commit b760721672011534ca3607d17e3bf61a4dc6ed90 (real upstream issue #10807, a.k.a. PR/fix commit 89aaee9d60cae20775d3c40e4f243f9945f718e1). `poetry debug resolve` builds each result row as a two-element list [<c1>name</c1>, <b>version</b>] and then, for any resolved package whose environment marker is not 'any' (e.g. a package restricted to certain platforms or a Python-version range), executes `row[2] = str(pkg.marker)` on a two-element list, which raises IndexError: list assignment index out of range right after printing 'Resolution results:'; the upstream fix is the one-token change to `row.append(str(pkg.marker))`. Agent is dropped into the real tree with the bug still in it and no network, must reproduce (offline in-memory repository, the project's own command-test machinery), localise and fix. The image ships a probe (/app/probe_resolve.py) reproducing the crash, keeps the fix commit unreachable from /app/src (depth-1 init+fetch of the parent alone; golden test extracted from the fix commit at image build time into /opt/golden/), pins poetry-core to the exact lock ref b9663e42c808543377ae523611c4cfad68016f30 so `pip install -e .` cannot drift, and pre-installs the project venv at /opt/poetry-venv. Hidden cases: two authored pytest files driving the real debug-resolve code path from inputs the upstream regression test does not use -- darwin and python-version markers, a combined marker expression, a platform-machine marker, and a plain (marker-is-any) package asserting the row keeps exactly two columns. Verifier: provenance (HEAD still the pinned parent, single commit only, fix commit unreachable, only src/poetry/ tracked files modified, import poetry resolves to /app/src/src/poetry), the upstream golden test, the project's own tests/console/commands/debug/ suite, and the hidden cases. Both directions re-confirmed inside the task image before shipping."
+}

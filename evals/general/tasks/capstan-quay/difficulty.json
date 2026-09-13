@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on gohugoio/hugo at parent commit a7b93e6564e6a4a7a3043b431e255ba716940408 (real upstream bug, issue #11406, fixed by 3a8aad6b190bb3d7cecc8ec6bc8379a01ec547cb). A page consisting only of front matter leaks the raw front matter (delimiters and keys) into output that prints {{ .RawContent }}, because hugolib/page.go only records the main-content byte offset when the parser has not reached end-of-input, so RawContent() falls back to slicing from offset 0. Agent must reproduce (via an authored probe test run through the project's own go test runner), localise and fix the real tree. Go 1.27.1 pinned (tarball from go.dev), module cache and build cache warmed in the image so a 1-CPU offline trial recompiles incrementally in seconds (full warm pass measured ~3 min on 1 core). Verifier asserts provenance (HEAD still the pinned parent, fix commit unreachable, exactly one commit, only non-test source under hugolib/ modified and the test-harness helper integrationtest_builder.go untouched), runs the upstream regression test extracted from the fix commit into /opt/golden at image build time (fix-commit version of hugolib/page_test.go, TestPageRawContent), runs two authored hidden cases (TOML front matter in a section dir; long YAML block in a dated path) plus the probe, and re-runs 14 existing hermetic page/front-matter tests from page_test.go/frontmatter_test.go. Nop passes 0 (golden + hidden cases fail on the untouched parent tree). Both directions re-confirmed inside the measurements: golden test + authored cases FAIL at parent and PASS with the fix applied. REVIEW (independent): re-verified both directions in a container on the task base image (golden FAIL at parent matches the mining observation byte for byte; PASS with the fix). Hardened tests/test.sh after demonstrating two full bypasses that scored 1 with the bug intact: a swapped /usr/local/go/bin/go that fakes PASS output, and a neutered integrationtest_builder.go hidden by `git update-index --assume-unchanged`. The verifier now binds sha256 of go, git, /opt/golden/page_test.go and /app/probe_test.go to constants, rejects assume-unchanged/skip-worktree index entries, and rewrites /logs/verifier/reward.txt unconditionally in the EXIT trap (pre-written reward file attack). All bypasses now score 0; nop=0, oracle=1 still hold through verify_new_task.sh."
+}

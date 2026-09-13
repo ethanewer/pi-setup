@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 1,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 30,
+  "documented_probe": "Real upstream tree apache/commons-lang@596269f16d33cd4a20223978c245a15c898c5084 (parent of the upstream fix 1d6ef29ce004309e50bd91e27f0f5e80e1a57a76 for issue #1775), shallow-fetched in the Dockerfile, detached at the parent so the fix commit is out of reach, with the offline Maven repository at /opt/m2repo warmed and the module compiled at build time. Seeded symptom: CharRange.contains(CharRange) mishandles a negated argument whose excluded block touches a domain boundary -- isNotIn(0, MAX) denotes the empty set, isNotIn(0, k) denotes [k+1, MAX], isNotIn(k, MAX) denotes [0, k-1] -- and answers false for proper ranges that logically contain them. The agent gets an executable repro (/app/probe.sh + Probe.java), the symptom description, and the project's own maven test commands, but no file name and no issue/commit reference.",
+  "notes": "Easy SWE-bench-shaped debugging task on a real upstream JVM library. The fix is a pure-logic branch rewrite inside one package-private method; the upstream regression test added by the fix commit (testContains_Charrange_negatedArgumentTouchingBounds) is extracted at image build time into /opt/golden/CharRangeTest.java and never committed here. The verifier requires the agent's tree to still sit at the pinned parent with exactly one commit object and the fix commit unreachable, runs the golden test, the project's own CharRange/CharSet/Range-family test classes, the direct repro, and three authored hidden cases: low-boundary complements (isNotIn(0,0), isNotIn(0,1), isNotIn(0,255), isNotIn(0,256)), high-boundary complements (isNotIn(0xFFFE,MAX), isNotIn(MAX,MAX), isNotIn(0x0100,MAX), isNotIn('{',MAX)), and non-regression guards (interior excluded blocks, negated receivers, negated arguments of negated receivers). difficulty_guess from the issue pool was 'easy'. The oracle applies the boundary fix itself and re-proves both the repro and the golden test. The maven repo and JDK are the same versions the mining container used (maven 3.9.9 from archive.apache.org, openjdk-21-jdk)."
+}

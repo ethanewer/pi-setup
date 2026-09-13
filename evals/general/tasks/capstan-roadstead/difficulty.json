@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 90,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on jestjs/jest (issue #16381, fixed by commit 4a65c5aa). The agent gets a real copy of jest at the buggy parent commit, must reproduce a file-selection symptom (a glob first seen with one matcher-option set keeps that behavior for every later call in the same process, even when different options such as dot:false are passed), localise the stale module-level matcher cache, and fix it so every call behaves like the micromatch package. Oracle applies the upstream fix as a small patch; the verifier compiles the agent's edited source with the project's own regression test (10 cases, extracted from the fix commit into /opt/golden), two of the project's own pre-existing jest-util test files, and three authored hidden cases (dot options in reverse order, nocase flips on lower/upper-cased inputs, and a mixed {dot:undefined}/{dot:false}/option-less sequence on one glob) -- all run through the published jest test runner. Both directions were re-confirmed inside the task image at build time: the golden test fails 4/6 on the parent source (repro prints 'true true') and passes 10/10 on the fix source (repro prints 'true false'). Hidden cases verified to fail at the parent commit and pass at the fix commit."
+}
