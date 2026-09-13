@@ -750,7 +750,7 @@
       ]
     }
   ],
-  "generated_at": "2026-09-13T04:15:34.778477+00:00",
+  "generated_at": "2026-09-13T06:30:21.418637+00:00",
   "policy": "clean-room for every authored fixture; from v4.2 some tasks also clone upstream repositories at image-build time, listed in external_sources. No listed repository is shared with the frozen reference provenance set; tools/check_upstream_disjointness.py enforces that against specs/tb21_source_repositories.json",
   "task_files": {
     "agents/p_agent.py": {
@@ -1356,7 +1356,7 @@
     "specs/v43b_landed.json": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2-spec",
-      "sha256": "6a306c73d8dcda233a44f8f74902dd904a87552ae82b6d60d68c38afe6df84aa",
+      "sha256": "166f0d778bc9f7acd890eadc133b43c9be0fe7875abcfe0fb246916042dd97e9",
       "source_commit": null,
       "source_repository": null,
       "transformation": "derived from private audit records"
@@ -85508,7 +85508,7 @@
     "tasks/plimsoll-bell/solution/solve.sh": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "29929854e83424f0852ea95c6a35dda39a6f16a662aa6d92f754b2166aeb6efc",
+      "sha256": "116d08ccb76e7254a03407a438b2900e0e1941be57eae035dbb6162f2b0bf4c8",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -95316,7 +95316,7 @@
     "tasks/rudder-main/environment/Dockerfile": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "e36edfbdbe282f95d26b67e6514e58eb1838d9b209fc9beb152f014ba27e2895",
+      "sha256": "2f994d2a57012da18135b29860ecc64ce8629b1b03ba3515f27d29de06a47a17",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -95436,7 +95436,7 @@
     "tasks/rudder-main/tests/test.sh": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "3e3f7532e7e1eb68354ee689729ba6efda2d7e9f8e52dd68c957ef660a9e1e1d",
+      "sha256": "bdd7ac7fce805f5cf5d28a5fb7c88a2340d653377d5ed1c0398507396f370704",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -100164,7 +100164,7 @@
     "tasks/scantling-keel/solution/solve.sh": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "538b2b5fd98a28bf5d43d0749e6cf2babbc509f90a6f54c20c7caf9e02f1fb3f",
+      "sha256": "759c8c42ee73bceb888d911b3c585232b7d9d38a6843f4b8d15a07fddfdc4591",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -100228,7 +100228,87 @@
     "tasks/scantling-keel/tests/test.sh": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
-      "sha256": "a8457bd70b55ccea022f609fab57e073c323b9a79a9bb6973deb1fb1815ffa0e",
+      "sha256": "d3c17c04204d61a312ad2cb80bcb060b9e09a6ae0823bc52924d2606000aaf24",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/scupper-gulf/difficulty.json": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "d30dfeb74a41d27fc30a16181dd31911aacbfe16c9ccf5450e3ce4adeb80b697",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/scupper-gulf/environment/Dockerfile": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "82410f33edf6dae88efbeb7fb8cf45917cfd27947607da141191be8e6cf59924",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/scupper-gulf/environment/files/README.md": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "de148640173a71b12181521085c04c18514427aedf10d73b7353aba5ae32b3b0",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/scupper-gulf/instruction.md": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "a578b56ae7e5b45b9c4e552626c954d7577c1e81fcbcff89896ba34926843903",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/scupper-gulf/solution/solve.sh": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "cc900d5b8a1409b89f3768ba23c76d31735805591e18aa2382294609c08640b0",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/scupper-gulf/task.toml": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "878d1416ebaaebe8d07b80fe09707c051cbceb48cc8ee442c6110714a4b980ff",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/scupper-gulf/tests/hidden/zero_different_id/zzhidden_diffid_test.go": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "3de9c4f455fe169519e18bc855cb4247767a5692578e73fb4417708f96a90997",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/scupper-gulf/tests/hidden/zero_then_normal/zzhidden_normal_test.go": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "d9ff010bdaabe1d33ab6dd8985045e34572e73ce20d4c7805a53dcb9a398abe7",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/scupper-gulf/tests/hidden/zero_twice_sequential/zzhidden_seq_test.go": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "6850a1e3fe7588f921d4efd5523218dae1eaca9c169f5fba34550939f881b829",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/scupper-gulf/tests/test.sh": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "b3403503a526366bd47c2c0e722449d932e5eb388a6495500d2253306d84a602",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -100769,6 +100849,614 @@
       "source_repository": null,
       "transformation": "hand-authored"
     },
+    "tasks/sennit-foresheet/difficulty.json": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "5311660e214fc4a5a76f503247efed801af3328d12cd2b2e90f458332e8df66f",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/sennit-foresheet/environment/Dockerfile": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "5fbc9921b89bd2bdf3eace7c66861589ca7aed98f8970e75a0f13741a5e97b76",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/sennit-foresheet/instruction.md": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "26ce70d31807de8c6868a140817a88d64a9b06c4b72002ab00ec8863bf5b1fc0",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/sennit-foresheet/solution/fix.patch": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "c9553cec6afa32736162e799abc48eed9362a9bf8a27167bb434ea90b1facef3",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/sennit-foresheet/solution/repro-solution.sh": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "c17d856c4e29ca03cc836d4e7c82aafbfb93e022a3089c933aca5b53647bd63b",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/sennit-foresheet/solution/solve.sh": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "7d9185740999116ab2201ba75d33dc31954d199f439de69378feeae74c703525",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/sennit-foresheet/task.toml": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "24c7ba4bfbdba2c7c213f745a62ab90fb32a239b7b60d34dd2f79d1ffa3d1d5f",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/sennit-foresheet/tests/hidden/case-overflow-window/case-overflow-window.sh": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "baa0cb93b6e2199e7eb7aa07e201e0a35501135ab847608af596ce41dc151890",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/sennit-foresheet/tests/hidden/case-pane-nonzero-window/case-pane-nonzero-window.sh": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "841d7f77e2cb5d9c0e453e4392e34573221127f60cee011932b0a95ad0c36460",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/sennit-foresheet/tests/test.sh": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "bce201c1db3b534b0e01376a3dd3e57b4c0e38d3b50090cc86e490dfd05957e8",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/sheer-drift/difficulty.json": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "546b1907548668c561f292176f5f4afc09142b48a5ec7a6cc3dcc941891e494e",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/sheer-drift/environment/Dockerfile": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "1216e9dfd344b5e18a4a86182a89f35ebbc2dc3b265ca35be482c7aa19dd289c",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/sheer-drift/environment/files/README-BUILD.md": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "1cfb3219a588ac56aa1f0fff20ce2bd4381fabaabd4a8ad23bbcd861d4fa9628",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/sheer-drift/instruction.md": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "cf7fdc519cbeb35f3dee33d4e1542e833d68781a88195d4b1c0bf2425a970ee4",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/sheer-drift/solution/fix.patch": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "8bc8b41c30855af3198d8ed39b4327fa16571941f429cbcf609894c3ee1cf8e3",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/sheer-drift/solution/solve.sh": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "4cdd6179d3aeb234318bd367015adee5f428dcab76aca0a9b453b6202deff8a2",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/sheer-drift/task.toml": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "84816160e0c913957beae992384c5717df5415b4d86cd7b3621e9eafb647f0f5",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/sheer-drift/tests/hidden/h1-blank-middle/run.sh": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "2929674c264877d726bbd5e47b78b59d9672c08ccfca50553cc8295b62a07531",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/sheer-drift/tests/hidden/h2-all-blank/run.sh": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "329a3cc219bd3a357cfe2f691edaf0a84b28fb151e6e539a6a8fd75ac5348745",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/sheer-drift/tests/hidden/h3-stdin/run.sh": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "7c2cd5283139987ffb57045eb3c28594b64a9404016d6523d39048d555611eda",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/sheer-drift/tests/hidden/h4-crlf-inline/run.sh": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "36f42cdf4b21ade287f041ed7c954b2e8105084fad3159063744bb6a92eed2ba",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/sheer-drift/tests/test.sh": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "77615587584a3fe7a9a9e67eb00013bdcc5a12672fbcbee9843c1b0125b035cb",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/sheet-coaming/difficulty.json": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "ad7d9a32d08cdb1993ae01530554772d0d9ee3f6fb4bc6d42ad8cd4ec9bc6e92",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/sheet-coaming/environment/Dockerfile": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "31c19a1a3c9c3ed9fe360d6006fec7771a463fbd115efda21733f8aa7e1313b1",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/sheet-coaming/environment/files/README.md": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "a0c600c74198623c0c7666e4ac4dbe9ad509adb9379aec2faf34a4f49565a429",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/sheet-coaming/instruction.md": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "006f142d028e2bf9edcbfe0123e103a00203092e930af4d35d73cb379aa4efa1",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/sheet-coaming/solution/fix_plugin.py": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "4060ea006dd7cd2a57d3dba5b7a3043bc3fe6f6eb600d0eaf938f958deba6631",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/sheet-coaming/solution/solve.sh": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "3af8aed16fd325389043c9b5b04ca42fe944c5cc2a336c83e56668df7952068a",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/sheet-coaming/task.toml": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "f7550015e8207dff78051ec2f4799311a07e75105cf74ca083cf126fd77f9088",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/sheet-coaming/tests/hidden/case-arg-order/trigger.py": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "378d659998c5fd4e454234bed4ba4520604eba1425e6f85960626b47480fde1a",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/sheet-coaming/tests/hidden/case-guards/guard.py": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "6c396e6eaff8dfdc56b199f7e576110b489f9327c45f1214b58a848530cde82a",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/sheet-coaming/tests/hidden/case-keyword-variants/trigger.py": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "f9654fcd97511ceb8a6ccb61c024481b6a5204e5c281850737c14846768c5ff9",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/sheet-coaming/tests/test.sh": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "45b702f0442d27ddc51ee8e995e49dfe38ad72e07153a6cf580b6c25f7470bf9",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/shroud-bulkhead/difficulty.json": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "5c913517c5a8c784bcc9073f901e8f16be5e53c0008a828838231ad7703aea0c",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/shroud-bulkhead/environment/Dockerfile": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "090cfee4d4950965d0535360261d5f944ce18c4e5def52eaea3fccb030096e2a",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/shroud-bulkhead/environment/files/README.md": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "cc3502283d0079a737a00a03fd31843af4c3b3300326904515a4c8cceeb1048b",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/shroud-bulkhead/instruction.md": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "47c870052fe209d2877dd34f73e59147615ccbad51e7921328929637319cc0b1",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/shroud-bulkhead/solution/parse.go": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "3b29f5875b9c9c7d22a59cc9174a0bf4cab102d221b783eae0e10279e4b76195",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/shroud-bulkhead/solution/repro-fixture.yaml": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "135eccc4c5006e5d73ca2e38761a510f76f2190092cb64552365db3898bfbe3e",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/shroud-bulkhead/solution/repro.sh": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "4e798cf57fff2a696f18d6585f18351a5bc4fa26201fa481d49a817a075057ef",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/shroud-bulkhead/solution/solve.sh": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "f3b5503e8b1fa9a770e878a6684d24177804e3e121dd456ac3f4bbcb3647ddcf",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/shroud-bulkhead/solution/types.go": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "7409fdd07247a80d72e8fc636d39fd65a590cbb8da26b488ccff2966f050f999",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/shroud-bulkhead/task.toml": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "10c8d91220262202a0415d4edd036f6549a8ce1770f55f3dc97afb0b63362e7e",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/shroud-bulkhead/tests/hidden/h1_scoped_mixed/hidden_h1_test.go": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "5209d91c1ddbc1e2b3215c6ebe4ebd8597849e66655e1d790d405cf88477e607",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/shroud-bulkhead/tests/hidden/h1_scoped_mixed/hidden_scoped_mixed.yaml": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "e31c30a38baf5c3ec5003fb868d9e420caf3ab821268ef2f7579117982824840",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/shroud-bulkhead/tests/hidden/h2_three_documents/hidden_h2_test.go": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "41b146d94cf959f9d048cfab6296e78e35c8f567989a5df57c4cda5ceb4e8416",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/shroud-bulkhead/tests/hidden/h2_three_documents/hidden_three_documents.yaml": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "d189934341b66f53629302f29b909d32f6be0252d828b2dda18546fc0363c80f",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/shroud-bulkhead/tests/hidden/h3_env_only/hidden_env_only.yaml": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "96df0b67c1d60c09d7f22fca3f21329253d00c72ab1c3b43670aec3d614844c9",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/shroud-bulkhead/tests/hidden/h3_env_only/hidden_h3_test.go": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "12f80f89a546cc17d41fe7d4a99d9ba12f9d0fb806ceb65f368154165ca1e706",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/shroud-bulkhead/tests/test.sh": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "e338f7044cd92ea2c4a76b5e9058c01769c2b6c19a55be36ec5471c9a7b5b7f4",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/sill-barquentine/difficulty.json": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "001395f921fd99680dff97461a711c8e916e67f8a0bd679d9f8e22bd4158e7cc",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/sill-barquentine/environment/Dockerfile": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "36e58e47c5e1d0ae7b6543fcdec5591e150a3b5b965d64d2fd16ce070376aec7",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/sill-barquentine/environment/files/README-BUILD.md": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "e46e4bd3eb519f125e03c41879d1457c8c40dffd3cbb52b396718d592095adab",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/sill-barquentine/instruction.md": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "19ffe28ef644715be88417fa346d851f7ca6ccdb3914e6ffba2719b48f86490e",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/sill-barquentine/solution/fix.patch": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "63f67069cd7b33e99e3b4c94cb618576bc03d0365a95b08d293a336759779305",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/sill-barquentine/solution/solve.sh": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "1714eaac2046f059c683beb2dd5f62637231e9392626525309568872644a707d",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/sill-barquentine/task.toml": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "c4d043706c1180a07e90c2cc073f1bd2a06292f9ac1af204530ec2edfba1f95f",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/sill-barquentine/tests/hidden/h1-start-null-increment/case.txt": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "2ffeebcdfb27598f8dc025aa30391220944dec727cb2e32cf414b3240cfd8c17",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/sill-barquentine/tests/hidden/h2-temp-minvalue-null/case.txt": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "520d92f5d440211b1d129bef98701d2d29de1e87d65e41e26e97e93deb399249",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/sill-barquentine/tests/hidden/h3-increment-null-noby/case.txt": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "bec7238d1983a57a022b055eb7370cf22a364eee3ff50d3c7d40b93998e54172",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/sill-barquentine/tests/hidden/h4-lowercase-maxvalue-null/case.txt": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "726e9ece465813a6fc7d8c2e8d69ab629380361f7f13e7c6746052e3daa270a9",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/sill-barquentine/tests/hidden/h5-start-with-null-cycle/case.txt": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "b70ab3f4dd74a3e4af238cfc5d5f83f2e47b1da0afbb91247ba478ed755cf772",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/sill-barquentine/tests/test.sh": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "eadf4f26d76d87820d7858f5354ebf7efe204e81aa2735cd8018672361f64e8f",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/sill-ember/difficulty.json": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "55c7f9937d98690b5d1433cdecabc5829510ad2c0a824ecf270279794feae206",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/sill-ember/environment/Dockerfile": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "e54634dd4805f28c9c86e598abbdd7c65729ded8585ddfa8754cd94a714d4532",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/sill-ember/environment/files/README-BUILD.md": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "f5b8e6cc4c7efd3803d34fe8e6b3f8ca2a512c09800d3b38417ca839c802c05d",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/sill-ember/environment/files/smoke-repro.js": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "392df16bd87e6bf318a8dee711d53db969a04d828f34b3172425ddf6d4053f33",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/sill-ember/instruction.md": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "ed46584037bc771671f09b83abe5a8d2f18fd638e73cb00f217af1df313e5ab4",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/sill-ember/solution/fix.patch": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "d11a3bd783a994ceebb93e734ae1b181f9ff6c84c82785afd7199d13c7311a02",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/sill-ember/solution/oracle-repro.js": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "5d587ab1ee9e1737ae18436d18963e22a3df4d85d43d989499afaddf81c572f7",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/sill-ember/solution/solve.sh": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "d72147d1d7da3e2c41d9aca6c1186ae3a766f9f8a2d2980e8f3152aabd7eb082",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/sill-ember/task.toml": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "9a7e3c10dc175261095323ca8d329f3295b0f5a2278f95caaa5ef3ab2793381c",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/sill-ember/tests/hidden/location-other-coercible/run.js": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "88e1520c7a8c232bbc2e6a7d5f9ac1fedc34149ece78e06527c1ae9581485698",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/sill-ember/tests/hidden/location-url-query-fragment/run.js": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "0dc572185b691ef884a0f59d702af87ac81481f3672dc2473c18c81203b5112c",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/sill-ember/tests/hidden/redirect-url-object/run.js": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "b5d4151f18af4273ffa8107d78cb01b83a5250d9ba09ea721ef4e9a96c96ef87",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/sill-ember/tests/test.sh": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "3f27edc14236b5c09a7de9b787ba300cf3a1f1ba54a9d245aedfd9bc81bf1ff8",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
     "tasks/silt-barrow/difficulty.json": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
@@ -100861,6 +101549,86 @@
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
       "sha256": "abeda8a2d378e35d2bf52bda011f0558411d98153b804d3f26f3bf06028c67f2",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/skiff-beacon/difficulty.json": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "1efb16318857342064d60cc9be33b75bee568946672ae837062cd2a624ef557a",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/skiff-beacon/environment/Dockerfile": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "db775ad0002d6607ad8e00d52fd487f3784d0ddb8d93d27c4468a3bcbcc70142",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/skiff-beacon/instruction.md": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "8daad4f03168184cc5c83216f091d963d725c3f55e62eb9e392f7a8a6cd6f984",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/skiff-beacon/solution/apply_fix.py": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "f19ea214994ec373cde01863190d6f3e7687f0c83df18cb2c288ef351be47f29",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/skiff-beacon/solution/repro.py": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "778c63387be3a6cf0b06ce3c1d215e3e0d32ef068975b9665e061e6a018938fb",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/skiff-beacon/solution/solve.sh": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "77b7cb9ed33ed4e70c8a64471c76ccd9a264f29ca51ee5d29644562971a4055f",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/skiff-beacon/task.toml": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "21a4c4b7e8bbbd730ecf01faf21c83d1b80f0117741d90a30dc7d5de3b31c2ce",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/skiff-beacon/tests/hidden/case-hex-adjacency/check.py": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "dddbd7c6d592df500e546d01a4d44174697d95ca49c051c30836ffd0296227bf",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/skiff-beacon/tests/hidden/case-timestamps/check.py": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "70e7039c16247d429bc8fdf52c5d7548b87e4a74353e3374bb76ce7c240a8d2a",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/skiff-beacon/tests/test.sh": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "d1f245e19d800bf535060bb33f0cdc3f8dded18eeda342b371965904b3e56ca7",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"
@@ -101841,6 +102609,174 @@
       "source_repository": null,
       "transformation": "hand-authored"
     },
+    "tasks/spile-wharf/difficulty.json": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "5c9c923cd0a18d3ba6fed7cdf47ba30df8c2b2006a76d11c0c58db68dbdf7770",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/spile-wharf/environment/Dockerfile": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "ed71880010b4a46c19be6b7a47efab9b4fde2e08c7c8e737e6bb9c50fbe31d2c",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/spile-wharf/instruction.md": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "47b14e207605e9378c578c0c0775b9a4227998a20db1ccf40f2ce3dfb62cbbd0",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/spile-wharf/solution/apply_fix.py": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "04949d989aa74e21210b60b19fcb5883bc50b0014f1272597aa2e840a33c7e19",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/spile-wharf/solution/reproduce.py": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "83a3ae4bd83f518676987cf5d65bb0b301072d32910d528bbe3cb902cecca642",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/spile-wharf/solution/solve.sh": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "067076ba415f1872068b3ec1cfca580882e5ddde3a2e2731fe8a51493935f615",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/spile-wharf/task.toml": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "f1c13f96d2c38f663214bd6df177d98760db42d9ed559ea54eacc89d13815ab2",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/spile-wharf/tests/hidden/case-arm64-nospace/driver.py": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "326d0ab2d4137139b9e71a4fb9f277211b8537b3024ad2c888e8e811d8318961",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/spile-wharf/tests/hidden/case-mixed-spacing/driver.py": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "e0c87964d7fe15c6eaa965ea38587b0346206b0169f74fbc20111f7e1fbf02ad",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/spile-wharf/tests/hidden/case-nospace-swap-fields/driver.py": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "1534c469f575688b1ce2d9e5e59a80e424c2f73f7066e15b6019dc054be014e0",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/spile-wharf/tests/test.sh": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "62c5e546445dbb5b8264b06255b9bea35f0ab241b98d051f1632837a4df2319c",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/spindrift-trim/difficulty.json": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "a65c5f6e647c25dc18a9e26695f813a9421e9c56b9e39e89f16eafcb1b945a83",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/spindrift-trim/environment/Dockerfile": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "2446cd56f48d6366b5ef513e03f3ae92f5d9f68c8bdff537f57612e2f80fc30b",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/spindrift-trim/environment/files/README-BUILD.md": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "0ffd3beb92723473a0c3fd20c3c486979f4cfadbb14c69e976b8e2699240dc56",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/spindrift-trim/instruction.md": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "44fc57aaad2656d578c4413398c86c985508d083e08185b0be315272578b7d79",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/spindrift-trim/solution/data-fix.patch": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "a25896f91c69c76521a2fb94285225fad65d9abd8201010ac385ad2e70823964",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/spindrift-trim/solution/solve.sh": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "df0a10a227b3ca4dbfefcace1af269fe51b992d455e74228e31a52685156911e",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/spindrift-trim/task.toml": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "3afd5dd25e515f20f7c72f0a2040d91e889f2d079aa7e6a13f01f0f93ea4a45d",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/spindrift-trim/tests/hidden/h1-recorder-binary/run.sh": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "ce4eea2e5dc841b80d9b7d8f018e92a36ee0ff20ed057b13f6648474617c5841",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/spindrift-trim/tests/hidden/h2-large-roundtrips/run.sh": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "7d788c2740bf566cf24c1be0ec284293e28fd87f1511858715c3c8a53568c7b1",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/spindrift-trim/tests/test.sh": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "0663ebb05b5b6d478d43900dbdf707c362a49b9826d79a5301959385cf198202",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
     "tasks/spume-ferry/difficulty.json": {
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
@@ -102621,6 +103557,246 @@
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2",
       "sha256": "6c08cbf117bdd54510e7d097253e3edab46557f42f2b707e087babee7ddb5492",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/stay-strait/difficulty.json": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "081f263beb6d698dc001c3c70ff6f421b8cf2122f3434c05b3489492fa1d8ba2",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/stay-strait/environment/Dockerfile": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "5792cea811bc854aa479330b2bc1a271105ac38aeb40a84264497dbd3233d2c7",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/stay-strait/environment/files/README-BUILD.md": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "9fd64354397dd421a12e2165a46191eb8d4bebeba213fa0bdd710ef4df05f000",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/stay-strait/instruction.md": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "a9fb02e1205a13d8750cfa4773c713962fc13c0a999b00bbd5a72884dc83c21e",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/stay-strait/solution/fix.patch": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "f3ce7ff1b896ef18886beef74cfb34f43e69ff4c1603eb8c4826179a5b1ee1dd",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/stay-strait/solution/solve.sh": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "f8b5a8da53f2708abefbf689cac5b1e9644000e2724e2e5b9a1137b696ac8e10",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/stay-strait/task.toml": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "03f96590854f379cd09eef010c0e8e72839579a105c7705df2c8ee58a6857cf7",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/stay-strait/tests/hidden/h1-tags-nonhex/run.sh": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "532d22b501a887989c24972bd395d5e6e78b9bcf215368bbed90d30abd9984fb",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/stay-strait/tests/hidden/h2-heads-zerooid/run.sh": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "1ae847423a253dc83404a8956b4723bf33fa6bdda17da473c30d1e48e6a9d857",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/stay-strait/tests/hidden/h3-nested-empty/run.sh": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "97641743b3a8c9b217787e1065dbe67162f7931e25e933d636261ec642f7942d",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/stay-strait/tests/test.sh": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "9a550858e63761152f7fa9d4f175e9571e452bd2df5c927a3ea9694c13ef01bd",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/stem-sloop/difficulty.json": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "642e7d1d243086711430091cc7f4f5b9d796cf1e2a0b3dd8afb7ea5f77278c5f",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/stem-sloop/environment/Dockerfile": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "80703ee226e4ac886edcc4c897652273309379b3598bf3b3a9a153a332a8ff22",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/stem-sloop/environment/files/README-BUILD.md": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "3654837d2f55f3fcc4589dfb96715286492f77615a1bd7044a49dc078c1bdf86",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/stem-sloop/instruction.md": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "f8f4e05a96fa7ddacacad282365a6ca3c29fe0e64a14921017df1b5e7dc214cc",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/stem-sloop/solution/fix.patch": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "200a177a063aa0b0c063024f33bbe669817ee11122bae4f2f7e5487c466790bb",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/stem-sloop/solution/solve.sh": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "7cdec55616c1f274ba5fecd190419dbf09a44a2fa0d787235d90e02ab55f9114",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/stem-sloop/task.toml": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "bfe988183807b1192c78b04ad6165deae6703567d832e655ea3ccbcf7b26a66b",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/stem-sloop/tests/hidden/h1-value-graph/ValueGraphCase.java": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "c8d1b0cbe3e7e333664baea4ebb409cc2b816cf0b0fb78d6d924f6a680a9fff6",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/stem-sloop/tests/hidden/h2-network/NetworkCase.java": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "99fca888d937696d4de7e200ead4aef16ccd2a618234716d776707abd2827e2f",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/stem-sloop/tests/hidden/h3-immutable/ImmutableCase.java": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "fc5fb3ee39bd38670a2a618c1d476f82468d0bafb082b3d1fba2a26914852d56",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/stem-sloop/tests/test.sh": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "22d2fd8f451d4e412666c35fac9f25b1cdf427117ae0f2e85cee6b7a1e01130b",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/stern-roadstead/difficulty.json": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "aeb8cd7333d661187eb5b09d017569b02414ada59a038eae94b2110104e8f8e0",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/stern-roadstead/environment/Dockerfile": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "89a029106ef63675de5e489f509cea3991f060cf3ca8a3b2f9b62b42f2fcc4dd",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/stern-roadstead/environment/files/README-BUILD.md": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "af36633a94c2f21a0cb058930d5feb31bff801de35fa84fba9b98ae6ced04407",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/stern-roadstead/instruction.md": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "1dc34b56821f0acdf56930f1ce54bbf28b1d102904f68ec550b45dcdb7020e59",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/stern-roadstead/solution/fix.patch": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "00445d8bef5199b9241889c75cf834051f00d55f2f908e266870a075540351b6",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/stern-roadstead/solution/repro.sh": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "d805452b3d32f1cdb632784c8bf0b04b7a94d21969172768f53d9d4f0531b145",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/stern-roadstead/solution/solve.sh": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "115945c1fc85b8a560e7dbb90c8c4cfae0d27fa63de627ab30dcfd106f4949ef",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "hand-authored"
+    },
+    "tasks/stern-roadstead/task.toml": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2",
+      "sha256": "59e7900c4bf08797575f99c845930b95d1002077d050e0576242704ec172df4a",
       "source_commit": null,
       "source_repository": null,
       "transformation": "hand-authored"

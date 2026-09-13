@@ -54,9 +54,27 @@ here than in an offline suite: trials have unrestricted egress (see
 into a lookup.
 
 **Structural properties, all 62:** build-time pin asserting `git rev-parse HEAD`
-equals the pinned SHA 62/62; golden test extracted at image-build time 62/62;
+equals the pinned SHA 62/62; golden test present at image-build time 62/62;
 system-wide `git safe.directory` 62/62; upstream source vendored into the task
 tree 0/62.
+
+Correction to how the golden figure was originally stated here. It was reported as
+"extracted at image-build time 62/62", which conflated two different things,
+because the check counted the presence of `/opt/golden` rather than where its
+contents came from. The wave's own staging pass separated them: **61 of 62 extract
+the project's own regression test from the fix commit**, and one, `capstan-overtake`
+(explosion/spaCy), ships an **authored** golden test because its fix commit contains
+no regression test at all. That is a legitimate exception and is documented in the
+task's own Dockerfile at line 4, which still asserts
+`! git cat-file -e "${FIX_SHA}^{commit}"` at line 42 so the fix stays unreachable.
+The reviewer independently reproduced the underlying bug there: at parent
+`f5d04868`, `spacy/displacy/__init__.py:69` imports `display` from
+`IPython.core.display`, which no longer exists, so
+`displacy.render(doc, style="ent", jupyter=True)` raises ImportError.
+
+An authored golden is weaker evidence than an upstream one, because it is written by
+the same process that wrote the verifier, so it should be read as 61 upstream
+regression tests plus one authored reproduction rather than 62 of either.
 
 **Fix-commit reachability.** A keyword scan left 24 tasks without a mitigation my
 patterns recognised, and manual inspection of three of them found real guards the
@@ -167,6 +185,20 @@ This is the third both-directions census in this project to catch a task that ha
 passed its author and its independent reviewer; the v4.3 census caught three the
 same way. It is also a defect class that can only appear on a second run, since the
 first run in a freshly built container can have matching bytecode.
+
+## Agreement with the wave's own staging pass
+
+The staging agent ran its own census, leak check and disjointness check after this
+registration and reached the same numbers independently: 62/62 both directions from
+raw per-task harbor logs across 124 runs with 0 exceptions, 0 instruction leaks with
+31 of 62 stating the parent commit, and `check_upstream_disjointness.py` reporting
+`problems=0 warnings=0`. It also confirmed `capstan-boom` passes both directions in
+its run, which is the fix described above holding rather than a flake. Its
+`tasks_cloning_upstream` count was 186 against the 180 recorded here, because the
+v4.3c wave added six more between the two runs.
+
+The one place it found something this registration got wrong is the golden-test
+figure, corrected above.
 
 ## Not done
 
