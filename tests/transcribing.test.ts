@@ -3,53 +3,18 @@ import { describe, expect, test } from "bun:test";
 import {
 	animateRenderedLines,
 	frameAt,
-	hasPlaceholder,
 	nextFreeSlot,
 	placeholderText,
-	replacePlaceholder,
 	SPINNER_FRAMES,
 	SPINNER_SENTINEL,
 } from "../forks/pi-voice-stt-safe/src/ui/transcribing";
 
 describe("placeholder", () => {
-	test("carries the sentinel, not a live frame", () => {
+	test("carries the sentinel, not a live frame, and slots number the concurrent ones", () => {
 		expect(placeholderText()).toBe(`[${SPINNER_SENTINEL} transcribing]`);
-		expect(hasPlaceholder(`before ${placeholderText()} after`)).toBe(true);
-		expect(hasPlaceholder("nothing here")).toBe(false);
-	});
-
-	test("is replaced in place, keeping what the user typed around it", () => {
-		const text = `before ${placeholderText()} after`;
-		expect(replacePlaceholder(text, "spoken words")).toEqual({
-			text: "before spoken words after",
-			replaced: true,
-		});
-	});
-
-	test("reports when the user deleted it, so the transcript is not appended blindly", () => {
-		expect(replacePlaceholder("user changed their mind", "spoken")).toEqual({
-			text: "user changed their mind",
-			replaced: false,
-		});
-	});
-
-	test("two outstanding placeholders are addressed individually", () => {
-		const first = placeholderText(1);
-		const second = placeholderText(2);
-		expect(second).toBe("[⠿ transcribing 2]");
-		const text = `${first} and ${second}`;
-
-		// Out of order on purpose: the second provider answering first must not take the
-		// first block's spot, which is exactly what "replace the first placeholder" did.
-		const b = replacePlaceholder(text, "SECOND", second);
-		expect(b.text).toBe(`${first} and SECOND`);
-		const a = replacePlaceholder(b.text, "FIRST", first);
-		expect(a.text).toBe("FIRST and SECOND");
-	});
-
-	test("slot 1's marker does not match slot 2's block", () => {
-		expect(hasPlaceholder(placeholderText(2), placeholderText(1))).toBe(false);
-		expect(replacePlaceholder(placeholderText(2), "x", placeholderText(1)).replaced).toBe(false);
+		// Slot 2's marker is a different string from slot 1's, so two outstanding
+		// transcriptions can be told apart by exact text.
+		expect(placeholderText(2)).toBe("[⠿ transcribing 2]");
 	});
 });
 

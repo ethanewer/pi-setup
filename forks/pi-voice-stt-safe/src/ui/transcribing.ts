@@ -123,26 +123,6 @@ export const animateRenderedLines = (lines: string[], frame: string, paint: (tex
 
 export const frameAt = (tick: number): string => SPINNER_FRAMES[tick % SPINNER_FRAMES.length] ?? SPINNER_FRAMES[0];
 
-/**
- * Replace one specific placeholder with `replacement`.
- *
- * Returns the original string when that marker is no longer there — the user may have
- * deleted it while the provider was working, and in that case the transcript has nowhere
- * to go and must not be appended blindly to whatever they typed instead.
- */
-export const replacePlaceholder = (
-	text: string,
-	replacement: string,
-	marker: string = placeholderText(),
-): { text: string; replaced: boolean } => {
-	const start = text.indexOf(marker);
-	if (start === -1) return { text, replaced: false };
-	return { text: text.slice(0, start) + replacement + text.slice(start + marker.length), replaced: true };
-};
-
-export const hasPlaceholder = (text: string, marker: string = placeholderText()): boolean =>
-	text.includes(marker);
-
 /** The lowest slot not currently outstanding, so numbering stays as small as possible. */
 export const nextFreeSlot = (taken: ReadonlySet<number>): number => {
 	let slot = 1;

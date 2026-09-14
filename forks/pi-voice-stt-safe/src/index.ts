@@ -47,12 +47,6 @@ export default function piVoiceSttExtension(pi: ExtensionAPI) {
   let activeEditor: EditorComponent | undefined;
   let activeProfile = startup.profile;
   const terminalInputCleanup: Array<() => void> = [];
-  // Prompt as it stood right after the transcript was inserted. Anything typed
-  // afterwards stays in the editor instead of being swept into the sent message.
-  // Kept in both forms: getEditorText() expands pi paste markers, the editor's
-  // own text still holds them.
-  let insertedPrompt: string | undefined;
-  let insertedEditorText: string | undefined;
 
   // Apply the persisted last-selection (sidecar state) once loaded; env and
   // the config `profile` key are already folded into startup.profile.
@@ -174,12 +168,7 @@ export default function piVoiceSttExtension(pi: ExtensionAPI) {
     keybind,
     strings,
     loadConfig: getConfig,
-    createRecorder: (config) => {
-      // A new dictation invalidates the previous insertion snapshot.
-      insertedPrompt = undefined;
-      insertedEditorText = undefined;
-      return createRecorder(config.capture);
-    },
+    createRecorder: (config) => createRecorder(config.capture),
     createProvider: (config) => {
       // Test seam. PI_STT_FAKE_TRANSCRIPT replaces the provider with a fixed answer so
       // the placeholder lifecycle can be driven end to end without a microphone or an API

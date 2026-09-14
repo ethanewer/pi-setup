@@ -1842,8 +1842,8 @@ diff -ruN --exclude=node_modules a/src/core/keybind.ts b/src/core/keybind.ts
 +export const describeKeybinds = (keybinds: readonly string[]): string => keybinds[0] ?? "";
 diff -ruN --exclude=node_modules a/src/core/parked.ts b/src/core/parked.ts
 --- a/src/core/parked.ts	1969-12-31 18:00:00
-+++ b/src/core/parked.ts	2026-09-13 12:48:06
-@@ -0,0 +1,329 @@
++++ b/src/core/parked.ts	2026-09-13 22:30:10
+@@ -0,0 +1,336 @@
 +/**
 + * Holding a composed message until every transcript placeholder inside it has landed.
 + *
@@ -1862,7 +1862,7 @@ diff -ruN --exclude=node_modules a/src/core/parked.ts b/src/core/parked.ts
 +import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 +
 +import type { Delivery } from "./dictation-controller";
-+import { placeholderText, replacePlaceholder } from "../ui/transcribing";
++import { placeholderText } from "../ui/transcribing";
 +
 +export type ParkedBatch = {
 +  ctx: ExtensionContext;
@@ -1921,14 +1921,21 @@ diff -ruN --exclude=node_modules a/src/core/parked.ts b/src/core/parked.ts
 +   * being cleared or substituted goes, not just the first. A duplicate can only have come
 +   * from someone copying the rendered placeholder, and leaving one behind would put the
 +   * sentinel back on the path to the model.
++   *
++   * The scan never re-reads what it just wrote: the search resumes past the replacement, so
++   * a transcript that dictates its own marker text (or any replacement containing the
++   * marker) substitutes once and stops. Rescanning the replacement is an infinite loop that
++   * blocks the event loop, and a timer could never interrupt it.
 +   */
 +  const substituteAll = (text: string, replacement: string, marker: string): string => {
-+    let out = text;
-+    let replaced = true;
-+    while (replaced) {
-+      ({ text: out, replaced } = replacePlaceholder(out, replacement, marker));
++    let out = "";
++    let rest = text;
++    for (;;) {
++      const at = rest.indexOf(marker);
++      if (at === -1) return out + rest;
++      out += rest.slice(0, at) + replacement;
++      rest = rest.slice(at + marker.length);
 +    }
-+    return out;
 +  };
 +
 +  /**
@@ -2248,7 +2255,7 @@ diff -ruN --exclude=node_modules a/src/core/voice-commands.ts b/src/core/voice-c
            return { command, text: stripped.slice(0, start).replace(TRAILING_PUNCTUATION, "") };
 diff -ruN --exclude=node_modules a/src/index.ts b/src/index.ts
 --- a/src/index.ts	1985-10-26 03:15:00
-+++ b/src/index.ts	2026-09-13 00:31:00
++++ b/src/index.ts	2026-09-13 22:30:19
 @@ -1,4 +1,5 @@
  import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 +import type { EditorComponent } from "@earendil-works/pi-tui";
@@ -2272,23 +2279,15 @@ diff -ruN --exclude=node_modules a/src/index.ts b/src/index.ts
  
  const toastType = (variant: DictationToast["variant"]): "info" | "warning" | "error" => {
    if (variant === "error") return "error";
-@@ -39,8 +44,15 @@
+@@ -39,6 +44,7 @@
    const strings = resolveStrings(startup.locale);
    const inputIndicator = createInputIndicator(keybind, strings);
    let activeMode = startup.mode || DEFAULT_MODE;
 +  let activeEditor: EditorComponent | undefined;
    let activeProfile = startup.profile;
    const terminalInputCleanup: Array<() => void> = [];
-+  // Prompt as it stood right after the transcript was inserted. Anything typed
-+  // afterwards stays in the editor instead of being swept into the sent message.
-+  // Kept in both forms: getEditorText() expands pi paste markers, the editor's
-+  // own text still holds them.
-+  let insertedPrompt: string | undefined;
-+  let insertedEditorText: string | undefined;
  
-   // Apply the persisted last-selection (sidecar state) once loaded; env and
-   // the config `profile` key are already folded into startup.profile.
-@@ -60,28 +72,139 @@
+@@ -60,28 +66,134 @@
  
    const getConfig = () => loadConfig({ configPath: startup.configPath, mode: activeMode, profile: activeProfile });
  
@@ -2394,28 +2393,12 @@ diff -ruN --exclude=node_modules a/src/index.ts b/src/index.ts
      keybind,
      strings,
      loadConfig: getConfig,
--    createRecorder: (config) => createRecorder(config.capture),
+     createRecorder: (config) => createRecorder(config.capture),
 -    createProvider: (config) => createProvider(config.provider),
 -    createCleanup: (config) => createCleanup(config.cleanup),
 -    appendPrompt: async (ctx, text) => {
 -      const current = ctx.ui.getEditorText();
 -      ctx.ui.setEditorText(`${current}${text}`);
-+    createRecorder: (config) => {
-+      // A new dictation invalidates the previous insertion snapshot.
-+      insertedPrompt = undefined;
-+      insertedEditorText = undefined;
-+      return createRecorder(config.capture);
-     },
--    submitPrompt: async (ctx) => {
--      const prompt = ctx.ui.getEditorText().trimEnd();
--      if (!prompt) {
--        notify(ctx, { title: "Pi Voice STT", message: strings.toast.emptyTranscript, variant: "warning" });
--        return;
--      }
--
--      ctx.ui.setEditorText("");
--      if (ctx.isIdle()) pi.sendUserMessage(prompt);
--      else pi.sendUserMessage(prompt, { deliverAs: "followUp" });
 +    createProvider: (config) => {
 +      // Test seam. PI_STT_FAKE_TRANSCRIPT replaces the provider with a fixed answer so
 +      // the placeholder lifecycle can be driven end to end without a microphone or an API
@@ -2433,6 +2416,17 @@ diff -ruN --exclude=node_modules a/src/index.ts b/src/index.ts
 +        },
 +      };
      },
+-    submitPrompt: async (ctx) => {
+-      const prompt = ctx.ui.getEditorText().trimEnd();
+-      if (!prompt) {
+-        notify(ctx, { title: "Pi Voice STT", message: strings.toast.emptyTranscript, variant: "warning" });
+-        return;
+-      }
+-
+-      ctx.ui.setEditorText("");
+-      if (ctx.isIdle()) pi.sendUserMessage(prompt);
+-      else pi.sendUserMessage(prompt, { deliverAs: "followUp" });
+-    },
 +    createCleanup: (config) => createCleanup(config.cleanup),
 +    beginDelivery: (ctx, outcome) =>
 +      outcome === "insert"
@@ -2444,7 +2438,7 @@ diff -ruN --exclude=node_modules a/src/index.ts b/src/index.ts
      notify,
      onModeChange: (mode) => inputIndicator.setMode(mode),
      onError: reportError,
-@@ -198,13 +321,18 @@
+@@ -198,13 +310,18 @@
          try {
            const config = await getConfig();
            assertProviderReady(config.provider);
@@ -2464,7 +2458,7 @@ diff -ruN --exclude=node_modules a/src/index.ts b/src/index.ts
          } catch (error) {
            reportError(ctx, error);
          }
-@@ -217,7 +345,17 @@
+@@ -217,7 +334,17 @@
        }
  
        const configPath = startup.configPath || "defaults only (set PI_STT_CONFIG or ~/.pi/agent/stt.json)";
@@ -2483,7 +2477,7 @@ diff -ruN --exclude=node_modules a/src/index.ts b/src/index.ts
      },
    });
  
-@@ -250,28 +388,21 @@
+@@ -250,28 +377,21 @@
  
      const previousEditor = ctx.ui.getEditorComponent();
      ctx.ui.setEditorComponent(createVoiceEditorFactory(previousEditor, {
@@ -2521,7 +2515,7 @@ diff -ruN --exclude=node_modules a/src/index.ts b/src/index.ts
        },
        onCancel: (handlerCtx) => {
          void controller.cancel(handlerCtx).catch((error: unknown) => reportError(handlerCtx, error));
-@@ -279,16 +410,37 @@
+@@ -279,16 +399,37 @@
        onSend: (handlerCtx) => {
          void controller.stopAndSubmit(handlerCtx).catch((error: unknown) => reportError(handlerCtx, error));
        },
@@ -3361,8 +3355,8 @@ diff -ruN --exclude=node_modules a/src/ui/pending-message.ts b/src/ui/pending-me
 +}
 diff -ruN --exclude=node_modules a/src/ui/transcribing.ts b/src/ui/transcribing.ts
 --- a/src/ui/transcribing.ts	1969-12-31 18:00:00
-+++ b/src/ui/transcribing.ts	2026-08-18 11:02:06
-@@ -0,0 +1,151 @@
++++ b/src/ui/transcribing.ts	2026-09-14 09:10:19
+@@ -0,0 +1,131 @@
 +/**
 + * The `[⠏ transcribing]` placeholder.
 + *
@@ -3487,26 +3481,6 @@ diff -ruN --exclude=node_modules a/src/ui/transcribing.ts b/src/ui/transcribing.
 +};
 +
 +export const frameAt = (tick: number): string => SPINNER_FRAMES[tick % SPINNER_FRAMES.length] ?? SPINNER_FRAMES[0];
-+
-+/**
-+ * Replace one specific placeholder with `replacement`.
-+ *
-+ * Returns the original string when that marker is no longer there — the user may have
-+ * deleted it while the provider was working, and in that case the transcript has nowhere
-+ * to go and must not be appended blindly to whatever they typed instead.
-+ */
-+export const replacePlaceholder = (
-+	text: string,
-+	replacement: string,
-+	marker: string = placeholderText(),
-+): { text: string; replaced: boolean } => {
-+	const start = text.indexOf(marker);
-+	if (start === -1) return { text, replaced: false };
-+	return { text: text.slice(0, start) + replacement + text.slice(start + marker.length), replaced: true };
-+};
-+
-+export const hasPlaceholder = (text: string, marker: string = placeholderText()): boolean =>
-+	text.includes(marker);
 +
 +/** The lowest slot not currently outstanding, so numbering stays as small as possible. */
 +export const nextFreeSlot = (taken: ReadonlySet<number>): number => {

@@ -121,6 +121,26 @@ that failure, but a genuine size error still fails twice by design, because Pi's
 has no trim ladder and the extension's only safe-looking fix would drop history from the
 persistent transcript.
 
+## pi-voice-stt-safe parking review, 2026-09-13
+
+An adversarial read of the placeholder-parking commit (`dcc2264d`): parked.ts, the wrapper
+guard, and the follow-up action wrap. The parking machine's states were traced end to end
+(park, sibling failure, re-park after recovery, duplicate markers, all-parked scrub,
+discarded placeholder, cancel and give-up) against Pi's real dispatch paths (`submitValue`,
+`handleFollowUp`, the `actionHandlers` map); the wrapped paths cover every route a submit
+can take.
+
+| Where | Finding | Fix |
+|---|---|---|
+| `parked.ts` (`substituteAll`) | Replacing *every* occurrence of a marker rescanned the replacement it had just inserted, so a transcript that dictated its own placeholder text (`echo [⠿ transcribing] back`) substituted forever. The loop is synchronous — no timer, no Esc, the event loop is blocked for the whole loop. The pre-parking code replaced one occurrence, so the hang was introduced with the loop. | The scan resumes past the replacement, so each occurrence substitutes exactly once and a self-containing transcript terminates. |
+| `index.ts` (voice) | `insertedPrompt`/`insertedEditorText` were write-only — a snapshot pair from an earlier design that nothing read. | Removed with their reset. |
+
+The termination fix is pinned by a regression test that hangs the whole suite under the old
+scan; the slot-formatting and animation pins the removed `replacePlaceholder`/`hasPlaceholder`
+tests carried stay, in the placeholder test and the parking suite.
+
+## Repeating it
+
 ## Repeating it
 
 Run it after any large change. The shape that worked: audit per package, refute every

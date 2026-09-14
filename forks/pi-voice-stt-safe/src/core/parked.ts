@@ -16,7 +16,7 @@
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 
 import type { Delivery } from "./dictation-controller";
-import { placeholderText, replacePlaceholder } from "../ui/transcribing";
+import { placeholderText } from "../ui/transcribing";
 
 export type ParkedBatch = {
   ctx: ExtensionContext;
@@ -75,14 +75,21 @@ export const createParking = (hooks: ParkingHooks): Parking => {
    * being cleared or substituted goes, not just the first. A duplicate can only have come
    * from someone copying the rendered placeholder, and leaving one behind would put the
    * sentinel back on the path to the model.
+   *
+   * The scan never re-reads what it just wrote: the search resumes past the replacement, so
+   * a transcript that dictates its own marker text (or any replacement containing the
+   * marker) substitutes once and stops. Rescanning the replacement is an infinite loop that
+   * blocks the event loop, and a timer could never interrupt it.
    */
   const substituteAll = (text: string, replacement: string, marker: string): string => {
-    let out = text;
-    let replaced = true;
-    while (replaced) {
-      ({ text: out, replaced } = replacePlaceholder(out, replacement, marker));
+    let out = "";
+    let rest = text;
+    for (;;) {
+      const at = rest.indexOf(marker);
+      if (at === -1) return out + rest;
+      out += rest.slice(0, at) + replacement;
+      rest = rest.slice(at + marker.length);
     }
-    return out;
   };
 
   /**

@@ -171,4 +171,20 @@ describe("parked message lifecycle", () => {
 		expect(submitted).toEqual(["a word b word"]);
 		expect(submitted[0]).not.toContain(SPINNER_SENTINEL);
 	});
+
+	test("a transcript that dictates its own marker substitutes once and terminates", () => {
+		const h = makeHarness();
+		h.setEditorText("say: ");
+		const delivery = h.parking.beginEditorDelivery(h.ctx);
+		const submitted: string[] = [];
+		h.parking.parkEditorSubmission(h.ctx, h.getEditorText(), (text) => submitted.push(text));
+
+		// The dictated words name the placeholder itself. That text is the user's, so it
+		// travels as-is; the substitution must still happen exactly once. A scan that
+		// re-read its own replacement would find the marker inside it and loop forever,
+		// and the event loop is blocked for the whole loop — no timer, no Esc.
+		delivery.resolve(`echo ${placeholderText(1)} back`);
+
+		expect(submitted).toEqual([`say: echo ${placeholderText(1)} back`]);
+	});
 });
