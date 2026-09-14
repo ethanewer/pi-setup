@@ -32,6 +32,11 @@ RESUME=${RESUME:-1}
 # Tasks whose reviewer is still running would be censused mid-edit, and
 # futtock-careen was never authored. Both are excluded by default.
 EXCLUDE=${EXCLUDE:-companion-berm,companion-flint,crance-bell,crojack-wheel,futtock-careen}
+# ONLY=name,name restricts the run to those tasks and ignores EXCLUDE. Used for
+# the final pass over tasks that were under review while the main census ran:
+# their result has to be re-measured after the reviewer stops editing, and the
+# resume filter would otherwise skip them on the strength of a stale pass.
+ONLY=${ONLY:-}
 
 if [ "$RESUME" = 1 ] && [ -f "$OUT/rc.txt" ]; then
   echo "resuming from $OUT ($(grep -c ' rc=0$' "$OUT/rc.txt" 2>/dev/null || echo 0) tasks already passed)"
@@ -41,13 +46,17 @@ fi
 mkdir -p "$OUT"
 echo "$EXCLUDE" | tr ',' '\n' | sed '/^$/d' | sort -u > "$OUT/exclude.txt"
 
-python3 - "$OUT" <<'PY' > "$OUT/tasks.txt"
+python3 - "$OUT" "$ONLY" <<'PY' > "$OUT/tasks.txt"
 import json, os, sys
-out = sys.argv[1]
+out, only = sys.argv[1], sys.argv[2]
 excl = set(open(f'{out}/exclude.txt').read().split())
 slots = [x['name'] for x in json.load(open('specs/v43c_slots.json'))]
+want = {n.strip() for n in only.split(',') if n.strip()}
 for n in slots:
-    if n in excl:
+    if want:
+        if n not in want:
+            continue
+    elif n in excl:
         continue
     if os.path.exists(f'tasks/{n}/task.toml'):
         print(n)
@@ -65,8 +74,13 @@ if [ -f "$OUT/rc.txt" ]; then
 fi
 
 n=$(wc -l < "$OUT/tasks.txt")
-echo "=== [$(date -Is)] census over $n outstanding tasks, $SHARDS shards ==="
-echo "    excluded: $(tr '\n' ' ' < "$OUT/exclude.txt")"
+if [ -n "$ONLY" ]; then
+  echo "=== [$(date -Is)] targeted census: $n task(s), $SHARDS shards ==="
+  echo "    only: $ONLY"
+else
+  echo "=== [$(date -Is)] census over $n outstanding tasks, $SHARDS shards ==="
+  echo "    excluded: $(tr '\n' ' ' < "$OUT/exclude.txt")"
+fi
 echo "    disk before: $(df -h / | awk 'NR==2{print $3" used, "$4" free"}')"
 [ "$n" -gt 0 ] || { echo "nothing to do"; exit 0; }
 
