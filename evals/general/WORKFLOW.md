@@ -55,6 +55,29 @@ which the tb2.1 competency inventory does not describe.
 270 v1 tasks predate the rubric and carry no task-level `difficulty.json`, which
 is why `tools/check_difficulty.py` needs `--allow-unmeasured`.
 
+### CPU quota
+
+Every one of the 290 v4 tasks runs at `cpus = 1`. Thirty older tasks do not: 14
+legacy `v1-*` imports and 16 v2/v3 clean-room tasks, at `cpus = 2` (26 of them)
+and `cpus = 4` (4). They are `amber-engine`, `brine-mesa`, `cedar-canyon`,
+`cinder-guest`, `cobalt-tide`, `gale-pier`, `gale-quarry`, `granite-beacon`,
+`iris-ledge`, `kestrel-bay`, `kite-helix`, `kite-yonder`, `larch-hearth`,
+`pearl-cipher`, `slate-hollow`, `wren-forge`, and the 14 `v1-*` names.
+
+This is accepted rather than an oversight. Several genuinely need the parallelism
+— `v1-skill-torch-distributed` is a distributed-training task, and the `cpus = 4`
+ones are large native builds whose agent timeouts were measured against that
+quota. Forcing them to one CPU would mean re-tuning and re-verifying each, and
+some would time out, which trades a real capability measurement for a smaller
+resource bill.
+
+`tools/register_task_wave.py` still rejects `cpus != 1` on registration, so the
+exception cannot grow by accident; `--allow-missing-cpus` is the explicit override
+if a future task genuinely needs more. `tools/pin_numeric_threads.py` is what makes
+the quota meaningful rather than decorative: it pins in-task thread pools to the
+declared `cpus` (200/200 currently), so a task cannot ask for one CPU and then
+oversubscribe the host through OpenMP or NumPy.
+
 ### Tasks retired in v3.4
 
 Both were removed because their own reference solution cannot pass, so every
