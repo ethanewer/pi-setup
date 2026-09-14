@@ -3,6 +3,24 @@
 Operational checklist. Written while three jobs were still running so the plan
 survives a context compaction. Update the checkboxes as steps land.
 
+## Status: steps 1-7 DONE, committed as 3ded0b3a
+
+Wave 3 landed and was committed on 2026-09-14. 106 tasks registered, all seven
+gates exit 0, census 106/106 with oracle reward 1 and nop reward 0, zero
+instruction leaks, disjointness problems=0. Suite is now 1075 tasks total and 805
+rubric-graded.
+
+Still outstanding:
+
+- **Step 6, the contamination audit, was still running when the commit was made.**
+  It had finished the block phase over 18420 payloads and was in the n-gram
+  phases, which are the expensive ones. Its findings must be acted on. If it names
+  a wave-3 task, fix that task and commit the fix; do not treat the commit as
+  closing this item.
+- **Step 8, the ten deferred image-size fixes.**
+- **Step 7 for the fix-up wave**, which is a separate commit from wave 3 and was
+  deliberately kept out of 3ded0b3a.
+
 State when written: census 59/102 recorded, all passing. Wave 3 at 211/213 agents
 with 2 reviews in flight. Image-size fix-up at 8/26.
 
