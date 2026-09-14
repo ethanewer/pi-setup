@@ -74,6 +74,11 @@ RUN cd /app/src \
 WORKDIR /app
 COPY files/ /app/
 
-RUN chmod -R a+rwX /app
+# Non-recursive on purpose. `files/` is empty, so the COPY above adds nothing and
+# /app contains only src/, which the warm-build RUN already made a+rwX in the same
+# layer that compiled it. A `chmod -R` here would rewrite the whole compiled tree
+# into a fresh copy-on-write layer -- the same bytes stored twice -- to change
+# nothing. Only the /app directory itself still needs the bit.
+RUN chmod a+rwX /app
 
 CMD ["/bin/bash"]

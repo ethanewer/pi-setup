@@ -26,13 +26,15 @@ RUN curl -sSf https://sh.rustup.rs -o /tmp/rustup.sh \
  && rustup toolchain install ${RUST_VERSION} \
  && rustup default ${RUST_VERSION} \
  && rustc --version && cargo --version \
- && rm -f /tmp/rustup.sh
+ && rm -f /tmp/rustup.sh \
+ && chmod -R a+rwX /opt/cargo
 
 # Cargo needs to create bookkeeping files (package cache, sparse-index
 # locks, downloaded crate archives) inside CARGO_HOME, and the trial may run
-# as uid 1000; make the whole cargo home world-writable (matching the
-# sibling v4.2 Rust tasks).
-RUN chmod -R a+rwX /opt/cargo
+# as uid 1000; the whole cargo home is made world-writable in the rustup RUN
+# above (matching the sibling v4.2 Rust tasks). It has to live in that same
+# RUN: a `chmod -R` of its own afterwards rewrites the toolchain rustup just
+# installed into a second copy-on-write layer, storing every byte twice.
 
 # Clone the REAL upstream repository at exactly the parent commit, with the
 # shallowest possible history: `git init` + one depth-1 fetch of the pinned
@@ -47,7 +49,8 @@ RUN git init -q /app/src \
  && test "$(git rev-parse HEAD)" = "${UPSTREAM_SHA_PARENT}" \
  && git config --system --add safe.directory '*' \
  && git config --system user.email "build@localhost" \
- && git config --system user.name "build"
+ && git config --system user.name "build" \
+ && { chmod -R a+rwX /app/src && chown -R 1000:1000 /app/src 2>/dev/null || true; }
 
 # The image is built as root; the trial may run as root or as uid 1000
 # (user `ubuntu` already exists in the base image). Make the tree writable by
@@ -58,7 +61,11 @@ RUN git init -q /app/src \
 # workspace plus the `rg` binary and the test harness; the trial has no
 # network, so this layer IS the warm cache.
 WORKDIR /app
-RUN chmod -R a+rwX /app/src && chown -R 1000:1000 /app/src 2>/dev/null || true
+# The chmod and chown of /app/src happen in the clone RUN above, in the same
+# layer that created the tree, so the clone is not stored twice. The brace group
+# preserves the original `A && B || true` tolerance exactly: neither the chmod
+# nor the chown can fail the build. The warm pass below runs AS uid 1000 and
+# needs that ownership already in place.
 RUN su -s /bin/bash ubuntu -c 'cd /app/src && export PATH="/opt/cargo/bin:$PATH" && \
     cargo build > /tmp/warm1.log 2>&1'; rc=$?; \
     tail -3 /tmp/warm1.log; \

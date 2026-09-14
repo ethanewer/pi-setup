@@ -31,7 +31,8 @@ RUN git init -q /app/src \
  && git config --system --add safe.directory '*' \
  && git config --system user.email "build@localhost" \
  && git config --system user.name "build" \
- && git submodule update --init framework
+ && git submodule update --init framework \
+ && chown -R 1000:1000 /app/src
 
 # The two upstream regression case blocks for this bug (the exact added
 # lines of the parent->fix diff of tests/suites/test_suite_psa_crypto_util.data)
@@ -59,7 +60,10 @@ RUN sha256sum /usr/bin/make /usr/bin/gcc /usr/bin/cc /usr/bin/python3 /usr/bin/g
 # build time at the parent commit, so the agent's and verifier's incremental
 # rebuilds (one source file + test data) take seconds even with cpus=1.
 WORKDIR /app
-RUN chown -R 1000:1000 /app/src
+# The chown to uid 1000 happens in the clone RUN above, in the same layer that
+# created the tree. It used to be a RUN of its own here, which copied the entire
+# clone into a second layer for nothing but a metadata change. Ownership is all
+# the warm builds below need: they run AS uid 1000 and uid 1000 owns the tree.
 RUN su -s /bin/bash ubuntu -c 'cd /app/src && make -j1 lib > /tmp/warm-lib.log 2>&1'; rc=$?; \
     tail -4 /tmp/warm-lib.log; \
     if [ $rc -ne 0 ]; then echo "WARM LIB BUILD FAILED (exit $rc)"; exit $rc; fi
@@ -73,10 +77,17 @@ RUN su -s /bin/bash ubuntu -c 'cd /app/src && make -C tests test_suite_psa_crypt
 RUN cd /app/src \
  && ./tests/test_suite_psa_crypto_util > /tmp/base-util.log 2>&1 && tail -1 /tmp/base-util.log \
  && ./tests/test_suite_psa_crypto > /tmp/base-psa.log 2>&1 && tail -1 /tmp/base-psa.log \
- && ./tests/test_suite_pk > /tmp/base-pk.log 2>&1 && tail -1 /tmp/base-pk.log
+ && ./tests/test_suite_pk > /tmp/base-pk.log 2>&1 && tail -1 /tmp/base-pk.log \
+ && chmod -R a+rwX /app/src
 RUN chmod 444 /opt/pins.sha256
 
 COPY files/ /app/
-RUN chmod -R a+rwX /app
+# /app/src was made a+rwX in the same RUN that ran the baseline suites above, so
+# it is deliberately not touched again here. A recursive chmod of /app would
+# rewrite the whole compiled library and test-suite tree into a fresh
+# copy-on-write layer to change nothing. Only /app itself and whatever the COPY
+# just brought in still need the bit.
+RUN chmod a+rwX /app \
+ && find /app -mindepth 1 -maxdepth 1 ! -name src -exec chmod -R a+rwX {} +
 
 CMD ["/bin/bash"]

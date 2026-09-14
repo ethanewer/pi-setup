@@ -63,7 +63,8 @@ RUN git init -q /app/src \
  && test "$(git rev-parse HEAD)" = "${UPSTREAM_SHA_PARENT}" \
  && git config --system --add safe.directory '*' \
  && git config --system user.email "build@localhost" \
- && git config --system user.name "build"
+ && git config --system user.name "build" \
+ && { chmod -R a+rwX /app/src && chown -R 1000:1000 /app/src 2>/dev/null || true; }
 
 # Belt: prove the fix commit is not reachable from the trial clone.
 RUN cd /app/src \
@@ -97,7 +98,11 @@ RUN git init -q /tmp/upstream-fix-clone \
 # target (the z3 binary) and the project's unit test harness (test-z3) with
 # the project's own cmake recipe; the trial may have no network, so this
 # layer IS the warm cache and the agent's rebuild is strictly incremental.
-RUN chmod -R a+rwX /app/src && chown -R 1000:1000 /app/src 2>/dev/null || true
+# The chmod and chown of /app/src happen in the clone RUN above, in the same
+# layer that created the tree, so the clone is not stored twice. The brace group
+# preserves the original `A && B || true` tolerance exactly: neither can fail the
+# build. The warm cmake pass below runs AS uid 1000 and needs that ownership
+# already in place.
 RUN su -s /bin/bash ubuntu -c 'cd /app/src && \
     cmake -S . -B build -DCMAKE_BUILD_TYPE=Release > /tmp/warm_cfg.log 2>&1 && \
     (cmake --build build --target shell -j$(( $(nproc) > 12 ? 12 : $(nproc) )) > /tmp/warm_shell.log 2>&1) && \

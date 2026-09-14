@@ -50,13 +50,15 @@ RUN curl -sSf https://sh.rustup.rs -o /tmp/rustup.sh \
  && rustup default ${RUST_VERSION} \
  && rustc --version && cargo --version \
  && rustfmt --version 2>/dev/null; true \
- && rm -f /tmp/rustup.sh
+ && rm -f /tmp/rustup.sh \
+ && chmod -R a+rwX /opt/cargo
 
 # Cargo needs to create bookkeeping files (package cache, sparse-index
 # locks, downloaded crate archives) inside CARGO_HOME, and the warm builds
-# run as uid 1000; make the whole cargo home world-writable now. The
-# executable dirs are hardened at the end of the build.
-RUN chmod -R a+rwX /opt/cargo
+# run as uid 1000; the whole cargo home is made world-writable in the rustup
+# RUN above, and the executable dirs are hardened at the end of the build.
+# It has to live in that same RUN: a `chmod -R` of its own afterwards rewrites
+# the toolchain rustup just installed into a second copy-on-write layer.
 
 # ---- working clone: buggy parent commit, fix commit unreachable -------------
 # The clone is created with `git init` + one depth-1 fetch of the pinned
@@ -183,16 +185,23 @@ RUN mkdir -p /opt/pins \
  && rm -rf /app/src/target/debug/incremental \
  && git -C /app/src status --porcelain | grep -q . && { echo "unexpected: /app/src dirty at build end"; exit 1; } || true \
  && test "$(git -C /app/src rev-parse HEAD)" = "${UPSTREAM_SHA}" \
- && echo "anchors pinned; /app/src clean at parent"
-
-COPY files/ /app/
-# The working tree must be writable by either trial uid; the shipped .git
-# stays root-owned and write-protected (see the pins RUN above for why), so
-# it is re-hardened AFTER the tree-wide chmod in this same RUN layer.
-RUN chmod -R a+rwX /app \
+ && echo "anchors pinned; /app/src clean at parent" \
+ && chmod -R a+rwX /app/src \
  && chown -R root:root /app/src/.git \
  && chmod -R a-w /app/src/.git \
  && chmod -R a+rX /app/src/.git
+
+COPY files/ /app/
+# /app/src was made writable and its .git re-hardened in the pins RUN above, in
+# the same layer that last wrote to the tree. The ordering that RUN documents
+# still holds: `git status` ran earlier in the chain, before these chmods, so it
+# could refresh the index without the hardening being undone. Only /app itself
+# and the file the COPY just brought in still need the bit. A recursive chmod of
+# /app here would rewrite the whole compiled target/ tree into a fresh layer to
+# change nothing, so src is excluded -- it is already correct, and re-touching it
+# is exactly the duplication this removes.
+RUN chmod a+rwX /app \
+ && find /app -mindepth 1 -maxdepth 1 ! -name src -exec chmod -R a+rwX {} +
 
 WORKDIR /app
 

@@ -42,7 +42,9 @@ RUN git init -q /app/src \
  && git fetch --depth 1 origin ${UPSTREAM_SHA_PARENT} \
  && git checkout -q --detach FETCH_HEAD \
  && test "$(git rev-parse HEAD)" = "${UPSTREAM_SHA_PARENT}" \
- && echo "parent pin ok: $(git rev-parse HEAD)"
+ && echo "parent pin ok: $(git rev-parse HEAD)" \
+ && chmod -R a+rwX /app/src \
+ && chown -R 1000:1000 /app/src
 
 # Extract the project's own regression test for this bug (the entry the fix
 # commit adds to testdata/regression.toml) into /opt/golden using a THROWAWAY
@@ -89,7 +91,9 @@ RUN mkdir -p /opt/pins \
 # network, so this layer IS the warm cache; the agent's rebuilds after editing
 # a source file are incremental and take seconds.
 WORKDIR /app
-RUN chmod -R a+rwX /app/src && chown -R 1000:1000 /app/src
+# The chmod and chown of /app/src happen in the clone RUN above, in the same
+# layer that created the tree, so the clone is not stored twice. The warm cargo
+# pass below runs AS uid 1000 and needs that ownership already in place.
 RUN su -s /bin/bash ubuntu -c 'cd /app/src && export PATH="/opt/cargo/bin:$PATH" && \
     cargo test --no-run --test integration -j1 > /tmp/warm-build.log 2>&1' ; rc=$?; \
     tail -3 /tmp/warm-build.log; \

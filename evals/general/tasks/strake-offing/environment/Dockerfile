@@ -267,6 +267,13 @@ assert rc.returncode == 0
 
 shutil.rmtree("/tmp/fixsrc", ignore_errors=True)
 shutil.rmtree("/tmp/fixedchk", ignore_errors=True)
+# The meson-python editable loader opens its build log for writing on every
+# import, and the smoke import above ran as root, so those logs came back
+# root-owned and a uid-1000 trial could not import matplotlib. Restore them
+# HERE, inside this same RUN, rather than in a chown of its own afterwards: a
+# separate layer copies the whole build tree up again for a few KB of log files.
+subprocess.run(["chown", "-R", "1000:1000", "/app/src/build/cp312/meson-logs"],
+               check=True)
 print("golden + pre-fix package + site-packages pinned; throwaway clones deleted")
 PYEOF
 
@@ -283,10 +290,9 @@ RUN cd /app/src \
  && cd / && sha256sum -c /opt/pins/golden.sha256 >/dev/null \
  && echo "fix commit unreachable from trial clone; HEAD = $(git -C /app/src rev-parse HEAD)"
 
-# the meson-python editable loader opens its build log (rw) on every import;
-# make the logs dir writable by the trial user so a uid-1000 run can import
-# matplotlib (only a few KB of log files, so the copy-up is negligible).
-RUN chown -R 1000:1000 /app/src/build/cp312/meson-logs
+# (the meson-logs chown that used to live here moved into the pinned-tree RUN
+# above, so it lands in the same layer as the root-owned import that made it
+# necessary instead of copying the build tree into a layer of its own)
 
 WORKDIR /app
 

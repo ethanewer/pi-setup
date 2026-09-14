@@ -54,7 +54,8 @@ RUN git init -q /app/src \
  && test "$(git rev-parse HEAD)" = "${UPSTREAM_SHA_PARENT}" \
  && git config --system --add safe.directory '*' \
  && git config --system user.email "build@localhost" \
- && git config --system user.name "build"
+ && git config --system user.name "build" \
+ && { chmod -R a+rwX /app/src && chown -R 1000:1000 /app/src 2>/dev/null || true; }
 
 # Belt: prove the fix commit is not reachable from the trial clone and that
 # the clone is exactly one commit.
@@ -150,7 +151,10 @@ RUN test -s /opt/golden/print_test.rs \
 # debug binary plus the unit-test harness, so the trial's 1-vCPU work is a
 # one-crate incremental compile only.
 WORKDIR /app
-RUN chmod -R a+rwX /app/src && chown -R 1000:1000 /app/src 2>/dev/null || true
+# The chmod and chown of /app/src happen in the clone RUN above, in the same
+# layer that created the tree, so the clone is not stored twice. The brace group
+# preserves the original `A && B || true` tolerance exactly. The warm cargo pass
+# below runs AS uid 1000 and needs that ownership already in place.
 RUN su -s /bin/bash ubuntu -c 'cd /app/src && export PATH="/opt/cargo/bin:$PATH" CARGO_HOME=/opt/cargo RUSTUP_HOME=/opt/rustup && \
     cargo build --locked > /tmp/warm1.log 2>&1 && \
     cargo test --locked --no-run >> /tmp/warm1.log 2>&1'; rc=$?; \

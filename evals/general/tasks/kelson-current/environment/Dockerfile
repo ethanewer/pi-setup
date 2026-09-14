@@ -41,7 +41,8 @@ RUN git init /app/src \
  && git fetch --depth 1 origin $UPSTREAM_SHA_PARENT \
  && git checkout --detach FETCH_HEAD \
  && test "$(git rev-parse HEAD)" = "$UPSTREAM_SHA_PARENT" \
- && echo "cloned at parent $UPSTREAM_SHA_PARENT"
+ && echo "cloned at parent $UPSTREAM_SHA_PARENT" \
+ && chown -R 1000:1000 /app/src
 
 # Extract the project's own regression test for this bug (JdkZlibTest.java
 # as of the FIX commit, with the two FEXTRA regression tests) into
@@ -73,8 +74,10 @@ RUN git init /tmp/upstream-fix-clone \
 # transport, codec-base, ...) once so /opt/m2 holds every dependency, and
 # run the module's pre-existing JdkZlibTest once so the pre-existing suite
 # is proven green at the parent commit and the test dependencies are warm.
-RUN chown -R 1000:1000 /app/src \
- && su -s /bin/bash ubuntu -c 'cd /app/src && MAVEN_OPTS="-Xmx4g -Dmaven.wagon.http.pool=false" mvn -pl codec-base,codec-compression -am install -DskipTests -Dcheckstyle.skip=true -Dxml.format.skip=true' \
+# The chown to uid 1000 happens in the clone RUN above, in the same layer that
+# created the tree. Leading this RUN with it copied the whole netty clone into a
+# fresh layer for a metadata change alone, before maven wrote anything into it.
+RUN su -s /bin/bash ubuntu -c 'cd /app/src && MAVEN_OPTS="-Xmx4g -Dmaven.wagon.http.pool=false" mvn -pl codec-base,codec-compression -am install -DskipTests -Dcheckstyle.skip=true -Dxml.format.skip=true' \
  && su -s /bin/bash ubuntu -c 'cd /app/src && MAVEN_OPTS="-Xmx4g -Dmaven.wagon.http.pool=false" mvn -pl codec-compression test -Dtest=JdkZlibTest -Dsurefire.failIfNoSpecifiedTests=true -Dcheckstyle.skip=true -Dxml.format.skip=true' \
  && echo "reactor closure installed; parent JdkZlibTest green"
 
