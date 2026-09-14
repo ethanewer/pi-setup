@@ -32,7 +32,8 @@
 /**
  * Test seam. A real context truncation cannot be produced on demand, so this forces the
  * agent_settled backstop to treat one run as unfinished, which is the only way to exercise
- * the injection end to end. Mirrors the PI_STT_FAKE_* seams in the voice fork.
+ * the injection end to end. Forced resumes carry no real cause and fire without backoff.
+ * Mirrors the PI_STT_FAKE_* seams in the voice fork.
  */
 export const FORCE_RESUME_ENV = "PI_CONTEXT_HANDOFF_FORCE_RESUME";
 
@@ -50,16 +51,40 @@ export const RESUME_MESSAGE_TYPE = "context-handoff-resume";
  */
 export const UNFINISHED_STOP_REASONS: readonly string[] = ["length", "error"];
 
-export const RESUME_TEXT =
-	"Your previous response did not finish — it was cut off before you produced an answer or " +
-	"a tool call, so the work you were doing is incomplete. If the context was full it has " +
-	"just been compacted, so there is room now. Re-read the handoff brief above and continue " +
-	"from where you were interrupted.";
+/**
+ * Where a resume comes from, which decides what the injected message may claim. The
+ * message must not say the context was compacted when it was not: a model told a false
+ * fact about its own session re-derives context it does not need to, or distrusts the
+ * transcript.
+ *
+ *   - "compacted": session_compact fired, so compaction really happened and a handoff
+ *     brief exists.
+ *   - "truncated": the backstop caught stopReason "length", meaning compaction failed,
+ *     was aborted, or found nothing to compact.
+ *   - "error": the backstop caught stopReason "error", a provider failure. The context
+ *     is untouched.
+ */
+export type ResumeCause = "compacted" | "truncated" | "error";
+
+export const RESUME_TEXTS: Record<ResumeCause, string> = {
+	compacted:
+		"Your previous response was cut off by the context limit. It has been compacted, so there is room now. Re-read the handoff brief above and continue where you left off.",
+	truncated:
+		"Your previous response was cut off by the context limit and the run ended before compaction made room. If the context is still full, compact it, then continue where you left off.",
+	error:
+		"Your previous response was cut off by a provider error. The context has not changed. Continue where you left off.",
+};
 
 export const GAVE_UP_TEXT =
 	`[context-handoff] Automatic resume stopped after ${MAX_CONSECUTIVE_RESUMES} unfinished ` +
-	"attempts in a row. The context is still too full to finish and it will not be retried " +
-	"automatically; a human should take over from here.";
+	"attempts in a row and will not retry. A human should take over from here.";
+
+/**
+ * Delay before the first error-triggered resume. A stream error is usually a transient
+ * outage lasting a few seconds, so resuming instantly often meets the same dead connection
+ * and burns one of the three attempts. Each consecutive error resume doubles the wait.
+ */
+export const ERROR_RESUME_BACKOFF_MS = 10_000;
 
 interface AssistantLike {
 	role?: string;

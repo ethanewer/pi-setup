@@ -139,6 +139,34 @@ The termination fix is pinned by a regression test that hangs the whole suite un
 scan; the slot-formatting and animation pins the removed `replacePlaceholder`/`hasPlaceholder`
 tests carried stay, in the placeholder test and the parking suite.
 
+## pi-context-handoff build repair and resume backoff, 2026-09-13
+
+The session-`01a09d38` work on cause-aware resume texts existed only in the installed copy
+under `~/.pi/agent/local`, and the bundle it rebuilt there without `--target bun` stubbed
+`node:fs` and crashed every Pi session at `emitContext` (`existsSync is not a function`) —
+the error that derailed the first attempt at the parking review above. The build was
+repaired with the installer's exact flags, the orphaned work was landed in the fork, and
+two review rounds hardened it:
+
+| Where | Finding | Fix |
+|---|---|---|
+| local install (not the repo) | A session implementing cause-aware resume rebuilt `~/.pi/agent/local/pi-context-handoff/extensions/context-handoff/index.js` with `bun build --external …` and no `--target bun`, so Bun's default browser target stubbed `node:fs` (`var {existsSync} = (() => ({}))`) and `node:os` (`homedir → "/"`) and inlined a POSIX path polyfill. Every Pi session crashed at `emitContext` with `existsSync is not a function`. | Rebuilt with the installer's exact flags (`--target bun --format esm --packages external`); the emitted bundle matches the installer's own builds (`import { existsSync } from "fs"`). The session's changes are landed in the fork, which is where the installer builds from. |
+| `resume.ts` / `index.ts` | The one injected message claimed "if the context was full it has just been compacted" for every resume, so a provider outage was reported to the model as a compaction it never had. Also, an instant error resume meets the same dead connection and burns one of the three attempts. | The message names the cause (`compacted`/`truncated`/`error`); error resumes wait out a doubling 10s/20s/40s backoff. |
+| `index.ts` (`agent_start`) — found in review | The backoff's drop point sat in `agent_end`, which fires when a run *finishes*. A resume scheduled after run A's error therefore survived the user's entire next run B — the agent_start that began B fired nothing — and at the deadline `sendMessage` with `triggerTurn`/`deliverAs: "steer"` steered "continue where you left off" into the middle of B. Reproduced with a simulated Pi driving the real extension; the claim "dropped if a new run starts first" was false in three documents and two comments. | The clear lives on `agent_start` — the first moment a new run exists, for every way one begins — and the delayed firing path re-checks `ctx.isIdle()` so a run the extension never saw begin still cannot be steered. `agent_end` keeps only its own jobs. |
+| `index.ts` (`sendResume`) — found in re-review | The idleness re-check sat in the send shared by *every* resume, so it also dropped the compacted rescue: `session_compact` fires from inside the run's own post-run handling with the run still active (`isIdle()` false at exactly that moment), and queuing the message there is the mechanism that makes `hasQueuedMessages()` carry the run on. The cheapest, production-observed rescue was dead, `take()` burned an attempt per drop, and after three the give-up notice went unsent too. | The re-check lives on the delayed send alone; the immediate sends fire mid-run by design (compacted) or at a settle (idle by definition). The compacted path is pinned in the wiring test with its real, busy ctx — verified adversarially: sharing the guard again fails exactly that test. |
+| `index.ts` (`session_shutdown`) — found in review | The README claimed the wait is dropped when "the session ends"; nothing hooked `session_shutdown`. The timer fired into the invalidated ctx, and the safety was incidental — the stale-runner `assertActive()` throw swallowed by the notify path. | `session_shutdown` clears the pending resume, making the documented mechanism real. |
+| `index.ts` (`session_start`) | The backoff timer was cleared on a new *run* but not a new *session* — the extension instance outlives a session switch, so a stale resume could fire into a fresh conversation claiming a "previous response" it never had. | `session_start` clears any pending backoff resume alongside the guard reset. |
+
+Pinned by `tests/resume.test.ts` (cause-specific texts never claim a compaction they did
+not make; the backoff schedule and the give-up cap) and
+`tests/resume-backoff-wiring.test.ts`, which drives the real extension through a mock Pi
+with fake timers — the agent_start drop, the session-start/shutdown drops, the fire-time
+idleness guard on the delayed send, the exact scheduled delays (10s/20s/40s, then an
+immediate give-up with no timer at all), and the compacted path mid-run with its real,
+busy ctx — asserted on the wiring, not the arithmetic. Both regressions were verified
+adversarially: disabling the `agent_start` clear fails the stale-resume test, and sharing
+the `isIdle` guard across every send again fails exactly the compacted-path test.
+
 ## Repeating it
 
 ## Repeating it

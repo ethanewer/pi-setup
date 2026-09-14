@@ -18,9 +18,10 @@
  *     the original messages — byte-for-byte the behaviour of not installing this package.
  *   - Resume (resume.ts, session_compact / agent_end / agent_settled): when Pi ends a run
  *     on a truncated reply or provider error — a case Pi's overflow test misses — this
- *     queues a resume message so agent.continue() keeps the run going. Never resumes
- *     stop/aborted; gives up after 3 consecutive unfinished resumes. It can never stop a
- *     run.
+ *     queues a resume message so agent.continue() keeps the run going. The message names
+ *     the cause, and error resumes wait out a doubling backoff first so a transient outage
+ *     can pass. Never resumes stop/aborted; gives up after 3 consecutive unfinished resumes.
+ *     It can never stop a run.
  *
  * The two compaction halves share one config file: handoff keys sit at the top level (as
  * before), and fold settings live under the optional "fold" object.
@@ -34,12 +35,14 @@ import { registerFold } from "./fold-hook.js";
 import { buildHandoffFocus } from "./instructions.js";
 import {
 	type EntryLike,
+	ERROR_RESUME_BACKOFF_MS,
 	FORCE_RESUME_ENV,
 	GAVE_UP_TEXT,
 	isUnfinishedStop,
 	lastAssistantWasTruncated,
 	RESUME_MESSAGE_TYPE,
-	RESUME_TEXT,
+	type ResumeCause,
+	RESUME_TEXTS,
 	ResumeGuard,
 } from "./resume.js";
 import { boundedSignal, createOnceNotifier, describe, judgeSummary, retryCallbacks, withAuthBaseUrl } from "./util.js";
@@ -58,6 +61,19 @@ export default function contextHandoffExtension(pi: ExtensionAPI) {
 	// Whether that run's own signal was aborted, which is how a user cancel is distinguished
 	// from a provider error that also settles as stopReason "error".
 	let lastRunAborted = false;
+	// A delayed error resume waiting out its backoff. Cleared the moment any new run starts
+	// (see the agent_start handler), so a user typing in the meantime never gets a stale
+	// resume steered into the middle of their turn.
+	let pendingErrorResume: ReturnType<typeof setTimeout> | undefined;
+
+	// Every state that outlives the run it was scheduled for drops the wait instead of
+	// firing it: a new run, a new session, the session ending. The resume is for a run
+	// that died — once anything else is happening, it is stale.
+	const clearPendingErrorResume = (): void => {
+		if (!pendingErrorResume) return;
+		clearTimeout(pendingErrorResume);
+		pendingErrorResume = undefined;
+	};
 
 	/**
 	 * Single cache shared with the fold half: one config file, loaded once, warning once.
@@ -89,9 +105,19 @@ export default function contextHandoffExtension(pi: ExtensionAPI) {
 		configWarnings = [];
 		notifyOnce.reset();
 		resumeGuard.reset();
+		// A backoff still waiting here belongs to the previous session's run; firing it
+		// into this one would claim a "previous response" this conversation never had.
+		clearPendingErrorResume();
 		lastCompactionFollowedTruncation = false;
 		lastRunStopReason = undefined;
 		lastRunAborted = false;
+	});
+
+	// The wait must not outlive the session it belongs to: the ctx the backoff closed over
+	// is dead after this, and a resume firing into it would claim a "previous response"
+	// this conversation never had.
+	pi.on("session_shutdown", () => {
+		clearPendingErrorResume();
 	});
 
 	pi.on("session_before_compact", async (event, ctx) => {
@@ -197,24 +223,60 @@ export default function contextHandoffExtension(pi: ExtensionAPI) {
 		}
 	});
 
-	const sendResume = (decision: "resume" | "give-up", ctx: ExtensionContext) => {
-		try {
-			pi.sendMessage(
-				{
-					customType: RESUME_MESSAGE_TYPE,
-					content: decision === "resume" ? RESUME_TEXT : GAVE_UP_TEXT,
-					display: true,
-					details: { consecutiveResumes: resumeGuard.consecutiveResumes },
-				},
-				// Exactly the shape the monitor uses, which is the shape observed to resume a
-				// run in production. "give-up" still sends: the run is ending either way, and
-				// a visible reason beats silence.
-				{ triggerTurn: decision === "resume", deliverAs: "steer" },
-			);
-		} catch (error) {
-			// A refused injection must never turn a survivable stop into a crash.
-			notifyOnce(ctx, `pi-context-handoff: could not resume the run (${describe(error)}).`, "warning");
+	/**
+	 * Injects the resume (or give-up) message. The text names the cause, so the model is
+	 * never told the context was compacted when it was not. `delayMs` spaces an error resume
+	 * from the outage that caused it; the ctx captured at the settling event stays valid for
+	 * the session, so using it after the wait is safe.
+	 *
+	 * Only the delayed send re-checks idleness. The immediate sends fire mid-run on purpose:
+	 * `session_compact` is emitted from inside the run's own post-run handling, while the
+	 * run is still active, and its message must be queued precisely then so
+	 * `hasQueuedMessages()` carries the run on through `agent.continue()`. An idleness guard
+	 * there would drop the cheapest, production-observed rescue and burn a resume attempt
+	 * doing it. The settle-time sends are idle by definition.
+	 */
+	const sendResume = (decision: "resume" | "give-up", cause: ResumeCause, ctx: ExtensionContext, delayMs = 0) => {
+		const content = decision === "resume" ? RESUME_TEXTS[cause] : GAVE_UP_TEXT;
+		const send = () => {
+			try {
+				pi.sendMessage(
+					{
+						customType: RESUME_MESSAGE_TYPE,
+						content,
+						display: true,
+						details: { consecutiveResumes: resumeGuard.consecutiveResumes },
+					},
+					// Exactly the shape the monitor uses, which is the shape observed to resume a
+					// run in production. "give-up" still sends: the run is ending either way, and
+					// a visible reason beats silence.
+					{ triggerTurn: decision === "resume", deliverAs: "steer" },
+				);
+			} catch (error) {
+				// A refused injection must never turn a survivable stop into a crash.
+				notifyOnce(ctx, `pi-context-handoff: could not resume the run (${describe(error)}).`, "warning");
+			}
+		};
+		if (delayMs <= 0) {
+			send();
+			return;
 		}
+		// The wait can be outlived by a run the extension never saw begin — a version whose
+		// agent_start arrives differently, or any gap between event and timer. A stale resume
+		// must never steer a live run, so a busy session drops it here rather than trusting
+		// the agent_start clear alone.
+		const fire = () => {
+			if (typeof ctx.isIdle === "function" && !ctx.isIdle()) {
+				clearPendingErrorResume();
+				return;
+			}
+			send();
+		};
+		clearPendingErrorResume();
+		pendingErrorResume = setTimeout(fire, delayMs);
+		// A headless run that exits after the error must not be kept alive by the wait; the
+		// resume only matters while the session is running anyway.
+		pendingErrorResume.unref?.();
 	};
 
 	// Pi emits this when a compaction fails or is aborted. An aborted compaction is the user
@@ -239,7 +301,17 @@ export default function contextHandoffExtension(pi: ExtensionAPI) {
 			getConfig(ctx).resume.enabled,
 		);
 		lastCompactionFollowedTruncation = false;
-		if (decision !== "ignore") sendResume(decision, ctx);
+		if (decision !== "ignore") sendResume(decision, "compacted", ctx);
+	});
+
+	// The backoff's drop point, and it has to be the *start* of a run: agent_end fires when
+	// a run finishes, which is far too late — the run that outlived the wait has already
+	// been streaming for seconds, and steering it is exactly the failure the backoff exists
+	// to prevent. agent_start is the first moment a new run exists, for every way one
+	// begins: the user typing, a queued message continuing, the monitor's event, or the
+	// resume's own triggerTurn (where the clear is a no-op — the timer has already fired).
+	pi.on("agent_start", () => {
+		clearPendingErrorResume();
 	});
 
 	// Backstop. Several ways Pi ends a run never emit session_compact at all — a compaction
@@ -275,6 +347,14 @@ export default function contextHandoffExtension(pi: ExtensionAPI) {
 			enabled || forced
 				? resumeGuard.decideOnSettled(lastRunStopReason, forced, lastRunAborted)
 				: "ignore";
+		// "length" means the backstop caught a truncation that compaction failed to rescue;
+		// every other unfinished stop is a provider error, with the context untouched. Forced
+		// resumes are the test seam with no real outage behind them, so they fire at once.
+		const cause: ResumeCause = lastRunStopReason === "length" ? "truncated" : "error";
+		const delayMs =
+			!forced && decision === "resume" && cause === "error"
+				? ERROR_RESUME_BACKOFF_MS * 2 ** (resumeGuard.consecutiveResumes - 1)
+				: 0;
 		lastRunAborted = false;
 		if (decision === "ignore") {
 			// A run that ended cleanly clears the streak so an unrelated stop much later does
@@ -284,7 +364,7 @@ export default function contextHandoffExtension(pi: ExtensionAPI) {
 			lastRunStopReason = undefined;
 			return;
 		}
-		sendResume(decision, ctx);
+		sendResume(decision, cause, ctx, delayMs);
 		resumeGuard.endRun();
 		lastRunStopReason = undefined;
 	});

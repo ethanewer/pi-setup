@@ -1,10 +1,13 @@
 import { describe, expect, test } from "bun:test";
 
 import {
+	ERROR_RESUME_BACKOFF_MS,
 	isUnfinishedStop,
 	lastAssistantWasTruncated,
 	MAX_CONSECUTIVE_RESUMES,
+	RESUME_TEXTS,
 	ResumeGuard,
+	type ResumeCause,
 } from "../forks/pi-context-handoff/extensions/context-handoff/resume";
 
 /**
@@ -331,5 +334,35 @@ describe("ResumeGuard disabled half", () => {
 		expect(g.consecutiveResumes).toBe(0);
 		// And the latches are gone too.
 		expect(g.decideOnSettled("length")).toBe("resume");
+	});
+});
+
+describe("resume texts name the cause", () => {
+	test("every cause has a text, and no text claims a cause it is not", () => {
+		const causes: ResumeCause[] = ["compacted", "truncated", "error"];
+		for (const cause of causes) {
+			expect(typeof RESUME_TEXTS[cause]).toBe("string");
+			expect(RESUME_TEXTS[cause].length).toBeGreaterThan(0);
+		}
+		// Only the compacted resume may say the context was compacted: the model must not
+		// be told a false fact about its own session.
+		expect(RESUME_TEXTS.compacted).toContain("compacted");
+		expect(RESUME_TEXTS.truncated).not.toContain("has been compacted");
+		expect(RESUME_TEXTS.error).not.toContain("compact");
+		expect(RESUME_TEXTS.error).toContain("provider error");
+	});
+
+	test("an error resume waits out a doubling backoff, and the cap still binds", () => {
+		// The delay schedule the agent_settled backstop uses: one wait per consecutive
+		// error resume, so a transient outage can pass before an attempt is burned.
+		expect(ERROR_RESUME_BACKOFF_MS).toBeGreaterThan(0);
+		expect([1, 2, 3].map((n) => ERROR_RESUME_BACKOFF_MS * 2 ** (n - 1))).toEqual([10_000, 20_000, 40_000]);
+		// A fourth unfinished stop never waits at all: the guard gives up, not the timer.
+		const g = new ResumeGuard();
+		for (let i = 0; i < MAX_CONSECUTIVE_RESUMES; i++) {
+			expect(g.decideOnSettled("error")).toBe("resume");
+			g.endRun();
+		}
+		expect(g.decideOnSettled("error")).toBe("give-up");
 	});
 });

@@ -9,7 +9,9 @@ Makes compaction survivable for long autonomous runs, from three angles:
    every LLM call, closing the gap where Pi's threshold check only runs between runs.
 3. **Resume** — resumes a run Pi ended on a truncated reply (`stopReason "length"`) or
    `error`, a case Pi's own overflow test misses. Never resumes `stop`/`aborted`; gives up
-   after three consecutive unfinished resumes.
+   after three consecutive unfinished resumes. The injected message names the cause — it
+   never claims a compaction that did not happen — and an error resume waits out a doubling
+   backoff first, so a transient outage can pass without burning an attempt.
 
 First-party extension, not a fork. It replaces `pi-continue`, which stopped long runs
 (see [`../../docs/LONG_RUNS.md`](../../docs/LONG_RUNS.md)).
@@ -27,7 +29,10 @@ behavior:
 - The resume sends one queued nudge, and only where Pi has already decided to end the
   run. Cap on consecutive resumes is 3, after which it says why and stops. It has its own
   kill switch (`resume: false`), and any run whose own signal was aborted is left alone, so
-  Esc stops it whether the abort settles as `aborted` or as `error`.
+  Esc stops it whether the abort settles as `aborted` or as `error`. An error resume is
+  delayed 10s/20s/40s by a doubling backoff — a stream error is usually a transient outage,
+  and resuming instantly meets the same dead connection — and a resume still waiting out
+  its backoff is dropped rather than injected if a new run starts or the session ends.
 
 ## Handoff briefs (between runs)
 
@@ -87,7 +92,30 @@ never resumed. **A run whose own signal was aborted is never resumed either**, w
 reason it settled with: Esc during a tool call makes the next provider call settle as
 `error` with "The operation was aborted", and that used to be read as unfinished work. Esc
 during a compaction is recorded through `session_compact_failed`, and a manual `/compact`
-never resumes. The whole half is controlled by `resume.enabled`; the guard resets at session
+never resumes.
+
+The message names the cause, so the model is never told the context was compacted when it
+was not: `compacted` (a `session_compact` rescue) says the brief is there to re-read,
+`truncated` (a `length` the backstop caught) says compaction failed to make room, and
+`error` says the provider failed with the context untouched. An error resume is also
+delayed by a doubling backoff — 10s, then 20s, then 40s — because a stream error is usually
+a transient outage lasting a few seconds, and an instant resume meets the same dead
+connection and spends one of the three attempts.
+
+A stale wait is never fired. `agent_start` — the *start* of any run, not `agent_end`, which
+arrives only after a run has finished — drops a pending resume the moment the user (or a
+queued message, or the monitor) takes over, `session_shutdown` drops it when the session
+ends, and the delayed send alone re-checks idleness, so even a run the extension never saw
+begin cannot be steered by a resume meant for a dead one. Nothing is injected mid-turn, and
+one session's run can never nudge another's.
+
+The re-check deliberately does not reach the other sends. A compacted rescue is *sent*
+mid-run: `session_compact` fires from inside the run's own post-run handling with the run
+still active, and queuing the message at exactly that moment is the mechanism — it is what
+makes `hasQueuedMessages()` carry the run on through `agent.continue()`. And the settle-time
+sends are idle by definition.
+
+The whole half is controlled by `resume.enabled`; the guard resets at session
 start and does not inflate its streak while the half is off. Resume logic is in
 [`extensions/context-handoff/resume.ts`](extensions/context-handoff/resume.ts).
 

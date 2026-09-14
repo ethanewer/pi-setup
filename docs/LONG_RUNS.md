@@ -271,6 +271,33 @@ aborted call with no brief at all could still look non-empty and be saved as the
 checkpoint. Both now judge the deadline before the text and discard the result, leaving the
 request unfolded and letting Pi's own compaction retry.
 
+A fourth, found reading a live `Upstream error from Together: Stream error` transcript: the
+one injected message claimed "if the context was full it has just been compacted" for every
+cause, so a provider outage was reported to the model as a compaction it never had — a false
+fact about its own session, which it either re-derived context to justify or distrusted the
+transcript over. The message now names the cause — compacted, truncated, error — and claims
+nothing else. An error resume is also delayed 10s/20s/40s by a doubling backoff, because a
+stream error is usually a transient outage and an instant resume meets the same dead
+connection and burns one of the three attempts.
+
+A review of that backoff then found its drop point in the wrong event: the clear sat in
+`agent_end`, which fires when a run *finishes* — so a resume scheduled after run A's error
+survived the whole of the user's next run B and steered "continue where you left off" into
+the middle of it, exactly the failure the backoff was written to prevent (reproduced with a
+simulated Pi driving the real extension). The clear now lives on `agent_start` — the first
+moment a new run exists, for every way one begins — plus `session_shutdown` for the
+session ending, and the delayed firing path re-checks idleness as a last guard, so a stale
+resume cannot be injected mid-turn and one session's run can never nudge another's.
+
+A re-review then caught that guard killing what it was meant to protect. Shared by every
+send, it also dropped the compacted rescue: `session_compact` fires from inside the run's
+own post-run handling with the run still active — `isIdle()` is false at exactly that
+moment — and queuing the message there is the whole mechanism (`hasQueuedMessages()` →
+`agent.continue()`, the 600-entry rescue in `019fcd7f`). Three attempts could burn on drops
+the run never saw, until even the give-up notice went unsent. The re-check now lives on the
+delayed send alone, and the compacted rescue is pinned mid-run in the wiring test with its
+real, busy ctx.
+
 Verified end to end in tmux rather than only in unit tests: with the
 `PI_CONTEXT_HANDOFF_FORCE_RESUME=1` seam the transcript shows the first turn, the injected
 `[context-handoff-resume]` message, and then a genuinely new model turn. Normal runs were
