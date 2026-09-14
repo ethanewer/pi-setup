@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 3,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 90,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on spf13/cobra at parent commit dbf85f6104904d539cabceebec234e817fa0df0c (real upstream bug, issue #1776, fixed by 22b617914c8890ba20db7ceafcdc2ef4ca4817d3). A child command's own flag that shadows (shares the name of) a parent persistent flag is dropped from the child's LocalFlags() (command.go LocalFlags adds only flags whose name is absent from parentsPflags), so the child's help omits the flag while the parent's persistent flag is shown under Global Flags; at runtime the child's flag is the one that takes effect, so help disagrees with behaviour. The image clones cobra shallow at the parent, fix commit unreachable; the upstream regression test (command_test.go at the fix commit, containing TestHelpCommandExecutedOnChildWithFlagThatShadowsParentFlag and TestChildFlagShadowsParentPersistentFlag) is extracted at build time into harness-owned /opt/golden via a throwaway bare clone and is NOT overlaid on the working tree: per the v4.3 contract the agent must author its own failing reproduction /app/repro/repro_test.go first. The verifier (1) asserts provenance (HEAD=parent, fix object absent, pinned go toolchain sha256, golden sha256, only command.go modified); (2) runs the agent's own reproduction filtered by its Test* function names against a fresh 'git archive HEAD' copy of the pre-fix tree and requires it to FAIL, and against the repaired tree and requires it to PASS; (3) overlays the golden regression test onto the repaired tree and requires the two upstream tests plus the full existing suite (279 tests) to pass; (4) runs three authored hidden cases (String-flag shadowing with exact help-text equality, two children shadowing the parent's sole persistent flag so the Global Flags section vanishes, and a three-level root->middle->leaf tree where the grandchild shadows the grandparent's Int persistent flag), each required to FAIL on the pre-fix tree and PASS on the repaired tree. The V-language go1.24.0 toolchain is pinned from go.dev/dl (sha256 97788e7e...); module/compile caches live in world-writable /opt paths warmed at build; the suite must run as the unprivileged user ubuntu (uid 1000) because one upstream test expects a permission-denied error that root bypasses. Seed built fail-closed: the Dockerfile's self-check RUN overlays the golden test (must FAIL with the mined symptom), applies the one-line fix (must PASS golden + full suite), and restores the pristine tree before shipping."
+}

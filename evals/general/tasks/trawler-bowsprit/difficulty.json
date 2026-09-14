@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 75,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on pypa/setuptools at parent 92b45e9817ae829a5ca5a5962313a56b943cad91 (v69.3.0, April 2024); real upstream issue #4302, fixed upstream by df45427cbb67c1149fcf5d2d1e2705e69b3baf0c. The tree's Distribution.get_fullname() (monkey-patched from setuptools/_core_metadata.py) routes the declared version through packaging.utils.canonicalize_version before putting it in release/archive names, so versions collapse in artifact names ('1.0' -> '1', default '0.0.0' -> '0') while the metadata keeps the full string. Unlike the previous wave's style, no reproduction is given: the instruction describes only the user-visible symptom and requires the agent to author /app/reproduce.py (a genuine failing reproduction: release-name assertions plus a real 'python -m build --no-isolation --sdist' of a scratch project) before fixing. The verifier runs the agent's repro against a pristine worktree of the parent (must fail) and against the repaired tree (must pass), overlays the fix-era golden regression test test_config_discovery.py::TestNoConfig::test_build_with_discovered_name (extracted at image build from the fix commit via a throwaway bare clone that is deleted; sha-pinned 4e26abc2...) on a copy of the repaired tree and requires the project's own suite green there (test_config_discovery + test_sdist + test_egg_info + test_wheel: 223 passed / 0 failed measured on this image both at parent and after fix; one stale in-tree test asserting the collapsed name is replaced by the golden file), plus three authored hidden cases the upstream test does not use: pyproject-declared '1.0' sdist, release-name matrix (0.0.0/1.0/2.3.0/1.0b1/3.0.0rc1/2024.4.13), setup.cfg-declared '1.0.0' sdist (wheel naming is NOT affected by this bug and is not asserted). Dependency era pins were required for a clean suite on bench-base:python-3.12 and are honored per the entry: pytest==8.4.2 and build (>=0.10; 1.2.2.post1 installed); additionally wheel==0.42.0 (newer wheel raises FutureWarning for the externalised bdist_wheel entry point, converted to error by the suite's filterwarnings), ruff==0.2.2 + pytest-ruff==0.3.1 (a 2025 ruff flags the golden file's import block), and build-essential for libc6-dev (C-extension tests). Measured end to end on this host: oracle reward 1, untouched-container (nop) reward 0; cheats tried and rejected: always-passing repro, no fix, special-casing only the default version, editing a different file, tampering with /opt/golden, moving HEAD. Fix commit is unreachable from /app/src (verified with '! git cat-file -e' in the image at build and again in the verifier)."
+}

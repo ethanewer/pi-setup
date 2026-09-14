@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": null,
+  "notes": "Upstream-clone bugfix in jestjs/jest (v4.2 family), issue #16345: jest-each title interpolation builds the $variable alternation by joining template keys with '|' without escaping, so a heading with regex metacharacters (e.g. count(*)) throws SyntaxError at table construction, and headings containing . or | match the wrong text. The agent must write its own failing reproduction (/app/repro.sh, exact stdout contract, verifier re-runs it against the parent version of the one fixable file and demands genuine failure), then fix the mechanism in the one source file the stack trace names (escape every key with the project's own jest-regex-util escapeStrForRegex and sort keys longest-first). Monorepo is pre-built and warm (yarn build:js ~5s, jest --runInBand transforms src directly), 1 vCPU. Verifier: provenance + scope (only the defect file may differ) + fresh rebuild + golden regression test from /opt/golden (extracted from fix commit at build time, sha256-pinned) + the project's own full jest-each unit suite (~550 tests, FORCE_COLOR=1 for the ANSI snapshot serializers) + three authored hidden cases with headings upstream's tests do not use (leading * and + crash-mode, trailing-* and {2} wrong-value mode, pipe-prefix overlap and dotted-key wildcard neutrality). Oracle applies an authored one-file patch, writes the canonical repro and summary, runs golden + existing suite."
+}

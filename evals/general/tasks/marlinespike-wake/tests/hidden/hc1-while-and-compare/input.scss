@@ -1,0 +1,4 @@
+$total: 0;
+@while $current-item-index-number < $total-items-in-the-queue and $still-searching-flag == true {
+  $total: $total + 1;
+}

@@ -1,0 +1,75 @@
+lockfileVersion: '9.0'
+
+importers:
+
+  .:
+    configDependencies: {}
+    packageManagerDependencies:
+      pnpm:
+        specifier: ^9.0.0
+        version: 9.9.9
+
+packages:
+
+  pnpm@9.9.9:
+    resolution: {integrity: sha512-eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee}
+    engines: {node: '>=22.13'}
+    hasBin: true
+
+  '@pnpm/win-x64@9.9.9':
+    resolution: {integrity: sha512-ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff}
+    cpu: [x64]
+    os: [win32]
+
+snapshots:
+
+  pnpm@9.9.9: {}
+
+  '@pnpm/win-x64@9.9.9':
+    optional: true
+
+---
+lockfileVersion: '9.0'
+
+importers:
+
+  .:
+    packageManagerDependencies:
+      '@pnpm/exe':
+        specifier: ^10.0.1
+        version: 10.0.1
+
+packages:
+
+  '@pnpm/exe@10.0.1':
+    resolution: {integrity: sha512-abababababababababababababababababababababababababababababababababababababababab}
+    hasBin: true
+
+snapshots:
+
+  '@pnpm/exe@10.0.1': {}
+
+---
+lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+importers:
+
+  .:
+    dependencies:
+      is-negative:
+        specifier: 2.0.0
+        version: 2.0.0
+
+packages:
+
+  is-negative@2.0.0:
+    resolution: {integrity: sha512-cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd}
+    engines: {node: '>=0.12.0'}
+
+snapshots:
+
+  is-negative@2.0.0: {}

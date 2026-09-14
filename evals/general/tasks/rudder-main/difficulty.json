@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": null,
+  "notes": "Upstream-clone bugfix in statsmodels/statsmodels (v4.3 family), issue #8190. The agent gets the real tree at the parent commit c67d83dc9 (depth-1 object store; fix commit 3c7f8f811 provably unreachable; golden regression test extracted from the fix commit at image build time through a separate throwaway clone into /opt/golden, sha256-pinned; pristine pre-fix linear_model.py baked at /opt/prefix and sha256-pinned). Symptom (user-visible, no leak of issue/PR/fix/file): fitting OLS or WLS with a user-supplied fixed scale (cov_type 'fixed scale'/'fixed_scale', scale kwarg) leaves the result's .scale attribute at the residual-based estimate (ssr/df_resid) instead of the supplied value, so .scale lies and .resid_pearson normalizes residuals with the wrong variance. The covariance matrix itself is already correct (cov_params_default = scale*normalized_cov_params), which is the subtlety that makes this a debugging task rather than a one-liner hunt. The fix upstream is the one-line 'res.scale = scale' in the fixed-scale branch of get_robustcov_results (statsmodels/regression/linear_model.py); the agent must author its own failing reproduction (/app/repro.py, run by the verifier against both the repaired tree and the swapped-in pristine pre-fix module, failing on the latter) before localizing and fixing. Verifier: provenance (HEAD == parent, fix commit unreachable, git-status scope permitting ONLY statsmodels/regression/linear_model.py to differ, import-file starts-with /app/src anti-shadow check), the agent's repro in both directions, the upstream golden test test_ols_wls_fixed_scale (planted from /opt/golden containing the whole fix-version test_regression.py, itself a strict superset of the parent's), the whole project test file statsmodels/regression/tests/test_regression.py (369 parent / 370 with golden planted; ~3s at 1 CPU), and four authored hidden cases using upstream-unused inputs: OLS with scale 2.5 + n=40/k=3, WLS with scale 0.25, the get_robustcov_results path with scale 7.0, and fixed scale with use_t=True on n=120 — each asserting scale AND resid_pearson AND cov_params/bse independently in numpy. Dependency pins honoured from the mining entry: numpy 2.5.3, scipy 1.18.1, pandas 3.0.5, patsy 1.0.3, formulaic 1.2.2 (+ packaging 26.3, pytest 9.1.1, meson-python 0.21.1, meson 1.12.0, ninja 1.13.2, cython 3.3.0, setuptools_scm 10.2.3) on bench-base:python-3.12; editable install is warm in the image (~40 s measured), pure-Python edit loop needs no rebuild. Measured fresh build ~65 s wall, image 755 MB unique. No network needed at trial time; reproduction uses only numpy-random data."
+}

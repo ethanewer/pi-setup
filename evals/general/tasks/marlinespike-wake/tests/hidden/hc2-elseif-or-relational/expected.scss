@@ -1,0 +1,15 @@
+@if $primary-storage-device-type == "ssd" and
+  $remaining-disk-space-bytes >= 1099511627776
+{
+  color: green;
+} @else if
+  $primary-storage-device-type == "hdd" or
+  $remaining-disk-space-bytes >= 549755813888
+{
+  color: amber;
+} @else if
+  $primary-storage-device-type == "net" or
+  $remaining-disk-space-bytes != 0
+{
+  color: red;
+}

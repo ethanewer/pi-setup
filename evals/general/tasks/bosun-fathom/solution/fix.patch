@@ -1,0 +1,29 @@
+diff --git a/crates/searcher/src/searcher/glue.rs b/crates/searcher/src/searcher/glue.rs
+index 006afad..5db5701 100644
+--- a/crates/searcher/src/searcher/glue.rs
++++ b/crates/searcher/src/searcher/glue.rs
+@@ -37,7 +37,11 @@ where
+ 
+     pub(crate) fn run(mut self) -> Result<(), S::Error> {
+         if self.core.begin()? {
+-            while self.fill()? && self.core.match_by_line(self.rdr.buffer())? {
++            while self.fill()? {
++                if !self.core.match_by_line(self.rdr.buffer())? {
++                    self.consume_remaining();
++                    break;
++                }
+             }
+         }
+         self.core.finish(
+@@ -46,6 +50,11 @@ where
+         )
+     }
+ 
++    fn consume_remaining(&mut self) {
++        let consumed = self.core.pos();
++        self.rdr.consume(consumed);
++    }
++
+     fn fill(&mut self) -> Result<bool, S::Error> {
+         assert!(self.rdr.buffer()[self.core.pos()..].is_empty());
+ 

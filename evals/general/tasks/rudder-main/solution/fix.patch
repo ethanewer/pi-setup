@@ -1,0 +1,14 @@
+diff --git a/statsmodels/regression/linear_model.py b/statsmodels/regression/linear_model.py
+index 7e0e7ba..b9622f7 100644
+--- a/statsmodels/regression/linear_model.py
++++ b/statsmodels/regression/linear_model.py
+@@ -2664,8 +2664,8 @@ class RegressionResults(base.LikelihoodModelResults):
+         # TODO: make it DRYer   repeated code for checking kwargs
+         if cov_type in ["fixed scale", "fixed_scale"]:
+             res.cov_kwds["description"] = descriptions["fixed_scale"]
+-
+             res.cov_kwds["scale"] = scale = kwargs.get("scale", 1.0)
++            res.scale = scale
+             res.cov_params_default = scale * res.normalized_cov_params
+         elif cov_type.upper() in ("HC0", "HC1", "HC2", "HC3"):
+             if kwargs:

@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 75,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on networkx/networkx at parent commit 195092869192b762fa553ef3a9ca5758e1d83ee3 (real upstream bug, issue #8726). geometric_soft_configuration_graph computes the mean hidden degree from a kappas MAPPING by summing the mapping's KEYS ('sum(kappas) / len(kappas)' in networkx/generators/geometric.py) instead of its values: with string node labels the call raises TypeError, and with integer node labels it silently misuses the ids as degrees (wrong density + wrong radial layout). The agent gets the real parent tree with the bug still in it and NO reproduction in the instruction: it must write its own failing reproduction as deliverable /app/reproduce_failure.py (verifier runs it against a pristine copy of the generator - must fail - and against the agent's fixed tree - must pass), then fix the tree. Verifier asserts provenance (HEAD still pinned parent, fix commit not reachable from the working clone, exactly one commit, only networkx/generators/geometric.py modified, no deletions, no untracked importable files, no interpreter-hook shims in /app or site-packages), runs the upstream regression test extracted from fix commit e9eac8a7e04df0b9cdcff8ed1682b3971678f4ed into /opt/golden at image build time (the fix-commit version of networkx/generators/tests/test_geometric.py, 55 tests), re-runs the tree's own test module (54 tests) after restoring it, and runs two authored hidden-case files over inputs the upstream test does not use: string labels (no crash + invariants) and integer labels unrelated to the degrees (mean-degree-from-values observable: edge count of a mean-1 graph with large ids ~0 edges under the bug, ~18 with the fix, plus exact radial-layout match to the documented formula). Deliberately raised difficulty: no repro handed to the agent and the silent int-key failure mode is the generalization demand; pure Python, subsecond tests, offline-capable; both directions re-confirmed inside the task image before shipping (1 failed / 54 passed at parent, 55 passed at fix). Full networkx suite not run: the rest of it needs numpy/scipy and is out of scope; the module-level suite for the changed code path is the project-suite evidence."
+}

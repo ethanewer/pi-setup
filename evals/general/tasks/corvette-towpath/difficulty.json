@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 2,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 1,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 120,
+  "documented_probe": null,
+  "notes": "Upstream-clone bugfix in Z3Prover/z3 (v4.3 family, repro-deliverable shape), upstream issue #10608, fix commit 8d32b2b02ab31c5cd293362866fa32f6eab75e09 (parent e950cd371c3ca16823079feded145bc6ce3feb95). Image clones the real repository SHALLOW at the parent commit with the bug present; the agent is NOT given the reproduction (deliberately raised difficulty over the v4.2 family) and must write its own failing reproduction as a deliverable before fixing anything. Bug: fpa2bv_converter::mk_fma() computes a fused multiply-add encoding that is one ulp off for some binary16 (5,11) operand triples: the h2 (second) rounding step built its sticky reduction from sticky_h1 (the first step's discarded-bit range) instead of sticky_h2, so exact-middle (tie) cases that need the h2 sticky bits reduced folded the wrong bits and rounded as if the late bits were zero; for the pinned half-precision repro (x subnormal #b1000001111000111, y=1.4375 #b0011110111000000, addend=x) the true IEEE-754 encoding of fp.fma RNE x y x is #x889b and the parent answers `sat` to (not (= (fp.to_ieee_bv 16 (fp.fma RNE x y x)) #x889b)) under (check-sat-using (then fpa2bv simplify bit-blast smt)) while the fix answers `unsat`. Two independent confirmation channels in the author's own image: (1) the mined repro .smt2 answers sat with the pre-fix binary baked into the image at build time; (2) the golden regression block the fix commit adds to src/test/smt_context.cpp (extracted at build time into /opt/golden, sha256 b4fc0a18327fe9a85d41927b50417f319f256185b7d41f4e483a44fdcaacfd0a, never part of this task tree; fix commit asserted unreachable from /app/src) fails on the parent tree with ASSERTION VIOLATION and passes on the fixed tree; hidden operand pairs cross-checked by independent exact-rational IEEE-754 computation in Python. Verifier: provenance (HEAD==parent, every tracked file except src/ast/fpa/fpa2bv_converter.cpp byte-identical to parent blobs, no untracked non-ignored files, /app/summary.md non-empty) + the agent's own /app/reproduce.sh must print `sat` against the baked pre-fix binary and `unsat` against the binary rebuilt from the fixed tree + incremental rebuild of shell and test-z3 + golden smt_context module pass + full test-z3 -a suite 0 failed (~1 min at 1 CPU) + 3 authored hidden half-precision fma pairs (bit patterns differing from the golden/visible pair and from each other; each answers sat pre-fix and unsat post-fix, cross-checked by exact rational arithmetic). Oracle applies the authored fix.patch (one-line sticky_h1->sticky_h2 swap, the upstream diff), writes reproduce.sh and summary.md, rebuilds, and re-runs the visible repro. Toolchain: apt g++ cmake make on bench-base:ubuntu-24.04 (no dependency pins)."
+}

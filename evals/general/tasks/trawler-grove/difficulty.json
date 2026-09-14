@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 0,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on python-poetry/poetry at parent commit b8383e3cda4e7336eb9048b1e7388b5b914a4653 (real upstream issue #10809, fixed by 3f7feee6985853ee3bda6c92465273738a94b628). Bug: Git's clone fallback computes `revision = refspec.tag or refspec.branch or refspec.revision or 'HEAD'` and then runs two `revision.replace(\"refs/head/\", \"\")` calls whose results are DISCARDED (str.replace returns a new string) and whose prefix is also misspelled \"refs/head/\" instead of \"refs/heads/\", so an explicit refs/heads/<branch> or refs/tags/<tag> pin is passed to SystemGit.checkout unchanged and the clone fails or lands on the wrong revision. Fix (upstream): assign `revision = revision.removeprefix(\"refs/heads/\")` then `revision.removeprefix(\"refs/tags/\")`. Deliberately raised over the sibling shape: the image ships the 100% parent tree (no regression test overlaid, fix commit never fetched — extracted via a deleted throwaway bare clone into /opt/golden, sha256 c8cb85ea...) and the instruction describes only the user-visible symptom, so the agent must write its own failing mock-based reproduction at /app/repro_test.py before fixing. Verifier: (0) provenance — HEAD pin, fix commit absent from the object store, no remotes, content-hashed scope check allowing only src/poetry/vcs/git/backend.py to differ (assume-unchanged tricks caught by hashing every blob), venv pins (poetry resolves to /app/src/src, single poetry.pth, top-level site-packages module set, venv bin hash); (1) agent repro must FAIL against the pristine pre-fix copy at /opt/prefix/src (baked at build time, verified equal to the parent blob) and PASS against the repaired tree; (2) golden test 4/4; (3) full tests/vcs/git/test_backend.py (34 tests, offline) green; (4) two hidden cases parametrizing ref inputs the upstream test does not use (refs/heads/feature/log-attachment, release/2.x, branch= refs/heads/experiment, refs/remotes passthrough; refs/tags/v2.3.1, v1.0.0-rc1, prod-2024.09.01). Both directions re-confirmed in a 1-CPU measurement container: parent gives '2 failed, 2 passed' on the golden -k selection in 0.18s; the minimal fix gives 4 passed and the full file 34 passed in 1.3s. Build is pure pip (no compilation): clone ~1s, venv install ~14s at 1 CPU, image ~0.8 GB. Difficulty landed at 11/30 (medium) because the reproduction is a required authored deliverable and the agent must navigate and localise in a real unfamiliar codebase; hard would overstate a two-line one-file defect with a fully offline repro loop."
+}

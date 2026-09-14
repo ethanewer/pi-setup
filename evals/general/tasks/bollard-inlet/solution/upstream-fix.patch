@@ -1,0 +1,111 @@
+diff --git a/lib/fs/basicfs.go b/lib/fs/basicfs.go
+index 9121fec..de2c56f 100644
+--- a/lib/fs/basicfs.go
++++ b/lib/fs/basicfs.go
+@@ -240,16 +240,24 @@ func (f *BasicFilesystem) DirNames(name string) ([]string, error) {
+ 	return names, nil
+ }
+ 
++// Open opens the file for reading, while not following symlinks
+ func (f *BasicFilesystem) Open(name string) (File, error) {
+ 	return f.OpenFile(name, os.O_RDONLY, 0)
+ }
+ 
++// OpenFile is the generalised file open call, using the flags to determine
++// the open semantics. We always add O_NOFOLLOW, disallowing opening files
++// by following symlinks, unless OptFollow is set.
+ func (f *BasicFilesystem) OpenFile(name string, flags int, mode FileMode) (File, error) {
+ 	rootedName, err := f.rooted(name)
+ 	if err != nil {
+ 		return nil, err
+ 	}
+-	flags |= alwaysOpenFlags // enforce extra bits in flags
++	if flags&OptFollow != 0 {
++		flags &^= OptFollow // unset the synthetic OptFollow bit
++	} else {
++		flags |= optNoFollow
++	}
+ 	fd, err := os.OpenFile(rootedName, flags, os.FileMode(mode))
+ 	if err != nil {
+ 		return nil, err
+@@ -257,6 +265,8 @@ func (f *BasicFilesystem) OpenFile(name string, flags int, mode FileMode) (File,
+ 	return basicFile{fd, name}, err
+ }
+ 
++// Create opens a file for writing, creating it as required. The Create will
++// fail if the destination is a symlink.
+ func (f *BasicFilesystem) Create(name string) (File, error) {
+ 	return f.OpenFile(name, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o666)
+ }
+diff --git a/lib/fs/basicfs_unix.go b/lib/fs/basicfs_unix.go
+index f9527f1..97e24bd 100644
+--- a/lib/fs/basicfs_unix.go
++++ b/lib/fs/basicfs_unix.go
+@@ -17,7 +17,7 @@ import (
+ 	"syscall"
+ )
+ 
+-const alwaysOpenFlags = syscall.O_NOFOLLOW // never open symlinks as the final path component
++const optNoFollow = syscall.O_NOFOLLOW
+ 
+ func (f *BasicFilesystem) CreateSymlink(target, name string) error {
+ 	name, err := f.rooted(name)
+diff --git a/lib/fs/basicfs_windows.go b/lib/fs/basicfs_windows.go
+index cde3167..5230431 100644
+--- a/lib/fs/basicfs_windows.go
++++ b/lib/fs/basicfs_windows.go
+@@ -19,7 +19,7 @@ import (
+ 	"golang.org/x/sys/windows"
+ )
+ 
+-const alwaysOpenFlags = 0 // no extra flags
++const optNoFollow = 0 // not defined for Windows
+ 
+ var errNotSupported = errors.New("symlinks not supported")
+ 
+diff --git a/lib/fs/filesystem.go b/lib/fs/filesystem.go
+index 31bbb97..b001dce 100644
+--- a/lib/fs/filesystem.go
++++ b/lib/fs/filesystem.go
+@@ -12,6 +12,7 @@ import (
+ 	"fmt"
+ 	"io"
+ 	"io/fs"
++	"math/bits"
+ 	"os"
+ 	"path/filepath"
+ 	"strings"
+@@ -173,8 +174,18 @@ const (
+ 	OptSync       = os.O_SYNC
+ 	OptTruncate   = os.O_TRUNC
+ 	OptWriteOnly  = os.O_WRONLY
++	OptFollow     = 1 << (bits.UintSize - 2)
+ )
+ 
++func init() {
++	// Ensure OptFollow doesn't clash with any other flag.
++	flags := OptAppend | OptCreate | OptExclusive | OptReadOnly | OptReadWrite | OptSync | OptTruncate | OptWriteOnly
++	flags &= OptFollow
++	if flags != 0 {
++		panic("bug: flag clash")
++	}
++}
++
+ // SkipDir is used as a return value from WalkFuncs to indicate that
+ // the directory named in the call is to be skipped. It is not returned
+ // as an error by any function.
+diff --git a/lib/ignore/ignore.go b/lib/ignore/ignore.go
+index 2acf7c2..1c8978c 100644
+--- a/lib/ignore/ignore.go
++++ b/lib/ignore/ignore.go
+@@ -357,8 +357,8 @@ func hashPatterns(patterns []Pattern) string {
+ 	return hex.EncodeToString(h.Sum(nil))
+ }
+ 
+-func loadIgnoreFile(fs fs.Filesystem, file string) (fs.File, fs.FileInfo, error) {
+-	fd, err := fs.Open(file)
++func loadIgnoreFile(ffs fs.Filesystem, file string) (fs.File, fs.FileInfo, error) {
++	fd, err := ffs.OpenFile(file, fs.OptReadOnly|fs.OptFollow, 0o666)
+ 	if err != nil {
+ 		return fd, nil, err
+ 	}

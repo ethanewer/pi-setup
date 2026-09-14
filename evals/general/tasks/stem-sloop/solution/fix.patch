@@ -1,0 +1,43 @@
+diff --git a/guava/src/com/google/common/graph/AbstractBaseGraph.java b/guava/src/com/google/common/graph/AbstractBaseGraph.java
+index 797468b7a..994332299 100644
+--- a/guava/src/com/google/common/graph/AbstractBaseGraph.java
++++ b/guava/src/com/google/common/graph/AbstractBaseGraph.java
+@@ -177,7 +177,11 @@ abstract class AbstractBaseGraph<N> implements BaseGraph<N> {
+     checkArgument(isOrderingCompatible(endpoints), ENDPOINTS_MISMATCH);
+   }
+ 
++  /**
++   * Returns {@code true} iff {@code endpoints}' ordering is compatible with the directionality of
++   * this graph.
++   */
+   protected final boolean isOrderingCompatible(EndpointPair<?> endpoints) {
+-    return endpoints.isOrdered() || !this.isDirected();
++    return endpoints.isOrdered() == this.isDirected();
+   }
+ }
+diff --git a/guava/src/com/google/common/graph/AbstractNetwork.java b/guava/src/com/google/common/graph/AbstractNetwork.java
+index d6bf4c36c..633ea0bfa 100644
+--- a/guava/src/com/google/common/graph/AbstractNetwork.java
++++ b/guava/src/com/google/common/graph/AbstractNetwork.java
+@@ -253,7 +253,7 @@ public abstract class AbstractNetwork<N, E> implements Network<N, E> {
+   }
+ 
+   protected final boolean isOrderingCompatible(EndpointPair<?> endpoints) {
+-    return endpoints.isOrdered() || !this.isDirected();
++    return endpoints.isOrdered() == this.isDirected();
+   }
+ 
+   @Override
+diff --git a/guava/src/com/google/common/graph/GraphConstants.java b/guava/src/com/google/common/graph/GraphConstants.java
+index ae224fdd2..4e8510662 100644
+--- a/guava/src/com/google/common/graph/GraphConstants.java
++++ b/guava/src/com/google/common/graph/GraphConstants.java
+@@ -52,7 +52,7 @@ final class GraphConstants {
+           + "adjacentNode(node) if you already have a node, or nodeU()/nodeV() if you don't.";
+   static final String EDGE_ALREADY_EXISTS = "Edge %s already exists in the graph.";
+   static final String ENDPOINTS_MISMATCH =
+-      "Mismatch: unordered endpoints cannot be used with directed graphs";
++      "Mismatch: endpoints' ordering is not compatible with directionality of the graph";
+ 
+   /** Singleton edge value for {@link Graph} implementations backed by {@link ValueGraph}s. */
+   enum Presence {

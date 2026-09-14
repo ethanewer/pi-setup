@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on falconry/falcon at parent commit 6566f4a4254fcc0158635c2e3bd4983663070ae4 (real upstream issue #2670, PR #2672, fix commit 7f55a5eb2e10b96d83ecc57384d4c8dca8bc4221). The Cython-accelerated uri.decode() lets a literal '+' followed by two hex digits fall into the percent-decoding branch when unquote_plus=False, so decode('+00', unquote_plus=False) == '\\x00' and ISO-8601 path segments like '...964935+00:00.jpg' get a NUL injected; the pure-Python fallback is correct, so the bug only reproduces once the compiled extension is built in place (build-essential + setuptools/wheel/Cython are required; bench-base:python-3.12 ships neither gcc-the-headers nor setuptools). The image clones at the parent, compiles the extension so the failing state is live (smoke-asserted at build), extracts the fixed tests/test_utils.py (sha256 01737d5e...) from the fix commit via a throwaway bare clone in /tmp that is deleted (fix object never reachable from /app/src/.git, asserted with ! git cat-file -e), and ships a read-only pristine pre-fix clone at /opt/pristine with its own compiled extension against which the verifier runs the agent's own reproduction. The agent must write its own failing reproduction /app/repro.py (deliverable; must import falcon via PYTHONPATH and exit non-zero on the pre-fix tree, zero on the repaired tree) and fix the source minimally; the verifier rebuilds the extension from the repaired tree (setup.py build_ext --inplace, ~2 s at 1 CPU), runs the golden regression selection (2 parametrized variants fail at parent, pass at fix), the project's own suite slice (tests/test_utils.py 386 passed/10 skipped, test_query_params.py 252 passed/85 skipped, test_cython.py 2 passed — all green at parent too, proving the slice is unaffected), and two authored hidden cases: 20 hex-adjacency strings (10 fail at parent) and 10 timestamp/offset strings (3 fail at parent), all pass at fix. measured image build ~55-75 s host, ~2 min single-core; image ~1.0 GB."
+}

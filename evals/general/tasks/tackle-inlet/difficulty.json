@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 35,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on nltk/nltk (issue #3785): SnowballStemmer('hungarian').stem('') raises IndexError('string index out of range') because the r1-region detection reads word[0] before checking the word is non-empty; the fix adds an early 'if not word: return word' guard in the Hungarian stem(). The image clones nltk at parent 47e236e9505c6f552d6712a21c6d960879ba7f1e (git init + one depth-1 fetch, so the object store holds exactly one commit), installs editable so imports resolve into /app/src, extracts the upstream regression test nltk/test/unit/test_snowball.py (a NEW file in fix 5c4c0d3fe65912fce05dae78dc76553b9e2bec85) into /opt/golden via a throwaway clone that is deleted (fix unreachable verified in-image twice), and re-confirms both directions as cached layers (parent: IndexError + golden fails exactly the hungarian subtest; fix: '' and full green). Deliberately harder than a repro-in-instruction task: the instruction reports only the user symptom and demands the agent author /app/reproduce.py, a reproduction whose behavioral contract the verifier checks BOTH ways (staged pristine parent tree must crash it; repaired tree must make it exit 0 with a fixed marker). Hidden cases: 13 assertions across three case dirs using inputs the upstream test does not use -- Hungarian batches (SARKI/tudnék/házak/megszámláltam/láthatóan/szabad/szám), edge inputs (' ', '\\t', '-', ', ', '1', 'é', repeated/interleaved calls), and the data-free subset of other languages ('running', 'Schränke', russian, 'Visionado', 'algue'); expected stems frozen from the fixed upstream stemmer and the project's own test vectors. Verifier also runs the golden test + the data-free subset of the project's own nltk/test/unit/test_stem.py to prove nothing else broke. Measured: image build 26.6s wall (probe), 786 MB unique -- a fast, pure-Python task."
+}

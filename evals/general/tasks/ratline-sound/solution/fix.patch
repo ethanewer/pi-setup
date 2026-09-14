@@ -1,0 +1,11 @@
+--- a/command.go
++++ b/command.go
+@@ -1505,7 +1505,7 @@
+ 	}
+
+ 	addToLocal := func(f *flag.Flag) {
+-		if c.lflags.Lookup(f.Name) == nil && c.parentsPflags.Lookup(f.Name) == nil {
++		if c.lflags.Lookup(f.Name) == nil && f != c.parentsPflags.Lookup(f.Name) {
+ 			c.lflags.AddFlag(f)
+ 		}
+ 	}

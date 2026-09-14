@@ -1,0 +1,61 @@
+lockfileVersion: '9.0'
+
+importers:
+
+  .:
+    configDependencies: {}
+    packageManagerDependencies:
+      pnpm:
+        specifier: ^11.10.0
+        version: 11.10.1
+
+packages:
+
+  pnpm@11.10.1:
+    resolution: {integrity: sha512-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa}
+    engines: {node: '>=22.13'}
+    hasBin: true
+
+  '@pnpm/exe@11.10.1':
+    resolution: {integrity: sha512-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb}
+    hasBin: true
+
+snapshots:
+
+  pnpm@11.10.1: {}
+
+  '@pnpm/exe@11.10.1': {}
+
+---
+lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+importers:
+
+  .:
+    dependencies:
+      '@corp/widget':
+        specifier: 3.1.0
+        version: 3.1.0
+    devDependencies:
+      lint-checks:
+        specifier: 0.9.4
+        version: 0.9.4
+
+packages:
+
+  '@corp/widget@3.1.0':
+    resolution: {integrity: sha512-cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc}
+    engines: {node: '>=18.0.0'}
+
+  lint-checks@0.9.4:
+    resolution: {integrity: sha512-ddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd}
+
+snapshots:
+
+  '@corp/widget@3.1.0': {}
+
+  lint-checks@0.9.4: {}

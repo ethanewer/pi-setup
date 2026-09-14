@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 2,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 3,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 90,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on tmux/tmux. Image checks out a buildable master commit (19a085a6727650ae660196a38e1a412f1b386615, the commit immediately before the upstream regression test for GitHub issue #5498 was added) so no reproduction exists in the agent's tree; the bug (stale control-mode offsets after a pane respawn leaves control clients reading past the end of a replaced screen buffer, crashing the server in input_parse) is fixed by upstream commit 4714f478fed87ae2c510ecd035aa89c5a90dedf8 (merged on master as 22b36797526758ff3ed3407c1bbc3cde26277aaf). The pristine parent binary is snapshotted to /opt/prefix/tmux at build time so the verifier runs the agent's own reproduction against the pre-fix build (must fail) and the repaired build (must pass); the upstream regression test is extracted from the fix-side tree through a throwaway bare clone at build time into /opt/golden. The agent must write its own failing reproduction as a deliverable (verifier enforces both directions), fix the bug, and rebuild. Verifier additionally runs five of tmux's own regress scripts (slice) and two authored hidden cases (silent-origin moved-window respawn; three clients with a doubled respawn of a moved pane), each required to crash the parent binary and pass the repaired binary - all empirically verified 3/3 (parent fail) and 3/3 (fixed pass) inside the image, as root and as uid 1000. Machine-sized at 1 CPU: build ~65 s at -j8, full -j1 rebuild ~28 s, golden test ~10 s, slice ~7 s, each hidden case ~7 s."
+}

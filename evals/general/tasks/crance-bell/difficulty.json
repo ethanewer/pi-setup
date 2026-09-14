@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 3,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 120,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on scipy/scipy (issue #26026). The agent must (1) write its own failing reproduction of the exact-zero Wilcoxon p-value before any fix, (2) localise the bug inside a real ~600MB tree whose only hint is a user-visible symptom, (3) reason about which tail of the exact distribution is being requested and why 1-cdf catastrophically cancels to 0.0 for tiny tails, and (4) land the fix in the tree with the source itself modified. Multiple dependent stages: reproduce -> localize -> reason -> fix -> verify with the project's own tooling. Debugging ambiguity is high: the tree is huge, the bug is a one-character branch condition, and a reproduction that does not fail on the pre-fix tree is rejected by the verifier. Quantitative correctness is measured (p-value must be > 0 and close to specific tiny reference values, both for the golden upstream test and for five hidden inputs of sizes and tie structures the upstream test does not use). A wrong 'fix' that returns any nonzero number fails the closeness assertions; a data-specific hardcode fails the hidden cases which use different samples. Rubric total 15 (medium bucket): the two debugging dimensions (ambiguity 3, reasoning depth 3) carry the score; the task is deliberately much harder than the easy bucket that similar one-line-flip upstream tasks scored in the previous wave because the agent must author the failing reproduction itself and is given only a user-reported symptom, while remaining single-CPU offline-capable and bounded in time."
+}

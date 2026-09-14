@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 3,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": "tmux master 936bb6e7cdff4fc7700a4f36a6b828b87d9f8241 (depth-1 clone, ~2200 files, ~120k LOC C); full build (autogen+configure+make -j1) 42s at 1 CPU; image 0.91 GB",
+  "notes": "Real upstream defect (tmux GitHub issue 5511) fixed by upstream commit 696a16cc; the task tree is pinned to 936bb6e7, the master revision at which the regression test for the issue (regress/tty-draw-line.sh) fails with 'line 2: expected 'A<U+270F><U+FE0F>B', got 'A B''. The bug: screen_write_combine queries window_visible_ranges with pane-relative column cx instead of window coordinate xoff+cx, so a variation-selector-widened character in a pane with nonzero xoff is judged obscured (covered by the neighbouring pane) and replaced by a space; the top border line of the pane to its left is exempt, which is why line 1 of an offset pane renders fine and lines >= 2 drop the glyph. Symptom-only instruction: the agent must write its own failing reproduction (/app/repro.sh) before fixing; the verifier rebuilds the tree in both the pristine pinned state (repro, upstream golden test and 3 authored hidden cases must FAIL there) and the agent's repaired state (everything must PASS), plus three more upstream regress scripts (combine-test, screen-redraw-fill-character, screen-redraw-cache) so a broken fix cannot pass. Golden test extracted from the fix-side merge c1f947a3 through a throwaway /tmp clone that is rm -rf'd; byte-checked (sha256 1d5231...cc92b). Fix object 696a16cc is unreachable in the shipped clone: the clone is a depth-1 fetch of the parent SHA only, asserted with `! git cat-file -e 696a16cc^{commit}` at build time. Hidden cases use a different glyph (U+2708+VS16, U+2764+VS16) and different geometries (xoff=10 line 2, xoff=30 line 2 col 0, 2x2 grid with both offsets nonzero), all verified to fail pre-fix and pass post-fix in this image. Review closure (independent reviewer wave): a masking hack that forces the combine visibility check to never deem a character obscured (leaving the pane-relative query unfixed) passed every render-only check, so phase 2 gained a static root-cause assert that the screen_write_combine visibility query includes the pane x offset (upstream 696a16cc shape); masking hacks now score 0, honest oracle still 1. 1 CPU, memory 4096."
+}

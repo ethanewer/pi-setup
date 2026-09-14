@@ -1,0 +1,62 @@
+diff --git a/tpl/partials/partials.go b/tpl/partials/partials.go
+index e8a8adc..b0dc0a9 100644
+--- a/tpl/partials/partials.go
++++ b/tpl/partials/partials.go
+@@ -25,7 +25,6 @@ import (
+ 	"strings"
+ 	"sync"
+ 
+-	"github.com/gohugoio/hugo/common/hreflect"
+ 	texttemplate "github.com/gohugoio/hugo/tpl/internal/go_templates/texttemplate"
+ 
+ 	"github.com/gohugoio/hugo/helpers"
+@@ -121,10 +120,6 @@ func (ns *Namespace) Include(name string, contextList ...interface{}) (interface
+ 	var w io.Writer
+ 
+ 	if info.HasReturn {
+-		if !hreflect.IsTruthful(context) {
+-			// TODO(bep) we need to fix this, but it is non-trivial.
+-			return nil, errors.New("partial that returns a value needs a non-zero argument.")
+-		}
+ 		// Wrap the context sent to the template to capture the return value.
+ 		// Note that the template is rewritten to make sure that the dot (".")
+ 		// and the $ variable points to Arg.
+diff --git a/tpl/tplimpl/template_ast_transformers.go b/tpl/tplimpl/template_ast_transformers.go
+index de9b542..33461dc 100644
+--- a/tpl/tplimpl/template_ast_transformers.go
++++ b/tpl/tplimpl/template_ast_transformers.go
+@@ -112,7 +112,11 @@ func getParseTree(templ tpl.Template) *parse.Tree {
+ }
+ 
+ const (
+-	partialReturnWrapperTempl = `{{ $_hugo_dot := $ }}{{ $ := .Arg }}{{ with .Arg }}{{ $_hugo_dot.Set ("PLACEHOLDER") }}{{ end }}`
++	// We parse this template and modify the nodes in order to assign
++	// the return value of a partial to a contextWrapper via Set. We use
++	// "range" over a one-element slice so we can shift dot to the
++	// partial's argument, Arg, while allowing Arg to be falsy.
++	partialReturnWrapperTempl = `{{ $_hugo_dot := $ }}{{ $ := .Arg }}{{ range (slice .Arg) }}{{ $_hugo_dot.Set ("PLACEHOLDER") }}{{ end }}`
+ )
+ 
+ var partialReturnWrapper *parse.ListNode
+@@ -125,16 +129,18 @@ func init() {
+ 	partialReturnWrapper = templ.Tree.Root
+ }
+ 
++// wrapInPartialReturnWrapper copies and modifies the parsed nodes of a
++// predefined partial return wrapper to insert those of a user-defined partial.
+ func (c *templateContext) wrapInPartialReturnWrapper(n *parse.ListNode) *parse.ListNode {
+ 	wrapper := partialReturnWrapper.CopyList()
+-	withNode := wrapper.Nodes[2].(*parse.WithNode)
+-	retn := withNode.List.Nodes[0]
++	rangeNode := wrapper.Nodes[2].(*parse.RangeNode)
++	retn := rangeNode.List.Nodes[0]
+ 	setCmd := retn.(*parse.ActionNode).Pipe.Cmds[0]
+ 	setPipe := setCmd.Args[1].(*parse.PipeNode)
+ 	// Replace PLACEHOLDER with the real return value.
+ 	// Note that this is a PipeNode, so it will be wrapped in parens.
+ 	setPipe.Cmds = []*parse.CommandNode{c.returnNode}
+-	withNode.List.Nodes = append(n.Nodes, retn)
++	rangeNode.List.Nodes = append(n.Nodes, retn)
+ 
+ 	return wrapper
+ }

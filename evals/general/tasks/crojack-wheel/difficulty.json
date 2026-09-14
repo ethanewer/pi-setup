@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": "797MB image (149.8MB unique), sqlalchemy 2.1.0b2 pinned at parent a49a4f021ad9c9ff69f5482881b00f831d523a22 (depth-1 fetch cut at the parent; fix d466d3758 object provably absent); editable install via pip install -e '.[asyncio]' pytest==9.1.1 pytest-xdist==3.8.0; golden test extracted from the fix commit through a throwaway /tmp clone (rm -rf'd after); pristine pre-fix tree at /opt/prefix via git archive.",
+  "notes": "Real-upstream debugging task. The agent gets a real SQLAlchemy 2.1.0b2 tree at the parent commit and a user-visible symptom: Session.get() with with_for_update=False on an object already in the session identity map still emits a real SELECT, while with_for_update=None or omitted short-circuits to the identity map. The instruction names neither the issue (#13176), the PR, the fix commit, the source file, nor the exact line; it hands the agent no reproduction -- the deliverable /app/src/repro_issue.py must be written by the agent and must detect the bug on the pristine pre-fix tree (verifier runs it against /opt/prefix expecting nonzero exit) and pass on the repaired tree. The verifier then overlays the golden regression test extracted from the fix commit (test/orm/test_session.py::SessionUtilTest::test_get_with_for_update_use, 4 variants, [false] discriminates pre-fix), runs it plus the whole of the project's own test/orm/test_session.py (216 tests, ~1s at 1 CPU), and runs three authored hidden cases (string PK, query-loaded identity entry, composite PK) that exercise the same identity-map fast-path guard from inputs the upstream test does not use. Oracle applies the exact upstream fix (hoist ForUpdateArg._from_argument and gate the fast path on it) and proves both directions. Nop scores 0: no deliverable exists, no edit made, golden [false] variant fails. Reproduced: parent emits 2 SELECTs vs 1 at fix for the seeded scenario; golden 1 failed/3 passed at parent, 4/4 after fix."
+}

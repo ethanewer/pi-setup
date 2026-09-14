@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on pytorch/vision (issue #9615): the JPEG re-compression kernel (transforms.v2.functional.jpeg / jpeg_image / jpeg_video) raises a stride/view RuntimeError as soon as the input's LEADING dimensions are non-contiguous (a transposed or strided video/image batch), while contiguous inputs of identical shape work. The upstream fix is one line in torchvision/transforms/v2/functional/_augment.py (view -> reshape in jpeg_image). Difficulty deliberately raised vs the earlier wave: the instruction gives the user-visible symptom only, with no reproduction — the agent must author /app/repro.py before fixing, then localise the fault inside the real tree (the installed package's transform logic resolves to /app/src via a symlink so a tree fix is the code that runs). The verifier restores a pristine pre-fix copy of the module (baked at /opt/prefix, sha256-pinned) and requires the agent's repro, the upstream regression test (extracted from the fix commit at build time into /opt/golden, sha256-pinned) and three authored hidden cases (transposed jpeg_video batch; strided-slice image batch; three-leading-dimension transpose) to all FAIL on the pre-fix bytes and PASS on the repaired tree; the project's own existing TestJPEG tests (5 parametrised nodes) must stay green; scope is enforced by hashing every tracked file against the parent commit allowing only the bug's module to differ; HEAD must remain the parent pin and the fix commit must be unreachable from the trial clone (single-commit object store). Binary reward, 0 on every failure path, cpus=1. Measured build ~70s on one core; image 1.7 GB."
+}

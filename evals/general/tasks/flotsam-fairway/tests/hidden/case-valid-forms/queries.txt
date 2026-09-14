@@ -1,0 +1,12 @@
+# The valid-input side of the contract must keep working after the fix:
+# ASCII %c results, several %c in one format string, %c with NULL, results of
+# chr(...) above 127, and other conversions are unchanged (sanity, not
+# discriminators).
+SELECT printf('%c', 66);	VALUE:B
+SELECT printf('%c%c%c', 72, 105, 33);	VALUE:Hi!
+SELECT printf('x%cy', 65);	VALUE:xAy
+SELECT printf('%c', NULL);	VALUE:NULL
+SELECT count(*) FROM (SELECT printf('%c', i) FROM range(65, 70) t(i)) s;	VALUE:5
+SELECT length(chr(255));	VALUE:1
+SELECT printf('%s', chr(255)) = chr(255);	VALUE:true
+SELECT printf('%s %02d', 't', 3);	VALUE:t 03

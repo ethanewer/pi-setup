@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": null,
+  "notes": "v4.3 candidate: real upstream bugfix in scikit-image/scikit-image (#7496), the _dynamic_max_trials helper inside skimage/measure/fit.py returning a non-positive trial budget (-0.0) when (1 - probability) rounds to exactly 1.0, e.g. _dynamic_max_trials(1, 100, 1000, 1e-40) == -0.0 at the parent commit. The agent gets the real tree at the parent commit (one depth-1 commit in the object store, fix commit provably unreachable: HEAD asserted, `git cat-file -e <fix>^{commit}` fails, rev-list count == 1). No reproduction is given: the instruction describes the user-visible symptom (zero/negative maximum-trial budget for stopping probabilities near 1) and requires the agent to author its own failing reproduction /app/repro.py first, then diagnose and repair the arithmetic, then write /app/summary.md. The verifier re-runs the agent's reproduction against a pristine pre-repair copy of the full package baked at /opt/prefix (read-only, sha256-pinned, merged source .py + compiled .so with fit.py at the parent blob; run with `python3 -S` + PYTHONPATH so the meson editable meta-finder cannot shadow it) and against the agent's tree (must fail / pass respectively), plants the upstream regression test (test_fit.py extracted from the fix commit at image build time through a separate throwaway clone, sha256-pinned at /opt/golden) and runs the full test_fit.py module (30 tests) plus two authored hidden cases that exercise the same budget computation from inputs the upstream test does not use: an extreme-probability sweep over p in {1e-17, 1e-20, 1e-30, 1e-45} x several ratios/min_samples (each must yield a positive integer, all == 1 where deterministically clipped), and a boundary-invariants case (probability==0 shortcut still returns 0, n_inliers==0 still returns inf, normal-probability values still equal the independent log-formula). Each hidden case runs in BOTH the pristine direction (must fail) and the repaired direction (must pass). Dependency pins from the mining entry honoured (numpy==2.1.3 scipy==1.14.1 Cython==3.0.12 meson-python==0.21.1 etc.). Measured image build ~135 s at 1 CPU; cpus=1, no thread-pool sensitivity (pure-Python fix; pins set anyway)."
+}

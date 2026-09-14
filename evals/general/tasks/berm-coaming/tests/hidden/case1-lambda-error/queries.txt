@@ -1,0 +1,8 @@
+# case1: explicit error() calls with messages and element types the upstream
+# regression test does not use. Each row: SQL<TAB>CLEAN:<substring>.
+# Repaired engine must print a clean error containing the substring (and no
+# INTERNAL Error); the pre-fix engine must print the INTERNAL error instead.
+SELECT list_reduce([10, 20, 30], lambda x, y: error('berm hidden msg 7x'));	CLEAN:Invalid Input Error: berm hidden msg 7x
+SELECT list_reduce([1, 2, 3, 4], lambda x, y: error('boom at stage 3'));	CLEAN:Invalid Input Error: boom at stage 3
+SELECT list_reduce([TRUE, FALSE, TRUE], lambda x, y: error('logic fault'));	CLEAN:Invalid Input Error: logic fault
+SELECT list_reduce([3, 5.5], lambda x, y: error('mixed types fail here'));	CLEAN:Invalid Input Error: mixed types fail here

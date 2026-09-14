@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on sqlalchemy/sqlalchemy at parent e51ff826b9374cadb8eded370a808bc4dcbe56ba (real upstream bug, issue #11832, fixed by 44be2ef4484345298825f547e21d2881cc4921a9, PR #11834). SQLiteDialect.get_check_constraints splits the stored CREATE TABLE text with the regex ',[\\s\\n]*(?=CONSTRAINT|CHECK)': when a CHECK constraint is followed by a UNIQUE/PRIMARY/FOREIGN clause, the comma before that clause is not a split point, so the check text swallows ', <next clause>' and reflects corrupted sqltext (e.g. '((value > 0) AND (value < 100) AND (value != 50))), \\n\\tUNIQUE (value'). Unlike the cistern-basin sibling task, the reproduction is NOT handed to the agent: the instruction gives the user-visible symptom only and requires the agent to author /app/reproduce_check_constraints.py as a deliverable, and the verifier runs that agent-authored script against a pristine copy of the pre-fix tree (must exit nonzero) and against the repaired tree (must exit 0), so a vacuous or hardcoded reproduction scores 0. Discriminating golden test: ConstraintReflectionTest::test_check_constraint from the FIX commit (the parent's own copy of that test does not cover CHECK-followed-by-UNIQUE and passes at parent; the fix-commit version rewrites the fixture so UNIQUE/PRIMARY clamp onto CHECKs and fails at parent with exactly the observed corruption - confirmed in the built task image: 1 failed/58 passed at parent, 59 passed with the one-line fix). Verifier additionally runs the full project file test/dialect/test_sqlite.py (201 passed at parent; re-run at verify time must stay green) plus three authored hidden cases whose inputs the upstream test does not use (CHECK then multi-column UNIQUE; CHECK then FOREIGN KEY; PRIMARY KEY between CHECKs, with string literals containing commas/parentheses), each confirmed to fail at parent and pass at the fix. Fix surface is one line in lib/sqlalchemy/dialects/sqlite/base.py (only place the regex occurs; grep count 1 confirmed) and the provenance gate allows exactly that one tracked modification. Depth-1 fetch-by-SHA of the parent means the fix commit object is not present in /app/src/.git (asserted at build with '! git cat-file -e', re-asserted at verify time); the golden file is extracted through a throwaway bare clone of the fix commit under /tmp which is rm -rf'd, so the fix object never enters the shipped repository. Pure Python install (DISABLE_SQLALCHEMY_CEXT=1), in-memory sqlite only, image builds in ~20s at 1 CPU, full test file runs in ~3s. Difficulty lands medium: finding the failing table shape from the symptom and localising the regex in the real tree is the work; the repair itself is small."
+}

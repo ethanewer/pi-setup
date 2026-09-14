@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": null,
+  "notes": "Upstream-clone bugfix in git/git (v4.3 family): `git fetch --multiple --jobs=0` aborts with an internal BUG diagnostic ('BUG: run-command.c:NNNN: you must provide a non-zero number of processes!') and dies by SIGABRT instead of falling back to the documented default parallelism (online_cpus()) and fetching from all remotes. The regression was introduced by an earlier refactor that only kept the online_cpus fallback on the configuration path, not the explicit --jobs=0 path. The agent gets the real tree at the parent commit (one depth-1 object store, fix commit provably unreachable), must author its own failing reproduction (/app/repro.sh, executed against both the rebuilt fixed binary and a pristine pre-fix binary baked at /opt/prefix/git) before fixing, then localise the defect by reading builtin/fetch.c and patch that single source file (the upstream one-liner: treat an explicit max_jobs of 0 as 'pick online_cpus()' before the parallel machinery runs). Verifier: provenance (HEAD == parent, fix commit unreachable, blob-level scope check permitting ONLY builtin/fetch.c to differ), a clean rebuild from source (kills planted artifacts), the agent's repro in both directions, the upstream regression test extracted from the fix commit at image build time into /opt/golden (whole t5514 file, sha256-pinned, replanted over the tree's copy), previously existing fetch/pull suites (t5510, t5513, t5520), and three authored hidden cases using inputs the upstream test does not use (three remotes with --tags, changed branch tips between fetches, and one unreachable remote alongside a reachable one with isolated failure). Dependency pins: none needed beyond the pinned Docker base and pinned commit (pure C build, local file-path remotes only, no network at trial time)."
+}

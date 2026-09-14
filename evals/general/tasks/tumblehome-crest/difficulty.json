@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 90,
+  "documented_probe": null,
+  "notes": "Upstream-clone task (python/mypy, issue #21409, fix #21411). Bug: negative narrowing on iterable membership (x not in container) treats a general container as exhaustive, so a dict-keyed counting loop over a single-member enum yields a spurious 'Statement is unreachable' under --warn-unreachable. The agent must (1) write its own failing reproduction (/app/repro.py) from the symptom text, (2) locate the unsound narrowing path in a real ~11k-line checker and add the tuple-of-singletons guard, (3) keep the project's narrowing suite green. No reproduction was handed to the agent (deliberately harder than the prior wave). Golden: upstream regression test testNegativeNarrowingInContainer extracted from the fix commit; existing-suite check: pytest mypy/test/testcheck.py -k 'Narrowing or Narrow' (~140 cases, ~5-10 s at 1 CPU); 4 authored hidden cases (dict+IntEnum, set, list, tuple-singleton soundness guard). Dependency pins resolved against bench-base:python-3.12 (Python 3.12.13): typing_extensions 4.16.0, mypy_extensions 1.1.0, pathspec 1.1.1, librt 0.15.0, ast-serialize 0.11.1, pytest 9.1.1, pytest-xdist 3.8.0, lxml 6.1.3. Measured clean image build ~64 s at 1 CPU (image 776 MB total / 647.6 MB unique); verifier ~1-2 min, oracle+verifier pair <2 min. Rubric total 14 -> medium."
+}

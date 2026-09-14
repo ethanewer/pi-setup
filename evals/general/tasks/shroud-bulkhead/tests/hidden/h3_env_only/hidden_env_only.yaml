@@ -1,0 +1,35 @@
+lockfileVersion: '9.0'
+
+importers:
+
+  .:
+    configDependencies: {}
+    packageManagerDependencies:
+      pnpm:
+        specifier: 12.7.0
+        version: 12.7.0
+
+packages:
+
+  pnpm@12.7.0:
+    resolution: {integrity: sha512-12121212121212121212121212121212121212121212121212121212121212121212121212121212}
+    engines: {node: '>=22.13'}
+    hasBin: true
+
+  '@pnpm/exe@12.7.0':
+    resolution: {integrity: sha512-34343434343434343434343434343434343434343434343434343434343434343434343434343434}
+    hasBin: true
+
+  '@pnpm/win-x64@12.7.0':
+    resolution: {integrity: sha512-56565656565656565656565656565656565656565656565656565656565656565656565656565656}
+    cpu: [x64]
+    os: [win32]
+
+snapshots:
+
+  pnpm@12.7.0: {}
+
+  '@pnpm/exe@12.7.0': {}
+
+  '@pnpm/win-x64@12.7.0':
+    optional: true

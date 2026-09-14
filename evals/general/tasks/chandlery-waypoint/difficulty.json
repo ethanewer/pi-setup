@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": "in-image build smoke: golden file injected into a copy of the parent tree ran 1 failed/23 passed with FileNotFoundError at src/flake8/options/config.py:19 (the mined symptom, re-confirmed inside this task's own image); the same golden file plus the minimal try/except OSError fix applied to another copy ran the full tests/unit/test_options_config.py green (24 passed) and the whole unit suite green (425 passed, 1 deselected via -k).",
+  "notes": "Upstream-clone debugging task on PyCQA/flake8 at parent commit 446b18d35a5fa0be6b3531d30a0706fc82247313 (real upstream issue #1642, fixed by 8b51ee4ea54241f85df23f3dd20390b1563d4521). flake8 aborts with a FileNotFoundError traceback before linting when $HOME names a directory that does not exist: the config-discovery step in src/flake8/options/config.py stats the expanded home path unguarded, so accounts like Debian's 'nobody' (HOME=/nonexistent) cannot run flake8 at all; the upstream fix wraps the home stat in try/except OSError and treats an un-stat-able home like an unset one. The image ships the real checkout SHALLOW at the parent (fix commit unreachable, asserted, and brought in only via a throwaway bare clone under /tmp which is deleted), pip-installs it editable with the era pins (pycodestyle 2.9.1, pyflakes 2.5.0, mccabe 0.7.0, pytest 7.4.4), and keeps two grader-held references in the image: /opt/golden (the project's own regression test extracted from the fix commit, never shipped into the agent's tree) and /opt/flake8-pristine (a second pure-parent snapshot at the same parent commit). The AGENT is deliberately NOT handed a failing test: the shipped tree's suite is green (modulo one documented pre-existing py3.12 DeprecationWarning incompatibility, test_pyflakes_codes.py::test_undefined_local_code, identical at parent and fix), so the agent must write its own reproduction (/app/reproduce_unknown_homedir.py; verifier reruns it against the pristine buggy tree and requires a FileNotFoundError crash, and against the repaired tree and requires exit 0) and then find the crash inside the discovery step. Verifier injects the golden regression test into a copy of the repaired tree and requires the full tests/unit/test_options_config.py to pass, runs the rest of the project's unit suite (-k 'not test_undefined_local_code'), plus three authored hidden cases that the upstream test does not cover: os.stat of the home path raising PermissionError (catches a FileNotFoundError-only repair), an existing home whose config must still be discovered (guards against neutralising home handling), and a deep multi-component nonexistent home (same code path, different input); the first and third are proven to fail against the pristine tree. Reproduction verified in-image both directions. flake8 is not a Terminal-Bench 2.1 source repository (checked against specs/tb21_source_repositories.json)."
+}

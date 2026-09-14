@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 3,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 90,
+  "documented_probe": null,
+  "notes": "Upstream-clone bugfix in serde-rs/serde (v4.3 family): an adjacently tagged enum deserializes fine when the map carries only its tag and content keys, but any unrelated/extra map key aborts deserialization with 'invalid value: string X, expected tag or content', even though unknown fields are silently skipped everywhere else. The agent gets the real 2017-era tree at the parent commit (one depth-1 object store; fix commit provably unreachable), must author its own failing reproduction as /app/repro.rs (a self-contained serde_test integration test) that fails on a pristine pre-fix copy and passes on the repaired tree, then localize the defect by reading serde_derive/src/de.rs (the quote!-based generated code for adjacently tagged enums) and serde/src/private/de.rs (the strict TagOrContentFieldVisitor), and fix the generated code so unrelated keys are skipped via IgnoredAny unless deny_unknown_fields is set (in which case they are rejected). Verifier: integrity anchors (sha256 of the golden test and the toolchain), provenance (HEAD == parent, fix commit unreachable), a content-level scope check allowing ONLY serde_derive/src/de.rs and serde/src/private/de.rs to differ, deliverables present, a clean rebuild of the fixed tree, the replay of the project's own regression test (the fix's test_suite/tests/test_macros.rs, sha256-pinned at /opt/golden, replanted over the tree copy) plus existing test binaries test_macros/test_ser/test_de/test_annotations/test_value/test_gen/test_borrow all green, the agent's own reproduction run against the repaired tree (must pass) and against a pristine parent copy reconstructed from the object store via git archive (must fail), and three authored hidden cases: h1 exercising tolerant skipping of heterogeneous extra keys (map- and sequence-valued extras, struct/tuple variants, content-first orderings - inputs the upstream test does not use); h2 exercising deny_unknown_fields being honored (an extra key must now error); h3 generating tag/content/extra-key names at verifier time with \\$RANDOM so the sampled input space cannot be enumerated from any readable file (kills the key-hardcode bypass). Dependency pins: rust 1.70.0 (newer rustc hard-errors on this tree's #![deny(unused_imports)] re-export path and cfg(cargo-clippy)), CARGO_REGISTRY_PROTOCOL=sparse, offline cargo registry cache. cpus=1; the crate compiles cold in ~15-30s at 1 CPU so no compile-time risk."
+}

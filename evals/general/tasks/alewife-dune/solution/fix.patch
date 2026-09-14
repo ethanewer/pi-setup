@@ -1,0 +1,22 @@
+--- a/library/psa_util.c
++++ b/library/psa_util.c
+@@ -443,6 +443,9 @@
+     if (raw_len != (2 * coordinate_len)) {
+         return MBEDTLS_ERR_ASN1_INVALID_DATA;
+     }
++    if (coordinate_len > sizeof(r)) {
++        return MBEDTLS_ERR_ASN1_BUF_TOO_SMALL;
++    }
+ 
+     /* Since raw and der buffers might overlap, dump r and s before starting
+      * the conversion. */
+@@ -561,6 +564,9 @@
+     if (raw_size < coordinate_size * 2) {
+         return MBEDTLS_ERR_ASN1_BUF_TOO_SMALL;
+     }
++    if (2 * coordinate_size > sizeof(raw_tmp)) {
++        return MBEDTLS_ERR_ASN1_BUF_TOO_SMALL;
++    }
+ 
+     /* Check that the provided input DER buffer has the right header. */
+     ret = mbedtls_asn1_get_tag(&p, der + der_len, &data_len,

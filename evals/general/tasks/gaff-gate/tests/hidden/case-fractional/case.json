@@ -1,0 +1,9 @@
+{
+  "method": "status",
+  "invalid": [
+    { "in": 100.5, "type": "TypeError" },
+    { "in": 302.9, "type": "TypeError" },
+    { "in": 500.25, "type": "TypeError" },
+    { "in": 599.99, "type": "TypeError" }
+  ]
+}

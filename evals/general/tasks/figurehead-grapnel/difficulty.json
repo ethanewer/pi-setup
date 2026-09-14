@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 90,
+  "documented_probe": null,
+  "notes": "figurehead-grapnel: curl/curl upstream bug #22868 fixed by 12cfc836. Agent must (1) author its own failing IMAP reproduction as a deliverable (/app/reproduce_bug.sh) whose contract is verifiable in both directions, (2) locate and fix the silent wrong-mailbox IMAP selection bug in a real ~200k-line C codebase without any hint of the file or the fix, (3) rebuild. The verifier runs the agent's reproduction against a pristine pre-fix binary (must fail) and the agent's rebuilt binary (must pass), force-rebuilds from source (defeats binary swapping/wrappers), runs the project's own golden regression test 804 (restored from a canonical copy so tampering is impossible), the project's own existing suite (tests 1,10,800-803,805,806), and three authored hidden cases (three case-variants, identical-name reuse, INBOX mixed-case reuse) that the upstream test does not use. Build is 1 CPU; measured build time used for build_timeout_sec."
+}

@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 1,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": null,
+  "notes": "Upstream-clone bugfix in netty/netty (v4.3 family): the gzip codec in codec-compression cannot decode valid gzip streams that carry an FEXTRA extra header field (RFC 1952; BGZF and other tools emit these). The decoder reads the two-byte little-endian XLEN by OR-ing it into the -1 'no extra field' sentinel, which leaves it -1 forever, so the extra field is never skipped and its bytes corrupt the inflater; the byte order is also wrong and xlen is not reset between concatenated gzip members. GZIPOutputStream never sets FEXTRA, so the bug is latent and undiscoverable by running the pre-existing suite. The agent gets the real tree at the parent commit with the bug intact, must write its own failing reproduction (/app/repro.sh + a JUnit test class in the module test package; the instruction describes only the user-visible symptom and never names the issue, the fix or the file), localise the defect by reading the header-parsing state machine in the gzip decoder, fix it, and prove it with the project's own Maven/JUnit machinery (fully offline, 1 CPU, warm /opt/m2). Verifier: trust-anchor sha256 pins for the golden test, the pristine pre-fix decoder source and the toolchain; provenance (HEAD still the pinned parent commit; every tracked file except the bug's source file byte-identical to the pinned commit; new untracked files allowed only in the module test package); the agent's reproduction both directions (passes on the repaired tree, must FAIL against the pristine pre-fix decoder source planted from /opt/prefix); the project's own regression test from the FIX commit (planted from /opt/golden, sha256-pinned) plus the pre-existing JdkZlibTest run together (24 tests, 0 errors); three authored hidden cases - a 300-byte extra field with nonzero high XLEN byte, a 512-byte extra field with a zero low XLEN byte (byte-order trap), and concatenated members mixing FEXTRA+FNAME with a plain member (resets the xlen state) - each failing on the pristine tree and passing on a genuine fix, with byte-exact content assertions. Oracle applies the real upstream one-file patch. Offline-capable: local Maven repository warmed at /opt/m2 via the global settings.xml so root and uid-1000 trials share it; measured module builds ~7s at 1 CPU."
+}

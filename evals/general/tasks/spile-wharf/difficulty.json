@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on giampaolo/psutil at parent commit 5ec16ad4d887c069f6b758fd0659fb6bc9b47f7d (real upstream issue #2809, fixed upstream by d46726028ac01e27e052ec60371951e789d2b101). psutil.swap_memory() parses every /proc/meminfo line as fields = line.split(); mems[fields[0]] = int(fields[1]) * 1024, so a field printed with no space after its colon (e.g. 'ShadowCallStack:10373888 kB', produced by the kernel's %8lu fixed-width format on arm64 once the value reaches 8 digits) makes int(b'kB') raise ValueError and swap reporting crash. The fix applies the same colon-split parsing upstream gave virtual_memory(): split each line on the first ':', then int() the first whitespace token of the value. Difficulty raised per v43 wave instructions: no reproduction is handed to the agent; the instruction describes only the user-visible symptom and REQUIRES the agent to author its own failing reproduction (/app/reproduce.py, synthetic /proc via psutil.PROCFS_PATH) as a deliverable before fixing. The verifier runs that script against a pristine pre-fix tree (must crash with the genuine ValueError) AND against the repaired tree (must exit 0 with consistent figures), so a stubbed or vacuous repro fails. The image clones the repo at the parent, overlays the fix-commit tests/test_linux.py (sha256-pinned ed219267..., extracted via a throwaway clone under /tmp that is deleted) so the mined failing state reproduces (TestSwapMemory::test_no_space_after_colon FAILS with the ValueError at build), prebuilds the C extension editable install (agent fix is pure Python; no rebuild needed), bakes a read-only pristine parent copy at /opt/pristine, and keeps the fix commit unreachable. Gaming vectors closed: fix SHA unreachable (no git log --all answer), golden test byte-restored from /opt/golden before the suite run, hardcoded values fail the three hidden cases (totals 1048576/3072000/1024000, percents 50.0/33.3/75.0 vs golden 15360/6.7), and the step-2/step-3 structure punishes wrapping, skipping, deleting, or vacuous repros. Hidden cases exercise the same parser with inputs the upstream test does not use: arm64-style no-space foreign fields with 8 and 9-digit values, no-space swap fields themselves, and spacing/content mixes plus exact percent rounding. Whole TestSwapMemory class + TestVirtualMemory::test_virtual_memory must be green after the fix. Measured: clone+apt+editable install ~36s at 1 CPU in the probe image; total task image build ~1-2 min; image size ~0.9-1.0 GB."
+}

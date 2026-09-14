@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": null,
+  "notes": "Upstream-clone bugfix in gin-gonic/gin (v4.3 family), the Go web framework. The raw-data renderer (render.Data.Render) writes content type and body but never sets a Content-Length header, so responses carrying known-size byte payloads (generated images, downloads, binary blobs) go out with the length undeclared; strict HTTP clients, caches and progress-bar middleware see an empty/missing header and fall back to chunked framing or refuse the response. Fixed by gin issue #4206 (fix commit 5c00df8afadd06cc5be530dde00fe6d9fa4a2e4a, parent db309081bc5c137b2aa15701ef53f7f19788da25): set Content-Length = strconv.Itoa(len(data)) when the payload is non-empty, before writing the body. The agent gets the real gin tree at the parent commit (single depth-1 object store, fix commit provably unreachable) and is NOT given a reproduction: the instruction describes the user-visible symptom only, and the agent must author its own failing reproduction (/app/repro.sh, a real HTTP-server exercising test planted into a scratch copy of the tree, required to pass against the repaired tree and to fail against a pristine pre-fix tree at /opt/prefix-src) before changing any code. Verifier: provenance (HEAD == parent, fix commit absent from the object store, blob-level scope check permitting ONLY render/data.go to differ), toolchain integrity (go binary sha256 + exact go version), deliverables executed, one-time GOCACHE wipe forcing a recompile of the whole module from the delivered sources, the project's own regression test (extracted from the fix commit via a throwaway clone at image build time into /opt/golden, sha256-pinned, never in the shipped repo) planted and run, the ENTIRE pre-existing render package test suite (go test github.com/gin-gonic/gin/render), and two authored hidden cases using inputs the upstream test does not use (recorder-mode binary payload with NUL/0xff bytes and a distinct content type; HTTP-server round trip at sizes 7/4096/1048576 with body-integrity counting). go 1.26.8 pinned (go.dev tarball), module caches warmed at build time under /opt/gocache shared by root and uid 1000; the whole render package compiles and runs offline in ~2 min at 1 CPU (verified in a throwaway image: parent-direction failures 'expected: \"19\" actual: \"\"' and 'expected: \"100000\" actual: \"\"', fix-direction pass, full suite green at fix with only those two tests failing at parent)."
+}

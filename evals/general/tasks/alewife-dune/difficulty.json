@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": null,
+  "notes": "Upstream-clone bugfix in Mbed-TLS/mbedtls (v4.2 family; CVE-2024-45157): stack buffer overflow in the ECDSA raw<->DER signature format conversions (mbedtls_ecdsa_raw_to_der / mbedtls_ecdsa_der_to_raw in library/psa_util.c) when the caller supplies a coordinate size above the build's max curve (521-bit => 66-byte fixed buffers; a 544-bit value => 68-byte coordinates overflows). On Ubuntu 24.04 gcc 13 the overflow is a deterministic glibc _FORTIFY_SOURCE abort ('*** buffer overflow detected ***: terminated', exit 134); the abort backtrace names the converting function, so localization is cheap (ambiguity 1), but the fix must be done correctly in BOTH directions with the check placed BEFORE any copy, returning MBEDTLS_ERR_ASN1_BUF_TOO_SMALL, and must not over-reject the 528-bit boundary (which still fits). The agent must author its own failing reproduction in the project's test data (raw->DER and DER->raw at 544-bit) and observe the crash before fixing. Verifier: provenance check (HEAD==pinned parent; only library/psa_util.c and the suite data file may differ, byte-identical else; no untracked files), then `git clean -fdx` purges every git-ignored build artifact (object files, archives, generated suite sources) so nothing the agent planted or left stale can be linked in by the verifier's own make; agent's reproduction must pass on the repaired tree AND fail on a pristine-copy (pre-fix concept) rebuilt from the pinned commit's blob; the upstream golden regression test (the two 544-bit data cases the fix commit added, shipped as the 6-line tests/golden/golden_cases.data on the verifier-only /tests mount and reconstructed as the parent's 41 cases + those two) must pass 43/43; the fix commit object is never in the image (single-commit shallow clone + build-time belt and verify-time re-assert of `git cat-file -e <fix>`); the project's own existing test_suite_psa_crypto (1945) and test_suite_pk (407) must stay green, plus four authored hidden data cases at inputs the upstream test does not use: 560-bit raw->DER, 560-bit DER->raw, and 528-bit boundary success in both directions. Toolchain (make/gcc/cc/python3/git) sha256-pinned to defeat stub/plant attacks. Build measured ~1-3 min at 1 cpu; agent work is incremental from the warm object tree."
+}

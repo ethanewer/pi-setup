@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on tmux/tmux. Parent 73db0a54e5ae5abf80bb790829222c9760f60b1d is the project's own test-first commit for GitHub issue #5576 (regression checks already committed and failing; cmd-find.c still contains the bug). Fix is the merge d44bfda26d2468b5f474087b56f93eda34c541b6 (master), which is exactly the OpenBSD-line commit 00f3899aea035666fa9e7bd60bc7c2cf36c8e745 applied to cmd-find.c (11+/7-); the dev-line commit itself is not Linux-buildable (its tree is the BSD-Makefile-only OpenBSD tree without autogen.sh/configure/regress), which is why the image pins the master coordinates, and both fix SHAs are asserted unreachable in the working clone. Symptom: malformed session-relative +N/-N window or pane offsets (+0, +foo, -0) are silently accepted and applied to the fallback item instead of rejected with 'can't find window:/pane: ...'. No reproduction is supplied in the instruction; the agent must write /app/repro.sh (contract: TMUX env var, exit 0 iff the binary rejects malformed offsets) and the verifier runs that repro both against the fixed build and against a pristine rebuild of the parent tree (via git worktree) to prove it distinguishes bug from fix. Golden tests: the project's own regress/targets.sh + targets-panes.sh, copied from the fix tree at image build time into /opt/golden (throwaway clone, deleted). Hidden cases (authored, run against the built binary): case-overflow-window (29-digit numeric offsets, both signs, which strtonum clamps pre-fix but must reject post-fix) and case-pane-nonzero-window (malformed pane offsets on a non-current window index 1, via has-session and select-pane, plus a valid +/- sanity check). Verifier also runs a randomized probe loop (runtime-generated overflow numbers, so static reading of /tests cannot pre-special-case every input), and a regression slice of the project's own suite (window-ops.sh, session-ops.sh, options-values.sh, run-shell-output.sh) from the golden copies. Provenance asserted: HEAD pinned parent, both fix commits unreachable (cat-file), exactly one commit, no assume-unchanged/skip-worktree flags, tracked modifications limited to cmd-find.c with at least one present, no deletions. sha256-bound: /usr/bin/git, /bin/sh, /opt/golden/regress/targets.sh, /opt/golden/regress/targets-panes.sh. Nop scores 0: on the untouched parent tree the golden tests fail at the first malformed-offset check, hidden cases fail, random probes fail, repro missing. Both directions re-confirmed inside the task image: golden tests FAIL at parent, PASS with the fix; direct repro (select-window -t alpha:+0 -> 'can't find window: +0', exit 1; exit 0 before). Measured at the task base: full build (apt+clone+autogen+configure+make -j8) ~100s, clean make -j1 ~30s, incremental relink ~1s, targets.sh+targets-panes.sh ~2s at 1 CPU; image ~1 GB."
+}

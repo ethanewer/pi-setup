@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 3,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 1,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 75,
+  "documented_probe": null,
+  "notes": "Upstream-clone bugfix in BurntSushi/ripgrep (v4.3 family): whitelisted hidden files (negated '!...' rules in .ignore) are silently skipped when the search starts inside a subdirectory and the search path is spelled '.'; all other spellings (no path, './') and all invocations from the parent directory work. The agent gets a real tree at the parent commit with the bug intact, must write its own failing reproduction (/app/repro.sh, run against both the repaired binary and a pristine pre-fix binary baked at /opt/prefix/rg in the image) before fixing, then localise the defect in the ancestor-ignore walker by reading (no panic, no file hint: ambiguity is high because the symptom is a silent empty listing for one exact path spelling), patch the single source file (crates/ignore/src/dir.rs), and prove the fix with the project's own harness. Verifier: provenance + blob-level scope check (only that one file may differ), the agent's repro both directions, the upstream regression test extracted from the fix commit at build time (r3173_hidden_whitelist_only_dot, planted from /opt/golden with sha256 pin), a selection of the project's own ignore/whitelist integration tests, and four authored hidden CLI cases using different hidden names/whitelist patterns/nesting (--sort=path for deterministic byte-exact output). Oracle applies the upstream one-file patch."
+}

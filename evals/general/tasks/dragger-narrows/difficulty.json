@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 90,
+  "documented_probe": "Pre-fix concept checkout proven by rebuilding the claimed degraded source against the parent blob inside the verifier (repro and all hidden fixtures print no pins and emit 'Ignoring unsupported Python request' warnings) and by the nop run scoring 0. Hardcode-repro attack probe: verifier checks the agent binary, golden test from the fix commit and 3 hidden fixtures independently of /app/repro.sh, so a script that prints the expected pins without a real source fix scores 0.",
+  "notes": "Upstream-clone task: real astral-sh/uv checkout at a pinned parent commit, real bug (#21529, whitespace-padded .python-version/.python-versions entries silently dropped). No reproduction or file hint in the instruction: the agent must write /app/repro.sh demonstrating the symptom with the project's own binary, then fix the source so padded entries are parsed. Oracle applies the upstream fix to the pinned parent tree. Verifier: scope check (only the uncommitted change to the version-file parser), forces an offline incremental rebuild, plants the fix commit's own regression test (extracted at image build time through a throwaway clone) and runs it, runs the agent repro and 3 authored hidden fixtures (all whitespace-padded, distinct inputs incl. CRLF and tabs, both file names) against the fixed binary, then rebuilds the parent blob of the parser as the pre-fix tree concept and asserts the same probes fail there. Toolchain pinned to the repo's own rust-toolchain.toml 1.98.1; builds measured at 1 CPU (incremental uv rebuild ~70 s, test target ~164 s, full cold build ~24 min). Difficulty bucket medium (13)."
+}

@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 90,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on a real codebase: redis/redis checked out at 8f365337d48c8a264bc9f3381c7b8cc12ffb51d2 (parent of upstream fix 4f20cb48934463db5970bd476461b2d57af3f38d, upstream issue redis/redis#15489). The clone is initialized fresh and a single shallow --no-tags fetch of the pinned parent SHA is made, so the fix commit is not reachable by any ref/object/reflog; the project's own regression test (tests/unit/type/stream-cgroups.tcl from the fix commit, test 'XSETID ENTRIESADDED clamps group entries_read and keeps the RDB loadable') is extracted into /opt/golden via a throwaway bare clone that is deleted. The fix commit's source bytes are NOT extracted into the image at all; the oracle re-derives the patch. The bug was re-confirmed inside this image in both directions: at the parent the fix-commit test fails (Expected '10' to be equal to '2', XINFO GROUPS reports existing entries_read=10 lag=-8 after XTRIM MAXLEN 2 + XSETID ... ENTRIESADDED 2, and DEBUG RELOAD fails leaving the db wiped), and with the fix applied (clamp every cgroup entries_read to a lowered entries_added, skipping SCG_INVALID_ENTRIES_READ) the same test reports 'All tests passed without errors!'. The bug: in xsetidCommand (src/t_stream.c) the directly-set s->entries_added is lowered without clamping consumer-group entries_read, breaking the entries_read <= entries_added invariant that streamReplyWithCGLag and the RDB loader both rely on (rdb.c rdbReportCorruptRDB 'Stream cgroup entries_read inconsistent with entries_added'). Deliberately raised difficulty: the instruction gives only the user-visible symptom (XNAME + lag + unloadable snapshot) and requires the agent to author /app/reproduce.sh (its own failing reproduction, a declared deliverable) before fixing; the verifier runs that script against a pristine pre-fix server rebuilt in the verifier from the parent source (VERDICT: BUGGY required) and against the agent's rebuilt server (VERDICT: FIXED required), so a vacuous or hard-coded reproduction scores 0. Then: provenance (HEAD still parent, fix commit absent, only src/t_stream.c changed, no stray files), make -j1, the golden regression test via './runtest --single unit/type/stream-cgroups --only <name>', three authored hidden cases also run through runtest with inputs the upstream test does not use (counter lowered to 0 on an emptied stream with two groups at different read positions; a never-read group whose entries_read is SCG_INVALID and must remain unset; a partial lowering where one group clamps and a below-the-counter group is left untouched), and the project's own pre-existing stream-cgroups suite (181 passing assertions, includes the two 'cap the value' tests) must stay green. Difficulty medium: no reproduction is handed to the agent, the symptom spans the XSETID command path, the lag arithmetic and the RDB loader validation, and the fix must be designed (not copied), but the repair itself is a contained ~20-line addition mirroring the clamp the code already applies in XGROUP CREATE/SETID."
+}

@@ -1,0 +1,18 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on gin-gonic/gin at parent commit fb2583442c4d9bccb75e6d26f1aa6e7c01950db6 (real upstream issue #4535, fixed by 472d086af2acd924cb4b9d7be0525f7d790f69bc). With RedirectFixedPath on, an unmatched request triggers the case-insensitive fixed-path lookup (findCaseInsensitivePathRec); at a routing-tree node that has BOTH static children and a wildcard (param or catch-all) child, the old code took children[0] (a static child, since addChild keeps the wildcard last) and panicked with 'invalid node type', killing the whole server process. The fix (66 lines in tree.go) first scans static children through the node's byte indices (exact/lower/upper first rune, recursive, exactly like getValue) and only falls back to the last child (the wildcard), with the not-found result instead of a panic on unmatched lookups. DELIBERATELY HARDER THAN THE PREVIOUS WAVE: no reproduction is shipped or described in the instruction; the agent must observe the symptom (server dies on mixed static+wildcard layouts), construct its own failing reproduction as a deliverable at /app/repro_caseinsensitive_test.go (test functions named TestRepro*), and only then fix the framework. The verifier re-runs the agent's own reproduction on a copy of the tree with the pristine buggy tree.go restored (must FAIL, proving it reproduces) and on the repaired tree (must PASS), runs the upstream regression tests extracted from the fix commit into /opt/golden at build time via a throwaway bare clone (fix commit never reachable from /app/src), runs the project's own full suite (gin, gin/binding, gin/render; 400 tests green at the parent as root, verified in-image), and three authored hidden cases that fail at parent and pass at fix: a deeper mixed static/param subtree (/api/v1/users/me + /api/v1/users/:id), a router-level RedirectFixedPath case through PerformRequest, and a static leaf + catch-all sibling. Toolchain: go1.26.8 tarball (sha256 d0f743b3...), make; all gopkg deps pinned by go.sum and warmed at build time; the image build fails closed if the mined panic ('panic: invalid node type') is not reproduced by the golden tests at build time. probe: none shipped (task requires the agent to author its own reproduction). Both directions re-confirmed inside the task image before shipping: parent panics on all three layouts, fix passes everything. Rubric: repro-first workflow adds a stage and forces reading unfamiliar routing-tree invariants (wildcard child is last, indices hold first bytes); debugging ambiguity is moderate because the panic backtrace points at the file but the crashing layout must be constructed; total 11 = medium.",
+  "documented_probe": null
+}

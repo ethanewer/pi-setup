@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 75,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on PyCQA/bandit at parent commit 6d6ec6d550ef3ce1c7b6b04a56931bac65e94f71 (real upstream bug, issue #764, fixed by PR #765 commit c420d1d5). The reproduction is deliberately NOT supplied: the instruction describes the user-visible symptom (bandit logs 'Bandit internal error running: django_rawsql_used ... list index out of range' on a Django raw-SQL call written one particular valid way, keeps going, and reports no finding for the risky call) and the agent must reverse-engineer the trigger (SQL text passed to Django's RawSQL as a keyword argument rather than first positional arg), author its own failing reproduction as the /app/repro.py deliverable, then repair the real tree so the same input scans cleanly AND the B611 finding is reported, with the project's own 267-test suite green. The verifier runs the agent's reproduction against a pristine copy of the pre-fix tree (/opt/pretree, sha-pinned) where it must fail and print internal-error evidence, and against the repaired tree where it must exit 0 and report the finding; runs the upstream regression material, which the verifier reconstructs byte-exactly from the sha-pinned pristine pre-fix tree at /opt/pretree (fix-commit test_functional.py::test_django_sql_injection_raw with its example; a true discriminator: 6 expected Medium vs 4 without the fix; no fix-commit bytes exist in the image); runs the full stestr suite; and runs four authored hidden-case files over shapes the upstream test does not use (keyword-only variants: concat/modulo/f-string SQL expressions; keyword-order variants including params-before-sql and nested-def calls; a keyword-constant guard: SQL passed as an unchanging literal by keyword must stay unflagged on the repaired tree, matching upstream ast.Str semantics, while the pre-fix tree still crashes on it; and positional guards: constant literal positional calls that must stay unflagged on both trees). Pure Python, offline-capable (verified nodevice, scans are static); measured image build ~20s and full stestr suite ~6s at 1 CPU. Both directions (parent fails / fix passes) re-confirmed inside the task image before shipping. Targeted-cheat controls: fix-sha object absent + exactly one commit in the working clone + only bandit/ tracked files modified (no new files under bandit/) + no sitecustomize/usercustomize wrappers + 'import bandit' resolves to /app/src + sha-pinned reconstruction of the fix-commit regression material + sha-pinned hidden-case files + shape check that the unguarded 'sql = context.node.args[0]' indexing is gone with a guard in its place + the verifier re-checks every declared deliverable and requires the Golden-B611 finding on the repaired tree (so swallowing the exception in core/tester.py or disabling the rule cannot pass) and requires keyword-constant calls to stay unflagged (so a blanket 'flag every keyword-only RawSQL call' substitute that never reads the sql keyword's value cannot pass)."
+}

@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": null,
+  "notes": "Real upstream debugging task (prettier/prettier, issue #19621). The agent must author its own failing reproduction (CLI), then fix the formatter inside a real ~250k-line codebase and make the project's own quote-props + whole-tests/format/typescript suites pass offline on 1 CPU. Root cause lives in the quote-props unquoting path but is not named; the fix is small once found. Hidden cases are authored inputs exercising the same code path on shapes (generic interface, single-quoted type alias) the upstream fixture does not use. Verified: reproduction fails at parent, passes at fix commit, in-image; golden hash pins prevent snapshot regeneration; simpler-exploit attempts (CLI wrapper, snapshot edit) are each caught by a distinct verifier check."
+}

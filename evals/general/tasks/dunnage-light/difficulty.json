@@ -1,0 +1,18 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on clap-rs/clap at parent 8bb3853eb5e19e9190d142ebb9ae230312da89f1 (real upstream issue #3815, fixed by 3eacf5b8b0f1e79955a0e7f94dc18b1f6a6b6502). Arg::default_value_ifs_os forwards arg.key() (a pre-hashed key) instead of the plain id into the singular default_value_if_os, which hashes again, so a conditional default keyed by a plain argument id never matches and the dependent argument reads back no value, while the sibling default_value_ifs (non-OS plural) and default_value_if_os (singular) work. The image clones the repo SHALLOW at the parent, prebuilds the project's trybuild harness (baseline 1576 builder tests), keeps a pristine parent snapshot at /opt/pristine, and ships the upstream regression test (tests/builder/arg_settings.rs at the fix commit, sha 08a1fc63...) as tests/golden/arg_settings.rs, a verifier-only mount never visible to the agent; its authenticity against the fix commit is asserted at build time via a throwaway bare clone that is deleted; the golden is NOT part of the image, so the agent must author its own failing reproduction first (deliverable /app/src/tests/builder/dunnage_repro.rs registered in main.rs, fn default_value_ifs_os_repro). The verifier rebuilds both trees offline, requires the agent's reproduction and the golden test to FAIL on the pristine tree and PASS on the repaired tree, runs the whole builder suite (1580 with the overlays), and two authored hidden cases: dunnage_hidden_multi_conditions (a 3-triple list keyed on two different argument ids incl. ordering - earliest triple wins when two fire - and not-met negative) and dunnage_hidden_short_condition (condition keyed on a short-flag id plus not-met negative), both empirically shown to fail pre-fix and pass post-fix. Difficulty is medium: the bug is a one-token root cause reachable by comparing the sibling implementations after the agent localises the API, so the harder half is the harness-conformant failing reproduction stage, not open-ended reasoning.",
+  "build_and_image": "Fresh docker build of the final image measured at 5m53s on 64 host cores (clone ~2s, rustup+toolchain fetch ~1min, cold cargo harness compile ~35s, pristine snapshot + golden extraction negligible); image size 6.07GB (base bench-base:ubuntu-24.04 0.61GB, pinned rust 1.98.1 toolchain ~2.7GB, two warm cargo target dirs ~2.5GB). Trial-time rebuilds at cpus=1 measured inside the image: ~34s for a test-file-only change, ~63s for a src/builder/arg.rs change, all offline (CARGO_HOME warm)."
+}

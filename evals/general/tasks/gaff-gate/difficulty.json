@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 75,
+  "documented_probe": "expressjs/express pinned at the parent of the issue #4212 fix (ee40a881f5d8cb4ce71bc45262fde8e4b7640d05, express 5.0.0-beta.3 era). Shallow clone + npm install on bench-base:node-22 at 1 CPU: ~18s cold image build; golden test suite (fix-commit test/res.status.js, 16 cases) runs in ~0.5s; the reproduction probe is hang-free (direct lib calls, no mocha).",
+  "notes": "Upstream-clone debugging task in the real expressjs/express tree (issue #4212, fix 723b5451). The agent gets the un-fixed tree and only a user-level symptom: invalid status codes (below 100, above 999, non-integers, strings, NaN, undefined) are silently accepted by the status-setting API and later blow up as a wrong/unparseable response. The instruction names no issue, no PR, no fix, no file: the agent must localize res.status (lib/response.js) and res.sendStatus, author its OWN discriminating regression (/app/reproduce.js, a deliverable that must exit non-zero on the pristine tree and 0 on the repaired tree), implement validation (TypeError for non-integers, RangeError for out-of-range integers, message beginning 'Invalid status code:'), route sendStatus through the validated path, and keep the project's existing suite green. The verifier runs the agent's own reproduction against both the pristine (git-restored) lib and the agent's repaired lib, runs the project's own fix-commit golden tests extracted at build time into the image (hash-pinned in test.sh so tampering is caught), proves the golden tests discriminate in-image (must fail on the pristine lib), re-runs four of express's own parent test files restored from git (defeating test deletion), runs five authored hidden input classes the upstream tests do not use, and clamps byte-identical copies of the upstream fix (sha256 pinned). Fix unreachable: the shipped clone is a --depth 1 fetch of the parent SHA only, asserted with `! git cat-file -e <FIX>^{commit}` both before and after the golden extraction, which happens in a separate throwaway clone under /tmp that is rm -rf'd. Does not claim a tb2.1 competency; claims_no_competencies."
+}

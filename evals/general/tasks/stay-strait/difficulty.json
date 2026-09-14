@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": null,
+  "notes": "Upstream-clone bugfix in git/git (v4.3 family, sibling of gunwale-tideway): cloning a repository straight from a local path crashes when the source repository contains a loose ref file whose contents are not a valid object id. The clone prints 'Cloning into ... done.', then an internal BUG: diagnostic ('BUG: refs.c:1113: create called without valid new_oid') and dies by abort signal (rc 134, core dump) instead of failing with an ordinary fatal error. Root cause is in ref_transaction_create() in refs.c, which BUG()s out on a null new_oid (the clone's ref scan passes one through after GIT_REF_PARANOIA became the default in 2.36); the fix turns that BUG() into an error strbuf ('%s' has a null OID) plus a return 1 that both callers already die() with. The agent gets the real tree at the parent commit (6cd33dcee, Git 2.36.0; shallow single-commit object store, fix commit d097a23b provably unreachable), must author its own failing reproduction (/app/repro.sh, executed both against the rebuilt fixed binary and against a pristine pre-fix binary baked at /opt/prefix/git), then localise the defect and patch the single source file refs.c. Verifier: provenance (HEAD == parent, fix commit unreachable, blob-level scope check permitting ONLY refs.c to differ), a clean rebuild from source (make clean && make -j1, ~110 s on one core), the agent's repro in both directions, the upstream regression test extracted from the fix commit at image build time into /opt/golden (whole t/t5605-clone-local.sh, sha256-pinned, replanted over the tree's copy; requires 'passed all 21 test(s)'), previously existing clone/ref suites (t5601-clone.sh, t5600-clone-fail-cleanup.sh, t1404-update-ref-errors.sh; 3-4 s each at 1 CPU), and three authored hidden cases using corrupt-ref inputs the upstream test does not use (a 40-character non-hex file in refs/tags/, an all-zero 40-hex OID in refs/heads/, and an empty ref file in a nested refs/heads/feat/x namespace), each run against the rebuilt binary (must pass) AND against the pre-fix binary (must crash, proving the case bites). Dependency pins: none; pure C build, local file-path remotes only, no network at trial time."
+}

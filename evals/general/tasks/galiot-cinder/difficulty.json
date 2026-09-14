@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 0,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 40,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on falconry/falcon 4.0.0 at parent commit 7191be4d19592401f38a7b8e824e9669d34dad2b (upstream issue #2157, upstream fix 69cdcd6edd2ee33f4ac9f7793e1cc3c4f99da692). falcon.testing.create_environ() hardcodes environ['RAW_URI'] = '/' while real WSGI servers expose the raw percent-encoded request path; apps that route or sign on the raw path behave differently under the test client than under a real server. The agent must write its own failing reproduction at /app/reproduce_bug.py and fix the defect somewhere in the checkout at /app/src so the raw path is preserved while PATH_INFO keeps the decoded, ISO-8859-1-tunnelled form; the verifier runs the agent's reproduction against a pristine git-archive export of the parent tree (must exit nonzero, pure-Python mode) and against the repaired tree (must exit 0), runs the project's own regression test extracted verbatim from the fix commit (must fail on pristine, pass on repaired), the full tests/test_testing.py module (42 tests), and three authored hidden-case modules (percent-encoded slashes/UTF-8/plus signs; TestClient end-to-end with query string; defaults + create_req + Request round-trip). The image ships a single-commit clone (parent only; fix commit never fetched into it), golden test extracted via a throwaway bare clone that is deleted, pip-installed editable with cython; bug verified present in-image. Image build ~115 s wall, ~1.02 GB. This stands in for TB2.1's bottlepy/bottle and pallets/flask testing-client tasks; falconry/falcon is not a TB2.1 source repository (checked against specs/tb21_source_repositories.json)."
+}

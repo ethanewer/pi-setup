@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task against real pallets/click, pinned at parent 4271fe283dc9365563aebb369ada8d20eee015a8 (the commit immediately before the no-args-help exit-status fix d8763b93021c416549b5f8b4b5497234619410db, #1489). No reproduction is handed to the agent: the instruction describes the user-visible symptom (help-only invocation exits 0 like success; scripts cannot distinguish) and requires the agent to write its own failing pytest reproduction at /app/repro/test_no_args_is_help.py before fixing. The fix lives in two parse_args bodies (Command and Group) plus a new UsageError subclass; pruning the Group.resolve_command hunk still passes every authored check (verified), so the measured skill is finding where the exit status is produced and turning the echo+ctx.exit(0) path into a UsageError (exit code 2). Verifier: agent repro must fail against a pristine pre-fix snapshot (/opt/pristine, read-only, extracted at build via git archive) and pass against the repaired tree; golden tests extracted from the fix commit through a separate throwaway clone (/opt/golden, not committed here) are overlaid over tests/ and must pass; 10 self-contained suite files (422 tests) must keep passing; plus 3 hidden cases (Command with a declared argument, group with option+subcommands, and a direct no-CliRunner parse_args API check). Pytest 9.1.1, flit_core 3.12.0 pinned; the suite run silences the project's filterwarnings=error because pytest 9.1.1 deprecation-warns a chain iterable in test_basic.py. Medium: 13."
+}

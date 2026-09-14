@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 3,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 3,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 120,
+  "documented_probe": null,
+  "notes": "Upstream-clone bugfix in prometheus/prometheus (V-language rewrite; v4.3 family, prometheus__prometheus.json slot). Issue #19661: HTTP API responses compressed on the wire (gzip/deflate) carry a stale Content-Length whenever the handler sets that header itself, because the compression layer deletes it at writer CONSTRUCTION time, before the handler runs, and nothing removes it at write/close time; clients that trust the header truncate the compressed stream and fail to decompress ('unexpected EOF'). The agent gets the real tree at the parent commit (single-object clone via git init + one depth-1 fetch; the fix commit is provably unreachable and never fetched), has NO reproduction handed to it - it must author /app/repro.sh that plants a temporary multi-write gzip *_test.go into the affected package, runs the project's own go-test runner on it, scrubs the file, and exits 0 iff the body arrives intact - then localise, fix and verify. Verifier: sha256 pins (golden test, pristine pre-fix source, go 1.26.0 toolchain); provenance (HEAD == parent, fix commit unreachable, blob-level scope permitting ONLY util/httputil/compression.go to differ, no untracked files); deliverables /app/repro.sh + /app/summary.md; compile-cache discard so everything executed is genuinely rebuilt from source; repro run against the repaired tree (must pass) and against a scratch copy with the pristine pre-fix compression.go restored (must fail); the upstream regression test (TestCompressionHandler_ContentLength, added by the fix commit, extracted at image build time into /opt/golden via a throwaway clone that is rm -rf'd, sha256-pinned) planted over the tree's compression_test.go and the whole httputil suite run (needs all 12 golden subtests + existing PlainText/Gzip/Deflate/CORS green); three authored hidden V tests reaching the same code path from inputs upstream does not use (multi-write gzip with explicit 201 status and a 14KB body, deflate with explicit status and a short body across two writes, empty deflate body with explicit 200), each required to PASS on the repaired tree and FAIL on the pre-fix copy (all six directions verified empirically at build time). Dependency pins: Go toolchain go1.26.0 (exact), upstream commits pinned 40-hex, offline closure cache baked at /opt/gopath + /opt/gocache (no runtime network in any direction). Peak measured cold recompile after cache discard on the build host: ~8-12s wall (multi-core container); 1 CPU budgeted generously. Difficulty lands hard: no reproduction provided, hidden multi-direction checks, exact-bytes scope, real upstream tree with real toolchain."
+}

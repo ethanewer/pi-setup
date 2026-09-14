@@ -1,0 +1,56 @@
+diff --git a/setuptools/_normalization.py b/setuptools/_normalization.py
+index 467b643d..9541a55d 100644
+--- a/setuptools/_normalization.py
++++ b/setuptools/_normalization.py
+@@ -134,7 +134,13 @@ def filename_component_broken(value: str) -> str:
+ def safer_name(value: str) -> str:
+     """Like ``safe_name`` but can be used as filename component for wheel"""
+     # See bdist_wheel.safer_name
+-    return filename_component(safe_name(value))
++    return (
++        # Per https://packaging.python.org/en/latest/specifications/name-normalization/#name-normalization
++        re.sub(r"[-_.]+", "-", safe_name(value))
++        .lower()
++        # Per https://packaging.python.org/en/latest/specifications/binary-distribution-format/#escaping-and-unicode
++        .replace("-", "_")
++    )
+ 
+ 
+ def safer_best_effort_version(value: str) -> str:
+diff --git a/setuptools/command/bdist_wheel.py b/setuptools/command/bdist_wheel.py
+index c8875347..2584050a 100644
+--- a/setuptools/command/bdist_wheel.py
++++ b/setuptools/command/bdist_wheel.py
+@@ -26,6 +26,7 @@ from wheel.metadata import pkginfo_to_metadata
+ from wheel.wheelfile import WheelFile
+ 
+ from .. import Command, __version__
++from .._normalization import safer_name
+ from ..warnings import SetuptoolsDeprecationWarning
+ from .egg_info import egg_info as egg_info_cls
+ 
+@@ -35,13 +36,6 @@ if TYPE_CHECKING:
+     from _typeshed import ExcInfo
+ 
+ 
+-def safe_name(name: str) -> str:
+-    """Convert an arbitrary string to a standard distribution name
+-    Any runs of non-alphanumeric/. characters are replaced with a single '-'.
+-    """
+-    return re.sub("[^A-Za-z0-9.]+", "-", name)
+-
+-
+ def safe_version(version: str) -> str:
+     """
+     Convert an arbitrary string to a standard version string
+@@ -147,10 +141,6 @@ def get_abi_tag() -> str | None:
+     return abi
+ 
+ 
+-def safer_name(name: str) -> str:
+-    return safe_name(name).replace("-", "_")
+-
+-
+ def safer_version(version: str) -> str:
+     return safe_version(version).replace("-", "_")
+ 
