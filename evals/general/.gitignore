@@ -23,3 +23,15 @@ specs/oracle_times.json
 # private audit records
 private-audit/
 __pycache__/
+
+# Harbor and agent scratch, regenerated on every run and never part of a task.
+# Anchored with a leading slash on purpose: an unanchored `reward.txt` or
+# `workspace` would also hide a future task fixture of the same name from git
+# status, and tools/check_task_files_tracked.py exists precisely to catch a task
+# that depends on a file a fresh clone will not have. Anchoring keeps these
+# patterns matching this directory only.
+/jobs/
+/reward.txt
+/try.json
+/workspace
+/zzctx/
