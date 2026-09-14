@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -70,6 +71,24 @@ def load_slots(path: Path) -> dict[str, dict]:
             'domain': s.get('domain') or entry.get('domain'),
         }
     return out
+
+
+def detect_indent(path: Path, default: int = 2) -> int:
+    """Match the indentation the file already uses.
+
+    Both specs in this suite are written with indent=1. The first version of this
+    tool wrote indent=2, which reformatted every line of both files: registering
+    106 tasks produced a 29,922-insertion, 26,636-deletion diff in which the
+    actual change was invisible and nothing could be reviewed. Content was
+    provably unchanged, but a diff that large is how a real unintended edit hides.
+    """
+    try:
+        with path.open() as f:
+            f.readline()
+            m = re.match(r'^( +)', f.readline() or '')
+        return len(m.group(1)) if m else default
+    except OSError:
+        return default
 
 
 def build_note(prov: dict, wave: str, extra: str | None) -> str:
@@ -152,7 +171,7 @@ def main() -> int:
         if args.dry_run:
             print('\nDRY RUN: nothing written.')
             return 0
-        diff_p.write_text(json.dumps(diff, indent=2) + '\n')
+        diff_p.write_text(json.dumps(diff, indent=detect_indent(diff_p)) + '\n')
         print(f'\nwrote {diff_p.relative_to(ROOT)}')
         return 0
 
@@ -230,6 +249,17 @@ def main() -> int:
                 'competencies': [],
                 'evidence': {},
                 'note': build_note(prov, args.wave, extra_notes.get(name)),
+                # Required, not decorative. build_coverage.py and
+                # check_tb21_coverage.py treat an empty competencies list as an
+                # error unless this flag is present, because a task that claims no
+                # tb2.1 competency is otherwise indistinguishable from one whose
+                # author never filled the claim in. The v4.x upstream-clone
+                # families deliberately claim none: their value is that they are
+                # real reproducing bugs in real repositories, which the tb2.1
+                # competency inventory does not describe. Omitting the flag made
+                # build_coverage.py exit 1 with exactly 106 errors, one per task
+                # this tool had just registered.
+                'claims_no_competencies': True,
             }
         added.append((name, entry['bucket'], entry['total']))
 
@@ -270,8 +300,8 @@ def main() -> int:
         print('\nDRY RUN: nothing written.')
         return 0
 
-    diff_p.write_text(json.dumps(diff, indent=2) + '\n')
-    claims_p.write_text(json.dumps(claims, indent=2) + '\n')
+    diff_p.write_text(json.dumps(diff, indent=detect_indent(diff_p)) + '\n')
+    claims_p.write_text(json.dumps(claims, indent=detect_indent(claims_p)) + '\n')
     print(f'\nwrote {diff_p.relative_to(ROOT)} and {claims_p.relative_to(ROOT)}')
     print('Not committed. Next: build_coverage.py, update_provenance.py, '
           'check_reproducibility.py, then the gates and the census.')
