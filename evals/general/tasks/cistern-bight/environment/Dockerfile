@@ -11,6 +11,12 @@ ARG UPSTREAM_SHA_FIX
 # pinned by Cargo.lock, so it is pinned explicitly here, exactly as the
 # mining run did. The toolchain lives in /opt (read-only for everyone); only
 # /app and the cargo target dir under /app/src are writable at trial time.
+# The `--profile minimal` component set (rustc, cargo, rust-std) is enough:
+# the task and verifier only use `cargo test`/`cargo`/`rustc`, never
+# clippy/rustfmt/rust-docs, so the ~1 GB of docs and lint/formatter binaries
+# are not installed. The cargo-home chmod is folded into this same RUN so the
+# writable tree is created with the right modes once (a separate `chmod -R`
+# RUN would copy every file under /opt/cargo into a second layer).
 ENV RUSTUP_HOME=/opt/rustup \
     CARGO_HOME=/opt/cargo \
     PATH=/opt/cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
@@ -21,24 +27,25 @@ RUN apt-get update \
 
 RUN curl -sSf https://sh.rustup.rs -o /tmp/rustup.sh \
  && sh /tmp/rustup.sh -y --default-toolchain none \
- && rustup toolchain install 1.98.1 \
+ && rustup toolchain install 1.98.1 --profile minimal \
  && rustup default 1.98.1 \
  && rustc --version && cargo --version \
- && rm -f /tmp/rustup.sh
+ && rm -f /tmp/rustup.sh \
+ && chmod -R a+rwX /opt/cargo
 
 # /opt/rustup stays read-only for everyone (rustc/cargo only read the
-# toolchain), but cargo itself needs to create bookkeeping files
+# toolchain); the cargo home was made world-writable (a+rwX) at the end of
+# the toolchain RUN above so cargo can create its bookkeeping files
 # (.package-cache, sparse-index lock/atomic writes, downloaded crate
-# archives) inside CARGO_HOME, and the trial may run as uid 1000; make the
-# whole cargo home world-writable. Cheap: a few thousand small files, vs the
-# 66k-file toolchain tree which stays untouched.
-RUN chmod -R a+rwX /opt/cargo
+# archives) under CARGO_HOME whether the trial runs as root or uid 1000.
 
 # Clone the REAL upstream repository at exactly the parent commit, with the
 # shallowest possible history: `git init` + one depth-1 fetch of the pinned
 # SHA means the object store in /app/src holds ONLY the parent commit. The
 # fix commit (which an agent must not be able to look up or fetch) is never
-# fetched into this clone.
+# fetched into this clone. The writable-by-uid-1000 modes/ownership are set
+# in this same RUN so the tree bytes are stored once, not copied into a
+# second layer by a later `chmod -R`/`chown -R` of its own.
 RUN git init -q /app/src \
  && cd /app/src \
  && git remote add origin https://github.com/clap-rs/clap.git \
@@ -47,7 +54,8 @@ RUN git init -q /app/src \
  && test "$(git rev-parse HEAD)" = "${UPSTREAM_SHA_PARENT}" \
  && git config --system --add safe.directory '*' \
  && git config --system user.email "build@localhost" \
- && git config --system user.name "build"
+ && git config --system user.name "build" \
+ && (chmod -R a+rwX /app/src && chown -R 1000:1000 /app/src 2>/dev/null || true)
 
 # Extract the project's own regression test (tests/builder/help.rs exactly as
 # it exists at the fix commit, i.e. the parent's file plus the added
@@ -73,15 +81,15 @@ RUN cd /app/src \
  && test "$(git rev-parse HEAD)" = "${UPSTREAM_SHA_PARENT}"
 
 # The image is built as root; the trial may run as root or as uid 1000
-# (user `ubuntu` already exists in the base image). Make the tree writable by
-# uid 1000 and WARM every cache the trial needs AS that user, so every
-# writable path (target/, cargo bookkeeping) is owned by uid 1000 from the
-# start and /opt stays a read-only toolchain. The warm pass downloads all
-# crates.io dependencies (Cargo.lock-pinned) and compiles the clap lib plus
-# every trybuild test binary under target/debug/deps; the trial has no
-# network, so this layer IS the warm cache.
+# (user `ubuntu` already exists in the base image). The tree was already made
+# writable by uid 1000 (mode a+rwX, owner 1000:1000) in the clone RUN; now we
+# WARM every cache the trial needs AS that user, so every writable path
+# (target/, cargo bookkeeping) is owned by uid 1000 from the start and /opt
+# stays a read-only toolchain. The warm pass downloads all crates.io
+# dependencies (Cargo.lock-pinned) and compiles the clap lib plus every
+# trybuild test binary under target/debug/deps; the trial has no network, so
+# this layer IS the warm cache.
 WORKDIR /app
-RUN chmod -R a+rwX /app/src && chown -R 1000:1000 /app/src 2>/dev/null || true
 RUN su -s /bin/bash ubuntu -c 'cd /app/src && export PATH="/opt/cargo/bin:$PATH" && \
     cargo test --no-run -p clap > /tmp/warm.log 2>&1' ; rc=$?; \
     tail -5 /tmp/warm.log; \

@@ -19,26 +19,40 @@ RUN apt-get update \
  && apt-get install -y --no-install-recommends build-essential curl ca-certificates git \
  && rm -rf /var/lib/apt/lists/*
 
+# Minimal rustup profile: the task only ever runs `cargo` and `rustc` (the
+# verifier rebuilds the integration test target offline; the oracle and the
+# agent do the same). Docs, clippy and rustfmt are never used, so they stay
+# out of the toolchain.
+#
+# The cargo-home writability fix lives HERE, in the very RUN that installed
+# it, because a layer is written once: chmod -R in the same RUN as the
+# install costs nothing extra, while a chmod -R in its own later RUN would
+# copy every file under /opt/cargo into a second layer. /opt/rustup stays
+# read-only for everyone (rustc/cargo only read the toolchain), but cargo
+# itself needs to create bookkeeping files (.package-cache, sparse-index
+# lock/atomic writes, downloaded crate archives) inside CARGO_HOME, and the
+# trial may run as uid 1000; so the whole cargo home is made world-writable.
 RUN curl -sSf https://sh.rustup.rs -o /tmp/rustup.sh \
  && sh /tmp/rustup.sh -y --default-toolchain none \
- && rustup toolchain install 1.98.1 \
+ && rustup toolchain install 1.98.1 --profile minimal \
  && rustup default 1.98.1 \
  && rustc --version && cargo --version \
+ && chmod -R a+rwX /opt/cargo \
  && rm -f /tmp/rustup.sh
-
-# /opt/rustup stays read-only for everyone (rustc/cargo only read the
-# toolchain), but cargo itself needs to create bookkeeping files
-# (.package-cache, sparse-index lock/atomic writes, downloaded crate
-# archives) inside CARGO_HOME, and the trial may run as uid 1000; make the
-# whole cargo home world-writable. Cheap: a few thousand small files, vs the
-# 66k-file toolchain tree which stays untouched.
-RUN chmod -R a+rwX /opt/cargo
 
 # Clone the REAL upstream repository at exactly the parent commit, with the
 # shallowest possible history: `git init` + one depth-1 fetch of the pinned
 # SHA means the object store in /app/src holds ONLY the parent commit. The
 # fix commit (which an agent must not be able to look up or fetch) is never
 # fetched into this clone.
+#
+# The clone runs as root but the trial may run as root or as uid 1000 (user
+# `ubuntu` already exists in the base image), and the warm build below runs
+# as uid 1000. The tree's ownership/mode bits are fixed HERE, in the same
+# RUN that created it: the layer is written once, so the chmod/chown costs
+# nothing extra, and every later RUN (belt check, warm build, trial) already
+# sees /app/src in its final end state. A chmod -R in its own later RUN
+# would copy every source file into a second layer.
 RUN git init -q /app/src \
  && cd /app/src \
  && git remote add origin https://github.com/rust-lang/regex.git \
@@ -47,7 +61,8 @@ RUN git init -q /app/src \
  && test "$(git rev-parse HEAD)" = "${UPSTREAM_SHA_PARENT}" \
  && git config --system --add safe.directory '*' \
  && git config --system user.email "build@localhost" \
- && git config --system user.name "build"
+ && git config --system user.name "build" \
+ && (chmod -R a+rwX /app/src && chown -R 1000:1000 /app/src 2>/dev/null || true)
 
 # Extract the project's own regression test (the file that the fix commit
 # adds: regex-automata/tests/dfa/onepass/regression.rs) into /opt/golden
@@ -72,10 +87,8 @@ RUN cd /app/src \
     fi \
  && test "$(git rev-parse HEAD)" = "${UPSTREAM_SHA_PARENT}"
 
-# The image is built as root; the trial may run as root or as uid 1000
-# (user `ubuntu` already exists in the base image). Make the tree writable by
-# uid 1000 and WARM every cache the trial needs AS that user, so every
-# writable path (target/, cargo bookkeeping) is owned by uid 1000 from the
+# Warm every cache the trial needs AS uid 1000, so every writable path
+# (target/, Cargo.lock, cargo bookkeeping) is owned by uid 1000 from the
 # start and /opt stays a read-only toolchain. The warm pass resolves all
 # crates.io dependencies (there is no committed Cargo.lock, so this pass
 # writes one pinned to today's crates.io state) and compiles the
@@ -83,7 +96,6 @@ RUN cd /app/src \
 # (regex-automata/tests/lib.rs) under target/; the trial has no network, so
 # this layer IS the warm cache.
 WORKDIR /app
-RUN chmod -R a+rwX /app/src && chown -R 1000:1000 /app/src 2>/dev/null || true
 RUN su -s /bin/bash ubuntu -c 'cd /app/src && export PATH="/opt/cargo/bin:$PATH" && \
     cargo test --no-run -p regex-automata --test integration > /tmp/warm.log 2>&1' ; rc=$?; \
     tail -5 /tmp/warm.log; \

@@ -84,14 +84,18 @@ RUN cd /app/src \
  && cmake --build build --target shell test-z3 -j$(nproc) \
  && test -x build/z3 \
  && test -x build/test-z3 \
+ && chown -R 1000:1000 /app/src 2>/dev/null || true \
+ && chmod -R a+rwX /app \
  && echo "warm-build-ok"
 
 # The image is built as root; the trial may run as root or as uid 1000
-# (user `ubuntu` already exists in the base image). Make the tree writable
-# by uid 1000 from the start.
+# (user `ubuntu` already exists in the base image). The ownership change
+# runs at the END of the build RUN above, so the tree is written into its
+# layer exactly once: a chmod -R / chown -R in its own later RUN would copy
+# every byte of the warm build into a second layer (Docker layers are
+# copy-on-write), roughly doubling the image. The end state is unchanged:
+# /app/src stays owned by 1000:1000 with a+rwX modes.
 WORKDIR /app
-RUN chmod -R a+rwX /app && chown -R 1000:1000 /app/src 2>/dev/null || true
-
 COPY files/ /app/
 RUN chmod a+rwX /app
 

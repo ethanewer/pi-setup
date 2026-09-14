@@ -41,14 +41,23 @@ RUN apt-get update \
 # rest of the suite uses; both pinned to versions verified on this base.
 RUN pip3 install --break-system-packages --no-cache-dir jsonschema==4.26.0 jinja2==3.1.6
 
+# --- a known uid for the tree owner ------------------------------------------
+# Everything under /app is created by uid 1000 (the base image's `ubuntu` user,
+# the same uid a non-root trial runs as), so the shell and make can rewrite it
+# without any post-build chown/chmod. The image's default USER stays root
+# (below) so harbor can write /logs; 1000 is just the owner of the deliverable
+# tree, reachable by both a root and a uid-1000 agent.
+RUN mkdir -p /app /opt/golden \
+ && chown 1000:1000 /app /opt/golden
+
 # ---- working clone: buggy parent commit, fix commit unreachable -------------
+USER 1000:1000
 RUN git clone --depth 1 https://github.com/Mbed-TLS/mbedtls.git /app/src \
  && cd /app/src \
  && git fetch --depth 1 origin dd48f0f23f8b5189031d6f3ac519b2b6113bd9e7 \
  && git checkout --detach FETCH_HEAD \
  && test "$(git rev-parse HEAD)" = "$UPSTREAM_SHA" \
  && ! git cat-file -e "${FIX_SHA}^{commit}" \
- && git config --system --add safe.directory '/app/src' \
  && git submodule update --init framework
 
 # ---- extract the upstream regression test from the FIX commit ----------------
@@ -80,8 +89,6 @@ RUN cd /app/src && ./tests/test_suite_psa_crypto > /tmp/smoke.log 2>&1; \
 
 WORKDIR /app
 
-# The build above ran as root; open the tree for whichever uid the trial
-# uses (the agent must edit library sources and make must write objects).
-RUN chmod -R a+rwX /app/src
+USER root
 
 CMD ["/bin/bash"]

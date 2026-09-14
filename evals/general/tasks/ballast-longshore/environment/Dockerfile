@@ -94,7 +94,9 @@ RUN pip install --no-cache-dir \
  && pip install --no-build-isolation -e . > /tmp/mpl-build.log 2>&1 \
  || { tail -60 /tmp/mpl-build.log; exit 1; } \
  && python3 -c "import matplotlib; print('installed matplotlib', matplotlib.__file__)" \
- && test -f /app/src/lib/matplotlib/tests/test_ticker.py
+ && test -f /app/src/lib/matplotlib/tests/test_ticker.py \
+ && chmod -R a+rwX /app/src \
+ && chmod a+rwX /app
 
 # ---- build-time confirmation that the image ships the mined failing state ----
 # The bug must be present in the baked image (read-only check, no writes):
@@ -110,10 +112,13 @@ assert f.offset == 0 and f.get_useOffset(), 'bug not present at parent commit!'
 print('smoke ok: the parent-commit bug is present in this image')
 EOF
 
-# Worktree must stay writable for whichever uid the trial uses (meson editable
-# loader and __pycache__ writes happen under /app/src at trial time); the
-# agent must also be able to write /app/explanation.md.
-RUN chmod -R a+rwX /app/src && chmod a+rwX /app
+# The tree (clone + compiled C extensions + any meson editable-loader
+# metadata) is made writable for whichever uid the trial uses by the
+# `chmod -R a+rwX /app/src` at the END of the build RUN above, i.e. in the
+# SAME layer that produced it. Removing it here avoids a copy-on-write
+# duplicate of the whole /app/src tree: a standalone `chmod -R` RUN after the
+# build would re-store every file's bytes in a new layer (in gunwale-tideway
+# this produced two layers of exactly 2.74 GB).
 
 COPY files/ /app/
 

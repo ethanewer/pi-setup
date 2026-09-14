@@ -43,7 +43,8 @@ RUN git init /app/src \
  && git remote add origin https://github.com/libvips/libvips.git \
  && git fetch --depth 1 origin "$UPSTREAM_SHA" \
  && git checkout -b baseline FETCH_HEAD \
- && test "$(git rev-parse HEAD)" = "$UPSTREAM_SHA"
+ && test "$(git rev-parse HEAD)" = "$UPSTREAM_SHA" \
+ && chown -R 1000:1000 /app/src
 
 # ---------------------------------------------------------------------------
 # The golden regression test: the fix-era test/test-suite/test_draw.py
@@ -75,6 +76,7 @@ RUN cd /app/src \
  && ninja -C build install \
  && ldconfig \
  && test "$(strings /usr/local/lib/x86_64-linux-gnu/libvips.so.42* | grep -c 'start point out of image')" = "0" \
+ && chown -R 1000:1000 /app/src /usr/local \
  && echo "build: parent library built, installed, and still buggy (no bounds-check string)"
 
 # pyvips (binds to the installed libvips at import time) + pytest for the
@@ -121,13 +123,18 @@ ENV OMP_NUM_THREADS=1 \
 
 # uid-1000 tolerance: the agent must edit the clone AND be able to run
 # `ninja install` into /usr/local, whichever uid (root or 1000) harbor uses.
-RUN chmod -R a+rwX /app/src /usr/local
+# The trees are created owned by uid 1000 in the RUN that wrote them (the
+# clone RUN and the build RUN above), so a later chmod/chown never has to
+# copy them up into a fresh layer.
 
 WORKDIR /app
 
-COPY files/ /app/
+COPY --chown=1000:1000 files/ /app/
 
-RUN chmod -R a+rwX /app
+# /app itself (not just its contents) must be writable by uid 1000 so the
+# agent can write the /app/diagnosis.md deliverable. Non-recursive: /app/src
+# is already owned by 1000, so recursing would re-store it in this layer.
+RUN chown 1000:1000 /app
 
 # ---------------------------------------------------------------------------
 # Liveness gate, fail closed: the bug must be live in THIS image.

@@ -41,12 +41,16 @@ RUN mkdir -p /app/tmux && cd /app/tmux \
 # the agent's rebuild after the fix is incremental. autogen+configure+make are
 # tmux's own documented build steps; bison/lex regenerate cmd-parse.c from
 # cmd-parse.y (the tree keeps only the .y source).
+# The chmod must live in this same RUN: Docker layers are copy-on-write, so a
+# separate `RUN chmod -R` after this build would write a second copy of the
+# whole tree into a new layer. Applied here it costs nothing extra.
 RUN cd /app/tmux \
  && ./autogen.sh \
  && ./configure \
  && make -j4 \
  && test -x /app/tmux/tmux \
- && echo "parent build ok"
+ && echo "build ok" \
+ && chmod -R a+rwX /app
 
 # ---------------------------------------------------------------------------
 # The project's own regression tests for this behaviour (regress/targets.sh
@@ -71,7 +75,7 @@ RUN mkdir -p /opt/golden \
  && cd / && rm -rf /tmp/golden-src
 
 # The trial may run as root or uid 1000; either must be able to edit and
-# rebuild in the clone.
-RUN chmod -R a+rwX /app && echo "cistern-bell image ok"
+# rebuild in the clone. The chmod above (end of the build RUN) leaves the
+# whole tree mode a+rwX, so both identities can write it.
 
 WORKDIR /app

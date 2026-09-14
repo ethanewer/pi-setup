@@ -50,19 +50,25 @@ RUN mkdir -p /opt/golden \
  && curl -fsSL "https://raw.githubusercontent.com/curl/curl/${FIX_SHA}/tests/data/test2429" -o /opt/golden/test2429 \
  && grep -q "only comments" /opt/golden/test2429
 
-# Build everything once at image-build time: libcurl+curl (debug), then the
-# test harness (test servers, libtest tools, unit bundles).
-RUN cd /app/src \
- && autoreconf -fi \
- && ./configure --with-openssl --enable-debug \
- && make -j$(nproc) \
- && make -C tests all
-
+# The trial may run as uid 1000; the agent must be able to edit + rebuild the
+# tree and write /app/diagnosis.md. COPY the read-only reference files first
+# (they are written before the build RUN), then build and chmod the whole
+# /app tree IN THE SAME RUN that produced the compiled objects. That opens the
+# same modes (a+rwX, owner stays root) without writing a second copy of the
+# compiled tree into a later copy-on-write layer.
 WORKDIR /app
 
 COPY files/ /app/
 
-# The trial may run as uid 1000; the agent must be able to edit + rebuild.
-RUN chmod -R a+rwX /app
+# Build everything once at image-build time: libcurl+curl (debug), then the
+# test harness (test servers, libtest tools, unit bundles). The source tree is
+# already configured by ./configure; the agent later does incremental rebuilds
+# only, so build state is kept.
+RUN cd /app/src \
+ && autoreconf -fi \
+ && ./configure --with-openssl --enable-debug \
+ && make -j$(nproc) \
+ && make -C tests all \
+ && chmod -R a+rwX /app
 
 CMD ["/bin/bash"]

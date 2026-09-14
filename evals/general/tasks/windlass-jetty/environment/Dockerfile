@@ -34,17 +34,20 @@ RUN git config --system --add safe.directory '*' && \
 RUN cp /home/ubuntu/go/bin/protoc-gen-go /home/ubuntu/go/bin/protoc-gen-go-grpc /usr/local/bin/
 
 # --- shipped files -----------------------------------------------------------
+# /app and everything under it must end up owned by the trial user (uid 1000).
+# Create the tree as that user in the first place: a chown -R in its own RUN
+# layer would store a second copy of every file (Docker layers are
+# copy-on-write), so the build below runs as the user that owns the result
+# instead of correcting ownership afterwards.
+USER ubuntu
 WORKDIR /app
-COPY files/ /app/
-RUN chown -R ubuntu:ubuntu /app
+COPY --chown=ubuntu:ubuntu files/ /app/
 
 # --- build the repo fixture (generator removes itself) -----------------------
-USER root
+# Runs as the owner of /app, so the compiled tree needs no separate chown.
 RUN bash /app/gen_repo.sh
-RUN chown -R ubuntu:ubuntu /app
 
 # --- warm the offline modget cache: scratch build of the SAME dependency set -
-USER ubuntu
 RUN mkdir -p /home/ubuntu/warm/proto && \
     cp /app/windlass-dispatch/go.mod /app/windlass-dispatch/go.sum /home/ubuntu/warm/ && \
     cp /app/windlass-dispatch/proto/dispatch.proto /home/ubuntu/warm/proto/ && \

@@ -69,17 +69,24 @@ RUN git init -q /tmp/fixsrc \
 
 # Build the whole tree once at image-build time (default jemalloc build),
 # so trial-time work is only an incremental rebuild of changed sources.
+# The recursive permission fix is folded into the SAME RUN as the build: a
+# layer is written once, so the chmod is committed with the build instead of
+# rewriting the entire compiled tree into a second copy-on-write layer.
 RUN cd /app/src \
  && make -j$(nproc) > /tmp/redis-build.log 2>&1 \
  && test -x src/redis-server \
  && test -x src/redis-cli \
  && tail -3 /tmp/redis-build.log \
- && rm -f /tmp/redis-build.log
+ && rm -f /tmp/redis-build.log \
+ && chmod -R a+rwX /app
 
 WORKDIR /app
 
+# files/ lands in /app AFTER the build, so it gets its own small chmod here;
+# the two files are plain files, so this is a non-recursive chmod and the
+# final modes are identical to the old `chmod -R a+rwX /app` end state.
 COPY files/ /app/
-RUN chmod -R a+rwX /app \
+RUN chmod a+rwX /app/reproduce.sh /app/reproduce.tcl \
  && chmod +x /app/reproduce.sh /app/reproduce.tcl
 
 CMD ["/bin/bash"]

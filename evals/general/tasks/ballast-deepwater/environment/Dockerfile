@@ -69,10 +69,15 @@ RUN cp /opt/golden/test_interval_negation_overflow.test \
       /app/src/test/sql/types/test_interval_negation_overflow.test
 
 # ---- pre-build the release engine + unittest runner (cached layers) ----------
+# The build runs as root; open the tree for whichever uid the trial uses (the
+# agent must edit sources and ninja must write objects). The chmod MUST stay in
+# this same RUN: a `chmod -R` in a RUN of its own would copy the whole
+# already-built tree into a second layer (docker layers are copy-on-write).
 RUN cd /app/src \
  && cmake -G Ninja -B build/release -DCMAKE_BUILD_TYPE=Release \
       -DBUILD_UNITTESTS=1 -DEXTENSION_STATIC_BUILD=1 -DBUILD_EXTENSIONS=core_functions \
- && ninja -C build/release -j24
+ && ninja -C build/release -j24 \
+ && chmod -R a+rwX /app/src
 
 # ---- smoke test: the mined failing state must be what the image ships --------
 RUN /app/src/build/release/duckdb -c \
@@ -81,9 +86,5 @@ RUN /app/src/build/release/duckdb -c \
     grep -qE "07:59:05\.224192" /tmp/repro.out
 
 WORKDIR /app
-
-# The build above ran as root; open the tree for whichever uid the trial uses
-# (the agent must edit sources and ninja must write objects).
-RUN chmod -R a+rwX /app/src
 
 CMD ["/bin/bash"]

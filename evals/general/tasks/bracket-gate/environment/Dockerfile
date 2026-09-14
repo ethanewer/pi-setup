@@ -40,7 +40,8 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
      | sh -s -- -y --default-toolchain 1.88.0 \
  && rustup default 1.88.0 \
  && rustc --version | grep -q '^rustc 1\.88\.0' \
- && cargo --version | grep -q '^cargo 1\.88\.0'
+ && cargo --version | grep -q '^cargo 1\.88\.0' \
+ && chmod -R a+rwX /opt/rustup /opt/cargo
 
 # ---- git identity and safe directories -------------------------------------
 RUN git config --system --add safe.directory '*' \
@@ -54,7 +55,8 @@ RUN git clone --depth 1 https://github.com/serde-rs/serde.git /app/src \
  && git checkout --detach FETCH_HEAD \
  && test "$(git rev-parse HEAD)" = "$UPSTREAM_SHA" \
  && ! git cat-file -e "${FIX_SHA}^{commit}" \
- && git config --system --add safe.directory '/app/src'
+ && git config --system --add safe.directory '/app/src' \
+ && chmod -R a+rwX /app
 
 # ---- extract the upstream regression test from the FIX commit --------------
 # Throwaway bare clone, so the fix commit never exists inside /app/src/.git.
@@ -77,7 +79,9 @@ RUN git init --bare /tmp/fixsrc \
 # (bug present, no regression test yet); it is green on 1.88.0.
 RUN cd /app/src \
  && cargo test -p serde_test_suite --test test_macros --no-run \
- && cargo test -p serde_test_suite --test test_macros -q
+ && cargo test -p serde_test_suite --test test_macros -q \
+ && chmod -R a+rwX /app/src/target /opt/cargo/registry \
+ && for f in /opt/cargo/.package-cache /opt/cargo/.package-cache-mutate /opt/cargo/.global-cache; do [ -e "$f" ] && chmod a+rwX "$f"; done
 
 # From here on cargo must never touch the network (trial mode).
 ENV CARGO_NET_OFFLINE=true
@@ -99,14 +103,11 @@ RUN mkdir -p /opt/harness \
  && test -s /opt/harness/toolchain.sha256 \
  && test -s /opt/harness/golden.sha256 \
  && test -s /opt/harness/registry-src.sha256 \
- && grep -q "test_internally_tagged_struct_with_flattened_field" /opt/golden/test_macros.rs
+ && grep -q "test_internally_tagged_struct_with_flattened_field" /opt/golden/test_macros.rs \
+ && chmod a+rwX /opt/cargo/config.toml
 
 WORKDIR /app
 
 COPY files/ /app/
-
-# The trial may run as a non-root uid; give it full access to the clone, the
-# cargo/rustup roots and whatever the agent produces.
-RUN chmod -R a+rwX /app /opt/cargo /opt/rustup
 
 CMD ["/bin/bash"]

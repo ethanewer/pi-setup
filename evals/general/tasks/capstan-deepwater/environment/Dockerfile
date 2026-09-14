@@ -42,16 +42,19 @@ RUN apt-get update \
 
 RUN curl -sSf https://sh.rustup.rs -o /tmp/rustup.sh \
  && sh /tmp/rustup.sh -y --default-toolchain none \
- && rustup toolchain install ${RUST_VERSION} \
+ && rustup toolchain install ${RUST_VERSION} --profile minimal \
  && rustup default ${RUST_VERSION} \
  && rustc --version && cargo --version \
- && rm -f /tmp/rustup.sh
-
+ && rm -f /tmp/rustup.sh \
+ && chmod -R a+rwX /opt/cargo
+# `--profile minimal` skips rust-docs/clippy/rustfmt, which nothing in the
+# build, test, oracle or verifier path uses (this task only runs `cargo build`
+# and `cargo test --no-run`). The trailing chmod is in this SAME RUN so the
+# cargo home is made world-writable exactly once, where it was created:
 # Cargo needs to create bookkeeping files (package cache, sparse-index locks,
 # downloaded crate archives) inside CARGO_HOME, and the trial may run as uid
-# 1000; make the whole cargo home world-writable (matching the sibling v4.2
-# Rust tasks).
-RUN chmod -R a+rwX /opt/cargo
+# 1000. A separate `RUN chmod -R` layer would copy every byte of /opt/cargo a
+# second time (Docker layers are copy-on-write).
 
 # Clone the REAL upstream repository at exactly the parent commit, with the
 # shallowest possible history: `git init` + one depth-1 fetch of the pinned
@@ -66,7 +69,15 @@ RUN git init -q /app/src \
  && test "$(git rev-parse HEAD)" = "${UPSTREAM_SHA_PARENT}" \
  && git config --system --add safe.directory '*' \
  && git config --system user.email "build@localhost" \
- && git config --system user.name "build"
+ && git config --system user.name "build" \
+ && chmod -R a+rwX /app/src \
+ && chown -R 1000:1000 /app/src
+# Ownership is fixed in this SAME RUN, while the tree is brand new: the image
+# is built as root but the trial may run as uid 1000 (user `ubuntu` exists in
+# the base image), so the whole tree must be writable by uid 1000 from the
+# start. A later separate `RUN chown -R` would make Docker's copy-on-write
+# storage rewrite every byte of /app/src into a second layer; here the chown
+# is part of the layer that just created the files, so it costs nothing.
 
 # Extract the project's own regression test for this bug (the test that the
 # fix commit appends to tests/regression.rs) into /opt/golden using a
@@ -92,16 +103,14 @@ RUN cd /app/src \
     fi \
  && test "$(git rev-parse HEAD)" = "${UPSTREAM_SHA_PARENT}"
 
-# The image is built as root; the trial may run as root or as uid 1000 (user
-# `ubuntu` already exists in the base image). Make the tree writable by uid
-# 1000 and WARM every cache the trial needs AS that user, so every writable
-# path (target/, cargo bookkeeping) is owned by uid 1000 from the start and
-# /opt stays a read-only toolchain. The warm pass downloads all crates.io
-# dependencies (Cargo.lock-pinned) and compiles the whole workspace plus the
-# `rg` binary and the test harness; the trial has no network, so this layer
-# IS the warm cache.
+# The tree is already owned by uid 1000 (see the clone RUN). WARM every cache
+# the trial needs AS that user, so every writable path (target/, cargo
+# bookkeeping) is owned by uid 1000 from the start and /opt stays a read-only
+# toolchain. The warm pass downloads all crates.io dependencies
+# (Cargo.lock-pinned) and compiles the whole workspace plus the `rg` binary
+# and the test harness; the trial has no network, so this layer IS the warm
+# cache.
 WORKDIR /app
-RUN chmod -R a+rwX /app/src && chown -R 1000:1000 /app/src 2>/dev/null || true
 RUN su -s /bin/bash ubuntu -c 'cd /app/src && export PATH="/opt/cargo/bin:$PATH" && \
     cargo build > /tmp/warm1.log 2>&1'; rc=$?; \
     tail -5 /tmp/warm1.log; \

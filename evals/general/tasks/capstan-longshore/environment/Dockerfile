@@ -52,7 +52,8 @@ RUN git init -q /app/src \
  && git -C /app/src checkout -q --detach FETCH_HEAD \
  && test "$(git -C /app/src rev-parse HEAD)" = "${UPSTREAM_SHA}" \
  && ! git -C /app/src cat-file -e "${FIX_SHA}^{commit}" \
- && test "$(git -C /app/src rev-list --all --count)" = "1"
+ && test "$(git -C /app/src rev-list --all --count)" = "1" \
+ && chmod -R a+rwX /app/src
 
 # ---- extract the upstream regression test from the FIX commit -----------------
 # Throwaway bare clone, deleted afterwards: the fix commit never exists inside
@@ -72,13 +73,16 @@ RUN git init --bare /tmp/fixsrc \
 
 # ---- overlay the regression test into the working tree ------------------------
 RUN cp /opt/golden/prepared_named_param.test \
-      /app/src/test/sql/prepared/prepared_named_param.test
+      /app/src/test/sql/prepared/prepared_named_param.test \
+ && chmod a+rwX /app/src/test/sql/prepared/prepared_named_param.test
 
 # ---- pre-build the release engine + unittest runner (cached layers) -----------
 RUN cd /app/src \
  && cmake -G Ninja -B build/release -DCMAKE_BUILD_TYPE=Release \
       -DBUILD_UNITTESTS=1 -DEXTENSION_STATIC_BUILD=1 -DBUILD_EXTENSIONS=core_functions \
- && ninja -C build/release -j24
+ && ninja -C build/release -j24 \
+ && chmod -R a+rwX /app/src/build \
+ && { [ ! -e /app/src/.cache ] || chmod -R a+rwX /app/src/.cache; }
 
 # ---- smoke test: the mined failing state must be what the image ships ---------
 # The overlaid regression test must FAIL on the buggy engine (the q03 block
@@ -91,12 +95,15 @@ RUN cd /app/src \
  && grep -q "FAILED" /tmp/gsmoke.out \
  && ! grep -q "All tests passed" /tmp/gsmoke.out \
  && ./build/release/duckdb -c 'PREPARE q03 AS SELECT $aa, $bb, $cc, $dd, $ee; EXECUTE q03(aa := 1, bb := 2);' 2>&1 \
-      | grep -q "parameters: ee, cc, dd"
+      | grep -q "parameters: ee, cc, dd" \
+ && { [ ! -d /app/src/duckdb_unittest_tempdir ] || chmod -R a+rwX /app/src/duckdb_unittest_tempdir; }
 
 WORKDIR /app
 
-# The build above ran as root; open the tree for whichever uid the trial uses
-# (the agent must edit sources and ninja must write objects).
-RUN chmod -R a+rwX /app/src && chmod a+rwX /app
+# /app must stay writable by whichever uid the trial uses. Making every path
+# below /app/src world-writable (a+rwX) happens in the same RUN that created
+# it, so the tree is never stored twice in two layers; this last one only
+# touches the /app directory entry it was created for by WORKDIR.
+RUN chmod a+rwX /app
 
 CMD ["/bin/bash"]

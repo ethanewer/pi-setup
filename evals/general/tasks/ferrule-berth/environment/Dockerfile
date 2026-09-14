@@ -11,10 +11,16 @@ RUN apt-get update \
 
 # Real upstream tree, pinned to the immutable 40-hex commit. Shallow: the
 # release history is unneeded, this task only drives the solution.
+# The tree is then chmod'd in THIS SAME RUN, because the trial must be able
+# to write into /app as root or uid 1000 and a `chmod -R` in a later RUN
+# would re-store every file into a new copy-on-write layer. The modes set
+# here (files 666, directories/executables 777, all root-owned) are exactly
+# what the task has always shipped.
 RUN git clone --depth 1 https://github.com/arminbiere/cadical.git /app/src \
  && cd /app/src \
  && test "$(git rev-parse HEAD)" = "$UPSTREAM_SHA" \
- && git config --system --add safe.directory '*'
+ && git config --system --add safe.directory '*' \
+ && chmod -R a+rwX /app
 
 # Warm the whole build as an image layer: configure + full single-CPU
 # compile. The solver binaries are then removed, so the agent must re-run
@@ -26,7 +32,10 @@ RUN git clone --depth 1 https://github.com/arminbiere/cadical.git /app/src \
 # into /opt/lrat-trim; the verifier uses it to independently validate every
 # UNSAT proof the agent emits, so a forged/corrupted/self-authored proof can
 # never pass via the agent's own binary.
-RUN cd /app/src && ./configure \
+# umask 000: everything configure/make creates lands directly at mode 666
+# (files) / 777 (executables) -- the same bits the verifier relies on -- so
+# the build outputs never need a later chmod layer that would re-store them.
+RUN cd /app/src && umask 000 && ./configure \
  && make -j1 \
  && test -x build/cadical \
  && rm -f build/cadical build/mobical \
@@ -51,5 +60,9 @@ WORKDIR /app
 
 COPY files/ /app/
 
-# Writable by whatever uid (root or 1000) the trial runs as.
-RUN chmod -R a+rwX /app && echo "ferrule-berth build-ok"
+# Writable by whatever uid (root or 1000) the trial runs as. Only /app/cases
+# needs a chmod here: it is four small fixtures fresh from the COPY above, so
+# this touches kilobytes. The cloned tree and the warm build were given their
+# (identical) modes in the RUNs that created them, so nothing big is ever
+# stored twice.
+RUN chmod -R a+rwX /app/cases && echo "ferrule-berth build-ok"

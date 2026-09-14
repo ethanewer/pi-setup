@@ -39,12 +39,21 @@ RUN git config --system --add safe.directory '*' \
 # `git init` + one depth-1 fetch of the pinned SHA means the object store in
 # /app/src holds ONLY the parent commit. The fix commit — which an agent must
 # not be able to look up or fetch — is never fetched into this clone.
+#
+# The whole tree below /app/src ends up owned by uid 1000 with mode a+rwX, and
+# that ownership is applied IN THE SAME RUN that creates the files, so the
+# layer is written once. Nothing later may chown/chmod /app/src again: docker
+# layers are copy-on-write, so a `chown -R` in a RUN of its own after a build
+# would store every byte a second time (and a `chmod -R a+rwX /app` after that
+# would store them a third).
 RUN git init -q /app/src \
  && cd /app/src \
  && git remote add origin https://github.com/Mbed-TLS/mbedtls.git \
  && git fetch --depth 1 origin ${UPSTREAM_SHA_PARENT} \
  && git checkout -q --detach FETCH_HEAD \
- && test "$(git rev-parse HEAD)" = "${UPSTREAM_SHA_PARENT}"
+ && test "$(git rev-parse HEAD)" = "${UPSTREAM_SHA_PARENT}" \
+ && chown -R 1000:1000 /app/src \
+ && chmod -R a+rwX /app/src
 
 # Submodules, pinned by the gitlinks recorded in the parent commit:
 #   framework        -> e92a81996656d82941a9afce843453c57e1d51f5
@@ -59,6 +68,9 @@ RUN cd /app/src \
  && test "$(git -C framework rev-parse HEAD)" = "${FRAMEWORK_SHA}" \
  && test "$(git -C tf-psa-crypto rev-parse HEAD)" = "${PSA_SHA}" \
  && test "$(git -C tf-psa-crypto/framework rev-parse HEAD)" = "${FRAMEWORK_SHA}" \
+ && chown -R 1000:1000 framework tf-psa-crypto .git/modules \
+ && chmod -R a+rwX framework tf-psa-crypto .git/modules \
+ && chown 1000:1000 .git/config \
  && echo "submodules pinned"
 
 # Extract the project's own regression test for this bug (added by the fix
@@ -104,16 +116,20 @@ RUN cd /app/src \
  && test -x build/tests/test_suite_x509parse \
  && ./build/tests/test_suite_x509parse > /tmp/warm-x509.log 2>&1 \
  && grep -q "PASSED (888 / 888 tests (58 skipped))" /tmp/warm-x509.log \
- && echo "warm build + x509parse sanity OK"
-
-# The image is built as root; the trial may run as root or as uid 1000
-# (user 'ubuntu' exists in the base image). Make the whole tree writable by
-# uid 1000 so an unprivileged trial can edit sources and the warm build/ dir.
-RUN chown -R 1000:1000 /app/src 2>/dev/null || true \
- && chmod -R a+rwX /app/src
+ && echo "warm build + x509parse sanity OK" \
+ && chown -R 1000:1000 build \
+ && chmod -R a+rwX build \
+ && find /app/src -type d -name __pycache__ -exec rm -rf {} + \
+ && chown 1000:1000 tf-psa-crypto/doxygen/input/doc_mainpage.h tf-psa-crypto/doxygen/tfpsacrypto.doxyfile \
+ && echo "build tree ownership + caches done"
 
 COPY files/ /app/
-RUN chmod -R a+rwX /app
+# The image is built as root; the trial may run as root or as uid 1000 (user
+# 'ubuntu' exists in the base image). /app holds only the two task files, so a
+# targeted chmod costs a few bytes. /app/src is already 1000:1000 a+rwX from
+# the RUNs that created it; do NOT chmod/chown /app or /app/src recursively
+# here, that would copy the whole compiled tree into a new layer.
+RUN chmod a+rwX /app /app/repro.c /app/README-BUILD.md
 
 WORKDIR /app
 

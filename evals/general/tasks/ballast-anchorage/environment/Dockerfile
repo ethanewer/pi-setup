@@ -23,16 +23,27 @@ RUN apt-get update \
 
 RUN curl -sSf https://sh.rustup.rs -o /tmp/rustup.sh \
  && sh /tmp/rustup.sh -y --default-toolchain none \
- && rustup toolchain install ${RUST_VERSION} \
+ && rustup toolchain install --profile minimal ${RUST_VERSION} \
  && rustup default ${RUST_VERSION} \
  && rustc --version && cargo --version \
+ && chmod -R a+rwX /opt/cargo \
+ && find /opt/cargo/bin /opt/rustup -type d -exec chmod 755 {} \; \
+ && find /opt/cargo/bin /opt/rustup -type f -exec chmod 755 {} \; \
+ && chmod 755 /opt/cargo/bin /opt/rustup \
  && rm -f /tmp/rustup.sh
 
 # Cargo needs to create bookkeeping files (package cache, sparse-index
 # locks, downloaded crate archives) inside CARGO_HOME, and the trial may run
-# as uid 1000; make the whole cargo home world-writable (matching the
-# sibling v4.2 Rust tasks).
-RUN chmod -R a+rwX /opt/cargo
+# as uid 1000; make the whole cargo home root world-writable (a+rwX above)
+# so the warm pass can run as uid 1000. The toolchain lives under
+# /opt/rustup and /opt/cargo/bin; those are chmod'd to root-only 755 right
+# here, in the SAME RUN that installed them, so no second copy of the
+# toolchain bytes is ever written (a later chmod in its own RUN would
+# copy-up every file into a new layer). /opt/cargo's root is bumped back to
+# world-writable below so the warm build (as uid 1000) can create the
+# registry and package caches; the lock-down RUN tightens it afterwards.
+# The toolchain itself stays read-only; only /app and target/ are writable
+# at trial time.
 
 # Clone the REAL upstream repository at exactly the parent commit, with the
 # shallowest possible history: `git init` + one depth-1 fetch of the pinned
@@ -47,7 +58,8 @@ RUN git init -q /app/src \
  && test "$(git rev-parse HEAD)" = "${UPSTREAM_SHA_PARENT}" \
  && git config --system --add safe.directory '*' \
  && git config --system user.email "build@localhost" \
- && git config --system user.name "build"
+ && git config --system user.name "build" \
+ && ( chmod -R a+rwX /app/src && chown -R 1000:1000 /app/src 2>/dev/null || true )
 
 # Extract the project's own regression test for this bug (the test that the
 # fix commit appends to tests/regression.rs) into /opt/golden using a
@@ -81,18 +93,21 @@ RUN cd /app/src \
 # workspace plus the `rg` binary and the test harness; the trial has no
 # network, so this layer IS the warm cache.
 WORKDIR /app
-RUN chmod -R a+rwX /app/src && chown -R 1000:1000 /app/src 2>/dev/null || true
 RUN su -s /bin/bash ubuntu -c 'cd /app/src && export PATH="/opt/cargo/bin:$PATH" && \
     cargo build > /tmp/warm1.log 2>&1'; rc=$?; \
     tail -5 /tmp/warm1.log; \
     if [ $rc -ne 0 ]; then echo "WARM BUILD FAILED (exit $rc)"; exit $rc; fi; \
     ls -la /app/src/target/debug/ | grep -vE '\.d$|^total' | head -30; \
-    test -x /app/src/target/debug/rg && echo "rg debug binary built" || { echo "no rg binary"; exit 1; }
+    test -x /app/src/target/debug/rg && echo "rg debug binary built" || { echo "no rg binary"; exit 1; }; \
+    chmod -R a+rwX /opt/cargo/registry 2>/dev/null || true; \
+    chmod 666 /opt/cargo/.package-cache /opt/cargo/.global-cache /opt/cargo/.package-cache-mutate 2>/dev/null || true
 RUN su -s /bin/bash ubuntu -c 'cd /app/src && export PATH="/opt/cargo/bin:$PATH" && \
     cargo test --no-run > /tmp/warm2.log 2>&1'; rc=$?; \
     tail -8 /tmp/warm2.log; \
     if [ $rc -ne 0 ]; then echo "WARM TEST-BUILD FAILED (exit $rc)"; exit $rc; fi; \
-    ls /app/src/target/debug/ | grep -iE 'integration|^rg$' | tr '\n' ' '; echo "(integration + rg present)"
+    ls /app/src/target/debug/ | grep -iE 'integration|^rg$' | tr '\n' ' '; echo "(integration + rg present)"; \
+    chmod -R a+rwX /opt/cargo/registry 2>/dev/null || true; \
+    chmod 666 /opt/cargo/.package-cache /opt/cargo/.global-cache /opt/cargo/.package-cache-mutate 2>/dev/null || true
 
 # Lock down the toolchain and the golden regression test. The warm passes
 # above needed world-writable cargo-home dirs, and those permissions survive
@@ -105,11 +120,7 @@ RUN su -s /bin/bash ubuntu -c 'cd /app/src && export PATH="/opt/cargo/bin:$PATH"
 # (cargo needs their locks and cache bookkeeping at trial time), keep the
 # golden test read-only, and record sha256 pins of the toolchain binaries and
 # of the golden regression test so the verifier can detect substitution.
-RUN chmod 755 /opt/cargo /opt/cargo/bin /opt/rustup \
- && find /opt/cargo/bin /opt/rustup -type d -exec chmod 755 {} \; \
- && find /opt/cargo/bin /opt/rustup -type f -exec chmod 755 {} \; \
- && chmod -R a+rwX /opt/cargo/registry \
- && chmod 666 /opt/cargo/.global-cache /opt/cargo/.package-cache /opt/cargo/.package-cache-mutate \
+RUN chmod 755 /opt/cargo \
  && mkdir -p /opt/pins \
  && sha256sum /opt/cargo/bin/cargo /usr/bin/git /opt/cargo/bin/rustc > /opt/pins/toolchain.sha256 \
  && sha256sum /opt/golden/regression.rs > /opt/pins/golden.sha256 \

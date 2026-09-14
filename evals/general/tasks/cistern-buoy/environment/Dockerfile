@@ -50,19 +50,23 @@ RUN mkdir -p /opt/golden \
  && curl -fsSL "https://raw.githubusercontent.com/curl/curl/${FIX_SHA}/tests/data/test1862" -o /opt/golden/test1862 \
  && grep -q "HSTS with extreme max-age" /opt/golden/test1862
 
-# Build everything once at image-build time: libcurl+curl (debug), then the
-# test harness (test servers, libtest tools, unit bundles).
-RUN cd /app/src \
- && autoreconf -fi \
- && ./configure --with-openssl --enable-debug \
- && make -j$(nproc) \
- && make -C tests all
-
+# Per-task notes for the trial, copied in before the build so the chmod below
+# can cover them in the same layer.
 WORKDIR /app
 
 COPY files/ /app/
 
-# The trial may run as uid 1000; the agent must be able to edit + rebuild.
-RUN chmod -R a+rwX /app
+# Build everything once at image-build time: libcurl+curl (debug), then the
+# test harness (test servers, libtest tools, unit bundles). The tree is left
+# a+rwX in THIS SAME layer: docker layers are copy-on-write, so a chmod -R in
+# a later RUN of its own would rewrite every file of the compiled tree into a
+# new layer and double the image size. The trial may run as uid 1000; the
+# agent must still be able to edit + rebuild, and to write /app/diagnosis.md.
+RUN cd /app/src \
+ && autoreconf -fi \
+ && ./configure --with-openssl --enable-debug \
+ && make -j$(nproc) \
+ && make -C tests all \
+ && chmod -R a+rwX /app
 
 CMD ["/bin/bash"]

@@ -68,17 +68,23 @@ RUN git init -q /tmp/fixsrc \
 
 # Build the whole tree once at image-build time (default jemalloc build),
 # so trial-time work is only an incremental rebuild of changed sources.
+# The chmod runs in this SAME layer as the build: a separate `chmod -R`
+# RUN would write a second copy of every compiled file into a new layer
+# (docker layers are copy-on-write), doubling the tree's storage cost.
 RUN cd /app/src \
  && make -j$(nproc) > /tmp/redis-build.log 2>&1 \
  && test -x src/redis-server \
  && test -x src/redis-cli \
  && tail -3 /tmp/redis-build.log \
- && rm -f /tmp/redis-build.log
+ && rm -f /tmp/redis-build.log \
+ && chmod -R a+rwX /app
 
 WORKDIR /app
 
 COPY files/ /app/
-RUN chmod -R a+rwX /app \
+# Only reproduce.sh is new since the build RUN chmod'd the tree; chmod that
+# one file (a full -R here would re-store the whole compiled tree).
+RUN chmod a+rwX /app /app/reproduce.sh \
  && chmod +x /app/reproduce.sh
 
 CMD ["/bin/bash"]

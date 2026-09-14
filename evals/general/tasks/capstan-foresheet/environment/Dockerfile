@@ -51,6 +51,14 @@ RUN chmod a+rx /app/plant_golden.sh 2>/dev/null || true \
 # SHA means the object store in /app/src holds ONLY the parent commit. The
 # fix commit (which an agent must not be able to look up or fetch) is never
 # fetched into this clone.
+#
+# The image is built as root but the trial may run as uid 1000 (user
+# `ubuntu` in the base image), so the tree is made world-readable/writable
+# (a+rwX) and owned by 1000:1000 right here, in the SAME RUN that creates
+# it. Docker layers are copy-on-write: doing the chown/chmod in a later RUN
+# would copy the whole tree (source + .git) into a new layer, storing the
+# same bytes twice (measured: +40 MB of pure duplication here). Inside the
+# creating layer a chown costs nothing extra.
 RUN git init -q /app/src \
  && cd /app/src \
  && git remote add origin https://github.com/Z3Prover/z3.git \
@@ -59,7 +67,8 @@ RUN git init -q /app/src \
  && test "$(git rev-parse HEAD)" = "${UPSTREAM_SHA_PARENT}" \
  && git config --system --add safe.directory '*' \
  && git config --system user.email "build@localhost" \
- && git config --system user.name "build"
+ && git config --system user.name "build" \
+ && { chmod -R a+rwX /app/src && chown -R 1000:1000 /app/src 2>/dev/null || true; }
 
 # Extract the project's own regression test for this bug (the file the fix
 # commit adds) into /opt/golden using a THROWAWAY clone that is deleted
@@ -84,14 +93,11 @@ RUN cd /app/src \
     fi \
  && test "$(git rev-parse HEAD)" = "${UPSTREAM_SHA_PARENT}"
 
-# The image is built as root; the trial may run as root or as uid 1000 (user
-# `ubuntu` already exists in the base image). Make the tree writable by uid
-# 1000 and WARM every cache the trial needs AS that user, so every writable
-# path is owned by uid 1000 from the start. The warm pass compiles the shell
+# WARM every cache the trial needs AS uid 1000 (the tree is already owned by
+# 1000:1000 from the clone RUN above). The warm pass compiles the shell
 # target (the z3 binary) and the project's unit test harness (test-z3) with
 # the project's own cmake recipe; the trial has no network, so this layer IS
 # the warm cache and the agent's rebuild is strictly incremental.
-RUN chmod -R a+rwX /app/src && chown -R 1000:1000 /app/src 2>/dev/null || true
 RUN su -s /bin/bash ubuntu -c 'cd /app/src && \
     cmake -S . -B build -DCMAKE_BUILD_TYPE=Release > /tmp/warm_cfg.log 2>&1 && \
     (cmake --build build --target shell -j$(nproc) > /tmp/warm_shell.log 2>&1) && \

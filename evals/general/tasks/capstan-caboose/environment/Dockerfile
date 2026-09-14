@@ -31,7 +31,7 @@ RUN apt-get update \
 # the whole cargo home is world-writable (cheap: a few thousand small files).
 RUN curl -sSf https://sh.rustup.rs -o /tmp/rustup.sh \
  && sh /tmp/rustup.sh -y --default-toolchain none \
- && rustup toolchain install 1.98.1 \
+ && rustup toolchain install --profile minimal 1.98.1 \
  && rustup default 1.98.1 \
  && rustc --version && cargo --version \
  && rm -f /tmp/rustup.sh \
@@ -50,7 +50,9 @@ RUN git init -q /app/src \
  && test "$(git rev-parse HEAD)" = "${UPSTREAM_SHA_PARENT}" \
  && git config --system --add safe.directory '*' \
  && git config --system user.email "build@localhost" \
- && git config --system user.name "build"
+ && git config --system user.name "build" \
+ && chmod -R a+rwX /app/src \
+ && chown -R 1000:1000 /app/src
 
 # Belt: prove the fix commit is not reachable from the trial clone.
 RUN cd /app/src \
@@ -134,15 +136,15 @@ RUN test -s /opt/golden/maven_test.rs \
  && rm -rf /tmp/upstream-fix-clone /tmp/maven-fix.rs
 
 # The image is built as root; the trial may run as root or as uid 1000
-# (user `ubuntu` exists in the base image). Make the tree writable by
-# uid 1000 and WARM every cache the trial needs AS that user, so every
-# writable path (target/ under /app/src, cargo bookkeeping under /opt/cargo)
-# is owned by uid 1000 from the start and /opt stays a read-only toolchain.
-# The warm pass downloads all crates.io dependencies (Cargo.lock-pinned) and
-# compiles the debug binary plus the test harness, so the trial's 1-vCPU work
-# is a one-crate incremental compile only.
+# (user `ubuntu` exists in the base image). The clone above already set the
+# whole /app/src tree to a+rwX and uid 1000 in the SAME layer that created it
+# (a later chown -R would store a second copy of every file), so every writable
+# path (target/ under /app/src, cargo bookkeeping under /opt/cargo) is owned by
+# uid 1000 from the start and /opt stays a read-only toolchain. WARM every
+# cache the trial needs AS that user: the warm pass downloads all crates.io
+# dependencies (Cargo.lock-pinned) and compiles the debug binary plus the test
+# harness, so the trial's 1-vCPU work is a one-crate incremental compile only.
 WORKDIR /app
-RUN chmod -R a+rwX /app/src && chown -R 1000:1000 /app/src 2>/dev/null || true
 RUN su -s /bin/bash ubuntu -c 'cd /app/src && export PATH="/opt/cargo/bin:$PATH" CARGO_HOME=/opt/cargo RUSTUP_HOME=/opt/rustup && \
     cargo build --locked > /tmp/warm1.log 2>&1 && \
     cargo test --locked --no-run >> /tmp/warm1.log 2>&1'; rc=$?; \

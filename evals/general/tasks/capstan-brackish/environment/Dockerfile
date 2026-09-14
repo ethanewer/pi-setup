@@ -49,7 +49,8 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
  && cargo --version \
  && git config --system --add safe.directory '*' \
  && git config --system user.email "build@localhost" \
- && git config --system user.name "build"
+ && git config --system user.name "build" \
+ && chmod -R a+rwX /opt/rustup /opt/cargo
 
 # ---- working clone: buggy parent commit only, fix commit unreachable -------
 RUN git init -q /app/src \
@@ -58,7 +59,8 @@ RUN git init -q /app/src \
  && git -C /app/src checkout -q --detach FETCH_HEAD \
  && test "$(git -C /app/src rev-parse HEAD)" = "${UPSTREAM_SHA}" \
  && ! git -C /app/src cat-file -e "${FIX_SHA}^{commit}" \
- && test "$(git -C /app/src rev-list --all --count)" = "1"
+ && test "$(git -C /app/src rev-list --all --count)" = "1" \
+ && chmod -R a+rwX /app/src
 
 # ---- extract the upstream regression test source from the FIX commit --------
 # Throwaway clone, deleted afterwards: the fix commit never exists inside
@@ -92,7 +94,8 @@ RUN git clone --depth 1 --no-checkout https://github.com/sharkdp/fd.git /tmp/fix
 # fails at this commit by design; that is why the build must not run it here.
 RUN cd /app/src \
  && cargo build \
- && cargo test --no-run
+ && cargo test --no-run \
+ && chmod -R a+rwX /app/src /opt/cargo
 
 # ---- from here on the trial must behave exactly as it will offline ----------
 ENV CARGO_NETWORK=off
@@ -101,7 +104,8 @@ WORKDIR /app
 
 COPY files/ /app/
 
-RUN chmod -R a+rwX /app /opt/cargo /opt/rustup /opt/golden \
+RUN chmod a+rwX /app /app/probe_out_of_range_ts.sh \
+ && chmod -R a+rwX /opt/golden \
  && find /opt/golden -type f -exec chmod a+r {} +
 
 CMD ["/bin/bash"]

@@ -7,6 +7,19 @@
 # incremental `ninja install`. The project's own regression test (the
 # fix-era test_conversion.py) is extracted into /opt/golden at build time
 # and is never committed in this tree (the tree is byte-audited).
+#
+# Image-size note: the whole source/build/install trees are made world-rw
+# (a+rwX) so the agent can edit, rebuild and reinstall whether harbor runs
+# the trial as root or as uid 1000. Docker layers are copy-on-write, so a
+# `chmod -R` in a RUN of its own after a compile would rewrite every byte of
+# the tree into a fresh layer (here: ~70MB of clone + build tree stored two
+# more times). To avoid that, each a+rwX pass is folded into the SAME RUN
+# that creates the bytes: the clone RUN makes the source tree writable, the
+# build RUN makes only the build artifacts it just produced writable, the
+# pip RUN makes /usr/local writable (it is the last step to write there),
+# the COPY carries the shipped file's modes, and the /app directory itself
+# is made writable with a non-recursive chmod. No tree is ever chmodded a
+# second time, so nothing is stored twice.
 FROM bench-base:ubuntu-24.04
 
 ARG UPSTREAM_SHA=92b95531d198abf9ca40aaa3f67dd6d7f4cfa2bd
@@ -35,13 +48,17 @@ RUN git config --system --add safe.directory '*' \
 # the clone holds only that commit on the `baseline` branch: no refs, no
 # master, and the fix commit is NOT reachable from this clone (the golden
 # test is extracted from a separate throwaway clone below, then deleted).
-# ---------------------------------------------------------------------------
+# The trailing `chmod -R a+rwX .` runs in this SAME RUN as the checkout, so
+# the source tree lands real-writable (files 666, dirs 777, exec bits kept)
+# at no extra layer cost and ends up exactly as writable by uid 1000 as the
+# old separate chown would have made it.
 RUN git init /app/src \
  && cd /app/src \
  && git remote add origin https://github.com/libvips/libvips.git \
  && git fetch --depth 1 origin "$UPSTREAM_SHA" \
  && git checkout -b baseline FETCH_HEAD \
- && test "$(git rev-parse HEAD)" = "$UPSTREAM_SHA"
+ && test "$(git rev-parse HEAD)" = "$UPSTREAM_SHA" \
+ && chmod -R a+rwX .
 
 # ---------------------------------------------------------------------------
 # The golden regression test: the fix-era test/test-suite/test_conversion.py.
@@ -62,13 +79,17 @@ RUN git init /tmp/golden-clone \
 # ---------------------------------------------------------------------------
 # Build + install the library AS SHIPPED: the parent, with the bug live.
 # The agent edits one source file and only needs `ninja -C /app/src/build
-# install` on top of this layer.
+# install` on top of this layer. The build artifacts under /app/src/build
+# are made writable right here, in the same RUN that produced them, so the
+# agent can rebuild incrementally as uid 1000 without a second copy of the
+# tree.
 # ---------------------------------------------------------------------------
 RUN cd /app/src \
  && meson setup build \
  && ninja -C build \
  && ninja -C build install \
- && ldconfig
+ && ldconfig \
+ && cd /app/src/build && chmod -R a+rwX .
 
 # Snapshot the byte-identity of the installed library as shipped. The
 # verifier requires the agent's rebuilt+reinstalled libvips core to DIFFER
@@ -82,8 +103,12 @@ RUN find /usr/local/lib -type f -name 'libvips.so.*' \
 
 # pyvips (binds to the installed libvips at import time) + pytest for the
 # project's own test suite. Exact pins resolved against this base image.
+# This is the last RUN to write under /usr/local, so the single a+rwX pass
+# over /usr/local lives here (covering the base install, the just-installed
+# libvips and these packages in one layer) instead of duplicating it.
 RUN python3 -m pip install --break-system-packages --no-cache-dir \
-      pyvips==3.2.0 pytest==8.4.2
+      pyvips==3.2.0 pytest==8.4.2 \
+ && chmod -R a+rwX /usr/local
 
 # The trial runs on one CPU; pin any numeric thread pools to 1.
 ENV OMP_NUM_THREADS=1 \
@@ -94,10 +119,12 @@ ENV OMP_NUM_THREADS=1 \
 
 # uid-1000 tolerance: the agent must edit the clone AND be able to run
 # `ninja install` into /usr/local, whichever uid (root or 1000) harbor uses.
-RUN chmod -R a+rwX /app/src /usr/local
-
+# /app/src and /usr/local are already writable from the layers above; here we
+# only make the /app directory itself writable (a single non-recursive chmod;
+# the shipped reproduce.py carries its modes from the COPY --chmod below, so
+# nothing under /app is copied a second time).
 WORKDIR /app
 
-COPY files/ /app/
+COPY --chmod=0777 files/ /app/
 
-RUN chmod -R a+rwX /app
+RUN chmod a+rwX /app
