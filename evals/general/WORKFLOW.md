@@ -19,6 +19,19 @@ Every verifier writes a binary reward: `/logs/verifier/reward.txt` contains
 exactly `1` or `0`. `tools/check_binary_reward.py` proves this statically for
 all 1075 tasks and runs in the gate pipeline, so partial credit cannot come back.
 
+Before a run, check the environment rather than discovering a problem three hours
+into it:
+
+    python3 tools/check_run_ready.py       # full, re-runs the 13 gates
+    python3 tools/check_run_ready.py --fast  # environment only, no gate sweep
+
+It exits non-zero if anything required is wrong, and each failure prints what to
+do. The checks that matter most are the ones nothing else complains about: that
+harbor is 0.22.0 rather than the incompatible 0.18.0 also installed on this box,
+that all three `bench-base` images survived the last prune, that the reclaim guard
+is actually running, and that the tree is clean so the run can be matched to the
+commit that produced it.
+
 Building a runset: `python3 tools/build_runsets.py` then
 `harbor run -p runsets/general-v2-x1`. The 200..500 trial budget that tool was
 written against predates the v4 waves; at 1075 tasks one sample per task is
