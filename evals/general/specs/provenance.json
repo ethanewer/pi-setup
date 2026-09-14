@@ -750,7 +750,7 @@
       ]
     }
   ],
-  "generated_at": "2026-09-14T13:59:22.848687+00:00",
+  "generated_at": "2026-09-14T14:22:32.396602+00:00",
   "policy": "clean-room for every authored fixture; from v4.2 some tasks also clone upstream repositories at image-build time, listed in external_sources. No listed repository is shared with the frozen reference provenance set; tools/check_upstream_disjointness.py enforces that against specs/tb21_source_repositories.json",
   "task_files": {
     "agents/p_agent.py": {
@@ -136045,6 +136045,14 @@
       "license": "internal (authored for general-v2)",
       "origin": "authored-clean-room-v2-tooling",
       "sha256": "4f8bed99fdbf783c1315ea11bf4ed37bf213e511d4384d8cf7f8473ccd5624fc",
+      "source_commit": null,
+      "source_repository": null,
+      "transformation": "authored tooling"
+    },
+    "tools/check_run_ready.py": {
+      "license": "internal (authored for general-v2)",
+      "origin": "authored-clean-room-v2-tooling",
+      "sha256": "5709d8f7587c93119e8c6732cec55c6d323501b81376fc15c290c6281d0b3ebb",
       "source_commit": null,
       "source_repository": null,
       "transformation": "authored tooling"
