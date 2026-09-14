@@ -14,17 +14,31 @@
 # under review are excluded: verify_new_task.sh uses a PID-suffixed gate cache
 # and a per-task job directory, so concurrent invocations do not collide.
 #
-#   SHARDS=3 EXCLUDE=a,b,c bash runs/census-v43c.sh
+#   SHARDS=8 EXCLUDE=a,b,c bash runs/census-v43c.sh
+#
+# Resumes by default: a task already recorded rc=0 is skipped, so raising
+# SHARDS costs nothing already measured. Set RESUME=0 to start clean.
 set -uo pipefail
 cd /home/ee/pi-setup/evals/general || exit 2
 
 OUT=${OUT:-/tmp/v43c-census}
-SHARDS=${SHARDS:-3}
+# Shards are cheap here. The first run used 2 on the assumption that docker
+# contention was the limit, but vmstat showed the host 88% idle at 1% iowait
+# while a single harbor trial ran 25 minutes: the work is long and mostly
+# waiting, not CPU- or I/O-bound. Throughput is therefore set by shard count,
+# and 2 shards capped the wave near 5 tasks/hour on a 64-core box.
+SHARDS=${SHARDS:-8}
+RESUME=${RESUME:-1}
 # Tasks whose reviewer is still running would be censused mid-edit, and
 # futtock-careen was never authored. Both are excluded by default.
 EXCLUDE=${EXCLUDE:-companion-berm,companion-flint,crance-bell,crojack-wheel,futtock-careen}
 
-rm -rf "$OUT"; mkdir -p "$OUT"
+if [ "$RESUME" = 1 ] && [ -f "$OUT/rc.txt" ]; then
+  echo "resuming from $OUT ($(grep -c ' rc=0$' "$OUT/rc.txt" 2>/dev/null || echo 0) tasks already passed)"
+else
+  rm -rf "$OUT"
+fi
+mkdir -p "$OUT"
 echo "$EXCLUDE" | tr ',' '\n' | sed '/^$/d' | sort -u > "$OUT/exclude.txt"
 
 python3 - "$OUT" <<'PY' > "$OUT/tasks.txt"
@@ -39,8 +53,19 @@ for n in slots:
         print(n)
 PY
 
+# Drop tasks already recorded as passing, so a resume or a shard increase only
+# measures what is still outstanding. A task interrupted mid-trial has a partial
+# log but no rc line, so it is correctly re-run.
+if [ -f "$OUT/rc.txt" ]; then
+  grep ' rc=0$' "$OUT/rc.txt" 2>/dev/null | awk '{print $1}' | sort -u > "$OUT/passed.txt" || : > "$OUT/passed.txt"
+  if [ -s "$OUT/passed.txt" ]; then
+    grep -vxF -f "$OUT/passed.txt" "$OUT/tasks.txt" > "$OUT/todo.txt" || : > "$OUT/todo.txt"
+    mv "$OUT/todo.txt" "$OUT/tasks.txt"
+  fi
+fi
+
 n=$(wc -l < "$OUT/tasks.txt")
-echo "=== [$(date -Is)] census over $n of 107 slots, $SHARDS shards ==="
+echo "=== [$(date -Is)] census over $n outstanding tasks, $SHARDS shards ==="
 echo "    excluded: $(tr '\n' ' ' < "$OUT/exclude.txt")"
 echo "    disk before: $(df -h / | awk 'NR==2{print $3" used, "$4" free"}')"
 [ "$n" -gt 0 ] || { echo "nothing to do"; exit 0; }
@@ -68,11 +93,31 @@ echo "    disk after: $(df -h / | awk 'NR==2{print $3" used, "$4" free"}')"
 python3 - "$OUT" <<'PY'
 import re, sys, pathlib
 out = pathlib.Path(sys.argv[1])
-rc = {}
-for line in (out / 'rc.txt').read_text().splitlines():
-    parts = line.rsplit(' rc=', 1)
-    if len(parts) == 2:
-        rc[parts[0]] = parts[1]
+
+
+def read_set(p, parse_rc=False):
+    if not p.exists():
+        return {}
+    d = {}
+    for line in p.read_text().splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        if parse_rc:
+            parts = line.rsplit(' rc=', 1)
+            if len(parts) == 2:
+                d[parts[0]] = parts[1]
+        else:
+            d[line] = '0'
+    return d
+
+
+rc = read_set(out / 'rc.txt', parse_rc=True)
+# Tasks that passed in an earlier run. They count as rc=0 here, and treating a
+# missing rc lookup as a failure instead would have reported every resumed task
+# as broken.
+prior = read_set(out / 'passed.txt')
+rc = {**prior, **rc}
 
 ok, bad, nolog = [], [], []
 for t in sorted(rc):
@@ -90,7 +135,7 @@ for t in sorted(rc):
     elif o[1] != '1.0': problems.append(f'oracle reward={o[1]!r} (want 1.0)')
     if nn is None: problems.append('no nop reward line')
     elif nn[1] != '0.0': problems.append(f'nop reward={nn[1]!r} (want 0.0)')
-    if rc.get(t) != '0': problems.append(f'gate rc={rc.get(t)}')
+    if rc[t] != '0': problems.append(f'gate rc={rc[t]}')
     (bad.append((t, problems)) if problems else ok.append(t))
 
 print(f'censused {len(rc)} tasks: PASS {len(ok)}  FAIL {len(bad)}  no-log {len(nolog)}')
