@@ -3,23 +3,49 @@
 Operational checklist. Written while three jobs were still running so the plan
 survives a context compaction. Update the checkboxes as steps land.
 
-## Status: steps 1-7 DONE, committed as 3ded0b3a
+## Status: wave 3 DONE (3ded0b3a), audit CLOSED (6458f10a), fix-up DONE (374a8e03)
 
 Wave 3 landed and was committed on 2026-09-14. 106 tasks registered, all seven
 gates exit 0, census 106/106 with oracle reward 1 and nop reward 0, zero
 instruction leaks, disjointness problems=0. Suite is now 1075 tasks total and 805
 rubric-graded.
 
-Still outstanding:
+**The contamination audit is closed.** It scanned 18420 payloads and exits 1 on
+nine hits — 3 block matches, 6 n-gram matches. None is new and none involves a
+v4.3c task: every flagged task was already in the previous independence report and
+all nine are adjudicated with recomputed bytes in `reports/v42_wave.md` section 7
+and `reports/v43_wave.md`. They are import boilerplate, the apt-get idiom, an HTML
+viewport meta tag, and low-information numeric 14-grams. Exact, canary and
+source-repository matches are all zero. Recorded in
+`reports/v43c_registration.md`.
 
-- **Step 6, the contamination audit, was still running when the commit was made.**
-  It had finished the block phase over 18420 payloads and was in the n-gram
-  phases, which are the expensive ones. Its findings must be acted on. If it names
-  a wave-3 task, fix that task and commit the fix; do not treat the commit as
-  closing this item.
-- **Step 8, the ten deferred image-size fixes.**
-- **Step 7 for the fix-up wave**, which is a separate commit from wave 3 and was
-  deliberately kept out of 3ded0b3a.
+**The image-size fix-up is committed.** All 26 targets clear
+`check_image_size_hygiene.py`; problems went 49 → 12 and distinct flagged tasks
+36 → 9. Verified independently: each of the 26 changed exactly one file,
+`environment/Dockerfile`, with zero changes to `tests/`, `solution/`,
+`instruction.md`, `task.toml` or `difficulty.json`. Two extra spot checks beyond
+the wave's own census — `ballast-anchorage` (largest reduction) and
+`capstan-caboose` (largest image) — both pass. One agent's `nop_reward: 1` field
+for `bracket-bell` was a transcription error, settled by re-running the gate;
+section 9 of the report records it rather than dropping it.
+
+Still outstanding — **step 8 only**:
+
+- Nine deferred image-size fixes: `alewife-anchorage`, `alewife-dune`,
+  `corvette-towpath`, `kelson-current`, `pintle-berm`, `ropewalk-passage`,
+  `sennit-foresheet`, `strake-offing`, `waterway-wharf`. (`cutwater-swell` turned
+  out to be already clean.) All nine are the same defect class as the 26 just
+  fixed — a standalone `RUN chmod -R` / `chown -R` after an earlier RUN built the
+  tree — so the fix pattern is known.
+- All nine have already been censused and pass at their current image size, so
+  each fix requires re-running `tools/verify_new_task.sh` afterwards. Shrinking
+  must not change behaviour, and only a re-run proves that.
+- `alewife-anchorage` is subtler than the others and is a good template: its
+  `chmod -R a+rwX /opt/cargo` follows the rustup RUN, and its
+  `chmod -R a+rwX /app/src && chown -R 1000:1000 /app/src` runs BEFORE a warm
+  `cargo build` as uid 1000 that creates `target/`. Folding each into the RUN that
+  produces the bytes preserves the end state exactly, but the ordering against the
+  warm build has to be respected.
 
 State when written: census 59/102 recorded, all passing. Wave 3 at 211/213 agents
 with 2 reviews in flight. Image-size fix-up at 8/26.
