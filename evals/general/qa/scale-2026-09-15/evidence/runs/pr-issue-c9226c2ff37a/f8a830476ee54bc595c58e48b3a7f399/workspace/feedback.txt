@@ -1,0 +1,88 @@
+shared QA failed; inspect qa logs
+build.log
+#0 building with "desktop-linux" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 904B done
+#1 DONE 0.0s
+
+#2 [internal] load metadata for docker.io/library/bench-base:python-3.12
+#2 DONE 0.0s
+
+#3 [internal] load .dockerignore
+#3 transferring context: 2B done
+#3 DONE 0.0s
+
+#4 [1/5] FROM docker.io/library/bench-base:python-3.12@sha256:90cb28b75f05e3163ce58ac0a9dd798596d17868d61eee8c4d6cc45672405e40
+#4 resolve docker.io/library/bench-base:python-3.12@sha256:90cb28b75f05e3163ce58ac0a9dd798596d17868d61eee8c4d6cc45672405e40 done
+#4 DONE 0.0s
+
+#5 [2/5] WORKDIR /app
+#5 CACHED
+
+#6 [3/5] RUN python -m pip install --no-cache-dir     anyio==4.6.2.post1 certifi==2024.8.30     httpcore==1.0.6 idna==3.10 pytest==8.3.3
+#6 CACHED
+
+#7 [4/5] RUN python - <<'PY'
+#7 1.264 <stdin>:11: DeprecationWarning: Python 3.14 will, by default, filter extracted tar archives and reject files or modify their metadata. Use the filter argument to control this behavior.
+#7 DONE 1.3s
+
+#8 [5/5] RUN mv /tmp/httpx-src/httpx-6f9b50990dad9645a6f9dc0e1eb90af0a6474c3b/* /app/ && rm -rf /tmp/httpx-src
+#8 DONE 0.2s
+
+#9 exporting to image
+#9 exporting layers 0.1s done
+#9 exporting manifest sha256:6d72866f5b0c7d2e02bef116a2110f68ce5deb43912456b32f98fcd359625fcc done
+#9 exporting config sha256:a80dba3b84ca418b47fcabe22ba11076769379b2d1eb8a95d2cf9a996990ed8c
+#9 exporting config sha256:a80dba3b84ca418b47fcabe22ba11076769379b2d1eb8a95d2cf9a996990ed8c done
+#9 exporting attestation manifest sha256:8bf6de3267672143bdf7b360ceea97c0464ed449b4db0f9bddbb934c34fede77 done
+#9 exporting manifest list sha256:089ddba60ab3b15b5cdf018800770c0a79341eaef362fec832d26fd726a43406 done
+#9 naming to docker.io/library/general-qa-d5e0e61c3e9f4075b17abd496f6ca64d:latest done
+#9 unpacking to docker.io/library/general-qa-d5e0e61c3e9f4075b17abd496f6ca64d:latest 0.1s done
+#9 DONE 0.2s
+
+check_binary_reward.py.log
+task=pr-issue-c9226c2ff37a cone_size=2
+  [ok        ] test.sh:sh-write       '0'
+  [ok        ] test.sh:sh-write       '1'
+
+lint_tasks.py.log
+tasks=1 legacy_v1_skipped=0 problems=0 notes=0
+
+diagnostics.log
+Traceback (most recent call last):
+  File "/tests/hidden/verify.py", line 8, in <module>
+    check(
+  File "/tests/hidden/verify.py", line 5, in check
+    assert str(actual.url) == expected, (str(actual.url), expected)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: ('https://example.com/items?old=1', 'https://example.com/items')
+
+nop.log
+
+diagnostics.log
+Traceback (most recent call last):
+  File "/tests/hidden/verify.py", line 45, in <module>
+    assert request.headers == httpx.Headers({})
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError
+
+oracle.log
+
+nop-result.json
+{
+  "agent": "nop",
+  "elapsed_seconds": 0.23164799999999985,
+  "returncode": 0,
+  "reward": "0",
+  "expected_reward": "0"
+}
+
+oracle-result.json
+{
+  "agent": "oracle",
+  "elapsed_seconds": 0.3323037919999998,
+  "returncode": 0,
+  "reward": "0",
+  "expected_reward": "1"
+}

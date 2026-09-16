@@ -1,0 +1,28 @@
+reference identity verified: commit=1a6ffa9674b5, 241 tasks, 2059 files, checkout_sha256=5b144a6924a3cae1
+scanning v2 tree /var/folders/0g/7b1wsj057j54tlk8zf8w612c0000gn/T/candidate-contamination-oq8d9pb5 against /Users/ethanewer/agent-collab/terminal-bench/original-tasks ...
+pass 1: canary + exact hashes over v2 payloads (streaming) ...
+  v2 payloads: 706
+building reference block index ...
+  block index: 500/4423 payloads
+  block index: 1000/4423 payloads
+  block index: 1500/4423 payloads
+  block index: 2000/4423 payloads
+  block index: 2500/4423 payloads
+  block index: 3000/4423 payloads
+  block index: 3500/4423 payloads
+  block index: 4000/4423 payloads
+comparing v2 blocks ...
+building reference n-gram index ...
+  ngram index: 500/4423 payloads
+  ngram index: 1000/4423 payloads
+  ngram index: 1500/4423 payloads
+  ngram index: 2000/4423 payloads
+  ngram index: 2500/4423 payloads
+  ngram index: 3000/4423 payloads
+  ngram index: 3500/4423 payloads
+  ngram index: 4000/4423 payloads
+comparing v2 n-grams ...
+files_scanned=706 exact_matches=0 block_matches=0 block_soft_matches_32b=2 ngram_matches=0 canary_matches=0 source_repository_matches=0
+indexing 241 reference tasks ...
+v2_tasks=3 reference_tasks=237 flagged_pairs=0
+{"byte_audit_exit": 0, "similarity_exit": 0, "flagged_pairs": 0, "status": "clear"}

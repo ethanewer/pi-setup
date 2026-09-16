@@ -1,0 +1,7 @@
+Traceback (most recent call last):
+  File "/tests/hidden/verify.py", line 8, in <module>
+    check(
+  File "/tests/hidden/verify.py", line 5, in check
+    assert str(actual.url) == expected, (str(actual.url), expected)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: ('https://example.com/items?old=1', 'https://example.com/items')

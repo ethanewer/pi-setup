@@ -1,0 +1,45 @@
+{
+  "bundle": "/private/tmp/general-scale.U9t4EQ/runs/repo-216a52efac63/debc72c6d2c24e308dc9a2cc7745d317",
+  "model": "gpt-5.6-luna",
+  "reasoning_effort": "medium",
+  "command": [
+    "codex",
+    "-a",
+    "never",
+    "exec",
+    "--ignore-user-config",
+    "-m",
+    "gpt-5.6-luna",
+    "-c",
+    "model_reasoning_effort=\"medium\"",
+    "-s",
+    "workspace-write",
+    "-c",
+    "sandbox_workspace_write.network_access=true",
+    "--skip-git-repo-check",
+    "-C",
+    "/private/tmp/general-scale.U9t4EQ/runs/repo-216a52efac63/debc72c6d2c24e308dc9a2cc7745d317/workspace",
+    "--json",
+    "-o",
+    "/private/tmp/general-scale.U9t4EQ/runs/repo-216a52efac63/debc72c6d2c24e308dc9a2cc7745d317/workspace/final.txt",
+    "-"
+  ],
+  "fingerprint": "dd9d4b295f4039ed1d00fbe2391f8817bfc50c741f4a1af76df6d527a259fafb",
+  "remaining_gates": [
+    "independent review",
+    "negative mutations",
+    "repeatability",
+    "blind pilots",
+    "contamination",
+    "diversity",
+    "release approval"
+  ],
+  "usage": {
+    "input_tokens": 397088,
+    "cached_input_tokens": 361328,
+    "cache_write_input_tokens": 35715,
+    "output_tokens": 6556,
+    "reasoning_output_tokens": 2555
+  },
+  "thread_id": "01a0a881-87c0-78f2-9a18-25b99a0dc6f2"
+}

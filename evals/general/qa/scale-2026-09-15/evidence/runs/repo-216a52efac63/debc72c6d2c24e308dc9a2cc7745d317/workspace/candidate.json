@@ -1,0 +1,23 @@
+{
+  "task_id": "repo-216a52efac63",
+  "objective": "Preserve explicit None defaults in Jinja map and groupby attribute filters while retaining omitted-default undefined behavior.",
+  "acceptance": [
+    "map honors an explicitly supplied None fallback for missing attributes",
+    "groupby honors an explicitly supplied None fallback and groups missing and present None values deterministically",
+    "omitting default retains existing undefined behavior and non-None defaults and present attributes remain compatible",
+    "synchronous and asynchronous groupby behavior both satisfy the contract and the upstream regression suite remains green"
+  ],
+  "skills": [
+    "jinja-extension-workflow: trace public API, runtime semantics, and focused regression tests"
+  ],
+  "source": {
+    "benchmark_derived": false,
+    "repository": "https://github.com/pallets/jinja.git",
+    "base_commit": "5ef70112a1ff19c05324ff889dd30405b1002044",
+    "license": "BSD-3-Clause; source reused from the public upstream repository under its LICENSE.txt",
+    "workflow": "Inspect pinned Jinja filter/runtime/test architecture, implement a localized source fix, and validate with focused hidden cases plus the upstream suite."
+  },
+  "author": "codex-cli-gpt-5.6-luna-medium",
+  "schema_version": 1,
+  "pipeline": "repo"
+}

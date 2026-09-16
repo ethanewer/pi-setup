@@ -1,0 +1,24 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "medium"
+category = "data_processing"
+verifier_kind = "executes-deliverable"
+deliverables = [
+    "/app/pyyaml/lib/yaml/config_overlay.py",
+    "/app/reproduce_overlay.py",
+]
+tags = ["pyyaml-config-overlay", "yaml", "safe-loading", "recursive-merge"]
+
+[verifier]
+timeout_sec = 300.0
+
+[agent]
+timeout_sec = 600.0
+
+[environment]
+build_timeout_sec = 600.0
+network_mode = "no-network"
+cpus = 1
+memory_mb = 4096
+storage_mb = 4096

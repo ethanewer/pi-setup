@@ -1,0 +1,32 @@
+{
+  "reference_root": "/Users/ethanewer/agent-collab/terminal-bench/original-tasks",
+  "v2_payloads": 9,
+  "reference_payloads": 4423,
+  "block_sizes": [
+    32,
+    64,
+    256,
+    1024
+  ],
+  "ngram_n": 14,
+  "exclusions": {
+    "private-audit/": "gitignored audit record; competency names, not task material",
+    "boilerplate_allowlist": "none",
+    "hash_verified_vendored_assets": "none"
+  },
+  "exact_matches": [],
+  "block_matches": [],
+  "block_soft_matches": [
+    {
+      "ours": "/var/folders/0g/7b1wsj057j54tlk8zf8w612c0000gn/T/candidate-contamination-gppsdi1y/tasks/pr-issue-c9226c2ff37a/environment/Dockerfile",
+      "reference": "/Users/ethanewer/agent-collab/terminal-bench/original-tasks/deterministic-tarball/tests/test_outputs.py"
+    }
+  ],
+  "ngram_matches": [],
+  "canary_matches": [],
+  "source_repository_matches": [],
+  "block_allowlisted_hits": 3,
+  "block_generic_hits": 0,
+  "ngram_generic_hits": 0,
+  "ngram_idiom_hits": 0
+}

@@ -1,0 +1,17 @@
+Completed and repaired task `repo-216a52efac63`.
+
+- Fixed forbidden Docker test copy and verifier paths.
+- Verifier now uses `/tests`, executes the deliverable, invokes hidden tests, and preserves diagnostics.
+- Validated candidate schema and executable permissions.
+- Created/validated reusable skill: `skills/jinja-extension-workflow/SKILL.md`
+- Skill SHA256: `12541e53bfead6866404924ce279de24b8929695eb6685ccbda541b311b5b00e`
+- Confirmed upstream commit and license receipts.
+
+Checks passed:
+
+```text
+lint_tasks.py: problems=0
+check_binary_reward.py: passed
+skill validation: passed
+candidate validation: passed
+```

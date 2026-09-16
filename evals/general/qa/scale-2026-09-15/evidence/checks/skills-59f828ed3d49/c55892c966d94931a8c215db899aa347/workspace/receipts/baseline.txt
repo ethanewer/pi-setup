@@ -1,0 +1,29 @@
+Source and baseline receipts for skills-59f828ed3d49
+
+Command:
+  git ls-remote https://github.com/pallets/click.git HEAD refs/heads/main
+Result:
+  6aabf099bfdd4c1e75fe8d0e0d4241372b988ab1 HEAD
+  6aabf099bfdd4c1e75fe8d0e0d4241372b988ab1 refs/heads/main
+
+Command:
+  git ls-remote https://github.com/pallets/click.git refs/tags/8.1.8^{}
+Result:
+  934813e4d421071a1b3db3973c02fe2721359a6e refs/tags/8.1.8^{}
+
+Command:
+  python3 -c 'import click; print(click.__version__)'
+Result:
+  8.1.8
+
+Command (untouched task image):
+  test -e /app/manifest_audit.py
+Result:
+  false (deliverable absent; verifier cannot pass baseline)
+
+Command (repository documentation inspection at the immutable commit):
+  rg -n 'Context|Path|File|CliRunner|isolated_filesystem' docs src/click
+Result:
+  matches in docs/complex.md, docs/parameters.md, src/click/decorators.py,
+  and src/click/testing.py; these document the Click context, typed parameters,
+  and isolated CLI testing workflow used to shape the scenario.

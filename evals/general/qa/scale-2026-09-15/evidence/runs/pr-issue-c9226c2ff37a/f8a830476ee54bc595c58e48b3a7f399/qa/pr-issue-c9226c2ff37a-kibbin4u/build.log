@@ -1,0 +1,38 @@
+#0 building with "desktop-linux" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 904B done
+#1 DONE 0.0s
+
+#2 [internal] load metadata for docker.io/library/bench-base:python-3.12
+#2 DONE 0.1s
+
+#3 [internal] load .dockerignore
+#3 transferring context: 2B done
+#3 DONE 0.0s
+
+#4 [1/5] FROM docker.io/library/bench-base:python-3.12@sha256:90cb28b75f05e3163ce58ac0a9dd798596d17868d61eee8c4d6cc45672405e40
+#4 resolve docker.io/library/bench-base:python-3.12@sha256:90cb28b75f05e3163ce58ac0a9dd798596d17868d61eee8c4d6cc45672405e40 done
+#4 DONE 0.0s
+
+#5 [4/5] RUN python - <<'PY'
+#5 CACHED
+
+#6 [2/5] WORKDIR /app
+#6 CACHED
+
+#7 [3/5] RUN python -m pip install --no-cache-dir     anyio==4.6.2.post1 certifi==2024.8.30     httpcore==1.0.6 idna==3.10 pytest==8.3.3
+#7 CACHED
+
+#8 [5/5] RUN mv /tmp/httpx-src/httpx-6f9b50990dad9645a6f9dc0e1eb90af0a6474c3b/* /app/ && rm -rf /tmp/httpx-src
+#8 CACHED
+
+#9 exporting to image
+#9 exporting layers done
+#9 exporting manifest sha256:081a107cb12262ca03ca9a104c6d5ac04b980d66f8bdecf28a6c970d3e379aba done
+#9 exporting config sha256:e375f7c75ec79146d20a4ff40c0f20b9e8fa885272ea3cbb04192c651ab7c433 done
+#9 exporting attestation manifest sha256:2ef7124b260450181635307b44dee0638971339436f59b972d28e65294540df9 done
+#9 exporting manifest list sha256:bfdbd1086d9a1d297834b2e3f1931a5b796a3fa7b5992080fa02f71afcedefc0 done
+#9 naming to docker.io/library/general-qa-e038571802ba4ced827bd6ce4793ef8c:latest done
+#9 unpacking to docker.io/library/general-qa-e038571802ba4ced827bd6ce4793ef8c:latest 0.1s done
+#9 DONE 0.1s

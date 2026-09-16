@@ -1,0 +1,19 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "medium"
+category = "programming"
+verifier_kind = "executes-deliverable"
+deliverables = ["/app/httpx/_models.py"]
+oracle = "solution/solve.sh"
+verifier = "tests/test.sh"
+
+[source]
+repository = "https://github.com/encode/httpx"
+base_commit = "6f9b50990dad9645a6f9dc0e1eb90af0a6474c3b"
+license = "BSD-3-Clause"
+
+[environment]
+network_mode = "no-network"
+cpus = 1
+memory_mb = 4096

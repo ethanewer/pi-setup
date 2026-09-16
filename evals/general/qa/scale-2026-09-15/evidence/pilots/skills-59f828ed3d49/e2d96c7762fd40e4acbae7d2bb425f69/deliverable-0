@@ -1,0 +1,220 @@
+#!/usr/bin/env python3
+"""Audit files against a JSON manifest."""
+
+from __future__ import annotations
+
+import hashlib
+import json
+import os
+import stat
+import sys
+from pathlib import Path, PurePosixPath
+from typing import Any
+
+import click
+
+
+def _err(path: str, code: str, detail: str) -> dict[str, str]:
+    return {"path": path, "code": code, "detail": detail}
+
+
+def _sort_errors(errors: list[dict[str, str]]) -> list[dict[str, str]]:
+    return sorted(errors, key=lambda e: (e["path"], e["code"], e["detail"]))
+
+
+def _is_int(value: Any) -> bool:
+    return isinstance(value, int) and not isinstance(value, bool)
+
+
+def _canonical_path(value: Any) -> bool:
+    if not isinstance(value, str) or not value or "\x00" in value:
+        return False
+    if value.startswith("/") or "\\" in value:
+        return False
+    parts = value.split("/")
+    return all(part not in ("", ".", "..") for part in parts)
+
+
+def _read_json(path: Path) -> tuple[Any, str | None]:
+    try:
+        with path.open("r", encoding="utf-8") as stream:
+            return json.load(stream), None
+    except Exception as exc:  # file and JSON errors are reportable audit errors
+        return None, str(exc)
+
+
+def _report_bytes(report: dict[str, Any], output_format: str) -> str:
+    if output_format == "json":
+        return json.dumps(report, indent=2, ensure_ascii=False) + "\n"
+    lines = ["OK" if report["ok"] else "FAIL", f"checked: {report['checked']}"]
+    lines.extend(
+        f"{item['path']}: {item['code']} {item['detail']}"
+        for item in report["errors"]
+    )
+    return "\n".join(lines) + "\n"
+
+
+def _policy(value: Any, errors: list[dict[str, str]]) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        errors.append(_err("<policy>", "INVALID_POLICY", "policy must be an object"))
+        return {}
+    allowed = {"allowed_extensions", "max_bytes", "required_paths", "forbidden_paths"}
+    if set(value) - allowed:
+        errors.append(_err("<policy>", "INVALID_POLICY", "unknown policy key"))
+    result: dict[str, Any] = {}
+    extensions = value.get("allowed_extensions")
+    if "allowed_extensions" in value:
+        if not isinstance(extensions, list) or any(
+            not isinstance(x, str) or not x for x in extensions
+        ):
+            errors.append(_err("<policy>", "INVALID_POLICY", "allowed_extensions must be a list of non-empty strings"))
+        else:
+            result["allowed_extensions"] = extensions
+    maximum = value.get("max_bytes")
+    if "max_bytes" in value:
+        if not _is_int(maximum) or maximum < 0:
+            errors.append(_err("<policy>", "INVALID_POLICY", "max_bytes must be a non-negative integer"))
+        else:
+            result["max_bytes"] = maximum
+    for name in ("required_paths", "forbidden_paths"):
+        paths = value.get(name)
+        if name in value:
+            if not isinstance(paths, list) or any(not _canonical_path(x) for x in paths):
+                errors.append(_err("<policy>", "INVALID_POLICY", f"{name} must contain canonical paths"))
+            elif len(set(paths)) != len(paths):
+                errors.append(_err("<policy>", "INVALID_POLICY", f"duplicate {name}"))
+            else:
+                result[name] = paths
+    return result
+
+
+def _audit(
+    manifest_path: Path, root: Path, policy_path: Path | None
+) -> tuple[dict[str, Any], set[Path]]:
+    errors: list[dict[str, str]] = []
+    data, problem = _read_json(manifest_path)
+    records: list[Any] = []
+    if problem is not None:
+        errors.append(_err("<manifest>", "INVALID_MANIFEST", problem))
+    elif not isinstance(data, dict) or set(data) != {"files"} or not isinstance(data["files"], list):
+        errors.append(_err("<manifest>", "INVALID_MANIFEST", "manifest must contain only a files list"))
+    else:
+        records = data["files"]
+
+    policy: dict[str, Any] = {}
+    if policy_path is not None:
+        pdata, problem = _read_json(policy_path)
+        if problem is not None:
+            errors.append(_err("<policy>", "INVALID_POLICY", problem))
+        else:
+            policy = _policy(pdata, errors)
+
+    manifest_paths: set[str] = set()
+    for record in records:
+        if not isinstance(record, dict) or set(record) != {"path", "bytes", "sha256"}:
+            errors.append(_err("<manifest>", "INVALID_MANIFEST", "each record has path, bytes, and sha256"))
+            continue
+        path_value = record["path"]
+        display = path_value if isinstance(path_value, str) else "<manifest>"
+        if not _canonical_path(path_value):
+            code = "PATH_TRAVERSAL" if isinstance(path_value, str) else "INVALID_MANIFEST"
+            errors.append(_err(display, code, "path is not a canonical relative POSIX path"))
+            continue
+        if path_value in manifest_paths:
+            errors.append(_err(path_value, "DUPLICATE_PATH", "path occurs more than once"))
+            continue
+        manifest_paths.add(path_value)
+        if not _is_int(record["bytes"]) or record["bytes"] < 0:
+            errors.append(_err(path_value, "INVALID_MANIFEST", "bytes must be a non-negative integer"))
+        digest = record["sha256"]
+        if not isinstance(digest, str) or len(digest) != 64 or any(c not in "0123456789abcdef" for c in digest):
+            errors.append(_err(path_value, "INVALID_MANIFEST", "sha256 must be lowercase hexadecimal"))
+        if not _is_int(record["bytes"]) or record["bytes"] < 0 or not isinstance(digest, str) or len(digest) != 64 or any(c not in "0123456789abcdef" for c in digest):
+            continue
+        target = root.joinpath(*path_value.split("/"))
+        try:
+            resolved = target.resolve(strict=False)
+            resolved.relative_to(root)
+        except (ValueError, RuntimeError):
+            errors.append(_err(path_value, "SYMLINK_ESCAPE", "resolved path is outside root"))
+            continue
+        try:
+            info = resolved.stat()
+        except FileNotFoundError:
+            errors.append(_err(path_value, "MISSING_FILE", "file does not exist"))
+            continue
+        except OSError as exc:
+            errors.append(_err(path_value, "MISSING_FILE", str(exc)))
+            continue
+        if not stat.S_ISREG(info.st_mode):
+            errors.append(_err(path_value, "NOT_REGULAR", "path is not a regular file"))
+            continue
+        maximum = policy.get("max_bytes")
+        if maximum is not None and info.st_size > maximum:
+            errors.append(_err(path_value, "SIZE_LIMIT", "file exceeds max_bytes"))
+        extensions = policy.get("allowed_extensions")
+        if extensions is not None and PurePosixPath(path_value).suffix not in extensions:
+            errors.append(_err(path_value, "EXTENSION_FORBIDDEN", "file extension is not allowed"))
+        try:
+            digestor = hashlib.sha256()
+            count = 0
+            with resolved.open("rb") as stream:
+                while chunk := stream.read(1024 * 1024):
+                    count += len(chunk)
+                    digestor.update(chunk)
+            if count != record["bytes"]:
+                errors.append(_err(path_value, "BYTE_MISMATCH", "file byte count differs from manifest"))
+            if digestor.hexdigest() != digest:
+                errors.append(_err(path_value, "HASH_MISMATCH", "file SHA-256 differs from manifest"))
+        except OSError as exc:
+            errors.append(_err(path_value, "MISSING_FILE", str(exc)))
+
+    for required in policy.get("required_paths", []):
+        if required not in manifest_paths:
+            errors.append(_err(required, "REQUIRED_MISSING", "required path is absent from manifest"))
+    for forbidden in policy.get("forbidden_paths", []):
+        if forbidden in manifest_paths:
+            errors.append(_err(forbidden, "PATH_FORBIDDEN", "path is forbidden by policy"))
+    report = {"ok": not errors, "checked": len(records), "errors": _sort_errors(errors)}
+    audited = {root.joinpath(*p.split("/")).resolve(strict=False) for p in manifest_paths}
+    return report, audited
+
+
+@click.group()
+def cli() -> None:
+    """Audit a filesystem against a manifest."""
+
+
+@cli.command()
+@click.option("--root", type=click.Path(exists=True, file_okay=False, dir_okay=True, path_type=Path), default=Path("."), show_default=True)
+@click.option("--policy", type=click.Path(path_type=Path), default=None)
+@click.option("--format", "output_format", type=click.Choice(["json", "text"]), default="json", show_default=True)
+@click.option("--output", type=click.Path(path_type=Path), default="-", show_default=True)
+@click.argument("manifest", type=click.Path(path_type=Path))
+def audit(root: Path, policy: Path | None, output_format: str, output: Path, manifest: Path) -> None:
+    """Check MANIFEST against files under ROOT."""
+    root = root.resolve()
+    manifest = manifest.resolve(strict=False)
+    policy_resolved = policy.resolve(strict=False) if policy is not None else None
+    report, audited = _audit(manifest, root, policy_resolved)
+    if output != Path("-"):
+        output_resolved = output.resolve(strict=False)
+        protected = {manifest, *audited}
+        if policy_resolved is not None:
+            protected.add(policy_resolved)
+        if output_resolved in protected:
+            click.echo("refusing to overwrite an input file", err=True)
+            raise click.exceptions.Exit(2)
+        try:
+            output.parent.mkdir(parents=True, exist_ok=True)
+            output.write_text(_report_bytes(report, output_format), encoding="utf-8")
+        except OSError as exc:
+            click.echo(f"cannot write report: {exc}", err=True)
+            raise click.exceptions.Exit(2)
+    else:
+        click.echo(_report_bytes(report, output_format), nl=False)
+    raise click.exceptions.Exit(0 if report["ok"] else 2)
+
+
+if __name__ == "__main__":
+    cli()

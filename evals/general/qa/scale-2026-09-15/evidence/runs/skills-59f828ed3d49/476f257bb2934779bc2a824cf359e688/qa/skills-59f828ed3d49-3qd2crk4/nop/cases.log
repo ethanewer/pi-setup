@@ -1,0 +1,7 @@
+Traceback (most recent call last):
+  File "/tests/hidden/cases.py", line 105, in <module>
+    main()
+  File "/tests/hidden/cases.py", line 35, in main
+    assert p.returncode == 0, (p.returncode, p.stderr)
+           ^^^^^^^^^^^^^^^^^
+AssertionError: (2, "/usr/local/bin/python3: can't open file '/app/manifest_audit.py': [Errno 2] No such file or directory\n")

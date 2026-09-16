@@ -1,0 +1,35 @@
+#0 building with "desktop-linux" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 454B done
+#1 DONE 0.0s
+
+#2 [internal] load metadata for docker.io/library/bench-base:python-3.12
+#2 DONE 0.0s
+
+#3 [internal] load .dockerignore
+#3 transferring context: 2B done
+#3 DONE 0.0s
+
+#4 [1/4] FROM docker.io/library/bench-base:python-3.12@sha256:90cb28b75f05e3163ce58ac0a9dd798596d17868d61eee8c4d6cc45672405e40
+#4 resolve docker.io/library/bench-base:python-3.12@sha256:90cb28b75f05e3163ce58ac0a9dd798596d17868d61eee8c4d6cc45672405e40 0.0s done
+#4 DONE 0.0s
+
+#5 [2/4] WORKDIR /app
+#5 CACHED
+
+#6 [3/4] RUN git clone --filter=blob:none --no-checkout https://github.com/pallets/jinja.git /tmp/jinja     && git -C /tmp/jinja checkout --detach 5ef70112a1ff19c05324ff889dd30405b1002044     && cp -a /tmp/jinja /app/jinja     && rm -rf /app/jinja/.git /tmp/jinja
+#6 CACHED
+
+#7 [4/4] RUN python -m pip install --no-cache-dir     "MarkupSafe==3.0.2"     "pytest==8.3.5"     "trio==0.29.0"
+#7 CACHED
+
+#8 exporting to image
+#8 exporting layers done
+#8 exporting manifest sha256:bb745855375409f3bc38ae1f01713d6869d16e8a188efe9bdae3760712e717dc done
+#8 exporting config sha256:d3eb2c69d3f2176b2876e8d7a73cddbac15d1632ee1daf7816d5c85d40a48a3d done
+#8 exporting attestation manifest sha256:80febb39cb0a43772241baed6c55458ccbfe7ba775f9922864a2333e41571b02 0.0s done
+#8 exporting manifest list sha256:c1a1e8995e0aa128f3e78aa855987c0662ae4fcd9a5b7c68f63aec69a3df2611 done
+#8 naming to docker.io/library/general-qa-aa31c7f0fb414f8ca95e007152cbaf98:latest done
+#8 unpacking to docker.io/library/general-qa-aa31c7f0fb414f8ca95e007152cbaf98:latest 0.1s done
+#8 DONE 0.2s

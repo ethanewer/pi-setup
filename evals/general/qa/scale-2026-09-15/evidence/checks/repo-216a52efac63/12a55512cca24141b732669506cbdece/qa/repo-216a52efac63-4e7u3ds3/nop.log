@@ -1,0 +1,310 @@
+F..F.F.FF                                                                [100%]
+=================================== FAILURES ===================================
+__________________ test_map_explicit_none_is_a_real_fallback ___________________
+
+    def test_map_explicit_none_is_a_real_fallback():
+>       assert render('{{ xs|map(attribute="name", default=None)|list }}', xs=[{}]) == "[None]"
+E       AssertionError: assert '[Undefined]' == '[None]'
+E         
+E         - [None]
+E         + [Undefined]
+
+/tests/test.py:13: AssertionError
+______________ test_groupby_explicit_none_groups_missing_and_none ______________
+
+    def test_groupby_explicit_none_groups_missing_and_none():
+        source = '{{ xs|groupby("name", default=None)|list }}'
+>       assert render(source, xs=[{}, {"name": "west"}, {"name": None}]) == (
+            "[(None, [{}, {'name': None}]), ('west', [{'name': 'west'}])]"
+        )
+
+/tests/test.py:27: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/tests/test.py:9: in render
+    return Environment(undefined=StrictUndefined).from_string(source).render(**values)
+jinja/src/jinja2/environment.py:1292: in render
+    self.environment.handle_exception()
+jinja/src/jinja2/environment.py:941: in handle_exception
+    raise rewrite_traceback_stack(source=source)
+<template>:1: in top-level template code
+    ???
+jinja/src/jinja2/async_utils.py:48: in wrapper
+    return normal_func(*args, **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+environment = <jinja2.environment.Environment object at 0xffff817a7980>
+value = [{}, {'name': 'west'}, {'name': None}], attribute = 'name'
+default = None, case_sensitive = False
+
+    @pass_environment
+    def sync_do_groupby(
+        environment: "Environment",
+        value: "t.Iterable[V]",
+        attribute: str | int,
+        default: t.Any | None = None,
+        case_sensitive: bool = False,
+    ) -> "list[_GroupTuple]":
+        """Group a sequence of objects by an attribute using Python's
+        :func:`itertools.groupby`. The attribute can use dot notation for
+        nested access, like ``"address.city"``. Unlike Python's ``groupby``,
+        the values are sorted first so only one group is returned for each
+        unique value.
+    
+        For example, a list of ``User`` objects with a ``city`` attribute
+        can be rendered in groups. In this example, ``grouper`` refers to
+        the ``city`` value of the group.
+    
+        .. sourcecode:: html+jinja
+    
+            <ul>{% for city, items in users|groupby("city") %}
+              <li>{{ city }}
+                <ul>{% for user in items %}
+                  <li>{{ user.name }}
+                {% endfor %}</ul>
+              </li>
+            {% endfor %}</ul>
+    
+        ``groupby`` yields namedtuples of ``(grouper, list)``, which
+        can be used instead of the tuple unpacking above. ``grouper`` is the
+        value of the attribute, and ``list`` is the items with that value.
+    
+        .. sourcecode:: html+jinja
+    
+            <ul>{% for group in users|groupby("city") %}
+              <li>{{ group.grouper }}: {{ group.list|join(", ") }}
+            {% endfor %}</ul>
+    
+        You can specify a ``default`` value to use if an object in the list
+        does not have the given attribute.
+    
+        .. sourcecode:: jinja
+    
+            <ul>{% for city, items in users|groupby("city", default="NY") %}
+              <li>{{ city }}: {{ items|map(attribute="name")|join(", ") }}</li>
+            {% endfor %}</ul>
+    
+        Like the :func:`~jinja-filters.sort` filter, sorting and grouping is
+        case-insensitive by default. The ``key`` for each group will have
+        the case of the first item in that group of values. For example, if
+        a list of users has cities ``["CA", "NY", "ca"]``, the "CA" group
+        will have two values. This can be disabled by passing
+        ``case_sensitive=True``.
+    
+        .. versionchanged:: 3.1
+            Added the ``case_sensitive`` parameter. Sorting and grouping is
+            case-insensitive by default, matching other filters that do
+            comparisons.
+    
+        .. versionchanged:: 3.0
+            Added the ``default`` parameter.
+    
+        .. versionchanged:: 2.6
+            The attribute supports dot notation for nested access.
+        """
+        expr = make_attrgetter(
+            environment,
+            attribute,
+            postprocess=ignore_case if not case_sensitive else None,
+            default=default,
+        )
+        out = [
+            _GroupTuple(key, list(values))
+>           for key, values in groupby(sorted(value, key=expr), expr)
+        ]
+E       jinja2.exceptions.UndefinedError: 'dict object' has no attribute 'name'
+
+jinja/src/jinja2/filters.py:1270: UndefinedError
+_______________________ test_async_groupby_explicit_none _______________________
+
+    def test_async_groupby_explicit_none():
+        async def run():
+            env = Environment(enable_async=True, undefined=StrictUndefined)
+            template = env.from_string('{{ xs|groupby("name", default=None)|list }}')
+            return await template.render_async(xs=[{}, {"name": "west"}, {"name": None}])
+    
+>       assert asyncio.run(run()) == "[(None, [{}, {'name': None}]), ('west', [{'name': 'west'}])]"
+
+/tests/test.py:43: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/usr/local/lib/python3.12/asyncio/runners.py:195: in run
+    return runner.run(main)
+/usr/local/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+/usr/local/lib/python3.12/asyncio/base_events.py:691: in run_until_complete
+    return future.result()
+/tests/test.py:41: in run
+    return await template.render_async(xs=[{}, {"name": "west"}, {"name": None}])
+jinja/src/jinja2/environment.py:1315: in render_async
+    return self.environment.handle_exception()
+jinja/src/jinja2/environment.py:941: in handle_exception
+    raise rewrite_traceback_stack(source=source)
+<template>:1: in top-level template code
+    ???
+jinja/src/jinja2/async_utils.py:68: in auto_await
+    return await t.cast("t.Awaitable[V]", value)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+environment = <jinja2.environment.Environment object at 0xffff817d8c80>
+value = [{}, {'name': 'west'}, {'name': None}], attribute = 'name'
+default = None, case_sensitive = False
+
+    @async_variant(sync_do_groupby)  # type: ignore
+    async def do_groupby(
+        environment: "Environment",
+        value: "t.AsyncIterable[V] | t.Iterable[V]",
+        attribute: str | int,
+        default: t.Any | None = None,
+        case_sensitive: bool = False,
+    ) -> "list[_GroupTuple]":
+        expr = make_attrgetter(
+            environment,
+            attribute,
+            postprocess=ignore_case if not case_sensitive else None,
+            default=default,
+        )
+        out = [
+            _GroupTuple(key, await auto_to_list(values))
+>           for key, values in groupby(sorted(await auto_to_list(value), key=expr), expr)
+        ]
+E       jinja2.exceptions.UndefinedError: 'dict object' has no attribute 'name'
+
+jinja/src/jinja2/filters.py:1297: UndefinedError
+_______________ test_groupby_none_with_case_insensitive_strings ________________
+
+    def test_groupby_none_with_case_insensitive_strings():
+        env = Environment()
+        source = '{{ xs|groupby("name", default=None)|list }}'
+>       assert env.from_string(source).render(
+            xs=[{}, {"name": "West"}, {"name": "west"}, {"name": None}]
+        ) == "[(None, [{}, {'name': None}]), ('West', [{'name': 'West'}, {'name': 'west'}])]"
+
+/tests/hidden/test_hidden.py:15: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+jinja/src/jinja2/environment.py:1292: in render
+    self.environment.handle_exception()
+jinja/src/jinja2/environment.py:941: in handle_exception
+    raise rewrite_traceback_stack(source=source)
+<template>:1: in top-level template code
+    ???
+jinja/src/jinja2/async_utils.py:48: in wrapper
+    return normal_func(*args, **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+environment = <jinja2.environment.Environment object at 0xffff8179fe60>
+value = [{}, {'name': 'West'}, {'name': 'west'}, {'name': None}]
+attribute = 'name', default = None, case_sensitive = False
+
+    @pass_environment
+    def sync_do_groupby(
+        environment: "Environment",
+        value: "t.Iterable[V]",
+        attribute: str | int,
+        default: t.Any | None = None,
+        case_sensitive: bool = False,
+    ) -> "list[_GroupTuple]":
+        """Group a sequence of objects by an attribute using Python's
+        :func:`itertools.groupby`. The attribute can use dot notation for
+        nested access, like ``"address.city"``. Unlike Python's ``groupby``,
+        the values are sorted first so only one group is returned for each
+        unique value.
+    
+        For example, a list of ``User`` objects with a ``city`` attribute
+        can be rendered in groups. In this example, ``grouper`` refers to
+        the ``city`` value of the group.
+    
+        .. sourcecode:: html+jinja
+    
+            <ul>{% for city, items in users|groupby("city") %}
+              <li>{{ city }}
+                <ul>{% for user in items %}
+                  <li>{{ user.name }}
+                {% endfor %}</ul>
+              </li>
+            {% endfor %}</ul>
+    
+        ``groupby`` yields namedtuples of ``(grouper, list)``, which
+        can be used instead of the tuple unpacking above. ``grouper`` is the
+        value of the attribute, and ``list`` is the items with that value.
+    
+        .. sourcecode:: html+jinja
+    
+            <ul>{% for group in users|groupby("city") %}
+              <li>{{ group.grouper }}: {{ group.list|join(", ") }}
+            {% endfor %}</ul>
+    
+        You can specify a ``default`` value to use if an object in the list
+        does not have the given attribute.
+    
+        .. sourcecode:: jinja
+    
+            <ul>{% for city, items in users|groupby("city", default="NY") %}
+              <li>{{ city }}: {{ items|map(attribute="name")|join(", ") }}</li>
+            {% endfor %}</ul>
+    
+        Like the :func:`~jinja-filters.sort` filter, sorting and grouping is
+        case-insensitive by default. The ``key`` for each group will have
+        the case of the first item in that group of values. For example, if
+        a list of users has cities ``["CA", "NY", "ca"]``, the "CA" group
+        will have two values. This can be disabled by passing
+        ``case_sensitive=True``.
+    
+        .. versionchanged:: 3.1
+            Added the ``case_sensitive`` parameter. Sorting and grouping is
+            case-insensitive by default, matching other filters that do
+            comparisons.
+    
+        .. versionchanged:: 3.0
+            Added the ``default`` parameter.
+    
+        .. versionchanged:: 2.6
+            The attribute supports dot notation for nested access.
+        """
+        expr = make_attrgetter(
+            environment,
+            attribute,
+            postprocess=ignore_case if not case_sensitive else None,
+            default=default,
+        )
+        out = [
+            _GroupTuple(key, list(values))
+>           for key, values in groupby(sorted(value, key=expr), expr)
+        ]
+E       jinja2.exceptions.UndefinedError: 'dict object' has no attribute 'name'
+
+jinja/src/jinja2/filters.py:1270: UndefinedError
+_________________________ test_async_map_explicit_none _________________________
+
+    def test_async_map_explicit_none():
+        async def run():
+            env = Environment(enable_async=True)
+            template = env.from_string('{{ xs|map(attribute="name", default=None)|list }}')
+            return await template.render_async(xs=[{}, {"name": "A"}])
+    
+>       assert asyncio.run(run()) == "[None, 'A']"
+E       assert "[Undefined, 'A']" == "[None, 'A']"
+E         
+E         - [None, 'A']
+E         + [Undefined, 'A']
+
+/tests/hidden/test_hidden.py:26: AssertionError
+=============================== warnings summary ===============================
+../usr/local/lib/python3.12/site-packages/_pytest/cacheprovider.py:475
+  /usr/local/lib/python3.12/site-packages/_pytest/cacheprovider.py:475: PytestCacheWarning: could not create cache path /tests/.pytest_cache/v/cache/nodeids: [Errno 30] Read-only file system: '/tests/pytest-cache-files-edg9kjgm'
+    config.cache.set("cache/nodeids", sorted(self.cached_nodeids))
+
+../usr/local/lib/python3.12/site-packages/_pytest/cacheprovider.py:429
+  /usr/local/lib/python3.12/site-packages/_pytest/cacheprovider.py:429: PytestCacheWarning: could not create cache path /tests/.pytest_cache/v/cache/lastfailed: [Errno 30] Read-only file system: '/tests/pytest-cache-files-bolxpy2d'
+    config.cache.set("cache/lastfailed", self.lastfailed)
+
+../usr/local/lib/python3.12/site-packages/_pytest/stepwise.py:51
+  /usr/local/lib/python3.12/site-packages/_pytest/stepwise.py:51: PytestCacheWarning: could not create cache path /tests/.pytest_cache/v/cache/stepwise: [Errno 30] Read-only file system: '/tests/pytest-cache-files-k2kayebm'
+    session.config.cache.set(STEPWISE_CACHE_DIR, [])
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED ../tests/test.py::test_map_explicit_none_is_a_real_fallback - Assertio...
+FAILED ../tests/test.py::test_groupby_explicit_none_groups_missing_and_none
+FAILED ../tests/test.py::test_async_groupby_explicit_none - jinja2.exceptions...
+FAILED ../tests/hidden/test_hidden.py::test_groupby_none_with_case_insensitive_strings
+FAILED ../tests/hidden/test_hidden.py::test_async_map_explicit_none - assert ...
+5 failed, 4 passed, 3 warnings in 0.15s

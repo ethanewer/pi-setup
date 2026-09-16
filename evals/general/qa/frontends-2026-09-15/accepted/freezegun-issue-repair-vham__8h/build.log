@@ -1,0 +1,42 @@
+#0 building with "desktop-linux" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 372B done
+#1 DONE 0.0s
+
+#2 [internal] load metadata for docker.io/library/bench-base:python-3.12
+#2 DONE 0.0s
+
+#3 [internal] load .dockerignore
+#3 transferring context: 2B done
+#3 DONE 0.0s
+
+#4 [1/5] FROM docker.io/library/bench-base:python-3.12@sha256:90cb28b75f05e3163ce58ac0a9dd798596d17868d61eee8c4d6cc45672405e40
+#4 resolve docker.io/library/bench-base:python-3.12@sha256:90cb28b75f05e3163ce58ac0a9dd798596d17868d61eee8c4d6cc45672405e40 done
+#4 DONE 0.0s
+
+#5 [internal] load build context
+#5 transferring context: 54.88kB done
+#5 DONE 0.0s
+
+#6 [4/5] COPY files/reproduce.py /app/reproduce.py
+#6 CACHED
+
+#7 [2/5] WORKDIR /app
+#7 CACHED
+
+#8 [3/5] COPY files/freezegun_base /app/freezegun_base
+#8 CACHED
+
+#9 [5/5] RUN pip install --no-cache-dir python-dateutil==2.9.0.post0 six==1.17.0
+#9 CACHED
+
+#10 exporting to image
+#10 exporting layers done
+#10 exporting manifest sha256:39f6ce450efa36003aa91311bba72627a65bce6e6bf47cd181e108b25eb1f78c done
+#10 exporting config sha256:0fba4ecd795f4784104544e76337a5b1a3a091a06403a3a0d3517f04d932be10 done
+#10 exporting attestation manifest sha256:614faf5f2f3a09a54485041277cb2e41ce67ece7c97102368884e5ebebe41aa4 done
+#10 exporting manifest list sha256:eec4d4016f8f1e4a27cdab662fb4909100a43b92654baedc2326f70021bae4ad done
+#10 naming to docker.io/library/general-qa-15e13f5f3f9148478993e4da2a9dd82c:latest done
+#10 unpacking to docker.io/library/general-qa-15e13f5f3f9148478993e4da2a9dd82c:latest done
+#10 DONE 0.0s

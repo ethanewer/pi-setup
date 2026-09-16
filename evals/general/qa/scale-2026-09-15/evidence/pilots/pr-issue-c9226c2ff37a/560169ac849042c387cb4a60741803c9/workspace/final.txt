@@ -1,0 +1,5 @@
+Implemented in `/app/httpx/_models.py`.
+
+Change: explicit `params` now replace existing URL query parameters; omitted `params` preserves them. Empty mappings remove the query string while ordered pairs, repeats, blanks, encoding, fragments, headers, and content remain intact.
+
+Behavior and compilation checks passed. Full pytest was unavailable because optional dependencies (`trio`, `trustme`) are missing.

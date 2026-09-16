@@ -1,0 +1,37 @@
+{
+  "bundle": "/private/tmp/general-scale.U9t4EQ/runs/pr-issue-c9226c2ff37a/3cac7f03aa7640d99f02d1b95a3ff99e",
+  "model": "gpt-5.6-luna",
+  "reasoning_effort": "medium",
+  "command": [
+    "codex",
+    "-a",
+    "never",
+    "exec",
+    "--ignore-user-config",
+    "-m",
+    "gpt-5.6-luna",
+    "-c",
+    "model_reasoning_effort=\"medium\"",
+    "-s",
+    "workspace-write",
+    "-c",
+    "sandbox_workspace_write.network_access=true",
+    "--skip-git-repo-check",
+    "-C",
+    "/private/tmp/general-scale.U9t4EQ/runs/pr-issue-c9226c2ff37a/3cac7f03aa7640d99f02d1b95a3ff99e/workspace",
+    "--json",
+    "-o",
+    "/private/tmp/general-scale.U9t4EQ/runs/pr-issue-c9226c2ff37a/3cac7f03aa7640d99f02d1b95a3ff99e/workspace/final.txt",
+    "-"
+  ],
+  "fingerprint": "5a07434102b77d404e7eff952cf9de6417cee27816d2768c3fde0f634361a46d",
+  "error": "shared QA failed; inspect qa logs",
+  "usage": {
+    "input_tokens": 245594,
+    "cached_input_tokens": 212657,
+    "cache_write_input_tokens": 32907,
+    "output_tokens": 4219,
+    "reasoning_output_tokens": 1276
+  },
+  "thread_id": "01a0a880-0538-7e00-950d-f92152f1dee9"
+}

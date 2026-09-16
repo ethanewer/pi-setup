@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "pipeline": "skills",
+  "task_id": "skills-59f828ed3d49",
+  "objective": "Build a deterministic Click CLI that audits a JSON file manifest against a local filesystem and emits a stable machine-readable or text report.",
+  "acceptance": [
+    "The audit command validates manifest structure and reports malformed records without a traceback.",
+    "Unsafe, non-canonical, missing, non-regular, and symlink-escaping paths are rejected.",
+    "Existing file bytes, byte counts, SHA-256 values, and policy constraints are checked accurately.",
+    "JSON and text reports are deterministic, sorted, and sent to the requested output channel with correct exit status."
+  ],
+  "skills": [
+    "click-manifest-auditing"
+  ],
+  "source": {
+    "benchmark_derived": false,
+    "skill_paths": [
+      "skills/click-manifest-auditing/SKILL.md@sha256:ed0182dded292f89104f8ab11a9d428fd43c969ea2bd75163f5c05c5b7ae3165"
+    ],
+    "scenario": "An authored offline filesystem-manifest audit for release packaging, with adversarial path and policy inputs.",
+    "license": "BSD-3-Clause for Click-derived workflow guidance; skill text is original and reusable."
+  },
+  "author": "codex-cli-gpt-5.6-luna-medium"
+}

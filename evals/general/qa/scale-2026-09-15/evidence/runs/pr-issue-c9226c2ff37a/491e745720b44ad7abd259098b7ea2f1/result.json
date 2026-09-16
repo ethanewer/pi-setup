@@ -1,0 +1,46 @@
+{
+  "bundle": "/private/tmp/general-scale.U9t4EQ/runs/pr-issue-c9226c2ff37a/491e745720b44ad7abd259098b7ea2f1",
+  "model": "gpt-5.6-luna",
+  "reasoning_effort": "medium",
+  "command": [
+    "codex",
+    "-a",
+    "never",
+    "exec",
+    "--ignore-user-config",
+    "-m",
+    "gpt-5.6-luna",
+    "-c",
+    "model_reasoning_effort=\"medium\"",
+    "-s",
+    "workspace-write",
+    "-c",
+    "sandbox_workspace_write.network_access=true",
+    "--skip-git-repo-check",
+    "-C",
+    "/private/tmp/general-scale.U9t4EQ/runs/pr-issue-c9226c2ff37a/491e745720b44ad7abd259098b7ea2f1/workspace",
+    "--json",
+    "-o",
+    "/private/tmp/general-scale.U9t4EQ/runs/pr-issue-c9226c2ff37a/491e745720b44ad7abd259098b7ea2f1/workspace/final.txt",
+    "-"
+  ],
+  "session_context": {
+    "thread_id": "01a0a883-072b-7bf0-a59e-d568aefd1a3d",
+    "contexts": [
+      {
+        "model": "gpt-5.6-luna",
+        "effort": "medium"
+      }
+    ]
+  },
+  "fingerprint": "f6b460e689797370bf88a5eef146823aa8961520d91d21bde416109d2b783b53",
+  "error": "shared QA failed; inspect qa logs",
+  "usage": {
+    "input_tokens": 437238,
+    "cached_input_tokens": 400762,
+    "cache_write_input_tokens": 36428,
+    "output_tokens": 8142,
+    "reasoning_output_tokens": 3134
+  },
+  "thread_id": "01a0a883-072b-7bf0-a59e-d568aefd1a3d"
+}

@@ -92,7 +92,7 @@ def detect_indent(path: Path, default: int = 2) -> int:
 
 
 def build_note(prov: dict, wave: str, extra: str | None) -> str:
-    parts = [f'{wave}: claims no tb2.1 competencies.']
+    parts = [f'{wave}: independently authored task; see candidate and QA evidence.']
     if prov.get('repository') and prov.get('parent_commit'):
         chain = f"Built from a verified real upstream issue: repository {prov['repository']}, parent {prov['parent_commit']}"
         if prov.get('fix_commit'):
@@ -126,6 +126,8 @@ def main() -> int:
                          'the census runs after registration, and check_difficulty.py '
                          'fails on tasks with no measured oracle time.')
     ap.add_argument('--dry-run', action='store_true')
+    ap.add_argument('--candidate-dir', type=Path, default=ROOT / 'authoring/candidates')
+    ap.add_argument('--qa-root', type=Path, default=ROOT / 'qa/results')
     args = ap.parse_args()
 
     diff_p = ROOT / 'specs' / 'difficulty.json'
@@ -212,6 +214,31 @@ def main() -> int:
             skipped.append(name)
             continue
 
+        # Newly registered tasks require acceptance for exactly these bytes.
+        from author_task import validate, fingerprint
+        try:
+            candidate = validate(json.loads((args.candidate_dir / f'{name}.json').read_text()))
+            if candidate['task_id'] != name:
+                raise ValueError('candidate task_id mismatch')
+            digest = fingerprint(d, candidate)
+            accepted = False
+            qa_receipt = None
+            for report_path in args.qa_root.glob(f'{name}-*/report.json'):
+                report = json.loads(report_path.read_text())
+                if report.get('task_id') == name and report.get('fingerprint') == digest and report.get('status') == 'accepted' and report.get('errors') == []:
+                    accepted = True
+                    qa_receipt = report_path
+            if not accepted:
+                raise ValueError('no accepted QA report for current package')
+            prov = dict(candidate['source'])
+            prov.setdefault('parent_commit', prov.get('base_commit'))
+            prov.setdefault('upstream_issue_ref', prov.get('reference'))
+            measured = qa_receipt.parent / 'oracle-result.json'
+            oracle_metrics = json.loads(measured.read_text()) if measured.exists() else {}
+        except (OSError, ValueError, TypeError) as exc:
+            rejected.append(f'{name}: {exc}')
+            continue
+
         dd = json.loads((d / 'difficulty.json').read_text())
         rub = dd.get('rubric') or {}
         bad = [k for k in RUBRIC_KEYS if not isinstance(rub.get(k), int)]
@@ -234,13 +261,16 @@ def main() -> int:
             'task_toml_difficulty': (toml.get('metadata') or {}).get('difficulty'),
             'expected_expert_time_min': dd.get('expected_expert_time_min'),
             'documented_probe': dd.get('documented_probe'),
-            'oracle_time_sec': (times.get(name) or {}).get('oracle_time_sec'),
-            'oracle_reward': (times.get(name) or {}).get('reward'),
+            'oracle_time_sec': oracle_metrics.get('elapsed_seconds', (times.get(name) or {}).get('oracle_time_sec')),
+            'oracle_reward': 1 if oracle_metrics.get('reward') in ('1', '1.0') else (times.get(name) or {}).get('reward'),
             'verifier_timeout_sec': (toml.get('verifier') or {}).get('timeout_sec'),
             'agent_timeout_sec': (toml.get('agent') or {}).get('timeout_sec'),
             'memory_mb': env.get('memory_mb'),
             'cpus': cpus,
             'notes': dd.get('notes', ''),
+            'authoring_pipeline': candidate['pipeline'],
+            'candidate_fingerprint': digest,
+            'qa_report': str(qa_receipt.resolve().relative_to(ROOT)) if qa_receipt.resolve().is_relative_to(ROOT) else str(qa_receipt.resolve()),
         }
         if name not in diff['tasks']:
             diff['tasks'][name] = entry
@@ -249,16 +279,7 @@ def main() -> int:
                 'competencies': [],
                 'evidence': {},
                 'note': build_note(prov, args.wave, extra_notes.get(name)),
-                # Required, not decorative. build_coverage.py and
-                # check_tb21_coverage.py treat an empty competencies list as an
-                # error unless this flag is present, because a task that claims no
-                # tb2.1 competency is otherwise indistinguishable from one whose
-                # author never filled the claim in. The v4.x upstream-clone
-                # families deliberately claim none: their value is that they are
-                # real reproducing bugs in real repositories, which the tb2.1
-                # competency inventory does not describe. Omitting the flag made
-                # build_coverage.py exit 1 with exactly 106 errors, one per task
-                # this tool had just registered.
+                # Compatibility field for existing release metadata.
                 'claims_no_competencies': True,
             }
         added.append((name, entry['bucket'], entry['total']))
@@ -303,8 +324,8 @@ def main() -> int:
     diff_p.write_text(json.dumps(diff, indent=detect_indent(diff_p)) + '\n')
     claims_p.write_text(json.dumps(claims, indent=detect_indent(claims_p)) + '\n')
     print(f'\nwrote {diff_p.relative_to(ROOT)} and {claims_p.relative_to(ROOT)}')
-    print('Not committed. Next: build_coverage.py, update_provenance.py, '
-          'check_reproducibility.py, then the gates and the census.')
+    print('Not committed. Next: review the additive registration and preserve '
+          'candidate, QA report, and review evidence with the release.')
     return 0
 
 

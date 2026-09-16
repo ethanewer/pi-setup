@@ -1,0 +1,21 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "hard"
+category = "data_processing"
+verifier_kind = "executes-deliverable"
+deliverables = ["/app/triage.py", "/app/repro_case.py"]
+tags = ["rich-log-triage", "rich", "structured-validation", "deterministic-reporting"]
+
+[verifier]
+timeout_sec = 120.0
+
+[agent]
+timeout_sec = 1200.0
+
+[environment]
+build_timeout_sec = 600.0
+network_mode = "no-network"
+cpus = 1
+memory_mb = 4096
+storage_mb = 4096

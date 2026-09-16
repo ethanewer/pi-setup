@@ -1,0 +1,14 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "medium"
+category = "security"
+verifier_kind = "executes-deliverable"
+deliverables = ["/app/manifest_audit.py"]
+oracle = "solution/solve.sh"
+verifier = "tests/test.sh"
+
+[environment]
+network_mode = "no-network"
+cpus = 1
+memory_mb = 4096

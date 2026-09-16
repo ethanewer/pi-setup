@@ -1,0 +1,16 @@
+Traceback (most recent call last):
+  File "/tests/hidden/hidden_test.py", line 134, in <module>
+    test_delete_edges()
+  File "/tests/hidden/hidden_test.py", line 42, in test_delete_edges
+    loaded = load_overlay("x: {nested: [!delete \"\"]}\n")
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/pyyaml/lib/yaml/config_overlay.py", line 47, in load_overlay
+    _validate_tree(value, in_mapping_value=False)
+  File "/app/pyyaml/lib/yaml/config_overlay.py", line 84, in _validate_tree
+    _validate_tree(item, in_mapping_value=True)
+  File "/app/pyyaml/lib/yaml/config_overlay.py", line 84, in _validate_tree
+    _validate_tree(item, in_mapping_value=True)
+  File "/app/pyyaml/lib/yaml/config_overlay.py", line 88, in _validate_tree
+    raise ValueError("DELETE cannot be used directly inside a sequence")
+ValueError: DELETE cannot be used directly inside a sequence
+0

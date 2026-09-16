@@ -1,0 +1,17 @@
+FAIL: reproduction failed on repaired source: BUILT FAIL
+CALLS 1
+FAIL: repaired reproduction output contract mismatch: BUILT FAIL
+CALLS 1
+Traceback (most recent call last):
+  File "/tests/hidden/as_arg//run.py", line 15, in <module>
+    factory = decorated(42, marker="hidden")
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/freezegun_base/freezegun/api.py", line 951, in wrapper
+    return self._call_with_time_factory(time_factory, func=func, args=args, kwargs=kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/freezegun_base/freezegun/api.py", line 934, in _call_with_time_factory
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+TypeError: decorated() missing 1 required positional argument: 'value'
+FAIL: hidden case as_arg failed after repair
+REWARD 0 (3 failures)

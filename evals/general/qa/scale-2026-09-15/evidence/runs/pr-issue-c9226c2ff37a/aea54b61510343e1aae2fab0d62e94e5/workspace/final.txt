@@ -1,0 +1,9 @@
+Repaired the draft task.
+
+- Fixed verifier mount path to `/tests/hidden/verify.py`.
+- Preserved diagnostics in `/logs/verifier/diagnostics.log`.
+- Refreshed skill SHA256 receipt.
+- Validated skill, candidate, shell scripts, task lint, and binary reward checks.
+- Confirmed executable `solve.sh` and `test.sh`.
+
+The task targets upstream [HTTPX PR #3364](https://github.com/encode/httpx/pull/3364), with provenance and baseline receipts retained.

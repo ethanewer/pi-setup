@@ -1,0 +1,15 @@
+Repaired the draft task:
+
+- Fixed verifier to invoke `/tests/hidden/cases.py`.
+- Preserved diagnostics in `/logs/verifier/cases.log`.
+- Added hidden cases for deterministic output, malformed policies, and audited-input protection.
+- Verified skill validity and SHA256.
+- Confirmed executable permissions.
+- Required checks pass:
+
+```text
+lint_tasks.py: problems=0
+check_binary_reward.py: binary reward verified
+```
+
+The oracle hidden suite also passes.

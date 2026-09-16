@@ -1,0 +1,3 @@
+Implemented in `/app/httpx/_models.py`.
+
+`Request(params=...)` now replaces existing URL query parameters while omitted `params` preserves them. Verified empty mappings, mappings, ordered pairs, repeated keys, blank values, encoding, fragments, headers, content, and method behavior.

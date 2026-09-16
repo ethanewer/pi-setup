@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "pipeline": "pr-issue",
+  "task_id": "pr-issue-c9226c2ff37a",
+  "objective": "Correct HTTPX request URL construction so explicitly supplied query parameters replace the URL query while omitted parameters preserve it.",
+  "acceptance": [
+    "An explicit empty parameter mapping removes an existing query string.",
+    "An explicit non-empty mapping replaces rather than merges with an existing query.",
+    "Ordered pairs preserve repeated keys, blank values, order, and URL encoding.",
+    "Omitting params preserves the original query and unrelated request behavior remains intact."
+  ],
+  "skills": [
+    "skills/httpx-url-query-regression/SKILL.md"
+  ],
+  "source": {
+    "benchmark_derived": false,
+    "repository": "https://github.com/encode/httpx",
+    "base_commit": "6f9b50990dad9645a6f9dc0e1eb90af0a6474c3b",
+    "fix_commit": "bf5758388619afdc957722ca8a9a4ff255df6866",
+    "license": "BSD-3-Clause",
+    "reference": "https://github.com/encode/httpx/pull/3364",
+    "reproduction": "At base, run python -c 'import httpx; print(httpx.Request(\"GET\", \"https://example.com/path?old=1\", params={}).url)' and observe https://example.com/path?old=1; at the fix commit the same command prints https://example.com/path."
+  },
+  "author": "codex-cli-gpt-5.6-luna-medium"
+}

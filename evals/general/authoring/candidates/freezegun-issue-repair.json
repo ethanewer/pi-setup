@@ -1,0 +1,28 @@
+{
+  "task_id": "freezegun-issue-repair",
+  "author": "codex-cli-gpt-5.6-luna-medium",
+  "objective": "Repair Freezegun so as_arg decorator injection invokes the decorated callable once while preserving as_kwarg and conflict behavior.",
+  "acceptance": [
+    "The authored reproduction passes on the repaired source and fails on the pinned pre-fix source.",
+    "as_arg injects the time factory before original positional arguments without a second invocation.",
+    "as_kwarg, generator decoration, and rejection of both injection modes remain correct.",
+    "The repair is limited to the supplied Freezegun source snapshot and is deterministic offline."
+  ],
+  "skills": [
+    "Python debugging",
+    "decorator control flow",
+    "regression testing"
+  ],
+  "source": {
+    "benchmark_derived": false,
+    "repository": "https://github.com/spulec/freezegun",
+    "base_commit": "c9bf52c5aa12ea1b5b8647a136a92504ea071f2f",
+    "fix_commit": "8df34959e3b094f3190cb1a7191309296a1aaac8",
+    "license": "Apache-2.0; source snapshot ships with LICENSE",
+    "reference": "https://github.com/spulec/freezegun/pull/583",
+    "workflow": "PR/issue to task; repair a real merged upstream regression offline",
+    "reproduction": "Command: python3 /app/reproduce.py. The reproduction honors FREEZEGUN_SOURCE when set. Expected failure: the pre-fix as_arg path invokes the decorated callable again without the injected factory. Observed: at c9bf52c the reproduction prints BUILT FAIL and CALLS 1 and exits 1; at 8df3495 it prints BUILT PASS and CALLS 2 and exits 0."
+  },
+  "schema_version": 1,
+  "pipeline": "pr-issue"
+}

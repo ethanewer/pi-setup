@@ -1,0 +1,32 @@
+#0 building with "desktop-linux" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 162B done
+#1 DONE 0.0s
+
+#2 [internal] load metadata for docker.io/library/bench-base:python-3.12
+#2 DONE 0.0s
+
+#3 [internal] load .dockerignore
+#3 transferring context: 2B done
+#3 DONE 0.0s
+
+#4 [1/3] FROM docker.io/library/bench-base:python-3.12@sha256:90cb28b75f05e3163ce58ac0a9dd798596d17868d61eee8c4d6cc45672405e40
+#4 resolve docker.io/library/bench-base:python-3.12@sha256:90cb28b75f05e3163ce58ac0a9dd798596d17868d61eee8c4d6cc45672405e40 done
+#4 DONE 0.0s
+
+#5 [2/3] WORKDIR /app
+#5 CACHED
+
+#6 [3/3] RUN python -m pip install --no-cache-dir --disable-pip-version-check 'click==8.1.8'
+#6 CACHED
+
+#7 exporting to image
+#7 exporting layers done
+#7 exporting manifest sha256:7d9bd54ce5f58e19fd25ec79857b526c363e5db05b6b48874b5fd7e986fb8edb done
+#7 exporting config sha256:8c618b7ad34b9421cff4acbf2da9baf304134e8e1326578479abfb27f7cefe40 done
+#7 exporting attestation manifest sha256:fa492079a72bdb98f1b14dcb1c3b4cf2bad3175c0fbd0c79151a376f6acbdab6 done
+#7 exporting manifest list sha256:dabc52bcdbebf5f5c947c849f6b3c2c1936fa7dde4665986aaf38c5302b0c1d0 done
+#7 naming to docker.io/library/general-qa-675a6b535f0348f1a64d87b9bff77868:latest done
+#7 unpacking to docker.io/library/general-qa-675a6b535f0348f1a64d87b9bff77868:latest 0.0s done
+#7 DONE 0.1s

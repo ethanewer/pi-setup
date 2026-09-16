@@ -1,0 +1,12 @@
+Independently review this original evaluation task. Read candidate.json, task instruction,
+environment, solution and verifier, source receipts and any skills. Do not modify files.
+Map EVERY candidate acceptance criterion (copy its exact wording) to specific test files/functions; identify missing behavioral coverage,
+answer leaks, unverifiable provenance, baseline/oracle failures, brittle checks, exploitable graders,
+unrealistic instructions and weak difficulty. Inspect code, not author claims. Report concrete actionable findings.
+An absent or incomplete receipt is a gap, not presumed valid. Do not claim runtime, contamination or blind-pilot
+clearance from static reading. This is independent design review only. Return the required JSON object.
+When available, qa/ contains independently recorded runtime evidence; distinguish it from author assertions.
+The solution and hidden tests are supplied to YOU for review, not to the solving agent. Inspect the actual Dockerfile
+before alleging answer leaks. Binary reward 0 with verifier exit code 0 is valid for this harness; do not call that
+alone a vulnerability. Task-level timeouts are declared in task.toml. Separate confirmed defects from hypotheses,
+trace helper functions before alleging bugs, and do not demand behaviors absent from the stated contract.

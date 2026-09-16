@@ -999,7 +999,6 @@ understate what the suite actually asks an agent to read.
 
 | Skill | Tasks | Example tasks |
 |---|---|---|
-| `clean-room` | 287 | `alewife-anchorage`, `alewife-dune`, `ballast-anchorage`, `ballast-berm`, … |
 | `debugging` | 230 | `alewife-anchorage`, `alewife-dune`, `ballast-anchorage`, `ballast-berm`, … |
 | `programming` | 130 | `amber-dial`, `amber-guest`, `amber-ledge`, `amber-quarry`, … |
 | `system_administration` | 91 | `amber-upland`, `anchor-quill`, `arid-hearth`, `basalt-bridge`, … |

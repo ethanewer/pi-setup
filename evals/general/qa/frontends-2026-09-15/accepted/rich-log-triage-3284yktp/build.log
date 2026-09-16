@@ -1,0 +1,39 @@
+#0 building with "desktop-linux" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 662B done
+#1 DONE 0.0s
+
+#2 [internal] load metadata for docker.io/library/bench-base:python-3.12
+#2 DONE 0.1s
+
+#3 [internal] load .dockerignore
+#3 transferring context: 2B done
+#3 DONE 0.0s
+
+#4 [internal] load build context
+#4 transferring context: 624B done
+#4 DONE 0.0s
+
+#5 [1/4] FROM docker.io/library/bench-base:python-3.12@sha256:90cb28b75f05e3163ce58ac0a9dd798596d17868d61eee8c4d6cc45672405e40
+#5 resolve docker.io/library/bench-base:python-3.12@sha256:90cb28b75f05e3163ce58ac0a9dd798596d17868d61eee8c4d6cc45672405e40 0.0s done
+#5 DONE 0.0s
+
+#6 [2/4] WORKDIR /app
+#6 CACHED
+
+#7 [3/4] RUN python -m pip install --no-cache-dir     'poetry-core==2.2.1' 'markdown-it-py==4.2.0' 'mdurl==0.1.2' 'Pygments==2.21.0'     && python -m pip install --no-cache-dir --no-deps --no-build-isolation     'https://github.com/Textualize/rich/archive/9d8f9a372cc5916fd4781fec207ced7ddac2f08f.tar.gz'
+#7 CACHED
+
+#8 [4/4] COPY files/source /app/source
+#8 CACHED
+
+#9 exporting to image
+#9 exporting layers done
+#9 exporting manifest sha256:9810eb8a35e05c62b45cf33b796affb6a1ade8b0f3d13367bb8da0244d000d4e done
+#9 exporting config sha256:da8bdc84b8d929279444423fb33246c28bf1d3387eafe7ce4a62a41ad62bcc60 done
+#9 exporting attestation manifest sha256:87c611fcac43727ea702b6a3535031a21b88e2505af9de26ac74c3356a40acc4 done
+#9 exporting manifest list sha256:615fa0433d0a2046dd54371732ccb98ddb1e91fb1189476b7870e183591c2040 done
+#9 naming to docker.io/library/general-qa-a4aceae67f62436991ef6ccd3f9bae13:latest done
+#9 unpacking to docker.io/library/general-qa-a4aceae67f62436991ef6ccd3f9bae13:latest done
+#9 DONE 0.0s

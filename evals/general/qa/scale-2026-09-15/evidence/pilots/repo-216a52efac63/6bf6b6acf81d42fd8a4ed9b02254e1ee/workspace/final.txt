@@ -1,0 +1,6 @@
+Implemented the requested fix in `/app/jinja/src/jinja2/filters.py`.
+
+- Explicit `default=None` now works for `map` and `groupby`.
+- Omitted defaults preserve undefined behavior.
+- Sync and async `groupby` paths support deterministic `None` grouping.
+- Existing tests pass: **911 passed**.

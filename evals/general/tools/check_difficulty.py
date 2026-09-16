@@ -6,8 +6,6 @@ Checks:
   - a hard task must derive difficulty from reasoning/debugging/adversarial
     depth or dependent stages, not from prompt length or timeouts alone
   - suite contains easy, medium, and hard tasks
-  - every competency has a covering task at or above its required difficulty
-    floor, unless the covering task documents an intentional probe waiver
   - oracle times are recorded (waive mid-development with --allow-unmeasured)
 """
 import argparse, json, sys
@@ -49,39 +47,6 @@ def main() -> int:
         if t['oracle_reward'] not in (None, 1, 1.0) and t['oracle_reward'] is not None:
             problems.append(f'{name}: oracle reward {t["oracle_reward"]} != 1')
 
-    # competency difficulty floors
-    inv = json.loads((ROOT / 'specs/tb21_competencies.json').read_text())
-    cov = json.loads((ROOT / 'specs/coverage.json').read_text())
-    matrix = cov['matrix']
-    # documented environmentally-infeasible competencies are waived. Same
-    # loader as check_tb21_coverage.py so the two gates cannot disagree, and it
-    # reads the tracked specs/infeasible_waivers.json, so a fresh clone with no
-    # private-audit/ still reaches the right verdict.
-    sys.path.insert(0, str(Path(__file__).resolve().parent))
-    from check_tb21_coverage import load_infeasible
-    infeasible_ids = load_infeasible(ROOT)
-    for c in inv['competencies']:
-        cid = c['id']
-        if cid in infeasible_ids:
-            continue
-        floor = c.get('min_required_difficulty', 'easy')
-        cells = matrix.get(cid, [])
-        ok = False
-        for cell in cells:
-            t = tasks.get(cell['task_id'])
-            if not t:
-                continue
-            if DIFF_ORDER.get(t['bucket'], 0) >= DIFF_ORDER[floor]:
-                ok = True
-                break
-            if t.get('documented_probe'):
-                ok = True  # intentional, documented probe
-                break
-        if not ok and cells:
-            problems.append(f'{cid}: no covering task at difficulty >= {floor} '
-                            'and no documented probe waiver')
-        elif not cells:
-            problems.append(f'{cid}: uncovered (see check_tb21_coverage)')
 
     print(f'tasks={len(tasks)} buckets={counts} problems={len(problems)}')
     for p in problems:

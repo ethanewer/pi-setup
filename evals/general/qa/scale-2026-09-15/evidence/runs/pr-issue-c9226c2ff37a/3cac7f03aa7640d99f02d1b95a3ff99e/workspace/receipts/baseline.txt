@@ -1,0 +1,26 @@
+Source: https://github.com/encode/httpx
+Base: 6f9b50990dad9645a6f9dc0e1eb90af0a6474c3b
+
+Command:
+python3 - <<'PY'
+import httpx
+for params in (None, {}, {'new': '2'}, [('tag', 'a'), ('tag', 'b')]):
+    print(repr(params), str(httpx.Request('GET', 'https://example.com/path?old=1', params=params).url))
+PY
+
+Observed at base:
+None https://example.com/path?old=1
+{} https://example.com/path?old=1
+{'new': '2'} https://example.com/path?old=1&new=2
+[('tag', 'a'), ('tag', 'b')] https://example.com/path?old=1&tag=a&tag=b
+
+Command:
+pytest -q tests/models/test_requests.py
+
+Observed baseline result: exit code 4 before collection because the local inspection environment lacked `trio`, required by the repository warning filter (`ModuleNotFoundError: No module named 'trio'`). This is unrelated to the focused URL reproduction; the task image pins its modest runtime dependencies and uses an offline behavioral verifier.
+
+Fix confirmation at bf5758388619afdc957722ca8a9a4ff255df6866:
+None https://example.com/path?old=1
+{} https://example.com/path
+{'new': '2'} https://example.com/path?new=2
+[('tag', 'a'), ('tag', 'b')] https://example.com/path?tag=a&tag=b

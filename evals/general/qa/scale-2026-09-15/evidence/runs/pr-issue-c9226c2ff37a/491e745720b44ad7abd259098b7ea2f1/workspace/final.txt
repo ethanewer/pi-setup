@@ -1,0 +1,12 @@
+Repaired and revalidated the `pr-issue` task.
+
+- Fixed verifier import path via `PYTHONPATH=/app`.
+- Pinned source archive with SHA256.
+- Created/applied reusable HTTPX regression skill; digest recorded.
+- Verified base fails and upstream fix passes hidden tests.
+- Updated acceptance checks for request invariants.
+- `candidate.json` validates.
+- Both required advisory checks pass:
+  - `lint_tasks.py`: 0 problems
+  - `check_binary_reward.py`: passes
+- Oracle and verifier scripts are executable.

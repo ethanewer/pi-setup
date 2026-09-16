@@ -1,0 +1,15 @@
+Repaired task `skills-59f828ed3d49`.
+
+- Fixed verifier reward polarity: pass = `1`, failure/absent deliverable = `0`.
+- Fixed oracle launcher path resolution.
+- Added early output-overwrite protection.
+- Verified skill validity and SHA256:
+  `ed0182dded292f89104f8ab11a9d428fd43c969ea2bd75163f5c05c5b7ae3165`
+- Candidate validation passed.
+- Hidden behavioral cases passed locally.
+- Required checks passed:
+  - `lint_tasks.py`: 0 problems
+  - `check_binary_reward.py`: passed
+- `solve.sh` and `test.sh` remain executable.
+
+Docker was not run, as instructed.

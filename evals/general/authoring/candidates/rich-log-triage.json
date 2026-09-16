@@ -1,0 +1,28 @@
+{
+  "task_id": "rich-log-triage",
+  "author": "codex-cli-gpt-5.6-luna-medium",
+  "objective": "Implement a deterministic Rich-backed log triage reporter with strict JSONL validation, stable aggregation and ordering, literal message rendering, and an executable reproduction harness.",
+  "acceptance": [
+    "Valid structured JSONL produces the exact deterministic report and stable tie ordering",
+    "Malformed records, duplicate IDs, unsupported levels, invalid timestamps, control characters, and wrong field types fail closed",
+    "Messages containing Rich-looking markup remain literal and output is noninteractive and ANSI-free",
+    "The reproduction harness exercises the implementation and all declared deliverables execute successfully"
+  ],
+  "skills": [
+    "rich-reporting",
+    "structured input validation",
+    "stable aggregation and deterministic text output"
+  ],
+  "source": {
+    "benchmark_derived": false,
+    "repository": "https://github.com/Textualize/rich",
+    "base_commit": "9d8f9a372cc5916fd4781fec207ced7ddac2f08f",
+    "skill_paths": [
+      "evals/general/authoring/skills/rich-reporting/SKILL.md@31893645e1cb509c2b6724105fa0f5b59aff93b9f147fd55a5a601e50922b2e4"
+    ],
+    "scenario": "An authored offline incident-review workflow receives JSONL application events and needs a reproducible human-readable triage report.",
+    "license": "MIT for upstream Rich; the task-local skill and authored fixtures are original work."
+  },
+  "schema_version": 1,
+  "pipeline": "skills"
+}

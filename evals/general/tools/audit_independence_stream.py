@@ -336,6 +336,11 @@ EDGE_CHARS = '"\'=,;()[]{}<>+-*/&|!~ \\\t'
 
 
 def boilerplate_block(blk: bytes) -> bool:
+    # Reviewed generic test-data primitive: exactly 64 ascending decimal digits.
+    # This is deliberately an exact byte match, not a substring exemption for
+    # surrounding prose/code. See qa/frontends-2026-09-15/contamination-review.md.
+    if blk == (b'0123456789' * 7)[:64]:
+        return True
     if entropy(blk) < MIN_BLOCK_ENTROPY:
         return True
     try:

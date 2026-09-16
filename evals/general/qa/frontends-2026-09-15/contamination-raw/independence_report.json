@@ -1,0 +1,45 @@
+{
+  "reference_root": "/Users/ethanewer/agent-collab/terminal-bench/original-tasks",
+  "v2_payloads": 706,
+  "reference_payloads": 4423,
+  "block_sizes": [
+    32,
+    64,
+    256,
+    1024
+  ],
+  "ngram_n": 14,
+  "exclusions": {
+    "private-audit/": "gitignored audit record; competency names, not task material",
+    "boilerplate_allowlist": "none",
+    "hash_verified_vendored_assets": "none"
+  },
+  "exact_matches": [],
+  "block_matches": [
+    {
+      "ours": "/var/folders/0g/7b1wsj057j54tlk8zf8w612c0000gn/T/candidate-contamination-onj_4xc7/tasks/rich-log-triage/tests/hidden/cases/long-literal.jsonl",
+      "reference": "/Users/ethanewer/agent-collab/terminal-bench/original-tasks/sqlite-with-gcov/vendor/sqlite-fossil-release.tar.gz::gz"
+    },
+    {
+      "ours": "/var/folders/0g/7b1wsj057j54tlk8zf8w612c0000gn/T/candidate-contamination-onj_4xc7/tasks/rich-log-triage/tests/hidden/expected/long-literal.txt",
+      "reference": "/Users/ethanewer/agent-collab/terminal-bench/original-tasks/sqlite-with-gcov/vendor/sqlite-fossil-release.tar.gz::gz"
+    }
+  ],
+  "block_soft_matches": [
+    {
+      "ours": "/var/folders/0g/7b1wsj057j54tlk8zf8w612c0000gn/T/candidate-contamination-onj_4xc7/tasks/freezegun-issue-repair/environment/Dockerfile",
+      "reference": "/Users/ethanewer/agent-collab/terminal-bench/original-tasks/portfolio-optimization/Dockerfile"
+    },
+    {
+      "ours": "/var/folders/0g/7b1wsj057j54tlk8zf8w612c0000gn/T/candidate-contamination-onj_4xc7/tasks/pyyaml-config-overlay/environment/pyyaml/.github/actions/dynamatrix/matrix_yaml_to_json.py",
+      "reference": "/Users/ethanewer/agent-collab/terminal-bench/original-tasks/optimal-transport/solution.sh"
+    }
+  ],
+  "ngram_matches": [],
+  "canary_matches": [],
+  "source_repository_matches": [],
+  "block_allowlisted_hits": 3337,
+  "block_generic_hits": 109,
+  "ngram_generic_hits": 149,
+  "ngram_idiom_hits": 0
+}

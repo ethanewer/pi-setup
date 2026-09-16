@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "authoring_model": "gpt-5.6-luna",
+  "reasoning_effort": "medium",
+  "model_verified_from": "Codex session turn_context records for every authoring and repair turn",
+  "csv": {
+    "path": "/Users/ethanewer/posttraining-2606/local/data/terminal_docs_v004/libraries_frameworks_github.csv",
+    "sha256": "bfd194fac66fecc11bc53fab590db53f6991bb37b3187a113aabf23dd1d5da42"
+  },
+  "authoring_sessions": {
+    "skills": "01a0a86d-a017-79a3-a277-2934f9538d41",
+    "repo": "01a0a86d-a483-73c3-afe8-09c04acb7576",
+    "pr-issue": "01a0a86d-a914-73b2-b376-d6d98829c7cd",
+    "offline_metadata": "01a0a873-0008-7bc3-ab78-80bc474e4e11"
+  },
+  "pilot_sessions": {
+    "skills": "01a0a870-df45-7d01-af44-9d85bce83cbc",
+    "repo": "01a0a870-dac6-76c3-8619-43beb426da5e",
+    "pr-issue": "01a0a871-0e54-7781-b037-c11c46324599"
+  },
+  "fingerprints": {
+    "rich-log-triage": "f66462f159e5b0af177e6c1c8a722bfd446f4581b67ce0f0156915a453f3c764",
+    "pyyaml-config-overlay": "cb66cb45ebad61414e4d3af938a346e803688f6fef23062f92b2591421e1ef7c",
+    "freezegun-issue-repair": "fa98804984d289f78cdc1f2bc8151f1e8988adc6587b391f7a9c38b5b3f6fcdd"
+  },
+  "status": "accepted-and-registered",
+  "pilot_rewards": {
+    "rich-log-triage": 1,
+    "pyyaml-config-overlay": 1,
+    "freezegun-issue-repair": 1
+  },
+  "qa_runtime_backend": "docker",
+  "network": "none",
+  "acceptance_reports": {
+    "rich-log-triage": "accepted/rich-log-triage-3284yktp/report.json",
+    "pyyaml-config-overlay": "accepted/pyyaml-config-overlay-z_ouqpjc/report.json",
+    "freezegun-issue-repair": "accepted/freezegun-issue-repair-vham__8h/report.json"
+  },
+  "limitation": "One blind pilot per task; difficulty estimates are provisional, not statistically calibrated."
+}

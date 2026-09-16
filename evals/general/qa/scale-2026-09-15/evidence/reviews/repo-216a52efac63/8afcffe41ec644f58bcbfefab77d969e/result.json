@@ -1,0 +1,61 @@
+{
+  "job": "repo-216a52efac63",
+  "author_fingerprint": "dd9d4b295f4039ed1d00fbe2391f8817bfc50c741f4a1af76df6d527a259fafb",
+  "bundle": "/private/tmp/general-scale.U9t4EQ/reviews/repo-216a52efac63/8afcffe41ec644f58bcbfefab77d969e",
+  "author_seal": "3d76208cc0be9c151dff2da843909c8bf9c3356c8bea80136c4ae467be0838eb",
+  "model": "gpt-5.6-luna",
+  "reasoning_effort": "medium",
+  "review": {
+    "verdict": "revise",
+    "criteria": [
+      {
+        "criterion": "map honors an explicitly supplied None fallback for missing attributes",
+        "test": "tasks/repo-216a52efac63/tests/test.py::test_map_explicit_none_is_a_real_fallback; tasks/repo-216a52efac63/tests/hidden/test_hidden.py::test_async_map_explicit_none",
+        "gap": "Covers synchronous template rendering and async template rendering with list inputs, but not direct filter invocation, nested attributes, custom undefined classes, or an async iterable input."
+      },
+      {
+        "criterion": "groupby honors an explicitly supplied None fallback and groups missing and present None values deterministically",
+        "test": "tasks/repo-216a52efac63/tests/test.py::test_groupby_explicit_none_groups_missing_and_none; tasks/repo-216a52efac63/tests/test.py::test_async_groupby_explicit_none; tasks/repo-216a52efac63/tests/hidden/test_hidden.py::test_groupby_none_with_case_insensitive_strings",
+        "gap": "Checks the principal string case in sync and async template paths, including case-insensitive grouping. It does not test an actual async iterable, case_sensitive=True, multiple ordinary comparable groups, numeric comparable values, nested attributes, or deterministic ordering beyond one ordinary string group."
+      },
+      {
+        "criterion": "omitting default retains existing undefined behavior and non-None defaults and present attributes remain compatible",
+        "test": "tasks/repo-216a52efac63/tests/test.py::test_map_omitted_default_stays_undefined; tasks/repo-216a52efac63/tests/test.py::test_groupby_omitted_default_retains_strict_undefined; tasks/repo-216a52efac63/tests/test.py::test_map_non_none_default_and_present_values; tasks/repo-216a52efac63/tests/hidden/test_hidden.py::test_explicit_empty_string_default_is_not_treated_as_missing",
+        "gap": "There is no focused groupby test for a non-None default, present attributes in groupby, custom undefined classes, or direct public API behavior. The verifier also does not run the upstream regression suite, so the broad compatibility portion is not independently enforced."
+      },
+      {
+        "criterion": "synchronous and asynchronous groupby behavior both satisfy the contract and the upstream regression suite remains green",
+        "test": "tasks/repo-216a52efac63/tests/test.py::test_groupby_explicit_none_groups_missing_and_none; tasks/repo-216a52efac63/tests/test.py::test_async_groupby_explicit_none; tasks/repo-216a52efac63/tests/hidden/test_hidden.py::test_groupby_none_with_case_insensitive_strings; receipt claim in receipts/baseline.md",
+        "gap": "The verifier runs only the nine focused tests and never invokes the upstream suite. receipts/baseline.md reports 911 upstream tests passing after the oracle patch, but provides no full-suite log, command output artifact, or independently reproducible receipt; this criterion therefore has an enforcement and provenance gap."
+      }
+    ],
+    "findings": [
+      "The candidate patch itself appears consistent with the focused contract: it introduces the existing missing sentinel, distinguishes omitted from explicit None in map/groupby, and uses a None-safe sort key in both sync and async groupby. QA evidence records the oracle passing all 9 focused tests and the no-op failing 5, but this is runtime evidence for those focused tests only, not clearance of the broader contract.",
+      "Confirmed coverage defect: the verifier does not run the upstream Jinja suite despite the acceptance criterion explicitly requiring it. Add an executable full-suite check, or make a separately recorded full-suite result part of verification rather than relying on the prose receipt.",
+      "Confirmed coverage defect: groupby non-None fallback compatibility is absent from the focused verifier. Add sync and async cases with missing attributes and a non-None fallback, plus present attributes, to catch regressions in the sentinel transition and sorting logic.",
+      "Confirmed coverage defect: custom undefined behavior is stated in the task but no test supplies a custom undefined class. Add map and groupby omitted-default cases and explicit-default cases using a custom Undefined subclass.",
+      "Confirmed coverage defect: the asynchronous tests use ordinary lists. Add an actual AsyncIterable for groupby, since do_groupby consumes it through auto_to_list and this is a distinct execution path.",
+      "Confirmed coverage defect: deterministic grouping is tested only with None plus one case-insensitive string group. Add multiple comparable values and both case_sensitive settings, and assert group order and member order.",
+      "Confirmed enforcement weakness: test.sh always exits 0 because it uses set +e and unconditionally exits after writing reward.txt. This is valid for the stated binary-reward harness and is not, by itself, a vulnerability, but external consumers that inspect only verifier exit status would miss failures; retain the reward check and document or enforce that contract at the harness layer.",
+      "No confirmed Docker answer leak was found from the supplied Dockerfile: it clones only the pinned upstream source and installs dependencies. The solution script and tests are supplied review artifacts, not copied into the image by the Dockerfile. Provenance beyond the pinned clone remains partly unverifiable because the source receipt asserts inspection and a 911-test result without preserving the inspected source or full-suite log.",
+      "Difficulty is likely weak-to-medium rather than genuinely medium: the required fix is a localized sentinel-default change plus a None-safe sort key, and the hidden tests add only three narrow template cases. Broader compatibility and async-input cases would improve discrimination without changing the stated task."
+    ]
+  },
+  "usage": {
+    "input_tokens": 63419,
+    "cached_input_tokens": 35159,
+    "cache_write_input_tokens": 28248,
+    "output_tokens": 3438,
+    "reasoning_output_tokens": 1640
+  },
+  "thread_id": "01a0a886-52a8-7aa2-9761-d8eb21055a48",
+  "session_context": {
+    "thread_id": "01a0a886-52a8-7aa2-9761-d8eb21055a48",
+    "contexts": [
+      {
+        "model": "gpt-5.6-luna",
+        "effort": "medium"
+      }
+    ]
+  }
+}

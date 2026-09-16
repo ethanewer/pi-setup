@@ -1,0 +1,36 @@
+#0 building with "desktop-linux" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 295B done
+#1 DONE 0.0s
+
+#2 [internal] load metadata for docker.io/library/bench-base:python-3.12
+#2 DONE 0.0s
+
+#3 [internal] load .dockerignore
+#3 transferring context: 2B done
+#3 DONE 0.0s
+
+#4 [1/3] FROM docker.io/library/bench-base:python-3.12@sha256:90cb28b75f05e3163ce58ac0a9dd798596d17868d61eee8c4d6cc45672405e40
+#4 resolve docker.io/library/bench-base:python-3.12@sha256:90cb28b75f05e3163ce58ac0a9dd798596d17868d61eee8c4d6cc45672405e40 0.0s done
+#4 DONE 0.0s
+
+#5 [internal] load build context
+#5 transferring context: 671.20kB 0.0s done
+#5 DONE 0.0s
+
+#6 [2/3] WORKDIR /app
+#6 CACHED
+
+#7 [3/3] COPY pyyaml /app/pyyaml
+#7 CACHED
+
+#8 exporting to image
+#8 exporting layers done
+#8 exporting manifest sha256:e7d30952f18954b35cdd789b53d21ff793d1bcf975fbb32aa8de7c4bdfedfb9e done
+#8 exporting config sha256:a6bd9ce8dd36ec39ac22f3c6ee34673a686f2b9998ebc4071625d7f499d88af8 done
+#8 exporting attestation manifest sha256:bc705cf481f61aca4c28f007986f98842e91aa4b5a5def4192abbfc8c63eb47f done
+#8 exporting manifest list sha256:fcbea4f752d3d78fb64030020a5c02ac230b80547ae870fc9a4ec0fcd604f9d4 done
+#8 naming to docker.io/library/general-qa-cb164d2341a147d19c0c7b7589a61e8e:latest done
+#8 unpacking to docker.io/library/general-qa-cb164d2341a147d19c0c7b7589a61e8e:latest done
+#8 DONE 0.1s

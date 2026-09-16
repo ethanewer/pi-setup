@@ -1,0 +1,9 @@
+shared QA failed; inspect qa logs
+check_binary_reward.py.log
+task=pr-issue-c9226c2ff37a cone_size=2
+  [ok        ] test.sh:sh-write       '1'
+  [ok        ] test.sh:sh-write       '0'
+
+lint_tasks.py.log
+tasks=1 legacy_v1_skipped=0 problems=1 notes=0
+ERROR pr-issue-c9226c2ff37a: verifier never executes deliverable /app/httpx/_models.py

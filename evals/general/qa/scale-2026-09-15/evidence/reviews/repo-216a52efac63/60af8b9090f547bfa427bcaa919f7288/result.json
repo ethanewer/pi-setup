@@ -1,0 +1,60 @@
+{
+  "job": "repo-216a52efac63",
+  "author_fingerprint": "dd9d4b295f4039ed1d00fbe2391f8817bfc50c741f4a1af76df6d527a259fafb",
+  "bundle": "/private/tmp/general-scale.U9t4EQ/reviews/repo-216a52efac63/60af8b9090f547bfa427bcaa919f7288",
+  "author_seal": "3d76208cc0be9c151dff2da843909c8bf9c3356c8bea80136c4ae467be0838eb",
+  "model": "gpt-5.6-luna",
+  "reasoning_effort": "medium",
+  "review": {
+    "verdict": "revise",
+    "criteria": [
+      {
+        "criterion": "map honors an explicitly supplied None fallback for missing attributes",
+        "test": "tasks/repo-216a52efac63/tests/test.py::test_map_explicit_none_is_a_real_fallback; tests/hidden/test_hidden.py::test_async_map_explicit_none",
+        "gap": "Only template-based sync/async cases are covered, with shallow missing attributes. No direct filter/API coverage, nested attributes, custom Undefined classes, empty input, or objects whose attribute access returns Undefined."
+      },
+      {
+        "criterion": "groupby honors an explicitly supplied None fallback and groups missing and present None values deterministically",
+        "test": "tasks/repo-216a52efac63/tests/test.py::test_groupby_explicit_none_groups_missing_and_none; tasks/repo-216a52efac63/tests/test.py::test_async_groupby_explicit_none; tests/hidden/test_hidden.py::test_groupby_none_with_case_insensitive_strings",
+        "gap": "Coverage is limited to strings, one None group, and one case-insensitive pair. It does not test case-sensitive mode, nested attributes, multiple groups with interleaved case variants, empty input, non-string comparable values, or deterministic ordering under repeated/equal keys. The oracle's sort_key only special-cases None and does not sort using the same case-folded key as groupby; inputs such as names 'a', 'B', 'A' can split a case-insensitive group."
+      },
+      {
+        "criterion": "omitting default retains existing undefined behavior and non-None defaults and present attributes remain compatible",
+        "test": "tasks/repo-216a52efac63/tests/test.py::test_map_omitted_default_stays_undefined; tasks/repo-216a52efac63/tests/test.py::test_groupby_omitted_default_retains_strict_undefined; tasks/repo-216a52efac63/tests/test.py::test_map_non_none_default_and_present_values; tests/hidden/test_hidden.py::test_explicit_empty_string_default_is_not_treated_as_missing",
+        "gap": "No groupby non-None-default test exists; present-attribute compatibility is only exercised in a few string template cases. There is no coverage for custom Undefined behavior, nested lookup, integer attributes, case-sensitive grouping, direct calls, or existing exception/message compatibility. The verifier never runs the upstream regression suite despite this criterion."
+      },
+      {
+        "criterion": "synchronous and asynchronous groupby behavior both satisfy the contract and the upstream regression suite remains green",
+        "test": "tasks/repo-216a52efac63/tests/test.py::test_groupby_explicit_none_groups_missing_and_none; tasks/repo-216a52efac63/tests/test.py::test_async_groupby_explicit_none",
+        "gap": "The tests cover one sync and one async template scenario only. tasks/repo-216a52efac63/tests/test.sh runs only test.py and tests/hidden and never runs the upstream suite, so the regression-suite portion is unverifiable by the grader. The baseline receipt reports historical runs but supplies no runnable artifact/log proving the current deliverable is regression-safe."
+      }
+    ],
+    "findings": [
+      "The acceptance contract and verifier are materially misaligned: the verifier awards success after py_compile plus nine focused tests, while the stated upstream-suite requirement is not checked. A submission can pass the grader while breaking unrelated Jinja behavior.",
+      "The oracle patch introduces a behavioral risk in both sync and async groupby: sorting uses the raw key tuple rather than the same postprocessed key used by grouping. Case-insensitive groups can become non-contiguous and be emitted as duplicate groups; add a regression such as values with names 'a', 'B', and 'A' (and test both sync and async).",
+      "The oracle's sort_key assumes all non-None keys are mutually orderable. The task asks for compatibility with ordinary values, but no tests establish the supported type boundary or preserve the prior exception behavior for mixed incomparable values.",
+      "The hidden tests are predictable and narrow: they add only empty-string map default, one case-insensitive None/string grouping case, and async map. They do not meaningfully test custom undefined classes, nested attributes, direct filter invocation, explicit non-None groupby defaults, case_sensitive=True, or interaction with environment options.",
+      "The verifier shell intentionally exits 0 even when compilation/tests fail and communicates status only through /logs/verifier/reward.txt. That may be acceptable to the harness, but it weakens standalone failure signaling and provides no test-selection or upstream-regression audit trail.",
+      "The baseline receipt is incomplete as provenance evidence: it uses unresolved placeholders such as <clean-source> and upstream/src, records aggregate counts without captured logs or source locations, and cannot be independently reproduced from the supplied workspace. It must be treated as an assertion, not proof of baseline/oracle validity.",
+      "The skill receipt records a hash and a narrative but does not include the traced call-chain evidence, focused commands, or outputs. The source receipt similarly lists inspected files without snapshots, diffs, or links to immutable file contents. Provenance and skill application are therefore not independently verifiable from this package.",
+      "The task is likely only medium difficulty for an experienced Jinja maintainer: the requested fix is a localized sentinel change with obvious focused examples, and the provided solve.sh reveals the intended implementation pattern. Difficulty would be stronger with explicit preservation tests and adversarial ordering/async cases."
+    ]
+  },
+  "usage": {
+    "input_tokens": 65403,
+    "cached_input_tokens": 48600,
+    "cache_write_input_tokens": 16788,
+    "output_tokens": 2993,
+    "reasoning_output_tokens": 1156
+  },
+  "thread_id": "01a0a883-97ae-75f3-9a63-4bd84a73a120",
+  "session_context": {
+    "thread_id": "01a0a883-97ae-75f3-9a63-4bd84a73a120",
+    "contexts": [
+      {
+        "model": "gpt-5.6-luna",
+        "effort": "medium"
+      }
+    ]
+  }
+}

@@ -1,0 +1,27 @@
+Create ONE original general evaluation task via the skills lane.
+Source repository: https://github.com/pallets/click. Task id: skills-59f828ed3d49.
+Read contract/README.md and contract/skills.md. Use no benchmarks or existing evaluation tasks as sources.
+Inspect upstream code/documentation and record actual immutable commits, license and baseline commands/results in receipts/.
+For pr-issue choose a real bounded upstream issue/PR; verify base and reproduction, keep fix/history out of task image.
+For skills FIRST create a genuinely reusable skill in skills/<name>/SKILL.md with YAML name/description,
+concise repository-specific workflow guidance, then apply it to a new scenario. Record skill path and SHA256.
+Write candidate.json satisfying contract/author_task.py validate(), with pipeline=skills, schema_version=1,
+author=codex-cli-gpt-5.6-luna-medium. Use the exact task id above and source.repository above.
+Write tasks/skills-59f828ed3d49/ with task.toml schema_version="1.4", instruction.md,
+environment/Dockerfile FROM bench-base:python-3.12 (or bench-base:ubuntu-24.04), WORKDIR /app,
+solution/solve.sh and tests/test.sh executable. Tests produce only binary /logs/verifier/reward.txt, guarded against failures.
+Metadata requires difficulty easy/medium/hard, category one of data_processing,data_science,debugging,file_operations,programming,reasoning,scientific_computing,security,system_administration,web; verifier_kind="executes-deliverable",
+deliverables list of /app paths explicitly mentioned by instruction, oracle and verifier.
+Environment requires network_mode="no-network", cpus=1, memory_mb=4096; pin dependencies and source.
+Include difficulty.json with integer expected_expert_time_min and rubric object containing exactly
+adversarial_inputs,debugging_ambiguity,dependent_stages,hidden_case_generalization,interaction_statefulness,quantitative_correctness,reasoning_depth,resource_pressure,tool_breadth,unsafe_action_penalty, each an integer 0..3.
+Implement hidden behavioral cases under tests/hidden, actually invoked by verifier. Test every acceptance criterion,
+regressions and plausible incomplete solutions. No answer leaks into environment. Oracle must solve; untouched baseline must fail.
+Do not run Docker or access files outside this workspace except public upstream source/tools. Write no live suite files.
+Keep dependencies and download sizes modest. Prefer a substantive bounded workflow over a toy formatting exercise.
+Before finishing run python3 contract/lint_tasks.py --root . --task skills-59f828ed3d49 and
+python3 contract/check_binary_reward.py --root . --task skills-59f828ed3d49; repair any failures.
+These local checks are advisory copies; host QA will independently run trusted versions.
+If the source cannot support a valid task, explain failure; never fabricate a PR or source receipt.
+
+This is a bounded repair attempt. Existing draft files and feedback.txt are provided. Fix the recorded failures and revalidate.

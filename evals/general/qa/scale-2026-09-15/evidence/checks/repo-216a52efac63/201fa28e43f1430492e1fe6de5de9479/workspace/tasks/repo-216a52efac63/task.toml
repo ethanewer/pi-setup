@@ -1,0 +1,18 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "medium"
+category = "programming"
+verifier_kind = "executes-deliverable"
+deliverables = ["/app/jinja/src/jinja2/filters.py"]
+
+[environment]
+network_mode = "no-network"
+cpus = 1
+memory_mb = 4096
+
+[oracle]
+path = "/app/solution/solve.sh"
+
+[verifier]
+path = "/app/tests/test.sh"

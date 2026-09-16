@@ -6,9 +6,6 @@ was previously spread across four partial sources and one narrative report:
 
   specs/pinned_python_deps.json   pip packages only, Python only, keyed by base
   specs/upstream_sources.json     the upstream repositories tasks clone
-  specs/tb21_competencies.json    tb2.1's competency inventory, which the v4.x
-                                  families deliberately claim none of
-  reports/v3.9_skill_gap_review.md  what was MISSING, not what is covered
 
 Nothing listed apt packages, npm dependencies, Cargo or Go modules, Maven
 dependencies, the services a task starts, or the build systems in use. This
@@ -382,7 +379,7 @@ def main() -> int:
                 cats[meta.get('category') or '(none)'] += 1
                 diffs[meta.get('difficulty') or '(none)'] += 1
                 for tag in meta.get('tags') or []:
-                    if not tag.startswith('C-') and tag != t:
+                    if not tag.startswith('C-') and tag not in (t, 'clean-room', 'integrated'):
                         add('tag', tag, t)
             except Exception:
                 pass

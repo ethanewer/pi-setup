@@ -3,9 +3,7 @@
 
 Every non-boilerplate file under tasks/, tools/, agents/ and the spec files
 gets an entry: origin, license, transformation history, final SHA-256.
-Default policy for v2 is zero shared source repositories: external_sources
-must stay empty, and the independence audit compares repository identities
-against the reference provenance set rather than trusting this list alone.
+Source receipts are recorded by authoring; contamination is checked in QA.
 
 Run this AFTER task content is frozen, then run the audits.
 """
@@ -25,10 +23,10 @@ def sha_file(p: Path) -> str:
 
 def origin_for(rel: str) -> str:
     if rel.startswith('tasks/'):
-        return 'authored-clean-room-v2'
+        return 'general-task'
     if rel.startswith(('tools/', 'agents/')):
-        return 'authored-clean-room-v2-tooling'
-    return 'authored-clean-room-v2-spec'
+        return 'general-tooling'
+    return 'general-spec'
 
 
 def main() -> int:
@@ -49,7 +47,7 @@ def main() -> int:
             continue
         rel = str(p.relative_to(ROOT))
         files[rel] = {
-            'origin': 'authored-clean-room-v2-spec',
+            'origin': 'general-spec',
             'source_repository': None,
             'source_commit': None,
             'license': 'internal (authored for general-v2)',
@@ -85,8 +83,7 @@ def main() -> int:
     # passing.
     upstream_path = ROOT / 'specs' / 'upstream_sources.json'
     external = []
-    policy = ('clean-room; zero shared source repositories with the '
-              'frozen reference provenance set')
+    policy = 'Source provenance recorded independently; contamination clearance requires QA.'
     if upstream_path.exists():
         up = json.loads(upstream_path.read_text())
         external = [{'repository': r, 'url': f'https://{r}',
@@ -95,12 +92,6 @@ def main() -> int:
                      'fetched_at': 'image build time (environment/Dockerfile); '
                                    'never committed to this tree'}
                     for r in up.get('repositories', [])]
-        policy = ('clean-room for every authored fixture; from v4.2 some tasks '
-                  'also clone upstream repositories at image-build time, listed in '
-                  'external_sources. No listed repository is shared with the '
-                  'frozen reference provenance set; '
-                  'tools/check_upstream_disjointness.py enforces that against '
-                  'specs/tb21_source_repositories.json')
     manifest = {
         'policy': policy,
         'external_sources': external,

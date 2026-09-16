@@ -1,0 +1,24 @@
+{
+  "task_id": "pyyaml-config-overlay",
+  "objective": "Add a safe, non-mutating recursive YAML configuration overlay API and command-line reproduction to the pinned PyYAML source tree.",
+  "acceptance": [
+    "A safe overlay loader recognizes scalar !delete and rejects unsafe or malformed YAML while requiring a mapping root.",
+    "Recursive mapping overlays, deletion, all three list modes, and deep copy isolation produce the specified results and reject invalid structures.",
+    "The executable CLI loads base and overlay files through the new API, emits safe YAML with preserved insertion order, and reports invalid input with a nonzero exit."
+  ],
+  "skills": [
+    "PyYAML safe loader and constructor extension",
+    "recursive immutable data transformation",
+    "offline CLI integration and negative testing"
+  ],
+  "source": {
+    "benchmark_derived": false,
+    "repository": "https://github.com/yaml/pyyaml",
+    "base_commit": "34a9bf82357f4952d8f194a5a31f1c39743652d0",
+    "license": "MIT; source snapshot retains LICENSE",
+    "workflow": "Inspect the pinned PyYAML loader and safe dump APIs, implement the overlay module inside the vendored source tree plus an executable CLI reproduction, and verify safe parsing, recursive merge policies, copy isolation, and failure behavior offline."
+  },
+  "author": "codex-cli-gpt-5.6-luna-medium",
+  "schema_version": 1,
+  "pipeline": "repo"
+}

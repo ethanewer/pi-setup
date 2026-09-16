@@ -1,0 +1,6 @@
+Implemented in `/app/jinja/src/jinja2/filters.py`.
+
+- Distinguishes omitted `default` from explicit `None` for `map` and `groupby`.
+- Preserves undefined behavior and custom undefined classes.
+- Supports deterministic sync/async grouping with `None`.
+- Full test suite passes: **911 tests**.

@@ -1,0 +1,37 @@
+{
+  "bundle": "/private/tmp/general-scale.U9t4EQ/runs/skills-59f828ed3d49/dd7f53ad4b5e4cbabf4dc94ae5ac4bca",
+  "model": "gpt-5.6-luna",
+  "reasoning_effort": "medium",
+  "command": [
+    "codex",
+    "-a",
+    "never",
+    "exec",
+    "--ignore-user-config",
+    "-m",
+    "gpt-5.6-luna",
+    "-c",
+    "model_reasoning_effort=\"medium\"",
+    "-s",
+    "workspace-write",
+    "-c",
+    "sandbox_workspace_write.network_access=true",
+    "--skip-git-repo-check",
+    "-C",
+    "/private/tmp/general-scale.U9t4EQ/runs/skills-59f828ed3d49/dd7f53ad4b5e4cbabf4dc94ae5ac4bca/workspace",
+    "--json",
+    "-o",
+    "/private/tmp/general-scale.U9t4EQ/runs/skills-59f828ed3d49/dd7f53ad4b5e4cbabf4dc94ae5ac4bca/workspace/final.txt",
+    "-"
+  ],
+  "fingerprint": "411cde639625e345248843b97ff3939aa656a8b2c6c12cbeb97d30ce6b51841e",
+  "error": "skill references require a SHA256 content hash",
+  "usage": {
+    "input_tokens": 186099,
+    "cached_input_tokens": 156326,
+    "cache_write_input_tokens": 29749,
+    "output_tokens": 2577,
+    "reasoning_output_tokens": 674
+  },
+  "thread_id": "01a0a880-054f-77f0-9213-179d81c78795"
+}

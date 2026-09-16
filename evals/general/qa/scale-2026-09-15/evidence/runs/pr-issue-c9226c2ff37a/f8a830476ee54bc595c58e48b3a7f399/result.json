@@ -1,0 +1,54 @@
+{
+  "bundle": "/private/tmp/general-scale.U9t4EQ/runs/pr-issue-c9226c2ff37a/f8a830476ee54bc595c58e48b3a7f399",
+  "model": "gpt-5.6-luna",
+  "reasoning_effort": "medium",
+  "command": [
+    "codex",
+    "-a",
+    "never",
+    "exec",
+    "--ignore-user-config",
+    "-m",
+    "gpt-5.6-luna",
+    "-c",
+    "model_reasoning_effort=\"medium\"",
+    "-s",
+    "workspace-write",
+    "-c",
+    "sandbox_workspace_write.network_access=true",
+    "--skip-git-repo-check",
+    "-C",
+    "/private/tmp/general-scale.U9t4EQ/runs/pr-issue-c9226c2ff37a/f8a830476ee54bc595c58e48b3a7f399/workspace",
+    "--json",
+    "-o",
+    "/private/tmp/general-scale.U9t4EQ/runs/pr-issue-c9226c2ff37a/f8a830476ee54bc595c58e48b3a7f399/workspace/final.txt",
+    "-"
+  ],
+  "session_context": {
+    "thread_id": "01a0a885-163a-75a2-835f-3ad0ee09f688",
+    "contexts": [
+      {
+        "model": "gpt-5.6-luna",
+        "effort": "medium"
+      }
+    ]
+  },
+  "fingerprint": "5440fc9ed997be159614ff70894293ca25974fe6e5c2f5b57a6530ca9a5f484a",
+  "remaining_gates": [
+    "independent review",
+    "negative mutations",
+    "repeatability",
+    "blind pilots",
+    "contamination",
+    "diversity",
+    "release approval"
+  ],
+  "usage": {
+    "input_tokens": 475268,
+    "cached_input_tokens": 439760,
+    "cache_write_input_tokens": 35457,
+    "output_tokens": 7009,
+    "reasoning_output_tokens": 1730
+  },
+  "thread_id": "01a0a885-163a-75a2-835f-3ad0ee09f688"
+}
