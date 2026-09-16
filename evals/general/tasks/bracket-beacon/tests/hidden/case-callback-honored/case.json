@@ -1,0 +1,6 @@
+{
+  "name": "callback-still-honored-non-uri",
+  "html": "<a href=\"javascript:alert(1)\" tracking=\"t\">x</a>",
+  "add_attr": ["href", "tracking"],
+  "expected": "<a tracking=\"t\">x</a>"
+}

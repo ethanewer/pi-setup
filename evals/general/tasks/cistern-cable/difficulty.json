@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 30,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on encode/httpx at parent commit 90538a3b4610ba49ce16c997bcfdb9101f9503be (real upstream bug, issue #2998, fixed by 1e110964736a95d822144390b99d7ecf17fca527). Response.iter_text()/aiter_text() yield a spurious trailing empty string for any streamed body: decoding the final empty text through TextChunker.decode() returns [''] because of the bare 'return [content]' when the chunk size is unset, so the final decoder flush becomes a bogus chunk. Agent must localise the bug in the real tree, fix it so iterated text chunks never contain a trailing empty piece (joining chunks must reproduce the document exactly), keep tests/test_decoders.py green, and only modify the minimal source surface; verifier also runs the upstream regression test test_streaming_text_decoder extracted from the fix commit, plus hidden cases over UTF-8-split chunking, empty/interleaved empty chunks, and the async aiter_text path. Pure in-memory, no network, <2s test suite. Both directions verified inside the task image before shipping."
+}

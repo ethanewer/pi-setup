@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on psf/requests at parent commit 96b22fa18c00831656ee4b286bf1c9062459b00a (real upstream bug, issue #6628). requests.exceptions.JSONDecodeError inherits from both InvalidJSONError (a RequestException, itself an IOError/OSError) and stdlib json.JSONDecodeError; because of the multiple-inheritance MRO pickle uses IOError.__reduce__ and reconstructs with a single message argument, so pickling the exception and unpickling it raises 'TypeError: JSONDecodeError.__init__() missing 2 required positional arguments: doc and pos' -- exactly what a multiprocessing pool hits when a worker fails to decode malformed JSON. Agent must reproduce (one-liner), localise the bug in the real tree (src/requests/exceptions.py), and add the upstream fix (an explicit __reduce__ on requests.exceptions.JSONDecodeError delegating to CompatJSONDecodeError.__reduce__); verifier runs the upstream regression test extracted from fix commit 3ff3ff21dd45957c9e143cd500291959bb15f690 into /opt/golden, the project's own self-contained test files, and three authored hidden cases exercising pickle protocols 0..HIGHEST, the Response.json() end-to-end path, and a cross-process pickle round-trip the upstream test does not cover. Dependency pins urllib3==2.7.0, certifi==2026.7.22, charset_normalizer==3.5.1, idna==3.19, PySocks==1.7.1, pytest==9.1.1. Pure Python, no network, <5s full verification. Fix direction observed in the task image before shipping."
+}

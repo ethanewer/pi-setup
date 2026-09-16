@@ -1,0 +1,11 @@
+[project]
+name = "hidden-normalize-mixed"
+version = "0.2.0"
+description = "hidden case: mixed case/separator normalization with extras and constraints"
+requires-python = ">=3.9"
+dependencies = [
+    "Django>=4.2",
+    "My.Pkg_One==1.0.0",
+    "FastAPI[all]>=0.100",
+    "zope.Interface",
+]

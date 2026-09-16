@@ -1,0 +1,2102 @@
+{
+ "note": "Upstream source repositories each task clones at image-build time, extracted from the build path of every task. Derived; regenerate with `python3 tools/check_upstream_disjointness.py --apply`. tools/update_provenance.py copies these into specs/provenance.json external_sources so audit_independence_stream.py --reference-provenance can compare them against the reference set.",
+ "policy": "upstream clones are permitted from v4.2 onward provided no repository is shared with the frozen Terminal-Bench 2.1 reference and every clone is pinned to an immutable revision; see specs/tb21_source_repositories.json",
+ "forbidden_repository_count": 68,
+ "forbidden_spec_commit": "1a6ffa9674b571da0ed040c470cb40c4d85f9b9b",
+ "task_count": 180,
+ "repositories": [
+  "github.com/actions/go-versions",
+  "github.com/adoptium/temurin24-binaries",
+  "github.com/adoptium/temurin25-binaries",
+  "github.com/aio-libs/aiohttp",
+  "github.com/angr/angr",
+  "github.com/apache/commons-lang",
+  "github.com/apache/kafka",
+  "github.com/aquasecurity/trivy",
+  "github.com/arminbiere/cadical",
+  "github.com/astral-sh/uv",
+  "github.com/burntsushi/ripgrep",
+  "github.com/clap-rs/clap",
+  "github.com/cure53/dompurify",
+  "github.com/curl/curl",
+  "github.com/duckdb/duckdb",
+  "github.com/encode/httpx",
+  "github.com/eslint/eslint",
+  "github.com/explosion/spacy",
+  "github.com/expressjs/express",
+  "github.com/falconry/falcon",
+  "github.com/giampaolo/psutil",
+  "github.com/gin-gonic/gin",
+  "github.com/git/git",
+  "github.com/gohugoio/hugo",
+  "github.com/google/guava",
+  "github.com/id-software/doom",
+  "github.com/jestjs/jest",
+  "github.com/junit-team/junit5",
+  "github.com/librosa/librosa",
+  "github.com/libvips/libvips",
+  "github.com/matplotlib/matplotlib",
+  "github.com/mbed-tls/mbedtls",
+  "github.com/mbed-tls/mbedtls.git.",
+  "github.com/mikf/gallery-dl",
+  "github.com/netty/netty",
+  "github.com/networkx/networkx",
+  "github.com/nltk/nltk",
+  "github.com/nothings/stb",
+  "github.com/official-stockfish/stockfish",
+  "github.com/pallets/click",
+  "github.com/pallets/jinja",
+  "github.com/pallets/werkzeug",
+  "github.com/prettier/prettier",
+  "github.com/prometheus/prometheus",
+  "github.com/psf/requests",
+  "github.com/psycopg/psycopg",
+  "github.com/pycqa/bandit",
+  "github.com/pycqa/flake8",
+  "github.com/pylint-dev/pylint",
+  "github.com/pypa/pip",
+  "github.com/pypa/setuptools",
+  "github.com/pytest-dev/pytest",
+  "github.com/python-poetry/poetry",
+  "github.com/python-poetry/poetry-core",
+  "github.com/python/cpython",
+  "github.com/python/mypy",
+  "github.com/pytorch/vision",
+  "github.com/qutip/qutip",
+  "github.com/rare-technologies/gensim",
+  "github.com/redis/redis",
+  "github.com/rust-lang/regex",
+  "github.com/scikit-image/scikit-image",
+  "github.com/scipy/scipy",
+  "github.com/semgrep/semgrep",
+  "github.com/serde-rs/serde",
+  "github.com/shadow-maint/shadow",
+  "github.com/sharkdp/fd",
+  "github.com/spf13/cobra",
+  "github.com/sqlalchemy/sqlalchemy",
+  "github.com/starship/starship",
+  "github.com/statsmodels/statsmodels",
+  "github.com/sympy/sympy",
+  "github.com/syncthing/syncthing",
+  "github.com/tinycc/tinycc",
+  "github.com/tmux/tmux",
+  "github.com/trinodb/trino",
+  "github.com/yt-project/yt",
+  "github.com/z3prover/z3",
+  "gitlab.com/example/group2"
+ ],
+ "tasks": [
+  {
+   "task": "alewife-anchorage",
+   "repositories": [
+    "github.com/burntsushi/ripgrep"
+   ],
+   "urls": [
+    "https://github.com/burntsushi/ripgrep"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "alewife-dune",
+   "repositories": [
+    "github.com/mbed-tls/mbedtls"
+   ],
+   "urls": [
+    "https://github.com/mbed-tls/mbedtls"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "ballast-anchorage",
+   "repositories": [
+    "github.com/burntsushi/ripgrep"
+   ],
+   "urls": [
+    "https://github.com/burntsushi/ripgrep"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "ballast-berm",
+   "repositories": [
+    "github.com/mbed-tls/mbedtls"
+   ],
+   "urls": [
+    "https://github.com/mbed-tls/mbedtls"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "ballast-bollard",
+   "repositories": [
+    "github.com/pycqa/bandit"
+   ],
+   "urls": [
+    "https://github.com/pycqa/bandit"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "ballast-boom",
+   "repositories": [
+    "github.com/pycqa/flake8"
+   ],
+   "urls": [
+    "https://github.com/pycqa/flake8"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "ballast-brackish",
+   "repositories": [
+    "github.com/z3prover/z3"
+   ],
+   "urls": [
+    "https://github.com/z3prover/z3"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "ballast-caboose",
+   "repositories": [
+    "github.com/apache/commons-lang"
+   ],
+   "urls": [
+    "https://github.com/apache/commons-lang"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "ballast-chartroom",
+   "repositories": [
+    "github.com/actions/go-versions",
+    "github.com/aquasecurity/trivy"
+   ],
+   "urls": [
+    "https://github.com/actions/go-versions",
+    "https://github.com/aquasecurity/trivy"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "ballast-current",
+   "repositories": [
+    "github.com/astral-sh/uv"
+   ],
+   "urls": [
+    "https://github.com/astral-sh/uv"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "ballast-deepwater",
+   "repositories": [
+    "github.com/duckdb/duckdb"
+   ],
+   "urls": [
+    "https://github.com/duckdb/duckdb"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "ballast-drift",
+   "repositories": [
+    "github.com/eslint/eslint"
+   ],
+   "urls": [
+    "https://github.com/eslint/eslint"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "ballast-fathom",
+   "repositories": [
+    "github.com/git/git"
+   ],
+   "urls": [
+    "https://github.com/git/git"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "ballast-foresheet",
+   "repositories": [
+    "github.com/gohugoio/hugo"
+   ],
+   "urls": [
+    "https://github.com/gohugoio/hugo"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "ballast-hull",
+   "repositories": [
+    "github.com/google/guava"
+   ],
+   "urls": [
+    "https://github.com/google/guava"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "ballast-keel",
+   "repositories": [
+    "github.com/librosa/librosa"
+   ],
+   "urls": [
+    "https://github.com/librosa/librosa"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "ballast-longshore",
+   "repositories": [
+    "github.com/matplotlib/matplotlib"
+   ],
+   "urls": [
+    "https://github.com/matplotlib/matplotlib"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "ballast-mooring",
+   "repositories": [
+    "github.com/netty/netty"
+   ],
+   "urls": [
+    "https://github.com/netty/netty"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "ballast-overtake",
+   "repositories": [
+    "github.com/networkx/networkx"
+   ],
+   "urls": [
+    "https://github.com/networkx/networkx"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "ballast-pilot",
+   "repositories": [
+    "github.com/nltk/nltk"
+   ],
+   "urls": [
+    "https://github.com/nltk/nltk"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "ballast-quay",
+   "repositories": [
+    "github.com/pylint-dev/pylint"
+   ],
+   "urls": [
+    "https://github.com/pylint-dev/pylint"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "ballast-reach",
+   "repositories": [
+    "github.com/pypa/setuptools"
+   ],
+   "urls": [
+    "https://github.com/pypa/setuptools"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "ballast-roadstead",
+   "repositories": [
+    "github.com/python-poetry/poetry",
+    "github.com/python-poetry/poetry-core"
+   ],
+   "urls": [
+    "https://github.com/python-poetry/poetry",
+    "https://github.com/python-poetry/poetry-core"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "ballast-rudder",
+   "repositories": [
+    "github.com/python/mypy"
+   ],
+   "urls": [
+    "https://github.com/python/mypy"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "barge-basin",
+   "repositories": [
+    "github.com/pycqa/bandit"
+   ],
+   "urls": [
+    "https://github.com/pycqa/bandit"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "bracket-anchor",
+   "repositories": [
+    "github.com/aio-libs/aiohttp"
+   ],
+   "urls": [
+    "https://github.com/aio-libs/aiohttp"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "bracket-basin",
+   "repositories": [
+    "github.com/clap-rs/clap"
+   ],
+   "urls": [
+    "https://github.com/clap-rs/clap"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "bracket-beacon",
+   "repositories": [
+    "github.com/cure53/dompurify"
+   ],
+   "urls": [
+    "https://github.com/cure53/dompurify"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "bracket-bell",
+   "repositories": [
+    "github.com/curl/curl"
+   ],
+   "urls": [
+    "https://github.com/curl/curl"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "bracket-berth",
+   "repositories": [
+    "github.com/encode/httpx"
+   ],
+   "urls": [
+    "https://github.com/encode/httpx"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "bracket-bight",
+   "repositories": [
+    "github.com/expressjs/express"
+   ],
+   "urls": [
+    "https://github.com/expressjs/express"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "bracket-bridge",
+   "repositories": [
+    "github.com/falconry/falcon"
+   ],
+   "urls": [
+    "https://github.com/falconry/falcon"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "bracket-buoy",
+   "repositories": [
+    "github.com/giampaolo/psutil"
+   ],
+   "urls": [
+    "https://github.com/giampaolo/psutil"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "bracket-cable",
+   "repositories": [
+    "github.com/gin-gonic/gin"
+   ],
+   "urls": [
+    "https://github.com/gin-gonic/gin"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "bracket-cairn",
+   "repositories": [
+    "github.com/adoptium/temurin24-binaries",
+    "github.com/adoptium/temurin25-binaries",
+    "github.com/junit-team/junit5"
+   ],
+   "urls": [
+    "https://github.com/adoptium/temurin24-binaries",
+    "https://github.com/adoptium/temurin25-binaries",
+    "https://github.com/junit-team/junit5"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "bracket-channel",
+   "repositories": [
+    "github.com/libvips/libvips"
+   ],
+   "urls": [
+    "https://github.com/libvips/libvips"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "bracket-cinder",
+   "repositories": [
+    "github.com/mikf/gallery-dl"
+   ],
+   "urls": [
+    "https://github.com/mikf/gallery-dl"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "bracket-cleat",
+   "repositories": [
+    "github.com/pallets/click"
+   ],
+   "urls": [
+    "https://github.com/pallets/click"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "bracket-compass",
+   "repositories": [
+    "github.com/pallets/jinja"
+   ],
+   "urls": [
+    "https://github.com/pallets/jinja"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "bracket-coral",
+   "repositories": [
+    "github.com/pallets/werkzeug"
+   ],
+   "urls": [
+    "https://github.com/pallets/werkzeug"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "bracket-crest",
+   "repositories": [
+    "github.com/prettier/prettier"
+   ],
+   "urls": [
+    "https://github.com/prettier/prettier"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "bracket-dune",
+   "repositories": [
+    "github.com/prometheus/prometheus"
+   ],
+   "urls": [
+    "https://github.com/prometheus/prometheus"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "bracket-ember",
+   "repositories": [
+    "github.com/psf/requests"
+   ],
+   "urls": [
+    "https://github.com/psf/requests"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "bracket-fathom",
+   "repositories": [
+    "github.com/psycopg/psycopg"
+   ],
+   "urls": [
+    "https://github.com/psycopg/psycopg"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "bracket-ferry",
+   "repositories": [
+    "github.com/pypa/pip"
+   ],
+   "urls": [
+    "https://github.com/pypa/pip"
+   ],
+   "clone_commands": 2,
+   "pinned": true
+  },
+  {
+   "task": "bracket-flint",
+   "repositories": [
+    "github.com/pytest-dev/pytest"
+   ],
+   "urls": [
+    "https://github.com/pytest-dev/pytest"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "bracket-flood",
+   "repositories": [
+    "github.com/redis/redis"
+   ],
+   "urls": [
+    "https://github.com/redis/redis"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "bracket-forge",
+   "repositories": [
+    "github.com/rust-lang/regex"
+   ],
+   "urls": [
+    "https://github.com/rust-lang/regex"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "bracket-gate",
+   "repositories": [
+    "github.com/serde-rs/serde"
+   ],
+   "urls": [
+    "https://github.com/serde-rs/serde"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "capstan-anchorage",
+   "repositories": [
+    "github.com/pytorch/vision"
+   ],
+   "urls": [
+    "https://github.com/pytorch/vision"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "capstan-berm",
+   "repositories": [
+    "github.com/scikit-image/scikit-image"
+   ],
+   "urls": [
+    "https://github.com/scikit-image/scikit-image"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "capstan-bollard",
+   "repositories": [
+    "github.com/scipy/scipy"
+   ],
+   "urls": [
+    "https://github.com/scipy/scipy"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "capstan-boom",
+   "repositories": [
+    "github.com/semgrep/semgrep",
+    "gitlab.com/example/group2"
+   ],
+   "urls": [
+    "https://github.com/semgrep/semgrep",
+    "https://gitlab.com/example/group2"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "capstan-brackish",
+   "repositories": [
+    "github.com/sharkdp/fd"
+   ],
+   "urls": [
+    "https://github.com/sharkdp/fd"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "capstan-caboose",
+   "repositories": [
+    "github.com/starship/starship"
+   ],
+   "urls": [
+    "https://github.com/starship/starship"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "capstan-chartroom",
+   "repositories": [
+    "github.com/statsmodels/statsmodels"
+   ],
+   "urls": [
+    "https://github.com/statsmodels/statsmodels"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "capstan-current",
+   "repositories": [
+    "github.com/syncthing/syncthing"
+   ],
+   "urls": [
+    "https://github.com/syncthing/syncthing"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "capstan-deepwater",
+   "repositories": [
+    "github.com/burntsushi/ripgrep"
+   ],
+   "urls": [
+    "https://github.com/burntsushi/ripgrep"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "capstan-drift",
+   "repositories": [
+    "github.com/mbed-tls/mbedtls",
+    "github.com/mbed-tls/mbedtls.git."
+   ],
+   "urls": [
+    "https://github.com/mbed-tls/mbedtls",
+    "https://github.com/mbed-tls/mbedtls.git."
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "capstan-ebb",
+   "repositories": [
+    "github.com/pycqa/bandit"
+   ],
+   "urls": [
+    "https://github.com/pycqa/bandit"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "capstan-fathom",
+   "repositories": [
+    "github.com/pycqa/flake8"
+   ],
+   "urls": [
+    "https://github.com/pycqa/flake8"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "capstan-foresheet",
+   "repositories": [
+    "github.com/z3prover/z3"
+   ],
+   "urls": [
+    "https://github.com/z3prover/z3"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "capstan-hull",
+   "repositories": [
+    "github.com/apache/commons-lang"
+   ],
+   "urls": [
+    "https://github.com/apache/commons-lang"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "capstan-inlet",
+   "repositories": [
+    "github.com/actions/go-versions",
+    "github.com/aquasecurity/trivy"
+   ],
+   "urls": [
+    "https://github.com/actions/go-versions",
+    "https://github.com/aquasecurity/trivy"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "capstan-keel",
+   "repositories": [
+    "github.com/astral-sh/uv"
+   ],
+   "urls": [
+    "https://github.com/astral-sh/uv"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "capstan-longshore",
+   "repositories": [
+    "github.com/duckdb/duckdb"
+   ],
+   "urls": [
+    "https://github.com/duckdb/duckdb"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "capstan-mooring",
+   "repositories": [
+    "github.com/eslint/eslint"
+   ],
+   "urls": [
+    "https://github.com/eslint/eslint"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "capstan-overtake",
+   "repositories": [
+    "github.com/explosion/spacy"
+   ],
+   "urls": [
+    "https://github.com/explosion/spacy"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "capstan-pilot",
+   "repositories": [
+    "github.com/git/git"
+   ],
+   "urls": [
+    "https://github.com/git/git"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "capstan-quay",
+   "repositories": [
+    "github.com/gohugoio/hugo"
+   ],
+   "urls": [
+    "https://github.com/gohugoio/hugo"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "capstan-reach",
+   "repositories": [
+    "github.com/google/guava"
+   ],
+   "urls": [
+    "https://github.com/google/guava"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "capstan-roadstead",
+   "repositories": [
+    "github.com/jestjs/jest"
+   ],
+   "urls": [
+    "https://github.com/jestjs/jest"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "capstan-rudder",
+   "repositories": [
+    "github.com/librosa/librosa"
+   ],
+   "urls": [
+    "https://github.com/librosa/librosa"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "chainplate-anchorage",
+   "repositories": [
+    "github.com/matplotlib/matplotlib"
+   ],
+   "urls": [
+    "https://github.com/matplotlib/matplotlib"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "chainplate-berm",
+   "repositories": [
+    "github.com/netty/netty"
+   ],
+   "urls": [
+    "https://github.com/netty/netty"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "chainplate-bollard",
+   "repositories": [
+    "github.com/networkx/networkx"
+   ],
+   "urls": [
+    "https://github.com/networkx/networkx"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "chainplate-boom",
+   "repositories": [
+    "github.com/nltk/nltk"
+   ],
+   "urls": [
+    "https://github.com/nltk/nltk"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "chainplate-brackish",
+   "repositories": [
+    "github.com/pylint-dev/pylint"
+   ],
+   "urls": [
+    "https://github.com/pylint-dev/pylint"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "chainplate-caboose",
+   "repositories": [
+    "github.com/pypa/setuptools",
+    "github.com/python/cpython"
+   ],
+   "urls": [
+    "https://github.com/pypa/setuptools",
+    "https://github.com/python/cpython"
+   ],
+   "clone_commands": 2,
+   "pinned": true
+  },
+  {
+   "task": "chainplate-chartroom",
+   "repositories": [
+    "github.com/python-poetry/poetry",
+    "github.com/python-poetry/poetry-core"
+   ],
+   "urls": [
+    "https://github.com/python-poetry/poetry",
+    "https://github.com/python-poetry/poetry-core"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "chainplate-current",
+   "repositories": [
+    "github.com/python/mypy"
+   ],
+   "urls": [
+    "https://github.com/python/mypy"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "chainplate-deepwater",
+   "repositories": [
+    "github.com/pytorch/vision"
+   ],
+   "urls": [
+    "https://github.com/pytorch/vision"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "chainplate-drift",
+   "repositories": [
+    "github.com/scikit-image/scikit-image"
+   ],
+   "urls": [
+    "https://github.com/scikit-image/scikit-image"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "chainplate-ebb",
+   "repositories": [
+    "github.com/scipy/scipy"
+   ],
+   "urls": [
+    "https://github.com/scipy/scipy"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "chainplate-fathom",
+   "repositories": [
+    "github.com/semgrep/semgrep"
+   ],
+   "urls": [
+    "https://github.com/semgrep/semgrep"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "chainplate-foresheet",
+   "repositories": [
+    "github.com/sharkdp/fd"
+   ],
+   "urls": [
+    "https://github.com/sharkdp/fd"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "chainplate-hull",
+   "repositories": [
+    "github.com/starship/starship"
+   ],
+   "urls": [
+    "https://github.com/starship/starship"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "chainplate-inlet",
+   "repositories": [
+    "github.com/statsmodels/statsmodels"
+   ],
+   "urls": [
+    "https://github.com/statsmodels/statsmodels"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "chainplate-keel",
+   "repositories": [
+    "github.com/syncthing/syncthing"
+   ],
+   "urls": [
+    "https://github.com/syncthing/syncthing"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "chandlery-waypoint",
+   "repositories": [
+    "github.com/pycqa/flake8"
+   ],
+   "urls": [
+    "https://github.com/pycqa/flake8"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "cistern-anchor",
+   "repositories": [
+    "github.com/spf13/cobra"
+   ],
+   "urls": [
+    "https://github.com/spf13/cobra"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "cistern-basin",
+   "repositories": [
+    "github.com/sqlalchemy/sqlalchemy"
+   ],
+   "urls": [
+    "https://github.com/sqlalchemy/sqlalchemy"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "cistern-beacon",
+   "repositories": [
+    "github.com/sympy/sympy"
+   ],
+   "urls": [
+    "https://github.com/sympy/sympy"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "cistern-bell",
+   "repositories": [
+    "github.com/tmux/tmux"
+   ],
+   "urls": [
+    "https://github.com/tmux/tmux"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "cistern-berth",
+   "repositories": [
+    "github.com/aio-libs/aiohttp"
+   ],
+   "urls": [
+    "https://github.com/aio-libs/aiohttp"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "cistern-bight",
+   "repositories": [
+    "github.com/clap-rs/clap"
+   ],
+   "urls": [
+    "https://github.com/clap-rs/clap"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "cistern-bridge",
+   "repositories": [
+    "github.com/cure53/dompurify"
+   ],
+   "urls": [
+    "https://github.com/cure53/dompurify"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "cistern-buoy",
+   "repositories": [
+    "github.com/curl/curl"
+   ],
+   "urls": [
+    "https://github.com/curl/curl"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "cistern-cable",
+   "repositories": [
+    "github.com/encode/httpx"
+   ],
+   "urls": [
+    "https://github.com/encode/httpx"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "cistern-cairn",
+   "repositories": [
+    "github.com/expressjs/express"
+   ],
+   "urls": [
+    "https://github.com/expressjs/express"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "cistern-channel",
+   "repositories": [
+    "github.com/falconry/falcon"
+   ],
+   "urls": [
+    "https://github.com/falconry/falcon"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "cistern-cinder",
+   "repositories": [
+    "github.com/giampaolo/psutil"
+   ],
+   "urls": [
+    "https://github.com/giampaolo/psutil"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "cistern-cleat",
+   "repositories": [
+    "github.com/gin-gonic/gin"
+   ],
+   "urls": [
+    "https://github.com/gin-gonic/gin"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "cistern-compass",
+   "repositories": [
+    "github.com/adoptium/temurin24-binaries",
+    "github.com/adoptium/temurin25-binaries",
+    "github.com/junit-team/junit5"
+   ],
+   "urls": [
+    "https://github.com/adoptium/temurin24-binaries",
+    "https://github.com/adoptium/temurin25-binaries",
+    "https://github.com/junit-team/junit5"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "cistern-coral",
+   "repositories": [
+    "github.com/libvips/libvips"
+   ],
+   "urls": [
+    "https://github.com/libvips/libvips"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "cistern-crest",
+   "repositories": [
+    "github.com/mikf/gallery-dl"
+   ],
+   "urls": [
+    "https://github.com/mikf/gallery-dl"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "cistern-dune",
+   "repositories": [
+    "github.com/pallets/click"
+   ],
+   "urls": [
+    "https://github.com/pallets/click"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "cistern-ember",
+   "repositories": [
+    "github.com/pallets/jinja"
+   ],
+   "urls": [
+    "https://github.com/pallets/jinja"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "cistern-fathom",
+   "repositories": [
+    "github.com/pallets/werkzeug"
+   ],
+   "urls": [
+    "https://github.com/pallets/werkzeug"
+   ],
+   "clone_commands": 2,
+   "pinned": true
+  },
+  {
+   "task": "cistern-ferry",
+   "repositories": [
+    "github.com/prettier/prettier"
+   ],
+   "urls": [
+    "https://github.com/prettier/prettier"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "cistern-flint",
+   "repositories": [
+    "github.com/prometheus/prometheus"
+   ],
+   "urls": [
+    "https://github.com/prometheus/prometheus"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "cistern-flood",
+   "repositories": [
+    "github.com/psf/requests"
+   ],
+   "urls": [
+    "https://github.com/psf/requests"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "cistern-forge",
+   "repositories": [
+    "github.com/psycopg/psycopg"
+   ],
+   "urls": [
+    "https://github.com/psycopg/psycopg"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "cistern-gate",
+   "repositories": [
+    "github.com/pypa/pip"
+   ],
+   "urls": [
+    "https://github.com/pypa/pip"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "clinker-mast",
+   "repositories": [
+    "github.com/encode/httpx"
+   ],
+   "urls": [
+    "https://github.com/encode/httpx"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "clinker-quay",
+   "repositories": [
+    "github.com/sympy/sympy"
+   ],
+   "urls": [
+    "https://github.com/sympy/sympy"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "conduit-anchor",
+   "repositories": [
+    "github.com/pytest-dev/pytest"
+   ],
+   "urls": [
+    "https://github.com/pytest-dev/pytest"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "conduit-basin",
+   "repositories": [
+    "github.com/redis/redis"
+   ],
+   "urls": [
+    "https://github.com/redis/redis"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "corbel-stave",
+   "repositories": [
+    "github.com/falconry/falcon"
+   ],
+   "urls": [
+    "https://github.com/falconry/falcon"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "corbel-weir",
+   "repositories": [
+    "github.com/pallets/click"
+   ],
+   "urls": [
+    "https://github.com/pallets/click"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "corvette-towpath",
+   "repositories": [
+    "github.com/z3prover/z3"
+   ],
+   "urls": [
+    "https://github.com/z3prover/z3"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "cuddy-stem",
+   "repositories": [
+    "github.com/aio-libs/aiohttp"
+   ],
+   "urls": [
+    "https://github.com/aio-libs/aiohttp"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "deadwood-shoal",
+   "repositories": [
+    "github.com/apache/commons-lang"
+   ],
+   "urls": [
+    "https://github.com/apache/commons-lang"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "derrick-tarn",
+   "repositories": [
+    "github.com/mikf/gallery-dl"
+   ],
+   "urls": [
+    "https://github.com/mikf/gallery-dl"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "dory-reach",
+   "repositories": [
+    "github.com/actions/go-versions",
+    "github.com/aquasecurity/trivy"
+   ],
+   "urls": [
+    "https://github.com/actions/go-versions",
+    "https://github.com/aquasecurity/trivy"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "dragger-narrows",
+   "repositories": [
+    "github.com/astral-sh/uv"
+   ],
+   "urls": [
+    "https://github.com/astral-sh/uv"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "dunnage-light",
+   "repositories": [
+    "github.com/clap-rs/clap"
+   ],
+   "urls": [
+    "https://github.com/clap-rs/clap"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "fender-hull",
+   "repositories": [
+    "github.com/cure53/dompurify"
+   ],
+   "urls": [
+    "https://github.com/cure53/dompurify"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "ferrule-berth",
+   "repositories": [
+    "github.com/arminbiere/cadical"
+   ],
+   "urls": [
+    "https://github.com/arminbiere/cadical"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "ferrule-keel",
+   "repositories": [
+    "github.com/tinycc/tinycc"
+   ],
+   "urls": [
+    "https://github.com/tinycc/tinycc"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "figurehead-grapnel",
+   "repositories": [
+    "github.com/curl/curl"
+   ],
+   "urls": [
+    "https://github.com/curl/curl"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "flotsam-fairway",
+   "repositories": [
+    "github.com/duckdb/duckdb"
+   ],
+   "urls": [
+    "https://github.com/duckdb/duckdb"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "forecastle-current",
+   "repositories": [
+    "github.com/encode/httpx"
+   ],
+   "urls": [
+    "https://github.com/encode/httpx"
+   ],
+   "clone_commands": 3,
+   "pinned": true
+  },
+  {
+   "task": "gaff-boom",
+   "repositories": [
+    "github.com/explosion/spacy"
+   ],
+   "urls": [
+    "https://github.com/explosion/spacy"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "gaff-gate",
+   "repositories": [
+    "github.com/expressjs/express"
+   ],
+   "urls": [
+    "https://github.com/expressjs/express"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "galiot-cinder",
+   "repositories": [
+    "github.com/falconry/falcon"
+   ],
+   "urls": [
+    "https://github.com/falconry/falcon"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "garboard-yard",
+   "repositories": [
+    "github.com/giampaolo/psutil"
+   ],
+   "urls": [
+    "https://github.com/giampaolo/psutil"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "gasket-wake",
+   "repositories": [
+    "github.com/gin-gonic/gin"
+   ],
+   "urls": [
+    "https://github.com/gin-gonic/gin"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "gunwale-tideway",
+   "repositories": [
+    "github.com/git/git"
+   ],
+   "urls": [
+    "https://github.com/git/git"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "halyard-spinnaker",
+   "repositories": [
+    "github.com/gohugoio/hugo"
+   ],
+   "urls": [
+    "https://github.com/gohugoio/hugo"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "hasp-plumb",
+   "repositories": [
+    "github.com/redis/redis"
+   ],
+   "urls": [
+    "https://github.com/redis/redis"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "hawse-shallows",
+   "repositories": [
+    "github.com/google/guava"
+   ],
+   "urls": [
+    "https://github.com/google/guava"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "hawser-quay",
+   "repositories": [
+    "github.com/jestjs/jest"
+   ],
+   "urls": [
+    "https://github.com/jestjs/jest"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "hoy-moor",
+   "repositories": [
+    "github.com/adoptium/temurin24-binaries",
+    "github.com/adoptium/temurin25-binaries",
+    "github.com/junit-team/junit5"
+   ],
+   "urls": [
+    "https://github.com/adoptium/temurin24-binaries",
+    "https://github.com/adoptium/temurin25-binaries",
+    "https://github.com/junit-team/junit5"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "ingot-flood",
+   "repositories": [
+    "github.com/id-software/doom"
+   ],
+   "urls": [
+    "https://github.com/id-software/doom"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "jackstay-larboard",
+   "repositories": [
+    "github.com/librosa/librosa"
+   ],
+   "urls": [
+    "https://github.com/librosa/librosa"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "jerkin-cleat",
+   "repositories": [
+    "github.com/nothings/stb"
+   ],
+   "urls": [
+    "https://github.com/nothings/stb"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "jetsam-head",
+   "repositories": [
+    "github.com/libvips/libvips"
+   ],
+   "urls": [
+    "https://github.com/libvips/libvips"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "jib-gangplank",
+   "repositories": [
+    "github.com/matplotlib/matplotlib"
+   ],
+   "urls": [
+    "https://github.com/matplotlib/matplotlib"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "kedge-fairway",
+   "repositories": [
+    "github.com/mikf/gallery-dl"
+   ],
+   "urls": [
+    "https://github.com/mikf/gallery-dl"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "kedge-lattice",
+   "repositories": [
+    "github.com/libvips/libvips"
+   ],
+   "urls": [
+    "https://github.com/libvips/libvips"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "kelson-current",
+   "repositories": [
+    "github.com/netty/netty"
+   ],
+   "urls": [
+    "https://github.com/netty/netty"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "lazaret-careen",
+   "repositories": [
+    "github.com/networkx/networkx"
+   ],
+   "urls": [
+    "https://github.com/networkx/networkx"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "lighter-boom",
+   "repositories": [
+    "github.com/nltk/nltk"
+   ],
+   "urls": [
+    "https://github.com/nltk/nltk"
+   ],
+   "clone_commands": 2,
+   "pinned": true
+  },
+  {
+   "task": "lighter-gate",
+   "repositories": [
+    "github.com/pallets/click"
+   ],
+   "urls": [
+    "https://github.com/pallets/click"
+   ],
+   "clone_commands": 2,
+   "pinned": true
+  },
+  {
+   "task": "limber-cinder",
+   "repositories": [
+    "github.com/pallets/jinja"
+   ],
+   "urls": [
+    "https://github.com/pallets/jinja"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "luff-yard",
+   "repositories": [
+    "github.com/pallets/werkzeug"
+   ],
+   "urls": [
+    "https://github.com/pallets/werkzeug"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "marlinespike-wake",
+   "repositories": [
+    "github.com/prettier/prettier"
+   ],
+   "urls": [
+    "https://github.com/prettier/prettier"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "masthead-tideway",
+   "repositories": [
+    "github.com/prometheus/prometheus"
+   ],
+   "urls": [
+    "https://github.com/prometheus/prometheus"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "midships-spinnaker",
+   "repositories": [
+    "github.com/psf/requests"
+   ],
+   "urls": [
+    "https://github.com/psf/requests"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "mizzen-seaboard",
+   "repositories": [
+    "github.com/psycopg/psycopg"
+   ],
+   "urls": [
+    "https://github.com/psycopg/psycopg"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "mizzen-summit",
+   "repositories": [
+    "github.com/apache/kafka"
+   ],
+   "urls": [
+    "https://github.com/apache/kafka"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "mooring-port",
+   "repositories": [
+    "github.com/pylint-dev/pylint"
+   ],
+   "urls": [
+    "https://github.com/pylint-dev/pylint"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "nock-meridian",
+   "repositories": [
+    "github.com/pypa/pip"
+   ],
+   "urls": [
+    "https://github.com/pypa/pip"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "nock-trestle",
+   "repositories": [
+    "github.com/adoptium/temurin25-binaries",
+    "github.com/trinodb/trino"
+   ],
+   "urls": [
+    "https://github.com/adoptium/temurin25-binaries",
+    "https://github.com/trinodb/trino"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "oakum-landfall",
+   "repositories": [
+    "github.com/pypa/setuptools"
+   ],
+   "urls": [
+    "https://github.com/pypa/setuptools"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "oarlock-haven",
+   "repositories": [
+    "github.com/pytest-dev/pytest"
+   ],
+   "urls": [
+    "https://github.com/pytest-dev/pytest"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "outrigger-ferry",
+   "repositories": [
+    "github.com/python-poetry/poetry",
+    "github.com/python-poetry/poetry-core"
+   ],
+   "urls": [
+    "https://github.com/python-poetry/poetry",
+    "https://github.com/python-poetry/poetry-core"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "painter-ebb",
+   "repositories": [
+    "github.com/python/mypy"
+   ],
+   "urls": [
+    "https://github.com/python/mypy"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "palliser-companion",
+   "repositories": [
+    "github.com/pytorch/vision"
+   ],
+   "urls": [
+    "https://github.com/pytorch/vision"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "pawl-bell",
+   "repositories": [
+    "github.com/official-stockfish/stockfish"
+   ],
+   "urls": [
+    "https://github.com/official-stockfish/stockfish"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "pennant-caboose",
+   "repositories": [
+    "github.com/redis/redis"
+   ],
+   "urls": [
+    "https://github.com/redis/redis"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "pintle-berm",
+   "repositories": [
+    "github.com/rust-lang/regex"
+   ],
+   "urls": [
+    "https://github.com/rust-lang/regex"
+   ],
+   "clone_commands": 0,
+   "pinned": true
+  },
+  {
+   "task": "pintle-flint",
+   "repositories": [
+    "github.com/scikit-image/scikit-image"
+   ],
+   "urls": [
+    "https://github.com/scikit-image/scikit-image"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "plinth-wicket",
+   "repositories": [
+    "github.com/cure53/dompurify"
+   ],
+   "urls": [
+    "https://github.com/cure53/dompurify"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "quoin-vellum",
+   "repositories": [
+    "github.com/rare-technologies/gensim"
+   ],
+   "urls": [
+    "https://github.com/rare-technologies/gensim"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "reeve-gate",
+   "repositories": [
+    "github.com/shadow-maint/shadow"
+   ],
+   "urls": [
+    "https://github.com/shadow-maint/shadow"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "tenon-orbit",
+   "repositories": [
+    "github.com/qutip/qutip"
+   ],
+   "urls": [
+    "https://github.com/qutip/qutip"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "trunnel-reach",
+   "repositories": [
+    "github.com/angr/angr"
+   ],
+   "urls": [
+    "https://github.com/angr/angr"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  },
+  {
+   "task": "turret-moor",
+   "repositories": [
+    "github.com/yt-project/yt"
+   ],
+   "urls": [
+    "https://github.com/yt-project/yt"
+   ],
+   "clone_commands": 1,
+   "pinned": true
+  }
+ ]
+}

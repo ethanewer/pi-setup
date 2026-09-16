@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": null,
+  "notes": "Upstream-clone bugfix in nltk/nltk (v4.3 family): Tree.fromstring labelled-bracket parsing treats a backslash-escaped '(' or ')' as a structural bracket instead of a literal token character, so trees whose leaves/labels contain an escaped parenthesis (e.g. a smiley ':\\\\)') raise ValueError or silently mis-parse and never round-trip. The agent must write its own failing reproduction as a deliverable (purposely NOT handed a repro: the task's difficulty depends on the agent building one), localise the defect in the tokenizer of the real tree installed editable at /app/src, fix it behaviourally, and keep the project's own tree tests green. Verifier: provenance (HEAD pinned, only the single bug's source file may differ, no untracked files), the agent's own repro is run against the repaired tree (must exit 0) and against a pristine pre-fix snapshot materialised from the pinned commit via git archive (must exit non-zero, ruling out hardcoded repros), the project's own regression test for this bug extracted from the fix commit at build time (4 tests, sha256-pinned), the project's own existing test_treetransforms.py suite, and four authored hidden inputs the upstream test does not use (escaped brackets in nested leaves and labels, custom bracket pairs). Pure interpreted Python: no compile step, measured image build ~14s on one CPU, image ~0.8 GB."
+}

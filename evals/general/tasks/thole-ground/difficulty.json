@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 3,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on a real codebase: pallets/werkzeug pinned at parent b97e13cc74d8a45dca260d4037edd7d1f5094042 (pre-fix). FloatConverter inherits NumberConverter.to_url = str(float), so building URLs for extreme floats emits scientific notation ('/1e-05'), which the converter regex r'\\d+\\.\\d+' rejects: the generated links 404 and build->match round-trips fail. The instruction is the user report only (no issue number, no commit, no fix, no file name) and REQUIRES the agent to author its own failing reproduction /app/reproduce.py as a deliverable before fixing. Difficulty is deliberately raised beyond the upstream fix: the actual committed upstream fix (f88164a) formats with f'{value:f}'.rstrip('0'), which still breaks 2.5e-07 ('/0.'), 5.0 ('/5.') and 1e20 ('/...000.') — bare-trailing-dot URLs the regex rejects. The verifier's golden test is the project's own regression test (test_float_no_scientific) extracted from the fix commit at build time, and three hidden cases (tiny, large/integral, signed) exercise values the upstream test does not use, so applying the naive upstream fix verbatim scores 0. The oracle implements the complete fix (str(value) when it has no 'e', else fixed-notation expansion with sign handling) which is byte-identical to parent behavior for all previously-working values, so the full 983-test upstream suite stays green (verified: full suite passes offline in ~8 s). Verifier also proves the agent's reproduction fails against a read-only pristine copy of the pre-fix tree (its BUILT line shows the scientific URL), runs the golden test against both trees, hashes the pristine tree and the tests/ directory (deletion/modification guard), and asserts the fix commit's object is not reachable from /app/src (build fetches the parent by SHA only). nop scores 0: no reproduction, golden fails, hidden cases fail on the untouched tree."
+}

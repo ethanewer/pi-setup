@@ -1,0 +1,81 @@
+[
+  {
+    "repository": "psycopg/psycopg",
+    "upstream_issue_ref": "#1348",
+    "fix_commit": "66e4b33fe271780d0bd02f15e94c66d52ed69cba",
+    "parent_commit": "7c9b6bee4ea6d7a4da5ce8e4bed9e4cba0c74012",
+    "base_image": "bench-base:python-3.12",
+    "source_files_changed": [
+      "psycopg/psycopg/rows.py"
+    ],
+    "golden_test_paths": [
+      "tests/test_rows.py"
+    ],
+    "golden_test_names": [
+      "test_make_nt_duplicate_names"
+    ],
+    "reproduction": "docker exec <container> bash -lc 'cd /work/psycopg && git reset --hard 7c9b6bee4ea6d7a4da5ce8e4bed9e4cba0c74012 && git clean -fdq && git checkout 66e4b33f -- tests/test_rows.py && python3 -m pytest \"tests/test_rows.py::test_make_nt_duplicate_names\" -q'   # direct repro: cd /tmp && python3 -c \"from psycopg import rows; rows._make_nt('utf-8', b'id', b'id')\"",
+    "observed_failure_at_parent": "ValueError - Encountered duplicate field name: 'id' (raw collections.namedtuple ValueError leaks instead of psycopg.DataError). Upstream golden test test_make_nt_duplicate_names FAILED at parent: '1 failed in 0.07s'.",
+    "verified": "both directions observed in bench-base:python-3.12 container (Debian 13, Python 3.12.13, libpq 17.11, pure-python pq_ctypes impl). PARENT 7c9b6bee: buggy code confirmed present by inspection (rows._make_nt ends with bare 'return namedtuple(\"Row\", snames)' with no try/except); direct repro raised ValueError; golden test FAILED. FIX 66e4b33f: fixed code confirmed (try/except re-raising as e.DataError); direct repro raised psycopg.DataError - \"can't create a namedtuple row: Encountered duplicate field name: 'id'\"; golden test PASSED ('1 passed in 0.02s'). Run pytest from the repo root; the regression test itself lives in the fix commit.",
+    "dependency_pins": {},
+    "install_recipe": "apt-get update && apt-get install -y libpq5 && python3 -m pip install /work/psycopg/psycopg /work/psycopg/psycopg_pool pytest   # NON-editable install (see notes); verified with libpq 17.11, pytest 9.1.1, typing-extensions from PyPI.",
+    "issue_paraphrase": "When a query result set contains two columns with the same name, as happens naturally in joins, and the connection uses the namedtuple row factory, the factory lets a plain Python ValueError from the standard library escape instead of raising a psycopg exception, so user code that catches psycopg errors does not see it. Duplicate column names should surface as a psycopg DataError like the other data-shape errors.",
+    "fix_summary": "rows._make_nt now wraps the collections.namedtuple() call in try/except ValueError and re-raises as psycopg.exceptions.DataError (from None), so the non-psycopg exception no longer leaks out of the row factory.",
+    "difficulty_guess": "easy",
+    "notes": "No PostgreSQL server needed: the regression test calls the private rows._make_nt() directly (as upstream does). Whole file tests/test_rows.py collects and the single test runs in ~0.05s at 1 CPU. conftest.py pytest_plugins force-import psycopg_pool at pytest startup, so psycopg_pool must be installed too or every test errors at collection. IMPORTANT environment hazard found while verifying: with an EDITABLE pip install, running any plain 'python -c \"import psycopg\"' from the repo root silently imports an EMPTY namespace package (the top-level psycopg/ subproject directory shadows the installed package, psycopg.__file__ is None), which also breaks pytest via fix_db's psycopg.Pipeline. A REGULAR (non-editable) pip install of /work/psycopg/psycopg resolves correctly from the repo root (regular package beats the namespace dir on the path scan), which is what was verified. Direct python repros should still be run from a cwd other than the repo root (e.g. cd /tmp)."
+  },
+  {
+    "repository": "psycopg/psycopg",
+    "upstream_issue_ref": "#1327",
+    "fix_commit": "b9f196895eb6d3973437102fb50802266dedafea",
+    "parent_commit": "f9078032c2ccd64ec351b3ab7bdeb257b2480977",
+    "base_image": "bench-base:python-3.12",
+    "source_files_changed": [
+      "psycopg/psycopg/waiting.py"
+    ],
+    "golden_test_paths": [
+      "tests/test_waiting.py"
+    ],
+    "golden_test_names": [
+      "test_wait_r[wait_selector-2-R-R-0.2]",
+      "test_wait_r[wait_selector-2-R-R-2]",
+      "test_wait_r[wait_selector-2-RW-R-0.2]",
+      "test_wait_r[wait_selector-2-RW-R-2]"
+    ],
+    "reproduction": "docker exec <container> bash -lc 'cd /work/psycopg && git reset --hard f9078032c2ccd64ec351b3ab7bdeb257b2480977 && git clean -fdq && git checkout 5369bbc9 -- tests/test_waiting.py tests/test_waiting_async.py && python3 -m pytest \"tests/test_waiting.py::test_wait_r\" -k wait_selector -q'  # direct repro (run from /tmp, not the repo root): python3 - <<'EOF'\nimport socket, selectors\nfrom psycopg import waiting\nr, w = socket.socketpair()\ndef gen():\n    yield selectors.EVENT_WRITE   # phase 1: wait until writable\n    yield selectors.EVENT_READ    # phase 2: wait for read after wake-up\n    return \"COMPLETED\"\ntry:\n    rv = waiting.wait_selector(gen(), r.fileno(), interval=0.05)\n    print(\"returned:\", rv)\nexcept Exception as ex:\n    print(type(ex).__name__, \"-\", ex)\nEOF",
+    "observed_failure_at_parent": "KeyError - '3 (FD 3) is already registered' from selectors.DefaultSelector.register (the wait loop re-registers the still-registered fd). Upstream regression test slice: 4 failed with 'KeyError: 11 (FD 11) is already registered' (the nevents=2 ready=R combos), 12 passed.",
+    "verified": "both directions observed in bench-base:python-3.12 container. PARENT f9078032: buggy code confirmed present in the installed package (waiting.py has the unconditional 'sel.register(fileno, s)' after gen.send(ready) and no last_s tracking); two-phase socketpair repro raised KeyError '3 (FD 3) is already registered'; upstream regression test test_wait_r (with the nevents=2 parametrization from commit 5369bbc9) FAILED: 4 failed / 12 passed. FIX b9f19689: installed waiting.py contains the unregister-before-reregister logic (last_s walrus); same repro returned 'COMPLETED' with no exception; regression test slice PASSED: 16/16. NOTE: the wait_selector fix was merged as branch 'fix-wait_selector' (merge 3407a961) together with the wait_conn counterpart fix f46aad64 ('perf: only reregister fileno when necessary in wait_conn'); the regression test commit 5369bbc9 'test: main loop of each of the wait functions' (adding the nevents parameter) is a later commit in that same branch and is what makes the parent fail.",
+    "dependency_pins": {},
+    "install_recipe": "apt-get update && apt-get install -y libpq5 && python3 -m pip install /work/psycopg/psycopg /work/psycopg/psycopg_pool pytest   # non-editable install; verified with libpq 17.11, pytest 9.1.1.",
+    "issue_paraphrase": "On platforms where psycopg falls back to the generic selector-based wait function, any operation that needs two consecutive waits on the same connection - for example a connect that first waits for the socket to become writable and is then woken and waits again for it to become readable - dies with an unexpected KeyError about the file descriptor already being registered. The wait loop keeps re-registering the same descriptor instead of updating its registration, so multi-phase operations crash instead of completing.",
+    "fix_summary": "wait_selector now remembers the last registration mask (last_s) and, after being woken, only calls sel.unregister()+sel.register() when the generator's new wait state differs from the current one; the fd registration is no longer overwritten while still active.",
+    "difficulty_guess": "easy",
+    "notes": "No PostgreSQL server needed: the included direct repro uses a socketpair and a fake two-phase generator; the upstream test test_wait_r uses only localhost sockets (marked slow; the wait_selector slice of 16 tests runs in ~18s at 1 CPU, the interval=2 combos take ~2-4s each). Run pytest from the repo root. The regression test (commit 5369bbc9) is a later commit than the fix: at parent_commit the in-tree test file still had the old single-event form, so the parent-direction run must check out tests/test_waiting.py and tests/test_waiting_async.py from 5369bbc9 (as recorded in reproduction); at the fix commit the code passes with those test files. Discriminating combos are the four nevents=2 / ready=R parametrizations (ids listed in golden_test_names); the ready=NONE combos pass at both ends."
+  },
+  {
+    "repository": "psycopg/psycopg",
+    "upstream_issue_ref": "#1363",
+    "fix_commit": "793cd8786373f5d1564493e35283b0d80cb67d96",
+    "parent_commit": "19b58ffd057f23a5dc10fac5b949792f584e0494",
+    "base_image": "bench-base:python-3.12",
+    "source_files_changed": [
+      "psycopg/psycopg/_encodings.py"
+    ],
+    "golden_test_paths": [
+      "tests/test_encodings.py"
+    ],
+    "golden_test_names": [
+      "test_conninfo_encoding[user=foo dbname=bar client_encoding=MSKANJI-shift_jis]",
+      "test_conninfo_encoding[user=foo dbname=bar client_encoding=mskanji-shift_jis]"
+    ],
+    "reproduction": "docker exec <container> bash -lc 'cd /work/psycopg && git reset --hard 19b58ffd057f23a5dc10fac5b949792f584e0494 && git clean -fdq && git checkout ff4bb40e -- tests/test_encodings.py && python3 -m pytest \"tests/test_encodings.py::test_conninfo_encoding\" -q'  # direct repro: cd /tmp && python3 -c \"from psycopg import _encodings as e; print(e.conninfo_encoding('user=foo dbname=bar client_encoding=MSKANJI'))\"",
+    "observed_failure_at_parent": "conninfo_encoding('...client_encoding=MSKANJI') returns 'utf-8' instead of 'shift_jis' (unknown-encoding fallback), so text is decoded with the wrong codec. Upstream golden test test_conninfo_encoding FAILED at parent: 2 failed (MSKANJI, mskanji rows) / 7 passed.",
+    "verified": "both directions observed in bench-base:python-3.12 container. PARENT 19b58ffd: buggy code confirmed present in the installed package (grep for the alias maps in _encodings.py finds no Mskanji/ShiftJIS/UHC aliases); direct repro printed 'MSKANJI -> utf-8'; golden test FAILED (2/7). FIX 793cd878: fixed code confirmed (alias tuples present); direct repro printed 'MSKANJI -> shift_jis' and 'mskanji -> shift_jis'; golden test PASSED 9/9. The fix commit did not touch tests: the regression test file (added rows for MSKANJI/mskanji/Unicode etc.) was committed separately as ff4bb40e in the same PR (merged as PR #1364); the parent-direction run checks that newer test file out over the parent tree, as recorded in reproduction.",
+    "dependency_pins": {},
+    "install_recipe": "apt-get update && apt-get install -y libpq5 && python3 -m pip install /work/psycopg/psycopg /work/psycopg/psycopg_pool pytest   # non-editable install; verified with libpq 17.11, pytest 9.1.1.",
+    "issue_paraphrase": "Passing a client_encoding option in the connection string that uses any of PostgreSQL's documented charset alias names - such as MSKANJI, which is the PostgreSQL name for Shift_JIS - makes psycopg silently ignore the requested encoding and fall back to utf-8. Server text is then decoded with the wrong codec and comes out corrupted. All the PostgreSQL alias names from the documented charset table should resolve to the matching Python codec.",
+    "fix_summary": "_encodings.py was restructured from a flat name->codec dict to a table keyed by tuples of (canonical name, documented aliases) per PostgreSQL charset; the runtime py_codecs mapping is built by upper-casing and stripping '-'/'_' (plus a no-underscore variant), so aliases like MSKANJI, Mskanji, ShiftJIS, WIN932, UHC, WIN949, ALT, ABC resolve e.g. to shift_jis, cp949, cp866, cp1258.",
+    "difficulty_guess": "easy",
+    "notes": "No PostgreSQL server needed; the function under test parses the conninfo string only. The whole test_conninfo_encoding parametrization (9 rows) runs in ~0.05s at 1 CPU. Discriminating rows are the MSKANJI/mskanji ones; the Unicode/UNICODE rows return utf-8 at both ends (canonical UTF8 also maps to utf-8). Run pytest from the repo root (non-editable install) and python repros from a cwd other than the repo root, as for the other entries."
+  }
+]

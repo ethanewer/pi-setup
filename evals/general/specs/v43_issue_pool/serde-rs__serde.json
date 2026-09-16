@@ -1,0 +1,40 @@
+[
+  {
+    "repository": "serde-rs/serde",
+    "upstream_issue_ref": "#1468",
+    "fix_commit": "1d6ef76cfb339df48232b59cc2ce8568fd19660c",
+    "parent_commit": "bb99b31eb0a55393101f9c80cd959b3a739ad70f",
+    "base_image": "bench-base:ubuntu-24.04",
+    "source_files_changed": ["serde_derive/src/ser.rs"],
+    "golden_test_paths": ["test_suite/tests/test_macros.rs"],
+    "golden_test_names": ["test_internally_tagged_struct_with_flattened_field"],
+    "reproduction": "RUSTUP_TOOLCHAIN=1.88.0 cargo test -p serde_test_suite --test test_macros -- test_internally_tagged_struct_with_flattened_field  (after: git reset --hard bb99b31eb0a55393101f9c80cd959b3a739ad70f && git clean -fdx && git checkout 1d6ef76cfb339df48232b59cc2ce8568fd19660c -- test_suite/tests/test_macros.rs)",
+    "observed_failure_at_parent": "test panics: expected Token::Str(\"tag_enum\") but serialized as Str(\"tag_struct\") (serde_test/src/ser.rs:154) — the internally-tagged enum flattened inside a tagged struct is serialized with the outer struct's tag",
+    "verified": "both directions observed on rustc 1.88.0. Parent bb99b31e + fix's test_macros.rs: test FAILED with the panic above (38 other tests filtered). Fix 1d6ef76c, same command: test passed (1 passed, 0 failed). Buggy code proven present at parent: grep serialize_struct_tag_field serde_derive/src/ser.rs -> 0 matches; present at fix (function defined at line 292).",
+    "dependency_pins": {"rust_toolchain": "1.88.0"},
+    "install_recipe": "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain 1.88.0 ; source $HOME/.cargo/env ; cd /work/serde ; git reset --hard <parent> ; git clean -fdx ; git checkout <fix> -- test_suite/tests/test_macros.rs ; cargo test -p serde_test_suite --test test_macros -- test_internally_tagged_struct_with_flattened_field   (rustup default stable would NOT work: rustc >=1.98 rejects the project's own macro code 'trailing semicolon in macro used in expression position', so the toolchain MUST be pinned to 1.88.0)",
+    "issue_paraphrase": "When a struct that is given an internal tag (the tag attribute) has a field marked flattened whose type is itself an internally or adjacently tagged enum, serializing the struct emits the wrong tag string at the point where the flattened enum's content appears: the value that should carry the enum's own tag/name is written out with the outer struct's tag/name instead. Deserialization reads the same tokens back correctly, so data serialized by this combination does not round-trip as expected and any consumer that checks the enum tag fails or misparses the output.",
+    "fix_summary": "Extracted the serialization of the internally tagged struct's own tag field into a separate helper emitted before the flatten/field serialization, and computes the map length hint from whether that tag field exists instead of inserting the tag emit at position 0 of the shared field list. With the old insert(0), the flattened enum's own serialization (which uses the visitor-inlined field list) picked up the outer struct's tag binding.",
+    "difficulty_guess": "medium",
+    "notes": "Build: serde workspace (serde, serde_derive, serde_test, test_suite) compiles cleanly on rustc 1.88.0 at both parent and fix (only warnings; old crate uses 2018 edition features). First full build ~5-10 min on 64 cores; incremental ~seconds. IMPORTANT: only run with '--test test_macros'; at this commit other test binaries (test_gen, test_ser) do not compile on rustc 1.88 (unexpected cfg condition 'cargo-clippy', from_utf8_unchecked hard errors). test_macros runs in <1s. No network needed at test time; no fixture downloads. Base image has no rust; install via rustup."
+  },
+  {
+    "repository": "serde-rs/serde",
+    "upstream_issue_ref": "#816",
+    "fix_commit": "873cfbe9ab4271ce1bd30c0b0bbfdfaed652ccf8",
+    "parent_commit": "c96efcb87ab72f14a2a084644308c4a5e98ed820",
+    "base_image": "bench-base:ubuntu-24.04",
+    "source_files_changed": ["serde/src/private/de.rs", "serde_derive/src/de.rs"],
+    "golden_test_paths": ["test_suite/tests/test_macros.rs"],
+    "golden_test_names": ["test_adjacently_tagged_enum"],
+    "reproduction": "CARGO_REGISTRY_PROTOCOL=sparse RUSTUP_TOOLCHAIN=1.70.0 cargo test -p serde_test_suite --test test_macros -- test_adjacently_tagged_enum  (after: git reset --hard c96efcb87ab72f14a2a084644308c4a5e98ed820 && git clean -fdx && git checkout 873cfbe9ab4271ce1bd30c0b0bbfdfaed652ccf8 -- test_suite/tests/test_macros.rs)",
+    "observed_failure_at_parent": "deserialization panics on the first unknown key of the map: 'tokens failed to deserialize: invalid value: string \"f\", expected \"t\" or \"c\"' (serde_test/src/assert.rs:189). The 'unit with excess content (f, g, h)' assertion in the golden test fails at the parent.",
+    "verified": "both directions observed on rustc/cargo 1.70.0. Parent c96efcb8 + fix's test_macros.rs: test_adjacently_tagged_enum FAILED with the panic above (1 failed, 26 filtered). Fix 873cfbe9, same command: test passed (1 passed, 0 failed). Buggy code proven absent at parent: grep TagContentOtherField serde/src/private/de.rs and serde_derive/src/de.rs -> 0 matches; at fix the new visitor type exists and deserialize_adjacently_tagged_enum references it.",
+    "dependency_pins": {"rust_toolchain": "1.70.0", "cargo_registry_protocol": "sparse"},
+    "install_recipe": "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain 1.70.0 ; source $HOME/.cargo/env ; export CARGO_REGISTRY_PROTOCOL=sparse ; cd /work/serde ; git reset --hard <parent> ; git clean -fdx ; git checkout <fix> -- test_suite/tests/test_macros.rs ; cargo test -p serde_test_suite --test test_macros -- test_adjacently_tagged_enum   (rustc newer than ~1.70 hard-errors on the era's #![deny(unused_imports)] re-export lint and cfg(cargo-clippy); cargo 1.70 needs the sparse registry protocol env var for the current crates.io index)",
+    "issue_paraphrase": "Deserializing an adjacently tagged enum - an enum that is represented as a map containing one key for the variant tag and one key for the content - fails whenever the map also holds any other, unrelated keys. The deserializer treats the first key that is neither the tag nor the content as a hard error, so maps produced by other sources that carry extra metadata fields cannot be parsed at all, even though unknown fields are silently ignored everywhere else in the library. When the strict deny-unknown-fields option is set, those extra keys should instead be rejected deliberately, and when it is not set they should be skipped transparently.",
+    "fix_summary": "Added a TagContentOtherField visitor that classifies each map key as tag, content or other; generated deserialization code for adjacently tagged enums now loops, skipping and consuming 'other' keys (values read via IgnoredAny) until the tag/content keys are found, when deny_unknown_fields is unset. When deny_unknown_fields is set it keeps using the strict visitor that errors on any other key, so the option is now actually honored instead of being the universal behavior.",
+    "difficulty_guess": "medium",
+    "notes": "2017-era tree (quote 0.3.8, syn 0.11, serde_derive_internals path dep) compiles cleanly on rustc 1.70.0 at both parent and fix. First build ~5-10 min on 64 cores. Only the test_macros binary is runnable on the pinned toolchain (other binaries are not needed). test_macros runs in <1s. The failing assertion is the final 'unit with excess content (f, g, h)' block inside the golden test. No network needed at test time. Do NOT use rustup stable (>=1.85 hard-errors on cfg(cargo-clippy)/unused-import in serde/src/lib.rs)."
+  }
+]

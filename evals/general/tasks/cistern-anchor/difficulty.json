@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on spf13/cobra at parent commit cc7e235fc26cfd0b5ae36c960f399eea4badaa3e (real upstream bug, issue #1781, fixed by 6b0bd3076cfafd1c108264ed1e4aa0c0fe3f8537). Find() resolves subcommands by locating the first argument that matches the subcommand name and removing it; when a flag value happens to equal a subcommand name, that value is removed instead (argsMinusFirstX scans raw args), the flag value is lost and every later token shifts left, so the program receives wrong arguments (mined symptom: TestFind/[--foo_child_--bar_something_child] 'Expected: [--foo child --bar something] / Got: [--foo --bar something child]'). The image clones cobra shallow at the parent, overlays the upstream regression test command_test.go (extracted from the fix commit at build time) onto the working tree so `go test -v ./... -run TestFind` fails in-image exactly as mined; the fix commit itself is fetched only into a throwaway bare clone and is never reachable from /app/src/.git. Agent must reproduce, localise the bug in the real tree (the argsMinusFirstX/search-path in command.go), and fix it without touching anything else. The V-language (formerly 'Go') go1.24.0 toolchain is pinned from go.dev/dl; module/compile caches live in world-writable /opt paths and are warmed at build, so the trial is fully offline; the suite (279+ tests) must be run as the unprivileged user vtest (uid 1000) because one upstream test expects a permission-denied error that root bypasses. Verifier: provenance (HEAD=parent, fix commit unreachable, only command.go plus the overlaid regression-test file differ, command_test.go byte-identical to golden), the upstream TestFind regression test, the full project suite, and two authored hidden cases (novel flag/subcommand argument layouts through Find, and a two-level command tree with the collision at its deeper level) that fail at the parent and pass after the fix. Both directions verified inside the task image before shipping."
+}

@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 3,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 110,
+  "documented_probe": null,
+  "notes": "Hard. dependent_stages=3: the agent must first enable strict + strictNullChecks in tsconfig without leaving any strictness override disabled, then repair one error class at a time (implicit-any parameters, unproven nullable reads, unchecked index accesses, optional-property precision) until tsc passes, then keep the whole vitest suite green on top of the typed tree. tool_breadth=3: drives the tsc compiler (incl. noUncheckedIndexedAccess / exactOptionalPropertyTypes / noImplicitOverride), vitest, git log/blame over a 12-commit history, npm scripts and the node toolchain. reasoning_depth=3: the tree ships 5000+ LOC with ~60 untyped signatures and ~50 proof sites concentrated in the legacy modules; the migration must add exactly the right evidence (annotations, non-null proofs, narrowing) without any intermediate relaxation, and widening a type fails the hidden contracts. debugging_ambiguity=2: the strict compiler reports per-file cascade errors, but the root contract (annotations vs proofs vs config) must be triaged; a changed tsconfig silently changes which class of error remains. adversarial_inputs=2: hidden probes pin exact exported types (string|null vs string|undefined, exact unions, generic store typing), and ban-deep checks reject any/ts-ignore/unknown-cast escapes. hidden_case_generalization=3: two fresh type-level contract files are dropped into the tree and compiled under the delivered tsconfig and under the hardening overlay; they fail on any weakening migration and pass the reference one. quantitative_correctness=2: the tsconfig JSON contract, hard LOC floors (5000+), commit-count floor and pristine test hashes are all asserted exactly. No resource pressure, no live services, nothing unsafe beyond editing files in the repository."
+}

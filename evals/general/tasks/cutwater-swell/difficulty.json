@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 3,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 90,
+  "documented_probe": null,
+  "notes": "Upstream-clone bugfix in BurntSushi/ripgrep (v4.3 family): silent false negatives for case-insensitive alternations with wildcards. Pattern '(?i:e.x|ex)' against a file containing 'e-x' prints nothing and exits 1; on a mixed file only the 'ex' line is printed (exit 0), so missed matches are invisible. Root cause: the search prefilter's inner-literal extraction unioned the two alternation branches into an over-specific exact set (Seq[E(\"EX\"), E(\"Ex\"), E(\"eX\"), E(\"ex\")]) that no 'e-x' text contains, so valid matches were rejected before the regex engine ran. Upstream fix (9d738ad, issue #2884): in crates/regex/src/literal.rs, unioned sequences keep prefix=true only when both operands are prefix-exact, and choose() always returns an inexact sequence; the fix also updates four existing extraction unit-test expectations that encoded the old behaviour. Agent gets the real tree at the parent commit (single depth-1 object store, fix commit provably unreachable), must author its own failing reproduction (/app/repro.sh, executed by the verifier against the rebuilt tree and against a pristine pre-fix binary baked at /opt/prefix/rg), then localise the defect (crates/regex/src/literal.rs, deliberately unnamed) and fix it so the reproduction, the project's own regression test (case_insensitive_alternation, extracted from the fix commit at image build time into /opt/golden and planted inside the tests module by the verifier, sha256-pinned), the full 'cargo test -p grep-regex --lib' suite, and three authored hidden cases (different alphabet t.t|tt; 549-line -c count across case/mid-line variants; two-char gap e..x|ex with a single-gap decoy) all pass. The hidden-case patterns were verified to reproduce the false negative at the parent binary and pass at the fix. Dependency pins: committed Cargo.lock plus Rust 1.98.1 from the official dist tarball (static.rust-lang.org/dist/2026-09-03), matching the mining container; warm debug build + warm lib-test build in the image so agent runs of cargo are incremental and offline; CARGO_NET_OFFLINE=true; CARGO_BUILD_JOBS=1. Not reproduced for every alternation (letter-rank heuristics), which is why pattern choices were validated empirically."
+}

@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 90,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on rust-lang/regex at parent commit bbf0b38df618734b92d7b92acc8a8bf31b6d0046 (release 1.9.2), real upstream issue #1060, fixed by 73f7889021542ea80937b3adacefa5825eaa97fe. The reverse inner (and reverse suffix) literal optimization in regex-automata/src/meta/limited.rs can return a real-but-not-leftmost match when a pattern's first alternative is optional: for '(?:(\\d+)[:.])?(\\d{1,2})[:.](\\d{2})' on '102:12:39' it reports 1..9 instead of 0..9 and the optional group's captures are shifted/empty. The fix adds a 'was_dead' trip-wire: when the reverse search reaches the start of the search span, the found match starts past the search start, and the FSM was not dead before the end-of-input transition, the routine returns a Quadratic retry error so the slower correct path finds the true leftmost match. Deliberately raised shape vs the earlier wave: the agent is NOT handed a reproduction; the instruction gives only the user-visible symptom with one example pattern/haystack, and the deliverable contract requires the agent to author its own failing regression case in testdata/regression.toml (encoding CORRECT expectations), which the verifier replays against a pristine pre-fix clone (/opt/pristine) and requires to fail there and pass in the repaired tree, before running the upstream golden test, the full integration suite, the regex-automata deep engine-level suite (53 tests), and 3 authored hidden cases (fixed-width group variant on '888:77:66', colon-only separator pattern, and a four-capture-group variant with a longer haystack) \u2014 all verified to fail at the parent and pass with the upstream fix. Scope check allows only limited.rs + testdata/regression.toml to differ; fix commit unreachable in both clones (extracted golden via throwaway bare clone). Build measured ~7 min at 1 CPU (warm builds of both trees); suite runs <1 s apart from the deep suite (~40 s)."
+}

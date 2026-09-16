@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 2,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": "aquasecurity/trivy pinned at parent f06520353fc632e69eaf9d669ecdd785e770305a (shallow single-commit clone; the fix commit 3c6a1a2aca33893f231412a34d3dfddc4f64b456 is never fetched into /app/src and is provably absent from its object store). Go 1.26.3 (actions/go-versions tag 1.26.3-25533533231), exactly matching go.mod 'go 1.26.3'; all module deps hash-pinned via the committed go.sum and warmed into /opt/gomodcache; compile cache /opt/gocache warm. Probe (measured inside the task image): cold one-CPU compile of `go test -short ./pkg/dependency/parser/dotnet/core_deps/...` ~33 s; reruns with warm cache <1 s. At the parent commit with the golden regression test planted (upstream parse_test.go + ambiguous-root.deps.json + multi-project.deps.json from the fix commit), TestParse/multi-project_solution and TestParse/ambiguous_root FAIL: for multi-project the actual package set has len=2 (Api root, Newtonsoft) vs expected len=4 (Web root, Api/Data workspace, Newtonsoft direct); after the rootProject() fix the same command passes 9/9 subtests plus all three authored hidden cases. Image size: ~1.9 GB. Offline-clean confirmed by running oracle+verifier with no network.",
+  "notes": "v4.2 upstream-clone task. The agent gets the REAL aquasecurity/trivy tree (Go, ~700k LOC) at the parent commit, sees only the user-visible symptom (multi-project .NET .deps.json workspaces report only the first-listed project; the rest silently vanish), and must reproduce, localise and fix the defunct root-project selection in pkg/dependency/parser/dotnet/core_deps without being told the file, the issue number or the commit (the fix commit is unreachable from the clone and there is no network). The verifier plants the project's OWN regression test for the bug (parse_test.go + the two new fixtures exactly as at the fix commit, extracted at image build time into /opt/golden, never vendored into this task tree) plus 3 authored hidden cases (workspace-rotate: application project listed LAST with a two-level helper chain, asserting Root on the unreferenced project and Workspace on both helpers; no-root: a dependency cycle between two projects, asserting the parser does NOT guess a root and keeps all packages with Unknown relationship plus the targets-derived edges; diamond: root listed second while a workspace member is also a direct dependency of the root, asserting the workspace relationship survives the direct-dep pass and the shared package is Direct), rebuilds offline and runs the project's own Go test command on the core_deps package, grepping per-test PASS lines so neutralised/skipped runs fail. Provenance is enforced at the blob level (every tracked file except the single allowed dotnet core_deps source file must hash to the pinned commit's blob; no untracked non-ignored files; object store holds nothing beyond the pinned commit). The over-fix direction is guarded: dropping root marking entirely, or marking every project root, breaks the golden multi-project case and the diamond hidden case. Nop container scores 0 (summary.md missing; planted regression and hidden tests fail at parent)."
+}

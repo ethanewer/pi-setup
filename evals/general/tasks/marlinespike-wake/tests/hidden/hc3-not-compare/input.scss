@@ -1,0 +1,5 @@
+@workspace {
+  @if not $feature-flag-enabled == true and $cache-entry-ttl-seconds > 300 or $metrics-mode == "quiet" {
+    display: none;
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 75,
+  "documented_probe": null,
+  "notes": "Upstream-clone bugfix in sympy/sympy (v4.3 family): nonlinsolve crashes with a raw arithmetic TypeError ('unsupported operand type(s) for /: Integer and Interval') when one equation of a system involves sign(), because sign(x)-1=0 is reduced by the real solver to the interval (0, oo) which later code then divides other expressions by. The agent gets the real tree at the parent commit (single depth-1 object store; fix commit provably unreachable), must author its own failing reproduction (/app/repro.py, three documented checks: two sign-mixed two-equation systems must raise a solver-level NotImplementedError naming the solution type, and the lone sign equation must return a FiniteSet) before fixing, then localise the defect by reading sympy/solvers/solveset.py and patch that single source file (upstream fix: raise NotImplementedError right after the combine step when the accumulated solution is not FiniteSet/ImageSet/ConditionSet/Union/EmptySet, and narrow the surrounding except from (NotImplementedError, ValueError) to ValueError so the new error propagates). Verifier: trust-anchor sha256 pins (golden test, pre-fix solver file, toolchain), provenance (HEAD == parent, fix commit unreachable), scope diff of the whole working tree against a pristine second parent checkout at /opt/prefix-sympy permitting ONLY sympy/solvers/solveset.py to differ, forced import-resolution check (sympy must import from /app/src), the agent's repro in both directions (fixed tree must pass, pre-fix reference tree at /opt/prefix-sympy must fail with the crash), the upstream regression test extracted from the fix commit at image build time into /opt/golden/test_solveset.py (sha256-pinned, replanted over the tree's copy; golden node must FAIL against /opt/prefix-sympy and PASS against the repaired tree), eight pre-existing nonlinsolve tests (incl. test_nonlinsolve_abs which guards the same except clause) that must stay green, and three authored hidden cases exercising the same code path from inputs the upstream test does not use (sign(x)+1 with a different companion polynomial, sign on the second symbol, and a scaled 2*sign(x)-2 variant - two crash with TypeError and one with AttributeError on the pre-fix tree). Dependency pins: mpmath==1.3.0, pytest==9.1.1, hypothesis==6.168.0 on bench-base:python-3.12 as resolved by the mining run; editable install of /app/src; no network at trial time."
+}

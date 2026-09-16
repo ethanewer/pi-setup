@@ -1,0 +1,49 @@
+---
+title: Python API
+order: 55
+tags: [reference, api]
+---
+
+quaydoc is importable as a library; every public name lives in a module with
+a matching name.
+
+## Parsing
+
+```python
+from quaydoc.parser import parse_document
+
+document = parse_document(source_text, source="docs/index.qd")
+for level, title in document.headings:
+    print(level, title)
+```
+
+## Building a site
+
+```python
+from quaydoc.config import load_config
+from quaydoc.site import Site
+
+config = load_config("docs")
+site = Site("docs", config).load()
+stats = site.build(outdir="site")
+print(stats.report())
+```
+
+## Checking a build
+
+```python
+from quaydoc.check import Checker
+
+issues = Checker("site").check()
+for issue in issues:
+    print(issue.render())
+```
+
+## Templates
+
+```python
+from quaydoc.template import Template
+
+template = Template("Hello, {{ name|upper }}!")
+print(template.render({"name": "quaydoc"}))
+```

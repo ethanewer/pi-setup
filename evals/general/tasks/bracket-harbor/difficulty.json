@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 3,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 3,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 90,
+  "documented_probe": null,
+  "notes": "Hard. dependent_stages=3: the agent must first get the repository to build (go build), then keep it vet-clean, then make the whole suite green via a correct cross-package fix, then survive two hidden contract-test insertions. tool_breadth=3: drives the go toolchain (build/vet/test), git archaeology (log/diff/blame over a 17-commit history), shell, and the repo's own canonical-format tooling. reasoning_depth=3: the failing test lives in internal/query but the regression is a precedence-tier change in internal/token made two commits back; repairing it requires tracing parse grouping through parser->token precedence dispatch and restoring the documented ladder without touching the (correct) tests. debugging_ambiguity=3: the symptom (and grouping) points at the parser/query layer; the root cause (KindOr folded into the AND tier) is invisible in the failing test's own package, the changed state conflicts with the package doc comment, and only the refactor commit exposes it. adversarial_inputs=2: hidden tests push mixed boolean chains, IN/LIKE/BETWEEN mixtures and canonical-key corner cases (spacing, underscore/dot keys, wildcards) at the restored contract. hidden_case_generalization=3: two hidden fixtures place contract tests into internal/token, internal/query and internal/idx whose exact precedence ladder and canonical-key behavior were never visible to the agent; test-tampering or parser-local workarounds fail them. quantitative_correctness=2: exact integer precedence tiers and byte-exact canonical condition strings are asserted. No resource pressure, no live services, nothing unsafe beyond editing files in the repo."
+}

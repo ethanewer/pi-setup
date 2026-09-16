@@ -1,0 +1,10 @@
+# Hidden case: TIME/TIMETZ minus an interval whose microseconds component is
+# the 64-bit signed minimum (INT64_MIN), with times and offsets the upstream
+# regression test does not use. Line format: QUERY<TAB>EXPECTED, where
+# EXPECTED is "ERROR:<substring>" (CLI output must contain the substring)
+# or "VALUE:<substring>" (query must succeed and output must contain it).
+SELECT TIME '00:00:00' - INTERVAL '-4611686018427387904 microseconds -4611686018427387904 microseconds';	ERROR:Interval micros value out of range
+SELECT TIME '23:59:59.999999' - INTERVAL '-4611686018427387904 microseconds -4611686018427387904 microseconds';	ERROR:Interval micros value out of range
+SELECT TIMETZ '12:00:00+05:30' - INTERVAL '-4611686018427387904 microseconds -4611686018427387904 microseconds';	ERROR:Interval micros value out of range
+SELECT TIME '12:00:00' - INTERVAL '1 hour';	VALUE:11:00:00
+SELECT TIMETZ '12:00:00+05:30' - INTERVAL '1 hour';	VALUE:11:00:00+05:30

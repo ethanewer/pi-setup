@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 3,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": "pallets/jinja parent 079e8312c3ceee54066d2dc887da83867f2db68a (4MB, ~200 files, pyproject); upstream issue #1960, fix commit 1655128cfc0e8b598d5b3f361a3983f82098276b",
+  "notes": "Real-upstream debugging task (v4.2 family). Image clones pallets/jinja and checks out exactly the PARENT commit, which contains the real bug: async template rendering leaks async generators whenever output is consumed incrementally (streaming a page, include, extends, self.foo() block calls), so runtimes that police cleanup (trio) emit 'Async generator was garbage collected before it had been exhausted' ResourceWarnings. The agent gets /app/reproduce.py (visible reproducer, trio-only observable: exits 1 at parent, 0 fixed), no git metadata (the tree is a bare working copy; the fix commit is never fetched into /app/src and a build-time belt check asserts it is unreachable), and no file names. It must localise the bug in a real 4MB tree (module-level cause lives in compiler.py + environment.py + async_utils.py), fix it at source, and keep the project's own suite green. Verifier: (1) byte-level provenance manifest frozen at build time — every file must stay byte-identical to the parent checkout except exactly src/jinja2/{async_utils,compiler,environment}.py; no new/deleted files (pycache/pyc/pytest_cache excluded); (2) the project's OWN regression tests for the bug, extracted at build time from the fix commit's tests/test_async.py into /opt/golden (never committed here, byte-audit clean), copied into tests/ and run — at parent the four [trio] parametrisations fail via pluggy.PluggyTeardownRaisedWarning, at fix all 8 pass; (3) the project's own full tests/ suite must pass (927 passed in ~2s at 1 CPU on the fixed tree); (4) three authored hidden cases (stream_early: 300-item for-loop partial consumption; include_stream: include-in-loop over 40 dict rows; extend_chain: 3-level inheritance with self.foo() block call) with fresh inputs and outputs different from the upstream test set, each asserting output prefix correctness AND absence of leaked-generator ResourceWarnings under BOTH asyncio and trio via synchronous catch_warnings+gc.collect (deterministic; verified failing at parent: 2-3 leaks per case, and passing at fix). Nop scores 0 via golden/suite/hidden failures. Dependencies pinned exactly (pytest 7.4.3, trio 0.34.0, pytest-timeout 2.4.0, MarkupSafe 3.0.3); trio is mandatory — under asyncio alone the regression is invisible. Tried-and-tested both directions in the image: parent 4 failed/4 passed on goldens, 5 failed/922 passed on full suite, all hidden cases fail; fixed tree 8 passed goldens, 927 passed full suite, all hidden pass. Oracle applies byte-exact upstream hunks (patched modules are byte-identical to the fix commit files, verified with diff). The same Pythons/layout as the mining run: all checks offline."
+}

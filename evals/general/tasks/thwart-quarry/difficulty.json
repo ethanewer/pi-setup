@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 2,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": null,
+  "notes": "Medium. The agent implements a live cache layer against a real daemonized redis-server: cache-aside reads with per-key TTL, single-flight stampede protection (N concurrent misses on the same key must cause exactly one backend call), and an atomic compound read-modify-write (debit-if-sufficient) done as one server-side Lua script, enforced both by a static source check and by a runtime EVAL/EVALSHA wire-presence check via redis-cli MONITOR so a spoofed source marker cannot satisfy it. The verifier starts redis from the agent's own /app/start_redis.sh, then drives the workload described in the visible fixture and 3 hidden fixtures (different ports, key sets, TTLs, concurrency, spend budgets) with real threads, asserting exact per-key backend call counts per round, key TTL windows, generation-fresh values (stale data is caught because backend values change every round), and the no-lost-update balance invariant (final balance equals start minus acknowledged debits and never goes negative). interaction_statefulness=2: live daemonized redis (a real service the agent's own deliverable starts per case) whose TTL expiry windows the verifier waits through and whose balance state must survive concurrent mutation across rounds. Failure modes an agent hits: deadlock/timeouts from a broken single-flight lock (thread-hang detection), over-fetching (call count > 1), stale reads across TTL windows, overdraft/lost updates from a check-then-write race, and non-Lua spend implementations (WATCH/MULTI or Python-side GET/SET races fail the MONITOR wire check). Difficulty derives from concurrency correctness (reasoning_depth), debugging_ambiguity (races only reproduce under load), hidden_case_generalization (3 fresh workloads), and quantitative_correctness (exact counts, TTL windows, balances). Low resource pressure; live redis state is confined to a port per case."
+}

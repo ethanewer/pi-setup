@@ -1,0 +1,30 @@
+{
+  "ci_version": 1,
+  "jobs": {
+    "build": {
+          "steps": [
+          {"step": "restore_cache", "key": "vendor-{{hash:ci/vendor.lock}}", "path": ".vendor", "if": "always"},
+          {"step": "run", "name": "install", "cmd": "bash ci/install.sh", "if": "cache_miss"},
+          {"step": "run", "name": "build", "cmd": "python3 scripts/build.py", "if": "always"},
+          {"step": "upload_artifacts", "path": "dist/", "if": "always"}
+          ]
+        },
+    "package": {
+          "steps": [
+          {"step": "download_artifacts", "from": "build", "if": "always"},
+          {"step": "run", "name": "package", "cmd": "python3 scripts/package.py", "if": "always"},
+          {"step": "upload_artifacts", "path": "release/", "if": "always"}
+          ]
+        },
+    "verify": {
+          "steps": [
+          {"step": "download_artifacts", "from": "package", "if": "always"},
+          {"step": "run", "name": "verify_artifact", "cmd": "python3 scripts/check_artifact.py", "if": "always"},
+          {"step": "run", "name": "unit",
+             "cmd": "python3 -m pytest -p no:cacheprovider -q tests/",
+             "if": "always",
+             "env": {"PYTHONDONTWRITEBYTECODE": "1"}}
+          ]
+        }
+  }
+}

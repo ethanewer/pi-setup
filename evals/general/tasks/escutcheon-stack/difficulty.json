@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 90,
+  "documented_probe": null,
+  "notes": "Terraform 1.9.8 (offline filesystem provider mirror for hashicorp/local and null) against hand-managed on-disk config. The agent authors a reusable deploy.sh that adopts arbitrary live/ file sets under Terraform management (content-exact, so nothing is rewritten), adds a deployment.manifest as a second managed resource, and leaves an empty plan. Multistage init/plan/apply; hidden snapshots have different file names, counts and content. Import blocks/terraform import are not the mechanism here because the local provider's local_file resource does not support import; adoption is effectuated by declaring byte-exact content and applying, and the verifier's byte-integrity check is what catches a non-adopting or destructive solution."
+}

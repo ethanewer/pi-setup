@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 0,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 40,
+  "documented_probe": "qutip/qutip @ c95e637e0e3f9c0d3279b5fbff2c150e0de6bf9a (tag v5.3.1, annotation = commit). Build on bench-base:python-3.12 requires build-essential (qutip compiles C++ extensions) + numpy/scipy/cython pinned, then `pip install .` off the shallow clone. Measured cold build at 1 CPU: ~285 s wall (apt + wheels + qutip C++ build), image 1532 MB (runs as uid here; -e installs a normal byte-compiled package so import is offline-clean). sesolve on the Rabi model matches the closed-form reference |<1|exp(-iHT)|0>|^2 = (w^2/W^2) sin^2(W T/2) to ~6e-6 worst case across the chosen hidden parameter sets, so a 2e-4 tolerance is safe.",
+  "notes": "Upstream-clone scientific-computing task (v4.2 family), the quantum-python shape standing in for TB2.1's jcmgray/quimb. Clones qutip/qutip pinned and installs it from source at /app/src. The agent must write /app/quantum_dynamics.py that builds the driven two-level Hamiltonian H = -(delta/2) sigmaz + (omega/2) sigmax with QuTiP operators, evolves |0> to time T with a QuTiP solver, and prints the excited-state population P1(T). The verifier refuses any deliverable that does not import qutip, build qutip operators and call a QuTiP solver (grep-level check), then runs the deliverable on 3 fresh hidden parameter sets and asserts the printed P1(T) matches an independently computed closed-form Rabi-flopping reference within 2e-4. An agent cannot pass by writing a fresh numpy script that ignores the clone: numeric correctness against the closed form alone is not enough -- the deliverable must genuinely use the installed qutip package's machinery. The instruction fixes the physics, the CLI and the output contract but not which solver to use or how to express the operators, so it exercises finding the qutip API in the real /app/src tree."
+}

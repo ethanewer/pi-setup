@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": null,
+  "notes": "Upstream-clone bugfix in psycopg/psycopg (v4.3 family, issue #1363, fix 793cd878, regression test commit ff4bb40e). Symptom: documented PostgreSQL charset ALIAS names (MSKANJI, ShiftJIS, WIN932, WIN949, KOI8, ALT, Unicode, ...) passed as client_encoding in a conninfo string are silently ignored - psycopg falls back to utf-8, so server text is decoded with the wrong codec and comes out garbled; canonical names work. The agent gets the real tree at the parent commit (depth-1 object store holding only the parent; fix commit provably unreachable), is given the full documented PG charset table in the instruction but NO reproduction, and must author its own failing reproduction (/app/repro.sh, executed against the pristine pre-fix package at /opt/prefix/psycopg - must fail - and against the repaired tree - must pass) before fixing. The bug lives in one source file (psycopg/psycopg/_encodings.py): the flat name->codec mapping lacks the documented aliases; the fix restructures the table keyed by (canonical, aliases) per charset. Verifier: provenance + fix-unreachable + blob-level scope check allowing only that one file, deliverables, repro in both directions, a direct probe that the baked pristine package exhibits the bug, site-packages refresh from the delivered tree (import the library the agent installed), the upstream regression test planted from /opt/golden (whole test_encodings.py, sha256-pinned; 21/21 must pass incl. MSKANJI/mskanji rows that fail at parent), previously-existing DB-free suites test_conninfo.py (43) and test_sql.py (44+80 skips), and two authored hidden pytest cases (27 conninfo alias/syntax/casing rows + 20 direct pg2pyenc/py2pgenc checks) using inputs the upstream test does not use. No PostgreSQL server needed; no runtime network; cpus=1; build measured ~14s at 1 CPU."
+}

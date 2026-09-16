@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 2,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": "Real upstream tree python/mypy@cd75c4ec10254f4c98964308a0a1437274c7be4f (parent of upstream fix 4c8f9944ead815e264bcb71cd5f0e8eeb2a75689 for issue #21571), shallow-fetched in the Dockerfile, git metadata stripped, pristine sibling copy kept at /opt/pristine-src for the pre-fix verification half. Golden regression test (test-data/unit/check-classes.test, check-python310.test, check-python312.test) extracted from the fix commit through a throwaway clone under /tmp which is deleted inside the build; the fix object never enters /app/src or /opt/pristine-src (cat-file check at build, .git removed after).",
+  "notes": "SWE-bench-shaped debugging task on the real mypy tree. The seed is the actual upstream bug: ExpressionChecker.analyze_type_type_callee substitutes the TypeVar instance into the constructor callee's return type only for CallableType/Overloaded callees; when T is bounded by a union of classes the callee is a UnionType and the substitution is skipped, so every constructor call through a Type[T] parameter is checked against 'A | B' instead of 'T' and factory functions are littered with 'Incompatible return value type' errors. The agent is told the user-visible symptom only - no issue number, no commit, no file name, no reproduction code - and must write its own failing /app/repro.py first, then localize and fix, then write /app/diagnosis.md naming the module and the return-type substitution cause. The verifier runs the agent's repro and 3 authored hidden cases (two-arg constructors, nested-union bound Union[A, Union[B, C]], class-method factory) against the pristine parent tree (must fail with the bug's error) and against the repaired tree (must pass), then overlays the fix commit's three test-data files and runs the project's own pytest suite on the repaired tree: the golden regression case testTypeUsingTypeCConstructorReturnFromTypeVarUnionBound, the whole testTypeUsingTypeC family (26 existing cases, proves nothing else broke), the upstream-updated match-arm case testMatchTypeObjectTypeVar (an extra behavioral gate: the reveal must become 'T_Choice`-1'), and the PEP 695 case testPEP695UpperBoundTypeTypeConstructorReturnType. Provenance gates hash-check the test runner (mypy/test/{testcheck,data,helpers,config,typefixture}.py), the non-overlaid check-class-namedtuple.test, the buggy checkexpr.py at the pristine copy, and the /opt/golden files, and require .git to be absent. Verified both directions inside the built image: parent reproduces 2 'Incompatible return value type' errors and all gate tests fail; after the oracle's fix everything passes (measured: build ~13s, image 780MB unique, mypy CLI ~3.4s per run, pytest -k runs ~2.2s each). difficulty_guess from the issue pool was 'medium'."
+}

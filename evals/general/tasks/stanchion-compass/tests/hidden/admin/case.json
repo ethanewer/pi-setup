@@ -1,0 +1,17 @@
+{
+  "label": "hidden-admin",
+  "route": "/admin",
+  "ready": [
+    { "selector": "[data-testid=audit-head]", "contains": "scm_73b4_admin" },
+    { "selector": "[data-testid=audit-list]", "contains": "0x" }
+  ],
+  "steps": [
+    {
+      "action": { "kind": "click", "selector": "[data-testid=audit-verify]" },
+      "checks": [
+        { "selector": "[data-testid=audit-sum]", "matches": "^73b4:" },
+        { "selector": "[data-testid=audit-sum]", "nonempty": true }
+      ]
+    }
+  ]
+}

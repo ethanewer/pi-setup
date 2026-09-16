@@ -1,0 +1,17 @@
+{
+ "documented_probe": null,
+ "expected_expert_time_min": 30,
+ "notes": "Upstream-clone debugging task on giampaolo/psutil at parent commit afaaf9f340ff6561541f9f4781c58268b59abdac (real upstream bug, issue #2809; fix 8d8ffe516627c024ccd216485b5920e8ffa8a88e). On arm64 Linux builds with shadow call stacks, /proc/meminfo's ShadowCallStack field is printed with a fixed-width 8-digit payload; once the value reaches 8 digits there is no space between the name and the number (fs/proc/meminfo.c uses %8lu), and virtual_memory()'s line.split() parse then feeds int() the second token b'kB' and aborts with ValueError, so no memory statistics can be read at all on those systems. Agent must reproduce, localise and fix it in the real tree (the only difference between parent and fix for this bug is the 2-line parse change in virtual_memory(): split on the first ':' and int() the first whitespace token of the value). Verifier runs the upstream regression test test_virtual_memory_no_space_after_colon extracted from the fix commit, a deterministic mock/proc-based subset of the project's own tests/test_linux.py (the free/vmstat CLI-comparison classes are excluded: those CLIs are not installed in the container), and two authored hidden cases driving the same code path from meminfo layouts the upstream test does not use (multiple no-space standard fields with 9/11-digit magnitudes; the MemAvailable-missing fallback and avail>total clamp edges), read through PROCFS_PATH. The C extension is built and pip-installed editable at image build time; the fix is pure Python so no rebuild is needed. Runners pinned: pytest 9.1.1, pytest-instafail 0.5.0, pytest-xdist 3.8.0 (the latter two are required by the project's own [tool.pytest] addopts: --instafail, -p instafail, -p xdist). Both directions re-verified inside the task image before shipping. [reg] verifier's existing-tests slice also excludes TestVirtualMemoryAgainstFree, psutil's own free-vs-psutil comparison with a 5MB tolerance and 10 retries, which flakes under load on a busy shared host; it is unrelated to the /proc/meminfo parsing bug and was observed to fail only during the loaded 4-shard census, and not to affect discrimination (golden + hidden cases carry the verdict).",
+ "rubric": {
+  "adversarial_inputs": 1,
+  "debugging_ambiguity": 1,
+  "dependent_stages": 2,
+  "hidden_case_generalization": 2,
+  "interaction_statefulness": 0,
+  "quantitative_correctness": 1,
+  "reasoning_depth": 1,
+  "resource_pressure": 0,
+  "tool_breadth": 1,
+  "unsafe_action_penalty": 0
+ }
+}

@@ -1,0 +1,35 @@
+{
+  "session": "H2",
+  "max_steps": 12,
+  "user": "One chocolate-cake (item 1) was ordered over the phone. Charge the card for the order total, send the receipt to carol@example.com and finalize the order. The card is the house card, keep charges within its limit.",
+  "initial_state": {
+    "menu": [
+      {"item_id": 1, "name": "chocolate-cake", "price": 22.5},
+      {"item_id": 2, "name": "lemon-tart", "price": 12.5},
+      {"item_id": 3, "name": "butter-croissant", "price": 4.5},
+      {"item_id": 4, "name": "sourdough-loaf", "price": 8.0},
+      {"item_id": 5, "name": "star-cookie", "price": 2.25}
+    ],
+    "stock": {"1": 8, "2": 7, "3": 12, "4": 5, "5": 0},
+    "orders": [],
+    "payments": [],
+    "outbox": [],
+    "card_limit": 60.0,
+    "next_order_id": 1,
+    "next_charge_id": 1,
+    "next_notify_id": 1
+  },
+  "transients": [
+    ["charge_card", {"order_id": 1, "amount": 22.5}, 1]
+  ],
+  "decisions": [
+    ["", {"kind": "tool_call", "name": "place_order", "arguments": {"item_id": 1, "qty": 1}}],
+    ["K", {"kind": "tool_call", "name": "charge_card", "arguments": {"order_id": 1, "amount": 122.5}}],
+    ["KE", {"kind": "tool_call", "name": "charge_card", "arguments": {"order_id": 1, "amount": 22.5}}],
+    ["KEK", {"kind": "tool_call", "name": "charge_card", "arguments": {"order_id": 1, "amount": 22.5}}],
+    ["KEKR", {"kind": "tool_call", "name": "send_notification", "arguments": {"recipient": "carol@example.com", "text": "Receipt for order 1: 22.5"}}],
+    ["KEKRK", {"kind": "tool_call", "name": "send_notification", "arguments": {"recipient": "carol@example.com", "text": "Receipt for order 1: 22.5"}}],
+    ["KEKRKR", {"kind": "tool_call", "name": "finalize_order", "arguments": {"order_ids": [1]}}],
+    ["KEKRKRK", {"kind": "final", "answer": "Order 1 complete: paid 22.5, receipt sent, finalized"}]
+  ]
+}

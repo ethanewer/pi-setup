@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": null,
+  "notes": "Upstream-clone bugfix in pypa/setuptools (v4.3 family): bdist_wheel writes the distribution name verbatim into wheel file names and .dist-info directory names whenever it contains dots, upper-case letters or runs of separators (e.g. 'unicode.dist-0.1-py3-none-any.whl' instead of the canonical 'unicode_dist-0.1-...'), because the name-normalisation helper 'safer_name' (used by both the wheel filename assembly and the dist-info dirname assembly) never collapses [-_.] runs, never lower-cases, and keeps dots, and the bdist_wheel command additionally carries its own private copies of the same incomplete logic. The agent gets the real tree at the parent commit d8da7dfaa0 (75.3.0; one depth-1 object store, fix commit 9559193e1 provably unreachable), must author its own failing reproduction (/app/reproduce.py, executed against both the repaired tree and a pristine pre-fix snapshot baked at /opt/pristine.tar.gz) before fixing, then localise the defect (trace wheel_dist_name / dist-info dirname back to the 'safer_name' helpers in two modules) and make BOTH paths emit the canonical normalised name: collapse runs of [-_.] to '-', lowercase, replace '-' with '_' (the upstream change: shared _normalization.safer_name implements the rule and bdist_wheel stops carrying private duplicates and imports the shared helper). Verifier: provenance (HEAD == pinned parent, fix commit unreachable, tracked files may differ only in the two fix-target source files and the two golden regression-test files, which are sha256-pinned from image build time; no stray untracked files), the agent's repro in both directions, the project's own regression tests extracted from the FIX commit at image build time through a throwaway clone (test_unicode_record in test_bdist_wheel.py and TestWheelCompatibility in test_dist_info.py), the still-existing area tests (full test_bdist_wheel.py, full test_dist_info.py, doctests of the normalisation module), and two authored hidden cases using inputs the upstream tests do not use (direct name-normalisation table with punctuation/case shapes, end-to-end wheels built for distributions named 'Camel.Case' and 'weird.name--With--Dashes'). Dependency pins from the mining recipe honoured: pytest==8.4.2, wheel==0.44.0 (wheel>=0.45 warns at import, converted to collection errors by the repo's error warning filter), gcc + libc6-dev for the C-extension test fixture. Image ~1GB, build ~1min at 1 CPU; measured ruby: golden tests and area suites run in ~20s total at 1 CPU."
+}

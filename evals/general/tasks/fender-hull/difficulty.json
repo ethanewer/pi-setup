@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on cure53/DOMPurify at parent commit 2c8ca25ef3cec05e12a50bd456f57a816eaa5998 (real upstream issue #1560, fixed by 0332fe7cd45ad7971935e78c210c4714be4662ad). Bug: IN_PLACE sanitize of a live subtree reads the walk root's owning document with a DIRECT property read (root.ownerDocument); a form root whose document-owner lookup is shadowed (own accessor, or a named child under [LegacyOverrideBuiltIns]) makes createNodeIterator.call(<foreign element>, ...) throw BEFORE the fail-closed barrier, so the caller is returned control with armed on* handlers still attached to surviving descendants. The fix reads ownerDocument through the cached Node.prototype getter (immune to own-property shadowing) in _createNodeIterator and _scrubTemplateExpressions, and moves iterator construction inside the fail-closed try barrier. The image clones the repo pinned at the parent, npm ci's the committed lockfile (jsdom 29.1.1), extracts the fix commit's two IN_PLACE regression tests into /opt/golden via a throwaway clone that is deleted, proves at build time (suite smoke run) that overlaying them makes exactly the mined case fail (armed onerror survives, 'got: \"alert(1)\"'), then reverts the overlay: the agent works in a tree whose suite is fully green, so it must write its own reproduction from the symptom description alone (deliverable /app/repro.js, contract: DOMPURIFY_MODULE, exit 0 iff handler gone). The verifier runs the repro against the pristine parent dist blob (must fail) and against a dist it rebuilds from the agent's source via the project's own build (must pass), overlays /opt/golden and runs the project's full jsdom suite (must be green with both golden cases passing), and runs three authored hidden cases (deep form subtree with textarea-shaped accessor + natural named child + onmouseover; non-form div root with object-shaped accessor + nested table + javascript: href; vicious throwing accessor) — all fail pre-fix with the surviving handler and pass post-fix. Build ~53 s at 1 CPU incl. the ~35 s suite smoke; agent cycle: npm run build ~4 s, suite ~35 s; image ~957 MB. Difficulty lands medium on the rubric (13): no resource pressure or statefulness dimensions."
+}

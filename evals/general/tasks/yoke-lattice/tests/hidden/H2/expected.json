@@ -1,0 +1,115 @@
+{
+  "jobs": {
+    "audit": {
+      "needs": [
+        "build",
+        "package",
+        "deploy"
+      ],
+      "outputs": {},
+      "skip_reason": "if",
+      "status": "skipped",
+      "steps": []
+    },
+    "build": {
+      "needs": [],
+      "outputs": {
+        "tag": "stable"
+      },
+      "skip_reason": null,
+      "status": "success",
+      "steps": [
+        {
+          "exit_code": 0,
+          "id": null,
+          "index": 1,
+          "name": "read version",
+          "status": "success"
+        },
+        {
+          "exit_code": 0,
+          "id": null,
+          "index": 2,
+          "name": "always touch",
+          "status": "success"
+        },
+        {
+          "exit_code": null,
+          "id": null,
+          "index": 3,
+          "name": "failure touch",
+          "status": "skipped"
+        }
+      ]
+    },
+    "deploy": {
+      "needs": [
+        "build",
+        "package"
+      ],
+      "outputs": {
+        "loc": "production"
+      },
+      "skip_reason": null,
+      "status": "success",
+      "steps": [
+        {
+          "exit_code": 0,
+          "id": null,
+          "index": 1,
+          "name": "deploy",
+          "status": "success"
+        }
+      ]
+    },
+    "package": {
+      "needs": [
+        "build"
+      ],
+      "outputs": {},
+      "skip_reason": null,
+      "status": "success",
+      "steps": [
+        {
+          "exit_code": 0,
+          "id": null,
+          "index": 1,
+          "name": "ship",
+          "status": "success"
+        }
+      ]
+    },
+    "test": {
+      "needs": [
+        "build"
+      ],
+      "outputs": {},
+      "skip_reason": null,
+      "status": "success",
+      "steps": [
+        {
+          "exit_code": 0,
+          "id": null,
+          "index": 1,
+          "name": "run checks",
+          "status": "success"
+        },
+        {
+          "exit_code": null,
+          "id": null,
+          "index": 2,
+          "name": "cleanup on failure",
+          "status": "skipped"
+        }
+      ]
+    }
+  },
+  "order": [
+    "build",
+    "test",
+    "package",
+    "deploy",
+    "audit"
+  ],
+  "workflow": "workflow.yml"
+}

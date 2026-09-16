@@ -1,0 +1,8 @@
+{
+  "scales": { "freq": 20, "load": 1, "solar": 1, "wind": 1 },
+  "drops": [
+    { "sensor": "solar", "below": 100 },
+    { "sensor": "freq", "above": 10400 }
+  ],
+  "emit": ["site", "sensor", "ts", "value"]
+}

@@ -1,0 +1,53 @@
+{
+  "orders": [
+    {
+      "order_id": "ORN-2201",
+      "fills": [
+        {
+          "seq": 1,
+          "side": "BUY",
+          "instrument": "TARNCORP",
+          "quantity": 100,
+          "price": 12.5,
+          "timestamp": "2025-02-03T09:00:01"
+        },
+        {
+          "seq": 2,
+          "side": "BUY",
+          "instrument": "TARNCORP",
+          "quantity": 150,
+          "price": 12.4,
+          "timestamp": "2025-02-03T09:00:02"
+        }
+      ],
+      "fill_count": 2,
+      "gross": 3110.0,
+      "fee": 4.67,
+      "net": 3105.33,
+      "sides": [
+        "BUY"
+      ]
+    },
+    {
+      "order_id": "ORN-2202",
+      "fills": [
+        {
+          "seq": 3,
+          "side": "SELL",
+          "instrument": "TARNCORP",
+          "quantity": 75,
+          "price": 13.1,
+          "timestamp": "2025-02-03T09:01:00"
+        }
+      ],
+      "fill_count": 1,
+      "gross": 982.5,
+      "fee": 1.47,
+      "net": 981.03,
+      "sides": [
+        "SELL"
+      ]
+    }
+  ],
+  "warnings": []
+}

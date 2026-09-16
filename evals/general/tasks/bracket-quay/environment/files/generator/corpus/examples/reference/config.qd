@@ -1,0 +1,57 @@
+---
+title: Configuration reference
+order: 50
+tags: [reference, config]
+---
+
+The `quaydoc.toml` file is TOML with three optional tables.
+
+## `[site]`
+
+| key | type | default | meaning |
+|---|---|---|---|
+| `title` | string | `Docs` | site title used in `<title>`, feed and footer |
+| `base_url` | string | `/` | absolute URL prefix for sitemap and feed links |
+| `pretty_urls` | bool | `true` | directory-style URLs with `index.html` |
+| `nav_title` | string | site title | short brand shown in the sidebar |
+| `toc` | bool | `true` | show the per-page table of contents panel |
+
+## `[build]`
+
+| key | type | default | meaning |
+|---|---|---|---|
+| `output_dir` | string | `site` | where rendered pages and assets go |
+| `search` | bool | `true` | write `search_index.json` |
+| `rss` | bool | `true` | write `feed.xml` |
+| `default_lang` | string | `python` | language used for unfenced code |
+| `theme` | string | unset | custom theme directory |
+| `archive` | string | unset | archive path for `build --archive` |
+
+## `[determ]`
+
+| key | type | default | meaning |
+|---|---|---|---|
+| `default_lang` | string | `python` | fallback language for code fences without a label |
+| `locale` | string | unset | reserved for future localisation |
+
+## Validation
+
+At build time quaydoc validates types and known keys. Unknown keys are
+warnings, not errors, so older trees keep building after upgrades; wrong
+types are config errors and stop the build.
+
+## Examples
+
+A minimal tree has no config at all. A realistic configuration:
+
+```toml
+[site]
+title = "Acme Widget SDK"
+base_url = "https://acme.example.net/widget-sdk"
+pretty_urls = true
+
+[build]
+output_dir = "site"
+search = true
+rss = false
+```

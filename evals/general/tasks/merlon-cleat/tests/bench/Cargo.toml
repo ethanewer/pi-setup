@@ -1,0 +1,12 @@
+[package]
+name = "pennant-bench"
+version = "0.1.0"
+edition = "2021"
+description = "Benchmark harness: reference vs candidate pennant encoders"
+
+[dependencies]
+pennant = { path = "/app/pennant" }
+pennant-baseline = { path = "/opt/reference/pennant" }
+
+[profile.release]
+opt-level = 3

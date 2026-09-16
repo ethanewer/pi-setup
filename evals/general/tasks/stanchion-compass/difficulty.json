@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 75,
+  "documented_probe": null,
+  "notes": "Medium (11/30). Vite build engineering on a working-but-bloated React app. The shipped app builds and runs but emits one ~1MB entry chunk: all three heavy route views (charts/reports/admin) are statically imported into the entry. The agent must introduce route-level code splitting (React.lazy dynamic imports), configure a manualChunks rule so the react/react-dom vendor code lands outside the entry, and get the statically-reachable initial JavaScript under 400,000 bytes while keeping every route functional. The verifier rebuilds the app itself, parses the emitted chunk graph from dist/index.html (static-import BFS from the entry), asserts chunk count, per-view chunk identity via unique markers embedded in each generated heavy data module, dynamic-import references in the entry, vendor separation via a react-dom internals token, then boots the built bundle in three separate jsdom processes (visible charts route + hidden reports and admin routes) asserting the route chunk is actually fetched and executed (ready-content + DOM interactions driven by the heavy module's own exports). Hidden cases differ: distinct routes, data and interactions. Untouched container fails the byte budget and chunk-count gates immediately. Tool breadth: vite config, rollup manualChunks, React.lazy, jsdom, chunk graph inspection."
+}

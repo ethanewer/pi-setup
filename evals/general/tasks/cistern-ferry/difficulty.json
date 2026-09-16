@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 30,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on the real prettier/prettier tree (pinned pre-fix parent 7c5872f7a27b3eb249d0347fcfac989eca2cb70b of upstream issue #19709). The bug: HTML attribute-name normalization (lowercasing) is gated on whether the element has an entry in Prettier's per-element attribute table (ELEMENT_ATTRIBUTES), so an attribute like CLASS on a well-known tag that lacks per-element data (e.g. <span>, <section>, <header>) is left uppercase while the same attribute on <div> is rewritten to class - the same attribute gets inconsistent casing depending on the tag. The agent gets the real repo (only the parent commit ever enters its object store; the fix commit is only fetched into a scratch clone at build time to extract the project's own regression suite tests/format/html/attributes/lowercase/ (format.test.js + snapshot) into /opt/golden, then deleted), repros with the project's own CLI (node bin/prettier.js <file>), localises the cause inside src/ (instruction names no file, issue or commit), and fixes it. Verifier: leak guard (fix object absent from /app/src) + provenance audit (only src/language-html/parse/postprocess.js may differ from the parent) + CLI repro /app/reproduce.js (must print class= on both span and div; fails at parent) + the upstream regression lowercase suite run with the project's own jest runner (snippet '#0 format 1' passes at fix, fails at parent) + the project's own targeted HTML suites (tests/format/html/attributes, case, basics, tags and tests/unit/html-elements.js, together ~110 tests, seconds at 1 CPU) still green + 2 authored hidden cases through the CLI (h1: class/id/title/style/lang/hidden/tabindex etc. upper- and mixed-cased on tags without per-element data; h2: casing consistency across dataful/data-less tags plus negative controls for unknown attributes and custom elements - both inputs the upstream lowercase test does not use, both fail at the parent). nop scores 0 (repro, golden and both hidden cases fail on the untouched tree). Medium: the bug is immediately visible in the CLI output and the fix is a one-line gate change, but the agent must navigate a real ~10k-file tree unassisted and the regression suite only exists at the fix commit (hidden until grading)."
+}

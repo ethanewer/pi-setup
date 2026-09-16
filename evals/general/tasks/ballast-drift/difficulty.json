@@ -1,0 +1,18 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 0,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": null,
+  "notes": "Upstream-clone bugfix in eslint/eslint (v4.3 family): rule `new-cap`, configured with the option that suppresses property-access checks (properties: false), still reports member calls whose name ends in 'UTC' (foo.UTC(), foo?.UTC(), a.Date.UTC(), foo().UTC(), foo[\"UTC\"]()) because the rule's UTC special case (allow only Date.UTC) runs before the skipProperties branch of isCapAllowed, so skipProperties never shields member expressions whose callee name is 'UTC'. Agent gets the real repo checked out at the parent commit, a repro that exits 1, and the project's own RuleTester/mocha tooling; must localise the one function, reorder the branches so skipProperties short-circuits all MemberExpression callees, and keep Date.UTC exemption + bare-capitalised-call reporting intact. Verifier: provenance byte-check (only lib/rules/new-cap.js may differ from the pinned blob) + planted upstream regression test (the rule's own test file as of the fix commit: 97 cases incl. the three added valid cases) + 985-case selection of the project's existing rule/rule-tester tests + three authored hidden RuleTester cases (deeper member chains, computed access, semantics-preserved controls). Oracle applies an authored one-hunk patch.",
+  "probe_note": "entry.difficulty_guess was 'easy'; rubric total 9 lands in the easy bucket (0-9)."
+}

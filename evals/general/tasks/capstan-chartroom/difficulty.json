@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 0,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 0,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 30,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on statsmodels/statsmodels at parent commit 52f10d214d4dc02e9b521b9f9a83c5e3d4880f94 (real upstream bug #9891, fixed by e30aa8337deebbb902d886b291ab206c3ce4e639). describe()/Description on a zero-row DataFrame raises instead of returning a summary: numeric columns die with 'ValueError: Length of values (2) does not match length of index (1)' from the pandas empty-result path of df.apply(_mode), and categorical-only frames die with KeyError: 2 when the code indexes an empty Jarque-Bera apply result. The image ships the parent tree with the fix commit's test_descriptivestats.py overlaid (adds the parametrized 'test_empty_rows' regression), built and installed non-editable into site-packages from a warmed meson build dir (/opt/sm-build); fix unreachable (single shallow parent commit, golden bytes extracted via a throwaway clone that is deleted). The agent must reproduce, localise and fix in the real tree; the verifier asserts provenance (HEAD still pinned parent, single commit, fix commit absent in the object store, only the library source plus the shipped test overlay modified, overlay byte-identical to /opt/golden, nothing deleted/added/staged), rebuilds and reinstalls from the repaired tree (incremental, ~6s at 1 CPU), runs the project's own test_descriptivestats.py module (existing 15 tests + 3 golden parametrizations) and three authored hidden cases from inputs the upstream test does not use (multi-column numeric 0-row frames, 0-row Series input, nullable Int64, custom stats selections incl. jarque_bera/mode expansion, categorical top/freq on an empty mixed frame, ci bounds), plus the raw reproduction snippet. Trial is fully offline: pinned deps (numpy 2.5.3, scipy 1.18.1, pandas 3.0.5, patsy 1.0.3, formulaic 1.2.2, pytest 9.1.1, meson-python 0.21.1, meson 1.12.0, ninja 1.13.2, cython 3.3.0, setuptools_scm 9.2.2, packaging 26.3) are preinstalled; the source tree itself is not importable (generated statsmodels/_version.py lives in the installed build), which the instruction explains. Both directions re-confirmed inside the task image before shipping: parent raises ValueError (numeric/mixed) and KeyError 2 (categorical) and fails all 3 golden parametrizations + all 6 hidden tests; the fix (zero-row guards around mode and Jarque-Bera applies, exactly the upstream diff) passes 18/18 golden module + 6/6 hidden."
+}

@@ -1,0 +1,49 @@
+# Halyard yard alerting rules.
+#
+# Each alert is realised from the operational contract in
+# /app/yard/docs/runbook.md (and src/yard/alerting.py):
+#
+#   GateBacklogFault   gate lane over ceiling (60) AND not draining (<2/min),
+#                      sustained 10m — never on occupancy alone.
+#   StackerFaultStorm  per-crane fault ratio breaches 20% over a 5m window —
+#                      ratio, not raw fault count (per-second rates).
+#   ReeferColdChain    |temp - own setpoint| > 2.0C persisting past the 5m
+#                      icing/loading window.
+#   DispatchAgeSLA     wait > SLA (14400s) sustained a full 15m departure
+#                      cadence.
+groups:
+  - name: yard_alerts
+    rules:
+      - alert: GateBacklogFault
+        expr: yard_gate_occupancy > 60 and rate(yard_lane_drain_total[5m]) * 60 < 2.0
+        for: 10m
+        labels:
+          severity: page
+        annotations:
+          summary: gate lane over ceiling and not draining
+
+      - alert: StackerFaultStorm
+        expr: >
+          rate(yard_crane_faults_total[5m]) /
+          (rate(yard_crane_pickups_total[5m]) + rate(yard_crane_faults_total[5m])) > 0.20
+        for: 5m
+        labels:
+          severity: page
+        annotations:
+          summary: crane above the 20% fault ratio limit
+
+      - alert: ReeferColdChain
+        expr: abs(reefer_temp_celsius - reefer_setpoint_celsius) > 2.0
+        for: 5m
+        labels:
+          severity: page
+        annotations:
+          summary: reefer outside setpoint tolerance
+
+      - alert: DispatchAgeSLA
+        expr: yard_dispatch_wait_seconds > 14400
+        for: 15m
+        labels:
+          severity: page
+        annotations:
+          summary: dispatch wait above the 4h SLA

@@ -1,0 +1,20 @@
+# Prometheus configuration for the Halyard yard.
+#
+# The alerting rules live in the file declared under `rule_files:`.  That file
+# is checked and unit-tested with `promtool check rules` and `promtool test
+# rules`.  The scrapes below describe the static topology Halyard exposes so
+# the rule file has a home in the monitoring stack.
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - /app/alerting/alerts.yml
+
+scrape_configs:
+  - job_name: halyard
+    static_configs:
+      - targets: ["localhost:9100"]
+        labels:
+          service: halyard-yard

@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 30,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on nltk/nltk at parent commit 52227d2afe764648864e59c851e991cf1d6cb77e (real upstream bug, closed by #3693; fixed upstream in 27b8ad6cd50a484590cb9409e5d2a891ab56e16c). chomsky_normal_form binarizes any node with more than two children by reading a label from every child; a plain terminal among the children (a word, punctuation such as '+', or a non-string value such as the integer 7) has no .label() and raises AttributeError at nltk/tree/transforms.py:148. Agent must localise the bug in the real tree, make the binarization handle terminal children (carrying the terminal's own string into the intermediate node names) so both factors work, every node ends binary and un_chomsky_normal_form recovers the original tree exactly, keep the repo's own test_treetransforms.py green, and only modify the minimal source file; the verifier also runs the upstream regression tests for this bug extracted from the fix commit into /opt/golden/ (test_chomsky_normal_form_with_terminal_siblings, test_chomsky_normal_form_with_nonstring_terminal), plus hidden cases the upstream tests do not use (float/bool/None/multi-symbol punctuation terminals, a five-child node with two terminals, terminals at depth 2 inside a sibling that also gets binarized, horzMarkov and vertMarkov parameter combinations, and the round-trip contract for every one of them). Pure Python, no network, ~10s test suite at 1 CPU. Both directions (bug present at parent, gone at fix) re-confirmed inside the task image before shipping."
+}

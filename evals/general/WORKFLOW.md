@@ -1,26 +1,95 @@
 # General Eval — Build & Verification Workflow
 
-785 Harbor tasks for training and evaluating coding agents. Covers the full
+1075 Harbor tasks for training and evaluating coding agents. Covers the full
 Terminal-Bench 2.1 competency space (726 atomic competencies, 725 covered,
 1 waived as environmentally infeasible, 0 uncovered) plus 270 supplementary
-general-coding tasks (v1 family) and 20 supplementary clean-room skill-coverage
-tasks. Zero contamination with Terminal-Bench 2.1: re-audited over the v3.4 tree
-against the frozen reference commit, with 0 exact, 0 canary and 0 source-repository
-matches, and every remaining block and n-gram hit inspected and shown to be
-boilerplate (see `## Contamination audit` below).
+general-coding tasks (v1 family), 21 supplementary clean-room skill-coverage
+tasks, and 290 tasks added by the v4 waves that put the agent inside a real
+upstream repository at the parent of a real fix commit.
+
+Zero contamination with Terminal-Bench 2.1: re-audited over the v4.3c tree
+against the frozen reference commit, with 0 exact, 0 canary and 0
+source-repository matches over 18,420 payloads, and every remaining block and
+n-gram hit inspected and shown to be boilerplate (see `## Contamination audit`
+below). No upstream repository the suite clones appears in Terminal-Bench's
+68-repository source list: `tools/check_upstream_disjointness.py` reports
+problems=0 over 238 upstream-cloning tasks and 79 distinct repositories.
 
 Every verifier writes a binary reward: `/logs/verifier/reward.txt` contains
 exactly `1` or `0`. `tools/check_binary_reward.py` proves this statically for
-all 785 tasks and runs in the gate pipeline, so partial credit cannot come back.
+all 1075 tasks and runs in the gate pipeline, so partial credit cannot come back.
+
+Before a run, check the environment rather than discovering a problem three hours
+into it:
+
+    python3 tools/check_run_ready.py       # full, re-runs the 13 gates
+    python3 tools/check_run_ready.py --fast  # environment only, no gate sweep
+
+It exits non-zero if anything required is wrong, and each failure prints what to
+do. The checks that matter most are the ones nothing else complains about: that
+harbor is 0.22.0 rather than the incompatible 0.18.0 also installed on this box,
+that all three `bench-base` images survived the last prune, that the reclaim guard
+is actually running, and that the tree is clean so the run can be matched to the
+commit that produced it.
+
+Building a runset: `python3 tools/build_runsets.py` then
+`harbor run -p runsets/general-v2-x1`. The 200..500 trial budget that tool was
+written against predates the v4 waves; at 1075 tasks one sample per task is
+already 1075 trials, so it now defaults to N=1 and says so rather than failing.
+
+> The per-gate tallies in `## Verification gates` were re-measured over the
+> v4.3c tree and are current. The `### v3.5` and `### v3.4` sections further
+> down are historical records of runs over the then-785-task tree and their
+> counts are deliberately left as they were: they describe what was measured at
+> the time, not the suite as it now stands.
 
 ## Dataset composition
 
 | Source | Tasks | Description |
 |---|---|---|
-| v2/v3 clean-room | 495 | Authored to cover tb2.1 competencies without containing any tb2.1 content |
+| v2/v3 clean-room | 494 | Authored to cover tb2.1 competencies without containing any tb2.1 content |
 | v1 filtered | 270 | General coding tasks (Nemotron/TMax seeds); filtered for verifier quality |
-| Supplementary skill tasks | 20 | Clean-room tasks exercising skill domains not covered by the rest of the suite (see the 2026-09-02 additions below) |
-| **Total** | **785** | 21 skill tasks were authored; cinder-hearth was removed in v3.1 (unbuildable image behind a network proxy). drift-canyon was removed at the same time for a lost hidden fixture, then restored in v3.1 once the fixture was recreated, so it is counted here. slate-fjord and v1-item-043-hard were removed in v3.4 and are recorded in `specs/retired_tasks.json` |
+| Supplementary skill tasks | 21 | Clean-room tasks exercising skill domains not covered by the rest of the suite (see the 2026-09-02 additions below) |
+| v4.1 coverage expansion | 52 | Added against the v3.9 skill-gap review |
+| v4.2 upstream-clone | 20 | First family to put the agent inside a real cloned upstream repository |
+| v4.3 real-issue | 50 | Built from verified real upstream issues; the reproduction is supplied |
+| v4.3b real-issue diversity | 62 | Same shape, widened across 32 repositories and 14 domains |
+| v4.3c real-issue (leftover pool) | 106 | Same shape across 59 repositories and 15 domains, but the reproduction is WITHHELD so the agent must write its own. 107 slots attempted; `futtock-careen` (eslint/eslint) was not authored and is recorded in `specs/v43c_landed.json` |
+| **Total** | **1075** | Counts derived from `specs/coverage_claims.json` wave notes, not from a hand tally. 21 skill tasks were authored; cinder-hearth was removed in v3.1 (unbuildable image behind a network proxy). drift-canyon was removed at the same time for a lost hidden fixture, then restored in v3.1 once the fixture was recreated, so it is counted here. slate-fjord and v1-item-043-hard were removed in v3.4 and are recorded in `specs/retired_tasks.json` |
+
+The 290 v4 tasks claim no tb2.1 competencies, recorded with an explicit
+`claims_no_competencies` flag in `specs/coverage_claims.json`. That flag is what
+distinguishes a task that deliberately claims none from one whose author never
+filled the claim in; without it `tools/build_coverage.py` reports an error per
+task. Their value is that they are real reproducing bugs in real repositories,
+which the tb2.1 competency inventory does not describe.
+
+805 of the 1075 carry a difficulty rubric (108 easy / 438 medium / 259 hard). The
+270 v1 tasks predate the rubric and carry no task-level `difficulty.json`, which
+is why `tools/check_difficulty.py` needs `--allow-unmeasured`.
+
+### CPU quota
+
+Every one of the 290 v4 tasks runs at `cpus = 1`. Thirty older tasks do not: 14
+legacy `v1-*` imports and 16 v2/v3 clean-room tasks, at `cpus = 2` (26 of them)
+and `cpus = 4` (4). They are `amber-engine`, `brine-mesa`, `cedar-canyon`,
+`cinder-guest`, `cobalt-tide`, `gale-pier`, `gale-quarry`, `granite-beacon`,
+`iris-ledge`, `kestrel-bay`, `kite-helix`, `kite-yonder`, `larch-hearth`,
+`pearl-cipher`, `slate-hollow`, `wren-forge`, and the 14 `v1-*` names.
+
+This is accepted rather than an oversight. Several genuinely need the parallelism
+— `v1-skill-torch-distributed` is a distributed-training task, and the `cpus = 4`
+ones are large native builds whose agent timeouts were measured against that
+quota. Forcing them to one CPU would mean re-tuning and re-verifying each, and
+some would time out, which trades a real capability measurement for a smaller
+resource bill.
+
+`tools/register_task_wave.py` still rejects `cpus != 1` on registration, so the
+exception cannot grow by accident; `--allow-missing-cpus` is the explicit override
+if a future task genuinely needs more. `tools/pin_numeric_threads.py` is what makes
+the quota meaningful rather than decorative: it pins in-task thread pools to the
+declared `cpus` (200/200 currently), so a task cannot ask for one CPU and then
+oversubscribe the host through OpenMP or NumPy.
 
 ### Tasks retired in v3.4
 
@@ -104,23 +173,28 @@ All had redundant coverage, so removal cost zero competency coverage.
 
 ## Verification gates
 
-All gates run via `tools/rebuild_and_audit.sh` or individually:
+All gates run via `tools/rebuild_and_audit.sh` or individually. Every tally below
+was re-measured over the v4.3c tree at 1075 tasks:
 
 | Gate | Tool | Result |
 |---|---|---|
-| Reward binarity | `tools/check_binary_reward.py` | 785/785 provably binary, 0 problems |
+| Reward binarity | `tools/check_binary_reward.py` | 1075/1075 provably binary, 0 problems |
 | Reward binarity self-test | `tools/selftest_binary_reward.py` | 23/23 fixtures (12 fractional shapes flagged, 11 binary shapes passed) |
-| Reward on every exit path | `tools/ensure_reward_guard.py` | 785/785 guarded, 0 unpatchable; also parses every EXIT trap body, which `bash -n` on the file cannot do |
-| Thread pools vs CPU quota | `tools/pin_numeric_threads.py` | 161/161 pinned to their declared `cpus`, 0 skipped |
-| Git repos safe for any user | `tools/ensure_git_safe_directory.py` | 8/8 images that build a repository set a system-wide `safe.directory`, 0 skipped |
-| Pinned pip dependencies | `tools/pin_python_dependencies.py` | 0 unpinned requirements across 233 install sites in 209 tasks; versions resolved per base image and per index in `specs/pinned_python_deps.json` |
-| Negative control | harbor `nop` agent over all 785 tasks | 785/785 score 0 on a pristine container; found 3 vacuous verifiers, all repaired. Not yet a scripted gate — see `## Negative control` |
-| Layout & contract lint | `tools/lint_tasks.py` | 516 clean-room tasks, 0 problems (271 legacy v1 skipped by design) |
-| Competency coverage | `tools/check_tb21_coverage.py` | 725/726 covered, 1 waived-infeasible, 0 problems |
-| Difficulty calibration | `tools/check_difficulty.py` | 516 measured (49 easy / 251 medium / 216 hard), 0 problems; the 271 v1 tasks carry no rubric, hence `--allow-unmeasured` |
-| Provenance | `tools/update_provenance.py` + `check_reproducibility.py` | 12,495 files, 0 drift |
+| Reward on every exit path | `tools/ensure_reward_guard.py` | 1075/1075 guarded, 0 would patch, 0 unpatchable; also parses every EXIT trap body, which `bash -n` on the file cannot do |
+| Thread pools vs CPU quota | `tools/pin_numeric_threads.py` | 200/200 pinned to their declared `cpus`, 0 would pin, 0 skipped |
+| Git repos safe for any user | `tools/ensure_git_safe_directory.py` | 248/248 images that build a repository set a system-wide `safe.directory`, 0 would patch, 0 skipped |
+| Pinned pip dependencies | `tools/pin_python_dependencies.py` | every pip requirement pinned to a recorded version, 0 Dockerfiles would be pinned; versions resolved per base image and per index in `specs/pinned_python_deps.json` |
+| Negative control | harbor `nop` agent | Run per wave rather than suite-wide. The v4.3c census covered all 106 of its tasks and the v4.3 fix-up pass covered all 26 tasks it touched: every one scored nop 0 and oracle 1, parsed from harbor's own `verifier/reward.txt`. The suite-wide 785/785 run is the v3.5 record below; it found 3 vacuous verifiers, all repaired. Still not a scripted gate — see `## Negative control` |
+| Layout & contract lint | `tools/lint_tasks.py` | 805 tasks linted, 0 problems, 93 notes (270 legacy v1 skipped by design) |
+| Competency coverage | `tools/check_tb21_coverage.py` | 725/726 covered, 1 waived-infeasible (`C-c65bea8a`), 0 problems, 401 second-task gaps (documented residual) |
+| Difficulty calibration | `tools/check_difficulty.py --allow-unmeasured` | 805 measured (108 easy / 438 medium / 259 hard), 0 problems. The 270 v1 tasks carry no rubric. Without `--allow-unmeasured` this exits 1 on 423 pre-existing "oracle time not measured" errors, because `specs/oracle_times.json` is gitignored and only holds locally-measured timings |
+| Coverage matrix | `tools/build_coverage.py` | 1075 tasks x 726 competencies, 1157 claimed cells, 0 errors |
+| Upstream disjointness | `tools/check_upstream_disjointness.py` | 238 upstream-cloning tasks over 79 distinct repositories, 0 problems and 0 warnings against the 68-repository Terminal-Bench forbidden list in `specs/tb21_source_repositories.json` |
+| Image size hygiene | `tools/check_image_size_hygiene.py` | 1075 Dockerfiles scanned, 0 problems, 113 advisories. Catches the copy-on-write duplication a `chown -R`/`chmod -R` in its own layer causes; `storage_mb` in task.toml is advisory only, since harbor 0.22.0 has no `--storage-opt` enforcement |
+| Fresh-clone reachability | `tools/check_task_files_tracked.py` | 16,813 task files on disk, 16,812 tracked, 5 declared large assets, 0 untracked-and-undeclared. Catches a task that passes on the machine that authored it and fails on every clone |
+| Provenance | `tools/update_provenance.py` + `check_reproducibility.py` | 16,939 files recorded, 16,942 checked, 0 drift, 0 not-fetched |
 | General inventory | `tools/check_general_coverage.py` | not-retained (decision D1), 0 errors |
-| Independence audit | `tools/audit_independence_stream.py` | Re-run over the v3.4 tree: 13,610 authored payloads against 4,838 reference payloads, **0 exact / 0 canary / 0 source-repository matches**. The 5 block, 8 n-gram and 575 soft matches were each inspected and are boilerplate; see `independence_report.json` in the published dataset for the overlapping bytes and the reasoning |
+| Independence audit | `tools/audit_independence_stream.py` | Re-run over the v4.3c tree: 18,420 authored payloads against 4,423 reference payloads, **0 exact / 0 canary / 0 source-repository matches**. The 3 block and 6 n-gram hits are all carried over from earlier trees and each is adjudicated with its overlapping bytes recomputed in `reports/v42_wave.md` §7 and `reports/v43_wave.md`; see `independence_report.json` |
 | Similarity triage | `tools/check_task_similarity.py` | **Not re-verified.** The record behind the original "cleared by two-reviewer blind triage" claim lived in `private-audit/`, which is gitignored, was never committed, and is not on this machine. The claim is carried forward unverified; the independence audit row above is the substantiated one |
 | Suite report | `tools/suite_report.py` | **Not available.** `private-audit/reports/suite_report.json` is gitignored, was never committed, and is not on this machine |
 
@@ -143,7 +217,9 @@ recomputed `task_checkout_sha256` merkle match the pin.
 
 ## Contamination audit
 
-Run for v3.4 over the current 785-task tree; the report ships as
+Last run over the v4.3c tree at 1075 tasks: 18,420 authored payloads against
+4,423 reference payloads, with 0 exact, 0 canary and 0 source-repository matches.
+It was originally run for v3.4 over the then-785-task tree. The report ships as
 `independence_report.json` in the published dataset and carries its own `scope`
 and `verdict` blocks.
 
@@ -294,9 +370,104 @@ helm-style manifest merge strategies (`ember-spire`).
 Per policy, no upstream source repositories are vendored anywhere in the
 suite — every task ships small self-authored fixture codebases.
 
+## 2026-09-10 addition — v4.1 coverage-expansion wave (47 tasks)
+
+Fifty-three slots (areas A–N of `specs/v41_slots.json`) were authored against
+the gaps measured in `reports/v3.9_skill_gap_review.md`; 47 landed and 6 did
+not (5 abandoned mid-run, 1 not achievable — see the wave report). Same rules
+as the earlier waves: every verifier is binary, every oracle proves its own
+task, no upstream repository is vendored, all tasks claim no tb2.1
+competencies (`claims_no_competencies: true` in `specs/coverage_claims.json`),
+`cpus = 1` everywhere. What changed: the 47 tasks ship 51k source lines in
+`environment/files` (vs 36k across the whole pre-existing 785-task suite),
+23 of them build a real git repository with history at image build time, and
+they add the suite's first Go (5 files), TypeScript/TSX (35 files), Rust (50),
+real CSS, and JVM/Maven deliverable coverage. Full per-task gap area, measured
+property, reviewer changes and the not-landed list are in
+`reports/v41_wave.md`. Registration gates (binary reward, reward guard,
+thread pins, git safe-directory, pip pins, lint, tb2.1 and general coverage)
+all pass on the 832-task tree; the difficulty gate's 494 pre-existing legacy
+problems (208 rubric-bucket drifts + 286 missing legacy oracle times) are
+unchanged by this wave and fail zero of the 47 new tasks.
+
+## 2026-09-11 addition — v4.2 upstream-clone wave (20 tasks)
+
+Twenty slots from `specs/v42_slots.json` landed and are registered in
+`reports/v42_wave.md`. This is the first family that clones a real pinned
+upstream repository at image-build time (`environment/Dockerfile`) and puts the
+agent inside somebody else's codebase — the shape Terminal-Bench 2.1 uses in 42
+of its 241 tasks. Same contract as every wave: binary reward, oracle proves its
+own task, `cpus = 1` (build timeouts are set from measured 1-CPU build times),
+all tasks claim no tb2.1 competencies (`claims_no_competencies: true`),
+`difficulty.json` buckets edited directly by rubric total (never via
+`build_difficulty.py`, whose frozen-reference dependency reassigns 208
+pre-existing tasks).
+
+New gates for the family, all wired into `tools/rebuild_and_audit.py`:
+
+- `tools/check_upstream_disjointness.py` (with `--apply`): every clone must
+  resolve to an immutable 40-hex revision (asserted fail-closed in the
+  Dockerfile), use `--depth 1`, live in the build path (never `tests/` or
+  `solution/`), and be absent from `specs/tb21_source_repositories.json` — the
+  68 repositories the frozen reference touches. Shared upstream with the
+  reference is how a clean-room claim dies even when no bytes ever enter a
+  tree. `--apply` writes `specs/upstream_sources.json`, and
+  `tools/update_provenance.py` copies it into `provenance.json`
+  `external_sources`.
+- `tools/check_task_files_tracked.py`: clone-integrity gate (post-v4.1), which
+deletes the class where a task-local `.gitignore` silently drops a fixture.
+  The v4.2 wave is the first family audited from the start by both gates,
+  and the clone-integrity test is repeated per wave: one task is exported
+  from the index and re-verified in both harbor directions (v4.2:
+  `kedge-lattice`, oracle 1 / nop 0).
+
+Effect on the audit: the `source_repository_matches` class of
+`tools/audit_independence_stream.py --reference-provenance` is no longer
+vacuous. Before this family, `provenance.json` carried an empty
+`external_sources` list, so a source-repository overlap check compared the
+empty set against the reference's 68 repositories and could only ever report
+zero. With the v4.2 wave it compares 21 real upstream identities (20 source
+repositories plus one JDK binary release asset) against the reference set, and
+the frozen-tree run of 2026-09-11 reports 0 overlap.
+
+## 2026-09-12 addition — v4.3 real-issue wave (50 tasks)
+
+Fifty tasks from the verified-issue pool (`specs/v43_issue_pool/`, one JSON
+file per upstream repository — 60 repositories, 218 verified entries) landed
+and are registered in `reports/v43_wave.md`. This is the first family whose
+tasks are built from **real bugs in real upstream projects** instead of seeded
+regressions. A task may only be built from an entry that reproduces in both
+directions against the project's own history (`reports/MINING_PROTOCOL_v43.md`):
+at the parent commit the reproduction FAILS; at the fix commit it PASSES, with
+the buggy code confirmed present/absent by inspection. The provenance chain —
+repository, parent commit, fix commit, upstream issue reference — is recorded
+in each task's note in `specs/coverage_claims.json` (and repeated in the wave
+report because it exists nowhere else in the specs). The golden regression
+test is extracted at image-build time from the fix commit with
+`git show <fix>:<path>` in a throwaway clone; no upstream source or test
+bytes are committed under any task directory.
+
+**Egress caveat (from `reports/v42_wave.md` section 9).** Trials have
+unrestricted outbound network in this harness (harbor's default network mode
+is PUBLIC; no task declares otherwise), so an agent can look a real issue up.
+That is why this wave's instructions must never name the issue number, PR,
+fix commit or the upstream-touched source file — a leaked issue number turns a
+debugging task into a lookup. The functional backstop is each task's
+upstream-integrity guard: the fix commit must stay unreachable
+(`git cat-file -e` fails), HEAD must stay pinned to the parent, and the fix
+must live in the tree, so egress at worst lets an agent fetch and implement
+the real fix, which the verifier scores correctly.
+
+The wave-proofing gate from the v4.2 family (`check_task_files_tracked.py`
+plus one `git archive` export re-verified in both harbor directions) was
+repeated; the v4.3 export was `bracket-forge`, oracle 1 / nop 0 / exit 0.
+Difficulty buckets were again edited directly by rubric total, never via
+`build_difficulty.py`.
+
 ## Oracle verification
 
 Every task's oracle solution was run from a pristine container. The original
+204-task v2 suite passed two full sweeps (204/204 ×2). Fleet-authored tasks The original
 204-task v2 suite passed two full sweeps (204/204 ×2). Fleet-authored tasks
 each passed their own oracle during authoring. A spot-check of 17
 WIP-touched tasks passed 17/17 (1 fixed: brisk-kiln ctl.sh syntax bug).
@@ -464,3 +635,55 @@ upstream per `specs/large_assets.json` (SHA-256 verified):
 - `node-v20.19.3-linux-x64.tar.xz` (harbor-gasket)
 - `vosk_model.zip` (zephyr-orchid)
 - `Gr.fst`, `HCLr.fst` (raven-orchid)
+
+## 2026-09-13 addition — v4.3b diversity wave (62 tasks)
+
+62 more tasks built from verified real upstream issues, bringing the suite to 969
+registered tasks, across 32 repositories that the v4.3 wave did not use and 14
+domains chosen to mirror Terminal-Bench 2.1's spread: scientific-python 8,
+rust-cli 6, security-tooling 6, program-analysis 6, jvm-systems 6,
+packaging-release 6, systems-c 4, computer-vision 4, go-infrastructure 4,
+js-tooling 3, nlp 3, solvers 2, data-engine 2, speech-audio 2.
+
+Combined with the v4.2 and v4.3 waves, 180 tasks now clone a real upstream
+repository at image-build time, across 79 distinct repositories, with zero
+intersection against the 68 repositories the frozen Terminal-Bench 2.1 reference
+uses (`specs/tb21_source_repositories.json`, enforced by
+`tools/check_upstream_disjointness.py`).
+
+Difficulty of the 62: 30 easy, 32 medium, 0 hard, mean rubric total 10.3 — the
+same skew as the v4.3 wave. A real upstream bug with a known reproduction is
+narrow by nature. The v4.3c wave therefore withholds the reproduction from the
+instruction and requires the agent to write its own, which is the available lever
+for difficulty without giving up real issues.
+
+Registered by the operator while the v4.3c wave was still authoring, so every
+suite-wide gate is read by attributing failures to task names rather than counting
+them; all failures were v4.3c directories mid-authoring, none wave-2. Details,
+including the independent leak and structural checks, are in
+`reports/v43b_registration.md`.
+
+Two tool fixes came out of registering it:
+
+- `tools/update_provenance.py` enumerated `specs/` with `glob('*.json')` while
+  `check_reproducibility.py` walks it with `rglob('*')`. The recorder was
+  non-recursive and json-only, the checker recursive and file-agnostic, so any
+  subdirectory under `specs/` was recorded by neither and demanded by one.
+  `specs/v43_issue_pool/` exposed it with 61 errors. Both now agree.
+- `tools/check_image_size_hygiene.py` is new. Real upstream builds made three task
+  images exceed 11 GB and one exceed 30 GB. The dominant cause is `chown -R` or
+  `chmod -R` in a RUN of its own after a compile filled the tree: layers are
+  copy-on-write, so every object file is stored twice. `tasks/gunwale-tideway`
+  shows it as two layers of exactly 2.74 GB in `docker history`. Measured on this
+  host with a 400 MB blob, a separate `chmod -R` grew an image from 1.07 GB to
+  1.49 GB. The gate is static and severity-aware: only ownership changes on trees
+  a COMPILE step filled are errors, because duplicating a cloned source tree costs
+  megabytes while duplicating a build directory costs gigabytes. Budget is 6 GB
+  with a 12 GB hard limit, recorded in `reports/AUTHORING_SPEC_v42.md`. It is not
+  yet wired into `rebuild_and_audit.py`, because it currently fails 33 tasks that
+  are mostly mid-authoring.
+
+Nothing else catches an oversized image: `storage_mb` is advisory in harbor 0.22.0.
+It is parsed, carried into telemetry and mapped for terminal-bench format, but
+there is no `storage_opt` or `--storage-opt` anywhere in harbor, so it never
+reaches docker as a limit.

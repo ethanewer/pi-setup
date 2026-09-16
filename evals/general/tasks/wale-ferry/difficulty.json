@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 1,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": null,
+  "notes": "Live MariaDB 10.11 schema-diagnosis task in the database-performance gap. The fixture ships a 1M-row order_facts table whose only secondary indexes are transaction-shaped (FK + status); every analytical rollup in the shipped workload and in the hidden cases plans a full scan plus 'Using temporary; Using filesort'. The agent must bring the server up, observe the plans with EXPLAIN, decide the schema change (a covering composite index whose leading columns match the rollup grouping), deliver an idempotent migration, and a machine-checkable EXPLAIN report. The verifier resets the database to a byte-identical pristine seed, applies the migration twice (idempotency), then asserts on each of 3 hidden query files and the 4 visible workload queries: EXPLAIN shows a non-NULL key with a (region,status)-leading column prefix and no 'Using filesort' in Extra; results byte-match precomputed golden TSVs; the dependent view vw_region_performance still resolves and returns its golden rows; and the agent's explain_report.tsv reproduces the re-derived EXPLAIN rows exactly. dependent_stages=2: the migration must fix the plan while keeping results and the view intact. debugging_ambiguity=2: the symptom is an unlocated performance complaint; the agent must map slow-query behaviour to an index-shape cause via EXPLAIN rather than reading an error. hidden_case_generalization=3: the unseen query family (HAVING, partitioned channels, three-dimension grouping all with different filters) plus a fresh-instance replay of the migration prove the fix is general, not memorised. quantitative_correctness=2: golden result sets are compared byte-for-byte and the explain report must equal the verifier's own EXPLAIN. interaction_statefulness=1: one live server session the agent drives; the verifier rebuilds state itself. Medium bucket (13/30)."
+}

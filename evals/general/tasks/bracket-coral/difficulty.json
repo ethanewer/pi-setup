@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": "/app/probe_upload_corruption.py",
+  "notes": "Upstream-clone debugging task on pallets/werkzeug at parent commit 2a2e371f41aba5d83ca575e65a6409aaa7dc1097 (real upstream issue #2761 'Prevent Addition of Extra Newline in Binary File Uploads', fix commit 89ce5e5a4c59bc9d51d360fd5c205b344ecf06c8). In MultipartDecoder._parse_data, when the buffer holds no complete boundary, 'data_end = del_index = self.last_newline(data[data_start:])' stores a slice-relative index into absolute offsets, so newline bytes around the part boundary leak into (or out of) the Data events: e.g. uploading b'x\\ry' yields b'\\nx\\ry', b'\\n\\n' yields b'\\r\\n\\n\\n'. The fix adds data_start to the last_newline result (upstream: 'last_newline_idx = self.last_newline(data[data_start:])\n data_end = del_index = last_newline_idx + data_start'). The instruction names the observable symptom and the round-trip contract but never the issue, the commit or the file to change; the working clone fetches ONLY the parent SHA (fix unreachable), the project's own regression test (test_decoder_data_start_with_different_newline_positions, 9 parametrized cases) is extracted from the fix commit into /opt/golden at build time, and the verifier also runs the tree's own tests/sansio/test_multipart.py + tests/test_formparser.py + tests/test_wrappers.py plus 2 authored hidden-case suites: (1) low-level chunked decoding (headers+content first, boundary later, events drained between chunks; boundaries stream-boundary-42/another-boundary, file bytes b'x\\ry', b'\\n\\n', b'\\n\\nB', b'\\r\\nX\\r\\n', b'ab\\ncd', b'nv\\r\\nx', b'sentinel'), (2) end-to-end upload through werkzeug.formparser.MultiPartParser with buffer_size in {5,7,11,31}. Both directions re-confirmed inside a bench-base:python-3.12 container with the pinned deps (MarkupSafe 3.0.3, pytest 9.1.1, pytest-xprocess 1.0.2, ephemeral-port-reserve 1.1.4): at parent the golden file fails 9 of 12 and probe/hidden cases fail; with the fix applied the golden file passes 12/12, tree tests pass 3+25+92, and all hidden cases pass. Difficulty rubric total 11 = medium."
+}

@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": null,
+  "notes": "SWE-bench-shaped debugging task on the real psf/requests tree. The image clones requests at parent bc7dd0fc4d56e808bcdd85ac2d797b3107c89259 (the commit immediately before upstream f0198e6dfc431a2293dc16e1b1e8fcddc910a7f3 fixed issue #7309) so the agent gets the real 15k-line codebase with the real bug: a Content-Type parameter without an equals sign is parsed as a boolean True placeholder and later a .strip() call on that bool raises AttributeError instead of falling back to ISO-8859-1 for text content. RESTRICTED SHAPE per the v43 authoring directive: no reproduction is shipped and the instruction names no issue number, PR, fix commit, fix mechanism or file to change -- the agent must author its own failing reproduction (/app/repro.py) as a deliverable before fixing, and the project's own test file at the parent commit actually still asserts the old buggy behavior (valueless params become True), so the reproduction is the only evidence. The verifier runs the agent's repro against the repaired tree (must print ISO-8859-1, exit 0) AND against a pristine copy of the pre-fix tree baked into the image (must crash with the AttributeError signature), then the upstream regression test extracted at build time into /opt/golden/test_utils.py (SHA-256 checked, copied over the tree's stale test file), the project's own offline tests (test_utils golden version + structures/help/packages/hooks), and three authored hidden cases: valueless-parameter variants through get_encoding_from_headers, direct parser assertions (valueless dropped, quoted/valued preserved, no bool placeholders), and mixed valueless/valued encoding variants. All suite runs use an isolated interpreter (python3 -I -S with explicit sys.path of the tree's src/ plus site-packages) so planted sitecustomize/.pth hooks or a swapped site-packages install cannot fake a verdict; provenance requires HEAD still at the parent with exactly one commit, the fix commit unreachable, only src/requests/utils.py modified, no untracked files, no .git exclude tricks. Difficulty lands medium (rubric 11). The oracle applies the same single-function fix upstream made and re-proves both directions."
+}

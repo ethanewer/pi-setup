@@ -1,0 +1,21 @@
+[package]
+name = "veldt-cli"
+version = "0.6.0"
+description = "The veldt command line tool"
+edition = "2021"
+
+[package.metadata]
+role = "binary"
+
+[lib]
+name = "veldt_cli"
+path = "src/lib.rs"
+
+[[bin]]
+name = "veldt"
+path = "src/main.rs"
+
+[dependencies]
+veldt-core = { path = "../veldt-core" }
+veldt-measure = { path = "../veldt-measure" }
+veldt-transport = { path = "../veldt-transport" }

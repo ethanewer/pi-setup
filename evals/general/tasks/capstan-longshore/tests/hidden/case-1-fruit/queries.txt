@@ -1,0 +1,9 @@
+# hidden case 1: 7 food-named parameters, gaps in the supply (upstream test
+# uses aa..ee with the first two supplied; these use different names/gaps).
+# The two middle names are supplied; the missing names must be reported in
+# declaration order apple, banana, durian, elderberry, grape. At the pinned
+# (buggy) commit this binary reports grape, elderberry swapped.
+PREPARE f AS SELECT $apple, $banana, $cherry, $durian, $elderberry, $fig, $grape; EXECUTE f(cherry := 3, fig := 6);	ERROR:Values were not provided for the following parameters: apple, banana, durian, elderberry, grape
+# Supply the tail and the head; the missing three must be banana, cherry, fig, grape
+# in declaration order (buggy commit reported them scrambled).
+PREPARE f AS SELECT $apple, $banana, $cherry, $durian, $elderberry, $fig, $grape; EXECUTE f(durian := 4, elderberry := 5, apple := 1);	ERROR:Values were not provided for the following parameters: banana, cherry, fig, grape

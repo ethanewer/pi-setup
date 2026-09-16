@@ -1,0 +1,12 @@
+--- a/falcon/routing/compiled.py
++++ b/falcon/routing/compiled.py
+@@ -476,9 +476,6 @@
+         # NOTE(kgriffs & philiptzou): Sort nodes in this sequence:
+         # static nodes(0), complex var nodes(1) and simple var nodes(2).
+         # so that none of them get masked.
+-        nodes = sorted(
+-            nodes, key=lambda node: node.is_var + (node.is_var and not node.is_complex)
+-        )
+ 
+         # NOTE(kgriffs): Down to this branch in the tree, we can do a
+         # fast 'return None'. See if the nodes at this branch are

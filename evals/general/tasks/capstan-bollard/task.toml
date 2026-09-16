@@ -1,0 +1,20 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "easy"
+category = "debugging"
+verifier_kind = "executes-deliverable"
+deliverables = ["/app/src", "/app/reproduce.py"]
+tags = ["capstan-bollard", "debugging", "clean-room"]
+
+[verifier]
+timeout_sec = 1500.0
+
+[agent]
+timeout_sec = 2400.0
+
+[environment]
+build_timeout_sec = 7200.0
+cpus = 1
+memory_mb = 8192
+storage_mb = 24576

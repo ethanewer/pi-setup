@@ -1,0 +1,509 @@
+{
+ "com.cistern.cli.AssessCommand": [
+  "descriptor: ()Ljava/lang/String;",
+  "public com.cistern.cli.AssessCommand();",
+  "public final class com.cistern.cli.AssessCommand implements com.cistern.cli.Command",
+  "public int run(java.lang.String[], int);",
+  "public java.lang.String name();",
+  "public java.lang.String usage();"
+ ],
+ "com.cistern.cli.Command": [
+  "descriptor: ()Ljava/lang/String;",
+  "public abstract int run(java.lang.String[], int);",
+  "public abstract java.lang.String name();",
+  "public abstract java.lang.String usage();"
+ ],
+ "com.cistern.cli.CompareCommand": [
+  "descriptor: ()Ljava/lang/String;",
+  "public com.cistern.cli.CompareCommand();",
+  "public final class com.cistern.cli.CompareCommand implements com.cistern.cli.Command",
+  "public int run(java.lang.String[], int);",
+  "public java.lang.String name();",
+  "public java.lang.String usage();"
+ ],
+ "com.cistern.cli.ConvertCommand": [
+  "descriptor: ()Ljava/lang/String;",
+  "public com.cistern.cli.ConvertCommand();",
+  "public final class com.cistern.cli.ConvertCommand implements com.cistern.cli.Command",
+  "public int run(java.lang.String[], int);",
+  "public java.lang.String name();",
+  "public java.lang.String usage();"
+ ],
+ "com.cistern.cli.HistoryCommand": [
+  "descriptor: ()Ljava/lang/String;",
+  "public com.cistern.cli.HistoryCommand();",
+  "public final class com.cistern.cli.HistoryCommand implements com.cistern.cli.Command",
+  "public int run(java.lang.String[], int);",
+  "public java.lang.String name();",
+  "public java.lang.String usage();"
+ ],
+ "com.cistern.cli.InspectCommand": [
+  "descriptor: ()Ljava/lang/String;",
+  "public com.cistern.cli.InspectCommand();",
+  "public final class com.cistern.cli.InspectCommand implements com.cistern.cli.Command",
+  "public int run(java.lang.String[], int);",
+  "public java.lang.String name();",
+  "public java.lang.String usage();"
+ ],
+ "com.cistern.cli.Main": [
+  "public final class com.cistern.cli.Main",
+  "public static int run(java.lang.String[]);",
+  "public static void main(java.lang.String[]);"
+ ],
+ "com.cistern.cli.ReportCommand": [
+  "descriptor: ()Ljava/lang/String;",
+  "public com.cistern.cli.ReportCommand();",
+  "public final class com.cistern.cli.ReportCommand implements com.cistern.cli.Command",
+  "public int run(java.lang.String[], int);",
+  "public java.lang.String name();",
+  "public java.lang.String usage();"
+ ],
+ "com.cistern.cli.Table": [
+  "descriptor: ()Ljava/lang/String;",
+  "descriptor: (Ljava/util/List;)Lcom/cistern/cli/Table;",
+  "descriptor: ([Ljava/lang/String;)Lcom/cistern/cli/Table;",
+  "public com.cistern.cli.Table addRow(java.util.List<java.lang.String>);",
+  "public final class com.cistern.cli.Table",
+  "public java.lang.String render();",
+  "public static com.cistern.cli.Table withColumns(java.lang.String...);"
+ ],
+ "com.cistern.cli.VersionCommand": [
+  "descriptor: ()Ljava/lang/String;",
+  "descriptor: Ljava/lang/String;",
+  "public com.cistern.cli.VersionCommand();",
+  "public final class com.cistern.cli.VersionCommand implements com.cistern.cli.Command",
+  "public int run(java.lang.String[], int);",
+  "public java.lang.String name();",
+  "public java.lang.String usage();",
+  "public static final java.lang.String VERSION;"
+ ],
+ "com.cistern.core.AssessmentEngine": [
+  "descriptor: (Lcom/cistern/core/LevelAssessor;Lcom/cistern/model/SampleWindow;Lcom/cistern/model/Threshold;)Lcom/cistern/model/Assessment;",
+  "descriptor: (Lcom/cistern/model/SampleWindow;Lcom/cistern/model/Threshold;Ljava/lang/String;)Lcom/cistern/model/Assessment;",
+  "public com.cistern.core.AssessmentEngine();",
+  "public com.cistern.model.Assessment evaluate(com.cistern.core.LevelAssessor, com.cistern.model.SampleWindow, com.cistern.model.Threshold);",
+  "public com.cistern.model.Assessment evaluate(com.cistern.model.SampleWindow, com.cistern.model.Threshold, java.lang.String);",
+  "public final class com.cistern.core.AssessmentEngine"
+ ],
+ "com.cistern.core.AssessmentHistory": [
+  "descriptor: ()Ljava/lang/String;",
+  "descriptor: ()Ljava/util/List;",
+  "descriptor: ()Ljava/util/Optional;",
+  "descriptor: (Ljava/lang/String;D)Lcom/cistern/core/AssessmentHistory;",
+  "public boolean containsCode(java.lang.String);",
+  "public com.cistern.core.AssessmentHistory record(java.lang.String, double);",
+  "public com.cistern.core.AssessmentHistory(int);",
+  "public final class com.cistern.core.AssessmentHistory",
+  "public int size();",
+  "public java.lang.String summary();",
+  "public java.util.List<com.cistern.core.AssessmentHistory$Entry> entries();",
+  "public java.util.Optional<com.cistern.core.AssessmentHistory$Entry> last();"
+ ],
+ "com.cistern.core.AssessmentValidator": [
+  "descriptor: (D)Lcom/cistern/model/Severity;",
+  "descriptor: (Lcom/cistern/model/Assessment;)Ljava/util/List;",
+  "descriptor: (Ljava/util/List;)Ljava/util/List;",
+  "public final class com.cistern.core.AssessmentValidator",
+  "public static com.cistern.model.Severity severityForLevel(double);",
+  "public static final double LEVEL_TOLERANCE;",
+  "public static java.util.List<java.lang.String> problems(com.cistern.model.Assessment);",
+  "public static java.util.List<java.lang.String> problems(java.util.List<com.cistern.model.Assessment>);",
+  "public static void requireValid(java.util.List<com.cistern.model.Assessment>);"
+ ],
+ "com.cistern.core.AssessorRegistry": [
+  "descriptor: ()Ljava/util/Set;",
+  "descriptor: (Ljava/lang/String;)Lcom/cistern/core/LevelAssessor;",
+  "public final class com.cistern.core.AssessorRegistry",
+  "public static boolean contains(java.lang.String);",
+  "public static com.cistern.core.LevelAssessor byCode(java.lang.String);",
+  "public static java.util.Set<java.lang.String> codes();"
+ ],
+ "com.cistern.core.BaselineAssessor": [
+  "descriptor: ()Ljava/lang/String;",
+  "public com.cistern.core.BaselineAssessor();",
+  "public double assess(com.cistern.model.SampleWindow, com.cistern.model.Threshold);",
+  "public final class com.cistern.core.BaselineAssessor implements com.cistern.core.LevelAssessor",
+  "public java.lang.String code();",
+  "public java.lang.String describe();"
+ ],
+ "com.cistern.core.BaselineTables": [
+  "descriptor: ()Ljava/util/Map;",
+  "public final class com.cistern.core.BaselineTables",
+  "public static double expectedFillFraction(int, int);",
+  "public static java.util.Map<java.lang.Integer, java.lang.Double> hourlyFillFraction();",
+  "public static java.util.Map<java.lang.Integer, java.lang.Double> seasonalMultiplier();"
+ ],
+ "com.cistern.core.Calibration": [
+  "public com.cistern.core.Calibration(double);",
+  "public double meanResidual(com.cistern.model.SampleWindow);",
+  "public final class com.cistern.core.Calibration",
+  "public long inSpecSamples(com.cistern.model.SampleWindow, double);"
+ ],
+ "com.cistern.core.ConfidenceBand": [
+  "descriptor: (Lcom/cistern/core/LevelAssessor;Lcom/cistern/model/SampleWindow;Lcom/cistern/model/Threshold;)Lcom/cistern/core/ConfidenceBand;",
+  "public com.cistern.core.ConfidenceBand(double, double);",
+  "public double center();",
+  "public double halfWidth();",
+  "public double lower();",
+  "public double upper();",
+  "public final class com.cistern.core.ConfidenceBand",
+  "public static com.cistern.core.ConfidenceBand of(com.cistern.core.LevelAssessor, com.cistern.model.SampleWindow, com.cistern.model.Threshold);"
+ ],
+ "com.cistern.core.DriftAssessor": [
+  "descriptor: ()Ljava/lang/String;",
+  "public com.cistern.core.DriftAssessor();",
+  "public double assess(com.cistern.model.SampleWindow, com.cistern.model.Threshold);",
+  "public final class com.cistern.core.DriftAssessor implements com.cistern.core.LevelAssessor",
+  "public java.lang.String code();",
+  "public java.lang.String describe();"
+ ],
+ "com.cistern.core.LevelAssessor": [
+  "descriptor: ()Ljava/lang/String;",
+  "public abstract double assess(com.cistern.model.SampleWindow, com.cistern.model.Threshold);",
+  "public abstract java.lang.String code();",
+  "public abstract java.lang.String describe();"
+ ],
+ "com.cistern.core.PeakAssessor": [
+  "descriptor: ()Ljava/lang/String;",
+  "public com.cistern.core.PeakAssessor();",
+  "public double assess(com.cistern.model.SampleWindow, com.cistern.model.Threshold);",
+  "public final class com.cistern.core.PeakAssessor implements com.cistern.core.LevelAssessor",
+  "public java.lang.String code();",
+  "public java.lang.String describe();"
+ ],
+ "com.cistern.core.StabilityAssessor": [
+  "descriptor: ()Ljava/lang/String;",
+  "public com.cistern.core.StabilityAssessor();",
+  "public double assess(com.cistern.model.SampleWindow, com.cistern.model.Threshold);",
+  "public final class com.cistern.core.StabilityAssessor implements com.cistern.core.LevelAssessor",
+  "public java.lang.String code();",
+  "public java.lang.String describe();"
+ ],
+ "com.cistern.core.SurgeAssessor": [
+  "descriptor: ()Ljava/lang/String;",
+  "public com.cistern.core.SurgeAssessor();",
+  "public double assess(com.cistern.model.SampleWindow, com.cistern.model.Threshold);",
+  "public final class com.cistern.core.SurgeAssessor implements com.cistern.core.LevelAssessor",
+  "public java.lang.String code();",
+  "public java.lang.String describe();"
+ ],
+ "com.cistern.core.TroughAssessor": [
+  "descriptor: ()Ljava/lang/String;",
+  "public com.cistern.core.TroughAssessor();",
+  "public double assess(com.cistern.model.SampleWindow, com.cistern.model.Threshold);",
+  "public final class com.cistern.core.TroughAssessor implements com.cistern.core.LevelAssessor",
+  "public java.lang.String code();",
+  "public java.lang.String describe();"
+ ],
+ "com.cistern.model.Assessment": [
+  "descriptor: ()Lcom/cistern/model/Severity;",
+  "descriptor: ()Ljava/lang/String;",
+  "descriptor: (Ljava/lang/String;Ljava/lang/String;DLcom/cistern/model/Severity;)Lcom/cistern/model/Assessment;",
+  "public com.cistern.model.Severity severity();",
+  "public double level();",
+  "public final class com.cistern.model.Assessment",
+  "public java.lang.String code();",
+  "public java.lang.String method();",
+  "public static com.cistern.model.Assessment of(java.lang.String, java.lang.String, double, com.cistern.model.Severity);"
+ ],
+ "com.cistern.model.CsvCodec": [
+  "descriptor: (Ljava/lang/String;)Ljava/util/List;",
+  "descriptor: (Ljava/util/List;)Ljava/lang/String;",
+  "public final class com.cistern.model.CsvCodec",
+  "public static java.lang.String writeSamples(java.util.List<com.cistern.model.Sample>);",
+  "public static java.util.List<com.cistern.model.Sample> parseSamples(java.lang.String);"
+ ],
+ "com.cistern.model.DurationFormat": [
+  "descriptor: (J)Ljava/lang/String;",
+  "public final class com.cistern.model.DurationFormat",
+  "public static java.lang.String format(long);",
+  "public static java.lang.String formatSeconds(long);"
+ ],
+ "com.cistern.model.JsonCodec": [
+  "descriptor: (D)Ljava/lang/String;",
+  "descriptor: (Ljava/lang/String;)Ljava/lang/String;",
+  "descriptor: (Ljava/util/List;)Ljava/lang/String;",
+  "descriptor: (Ljava/util/Map;)Ljava/lang/String;",
+  "public final class com.cistern.model.JsonCodec",
+  "public static java.lang.String escape(java.lang.String);",
+  "public static java.lang.String formatNumber(double);",
+  "public static java.lang.String writeList(java.util.List<?>);",
+  "public static java.lang.String writeObject(java.util.Map<java.lang.String, java.lang.Object>);"
+ ],
+ "com.cistern.model.LevelMath": [
+  "public final class com.cistern.model.LevelMath",
+  "public static boolean nearZero(double, double);",
+  "public static double clamp(double, double, double);",
+  "public static double clamp01(double);"
+ ],
+ "com.cistern.model.OutageCalendar": [
+  "descriptor: ()Ljava/util/List;",
+  "descriptor: (JJ)Lcom/cistern/model/OutageCalendar;",
+  "public boolean contains(long);",
+  "public boolean overlaps(long, long);",
+  "public com.cistern.model.OutageCalendar add(long, long);",
+  "public com.cistern.model.OutageCalendar();",
+  "public com.cistern.model.OutageCalendar(java.util.List<com.cistern.model.OutageCalendar$Interval>);",
+  "public double coverage(com.cistern.model.SampleWindow);",
+  "public final class com.cistern.model.OutageCalendar",
+  "public java.util.List<com.cistern.model.OutageCalendar$Interval> intervals();",
+  "public long coveredSamples(com.cistern.model.SampleWindow);"
+ ],
+ "com.cistern.model.Reading": [
+  "descriptor: ()Lcom/cistern/model/Sample;",
+  "descriptor: ()Lcom/cistern/model/Severity;",
+  "descriptor: ()Ljava/lang/String;",
+  "descriptor: (Lcom/cistern/model/Sample;DLcom/cistern/model/Severity;Ljava/lang/String;)Lcom/cistern/model/Reading;",
+  "public com.cistern.model.Reading(com.cistern.model.Sample, double, com.cistern.model.Severity, java.lang.String);",
+  "public com.cistern.model.Sample sample();",
+  "public com.cistern.model.Severity severity();",
+  "public double level();",
+  "public final class com.cistern.model.Reading",
+  "public java.lang.String note();",
+  "public static com.cistern.model.Reading of(com.cistern.model.Sample, double, com.cistern.model.Severity, java.lang.String);"
+ ],
+ "com.cistern.model.ReportHeader": [
+  "descriptor: ()Ljava/lang/String;",
+  "descriptor: (Ljava/lang/String;)Lcom/cistern/model/ReportHeader;",
+  "descriptor: Ljava/lang/String;",
+  "public com.cistern.model.ReportHeader(java.lang.String, java.lang.String, long);",
+  "public final class com.cistern.model.ReportHeader",
+  "public java.lang.String generator();",
+  "public java.lang.String reportId();",
+  "public java.lang.String stationId();",
+  "public long generatedAtMillis();",
+  "public static com.cistern.model.ReportHeader now(java.lang.String);",
+  "public static final java.lang.String GENERATOR;"
+ ],
+ "com.cistern.model.Sample": [
+  "descriptor: ()Lcom/cistern/model/Units;",
+  "descriptor: ()Ljava/lang/String;",
+  "descriptor: (JD)Lcom/cistern/model/Sample;",
+  "descriptor: (JDLcom/cistern/model/Units;Ljava/lang/String;)Lcom/cistern/model/Sample;",
+  "public boolean equals(java.lang.Object);",
+  "public com.cistern.model.Units unit();",
+  "public double value();",
+  "public double valueLitres();",
+  "public final class com.cistern.model.Sample",
+  "public int hashCode();",
+  "public java.lang.String source();",
+  "public java.lang.String toString();",
+  "public long timestampMillis();",
+  "public static com.cistern.model.Sample litres(long, double);",
+  "public static com.cistern.model.Sample of(long, double, com.cistern.model.Units, java.lang.String);"
+ ],
+ "com.cistern.model.SampleWindow": [
+  "descriptor: ()Ljava/lang/String;",
+  "descriptor: ()Ljava/util/List;",
+  "descriptor: (II)Lcom/cistern/model/SampleWindow;",
+  "descriptor: (Ljava/util/List;)Lcom/cistern/model/SampleWindow;",
+  "descriptor: ([Lcom/cistern/model/Sample;)Lcom/cistern/model/SampleWindow;",
+  "public boolean isChronological();",
+  "public boolean isEmpty();",
+  "public com.cistern.model.SampleWindow subWindow(int, int);",
+  "public double max();",
+  "public double mean();",
+  "public double min();",
+  "public double percentile(double);",
+  "public double range();",
+  "public double standardDeviation();",
+  "public double[] values();",
+  "public double[] valuesLitres();",
+  "public final class com.cistern.model.SampleWindow",
+  "public int size();",
+  "public java.lang.String toString();",
+  "public java.util.List<com.cistern.model.Sample> samples();",
+  "public static com.cistern.model.SampleWindow of(com.cistern.model.Sample...);",
+  "public static com.cistern.model.SampleWindow of(java.util.List<com.cistern.model.Sample>);",
+  "public static final int DEFAULT_CAPACITY;"
+ ],
+ "com.cistern.model.Severity": [
+  "descriptor: ()Ljava/lang/String;",
+  "descriptor: ()[Lcom/cistern/model/Severity;",
+  "descriptor: (Lcom/cistern/model/Severity;Lcom/cistern/model/Severity;)Lcom/cistern/model/Severity;",
+  "descriptor: (Ljava/lang/String;)Lcom/cistern/model/Severity;",
+  "descriptor: Lcom/cistern/model/Severity;",
+  "public final class com.cistern.model.Severity extends java.lang.Enum<com.cistern.model.Severity>",
+  "public int rank();",
+  "public java.lang.String code();",
+  "public java.lang.String label();",
+  "public static com.cistern.model.Severity maxOf(com.cistern.model.Severity, com.cistern.model.Severity);",
+  "public static com.cistern.model.Severity valueOf(java.lang.String);",
+  "public static com.cistern.model.Severity[] values();",
+  "public static final com.cistern.model.Severity ALERT;",
+  "public static final com.cistern.model.Severity CRITICAL;",
+  "public static final com.cistern.model.Severity NOMINAL;",
+  "public static final com.cistern.model.Severity WARN;"
+ ],
+ "com.cistern.model.Summary": [
+  "descriptor: ()Ljava/lang/String;",
+  "descriptor: ()Ljava/util/LinkedHashMap;",
+  "descriptor: (Lcom/cistern/model/SampleWindow;)Lcom/cistern/model/Summary;",
+  "public boolean isEmpty();",
+  "public double max();",
+  "public double mean();",
+  "public double min();",
+  "public double range();",
+  "public double standardDeviation();",
+  "public final class com.cistern.model.Summary",
+  "public int count();",
+  "public java.lang.String toString();",
+  "public java.util.LinkedHashMap<java.lang.String, java.lang.Object> toMap();",
+  "public static com.cistern.model.Summary of(com.cistern.model.SampleWindow);"
+ ],
+ "com.cistern.model.TankSpec": [
+  "descriptor: ()Lcom/cistern/model/Threshold;",
+  "descriptor: ()Lcom/cistern/model/Units;",
+  "descriptor: ()Ljava/lang/String;",
+  "descriptor: (D)Ljava/lang/String;",
+  "descriptor: (Ljava/lang/String;D)Lcom/cistern/model/TankSpec;",
+  "public com.cistern.model.TankSpec(java.lang.String, double, double, double, com.cistern.model.Units);",
+  "public com.cistern.model.Threshold toThreshold();",
+  "public com.cistern.model.Units displayUnit();",
+  "public double capacityLitres();",
+  "public final class com.cistern.model.TankSpec",
+  "public java.lang.String formatLitres(double);",
+  "public java.lang.String name();",
+  "public static com.cistern.model.TankSpec standard(java.lang.String, double);"
+ ],
+ "com.cistern.model.Threshold": [
+  "descriptor: ()Ljava/lang/String;",
+  "descriptor: (D)Lcom/cistern/model/Severity;",
+  "descriptor: (D)Lcom/cistern/model/Threshold;",
+  "descriptor: (DDD)Lcom/cistern/model/Threshold;",
+  "public com.cistern.model.Severity severityOfFraction(double);",
+  "public com.cistern.model.Severity severityOfValue(double);",
+  "public double alertFraction();",
+  "public double capacity();",
+  "public double levelOf(double);",
+  "public double warnFraction();",
+  "public final class com.cistern.model.Threshold",
+  "public java.lang.String toString();",
+  "public static com.cistern.model.Threshold of(double, double, double);",
+  "public static com.cistern.model.Threshold standard(double);"
+ ],
+ "com.cistern.model.TimeShifter": [
+  "descriptor: (Lcom/cistern/model/SampleWindow;J)Lcom/cistern/model/SampleWindow;",
+  "public final class com.cistern.model.TimeShifter",
+  "public static com.cistern.model.SampleWindow alignTo(com.cistern.model.SampleWindow, long);",
+  "public static com.cistern.model.SampleWindow shift(com.cistern.model.SampleWindow, long);"
+ ],
+ "com.cistern.model.Trend": [
+  "descriptor: ()Ljava/lang/String;",
+  "descriptor: ()[Lcom/cistern/model/Trend;",
+  "descriptor: (DD)Lcom/cistern/model/Trend;",
+  "descriptor: (Ljava/lang/String;)Lcom/cistern/model/Trend;",
+  "descriptor: Lcom/cistern/model/Trend;",
+  "public final class com.cistern.model.Trend extends java.lang.Enum<com.cistern.model.Trend>",
+  "public java.lang.String label();",
+  "public static com.cistern.model.Trend between(double, double);",
+  "public static com.cistern.model.Trend fromDelta(double, double);",
+  "public static com.cistern.model.Trend valueOf(java.lang.String);",
+  "public static com.cistern.model.Trend[] values();",
+  "public static final com.cistern.model.Trend FALLING;",
+  "public static final com.cistern.model.Trend FLAT;",
+  "public static final com.cistern.model.Trend RISING;"
+ ],
+ "com.cistern.model.Units": [
+  "descriptor: ()Ljava/lang/String;",
+  "descriptor: ()[Lcom/cistern/model/Units;",
+  "descriptor: (Ljava/lang/String;)Lcom/cistern/model/Units;",
+  "descriptor: (Ljava/lang/String;)Ljava/util/Optional;",
+  "descriptor: Lcom/cistern/model/Units;",
+  "public double fromLitres(double);",
+  "public double toLitres(double);",
+  "public final class com.cistern.model.Units extends java.lang.Enum<com.cistern.model.Units>",
+  "public java.lang.String code();",
+  "public java.lang.String symbol();",
+  "public static com.cistern.model.Units valueOf(java.lang.String);",
+  "public static com.cistern.model.Units[] values();",
+  "public static final com.cistern.model.Units BARRELS;",
+  "public static final com.cistern.model.Units CUBIC_FEET;",
+  "public static final com.cistern.model.Units GALLONS_UK;",
+  "public static final com.cistern.model.Units GALLONS_US;",
+  "public static final com.cistern.model.Units LITRES;",
+  "public static final com.cistern.model.Units METRES_CUBED;",
+  "public static final com.cistern.model.Units MILLILITRES;",
+  "public static java.util.Optional<com.cistern.model.Units> parse(java.lang.String);"
+ ],
+ "com.cistern.model.WindowMerger": [
+  "descriptor: (Lcom/cistern/model/SampleWindow;Lcom/cistern/model/SampleWindow;)Lcom/cistern/model/SampleWindow;",
+  "public final class com.cistern.model.WindowMerger",
+  "public static com.cistern.model.SampleWindow merge(com.cistern.model.SampleWindow, com.cistern.model.SampleWindow);",
+  "public static int distinctCount(com.cistern.model.SampleWindow, com.cistern.model.SampleWindow);"
+ ],
+ "com.cistern.report.JsonReportRenderer": [
+  "descriptor: (Lcom/cistern/report/Report;)Ljava/lang/String;",
+  "public com.cistern.report.JsonReportRenderer();",
+  "public final class com.cistern.report.JsonReportRenderer",
+  "public java.lang.String render(com.cistern.report.Report);"
+ ],
+ "com.cistern.report.LabelTable": [
+  "descriptor: ()Ljava/util/Map;",
+  "descriptor: (Ljava/lang/String;)Ljava/lang/String;",
+  "public final class com.cistern.report.LabelTable",
+  "public static java.lang.String label(java.lang.String);",
+  "public static java.util.Map<java.lang.String, java.lang.String> all();"
+ ],
+ "com.cistern.report.Report": [
+  "descriptor: ()Lcom/cistern/model/ReportHeader;",
+  "descriptor: ()Lcom/cistern/model/SampleWindow;",
+  "descriptor: ()Ljava/lang/String;",
+  "descriptor: ()Ljava/util/LinkedHashMap;",
+  "descriptor: ()Ljava/util/List;",
+  "descriptor: (Ljava/lang/String;)Ljava/util/Optional;",
+  "public com.cistern.model.ReportHeader header();",
+  "public com.cistern.model.SampleWindow window();",
+  "public com.cistern.report.Report(com.cistern.model.ReportHeader, com.cistern.model.SampleWindow, java.util.List<com.cistern.model.Assessment>, java.lang.String);",
+  "public final class com.cistern.report.Report",
+  "public java.lang.String trend();",
+  "public java.util.LinkedHashMap<java.lang.String, java.lang.Object> toMap();",
+  "public java.util.List<com.cistern.model.Assessment> measures();",
+  "public java.util.Optional<com.cistern.model.Assessment> measure(java.lang.String);",
+  "public long windowSpanMillis();"
+ ],
+ "com.cistern.report.ReportBuilder": [
+  "descriptor: (Lcom/cistern/model/ReportHeader;Lcom/cistern/model/SampleWindow;Lcom/cistern/model/Threshold;)Lcom/cistern/report/Report;",
+  "descriptor: (Lcom/cistern/model/ReportHeader;Lcom/cistern/model/SampleWindow;Lcom/cistern/model/Threshold;Ljava/lang/String;)Lcom/cistern/report/Report;",
+  "descriptor: (Lcom/cistern/model/SampleWindow;)Ljava/lang/String;",
+  "public com.cistern.report.Report buildAll(com.cistern.model.ReportHeader, com.cistern.model.SampleWindow, com.cistern.model.Threshold);",
+  "public com.cistern.report.Report buildSingle(com.cistern.model.ReportHeader, com.cistern.model.SampleWindow, com.cistern.model.Threshold, java.lang.String);",
+  "public com.cistern.report.ReportBuilder();",
+  "public final class com.cistern.report.ReportBuilder",
+  "public static java.lang.String trendOf(com.cistern.model.SampleWindow);"
+ ],
+ "com.cistern.report.ReportComparator": [
+  "descriptor: (Lcom/cistern/report/Report;Lcom/cistern/report/Report;)Ljava/lang/String;",
+  "descriptor: (Lcom/cistern/report/Report;Lcom/cistern/report/Report;)Ljava/util/LinkedHashMap;",
+  "public final class com.cistern.report.ReportComparator",
+  "public static boolean levelsUnchanged(com.cistern.report.Report, com.cistern.report.Report);",
+  "public static final double DEFAULT_TOLERANCE;",
+  "public static java.lang.String describe(com.cistern.report.Report, com.cistern.report.Report);",
+  "public static java.util.LinkedHashMap<java.lang.String, java.lang.Double> levelDeltas(com.cistern.report.Report, com.cistern.report.Report);"
+ ],
+ "com.cistern.report.ReportPipeline": [
+  "descriptor: (Ljava/lang/String;)Lcom/cistern/core/LevelAssessor;",
+  "descriptor: (Ljava/lang/String;Lcom/cistern/model/SampleWindow;Lcom/cistern/model/Threshold;)Lcom/cistern/model/Assessment;",
+  "descriptor: (Ljava/lang/String;Lcom/cistern/model/SampleWindow;Lcom/cistern/model/Threshold;)Ljava/lang/String;",
+  "descriptor: (Ljava/lang/String;Lcom/cistern/model/SampleWindow;Lcom/cistern/model/Threshold;)Ljava/util/Map;",
+  "public com.cistern.core.LevelAssessor assessorFor(java.lang.String);",
+  "public com.cistern.model.Assessment assess(java.lang.String, com.cistern.model.SampleWindow, com.cistern.model.Threshold);",
+  "public com.cistern.report.ReportPipeline();",
+  "public final class com.cistern.report.ReportPipeline",
+  "public java.lang.String renderJson(java.lang.String, com.cistern.model.SampleWindow, com.cistern.model.Threshold);",
+  "public java.util.Map<java.lang.String, java.lang.Object> renderMap(java.lang.String, com.cistern.model.SampleWindow, com.cistern.model.Threshold);"
+ ],
+ "com.cistern.report.Sparklines": [
+  "descriptor: (DI)Ljava/lang/String;",
+  "descriptor: (Lcom/cistern/model/SampleWindow;I)Ljava/lang/String;",
+  "public final class com.cistern.report.Sparklines",
+  "public static java.lang.String levelBar(double, int);",
+  "public static java.lang.String sparkline(com.cistern.model.SampleWindow, int);"
+ ],
+ "com.cistern.report.TextReportRenderer": [
+  "descriptor: (Lcom/cistern/report/Report;)Ljava/lang/String;",
+  "public com.cistern.report.TextReportRenderer();",
+  "public final class com.cistern.report.TextReportRenderer",
+  "public java.lang.String render(com.cistern.report.Report);"
+ ]
+}

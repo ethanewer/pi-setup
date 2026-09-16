@@ -1,0 +1,35 @@
+{
+  "session": "H3",
+  "max_steps": 10,
+  "user": "Order four butter-croissants and pay for them. The session is short-lived: the console gives up after a fixed step budget, so do not waste steps. Look up the croissant on the menu first and check the stock of item 3.",
+  "initial_state": {
+    "menu": [
+      {"item_id": 1, "name": "chocolate-cake", "price": 22.5},
+      {"item_id": 2, "name": "lemon-tart", "price": 12.5},
+      {"item_id": 3, "name": "butter-croissant", "price": 4.5},
+      {"item_id": 4, "name": "sourdough-loaf", "price": 8.0},
+      {"item_id": 5, "name": "star-cookie", "price": 2.25}
+    ],
+    "stock": {"1": 8, "2": 7, "3": 12, "4": 5, "5": 0},
+    "orders": [],
+    "payments": [],
+    "outbox": [],
+    "card_limit": 60.0,
+    "next_order_id": 1,
+    "next_charge_id": 1,
+    "next_notify_id": 1
+  },
+  "transients": [],
+  "decisions": [
+    ["", {"kind": "tool_call", "name": "search_menu", "arguments": {"query": "croissant", "max_results": 5}}],
+    ["K", {"kind": "tool_call", "name": "get_stock", "arguments": {"item_id": 3}}],
+    ["KK", {"kind": "tool_call", "name": "place_order", "arguments": {"item_id": 3, "qty": 4}}],
+    ["KKK", {"kind": "tool_call", "name": "charge_card", "arguments": {"order_id": 1, "amount": 18.0}}],
+    ["KKKK", {"kind": "tool_call", "name": "place_order", "arguments": {"item_id": 1, "qty": -2}}],
+    ["KKKKS", {"kind": "tool_call", "name": "place_order", "arguments": {"item_id": 1, "qty": -2}}],
+    ["KKKKSS", {"kind": "tool_call", "name": "place_order", "arguments": {"item_id": 1, "qty": -2}}],
+    ["KKKKSSS", {"kind": "tool_call", "name": "place_order", "arguments": {"item_id": 1, "qty": -2}}],
+    ["KKKKSSSS", {"kind": "tool_call", "name": "place_order", "arguments": {"item_id": 1, "qty": -2}}],
+    ["KKKKSSSSS", {"kind": "tool_call", "name": "place_order", "arguments": {"item_id": 1, "qty": -2}}]
+  ]
+}

@@ -1,0 +1,20 @@
+diff --git a/lib/bcheck.c b/lib/bcheck.c
+index 90f0ad2..8389c09 100644
+--- a/lib/bcheck.c
++++ b/lib/bcheck.c
+@@ -47,7 +47,15 @@
+ /* #define BOUND_STATIC */
+ 
+ /* use malloc hooks. Currently the code cannot be reliable if no hooks */
++#if defined(__GLIBC__) && (__GLIBC__ > 2 || (__GLIBC__ == 2 && __GLIBC_MINOR__ >= 34))
++/* glibc >= 2.34 removed the __malloc_hook (etc.) ABI this file used, so the
++   hook feature cannot be installed there; follow the FreeBSD/dietlibc branch
++   and fall back to the static-data bound table (the
++   #ifndef CONFIG_TCC_MALLOC_HOOKS path). */
++#undef CONFIG_TCC_MALLOC_HOOKS
++#else
+ #define CONFIG_TCC_MALLOC_HOOKS
++#endif
+ #define HAVE_MEMALIGN
+ 
+ #if defined(__FreeBSD__) \

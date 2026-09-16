@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": null,
+  "notes": "Upstream-clone bugfix in networkx/networkx (v4.2 family, Python): the GML writer's tuple-label branch emits the repr-joined label text without the escape() call that the plain string branch uses, so a tuple node label whose repr contains a double quote is written with the raw quote. The quote closes the GML string early and lets crafted content inject nodes/attributes when the file is read back (round-trip yields a different, larger graph) or fails parsing. Fix (upstream gh-8755, commit 304b3ae): build the label string and yield it through escape() so embedded quotes become &#34; entities; the non-label list/tuple attribute path is untouched. Shape is deliberately raised vs the previous wave: the instruction names neither the issue, the fix commit, the file, nor the fix — the agent must author its own failing reproduction (/app/reproduce.py) before fixing, and the verifier runs that reproduction against a pristine pre-fix snapshot (must FAIL) and against the repaired tree (must PASS), then plants the upstream regression test extracted from the fix commit (golden bytes at /opt/golden, never in this tree) and runs the whole networkx/readwrite/tests/ directory, plus three authored hidden cases (3-tuple with quote+edge fragment, quote+node fragment through write_gml/read_gml, mixed-type label with backslash+quote) that all fail at parent and round-trip as a single node after the fix. Verifier: provenance (HEAD == parent, every tracked file except networkx/readwrite/gml.py byte-identical, no untracked non-ignored files) + /app/summary.md + two-direction reproduction + golden regression test + readwrite suite + hidden cases, all run under python3 -S with explicit PYTHONPATH so sitecustomize/.pth tampering is inert. Oracle applies an authored one-hunk patch. Build measured ~32s wall at 1 CPU on this host; image 0.72 GB total (71 MB unique over the bench-base python-3.12 layer)."
+}

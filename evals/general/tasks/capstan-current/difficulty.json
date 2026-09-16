@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on syncthing/syncthing at parent commit 119d5e72efcf7d4c003664640ca0db6f472edfa4 (real upstream issue #10834, fixed by 703b185982e5cdcff26a119bfa932165d60bda19). replaceRawPath() in lib/upnp/upnp.go indexes p[0] without an empty-string guard, so a discovered IGD device whose control URL is a bare query string (e.g. '?control=...', empty path component) makes the program crash with 'panic: runtime error: index out of range [0] with length 0' during URL normalization; the fix adds 'p != \"\" &&' to the guard. The image clones the repo shallow at the parent, overlays the fix commit's lib/upnp/upnp_test.go (which adds TestControlURLParsingQueryOnly) exactly as the mining reproduction did, keeps the fix commit unreachable (throwaway bare clone), and pre-warms the Go module cache and test-build so the agent's cycle is a one-file incremental recompile. Agent must localise in lib/upnp/upnp.go and stop the crash for query-only control URLs without changing any other normalization behaviour. Hidden cases: two authored Go test vectors driven through the project's own replaceRawPath contract with inputs the upstream tests do not use (deep root path with long query value; multi-parameter query with a root path of '/'), both crashing at parent and producing the exact expected URL at fix; a third case asserts the relative-path append branch is unchanged. Whole ./lib/upnp/ package suite passes after the fix, ~1-2 min incremental rebuild at 1 CPU, first clone+module fetch at build time only."
+}

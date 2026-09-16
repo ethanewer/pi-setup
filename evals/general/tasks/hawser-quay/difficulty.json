@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 2,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 3,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": "Real upstream jest@30b0642f7c1a88b40e4d32726e8be0dee9dc0eb2 (parent of the %j-bigint fix), 30 MB tree, ~7600 files; lightweight toolchain: typescript/@types/node/@jest/get-type 30.5.0/pretty-format 30.5.1/@jest/types 30.5.1, then tsc of packages/jest-each/src/table/{array,interpolation}.ts + node driver",
+  "notes": "SWE-bench-style task against the real Jest monorepo pinned to the parent commit of the fix for the 'Do not know how to serialize a BigInt' %j-title crash (upstream issue #12827, fixed by PR #16338). The agent is NOT given a working reproducer: it must write its own failing reproduction (/app/reproduce.sh) as a deliverable, localise the title formatter in packages/jest-each/src/table/array.ts inside a large monorepo, and repair it (intercept the %j placeholder with a custom JSON stringifier that renders bigint as its literal 'n' form and cyclic structures as '[Circular]', and switch %p/%j interpolation to replacer functions so values holding $&/$`/$'/$$ render literally). The verifier compiles the agent's real edited source plus a hash-pinned pristine pre-fix copy and runs: the agent's own reproduction against both worlds (must fail pre-fix, pass post-fix), the three golden regression tests extracted from the fix commit at image-build time into /opt/hawser-golden (never committed to this tree), and three authored hidden cases with fresh inputs (negative/nested bigints in %j, $-replacement patterns across %p/%j, mixed object bigint rendering) that must fail pre-fix and pass post-fix. nop scores 0: tree is the unfixed parent, no reproduce.sh, no diagnosis. Rewards binary; toolchain, pristine table and golden runner are sha256-pinned to defeat substitution. Offline-capable: verified with networking disabled during the verifier run; instruction does not name issue number, PR, fix commit or file to change."
+}

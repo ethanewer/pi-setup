@@ -23,9 +23,17 @@ def main() -> int:
         # smallest N with N * tasks >= 200, capped so N * tasks <= 500
         n = max(1, -(-200 // len(tasks)))
         if n * len(tasks) > 500:
-            print(f'ERROR {len(tasks)} tasks cannot fit 200..500 samples '
-                  'without exceeding the cap')
-            return 1
+            # The 200..500 trial budget predates the v4 waves. At 1075 tasks a
+            # single sample per task is already 1075 trials, so no N can satisfy
+            # the cap. Refusing to build anything made the documented default
+            # invocation fail outright on a suite that runs fine -- it exited 1
+            # with "1075 tasks cannot fit 200..500 samples". One sample per task
+            # is the minimum meaningful run, so fall back to it and say so
+            # instead of failing. An explicit N is still honoured unchanged.
+            n = 1
+            print(f'NOTE {len(tasks)} tasks exceed the 200..500 trial budget at '
+                  f'N=1; building one sample per task ({len(tasks)} trials). '
+                  'Pass an explicit N to override.')
     total = n * len(tasks)
     if not 200 <= total <= 500 and n > 1:
         print(f'WARNING {total} trials outside 200..500')

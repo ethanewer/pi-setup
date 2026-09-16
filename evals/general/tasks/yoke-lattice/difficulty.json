@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 75,
+  "documented_probe": null,
+  "notes": "CI/CD that actually runs (suite gap #5): the agent authors a GitHub Actions workflow YAML AND a self-contained local runner that must parse it, topologically order jobs by needs: (declaration-order tiebreak), execute each job's steps in isolated clean bash shells under <rundir>/jobs, honour job- and step-level if: expressions (success/failure/always/cancelled, contains/startsWith/endsWith, comparison and boolean operators, ternary, needs.<job>.result/outputs and github.* contexts), compute job outputs from expressions, and emit a deterministic machine-readable summary.json with an exact schema plus per-job artifacts. The verifier runs the agent's own runner over the agent's own workflow (structural consistency: topological order validity, skip-reason/needs consistency, steps executed into artifact dirs) and over three genuinely different hidden workflow fixtures (a failing step with needs-based skip propagation plus always()/failure() job conditions and null-comparison if; an outputs/ternary/contains/startsWith/&& chain with distinct 'needs' vs 'if' skip reasons and step-level always()/failure() skips; a diamond graph exercising declaration-order tiebreak, step env literals and per-job artifact byte contents), asserting exact summary JSON equality and artifact file bytes. Difficulty comes from hidden_case_generalization (three distinct graphs), dependent_stages (workflow -> runner -> pipeline execution -> summary -> artifact bytes), adversarial_inputs (malformed YAML, unknown keys, unknown needs, cycles, bad expressions must be handled with documented exit codes), debugging_ambiguity (the runner contract is under-specified by design: the agent must infer exact semantics from the summary schema and hidden fixtures), and tool_breadth (bash wrapper, Python parser, expression evaluator, process execution, make-driven build)."
+}

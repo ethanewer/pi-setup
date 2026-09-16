@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 2,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 0,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 90,
+  "documented_probe": null,
+  "notes": "Upstream-clone bugfix in google/guava (v4.2 family), deliberately shaped harder than the previous wave's identical-bug-guava tasks: NO reproduction is shipped and the instruction names only the user-visible symptom (Splitter silently drops the final piece, or the whole input, when the pattern can match zero width such as \\b or lookahead/lookbehind). The agent must (1) author its own single-file self-checking reproduction at /app/repro/SplitRepro.java with the exit-0-iff-correct contract, (2) localise the defect in the ~2,000-file real tree, (3) fix it, (4) prove it with the project's own JUnit3 SplitterTest machinery and a summary. Root cause is subtle: PatternSplitter's zero-width-match handling in computeNext() stops iteration when offset >= toSplit.length(), so a zero-width match exactly at end-of-string drops the final piece; the canonical fix relaxes that >= to >. Plausible-looking wrong fixes exist (special-casing single-char inputs, patching the matcher rather than the iterator), and one of the two upstream regression methods (singleWordInput 'foo') passes at BOTH commits, so the agent is protected from discovering that while localising. Verifier: provenance (HEAD pinned, every tracked file except the one fixed source byte-identical to parent, no untracked files) + deliverables + full pre-fix (git archive of pinned HEAD) and fixed-tree compiles + the agent's OWN reproduction run in BOTH directions (must FAIL pre-fix, PASS fixed) + the upstream regression test extracted from the fix commit at build time (testPatternSplitWordBoundary_singleCharInput, the discriminating method, plus _singleWordInput) with sha256 tamper guard + 12 of the project's own existing SplitterTest methods + four authored hidden cases (lookahead/lookbehind alternation on 'banana', a trailing-non-word input 'foo.' on the word-boundary pattern, bare lookbehind 'fooo', repeated lookarounds 'Mississippi') each asserted bidirectional (must fail pre-fix, byte-exact pass post-fix); the (input, pattern) pairs all differ from the two upstream regression inputs f/foo on \b, which end in word characters. Oracle applies the authored one-line patch and re-verifies both directions. truth pinned to 0.28 (the 2016 pom version) because newer truth dies with NoSuchMethodError on Strings.lenientFormat; the direct repro path needs no truth. Plain javac pipeline, no Maven, 1 vCPU."
+}

@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on prometheus/prometheus at parent commit 297523f69825b59e5e9afc121fd0263c4d0248e5 (real upstream bug, issue #19045, fixed by f075de91d03d59f3d5996f1662eb9f0d6de7c40e). FastRegexMatcher's optimizer records a case-folded literal (e.g. \"ABC\") as the required prefix of a regex with an inline (?i) flag, and Matcher.Prefix() advertises that string through the public API even though it is not guaranteed to match the stored label text byte-for-byte; consumers pre-filtering label sets by comparing against the prefix prune away names whose capitalization differs, so prefix-based lookup and full-regex matching disagree. Agent must reproduce (the checkout carries the upstream regression test overlaid at build time, so `go test -v ./model/labels -run TestPrefix` fails exactly as mined), localise the bug in the real tree, and fix Matcher.Prefix() semantics; the hidden cases exercise other inline-flag placements via MatchRegexp, the prefix-pruning consumer path modelled on the issue, and a no-regression guard that case-sensitive prefixes are still advertised. Go 1.26.0 pinned, caches warmed at build so the trial is offline; whole model/labels module suite green after fix (51 tests, ~1s at 1 CPU)."
+}

@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on cure53/DOMPurify at the parent of 083bb8ae (8cc5ae1388587f7a08cc099ff2a5e985f85d77c5), the real fix for issue #1577. Symptom: when the sanitizer receives an already-parsed DOM node (as opposed to an HTML string), attribute names keep the case they were created with (setAttributeNS / createAttributeNS / imported XML nodes), and name-based removal (removeAttribute/getAttributeNode) ASCII-lowercases its lookup key but not the stored qualified name, so uppercase ONCLICK/ONERROR and uppercase HREF=javascript: attributes survive the walk and re-arm when the subtree is serialized back to HTML. The agent must localise the removal step in the real tree (src/purify.ts), repair it to remove the exact Attr node, rebuild the committed dist artifact with the project's own build so the project's dist-based jsdom suite exercises the fix, keep the project's own test/ suite green, and satisfy provenance checks (parent commit checked out, fix commit unreachable, only src + committed dist artifacts modified). The verifier runs the upstream regression tests extracted from the fix commit (targeted module slice: 4 case-preservation regressions + string control + DOMParser variant which runs under jsdom 29.1.1), the project's own full jsdom suite, and 3 authored hidden cases on inputs the upstream tests do not use (other elements/handlers, multiple case-preserved attrs on one node with safe-attribute preservation, and a reparse-sink scenario that proves handlers cannot re-arm). Both directions re-verified inside the task image: parent FAILs the repro (3 surviving handlers, exit 1) and the golden slice; the applied fix passes. jsdom 29.1.1 pinned by the project's own package-lock; ~1 min build (clone + npm install), 35s full jsdom suite."
+}

@@ -1,0 +1,110 @@
+[
+  {
+    "repository": "prometheus/prometheus",
+    "upstream_issue_ref": "#19045",
+    "fix_commit": "f075de91d03d59f3d5996f1662eb9f0d6de7c40e",
+    "parent_commit": "297523f69825b59e5e9afc121fd0263c4d0248e5",
+    "base_image": "bench-base:ubuntu-24.04",
+    "source_files_changed": [
+      "model/labels/matcher.go"
+    ],
+    "golden_test_paths": [
+      "model/labels/matcher_test.go"
+    ],
+    "golden_test_names": [
+      "TestPrefix"
+    ],
+    "reproduction": "cd <repo> && git reset --hard 297523f69825b59e5e9afc121fd0263c4d0248e5 && git clean -fdq && git checkout f075de91d03d59f3d5996f1662eb9f0d6de7c40e -- model/labels/matcher_test.go && go test -v ./model/labels -run TestPrefix",
+    "observed_failure_at_parent": "--- FAIL: TestPrefix (0.00s); expected: \"\" / actual: \"ABC\" for matcher _test_label_name!~\"(?i)abc.+\"",
+    "verified": "Both directions observed in the container: at parent_commit the test TestPrefix fails with `expected: \"\" actual: \"ABC\"`; at fix_commit it PASSes. Buggy code confirmed present at parent (Matcher.Prefix() returns the case-insensitive prefix 'ABC' for a (?i) pattern; the `m.re.caseInsensitivePrefix` guard is absent) and absent at fix.",
+    "dependency_pins": {
+      "go": "1.26.0"
+    },
+    "install_recipe": "apt-get update && apt-get install -y build-essential make git ca-certificates; curl -sL -o /tmp/go.tgz https://go.dev/dl/go1.26.0.linux-amd64.tar.gz && tar -C /opt -xzf /tmp/go.tgz && export PATH=/opt/go/bin:$PATH; git config --global --add safe.directory <repo-abs-path>; cd <repo> && go test -v ./model/labels -run TestPrefix   (first 'go test' downloads modules from the network, ~1-2 min; no node/rust needed for this package)",
+    "issue_paraphrase": "Case-insensitive label matchers, written with an inline PCRE case-insensitive flag, expose a literal prefix string through the public matching API that is not guaranteed to match the stored label text byte-for-byte. Downstream code that pre-filters label sets by comparing directly against that prefix (instead of running the full regex) therefore prunes away label names whose capitalization differs, so prefix-based label lookups and regex matching disagree on which labels match. After the fix, case-insensitive matchers no longer advertise a byte-wise prefix at all.",
+    "fix_summary": "Matcher.Prefix() returns \"\" (no usable prefix) when the underlying regex has a case-insensitive prefix (m.re.caseInsensitivePrefix), so callers stop doing byte-wise prefix comparisons on patterns where that would be wrong; only case-sensitive prefixes are exposed. Doc comment updated to say 'byte-for-byte'.",
+    "difficulty_guess": "easy",
+    "notes": "Leaf Go package; test compiles and runs in ~5s at 1 CPU after the toolchain is installed. No network needed at test time beyond the initial module fetch. Single golden test file model/labels/matcher_test.go; the failing subtest is the (?i)abc.+ case-insensitive one."
+  },
+  {
+    "repository": "prometheus/prometheus",
+    "upstream_issue_ref": "#18653",
+    "fix_commit": "7450865dcd1f7a521b96c5c9dad01e5eb2c66be0",
+    "parent_commit": "7d1195258cb1702d958361deab455059fdebc08e",
+    "base_image": "bench-base:ubuntu-24.04",
+    "source_files_changed": [
+      "model/relabel/relabel.go"
+    ],
+    "golden_test_paths": [
+      "model/relabel/relabel_test.go"
+    ],
+    "golden_test_names": [
+      "TestConfig_UnmarshalThenMarshal"
+    ],
+    "reproduction": "cd <repo> && git reset --hard 7d1195258cb1702d958361deab455059fdebc08e && git clean -fdq && git checkout 7450865dcd1f7a521b96c5c9dad01e5eb2c66be0 -- model/relabel/relabel_test.go && go test -v ./model/relabel -run TestConfig_UnmarshalThenMarshal",
+    "observed_failure_at_parent": "--- FAIL: TestConfig_UnmarshalThenMarshal/Explicit_empty_separator_and_replacement (0.00s); serialized YAML lost the fields, expected 'separator: \"\" ... replacement: \"\"' but actual omits them both (regex: null)",
+    "verified": "Both directions observed: at parent the YAML round-trip subtest fails (empty separator/replacement fields are dropped from the serialized config, so reload falls back to defaults ';' and '$1'); at the fix commit the same test PASSes (each direction observed in at least one real, uncached execution). Buggy code confirmed present at parent (`Separator string \\`yaml:\"separator,omitempty\" json:\"separator,omitempty\"\\`` and same for Replacement).",
+    "dependency_pins": {
+      "go": "1.26.0"
+    },
+    "install_recipe": "apt-get update && apt-get install -y build-essential make git ca-certificates; curl -sL -o /tmp/go.tgz https://go.dev/dl/go1.26.0.linux-amd64.tar.gz && tar -C /opt -xzf /tmp/go.tgz && export PATH=/opt/go/bin:$PATH; git config --global --add safe.directory <repo-abs-path>; cd <repo> && go test -v ./model/relabel -run TestConfig_UnmarshalThenMarshal   (first 'go test' downloads modules from network)",
+    "issue_paraphrase": "Relabeling rules that deliberately configure an empty separator or an empty regex replacement lose those empty values whenever the configuration is serialized and loaded again, because the empty strings are treated as 'unset' and omitted. After a reload the rule silently falls back to the built-in defaults (a ';' separator and the '$1' replacement), so the same rule rewrites label names differently than before the reload even though the configuration file was not changed.",
+    "fix_summary": "Removed `omitempty` from the yaml/json serialization directives of Config.Separator and Config.Replacement so explicit empty strings are written out and survive a round trip (and Regexp.MarshalYAML now emits nil only when the compiled regex is nil instead of when its string is empty).",
+    "difficulty_guess": "easy",
+    "notes": "Leaf Go package; test runs in ~5s. The golden test also covers the JSON marshal/unmarshal path (TestRegexp_JSONUnmarshalThenMarshal) but only TestConfig_UnmarshalThenMarshal is needed to detect the regression. No network needed at test time."
+  },
+  {
+    "repository": "prometheus/prometheus",
+    "upstream_issue_ref": "#19661",
+    "fix_commit": "78169fb57d69371b24863b0f26555631a754204c",
+    "parent_commit": "1885dfd99d1b89d350ba4b56b3a74ffa0de50427",
+    "base_image": "bench-base:ubuntu-24.04",
+    "source_files_changed": [
+      "util/httputil/compression.go"
+    ],
+    "golden_test_paths": [
+      "util/httputil/compression_test.go"
+    ],
+    "golden_test_names": [
+      "TestCompressionHandler_ContentLength"
+    ],
+    "reproduction": "cd <repo> && git reset --hard 1885dfd99d1b89d350ba4b56b3a74ffa0de50427 && git clean -fdq && git checkout 78169fb57d69371b24863b0f26555631a754204c -- util/httputil/compression_test.go && go test -v ./util/httputil -run TestCompressionHandler_ContentLength",
+    "observed_failure_at_parent": "--- FAIL: TestCompressionHandler_ContentLength (0.01s) for gzip/deflate subtests; client reports 'unexpected EOF' when decoding the compressed body because the stale uncompressed Content-Length header is still present",
+    "verified": "Both directions observed: at parent the gzip/deflate subtests fail with 'unexpected EOF'; at the fix commit TestCompressionHandler_ContentLength PASSes (all 12 subtests; each direction observed in at least one real, uncached execution). Buggy code confirmed present at parent: Content-Length is deleted only in the constructor's encoding-switch, never in Write/WriteHeader/Close.",
+    "dependency_pins": {
+      "go": "1.26.0"
+    },
+    "install_recipe": "apt-get update && apt-get install -y build-essential make git ca-certificates; curl -sL -o /tmp/go.tgz https://go.dev/dl/go1.26.0.linux-amd64.tar.gz && tar -C /opt -xzf /tmp/go.tgz && export PATH=/opt/go/bin:$PATH; git config --global --add safe.directory <repo-abs-path>; cd <repo> && go test -v ./util/httputil -run TestCompressionHandler_ContentLength   (first 'go test' downloads modules from network)",
+    "issue_paraphrase": "HTTP API endpoints that serve gzip- or deflate-compressed responses can advertise a Content-Length computed before the body was compressed. Clients that trust that header then read a truncated or over-long stream and fail with unexpected-EOF style errors when downloading the response. The problem occurs when a handler sets Content-Length itself and then the response goes through the internal compression layer: the size is only corrected at the moment the compressed writer is created, not when the handler actually writes headers or the body, so the stale length survives to the wire.",
+    "fix_summary": "compressedResponseWriter gains removeContentLength() called from Write, WriteHeader and Close (only for zlib/gzip writers), so a handler-set Content-Length is stripped at the point the compressed body is actually produced instead of only at construction time; the constructor-time Del calls are removed.",
+    "difficulty_guess": "medium",
+    "notes": "Leaf Go package; the golden test spins up an in-process httptest server and real client, no external network. ~10s to run. Companion tests TestCompressionHandler_PlainText/Gzip/Deflate exist. The failure mode is a client-side decode error ('unexpected EOF'), a clear symptom."
+  },
+  {
+    "repository": "prometheus/prometheus",
+    "upstream_issue_ref": "#18051",
+    "fix_commit": "94ddb36f647b9b50dee4ce06da27a1239e59ffcc",
+    "parent_commit": "6f81b2271a90887048f209298382340d61f35faf",
+    "base_image": "bench-base:ubuntu-24.04",
+    "source_files_changed": [
+      "cmd/promtool/tsdb.go"
+    ],
+    "golden_test_paths": [
+      "cmd/promtool/tsdb_test.go"
+    ],
+    "golden_test_names": [
+      "TestTSDBDumpNativeHistogram"
+    ],
+    "reproduction": "cd <repo> && git reset --hard 6f81b2271a90887048f209298382340d61f35faf && git clean -fdq && git checkout 94ddb36f647b9b50dee4ce06da27a1239e59ffcc -- cmd/promtool/tsdb_test.go && go test -v ./cmd/promtool -run TestTSDBDumpNativeHistogram",
+    "observed_failure_at_parent": "--- FAIL: TestTSDBDumpNativeHistogram (0.11s); dumped output for histogram series is missing the first samples, e.g. expected '{__name__=\"integer_hist\", job=\"test\"} {count:1, sum:1, [-0.001,0.001]:1} 0' and '{count:2...} 60000' are absent from the actual dump",
+    "verified": "Both directions observed with the Go test cache wiped: at parent TestTSDBDumpNativeHistogram FAILs (histogram series lose their earliest samples in the dump), at fix PASSes (both directions re-run with the Go test cache wiped so no result is cached). Buggy code confirmed present at parent: formatSeriesSet uses three consecutive 'for it.Next() == chunkenc.ValFloat' loops, so the first call to Next() in each loop advances past a sample of the other type and drops it.",
+    "dependency_pins": {
+      "go": "1.26.0"
+    },
+    "install_recipe": "apt-get update && apt-get install -y build-essential make git ca-certificates; curl -sL -o /tmp/go.tgz https://go.dev/dl/go1.26.0.linux-amd64.tar.gz && tar -C /opt -xzf /tmp/go.tgz && export PATH=/opt/go/bin:$PATH; git config --global --add safe.directory <repo-abs-path>; cd <repo> && go test -v ./cmd/promtool -run TestTSDBDumpNativeHistogram   (first 'go test' downloads modules from network; cmd/promtool compiles in ~40-60s at 1 CPU after warm-up)",
+    "issue_paraphrase": "The promtool TSDB dump command silently omits the earliest samples of histogram-typed metric series: when a series contains both ordinary numbers and histograms, the first histogram sample of every histogram series is consumed internally and never printed, so dumps of histogram series are incomplete with no error or warning. The same bug also makes the dump behave unpredictably when it meets a sample type it does not recognize instead of reporting it.",
+    "fix_summary": "formatSeriesSet in cmd/promtool/tsdb.go replaces the three separate 'for it.Next() == ValX' loops (whose first Next() call in loop 2/3 advances past and drops the first histogram/float sample) with a single switch loop over Next() until ValNone, and returns an explicit error for unknown sample types.",
+    "difficulty_guess": "medium",
+    "notes": "Test builds a real tsdb storage fixture in a temp dir via promqltest.LoadedStorage and runs promtool dump logic on it; ~15-20s to run. The companion test TestFormatSeriesSetRejectsUnknownSampleType covers the unknown-type error path. tsdb tests in cmd/promtool do not need node or rust. No external network at test time."
+  }
+]

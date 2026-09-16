@@ -1,0 +1,115 @@
+[
+  {
+    "base_image": "bench-base:python-3.12",
+    "dependency_pins": {
+      "MarkupSafe": "3.0.3",
+      "pytest": "9.1.1",
+      "pytest-xprocess": "1.0.2"
+    },
+    "difficulty_guess": "medium",
+    "fix_commit": "89ce5e5a4c59bc9d51d360fd5c205b344ecf06c8",
+    "fix_summary": "In MultipartDecoder._parse_data, when the buffer holds no complete boundary, self.last_newline(data[data_start:]) returns an index relative to the sliced bytes but was assigned untouched to data_end/del_index, which are absolute offsets into data. The fix adds data_start to the result before storing it, so the 'data up to the partial boundary' slice ends at the correct absolute position and trailing newline bytes belonging to the next chunk are no longer appended to the returned Data event.",
+    "golden_test_names": [
+      "test_decoder_data_start_with_different_newline_positions"
+    ],
+    "golden_test_paths": [
+      "tests/sansio/test_multipart.py"
+    ],
+    "install_recipe": "git clone https://github.com/pallets/werkzeug.git (full history); git checkout <parent-or-fix-commit>; python3 -m pip install -e . pytest pytest-timeout pytest-xprocess cffi cryptography ephemeral-port-reserve watchdog. NOTE: pytest-xprocess is mandatory even to collect a single test - tests/conftest.py does 'from xprocess import ProcessStarter' at import time (ModuleNotFoundError otherwise, easy to misread as a test failure). Werkzeug is pure Python; bits are: src must be importable from the working tree (`pip install -e .` resolves src/werkzeug dynamically from the current checkout).",
+    "issue_paraphrase": "A client uploads a binary file whose content ends with newline bytes right before the multipart closing boundary; the parsed file content comes back corrupted, with extra carriage-return/newline characters that belong to the boundary appended onto the uploaded bytes. An application that stores such uploads (for example saving the received file to disk) ends up with a file that differs from what the client sent - for instance a file whose content is 'A' is received as 'A\\r\\n'. The corruption appears only for certain byte layouts near the boundary and does not affect uploads whose content does not end in a line break.",
+    "notes": "Golden test is parametrized with 9 byte layouts. All 9 fail at parent; file-level run is 12 passed at fix (sub-second). No network. No other project deps touched by these modules (pure stdlib + werkzeug). The working tree must be at the target commit before pip install -e . for a faithful environment; install once is enough if you keep an editable install pointing at the repo.",
+    "observed_failure_at_parent": "9 failed, e.g. test_decoder_data_start_with_different_newline_positions[A]: pytest diff 'At index 2 diff: Data(data=b\"A\", more_data=True) != Data(data=b\"A\\r\\n\", more_data=True)' - the actual Data event carries extra b'\\r\\n' bytes appended to the uploaded content; same failure for all 9 params (b'A', b'\\n', b'\\r', b'\\r\\n', b'\\n\\r', b'A\\n', b'A\\r', b'A\\r\\n', b'A\\n\\r').",
+    "parent_commit": "2a2e371f41aba5d83ca575e65a6409aaa7dc1097",
+    "repository": "pallets/werkzeug",
+    "reproduction": "cd <werkzeug-repo>; git reset --hard 2a2e371f41aba5d83ca575e65a6409aaa7dc1097 && git clean -fd; git checkout 89ce5e5a4c59bc9d51d360fd5c205b344ecf06c8 -- tests/sansio/test_multipart.py; python3 -m pytest tests/sansio/test_multipart.py::test_decoder_data_start_with_different_newline_positions  -> 9 failed at parent; then git reset --hard 89ce5e5a4c59bc9d51d360fd5c205b344ecf06c8 && git clean -fd; same pytest command -> 12/12 passed (the parametrized 9 plus 3 pre-existing tests in the file). No network needed. The golden test drives the low-level API: decoder = MultipartDecoder(boundary); decoder.receive_data(data); [decoder.next_event()...] and asserts the File Data event carries exactly the uploaded bytes.",
+    "source_files_changed": [
+      "src/werkzeug/sansio/multipart.py"
+    ],
+    "upstream_issue_ref": "#2761",
+    "verified": "Both directions observed in bench-base:python-3.12 (Python 3.12.13). At parent 2a2e371f the buggy line 'data_end = del_index = self.last_newline(data[data_start:])' was confirmed present in src/werkzeug/sansio/multipart.py (line 259) and the golden test FAILED 9/9. At fix 89ce5e5a the line reads 'last_newline_idx = self.last_newline(data[data_start:]); data_end = del_index = last_newline_idx + data_start' and the same test command PASSED (12 passed)."
+  },
+  {
+    "base_image": "bench-base:python-3.12",
+    "dependency_pins": {
+      "pytest": "9.1.1",
+      "pytest-xprocess": "1.0.2"
+    },
+    "difficulty_guess": "easy",
+    "fix_commit": "f516c4005c7c4510b61ae07969450771b929809d",
+    "fix_summary": "TypeConversionDict.get now catches TypeError in addition to ValueError around the call to the user-supplied converter, returning the default value instead of letting the exception propagate.",
+    "golden_test_names": [
+      "TestTypeConversionDict::test_return_default_when_conversion_is_not_possible"
+    ],
+    "golden_test_paths": [
+      "tests/test_datastructures.py"
+    ],
+    "install_recipe": "git clone https://github.com/pallets/werkzeug.git (full history); git checkout <parent-or-fix-commit>; python3 -m pip install -e . pytest pytest-timeout pytest-xprocess cffi cryptography ephemeral-port-reserve watchdog (pytest-xprocess needed by tests/conftest.py even for a single test collection).",
+    "issue_paraphrase": "Calling .get() with a type= converter on werkzeug's dict-based request storage (the MultiDict family used for request.args, request.form and request.files) lets TypeError escape the call, so code such as request.args.get('flag', type=int) crashes with an unhandled exception whenever the stored value has a type the converter rejects (for example None for int()). The documented and expected behavior is that an unconvertible value makes .get() return the supplied default; only ValueError was caught, so a None-valued key raises TypeError from request-handling code instead of gracefully falling back to the default.",
+    "notes": "One-line fix, direct repro, sub-second tests. Golden test lives in class TestTypeConversionDict of tests/test_datastructures.py; the fix's version of that file added 'baz=None' plus the assertion d.get('baz', default=-1, type=int) == -1, so bring the fix's test file over the parent tree when verifying. No network.",
+    "observed_failure_at_parent": "TypeError: int() argument must be a string, a bytes-like object or a real number, not 'NoneType' (propagates out of TypeConversionDict.get, raised at structures.py:82 'rv = type(rv)'); golden test FAILED (1 failed) because d.get('baz', default=-1, type=int) with baz=None raises instead of returning -1.",
+    "parent_commit": "4c09d1b3b08deb939803a4beb53483cbc54dfb8d",
+    "repository": "pallets/werkzeug",
+    "reproduction": "Direct repro without pytest: python3 -c \"from werkzeug.datastructures import TypeConversionDict; print(TypeConversionDict(baz=None).get('baz', default=-1, type=int))\" -> at parent 4c09d1b3 raises TypeError: int() argument must be a string, a bytes-like object or a real number, not 'NoneType'; at fix f516c400 prints -1. Pytest version: git reset --hard 4c09d1b3b08deb939803a4beb53483cbc54dfb8d && git clean -fd; git checkout f516c4005c7c4510b61ae07969450771b929809d -- tests/test_datastructures.py; python3 -m pytest tests/test_datastructures.py::TestTypeConversionDict::test_return_default_when_conversion_is_not_possible -> 1 failed at parent, 1 passed at fix.",
+    "source_files_changed": [
+      "src/werkzeug/datastructures/structures.py"
+    ],
+    "upstream_issue_ref": "#2842",
+    "verified": "Both directions observed in bench-base:python-3.12 (Python 3.12.13). At parent 4c09d1b3 grep confirmed 'except ValueError:' only (no TypeError) at TypeConversionDict.get and both the direct repro and the golden test FAILED with TypeError. At fix f516c400 'except (ValueError, TypeError):' present and both the direct repro (prints -1) and the golden test PASSED."
+  },
+  {
+    "base_image": "bench-base:python-3.12",
+    "dependency_pins": {
+      "pytest": "9.1.1",
+      "pytest-xprocess": "1.0.2"
+    },
+    "difficulty_guess": "easy",
+    "fix_commit": "f88164a271dd3e86a3241389ddc5c53eca4b9e4a",
+    "fix_summary": "FloatConverter gains a to_url override that formats the number with fixed-point presentation (f format, which never uses scientific notation) and strips trailing zeros, so 0.00001 builds as '/0.00001' instead of '/1e-05'; the produced URLs match the converter regex and round-trip through MapAdapter.match.",
+    "golden_test_names": [
+      "test_float_no_scientific"
+    ],
+    "golden_test_paths": [
+      "tests/test_routing.py"
+    ],
+    "install_recipe": "git clone https://github.com/pallets/werkzeug.git (full history); git checkout <parent-or-fix-commit>; python3 -m pip install -e . pytest pytest-timeout pytest-xprocess cffi cryptography ephemeral-port-reserve watchdog (pytest-xprocess needed by tests/conftest.py even for a single test collection).",
+    "issue_paraphrase": "Routes defined with a <float:...> converter generate broken URLs for float values that are very small (below 0.0001) or very large, because the value is embedded in the path using scientific notation (for example /1e-05 or /1e+20). Those generated links do not match the converter's own pattern, so requests to them end in 404 Not Found, and even within the same application building a URL for such a value and then matching it back fails. Link generation works for ordinary mid-range floats but silently produces unusable links for extreme values.",
+    "notes": "Very recent commit (2026-04) on main; no follow-up changes to converters.py exist between it and HEAD. Fix relies on Python's 'f' float presentation format and rstrip('0'); note f'{5.0:f}'.rstrip('0') leaves '5.' (trailing dot) - acceptable for the golden test but worth knowing if authors probe edge values. No network, sub-second tests.",
+    "observed_failure_at_parent": "adapter.build('a', {'v': 0.00001}) -> '/1e-05'; adapter.match('/1e-05') raises werkzeug.routing.exceptions.NotFound (The requested URL was not found on the server); golden test FAILED with AssertionError: 'e' is contained here: /1e-05 (1 failed).",
+    "parent_commit": "b97e13cc74d8a45dca260d4037edd7d1f5094042",
+    "repository": "pallets/werkzeug",
+    "reproduction": "Direct repro without pytest: python3 -c \"import werkzeug.routing as r; m = r.Map([r.Rule('/<float:v>', endpoint='a')]); ad = m.bind('test.example'); url = ad.build('a', {'v': 0.00001}); print(url); print(ad.match(url))\" -> at parent b97e13cc prints '/1e-05' and raises NotFound; at fix f88164a prints '/0.00001' and matches ('a', {'v': 1e-05}). Pytest version: git reset --hard b97e13cc74d8a45dca260d4037edd7d1f5094042 && git clean -fd; git checkout f88164a271dd3e86a3241389ddc5c53eca4b9e4a -- tests/test_routing.py; python3 -m pytest tests/test_routing.py::test_float_no_scientific -> 1 failed at parent, 1 passed at fix (assertion is 'e' not in adapter.build('a', {'v': 0.00001})).",
+    "source_files_changed": [
+      "src/werkzeug/routing/converters.py"
+    ],
+    "upstream_issue_ref": "#3146",
+    "verified": "Both directions observed in bench-base:python-3.12 (Python 3.12.13). At parent b97e13cc grep confirmed FloatConverter has no to_url override (its base class str() renders the float) and the built URL '/1e-05' both failed the golden assertion and failed to round-trip (NotFound). At fix f88164a 'to_url' with f'{self.num_convert(value):f}'.rstrip('0') is present in FloatConverter; built URL is '/0.00001', round-trip match succeeds, golden test PASSED."
+  },
+  {
+    "base_image": "bench-base:python-3.12",
+    "dependency_pins": {
+      "pytest": "9.1.1",
+      "pytest-xprocess": "1.0.2"
+    },
+    "difficulty_guess": "easy",
+    "fix_commit": "051fd66352cf8b3f0797249858068dedaead6d39",
+    "fix_summary": "WWWAuthenticate.to_header now returns type.title() immediately when there is neither a token nor any parameters, instead of falling through to the parameter join/dump path that emitted a trailing space; parameterless challenges serialize as e.g. 'Bearer'.",
+    "golden_test_names": [
+      "TestHTTPUtility::test_www_authenticate_header"
+    ],
+    "golden_test_paths": [
+      "tests/test_http.py"
+    ],
+    "install_recipe": "git clone https://github.com/pallets/werkzeug.git (full history); git checkout <parent-or-fix-commit>; python3 -m pip install -e . pytest pytest-timeout pytest-xprocess cffi cryptography ephemeral-port-reserve watchdog (pytest-xprocess needed by tests/conftest.py even for a single test collection).",
+    "issue_paraphrase": "A WWW-Authenticate challenge that carries only the authentication scheme with no parameters (for example 'Bearer', when realm and other directives are legitimately omitted) is serialized with a trailing space, producing the header value 'Bearer ' instead of 'Bearer'. Some HTTP/1.1 client stacks (for example the h11 library) treat that as a malformed header and reject the response, so a client cannot complete authentication against servers that send parameterless challenges. The same defect affects any single-scheme challenge such as 'Basic' when no parameters are present.",
+    "notes": "One-line fix, direct repro, sub-second tests. The golden assertion is an addition inside the existing test_www_authenticate_header method of class TestHTTPUtility. Commit is adjacent to the #3128 list-quote-change commit (its parent). No network.",
+    "observed_failure_at_parent": "WWWAuthenticate('bearer').to_header() returns 'Bearer ' - repr confirms the trailing space (str.rstrip mismatch True); golden test FAILED at the new assertion: assert wa.to_header() == 'Bearer' with actual value 'Bearer ' (1 failed).",
+    "parent_commit": "795f4eaf6ef1fdc2fd1d7114c61ad384ede4322c",
+    "repository": "pallets/werkzeug",
+    "reproduction": "Direct repro without pytest: python3 -c \"from werkzeug.datastructures import WWWAuthenticate; print(repr(WWWAuthenticate('bearer').to_header()))\" -> at parent 795f4eaf prints 'Bearer ' (trailing space); at fix 051fd663 prints 'Bearer'. Pytest version: git reset --hard 795f4eaf6ef1fdc2fd1d7114c61ad384ede4322c && git clean -fd; git checkout 051fd66352cf8b3f0797249858068dedaead6d39 -- tests/test_http.py; python3 -m pytest tests/test_http.py::TestHTTPUtility::test_www_authenticate_header -> 1 failed at parent, 1 passed at fix (assertion added by the fix: wa = WWWAuthenticate('bearer'); assert wa.to_header() == 'Bearer').",
+    "source_files_changed": [
+      "src/werkzeug/datastructures/auth.py"
+    ],
+    "upstream_issue_ref": "#3127",
+    "verified": "Both directions observed in bench-base:python-3.12 (Python 3.12.13). At parent 795f4eaf grep confirmed the early return 'if not self.parameters: return self.type.title()' is ABSENT from WWWAuthenticate.to_header and both the direct repro and golden test FAILED ('Bearer '). At fix 051fd663 the early return is present (auth.py:298) and both the direct repro and golden test PASSED ('Bearer')."
+  }
+]

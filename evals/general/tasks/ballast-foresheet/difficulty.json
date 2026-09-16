@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 75,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on gohugoio/hugo at parent commit 5f0d88b8a3652bbee992f4cbba2b018527f16a15 (real upstream issue #15285, fixed by 24d5e42ffa33eebdf906c495713f0d2bae30c0cb). Three default-policy SSRF holes in config/security: (1) the IP-literal URL deny rule '! ^https?://\\d+\\.' is case-sensitive, so a mixed-case scheme (HTTP://127.0.0.1/) bypasses it; (2) CheckAllowedHTTPAddress gates only on netip IsGlobalUnicast()/IsPrivate(), so CGNAT 100.64.0.0/10, 192.0.0.0/24, TEST-NET-1/2/3, 198.18.0.0/15, 240.0.0.0/4, 2001:db8::/32, 3fff::/20 and 2001:2::/48 all count as 'public'; (3) NAT64 prefixes (64:ff9b::/96, 64:ff9b:1::/48) and IPv4-mapped forms are not unwrapped before classification. Fix: (?i) on the deny rule plus an isPublicAddr helper that unwraps NAT64 and denies the special ranges. Image: shallow clone at parent pinned with a 40-hex assert, golden regression test (the fixed securityConfig_test.go, sha 85e6b0f7...) extracted from the fix commit in a throwaway bare clone (deleted; fix commit never in /app/src), overlaid into the tree so `go test -vet=off ./config/security` fails exactly as mined (HTTP://127.0.0.1/ and 100.64.0.1:80 denied-cases get nil errors; TestToTOML also fails as cosmetic collateral at parent); go1.27.1 pinned per dependency_pins, module+build caches warmed as layers; no cgo/extended tags needed. Agent must localise in config/security and repair the default policy without touching test files; verifier asserts provenance (HEAD==parent, fix commit unreachable, porcelain exactly M config/security/securityConfig.go + M ..._test.go, golden hash) then runs golden filtered tests, gated full package, and three authored hidden cases (mixed-case schemes on loopback/private/CGNAT hosts plus public-host allowances; CGNAT/TEST-NET/benchmark/reserved/2001:2::/2001:db8 documented address-layer vecs; NAT64-embedded and IPv4-mapped private + special + public vecs, and a URL-text-vs-resolved-address cross-layer check) each of which fails at parent and passes at fix. Measured: golden filtered run ~7s cold; full package ~1s warm at 1 CPU."
+}

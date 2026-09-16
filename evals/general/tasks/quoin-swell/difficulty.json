@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 90,
+  "documented_probe": null,
+  "notes": "Upstream-clone bugfix in sharkdp/fd (v4.3 family, issue #849): a search-path argument equal to '-' silently matches nothing - `fd . -` run inside a directory that contains a real subdirectory named '-' prints NOTHING and exits 0, while `fd . ./-` finds the very same files. The agent gets the real tree at the parent commit (single depth-1 object store, fix commit provably unreachable: golden test tests/tests.rs extracted from the fix commit via a throwaway clone into /opt/golden, sha256-pinned), must author its own failing reproduction (/app/repro.sh, executed against both the rebuilt fixed binary and a pristine pre-fix binary baked at /opt/prefix/fd) before fixing, then localise the defect by reading the CLI/search-path code (the 4-line upstream fix normalizes '-' to './-' in Opts.normalize_path, src/cli.rs) and patch exactly that single source file. Verifier: provenance (HEAD == parent, fix commit unreachable, blob-level scope check permitting ONLY src/cli.rs to differ), a forced offline rebuild from the source tree (touch + cargo build -j1; kills planted artifacts), the agent's repro in both directions, the upstream regression test (test_single_dash_root_path) planted from /opt/golden and run inside the full suite (`cargo test -- --skip test_exec_nulls`; test_exec_nulls is a pre-existing 1-CPU-sandbox artifact that fails on the pristine parent tree too and is unrelated to the dash bug - verified both at --cpus=1 and on full cores), and four authored hidden cases using inputs the upstream test does not use (nested dash dirs, filtered pattern, dash path alongside a second valid search path, and the --search-path long-option form), each required to pass on the rebuilt binary AND to fail on the pre-fix binary. Dependency pins: rust >= 1.90 satisfied by pinned rustup stable 1.98.1; Cargo.lock committed at the pinned commit; CARGO_NET_OFFLINE=true with fully warm registry cache (offline rebuild smoke-tested at image build time). test_exec_nulls: independent review re-ran it at --cpus=1 on this host (5/5 runs passed), so the 'fails on the pristine parent tree' claim did not reproduce there; the verifier's --skip of exactly that test is retained regardless because the suite-count assertions (108 passed / 1 filtered) are calibrated with it skipped and skipping keeps the graded run deterministic on busier hosts."
+}

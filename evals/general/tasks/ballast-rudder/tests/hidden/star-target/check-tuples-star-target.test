@@ -1,0 +1,17 @@
+[case testMultiAssignmentOverloadReinferredStarMarker]
+from typing import Any, TypeVar, overload
+
+T = TypeVar("T")
+
+
+@overload
+def f(value: T) -> tuple[T, int, str]: ...
+@overload
+def f(*values: object) -> tuple[Any, ...]: ...
+def f(*values: object, **kwargs: object) -> object: ...
+
+
+def g() -> None:
+    head: str
+    head, *tail = f(1)  # E: Incompatible types in assignment (expression has type "int", variable has type "str")
+[builtins fixtures/tuple.pyi]

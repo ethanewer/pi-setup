@@ -1,0 +1,15 @@
+diff --git a/core/trino-parser/src/main/java/io/trino/sql/parser/AstBuilder.java b/core/trino-parser/src/main/java/io/trino/sql/parser/AstBuilder.java
+index 880337ad..97409e09 100644
+--- a/core/trino-parser/src/main/java/io/trino/sql/parser/AstBuilder.java
++++ b/core/trino-parser/src/main/java/io/trino/sql/parser/AstBuilder.java
+@@ -3818,8 +3818,8 @@ class AstBuilder
+                 getLocation(context),
+                 context.precision != null ? OptionalInt.of(Integer.parseInt(context.precision.getText())) : OptionalInt.empty(),
+                 switch (context.field.getType()) {
+-                    case YEAR -> new IntervalField.Year();
+-                    case MONTH -> new IntervalField.Month();
++                    case YEAR -> new IntervalField.Month();
++                    case MONTH -> new IntervalField.Year();
+                     default -> throw parseError("Unexpected year-month interval field: " + context.field.getText(), context);
+                 });
+     }

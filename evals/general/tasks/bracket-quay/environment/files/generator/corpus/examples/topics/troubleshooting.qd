@@ -1,0 +1,35 @@
+---
+title: Troubleshooting
+order: 90
+tags: [help]
+---
+
+## Broken fragment links
+
+Symptom: `quaydoc check` reports `broken-fragment`, or clicking a table of
+contents entry never scrolls the page.
+
+The most common cause is a mismatch between the ids the TOC assigns to
+headings and the fragments the reference machinery computes for the same
+title. Both sides of the pipeline are documented as needing to agree
+exactly; when they disagree, every link to the headings concerned breaks.
+Start with the page whose fragment is reported, look at the heading titles
+involved, and compare the two anchor computations in the source. The
+regression usually arrives in a release whose changelog mentions anchor ids.
+
+## Missing pages
+
+`missing-page` means a path link points at a source file that does not
+build a page. Check the spelling, and remember that `draft: true` files
+build nothing.
+
+## Duplicate ids
+
+`duplicate-id` means one page assigns the same id twice — usually two
+headings with the same title. The first keeps the base id; the second gets
+a `-2` suffix.
+
+## Nothing renders
+
+Check the front matter: a missing closing `---` swallows the whole page.
+Run `python3 -m quaydoc.cli check site` and read `.quay-check.txt`.

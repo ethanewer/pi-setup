@@ -1,0 +1,8 @@
+# hidden case 3: a fully empty supply on seven parameters, a parameter name
+# repeated in the declaration, and a repeated name with non-adjacent
+# neighbours -- the same missing-parameter code path, different inputs than
+# the upstream test uses. A fix that deduplicates by walking the statement's
+# parameter list, or that reports in any order, must not pass.
+PREPARE e AS SELECT $x1, $x2, $x3, $x4, $x5, $x6, $x7; EXECUTE e();	ERROR:Values were not provided for the following parameters: x1, x2, x3, x4, x5, x6, x7
+PREPARE d AS SELECT $b, $a, $c, $b, $alpha, $beta; EXECUTE d(b := 1);	ERROR:Values were not provided for the following parameters: a, c, alpha, beta
+PREPARE d2 AS SELECT $zeta, $b, $a, $c, $b, $eta; EXECUTE d2(b := 9);	ERROR:Values were not provided for the following parameters: zeta, a, c, eta

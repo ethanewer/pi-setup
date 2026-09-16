@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 3,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 3,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 1,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 90,
+  "documented_probe": null,
+  "notes": "Hard debugging task in the flaky-test space (the skill-gap wave's item 8). The shipped Python project has a genuine hash-seed nondeterminism: the rotation wheel breaks availability ties with the interpreter's builtin hash() of the member id, which is randomized per process, and it ignores the previous on-call member it is required to exclude. The suite is green ~14/15 of full runs (verified empirically over sampled seeds: 20/300) debugging_ambiguity=3: the failure is invisible in most runs, so the agent must reproduce statistically (repeated runs and/or PYTHONHASHSEED sweeps), distinguish code pollution from test pollution, and confirm the fix across 40 runs. reasoning_depth=3: the root cause is interpreter-level (per-process string hash randomization vs the documented cross-process reproducibility contract) and the fix must preserve the contract, not just the symptom. dependent_stages=3: reproduce -> isolate the one flaky test -> trace the tie-break path -> fix the wheel so the previous member is excluded and the tie-break is deterministic -> re-verify under 40 seeded runs plus 2 hidden source mutants that must still fail. tool_breadth=3: pytest invocation patterns, PYTHONHASHSEED control, git log/blame archaeology over a real committed history, and interpreter-level reasoning. adversarial_inputs=2 and hidden_case_generalization=2: the verifier throws two hidden source mutations at the delivered result (a stuck wheel and a silently truncated roster) and requires each to make the suite go red, proof the tests still bite; the composed fix must survive both. quantitative_correctness=1: the suite's count/format assertions (16 tests) must stay exact. interaction_statefulness=1: the wheel threads the previous member across weeks, and the agent's verify loop is an observe-revise cycle. No resource pressure, no unsafe actions. The natural per-run flake rate (~1/15) reproduces the brief's requirement; the verifier pins 40 seeds that deterministically trigger the pre-fix failure so the negative control (untouched container) always scores 0."
+}

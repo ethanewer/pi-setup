@@ -1,0 +1,10 @@
+# Hidden case: DATE/TIMESTAMP minus an interval with a field at its signed
+# minimum. These operands route through the same "negate the interval, then
+# add" logic (Interval::Invert), which the upstream regression test never
+# exercises with DATE/TIMESTAMP inputs. Line format: QUERY<TAB>EXPECTED.
+SELECT DATE '2024-01-01' - INTERVAL '-4611686018427387904 microseconds -4611686018427387904 microseconds';	ERROR:Interval micros value out of range
+SELECT TIMESTAMP '2024-01-01 12:00:00' - INTERVAL '-4611686018427387904 microseconds -4611686018427387904 microseconds';	ERROR:Interval micros value out of range
+SELECT DATE '2024-01-01' - INTERVAL '-2147483648 days';	ERROR:Interval days value out of range
+SELECT DATE '2024-01-01' - INTERVAL '-2147483648 months';	ERROR:Interval months value out of range
+SELECT DATE '2024-01-01' - INTERVAL '1 month';	VALUE:2023-12-01
+SELECT TIMESTAMP '2024-01-01 12:00:00' - INTERVAL '1 day';	VALUE:2023-12-31 12:00:00

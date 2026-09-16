@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 1,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 30,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on explosion/spaCy at parent commit f5d04868e1e66d0acd6417b1c8099bcd4068fff7 (real upstream issue #13876, fixed upstream by 94d6be8a9b1dbecc92820bd7996cd8c75e186320 with a one-line import move; that fix commit ships NO regression test, so the golden test here is authored from the reproduction and lives in /opt/golden, outside the agent tree). displacy.render(..., jupyter=True) imports the IPython display helper from the deprecated IPython.core.display path, which IPython>=9 removed, so every notebook-bound render call crashes with ImportError before reaching IPython. The image shallow-clones exactly the parent commit (fix commit never fetched; not reachable from /app/src), compiles spaCy's Cython extensions in place via pip install -e . (editable; pure-Python edits are live without reinstalling), pins ipython==9.17.1 (the bug only reproduces on IPython>=9), plus pytest==9.1.1 and hypothesis==6.168.0 which spaCy's own tests/conftest.py requires. A build-time smoke layer fails closed if the parent does not reproduce the ImportError, and the pre-existing spacy/tests/test_displacy.py is green on the untouched parent (the existing suite never exercises jupyter=True, so it cannot detect the bug). Verifier: tree provenance (HEAD still the parent, fix commit unreachable, working tree differs only in spacy/displacy/__init__.py), the authored golden regression test, three authored hidden cases exercising the same jupyter display branch from inputs the golden test does not use (style='dep' on an annotated Doc, style='span' on a spans-annotated Doc, style='ent' manual=True dict with a custom colour palette) each asserting via a display spy that the rendered markup payload is actually handed to IPython, and the project's own displaCy test module. Nop (untouched tree) scores 0 naturally: the golden and hidden tests hit the ImportError and provenance fails."
+}

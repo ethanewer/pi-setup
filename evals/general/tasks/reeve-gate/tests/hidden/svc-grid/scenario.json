@@ -1,0 +1,53 @@
+{
+  "revision": "2026-09-10",
+  "cleanup": ["/srv/data"],
+  "groups": [
+    {"name": "grid", "gid": 5401},
+    {"name": "gridops", "gid": 5402}
+  ],
+  "users": [
+    {
+      "name": "dave",
+      "uid": 3301,
+      "primary_group": "grid",
+      "home": "/var/empty",
+      "create_home": false,
+      "shell": "/usr/sbin/nologin",
+      "gecos": "Grid Daemon",
+      "password": "d@ve-grid-9x!",
+      "locked": false,
+      "supplementary_groups": ["gridops"],
+      "min_days": 0,
+      "max_days": 365,
+      "warn_days": 14,
+      "inactive_days": 0,
+      "expiry": "2027-01-15"
+    }
+  ],
+  "paths": [
+    {
+      "path": "/srv/data/grid/state",
+      "kind": "directory",
+      "mode": "0700",
+      "owner": "dave",
+      "group": "grid",
+      "marker": {
+        "file": "node.lock",
+        "content": "GRID-READY",
+        "mode": "0600"
+      }
+    },
+    {
+      "path": "/srv/data/grid/tokens",
+      "kind": "directory",
+      "mode": "0750",
+      "owner": "dave",
+      "group": "gridops",
+      "marker": {
+        "file": "token",
+        "content": "ab86c4fe",
+        "mode": "0640"
+      }
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 90,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on python-poetry/poetry at parent commit 35eb5025dc7374db74ef26ce32a0e70f54d2e3b6 (real upstream bug, issue #10805). The resolver's Indicator.context() only clears the class-level Indicator.CONTEXT on the happy path (yield _set_context then _set_context(None)); when the body of the with-block raises, the stale activity label leaks out and keeps being displayed on later, unrelated progress output. Fix (upstream b8383e3c) wraps the yield in try/finally. Difficulty deliberately raised versus the mined reproduction: the instruction describes only the user-visible symptom and does NOT name the file, the fix, the issue or the commit; the agent must write its own failing reproduction (/app/reproduce_indicator_leak.py, a declared deliverable) before fixing. The verifier runs the agent's reproduction against a clean pre-fix tree (must fail) and against the repaired tree (must pass), runs the upstream regression test extracted from the fix commit into /opt/golden at image build time, runs a fast offline slice of the project's own tests/puzzle/test_provider.py (one unrelated version-format test excluded, which fails on this poetry-core revision even pre-fix), and runs three authored hidden cases over other exception types, normal-exit/re-entry paths, and the label formatter - inputs the upstream test does not use. Provenance gates: HEAD still the pinned parent, fix commit not reachable (exactly one commit), only tracked source files under src/poetry/ modified (at least one), no tracked test modified, no tracked file deleted, no assume-unchanged flags, no importable untracked file, import poetry.puzzle.provider resolves to /app/src; site-packages manifest and harness canaries checked. Pure Python, offline, ~4s per pytest run on 1 CPU."
+}

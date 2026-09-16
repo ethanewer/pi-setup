@@ -1,0 +1,93 @@
+[
+ {
+  "repository": "pallets/jinja",
+  "upstream_issue_ref": "#1858",
+  "fix_commit": "051df10c7b95b735ee53eeb1e9c8de1eb48ead14",
+  "parent_commit": "37f5b058ee4aaa01994ae4d378fc015bde484933",
+  "base_image": "bench-base:python-3.12",
+  "source_files_changed": [
+   "src/jinja2/parser.py"
+  ],
+  "golden_test_paths": [
+   "tests/test_inheritance.py"
+  ],
+  "golden_test_names": [
+   "test_invalid_required"
+  ],
+  "reproduction": "cd <jinja-checkout>\n# --- parent direction ---\ngit reset --hard 37f5b058ee4aaa01994ae4d378fc015bde484933 && git clean -fd\ngit checkout 051df10c7b95b735ee53eeb1e9c8de1eb48ead14 -- tests/test_inheritance.py\n# prove buggy code present: src/jinja2/parser.py contains 'if node.required and not all('\npython -m pytest tests/test_inheritance.py::TestInheritance::test_invalid_required -q\n# => FAILED (AttributeError)\npython -c \"from jinja2 import Environment; Environment().from_string('{% block x required %}{% if true %}{% endif %}{% endblock %}')\"\n# => AttributeError: 'If' object has no attribute 'nodes'\n# --- fix direction ---\ngit reset --hard 051df10c7b95b735ee53eeb1e9c8de1eb48ead14 && git clean -fd\n# prove fix present: src/jinja2/parser.py contains 'for body_node in node.body:'\npython -m pytest tests/test_inheritance.py::TestInheritance::test_invalid_required -q\n# => 1 passed\npython -c \"from jinja2 import Environment; Environment().from_string('{% block x required %}{% if true %}{% endif %}{% endblock %}')\"\n# => TemplateSyntaxError: Required blocks can only contain comments or whitespace",
+  "observed_failure_at_parent": "golden test FAILED with 'AttributeError: 'Block' object has no attribute 'nodes'' (tests/test_inheritance.py::TestInheritance::test_invalid_required); direct repro raised AttributeError: 'If' object has no attribute 'nodes'. At the fix commit the same test passes and the direct repro raises TemplateSyntaxError('Required blocks can only contain comments or whitespace').",
+  "verified": "both directions observed in container bench-base:python-3.12 with pytest 7.4.3. At parent: buggy check 'if node.required and not all(isinstance(child, nodes.TemplateData) and child.data.isspace() for body in node.body for child in body.nodes)' confirmed in src/jinja2/parser.py by grep; golden test fails with AttributeError; direct repro fails with AttributeError. At fix commit: 'for body_node in node.body' + Output-node check confirmed; golden test passes; direct repro raises the intended TemplateSyntaxError. Note: whitespace/comment-only and truly empty required blocks were already accepted at the parent; the regression fixed here is required blocks containing statements (nested block, if, ...), which crashed with an internal AttributeError instead of the intended syntax error.",
+  "dependency_pins": {
+   "pytest": "7.4.3",
+   "MarkupSafe": "3.0.3"
+  },
+  "install_recipe": "git clone https://github.com/pallets/jinja.git (full history); git reset --hard <parent-or-fix-commit> && git clean -fd; python3 -m pip install -e . 'pytest==7.4.3' pytest-timeout trio (the 2023-era conftest.py does not import trio, so pytest alone suffices for this test; installing trio is harmless and needed for other era tests). Editable install resolves src/jinja2 from the current checkout, so reset the working tree BEFORE any pip install or rerun `pip install -e .` after switching commits.",
+  "issue_paraphrase": "A template that declares a required block and places a statement inside it - for example a nested child block or a conditional - fails to compile, but instead of reporting the intended template-syntax error, the parser crashes with an internal AttributeError about an object lacking a 'nodes' attribute and dumps a confusing Python traceback. Required blocks containing only whitespace or comments compile fine, and blocks containing literal text already produce the intended clear error; the crash is specific to statement content. The friendly message the project intends for this situation ('Required blocks can only contain comments or whitespace') is never shown to the user.",
+  "fix_summary": "The pre-fix check iterated child.nodes of every body statement, assuming every node has a .nodes attribute (true only for Output/TemplateData); statement nodes such as If or Block raised AttributeError before the intended failure. The fix verifies each body node is an Output node (and that all its TemplateData leaves are whitespace) before raising TemplateSyntaxError('Required blocks can only contain comments or whitespace'), and rewrites the regression test to cover empty/blank accepted cases and text/nested-block/if rejected cases. Bug present since required blocks were introduced (2020-06-10, commit 8da77f97).",
+  "difficulty_guess": "easy",
+  "notes": "Fully offline, no network, ~0.05 s for the golden test. Only pytest + jinja2(+markupsafe) needed. Do not pint to pytest>=8: era tests use the removed callable form of pytest.raises (does not affect this specific golden test, but affects the surrounding file at this era). Full suite at the fix commit: 874 passed in ~2 s (with pytest 7.4.3 + trio + pytest-timeout)."
+ },
+ {
+  "repository": "pallets/jinja",
+  "upstream_issue_ref": "#1960",
+  "fix_commit": "1655128cfc0e8b598d5b3f361a3983f82098276b",
+  "parent_commit": "079e8312c3ceee54066d2dc887da83867f2db68a",
+  "base_image": "bench-base:python-3.12",
+  "source_files_changed": [
+   "src/jinja2/async_utils.py",
+   "src/jinja2/compiler.py",
+   "src/jinja2/environment.py"
+  ],
+  "golden_test_paths": [
+   "tests/test_async.py"
+  ],
+  "golden_test_names": [
+   "test_basic_generate_async[trio]",
+   "test_include_generate_async[trio]",
+   "test_blocks_generate_async[trio]",
+   "test_async_extend[trio]"
+  ],
+  "reproduction": "cd <jinja-checkout>\n# --- parent direction ---\ngit reset --hard 079e8312c3ceee54066d2dc887da83867f2db68a && git clean -fd\ngit checkout 1655128cfc0e8b598d5b3f361a3983f82098276b -- tests/test_async.py tests/test_async_filters.py\n# prove buggy code present: src/jinja2/async_utils.py contains 'async def auto_aiter('\npython -m pytest tests/test_async.py::test_basic_generate_async tests/test_async.py::test_include_generate_async tests/test_async.py::test_blocks_generate_async tests/test_async.py::test_async_extend -q\n# => 4 failed, 4 passed (the [asyncio] params pass, the [trio] params fail)\n# --- fix direction ---\ngit reset --hard 1655128cfc0e8b598d5b3f361a3983f82098276b && git clean -fd\n# prove fix present: src/jinja2/async_utils.py contains 'return iterable.__aiter__()'\npython -m pytest tests/test_async.py::test_basic_generate_async tests/test_async.py::test_include_generate_async tests/test_async.py::test_blocks_generate_async tests/test_async.py::test_async_extend -q\n# => 8 passed (both asyncio and trio params)",
+  "observed_failure_at_parent": "4 failed, 4 passed. The four failures are the trio-parameterised variants of test_basic_generate_async, test_include_generate_async, test_blocks_generate_async, test_async_extend, e.g. 'FAILED tests/test_async.py::test_basic_generate_async[trio] - pluggy.PluggyTeardownRaisedWarning: ResourceWarning: Async generator '<<template>>.root' was garbage collected before it had been exhausted. Surround its use in 'async with aclosing(...):' to ensure that it gets cleaned up as soon as you're done using it.' (the ResourceWarning is raised by trio's async-gen finalizer during pytest teardown). At the fix commit all 8 pass.",
+  "verified": "both directions observed in container bench-base:python-3.12 with pytest 7.4.3, trio 0.34.0, pytest-timeout 2.4.0. At parent: grep confirmed auto_aiter is still an async generator function ('async def auto_aiter') and compiler.py still emits plain 'async for event in parent_template.root_render_func(context):' without try/finally aclose; the four trio tests fail with the ResourceWarning as quoted. At fix commit: grep confirmed 'return iterable.__aiter__()' in auto_aiter and 'finally: await agen.aclose()' in compiler.py; all four tests pass under both asyncio and trio runners. Deterministic and stable across runs; no network involved.",
+  "dependency_pins": {
+   "pytest": "7.4.3",
+   "trio": "0.34.0",
+   "pytest-timeout": "2.4.0",
+   "MarkupSafe": "3.0.3"
+  },
+  "install_recipe": "git clone https://github.com/pallets/jinja.git (full history); git reset --hard <parent-or-fix-commit> && git clean -fd; python3 -m pip install -e . 'pytest==7.4.3' pytest-timeout trio. trio is mandatory: the regression was never observable under plain asyncio (asyncio's shutdown_asyncgens closes leftover generators silently) - the parent-wrong behavior only surfaces through trio's async-generator finalizer. Editable install resolves src/jinja2 from the current checkout.",
+  "issue_paraphrase": "When an application renders a template in async mode and consumes its output incrementally - streaming a page, using include, or rendering through template inheritance - the underlying async generators are never closed when iteration stops early. Event-loop runtimes that actively police resource cleanup then report ResourceWarning diagnostics such as 'Async generator was garbage collected before it had been exhausted', and some libraries turn those warnings into failures, so perfectly normal streaming code starts crashing. The code generated for a template yields from nested async generators (parent/child templates, includes, block calls) but never calls aclose on them when the consumer stops reading, and the helper that adapts iterators to async iteration adds another unclosed generator layer of its own.",
+  "fix_summary": "auto_aiter is no longer an async-generator function: for async iterables it returns iterable.__aiter__() and for sync iterables it returns a tiny _IteratorToAsyncIterator wrapper, so no extra generator layer exists to leak. Compiled template code that yields from a parent template's root render function, from an included/extended template's root render function, or from a block call now wraps the smart for-loop in try/finally that awaits agen.aclose() (or calls gen.close() in sync mode). Tests were reworked to run under both asyncio and trio runners via a parametrized run_async_fn fixture, and the new aclose regression tests exercise generate_async with explicit early stop + aclose.",
+  "difficulty_guess": "medium",
+  "notes": "Golden tests are deterministic here: at the parent all four trio params failed reproducibly; at the fix all 8 pass. The failure surfaces during pytest teardown as pluggy.PluggyTeardownRaisedWarning wrapping trio's ResourceWarning, so the pytest exit code is non-zero at parent. No network needed. Full suite at fix commit: 874 passed in ~2 s at 1 CPU. Prefer running the four tests as a group (they cover include/extends/self-block and a plain for-loop)."
+ },
+ {
+  "repository": "pallets/jinja",
+  "upstream_issue_ref": "#1448",
+  "fix_commit": "d5f49f5cc135f1a78704dba7db8212be2388b50e",
+  "parent_commit": "189132094135d4c84414404c3b388500d35dc49e",
+  "base_image": "bench-base:python-3.12",
+  "source_files_changed": [
+   "src/jinja2/runtime.py"
+  ],
+  "golden_test_paths": [
+   "tests/test_api.py"
+  ],
+  "golden_test_names": [
+   "test_default_undefined"
+  ],
+  "reproduction": "cd <jinja-checkout>\n# --- parent direction ---\ngit reset --hard 189132094135d4c84414404c3b388500d35dc49e && git clean -fd\ngit checkout d5f49f5cc135f1a78704dba7db8212be2388b50e -- tests/test_api.py\n# prove buggy code present: src/jinja2/runtime.py contains '__call__ = __getitem__ = __contains__ = _fail_with_undefined_error'\npython -m pytest tests/test_api.py::TestUndefined::test_default_undefined -q\n# => FAILED: jinja2.exceptions.UndefinedError: 'missing' is undefined\npython -c \"from jinja2 import Environment; print(Environment().from_string('{{ \\\"foo\\\" in missing }}').render())\"\n# => raises jinja2.exceptions.UndefinedError\n# --- fix direction ---\ngit reset --hard d5f49f5cc135f1a78704dba7db8212be2388b50e && git clean -fd\n# prove fix present: '__contains__ = _fail_with_undefined_error' moved to StrictUndefined only\npython -m pytest tests/test_api.py::TestUndefined::test_default_undefined -q\n# => 1 passed\npython -c \"from jinja2 import Environment; print(Environment().from_string('{{ \\\"foo\\\" in missing }}').render())\"\n# => prints False",
+  "observed_failure_at_parent": "golden test FAILED with 'jinja2.exceptions.UndefinedError: 'missing' is undefined' (tests/test_api.py::TestUndefined::test_default_undefined) and the direct repro raised the same UndefinedError; at the fix commit the test passes and the repro renders the string 'False'.",
+  "verified": "both directions observed in container bench-base:python-3.12 with pytest 7.4.3 (required: era tests use the callable form of pytest.raises removed in pytest 8). At parent: grep confirmed Undefined.__contains__ is wired to _fail_with_undefined_error (so membership checks on undefined values raise); golden test fails and direct repro raises UndefinedError. At fix commit: grep confirmed __contains__ was removed from the raising-op list for Undefined and added to StrictUndefined; golden test passes and direct repro returns False. Behavior survives to current master (checked HEAD), so the direction is stable.",
+  "dependency_pins": {
+   "pytest": "7.4.3",
+   "MarkupSafe": "3.0.3"
+  },
+  "install_recipe": "git clone https://github.com/pallets/jinja.git (full history); git reset --hard <parent-or-fix-commit> && git clean -fd; python3 -m pip install -e . 'pytest==7.4.3' pytest-timeout trio. Do NOT use pytest>=8 for this era: tests/test_api.py at this commit uses pytest.raises(Exc, callable) which was removed in pytest 8. Editable install resolves src/jinja2 from the current checkout.",
+  "issue_paraphrase": "Templates that test membership against a variable that is not defined, such as checking whether a key or label appears in a possibly-missing object, now abort rendering with an UndefinedError instead of simply evaluating the membership test to false as they did in the previous major version. The regression breaks templates that probe optional data by membership: rendering stops with a traceback even though the template author clearly intended the undefined value to behave as an empty/falsy container. Only templates using the default undefined type are affected; users who opted into strict-undefined mode still expect the operation to raise.",
+  "fix_summary": "Jinja 2.x made 'x in undefined' evaluate to False (default Undefined delegates to the base object's membership behavior); the 3.0 development cycle wired __contains__ to _fail_with_undefined_error (commit 609bcb08, 2020-05-09). This fix reverts that: Undefined.__contains__ no longer raises, so 'in' yields False, while StrictUndefined keeps __contains__ = _fail_with_undefined_error. Regression test updated to assert '{{ 'foo' in missing }}' renders 'False' for the default undefined and still raises for strict undefined.",
+  "difficulty_guess": "easy",
+  "notes": "Trivial two-line source change (src delta 2 lines, the smallest of the three entries) but a genuine user-visible 3.0 regression with the project's own regression test; flag if pool reviewers prefer >=4-line deltas. Offline, no network, golden test runs in <0.1 s. Caveat for authors: at this commit the full suite is NOT green in a pytest-7.4.3/py3.12 environment for unrelated era reasons: 1 failure in tests/test_debug.py::TestDebug::test_runtime_error (asserts an old traceback format) and 9 teardown errors in tests/test_loader.py::TestModuleLoader (removed pytest API in module teardown); run only the golden test, not the whole suite. Requires pytest<8 (callable pytest.raises)."
+ }
+]

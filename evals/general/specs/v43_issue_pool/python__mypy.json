@@ -1,0 +1,129 @@
+[
+ {
+  "repository": "python/mypy",
+  "upstream_issue_ref": "#21830",
+  "fix_commit": "0221c8018430c27607ff5e41d3127bd48a3e6170",
+  "parent_commit": "5bb72b788d5c031244f04f30f571f6fa199871ad",
+  "base_image": "bench-base:python-3.12",
+  "source_files_changed": [
+   "mypy/checker.py"
+  ],
+  "golden_test_paths": [
+   "test-data/unit/check-tuples.test"
+  ],
+  "golden_test_names": [
+   "testMultipleAssignmentWithOverloadReinferredAsHomogeneousTuple",
+   "testMultipleAssignmentWithOverloadReinferredAsNonTuple"
+  ],
+  "reproduction": "cat > /tmp/repro.py <<'EOF'\nfrom typing import Any, TypeVar, overload\nT = TypeVar(\"T\")\n@overload\ndef f(value: T) -> tuple[T, int]: ...\n@overload\ndef f(*values: object) -> tuple[Any, ...]: ...\ndef f(*values: object, **kwargs: object) -> object: ...\ndef g() -> None:\n    first: str\n    first, second = f(1)\nEOF\ncd /work/mypy && python3 -m mypy --no-incremental --cache-dir=/tmp/mycache /tmp/repro.py\nAt parent_commit exit code is 2 and mypy prints 'INTERNAL ERROR' (the whole module check aborts). At fix_commit exit code is 1 and mypy prints only the expected 'Incompatible types in assignment (expression has type \"int\", variable has type \"str\")'. Golden test: python3 -m pytest mypy/test/testcheck.py -k testMultipleAssignmentWithOverloadReinferredAsHomogeneousTuple -q (2 failed / 2 passed).",
+  "observed_failure_at_parent": "mypy aborts the whole check with 'INTERNAL ERROR' (exit 2) instead of diagnosing the mismatched assignment: '/tmp/repro.py:11: error: INTERNAL ERROR -- Please try using mypy master on GitHub... version: 2.4.0+dev.5bb72b788d5c031244f04f30f571f6fa199871ad'. Project regression test testMultipleAssignmentWithOverloadReinferredAsHomogeneousTuple FAILS at parent (AssertionError at mypy/checker.py:4412) and testMultipleAssignmentWithOverloadReinferredAsNonTuple also FAILS; both PASS at the fix. Buggy code confirmed at parent: mypy/checker.py line 4412 contains the hard 'assert isinstance(reinforced_rvalue_type, TupleType)' (replaced by an 'if isinstance(...)' at the fix).",
+  "verified": "Both directions observed in container bench-base:python-3.12 (Python 3.12.13, mypy run from source tree, pure-Python 'compiled: no'). Parent 5bb72b7: repro exits 2 with INTERNAL ERROR; golden tests 2 failed. Fix 0221c80: repro exits 1 with the single expected assignment error; golden tests 2 passed. Code presence: 'assert isinstance(reinforced_rvalue_type, TupleType)' present at parent line 4412, replaced by 'if isinstance(reinforced_rvalue_type, TupleType):' at fix.",
+  "dependency_pins": {},
+  "install_recipe": "git config --global --add safe.directory /work/mypy && cd /work/mypy && git reset --hard <sha> && git clean -fd && python3 -m pip install typing_extensions mypy_extensions pathspec librt ast-serialize pytest pytest-xdist lxml && python3 -m mypy --no-incremental --cache-dir=/tmp/mycache <file>",
+  "issue_paraphrase": "Unpacking the result of a call into multiple assignment targets, like `a, b = f(...)`, makes mypy abort the entire check with an INTERNAL ERROR whenever the called function is overloaded and the assignment context selects an overload whose return type is not a plain tuple. A small standalone module that assigns the unpacked result gets no diagnostics at all: the whole type-check run crashes instead of reporting the real incompatibility in the assignment. The crash happens regardless of how the rest of the file is written.",
+  "fix_summary": "In check_multi_assignment_from_tuple, the code asserted that the call's reinferred rvalue type is always a TupleType. The fix removes the assertion and, when the context selects an overload whose inferred return type is not a tuple, re-infers the rvalue in an empty context so unpacking still type-checks correctly. Two regression cases cover a call reinferred as a homogeneous tuple and as a non-tuple.",
+  "difficulty_guess": "easy",
+  "notes": "Fast (~2s CLI, ~3.5s golden pytest run) and fully offline; typeshed is vendored under mypy/typeshed so no submodule init is needed. Run mypy as 'python3 -m mypy' from the repo root; no need to pip-install mypy itself. ALWAYS pass --no-incremental --cache-dir to keep the source tree clean. mypy of this era imports librt+ast-serialize at module load (via mypy/nativeparse.py), so those wheels must be installed or mypy fails to start; both have cp312 manylinux wheels. Golden test needs pytest and pytest-xdist (conftest auto-uses xdist); -k filtering makes each run ~3.5s even though full testcheck collection parses all .test files."
+ },
+ {
+  "repository": "python/mypy",
+  "upstream_issue_ref": "#21428",
+  "fix_commit": "3f0c355b7b5fbce50fc192a697bbe4f214e01253",
+  "parent_commit": "1730c9535e464be8a1eee4d74f74156d75a6c0b2",
+  "base_image": "bench-base:python-3.12",
+  "source_files_changed": [
+   "mypy/checker.py"
+  ],
+  "golden_test_paths": [
+   "test-data/unit/check-inference.test"
+  ],
+  "golden_test_names": [
+   "testLocalPartialTypesWithGlobalInitializedToEmptyListAndRedefine2"
+  ],
+  "reproduction": "cat > /tmp/repro.py <<'EOF'\nx = []\ndef f() -> None:\n    global x\n    x\nEOF\ncd /work/mypy && python3 -m mypy --no-incremental --allow-redefinition --cache-dir=/tmp/mycache /tmp/repro.py\nAt parent_commit exit code is 2 and mypy prints 'INTERNAL ERROR' (line 4, the 'global x' statement). At fix_commit exit code is 1 and mypy prints only 'Need type annotation for \"x\" (hint: \"x: list[<type>] = ...\")'. Golden test: python3 -m pytest mypy/test/testcheck.py -k testLocalPartialTypesWithGlobalInitializedToEmptyListAndRedefine2 -q (1 failed / 1 passed).",
+  "observed_failure_at_parent": "mypy crashes with 'INTERNAL ERROR' (exit 2) on an ordinary module that assigns x = [] at module level and then declares 'global x' inside a function when --allow-redefinition is on: '/tmp/repro.py:4: error: INTERNAL ERROR -- ... version: 2.1.0+dev.1730c9535e464be8a1eee4d74f74156d75a6c0b2'. Project regression test testLocalPartialTypesWithGlobalInitializedToEmptyListAndRedefine2 FAILS at parent; PASSES at fix. Buggy code confirmed at parent: mypy/checker.py contains the unconditional 'self.binder.assign_type(n, sym.node.type, sym.node.type)' for names in scope ('o.names'); the fix guards it with 'typ = get_declaration(n); if typ is not None:'.",
+  "verified": "Both directions observed in container bench-base:python-3.12 (Python 3.12.13, mypy from source). Parent 1730c95: repro exits 2 with INTERNAL ERROR; golden test FAILED. Fix 3f0c355: repro exits 1 with only the 'Need type annotation' hint; golden test PASSED. Code presence: parent has the bare 'self.binder.assign_type(n, sym.node.type, sym.node.type)' line; fix wraps it in 'typ = get_declaration(n) / if typ is not None:'.",
+  "dependency_pins": {},
+  "install_recipe": "git config --global --add safe.directory /work/mypy && cd /work/mypy && git reset --hard <sha> && git clean -fd && python3 -m pip install typing_extensions mypy_extensions pathspec librt ast-serialize pytest pytest-xdist lxml && python3 -m mypy --no-incremental --allow-redefinition --cache-dir=/tmp/mycache <file>",
+  "issue_paraphrase": "With the --allow-redefinition flag enabled, mypy crashes with an internal error on code that is otherwise completely ordinary: a module-level variable initialized to an empty list combined with a function that refers to that same name through a 'global' declaration. Instead of the usual 'need type annotation' hint about the unannotated empty list, the whole type-check run aborts with an INTERNAL ERROR, so no diagnostics of any kind are produced. The crash is triggered by the mere presence of the global statement inside the function.",
+  "fix_summary": "When propagating names from a scope into the binder, mypy unconditionally called assign_type with the raw symbol type, which for a partial type (empty list literal) crashed. The fix reads the declaration type via get_declaration() and only assigns the binder when a real type exists, filtering out partial types. Regression tests cover both the crash case and a sibling reveal case.",
+  "difficulty_guess": "easy",
+  "notes": "Fast (~2s CLI, ~3.5s golden pytest run) and fully offline. Requires --allow-redefinition on the command line for the CLI repro; the golden .test case sets it via '# flags: --allow-redefinition' inside the test-data file, so the pytest path needs no extra flags. mypy of this era imports librt+ast-serialize at import time; install those wheels (cp312 manylinux available). Recommend -k-filtered pytest runs; full testcheck collection takes ~30s once per invocation. The sibling case testLocalPartialTypesWithGlobalInitializedToEmptyListAndRedefine1 (same commit) passes at BOTH parent and fix, so it is NOT a valid oracle."
+ },
+ {
+  "repository": "python/mypy",
+  "upstream_issue_ref": "#21411",
+  "fix_commit": "b7a8bab4e5385adf2457f6644aa70a8fceab9113",
+  "parent_commit": "0007c5267287ba47a3e4acc022ecb149fcf702e2",
+  "base_image": "bench-base:python-3.12",
+  "source_files_changed": [
+   "mypy/checker.py"
+  ],
+  "golden_test_paths": [
+   "test-data/unit/check-narrowing.test"
+  ],
+  "golden_test_names": [
+   "testNegativeNarrowingInContainer"
+  ],
+  "reproduction": "cat > /tmp/repro.py <<'EOF'\nfrom enum import Enum\nclass Color(Enum):\n    RED = 1\ndef count(colors: list[Color]) -> None:\n    counts: dict[Color, int] = {}\n    for color in colors:\n        if color not in counts:\n            counts[color] = 0\n        counts[color] += 1\nEOF\ncd /work/mypy && python3 -m mypy --no-incremental --warn-unreachable --cache-dir=/tmp/mycache /tmp/repro.py\nAt parent_commit exit code is 1 and mypy reports 'Statement is unreachable [unreachable]' on the line inside the if (the counter-initialization line). At fix_commit exit code is 0 ('Success: no issues found in 1 source file'). Golden test: python3 -m pytest mypy/test/testcheck.py -k testNegativeNarrowingInContainer -q (1 failed / 1 passed).",
+  "observed_failure_at_parent": "mypy with --warn-unreachable reports a false positive on a reachable statement: '/tmp/repro.py:8: error: Statement is unreachable [unreachable]' where line 8 is the counter initialization inside 'if color not in counts:' for a freshly created dict. Project regression test testNegativeNarrowingInContainer FAILS at parent; PASSES at fix. Buggy code confirmed at parent: mypy/checker.py line 6782 'if right_index in narrowable_operand_index_to_hash:' block assigns else_map directly from conditional_types_for_iterable with no guard; the fix adds a check that clears else_map ('else_map = {}') unless the iterable is a tuple of singleton-equality types (else_map assignment count 3 at parent, 4 at fix).",
+  "verified": "Both directions observed in container bench-base:python-3.12 (Python 3.12.13, mypy from source). Parent 0007c52: repro prints 'Statement is unreachable' and exits 1; golden test FAILED. Fix b7a8bab: repro prints 'Success: no issues found' and exits 0; golden test PASSED. Code presence: parent block binds else_map without the tuple-singleton guard; fix adds the guard with comment 'In general, we can't do negative narrowing, since e.g. the container could just be empty'.",
+  "dependency_pins": {},
+  "install_recipe": "git config --global --add safe.directory /work/mypy && cd /work/mypy && git reset --hard <sha> && git clean -fd && python3 -m pip install typing_extensions mypy_extensions pathspec librt ast-serialize pytest pytest-xdist lxml && python3 -m mypy --no-incremental --warn-unreachable --cache-dir=/tmp/mycache <file>",
+  "issue_paraphrase": "Inside a runtime membership test such as `if color not in counts:` where counts is an ordinary dict and color is an enum member, mypy wrongly concludes the branch is unreachable and, with --warn-unreachable enabled, flags the statements inside the block as 'Statement is unreachable'. The code is in fact perfectly reachable, since a fresh dictionary is empty the first time it is probed. The spurious error vanishes when the same condition is rewritten, for example inside a helper variable, even though the semantics are identical.",
+  "fix_summary": "Negative narrowing for iterable-membership checks ('x not in container') now only narrows when the container is a tuple whose items are singleton-equality types (e.g. `x not in (None,)`); for general containers the else_map is cleared because the container could be empty. This removes the false 'unreachable' verdict while keeping the sound special case. A regression test class with an enum + dict membership loop was added under --warn-unreachable.",
+  "difficulty_guess": "easy",
+  "notes": "Fast (~2s CLI, ~3.5s golden pytest run) and fully offline. Needs --warn-unreachable for the CLI repro; the golden case sets it via '# flags: --warn-unreachable' in test-data/unit/check-narrowing.test. mypy runtime needs librt+ast-serialize wheels (cp312 available) because mypy/nativeparse.py imports them at module load. Use -k-filtered pytest; do not run the whole mypy suite at 1 CPU (tens of minutes)."
+ },
+ {
+  "repository": "python/mypy",
+  "upstream_issue_ref": "#21431",
+  "fix_commit": "d0b3fb3c89851f10edce10bb425676f400898e00",
+  "parent_commit": "4e349a7c0ba553f7b1ba281d35956f4267208f02",
+  "base_image": "bench-base:python-3.12",
+  "source_files_changed": [
+   "mypy/subtypes.py"
+  ],
+  "golden_test_paths": [
+   "test-data/unit/check-typevar-values.test"
+  ],
+  "golden_test_names": [
+   "testTypeVarValuesSubtypeOfAll"
+  ],
+  "reproduction": "cat > /tmp/repro.py <<'EOF'\nfrom typing import TypeVar\nclass B: ...\nclass C(B): ...\nS = TypeVar(\"S\", B, C)\nb = B()\nc = C()\ndef g(x: S = c):  # valid: C is one of the value types of S\n    pass\ndef h(x: S = b):  # invalid: B is not a subtype of C\n    pass\nEOF\ncd /work/mypy && python3 -m mypy --no-incremental --cache-dir=/tmp/mycache /tmp/repro.py\nAt parent_commit exit code is 1 and mypy reports TWO 'Incompatible default for parameter \"x\"' errors (line 7 for the VALID default c, line 9 for the invalid default b). At fix_commit exit code is 1 but only the line-9 error remains (the valid default is accepted). Golden test: python3 -m pytest mypy/test/testcheck.py -k testTypeVarValuesSubtypeOfAll -q (1 failed / 1 passed).",
+  "observed_failure_at_parent": "mypy rejects a valid default argument value: for `S = TypeVar(\"S\", B, C)` with classes B and C where C subclasses B, `def g(x: S = c)` (c: C) is reported as 'Incompatible default for parameter \"x\" (default has type \"C\", parameter has type \"S\")' even though C is one of the TypeVar's value types. Project regression test testTypeVarValuesSubtypeOfAll FAILS at parent; PASSES at fix. Buggy code confirmed at parent: mypy/subtypes.py contains no TypeVar-values special case in _is_subtype (no 'right.values' handling); the fix adds a block that checks left against each of right.values.",
+  "verified": "Both directions observed in container bench-base:python-3.12 (Python 3.12.13, mypy from source). Parent 4e349a7: repro shows 2 errors (false positive on the valid default at line 7); golden test FAILED. Fix d0b3fb3: repro shows a single error on the invalid default (line 9) and the valid one accepted; golden test PASSED. Code presence: grep for 'right.values' in mypy/subtypes.py returns nothing at parent, 3 hits at fix (lines 366-373) for the TypeVarType-with-values subtype rule.",
+  "dependency_pins": {},
+  "install_recipe": "git config --global --add safe.directory /work/mypy && cd /work/mypy && git reset --hard <sha> && git clean -fd && python3 -m pip install typing_extensions mypy_extensions pathspec librt ast-serialize pytest pytest-xdist lxml && python3 -m mypy --no-incremental --cache-dir=/tmp/mycache <file>",
+  "issue_paraphrase": "A default argument on a function parameter whose annotation is a TypeVar declared with a list of value types, like `TypeVar(\"S\", B, C)`, is rejected whenever the default's type is exactly one of the permitted values but is not a supertype of the others: mypy reports 'Incompatible default for parameter' even though the default is legal. The same declaration with a default whose type is a supertype passes, so the checker's verdict depends on which of the value types the default happens to be, not on whether it is allowed. Genuinely invalid defaults are still caught.",
+  "fix_summary": "In _is_subtype, when the right side is a TypeVarType with a non-empty 'values' list and the left side is not itself a TypeVarType, the left is now a subtype of the TypeVar if it is a (proper) subtype of all the values. A regression case asserts that a default of value type C is accepted while a default of the supertype B is rejected.",
+  "difficulty_guess": "medium",
+  "notes": "Fast (~2s CLI, ~3.5s golden pytest run) and fully offline. NOTE the oracle: BOTH directions exit 1; the observable difference is the presence/absence of the false-positive error line — the golden .test case is the cleanest oracle (FAIL at parent, PASS at fix). mypy runtime needs librt+ast-serialize wheels (cp312 available). Use -k-filtered pytest runs."
+ },
+ {
+  "repository": "python/mypy",
+  "upstream_issue_ref": "#21571",
+  "fix_commit": "4c8f9944ead815e264bcb71cd5f0e8eeb2a75689",
+  "parent_commit": "cd75c4ec10254f4c98964308a0a1437274c7be4f",
+  "base_image": "bench-base:python-3.12",
+  "source_files_changed": [
+   "mypy/checkexpr.py"
+  ],
+  "golden_test_paths": [
+   "test-data/unit/check-classes.test",
+   "test-data/unit/check-python310.test"
+  ],
+  "golden_test_names": [
+   "testTypeUsingTypeCConstructorReturnFromTypeVarUnionBound"
+  ],
+  "reproduction": "cat > /tmp/repro.py <<'EOF'\nfrom typing import Optional, Type, TypeVar, Union\nclass A:\n    def __init__(self, value: str = \"\") -> None: pass\nclass B:\n    def __init__(self, value: str = \"\") -> None: pass\nT = TypeVar(\"T\", bound=Union[A, B])\ndef make(ftype: Type[T], value: Optional[str]) -> T:\n    if value is None:\n        return ftype()\n    return ftype(value)\nreveal_type(make(A, \"a\"))\nreveal_type(make(B, None))\nEOF\ncd /work/mypy && python3 -m mypy --no-incremental --cache-dir=/tmp/mycache /tmp/repro.py\nAt parent_commit exit code is 1 and mypy reports TWO 'Incompatible return value type (got \"A | B\", expected \"T\")' errors on the returns that call the constructor. At fix_commit exit code is 0 ('Success: no issues found', both reveals still \"A\"/\"B\"). Golden test: python3 -m pytest mypy/test/testcheck.py -k testTypeUsingTypeCConstructorReturnFromTypeVarUnionBound -q (1 failed / 1 passed).",
+  "observed_failure_at_parent": "mypy rejects every constructor call made through a parameter declared as Type[T] when the TypeVar T is bound to a union of classes: '/tmp/repro.py:9-10: error: Incompatible return value type (got \"A | B\", expected \"T\")'. The constructed type is revealed correctly (A and B respectively) but the compatibility check against T fails, so the whole function body is reported as erroneous. Project regression test testTypeUsingTypeCConstructorReturnFromTypeVarUnionBound FAILS at parent; PASSES at fix. Buggy code confirmed at parent: mypy/checkexpr.py lines 1953-1956 special-case only CallableType/Overloaded callees from analyze_type_type_callee and then 'return callee' — a UnionType callee keeps the unsubstituted return types; the fix factors the ret-type substitution into replace_type_type_callee_ret_type which recurses into UnionType.relevant_items().",
+  "verified": "Both directions observed in container bench-base:python-3.12 (Python 3.12.13, mypy from source). Parent cd75c4e: repro exits 1 with 2 'Incompatible return value type' errors; golden test FAILED. Fix 4c8f994: repro exits 0 with no issues; golden test PASSED. Code presence: parent has 'callee.copy_modified(ret_type=item)' / 'Overloaded([c.copy_modified(ret_type=item) ...])' followed by bare 'return callee' with no UnionType branch; fix replaces this with the new replace_type_type_callee_ret_type helper that recurses into unions.",
+  "dependency_pins": {},
+  "install_recipe": "git config --global --add safe.directory /work/mypy && cd /work/mypy && git reset --hard <sha> && git clean -fd && python3 -m pip install typing_extensions mypy_extensions pathspec librt ast-serialize pytest pytest-xdist lxml && python3 -m mypy --no-incremental --cache-dir=/tmp/mycache <file>",
+  "issue_paraphrase": "A constructor called through a parameter that is annotated as the type object of a TypeVar, e.g. `Type[T]`, is rejected by mypy whenever T's bound is a union of classes: every call site reports 'Incompatible return value type (got \"Union[A, B]\", expected \"T\")' even though both classes are instantiable with the same arguments. The constructed value's precise type is inferred correctly — mypy itself reveals it as the individual class — but the check against the TypeVar's declared return type fails anyway, so otherwise valid factory functions are littered with errors. The failure appears in both the no-argument and the one-argument call forms.",
+  "fix_summary": "ExpressionChecker.analyze_type_type_callee handles a Type[T] call by finding the constructor of each possible type; the return types of those constructors must be replaced with the TypeVar instance T. The fix extracts that substitution into replace_type_type_callee_ret_type and makes it recurse into UnionType items (after get_proper_type and .relevant_items()), so a union-bounded TypeVar yields a union of constructors whose return types are all replaced. A regression case asserts the two revealed types and that no errors are raised; a match-statement case in check-python310.test is updated accordingly.",
+  "difficulty_guess": "medium",
+  "notes": "Fast (~2s CLI, ~3.5s golden pytest run) and fully offline. Note the fix also updates an EXPECTED reveal in test-data/unit/check-python310.test (reveal of choice() in the default match arm changes from 'b.One | b.Two' to 'T_Choice`-1'), so overlaying the fix's test files at the parent is the correct golden procedure; at parent only the new case testTypeUsingTypeCConstructorReturnFromTypeVarUnionBound fails. mypy runtime needs librt+ast-serialize wheels (cp312 available). Use -k-filtered pytest runs."
+ }
+]

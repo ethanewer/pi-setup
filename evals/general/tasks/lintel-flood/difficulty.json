@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 2,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 3,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 75,
+  "documented_probe": null,
+  "notes": "Feature-gated Rust crate (floodgate) with a combined-strategy integration module that only compiles under `--features sliding,bucket` and is broken exactly there. dependent_stages=3: the reference solution must keep all four feature combinations (default, sliding, bucket, both) building AND fully green simultaneously; a fix that clears one combination regresses another. reasoning_depth=3: the error wall (six E0609 missing-field diagnostics) names no root cause; the agent must read the two single-strategy modules to learn the real verdict API and derive the combined contract (admit iff both admit, retry = max of the two individual delays, admitting side contributes zero) from README.md and the spec tests. debugging_ambiguity=3: the failure appears only under one of four combos; a literal field-swap of the stale integration code compiles but fails five dual-mode spec tests (min-vs-max retry semantics), so the agent must repair the semantics, not just the syntax. adversarial_inputs=2: hidden fixtures deliberately attack partial fixes (exact window-boundary eviction, near-u64::MAX quantities that would overflow a debug build, clock reversals, gold dual retry values where min != max). hidden_case_generalization=3: three injected integration test files (dual edges, single-strategy edges, counter edges) exercise the same contracts from different angles and run in the verifier under the relevant combos. tool_breadth=2: cargo build/test across the feature matrix plus source/doc reading. Difficulty comes from the layered debugging, not from prompt length."
+}

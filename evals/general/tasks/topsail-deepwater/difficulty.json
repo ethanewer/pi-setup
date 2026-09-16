@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 90,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on prometheus/prometheus at parent commit 6f81b2271a90887048f209298382340d61f35faf (real upstream bug, issue #18051, fixed upstream by 94ddb36f647b9b50dee4ce06da27a1239e59ffcc). promtool's formatSeriesSet dumps each sample through three consecutive 'for it.Next() == chunkenc.ValX' loops, so the first Next() of loop 2/3 advances past and silently drops the first histogram/float sample of each run; the fix replaces them with a single switch loop that advances once per sample and returns an explicit error for unknown sample types. The image ships the PRISTINE parent tree with NO reproduction: the agent must author its own failing reproduction (/app/repro.sh) against the project's own go test runner as a deliverable before fixing, and the verifier runs that repro against the pre-fix tree (must fail and print a failing go test run) and the repaired tree (must pass), then the upstream regression tests extracted from the fix commit into /opt/golden (TestTSDBDumpNativeHistogram, TestFormatSeriesSetRejectsUnknownSampleType), both whole-module suite shapes (fix-commit CI shape and original parent test file), and two authored hidden cases (a dump-completeness case with a 5-sample pure-histogram series plus a float/histogram layout ending on a histogram run and a float-only no-regression series; and an unknown-sample-type case with raw values 253/254, including mid-stream after a valid float). Go 1.26.0 pinned as go.dev tarball; build-time fail-closed check re-runs the mined failing direction inside the image (both golden tests FAIL at parent, PASS with fix, verified offline at 1 CPU); provenance guards: HEAD pinned to parent, fix commit unreachable from the clone, only cmd/promtool/tsdb.go may differ. Honest difficulty: the git-apply upstream fix is small, the module compiles in ~1 min warm, and the tree contains an exemplar dump test, so medium is right despite the missing reproduction; the rubric total is 13."
+}

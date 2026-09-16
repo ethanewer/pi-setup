@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 0,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 0,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": "encode/httpx @ 189fc4bcbe5f314128775dec66a616ac9a31ad48 (parent of fix 47f4a96): shallow init+fetch clone, pure-Python editable install. Repro: python3 -c \"import httpx; r = httpx.Response(200, headers=[(b'Content-Encoding', b'zstd')], content=b''); print(repr(r.content))\" -> raises httpx.DecodingError 'Zstandard data is incomplete' at parent, prints b'' with the fix applied. Golden tests/test_decoders.py (fix commit overlay): 1 failed (test_zstd_empty) / 1 passed (test_zstd_truncated) at parent; 34 passed at fix. Hidden cases (sync roundtrip, async roundtrip, empty iterator stream) fail at parent, pass at fix. Verified inside the task image at build time.",
+  "notes": "Upstream-clone bug-fix task (v4.2/v4.3 family) on the real httpx repo, SHA-pinned at the buggy revision. The bug: ZStandardDecoder.flush() unconditionally checks decompressor.eof, so a zero-length body with Content-Encoding: zstd raises DecodingError on read; upstream fix 47f4a96 adds a seen_data flag so flush() returns b'' when no data was ever fed. The instruction describes the user-visible symptom only (no issue number, commit, or file-to-change named). Critical environment trap: without the zstandard package httpx silently falls back to an identity decoder for zstd and the bug vanishes, so the image installs zstandard and a build-time self-check fails closed if the repro does not raise at the parent. The golden regression test (tests/test_decoders.py at the fix commit) is extracted at build time from a throwaway shallow clone into /opt/golden, so the fix commit is never reachable from /app/src/.git; the verifier asserts the working tree differs from upstream in exactly one file (httpx/_decoders.py), that the fix commit object is absent, and that the git status --ignored output matches the empty baseline recorded at build time (no added, hidden, or ignored files — this catches sitecustomize.py / .git/info/exclude wrapper attacks and forged .pyc bytecode caches, both demonstrated during review). Hidden cases: sync roundtrip, async roundtrip, empty iterator stream, and a tail-truncated zstd frame whose detection lives only in flush() (this last one fails any fix that silences flush entirely). Review confirmed both directions inside the task image, and that the hardcoded 'flush returns b'' always' or a startup-hook wrapper both score 0 after hardening while the oracle scores 1. Difficulty easy (total rubric 9): single-file, ~4-line fix, fast and fully offline."
+}

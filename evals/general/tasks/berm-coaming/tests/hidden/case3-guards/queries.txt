@@ -1,0 +1,10 @@
+# case3: successful reductions that must keep returning exact values
+# (over-fix guards) plus a late mid-reduction error on a longer list.
+# VALUE:<v>  -> exact value on BOTH engines (the fix must not alter
+#               successful behaviour).
+# CLEAN:<s>  -> clean error containing the substring on the repaired engine;
+#               INTERNAL error on the pre-fix engine.
+SELECT list_reduce([1,2,3,4,5,6], lambda x, y: x + y);	VALUE:21
+SELECT list_reduce([1,2,3,4,5,6,7,8,9,10], lambda x, y: x * y);	VALUE:3628800
+SELECT list_reduce(['a','b','c'], lambda x, y: concat(x, y));	VALUE:abc
+SELECT list_reduce([1,2,3,4,5,6,7,8,9,10,11,12], lambda x, y: error('late failure'));	CLEAN:Invalid Input Error: late failure

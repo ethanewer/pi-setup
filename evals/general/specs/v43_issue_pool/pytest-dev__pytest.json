@@ -1,0 +1,87 @@
+[
+ {
+  "repository": "pytest-dev/pytest",
+  "upstream_issue_ref": "#719",
+  "fix_commit": "3fc824a62cd5f724ff2ae9a3aff721cee7cb4cbf",
+  "parent_commit": "dde81b1948d1592b0156c2fdb79522ade6b4b857",
+  "base_image": "bench-base:python-3.12",
+  "source_files_changed": [
+   "src/_pytest/mark/structures.py"
+  ],
+  "golden_test_paths": [
+   "testing/python/metafunc.py"
+  ],
+  "golden_test_names": [
+   "TestMetafunc::test_parametrize_single_arg_trailing_comma",
+   "TestMetafuncFunctional::test_parametrize_single_arg_trailing_comma_functional"
+  ],
+  "reproduction": "Container bench-base:python-3.12 (Python 3.12.13), repo mounted at /work/pytest, `pip install -e '.[dev]'` once.\nrepro719.py:\n  import pytest\n  @pytest.mark.parametrize('arg,', [('a',), ('b',)])\n  def test_string_trailing_comma(arg):\n      assert isinstance(arg, str)\n  @pytest.mark.parametrize('arg,', [('a',), ('b',)])\n  def test_string_trailing_comma_value(arg):\n      assert arg == 'a' or arg == 'b'\n# --- parent direction ---\ngit reset --hard dde81b1948d1592b0156c2fdb79522ade6b4b857 && git clean -fd\ngit checkout 3fc824a62cd5f724ff2ae9a3aff721cee7cb4cbf -- testing/python/metafunc.py\n# prove buggy code present: grep -c has_trailing_comma src/_pytest/mark/structures.py => 0 (absent)\npython -m pytest /work/repro719.py -p no:cacheprovider        # => 4 FAILED (arg == ('a',) / ('b',))\npython -m pytest 'testing/python/metafunc.py::TestMetafuncFunctional::test_parametrize_single_arg_trailing_comma_functional' 'testing/python/metafunc.py::TestMetafunc::test_parametrize_single_arg_trailing_comma' -p no:cacheprovider\n# => 2 FAILED; functional subfailures: AssertionError: assert ('b',) in ('a', 'b')\n# --- fix direction ---\ngit reset --hard 3fc824a62cd5f724ff2ae9a3aff721cee7cb4cbf && git clean -fd\n# prove fix present: grep -c has_trailing_comma src/_pytest/mark/structures.py => 2\npython -m pytest /work/repro719.py -p no:cacheprovider        # => 4 passed\npython -m pytest 'testing/python/metafunc.py::TestMetafuncFunctional::test_parametrize_single_arg_trailing_comma_functional' 'testing/python/metafunc.py::TestMetafunc::test_parametrize_single_arg_trailing_comma' -p no:cacheprovider\n# => 2 passed",
+  "observed_failure_at_parent": "Standalone repro: 4 failed, e.g. 'assert isinstance(('a',), str)' => AssertionError (parameter received the tuple ('a',) instead of the string 'a'). Golden tests: TestMetafunc::test_parametrize_single_arg_trailing_comma and TestMetafuncFunctional::test_parametrize_single_arg_trailing_comma_functional both FAILED; the functional test's two string-trailing-comma subtests failed with 'AssertionError: assert ('b',) in ('a', 'b')'. At the fix commit the same repro gives 4 passed and both golden tests pass.",
+  "verified": "Both directions observed in bench-base:python-3.12. Parent (dde81b19, fix's own test file overlaid): buggy behavior confirmed by absence of has_trailing_comma logic in src/_pytest/mark/structures.py (grep -c => 0); standalone repro 4 failed (arg was the whole tuple); project golden tests 2 failed. Fix (3fc824a6): has_trailing_comma logic present (grep -c => 2); standalone repro 4 passed; golden tests 2 passed.",
+  "dependency_pins": {},
+  "install_recipe": "cd <checkout> && pip install -e '.[dev]' (dev extra: argcomplete, attrs, hypothesis, mock, requests, setuptools, xmlschema). Resolved at verify time: pluggy 1.6.0, iniconfig 2.3.0, packaging 26.3, pygments 2.21.0, hypothesis 6.168.0.",
+  "issue_paraphrase": "Passing a single comma-terminated argument name to parametrize \u2014 for example 'arg,' \u2014 together with a list of one-element tuples as the values does not unpack those tuples the way the tuple form ('arg',) does. Each test invocation receives the whole one-element tuple as its argument instead of the single element, so a test expecting the string value fails with something like 'assert ('b',) in ('a', 'b')'. The comma-terminated string form should behave exactly like the equivalent tuple form.",
+  "fix_summary": "ParameterSet._for_parametrize now detects a trailing comma in the string argnames and sets force_tuple=False for single-argument string form, so comma-terminated 'arg,' behaves like ('arg',) (values are NOT wrapped; the list items are treated as tuples to unpack).",
+  "difficulty_guess": "easy",
+  "notes": "No network needed at test time. Whole verification (both directions + golden tests) takes under ~1 minute at 1 CPU. The unit golden test uses the private Metafunc helper and the functional one uses pytester; both run directly under `python -m pytest` from the repo root. pyproject.toml is the configfile and adds no restrictive addopts."
+ },
+ {
+  "repository": "pytest-dev/pytest",
+  "upstream_issue_ref": "#14466",
+  "fix_commit": "2c555d62fa2c51ccb0c4c1cdd6243149ce4ffa97",
+  "parent_commit": "fbab7c5dfe63a22f545207e8dc163ed61ad51d98",
+  "base_image": "bench-base:python-3.12",
+  "source_files_changed": [
+   "src/_pytest/python_api.py"
+  ],
+  "golden_test_paths": [
+   "testing/python/approx.py"
+  ],
+  "golden_test_names": [
+   "TestApproxDatetime::test_timedelta_rel_must_be_number",
+   "TestApproxDatetime::test_timedelta_rel_must_be_non_negative",
+   "TestApproxDatetime::test_timedelta_rel_must_not_be_nan",
+   "TestApproxDatetime::test_timedelta_rel_with_abs",
+   "TestApproxDatetime::test_timedelta_rel_scales_with_expected",
+   "TestApproxDatetime::test_timedelta_in_sequence",
+   "TestApproxDatetime::test_timedelta_in_mapping"
+  ],
+  "reproduction": "Container bench-base:python-3.12 (Python 3.12.13), repo mounted at /work/pytest, `pip install -e '.[dev]'` once.\nrepro14466.py:\n  from datetime import timedelta\n  import pytest\n  def test_timedelta_rel_float_basic():\n      assert timedelta(seconds=100) == pytest.approx(timedelta(seconds=100.5), rel=0.01)\n  def test_timedelta_rel_scales():\n      assert timedelta(seconds=109) == pytest.approx(timedelta(seconds=100), rel=0.1)\n      assert timedelta(seconds=111) != pytest.approx(timedelta(seconds=100), rel=0.1)\n# --- parent direction ---\ngit reset --hard fbab7c5dfe63a22f545207e8dc163ed61ad51d98 && git clean -fd\ngit checkout 2c555d62fa2c51ccb0c4c1cdd6243149ce4ffa97 -- testing/python/approx.py\n# prove buggy code present: grep -n 'relative tolerance for timedelta must be a' src/_pytest/python_api.py => line present (TypeError branch)\npython -m pytest /work/repro14466.py -p no:cacheprovider   # => 2 FAILED, TypeError: relative tolerance for timedelta must be a timedelta, got float\npython -m pytest 'testing/python/approx.py::TestApproxDatetime::test_timedelta_rel_must_be_number' ... (all 7 nodeids) -p no:cacheprovider\n# => 7 FAILED (TypeError 'must be a timedelta' instead of 'must be a number'; '>' not supported between timedelta and float)\n# --- fix direction ---\ngit reset --hard 2c555d62fa2c51ccb0c4c1cdd6243149ce4ffa97 && git clean -fd\n# prove fix present: grep -n 'rel_tolerance = rel * builtins.abs' src/_pytest/python_api.py => line present\npython -m pytest /work/repro14466.py -p no:cacheprovider   # => 2 passed\npython -m pytest (same 7 nodeids) -p no:cacheprovider      # => 7 passed",
+  "observed_failure_at_parent": "Standalone repro: both tests failed with 'TypeError: relative tolerance for timedelta must be a timedelta, got float' raised by pytest.approx(...) itself. Golden tests: all 7 TestApproxDatetime::test_timedelta_rel_* tests FAILED at parent; failure modes include TypeError with the wrong message and, for the in-sequence/mapping nodes, a crash deep in the assert-repr machinery: \"TypeError: '>' not supported between instances of 'datetime.timedelta' and 'float'\". At the fix commit the same repro gives 2 passed and all 7 golden tests pass.",
+  "verified": "Both directions observed in bench-base:python-3.12. Parent (fbab7c5d, fix's test file overlaid): the 'relative tolerance for timedelta must be a timedelta' TypeError branch present at src/_pytest/python_api.py:597 by grep; standalone repro 2 failed; 7 golden tests failed. Fix (2c555d62): 'rel_tolerance = rel * builtins.abs(expected)' present at line 613; standalone repro 2 passed; 7 golden tests passed.",
+  "dependency_pins": {},
+  "install_recipe": "cd <checkout> && pip install -e '.[dev]' (dev extra: argcomplete, attrs, hypothesis, mock, requests, setuptools, xmlschema). Resolved at verify time: pluggy 1.6.0, iniconfig 2.3.0, packaging 26.3, pygments 2.21.0, hypothesis 6.168.0.",
+  "issue_paraphrase": "When comparing datetime/timedelta values with pytest.approx using a relative tolerance expressed as a plain number (for example rel=0.01), a TypeError is raised saying the relative tolerance must itself be a timedelta, so percentage-style relative tolerances cannot be used at all for datetime/timedelta comparisons even though plain numbers work for every other value type. Invalid tolerances such as a negative relative tolerance or NaN are also not rejected cleanly and instead surface as confusing errors, like the comparison machinery trying to compare a timedelta with a float.",
+  "fix_summary": "ApproxTimedelta now accepts rel as a plain number (int/float), validates it (reject negative and NaN rel, reject negative timedelta abs with clear ValueError messages), and computes the effective tolerance as rel * abs(expected) as a timedelta, taking max(abs, rel_tolerance) when both are given. ApproxBase._approx_scalar also routes datetime/timedelta scalars inside sequences/mappings to ApproxTimedelta so rel works there too. Old behavior required rel itself to be a timedelta and used max(abs, rel) directly.",
+  "difficulty_guess": "medium",
+  "notes": "No network needed at test time. Verification of both directions plus the 7 golden tests takes under a minute at 1 CPU. Note the semantics change: rel=timedelta(...) is no longer accepted (must be a number), so older tests that passed rel=timedelta are updated in the fix; a task author must keep the golden test file from the fix commit."
+ },
+ {
+  "repository": "pytest-dev/pytest",
+  "upstream_issue_ref": "#14909",
+  "fix_commit": "a88e91bacaa98b68fe80e07a138ce40994bd8797",
+  "parent_commit": "efa117ad49ce197c5971b12310d53b73ed678d92",
+  "base_image": "bench-base:python-3.12",
+  "source_files_changed": [
+   "src/_pytest/monkeypatch.py"
+  ],
+  "golden_test_paths": [
+   "testing/test_monkeypatch.py"
+  ],
+  "golden_test_names": [
+   "test_failed_delattr",
+   "test_failed_setitem",
+   "test_failed_delitem",
+   "test_setitem_delitem_oldval_captured_before_mutation"
+  ],
+  "reproduction": "Container bench-base:python-3.12 (Python 3.12.13), repo mounted at /work/pytest, `pip install -e '.[dev]'` once.\nrepro14909.py:\n  import pytest\n  from types import MappingProxyType\n  def test_failed_setitem_then_undo(monkeypatch):\n      mapping = MappingProxyType({'x': 1})\n      with pytest.raises(TypeError):\n          monkeypatch.setitem(mapping, 'x', 2)\n      monkeypatch.undo()   # should be a no-op: no mutation happened\n  def test_failed_delattr_then_undo(monkeypatch):\n      class A:\n          __slots__ = ()\n          x = 1\n      a = A()\n      with pytest.raises(AttributeError):\n          monkeypatch.delattr(a, 'x')\n      monkeypatch.undo()\n# --- parent direction ---\ngit reset --hard efa117ad49ce197c5971b12310d53b73ed678d92 && git clean -fd\ngit checkout a88e91bacaa98b68fe80e07a138ce40994bd8797 -- testing/test_monkeypatch.py\n# prove buggy code present: sed -n '/def delitem/,/del dic\\[name\\]/p' src/_pytest/monkeypatch.py shows self._setitem.append(...) BEFORE del dic[name]\npython -m pytest /work/repro14909.py -p no:cacheprovider  # => 2 failed + 2 errors (undo() re-raises TypeError/AttributeError)\npython -m pytest 'testing/test_monkeypatch.py::test_failed_delattr' 'testing/test_monkeypatch.py::test_failed_setitem' 'testing/test_monkeypatch.py::test_failed_delitem' 'testing/test_monkeypatch.py::test_setitem_delitem_oldval_captured_before_mutation' -p no:cacheprovider\n# => 3 failed, 1 passed, 3 errors\n# --- fix direction ---\ngit reset --hard a88e91bacaa98b68fe80e07a138ce40994bd8797 && git clean -fd\n# prove fix present: oldval captured and self._setitem.append(...) occurs AFTER del dic[name] / dic[name]=value / delattr\npython -m pytest /work/repro14909.py -p no:cacheprovider  # => 2 passed\npython -m pytest (same 4 nodeids) -p no:cacheprovider     # => 4 passed",
+  "observed_failure_at_parent": "Standalone repro: test_failed_setitem_then_undo failed and errored with \"TypeError: 'mappingproxy' object does not support item assignment\" raised from monkeypatch.undo(); test_failed_delattr_then_undo failed and errored with AttributeError raised from undo(). Golden tests at parent: test_failed_delattr, test_failed_setitem, test_failed_delitem FAILED (3 failed, 3 errors) because their monkeypatch.undo() calls re-raise the original TypeError/AttributeError. At the fix commit the same repro gives 2 passed and all 4 golden tests pass.",
+  "verified": "Both directions observed in bench-base:python-3.12. Parent (efa117ad, fix's test file overlaid): source inspection of src/_pytest/monkeypatch.py confirms self._setattr/_setitem undo entries are appended BEFORE the mutation (delattr / dic[name]=value / del dic[name]); standalone repro 2 failed + 2 errors; golden tests 3 failed + 3 errors. Fix (a88e91ba): undo entries appended only AFTER a successful mutation; standalone repro 2 passed; golden tests 4 passed.",
+  "dependency_pins": {},
+  "install_recipe": "cd <checkout> && pip install -e '.[dev]' (dev extra: argcomplete, attrs, hypothesis, mock, requests, setuptools, xmlschema). Resolved at verify time: pluggy 1.6.0, iniconfig 2.3.0, packaging 26.3, pygments 2.21.0, hypothesis 6.168.0.",
+  "issue_paraphrase": "If a monkeypatch mutation fails \u2014 for instance setitem or delitem on an immutable mapping proxy, or delattr of an attribute that cannot be deleted (such as a slot attribute on a class) \u2014 pytest still records an undo entry for the operation that never happened. Calling undo() afterwards then re-raises the original error (TypeError or AttributeError) instead of being a harmless no-op, and the rollback bookkeeping no longer reflects what was actually changed. Failed mutations should register nothing to undo.",
+  "fix_summary": "MonkeyPatch.delattr, setitem and delitem now capture the old value first and append the undo entry to self._setattr / self._setitem only after the mutation itself (delattr / dict-style assignment / del) succeeded, so a failed mutation leaves no stale undo record and undo() is a no-op.",
+  "difficulty_guess": "medium",
+  "notes": "No network needed at test time. Verification of both directions plus the four golden tests takes under a minute at 1 CPU. test_setitem_delitem_oldval_captured_before_mutation depends on the make_mapping fixture defined in testing/conftest.py, so run golden tests from the repo root. All four golden tests are plain functions in testing/test_monkeypatch.py."
+ }
+]

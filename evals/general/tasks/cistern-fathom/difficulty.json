@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 0,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 0,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 40,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task: real pallets/werkzeug checkout at commit 4c09d1b3, the parent of upstream fix f516c400 (issue #2842). TypeConversionDict.get() (and the MultiDict family behind request.args/form/files) only catches ValueError from the type converter, so a None value for type=int lets TypeError escape the call and crash request handling; expected is fallback to the supplied default. The agent must reproduce, localise and fix in the real tree (upstream's own one-line fix: except (ValueError, TypeError)). The verifier swaps the fix-commit version of tests/test_datastructures.py (extracted at image build into /opt/golden from a deleted scratch clone) over the repo copy, requires it and two other untouched project test modules to pass, runs three authored hidden cases with inputs upstream's test does not use (float(None), int(list), int(dict), the MultiDict/OrderedMultiDict/ImmutableMultiDict/CombinedMultiDict family with None values, and exception-propagation semantics), and asserts provenance: HEAD pinned at the parent, fix commit absent from the object store, only the one library source file modified, no stray untracked files. Easy: one-line fix, direct repro, sub-second tests, no network."
+}

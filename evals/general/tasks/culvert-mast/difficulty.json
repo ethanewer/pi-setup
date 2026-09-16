@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 80,
+  "documented_probe": null,
+  "notes": "Greenfield Go (golang, the 'Go' language available as golang-go on noble) CLI built with the stdlib alone: the brief demands a three-subcommand CLI that uses only the stdlib flag package, so the deliverable is the compiled binary plus its source. The instruction pins the full observable contract (six settings, per-setting precedence of flag > env var > config file > default in a 4-layer chain, three subcommands resolve/diff/check, json and table output modes with a byte-exact serialization contract, and exit codes 0/1/2/3) while leaving the program structure to the agent. GGaps the suite previously could not measure: zero .go files existed in the tree, no task built a compiled binary from a real toolchain, and no task exercised the Go stdlib flag/encoding/json/os/strconv modules. The verifier REBUILDS the delivered source offline with the documented single command (which enforces the stdlib-only requirement: any external dependency fails the rebuild), runs the visible expectations against the delivered binary, and runs four hidden config/env/flag combinations against the rebuilt binary asserting byte-exact JSON, byte-exact table formats, and exact process exit codes. Hidden cases adversarially cover: layered overrides with all four sources in play, an unparseable env value (rc 2, empty stdout), a flag value rejected by the stdlib parser (rc 2), per-layer check reporting with the fixed error vocabulary and canonical ordering (rc 1), and a malformed config file (rc 3). Debugging ambiguity comes from a language most models have not trained on whose compiler is strict (unused imports/variables are fatal); reasoning depth from composing per-layer validation, canonicalization and overrides into one binary; medium bucket (13) via hidden_case_generalization 2, adversarial_inputs 2, debugging_ambiguity 2."
+}

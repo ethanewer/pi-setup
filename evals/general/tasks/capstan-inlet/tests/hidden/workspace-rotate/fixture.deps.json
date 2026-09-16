@@ -1,0 +1,64 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v13.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v13.0": {
+      "Reporting/2.0.0": {
+        "dependencies": {
+          "Common": "1.2.0"
+        },
+        "runtime": {
+          "Reporting.dll": {}
+        }
+      },
+      "Common/1.2.0": {
+        "runtime": {
+          "Common.dll": {}
+        }
+      },
+      "Frontend/3.1.0": {
+        "dependencies": {
+          "JsonHelper": "2.0.0",
+          "Reporting": "2.0.0"
+        },
+        "runtime": {
+          "Frontend.dll": {}
+        }
+      },
+      "JsonHelper/2.0.0": {
+        "runtime": {
+          "lib/net8.0/JsonHelper.dll": {
+            "assemblyVersion": "2.0.0.0"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "Reporting/2.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "Common/1.2.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "JsonHelper/2.0.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-aB3cD5eF7gH9iJkLmNoPqRsTuVwXyZ2a4c6e8g0iK2m4o=",
+      "path": "jsonhelper/2.0.0",
+      "hashPath": "jsonhelper.2.0.0.nupkg.sha512"
+    },
+    "Frontend/3.1.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}

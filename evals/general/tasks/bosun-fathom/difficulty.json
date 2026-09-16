@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 75,
+  "documented_probe": null,
+  "notes": "Upstream-clone bugfix in BurntSushi/ripgrep (v4.3 family, issue #2944): with an early-stop search limit (-m/--max-count), the --stats block reports '0 bytes searched' even though lines were plainly read and printed ('2 matches', '32 bytes printed' are correct); the unlimited run of the same search reports the true 25 bytes. The searcher's per-buffer loop exits when match_by_line reports the search is done (max-count reached) without consuming the remainder of the current buffer, so the byte-accounting finish() computes from the reader's consumed offset and misses the tail of the last buffer. The agent gets the real tree at the parent commit (one depth-1 object store, fix commit provably unreachable, no network), must author its own failing reproduction (/app/repro.sh, executed against both the rebuilt fixed binary and a pristine pre-fix binary baked at /opt/prefix/rg, plus a path-copied pre-fix binary to defeat path special-casing) before fixing, then localise the defect by reading the searcher glue code (crates/searcher/src/searcher/glue.rs, in the tree's unfamiliar non-Rust language with `mut self`/`let Ok(...) else` syntax, which raises reasoning_depth) and patch that single source file (the upstream fix adds a consume_remaining() call on the early-exit path so the remaining buffer is marked consumed). Verifier: provenance (HEAD == parent, fix unreachable, blob-level scope check permitting ONLY crates/searcher/src/searcher/glue.rs to differ), forced relink (rm binary + touch source + cargo build --locked, offline via warm /opt/cargo cache), the agent's repro in both directions + against a path-copied pre-fix binary, the upstream regression test r2944_incorrect_bytes_searched extracted from the fix commit at image build time into /opt/golden (sha256-pinned, planted over the tree's tests/regression.rs), the whole integration suite (309 tests incl. r2944) plus the searcher crate's own unit suite, and three authored hidden cases using inputs the upstream test does not use (two files with per-file max-count and distinct line sizes; UTF-8 multibyte lines; CRLF line endings) each asserting an exact 'N bytes searched' value. Dependency pins: Rust 1.98.1 (official dist tarball, static.rust-lang.org channel 2026-09-03), committed Cargo.lock with --locked; no cargo update ever. Difficulty deliberately raised per wave instructions: the reproduction is NOT in the instruction; the agent must write it, and the instruction never names the issue, the fix, or the file to change. Measured in the task image: cold 1-CPU debug build 19s, full integration suite 13s, searcher unit suite 11s."
+}

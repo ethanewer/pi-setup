@@ -1,0 +1,14 @@
+[package]
+name = "floodgate"
+version = "0.4.2"
+description = "In-memory rate limiting with pluggable accounting strategies"
+edition = "2021"
+license = "MIT"
+
+# Optional accounting strategies. With no features enabled the crate builds a
+# fixed-window counter gate; enabling `sliding` and/or `bucket` selects the
+# sliding-window and token-bucket gates. Every combination must build and test.
+[features]
+default = []
+sliding = []
+bucket = []

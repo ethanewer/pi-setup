@@ -1,0 +1,18 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": null,
+  "notes": "Upstream-clone bugfix in expressjs/express (v4.3 family): res.location/res.redirect throw (HTTP 500, no Location header) when handed a WHATWG URL instance, because the location helper runs `loc.toLowerCase()` on the raw argument (upstream issue #5555, fixed by PR #5554 / commit a003cfab, one-line `var loc = String(url);`). Deliberately raised over the v4.2 shape: no reproduction is shipped -- the agent must write its own failing /app/repro.js (contract: node /app/repro.js [REPO], supertest in-process, exit 0 iff the checkout redirects correctly) as a deliverable BEFORE fixing, and localise the one line in a real ~200-file repo (symptom text only, no file names). Verifier: HEAD pin + fix-commit-absent + byte-exact scope check (only lib/response.js may differ) + node_modules content pin + /app/summary.md + agent repro fails on a pristine pre-fix scratch tree (git archive of the pinned commit with symlinked node_modules) and passes on the repaired tree + planted upstream regression test (fix-commit test/res.location.js, 10 passing) + existing res.* selection (6 files green) + 3 authored hidden supertest cases (redirect helper with URL object = the real issue entry point, URL with query+fragment, non-string coercible value via toString). Oracle applies the upstream one-hunk patch, writes its own repro+summary, proves repro + golden green, restores the tree. entry.difficulty_guess was 'easy'; the required no-repro-shipped shape raises it to rubric total 12, medium bucket (10-17).",
+  "probe_note": "Measured image build 16.4s (clone ~5s, npm install 11s, node_modules 61MB); bug reproduces in-image (500/no Location, TypeError loc.toLowerCase); golden planted at parent fails exactly 1/10 (9 passing, 1 failing) and passes 10/10 after the one-line fix; all three hidden-case inputs 500 at parent and correct post-fix."
+}

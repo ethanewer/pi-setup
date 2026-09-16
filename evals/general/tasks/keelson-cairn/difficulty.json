@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 2,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 3,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 2,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 105,
+  "documented_probe": null,
+  "notes": "Java daemon (kedd) with three independent shutdown defects: the worker pool is never told to stop (joinAll waits on parked non-daemon workers), the heartbeat ticker is a non-daemon thread with no stop path (the hook joins it without stopping it), and the shutdown hook holds the journal's append mutex while joining workers that still need that mutex to drain - so a partial fix still hangs, and only fixing all three (plus preserving the ordered-journal discipline) yields a prompt exit with a complete, ordered, flushed journal. The symptom is a process that never exits on SIGTERM; the instruction states the observable contract (readiness marker, exit within a generous bound, exact journal transcript) and leaves all diagnosis unspecified. Verifier builds from the repaired source via /app/kedd/build.sh, drives /app/kedd/run.sh against the visible sample plus three genuinely different hidden workloads (streaming high-volume; quiet-run-then-burst; alternating narrow/wide), asserts the process is still alive at SIGTERM time, accepts exit code 0/143 within 60s (correct fix exits in ~10-17s), and recomputes the expected journal from each workload (digests, ordering, exact line count). Deadlock/hang design verified empirically against the JVM: shutdown hooks run on SIGTERM and block process exit until they return, so a hook joining a thread that is never asked to stop hangs the process deterministically. Baseline unsafe_action/resource_pressure are near-dead across the suite and are genuinely 0 here; dependent_stages/interaction_statefulness are high because the deliverable is a stateful long-lived process the verifier starts, probes, signals and observes across its whole lifecycle."
+}

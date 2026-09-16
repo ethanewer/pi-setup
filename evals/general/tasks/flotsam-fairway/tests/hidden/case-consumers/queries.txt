@@ -1,0 +1,10 @@
+# String functions applied to a %c result containing an invalid byte: every
+# one must fail with the clean user-facing error on the fixed engine (on the
+# buggy engine these throw INTERNAL errors / stack traces, and strip_accents
+# segfaults).
+SELECT upper(printf('%c', 255));	ERROR:Invalid UTF8 produced by format string
+SELECT trim(printf('%c', 255));	ERROR:Invalid UTF8 produced by format string
+SELECT reverse(printf('%c', 255));	ERROR:Invalid UTF8 produced by format string
+SELECT upper(printf('%c', 233));	ERROR:Invalid UTF8 produced by format string
+SELECT lower(printf('%c', 128));	ERROR:Invalid UTF8 produced by format string
+SELECT strip_accents(printf('%c', 194));	ERROR:Invalid UTF8 produced by format string

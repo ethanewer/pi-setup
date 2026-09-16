@@ -1,0 +1,8 @@
+{
+  "scales": { "cpu": 10, "mem": 1, "net": 1000, "disk": 2 },
+  "drops": [
+    { "sensor": "cpu", "below": 5000 },
+    { "sensor": "net", "above": 3000000 }
+  ],
+  "emit": ["site", "ts", "sensor", "value"]
+}

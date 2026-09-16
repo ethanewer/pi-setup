@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 30,
+  "documented_probe": "environment/files/probe_linprog.py",
+  "notes": "Upstream-clone debugging task on sympy/sympy at parent commit 6a968f7201e5d9187b50dbdc2cc66b17594a59ac (real upstream bug, issue #29368, fixed in 66ee6e06934fede513c7504413baacbf80917186). In linprog's no-constraints branch the right-hand side is built as a C.cols x 1 zero column (zeros(C.cols, 1)) next to a 0 x C.cols A; the row-count mismatch makes the internal _simplex routine see a truthy B beside a falsy A and raise ValueError('must give A and B'), so an unconstrained LP (cost-only call) is never solved. The upstream fix builds b as zeros(0, 1) so the problem flows through as a 0-row problem: tolerable costs return the trivial optimum (0, [0..0]) and a cost row with a negative entry raises UnboundedLPError. Agent must localise the bug in the real tree and fix it with minimal changes; verifier runs the upstream regression test extracted from the fix commit at image build time (test_29368) plus the project's own existing test_simplex.py, and hidden cases exercising the same branch from inputs the upstream test does not use (explicit empty constraint matrices, larger/zero-entry/rational/Float cost rows, 2+ variable default-bounds forms and their UnboundedLPError counterparts). Pure Python, ~1 min whole verification at 1 CPU, no network at trial. Both directions re-verified inside the task image before shipping."
+}

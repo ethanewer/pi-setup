@@ -1,0 +1,80 @@
+[
+  {
+    "repository": "statsmodels/statsmodels",
+    "upstream_issue_ref": "#9891",
+    "fix_commit": "e30aa8337deebbb902d886b291ab206c3ce4e639",
+    "parent_commit": "52f10d214d4dc02e9b521b9f9a83c5e3d4880f94",
+    "base_image": "bench-base:python-3.12",
+    "source_files_changed": ["statsmodels/stats/descriptivestats.py"],
+    "golden_test_paths": ["statsmodels/stats/tests/test_descriptivestats.py"],
+    "golden_test_names": ["test_empty_rows"],
+    "reproduction": "python - <<'EOF'\nimport pandas as pd\nfrom statsmodels.stats.descriptivestats import describe\ndf = pd.DataFrame({\"a\": pd.Series([], dtype=\"float64\")})\nres = describe(df)\nprint(res)\nassert (res.loc[\"nobs\"] == 0).all()\nassert float(res.loc[\"mean\", \"a\"]) != float(res.loc[\"mean\", \"a\"])  # NaN\nEOF\nAt the parent commit this raises ValueError inside pandas' apply; with a categorical column (pd.Series([], dtype=\"category\")) it raises KeyError. At the fix commit it prints the empty summary frame and the assertions hold.",
+    "observed_failure_at_parent": "ValueError: Length of values (2) does not match length of index (1) for numeric columns; KeyError: 2 for categorical columns. Empirically observed: describe() on the empty numeric frame raised the ValueError, on the empty categorical frame raised KeyError 2, on a mixed 2-column frame raised the ValueError.",
+    "verified": "Both directions observed in bench-base:python-3.12 with numpy 2.5.3 / scipy 1.18.1 / pandas 3.0.5. At parent 52f10d214 the direct reproduction raised ValueError/KeyError and the golden test test_empty_rows (extracted from the fix commit via git show) failed (1 failed: test_empty_rows[numeric]). After `git reset --hard e30aa8337 && git clean -fd`, the same test passed (3 passed). Buggy code confirmed present at parent by inspection: parent descriptivestats.py has no `if df.shape[0] == 0:` short-circuit (grep count 0) while the fix commit introduces it (count 1).",
+    "dependency_pins": {
+      "python": "3.12",
+      "numpy": "2.5.3",
+      "scipy": "1.18.1",
+      "pandas": "3.0.5",
+      "patsy": "1.0.3",
+      "formulaic": "1.2.2"
+    },
+    "install_recipe": "apt-get install -y gcc g++ && pip install numpy scipy pandas patsy formulaic packaging pytest meson-python meson ninja cython setuptools_scm && cd /work/statsmodels && pip install -e . --no-build-isolation",
+    "issue_paraphrase": "The statistical summary routine raises an unhelpful exception when given a zero-row (empty) DataFrame instead of returning a summary: numeric columns fail with a ValueError thrown from deep inside pandas' apply machinery, and all-categorical frames fail with a KeyError when the code tries to report skewness/kurtosis computed on an empty frame. The routine should instead return a summary frame in which per-column statistics are NaN and the observation and missing-value counts are zero, matching the summary the underlying data library itself produces for the same input.",
+    "fix_summary": "Short-circuits the mode and Jarque-Bera computations when there are no observations: skips df.apply(_mode) for 0-row input and returns NaN-vectors, and builds a 4-column NaN frame for the Jarque-Bera apply so the skew/kurtosis lookups do not KeyError. Author reference only; must not leak into instruction.md.",
+    "difficulty_guess": "easy",
+    "notes": "Self-contained pure-Python fix in statsmodels/stats/descriptivestats.py; no network needed at test time. Golden test is pytest-parametrized (numeric/categorical/mixed ids), runs in under 1s at 1 CPU. Reproduces on current pandas (3.0.x); pin pandas if the image installs differently. Editable install triggers a ninja rebuild of the Cython extensions on first import (a few minutes); instructing the agent with a plain `pip install .` (non-editable) avoids the reloader entirely."
+  },
+  {
+    "repository": "statsmodels/statsmodels",
+    "upstream_issue_ref": "#9805",
+    "fix_commit": "0a347973915a2a28ec795cb670343c37ab3d0d92",
+    "parent_commit": "3c102982fecc91782d7836b9ae456fe869dd3578",
+    "base_image": "bench-base:python-3.12",
+    "source_files_changed": ["statsmodels/regression/mixed_linear_model.py"],
+    "golden_test_paths": ["statsmodels/regression/tests/test_lme.py"],
+    "golden_test_names": ["TestMixedLMSummary::test_summary_title"],
+    "reproduction": "python - <<'EOF'\nimport numpy as np, pandas as pd\nfrom statsmodels.regression.mixed_linear_model import MixedLM\npid = np.repeat([0, 1], 5)\nx0 = np.repeat([1], 10)\nx1 = [1, 5, 7, 3, 5, 1, 2, 6, 9, 8]\nx2 = [6, 2, 1, 0, 1, 4, 3, 8, 2, 1]\ny = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]\ndf = pd.DataFrame({\"y\": y, \"pid\": pid, \"x0\": x0, \"x1\": x1, \"x2\": x2})\nres = MixedLM(df[\"y\"].values, df[[\"x0\", \"x1\", \"x2\"]].values, groups=df[\"pid\"].values).fit()\nsumm = res.summary(title=\"Custom MixedLM Summary\")\nassert summ.title == \"Custom MixedLM Summary\", summ.title\nEOF\nAt the parent commit the assertion fails because summ.title is the hard-coded default; at the fix commit it passes.",
+    "observed_failure_at_parent": "res.summary(title='Custom MixedLM Summary') returns a summary whose .title attribute is 'Mixed Linear Model Regression Results' instead of 'Custom MixedLM Summary' (AssertionError: TITLE IGNORED). Empirically observed: printed `summ.title = 'Mixed Linear Model Regression Results'` at parent 3c102982f.",
+    "verified": "Both directions observed in bench-base:python-3.12. Direct reproduction above failed at parent 3c102982f (title ignored, assertion raised), then passed after `git reset --hard 0a3479739 && git clean -fd`. The golden test TestMixedLMSummary::test_summary_title (extracted from the fix commit via git show) passed at the fix commit (1 passed in 0.66s). Buggy code confirmed present at parent by inspection: parent mixed_linear_model.py has no `if title is None:` branch (grep count 0) and add_title is called with the literal default; the fix commit adds the branch (count 1).",
+    "dependency_pins": {
+      "python": "3.12",
+      "numpy": "2.5.3",
+      "scipy": "1.18.1",
+      "pandas": "3.0.5",
+      "patsy": "1.0.3",
+      "formulaic": "1.2.2"
+    },
+    "install_recipe": "apt-get install -y gcc g++ && pip install numpy scipy pandas patsy formulaic packaging pytest meson-python meson ninja cython setuptools_scm && cd /work/statsmodels && pip install -e . --no-build-isolation",
+    "issue_paraphrase": "Fitting the linear mixed-effects model and asking for its tabular result report accepts a documented title argument, but the report ignores whatever title the caller passes and always prints the same default heading. Anyone who labels several reports with custom titles to embed in a document gets the wrong heading silently, with no error or warning, so the parameter appears to work while actually doing nothing.",
+    "fix_summary": "summary() now only fills in the default title when title is None and passes the caller's title through to add_title(). Author reference only; must not leak into instruction.md.",
+    "difficulty_guess": "easy",
+    "notes": "Reproduction needs no network and no data download: the model is a 10-observation, 2-group toy fit that completes in well under a second at 1 CPU. Golden test lives in statsmodels/regression/tests/test_lme.py under class TestMixedLMSummary; that test file also contains regularized variants that share the same setup class. The fix is a 3-line branch in a 2700-line file; the search space is the summary-rendering code path of the results class."
+  },
+  {
+    "repository": "statsmodels/statsmodels",
+    "upstream_issue_ref": "#8190",
+    "fix_commit": "3c7f8f8118160379e880d9d437d22edbb7ef9a9b",
+    "parent_commit": "c67d83dc9befc8927753c207e3571443b42cc749",
+    "base_image": "bench-base:python-3.12",
+    "source_files_changed": ["statsmodels/regression/linear_model.py"],
+    "golden_test_paths": ["statsmodels/regression/tests/test_regression.py"],
+    "golden_test_names": ["test_ols_wls_fixed_scale"],
+    "reproduction": "python - <<'EOF'\nimport numpy as np\nnp.random.seed(0)\nfrom statsmodels.regression.linear_model import OLS\nfrom statsmodels.tools.tools import add_constant\nX = add_constant(np.random.rand(50, 2))\ny = np.dot(X, [1, 2, 3]) + np.random.randn(50)\nscale = 5.0\nres = OLS(y, X).fit(cov_type=\"fixed scale\", cov_kwds={\"scale\": scale})\nnp.testing.assert_allclose(res.scale, scale)\nnp.testing.assert_allclose(res.resid_pearson, res.resid / np.sqrt(scale))\nres2 = res.get_robustcov_results(cov_type=\"fixed scale\", scale=scale)\nnp.testing.assert_allclose(res2.scale, scale)\nprint(\"OK\")\nEOF\nAt the parent commit the first assert fails because res.scale comes out as the residual-based estimate (observed 1.0417949595981135) rather than the fixed 5.0; at the fix commit all asserts pass.",
+    "observed_failure_at_parent": "res.scale = 1.0417949595981135 instead of 5.0. Max absolute difference among violations: 3.95820504 (assert_allclose between observed scale and expected_scale=5.0 raised AssertionError at parent c67d83dc).",
+    "verified": "Both directions observed in bench-base:python-3.12. Reproduction above failed at parent c67d83dc9 (scale attribute 1.0418 instead of 5.0; assertion raised) and passed after `git reset --hard 3c7f8f811 && git clean -fd` (res.scale = 5.0, OLS and get_robustcov_results asserts pass). The golden test test_ols_wls_fixed_scale (which also covers WLS and both 'fixed scale'/'fixed_scale' spellings) passed at the fix commit (1 passed in 0.65s). Buggy code confirmed present at parent by inspection: parent linear_model.py does not set res.scale in the fixed-scale branch of get_robustcov_results (grep for 'res.scale = scale' is empty) while the fix commit adds line 2668 `res.scale = scale`.",
+    "dependency_pins": {
+      "python": "3.12",
+      "numpy": "2.5.3",
+      "scipy": "1.18.1",
+      "pandas": "3.0.5",
+      "patsy": "1.0.3",
+      "formulaic": "1.2.2"
+    },
+    "install_recipe": "apt-get install -y gcc g++ && pip install numpy scipy pandas patsy formulaic packaging pytest meson-python meson ninja cython setuptools_scm && cd /work/statsmodels && pip install -e . --no-build-isolation",
+    "issue_paraphrase": "When a linear (ordinary or weighted least squares) regression is fitted with a user-specified fixed scale for the covariance, the fitted result does not actually report that scale: reading the scale attribute gives the value the package would have estimated from the residuals (roughly 1 for standardized data) instead of the supplied value, and the \"Pearson\" residuals — residuals normalized to unit variance — are divided by the square root of that wrong estimate. The result object should expose the scale the user supplied and normalize the residuals with it.",
+    "fix_summary": "In the fixed-scale branch of get_robustcov_results (used by every fit with cov_type fixed scale/fixed_scale), the fix writes the user-supplied scale into the cached result attribute res.scale, so the scale property no longer recomputes ssr/df_resid and resid_pearson divides by the correct sqrt(scale). One-line change (plus the added regression test covering OLS, WLS and get_robustcov_results). Author reference only; must not leak into instruction.md.",
+    "difficulty_guess": "medium",
+    "notes": "No network needed; reproduction uses only numpy random data (50x2). Golden test test_ols_wls_fixed_scale lives in the large statsmodels/regression/tests/test_regression.py file (import of that module is moderate but runs in ~0.7s for the single test at 1 CPU). The scale attribute is a cache_writable property on RegressionResults, and resid_pearson (also in linear_model.py) divides wresid by sqrt(self.scale) — the agent must realize the cached scale is stale after a fixed-scale fit. statsmodels/regression/linear_model.py imports patsy; ensure patsy+formulaic are installed."
+  }
+]

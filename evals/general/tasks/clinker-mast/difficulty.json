@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": "encode/httpx @ 26d48e0634e6ee9cdc0533996db289ce4b430177 (tag 0.28.1, lightweight tag = commit): 5MB shallow, 125 files, 17,751 LOC, pyproject (hatchling). Image builds in ~2-4 min at 1 CPU (pure Python, wheel downloads dominate). httpx suite runs in well under a second.",
+  "notes": "Upstream-clone library-feature task (v4.2 family). Adds a retrying transport wrapper (httpx.RetryTransport / httpx.AsyncRetryTransport), a documented gap in httpx 0.28.1, cloned pinned and editable-installed at /app/src. The instruction fixes the public API contract and observable retry semantics but not the file, module layout or internal design. The verifier runs httpx's own relevant test modules (tests/client/test_client.py, tests/client/test_event_hooks.py, tests/test_exported_members.py), then three hidden pytest case dirs exercising retry semantics, transport-stack interaction (event hooks, auth, stream hygiene, close semantics), and a frozen snapshot check that no existing public signature changed. An agent cannot pass by writing a standalone script: the acceptance imports the feature from the installed package in fresh interpreters, so the change must live in the /app/src checkout."
+}

@@ -1,0 +1,104 @@
+[
+  {
+    "repository": "PyCQA/bandit",
+    "upstream_issue_ref": "#880",
+    "fix_commit": "72fa5a7496caa89f21ace353d038754dbddf9a91",
+    "parent_commit": "7e6f580d6ad1b35be91046e591526602327a388d",
+    "base_image": "bench-base:python-3.12",
+    "source_files_changed": [
+      "bandit/core/node_visitor.py",
+      "bandit/core/tester.py",
+      "bandit/core/utils.py"
+    ],
+    "golden_test_paths": [
+      "tests/functional/test_functional.py"
+    ],
+    "golden_test_names": [
+      "tests.functional.test_functional.FunctionalTests.test_multiline_sql_statements"
+    ],
+    "reproduction": "File multiline_nosec.py:\n    query = \"\"\"\n    SELECT *\n    FROM foo\n    WHERE id = '%s'\n    \"\"\" % identifier  # nosec\n\nRun: bandit -q multiline_nosec.py\nAt parent: B608 'Possible SQL injection vector through string-based query construction.' is reported at line 1 and the process exits 1, even though the suppression comment is on the closing line of the multi-line string (output even says 'Total lines skipped (#nosec): 1'). At fix: no finding, exit 0.\n\nGolden test (from repo root): python -m unittest tests.functional.test_functional.FunctionalTests.test_multiline_sql_statements  (needs fix-version examples/sql_multiline_statements.py), fails at parent with MEDIUM 26 vs 37.",
+    "observed_failure_at_parent": "bandit -q multiline_nosec.py prints '>> Issue: [B608:hardcoded_sql_expressions] Possible SQL injection vector through string-based query construction.' with 'Total lines skipped (#nosec): 1' and exits 1. python -m unittest ...test_multiline_sql_statements fails: {'SEVERITY': {'MEDIUM': 26}} != {'SEVERITY': {'MEDIUM': 37}}, CONFIDENCE LOW 13 != 24. Only line 1 (the opening line of the multi-line string) is consulted for a suppression comment.",
+    "verified": "Parent (7e6f580): grep shows bandit/core/tester.py contains 'context_tests = self.nosec_lines.get(context[\"lineno\"], None)' and no get_nosec() exists in bandit/core/utils.py -> baby buggy code present. CLI repro exits 1 with the B608 issue listed; project regression test (fix-version example/test checked out onto parent) FAILED. Fix (72fa5a7): get_nosec() present in utils.py; same CLI repro exits 0 with no issues; same unittest OK.",
+    "dependency_pins": {},
+    "install_recipe": "apt-get install -y git && pip install setuptools pbr wheel && pip install --no-build-isolation -e . && pip install --no-build-isolation -e '.[baseline]' && pip install coverage fixtures stestr testscenarios testtools beautifulsoup4. (Plain 'pip install -e .' fails because pbr needs the git repo + a git binary to compute the dev version; setup.py uses pbr so git must exist in the image. bandit itself requires PyYAML, stevedore, rich; installed automatically.)",
+    "issue_paraphrase": "When a static-analysis warning covers a multi-line string or expression, placing the suppress comment on the closing line of that construct does not silence the warning; the scanner still reports the finding. Users must happen to put the comment on the very first line of the construct. A suppression comment should be honored no matter which line of the flagged code region it appears on.",
+    "fix_summary": "Introduced utils.get_nosec() which scans the whole context linerange (not just node.lineno) for a # nosec comment, so a suppress comment anywhere in a multi-line expression is honored; also moved 'nosec without test number' bookkeeping from pre-visit to the test phase so a nosec on a later line of a multi-line string is not double counted.",
+    "difficulty_guess": "medium",
+    "notes": "Functional tests must run from the repo root (they use os.getcwd() to locate examples/ and plugins). The single golden test takes ~0.02s at 1 CPU; the full tests/functional/test_functional.py suite runs bandit per example and takes a few minutes at 1 CPU, no network needed. If the harness container runs as root, set PYTHONPYCACHEPREFIX=/tmp/pycache so the checkout is not polluted with root-owned __pycache__ directories."
+  },
+  {
+    "repository": "PyCQA/bandit",
+    "upstream_issue_ref": "#1336",
+    "fix_commit": "3c56109061524f5907cc4d475b7370bac47a451b",
+    "parent_commit": "b790ce22f0a69f53468c1755e9d37e6349a2c8c2",
+    "base_image": "bench-base:python-3.12",
+    "source_files_changed": [
+      "bandit/plugins/injection_sql.py"
+    ],
+    "golden_test_paths": [
+      "tests/functional/test_functional.py"
+    ],
+    "golden_test_names": [
+      "tests.functional.test_functional.FunctionalTests.test_sql_statements"
+    ],
+    "reproduction": "File values.py:\n    import sqlite3\n    conn = sqlite3.connect(\"app.db\")\n    cur = conn.cursor()\n    cur.execute(\"INSERT INTO foo VALUES(%s)\" % value)\n\nRun: bandit -q values.py\nAt parent: no issues reported, exit 0 (a SQL-injection-vector statement with VALUES( and no space is silently missed). At fix: '>> Issue: [B608:hardcoded_sql_expressions] Possible SQL injection vector through string-based query construction.' Location values.py:4, exit 1.\n\nGolden test (from repo root): python -m unittest tests.functional.test_functional.FunctionalTests.test_sql_statements (needs fix-version examples/sql_statements.py and tests/functional/test_functional.py), FAILS at parent, OK at fix.",
+    "observed_failure_at_parent": "bandit -q values.py exits 0 and reports no issues for 'INSERT INTO foo VALUES(%s)' % value; the sanitized-output listing shows no finding for the VALUES( (no-space) form while the spaced form VALUES ( is still flagged. unittest ...test_sql_statements FAILED (expected counts mismatch) when run with the fix-version example and test.",
+    "verified": "Parent (b790ce2): bandit/plugins/injection_sql.py line 77 has the SQL regex branch 'insert\\s+into\\s.*values\\s' (requires whitespace after VALUES); CLI repro exits 0 with no finding; fix-version example+test checked out onto parent -> test_sql_statements FAILED. Fix (3c56109): regex branch is 'insert\\s+into\\s.*values[\\s(]'; same CLI repro reports B608 and exits 1; same unittest OK.",
+    "dependency_pins": {},
+    "install_recipe": "apt-get install -y git && pip install setuptools pbr wheel && pip install --no-build-isolation -e . && pip install --no-build-isolation -e '.[baseline]' && pip install coverage fixtures stestr testscenarios testtools beautifulsoup4. (Plain 'pip install -e .' fails because pbr needs the git repo + a git binary to compute the dev version; setup.py uses pbr so git must exist in the image.)",
+    "issue_paraphrase": "A static-analysis warning for string-built SQL is not raised when an INSERT statement writes VALUES directly before the opening parenthesis with no space (a common style), so a statement that embeds unsanitized input inside a SQL string can pass a scan without any warning even though the same statement with VALUES followed by a space is flagged. Both spellings are valid SQL and should be detected equally.",
+    "fix_summary": "Changed the SIMPLE_SQL_RE branch for INSERT statements from 'insert\\s+into\\s.*values\\s' to 'insert\\s+into\\s.*values[\\s(]' so that 'VALUES(' with no whitespace also matches, and added positive/negative functional examples.",
+    "difficulty_guess": "easy",
+    "notes": "Functional tests must run from the repo root. The single golden test takes ~0.01s at 1 CPU. No network needed. Selecting the right check is easy by diffing parent vs fix behavior on the repro; the safest correct fix is to widen the regex to accept '(' right after VALUES."
+  },
+  {
+    "repository": "PyCQA/bandit",
+    "upstream_issue_ref": "#764",
+    "fix_commit": "c420d1d5356f6979b7af3cc46bd182f3ac9edaeb",
+    "parent_commit": "6d6ec6d550ef3ce1c7b6b04a56931bac65e94f71",
+    "base_image": "bench-base:python-3.12",
+    "source_files_changed": [
+      "bandit/plugins/django_sql_injection.py"
+    ],
+    "golden_test_paths": [
+      "tests/functional/test_functional.py"
+    ],
+    "golden_test_names": [
+      "tests.functional.test_functional.FunctionalTests.test_django_sql_injection_raw"
+    ],
+    "reproduction": "File django_raw.py:\n    from django.db.models.expressions import RawSQL\n    from django.contrib.auth.models import User\n    User.objects.annotate(val=RawSQL(sql=\"{}secure\".format(\"no\"), params=[]))\n\nRun: bandit django_raw.py\nAt parent: '\\n[tester]\\tERROR\\tBandit internal error running: django_rawsql_used on file django_raw.py at line 3: list index out of range' with IndexError traceback, and no B611 finding (exit 0 with -q). At fix: '>> Issue: [B611:django_rawsql_used] Use of RawSQL potential SQL attack vector.' Location django_raw.py:3:26, exit 1.\n\nGolden test (from repo root): python -m unittest tests.functional.test_functional.FunctionalTests.test_django_sql_injection_raw (needs fix-version examples/django_sql_injection_raw.py and tests/functional/test_functional.py), FAILS at parent, OK at fix.",
+    "observed_failure_at_parent": "bandit django_raw.py prints '[tester]\\tERROR\\tBandit internal error running: django_rawsql_used on file django_raw.py at line 3: list index out of range' plus traceback 'IndexError: list index out of range', and reports no issue for the RawSQL call. unittest ...test_django_sql_injection_raw FAILED (MEDIUM 4 expected vs 6) with fix-version example/test checked out.",
+    "verified": "Parent (6d6ec6d): bandit/plugins/django_sql_injection.py line 132 reads 'sql = context.node.args[0]' unconditionally; CLI repro produces the internal-error IndexError and no finding; fix-version example+test checked out onto parent -> unittest FAILED. Fix (c420d1d): plugin falls back to keywords2dict(context.node.keywords) when args is empty; CLI repro reports B611 and exits 1; same unittest OK.",
+    "dependency_pins": {},
+    "install_recipe": "apt-get install -y git && pip install setuptools pbr wheel && pip install --no-build-isolation -e . && pip install --no-build-isolation -e '.[baseline]' && pip install coverage fixtures stestr testscenarios testtools beautifulsoup4. (Plain 'pip install -e .' fails because pbr needs the git repo + a git binary to compute the dev version; setup.py uses pbr so git must exist in the image.)",
+    "issue_paraphrase": "Calling Django's raw-SQL helper with the SQL text passed as a keyword argument instead of as the first positional argument makes the analyzer fail internally: it logs a list-index error with a traceback while scanning the file, and the risky call is not reported at all. A vulnerable raw-SQL call should be flagged regardless of whether its arguments are passed positionally or by keyword.",
+    "fix_summary": "In the django_rawsql_used plugin, fall back to reading the 'sql' keyword argument (via keywords2dict) when the call has no positional args, so RawSQL(sql=..., params=[...]) is detected instead of raising IndexError.",
+    "difficulty_guess": "easy",
+    "notes": "Functional tests must run from the repo root. Single golden test ~0.01s at 1 CPU. No network (scanning is static; django need not be installed). Note the plugin only fires when 'django.db.models' is imported in the scanned file, so a repro must include the import."
+  },
+  {
+    "repository": "PyCQA/bandit",
+    "upstream_issue_ref": "#1141",
+    "fix_commit": "049eba08c90c86404d16ed71e5f109dfddf459cd",
+    "parent_commit": "ad56c78f1e2f7d56fb3f75e8c2d78da85292d0e0",
+    "base_image": "bench-base:python-3.12",
+    "source_files_changed": [
+      "bandit/plugins/injection_shell.py"
+    ],
+    "golden_test_paths": [
+      "tests/functional/test_functional.py"
+    ],
+    "golden_test_names": [
+      "tests.functional.test_functional.FunctionalTests.test_subprocess_shell"
+    ],
+    "reproduction": "File empty_list.py:\n    import subprocess\n    subprocess.check_output([], stdout=None)\n\nRun: bandit empty_list.py\nAt parent: '[tester]\\tERROR\\tBandit internal error running: start_process_with_partial_path on file ./empty_list.py at line 2: list index out of range' plus traceback 'IndexError: list index out of range'. At fix: the same scan produces no internal error (only the ordinary B404/B603 findings).\n\nReproduction check: bandit empty_list.py 2>&1 | grep -c 'internal error'  -> 1 at parent, 0 at fix. NOTE: the project's own functional test (test_subprocess_shell) does NOT discriminate this fix, because the crash is caught and logged and the issue counts are identical with and without it; the oracle must be the absence of the 'Bandit internal error' log line.",
+    "observed_failure_at_parent": "[tester]\\tERROR\\tBandit internal error running: start_process_with_partial_path on file ./empty_list.py at line 2: list index out of range, followed by File 'bandit/plugins/injection_shell.py', line 687, in start_process_with_partial_path -> node = node.elts[0] -> IndexError: list index out of range. Test count check: test_subprocess_shell passes both at parent and fix code (verified empirically), so the golden check must be the stderr log.",
+    "verified": "Parent (ad56c78): bandit/plugins/injection_shell.py line 686 reads 'if isinstance(node, ast.List):' with no emptiness guard, node.elts[0] raises IndexError on an empty list; CLI repro logs the internal error with traceback. Fix (049eba0): line reads 'if isinstance(node, ast.List) and node.elts:'; same CLI repro logs no internal error (grep -c 'internal error' = 0). Both directions observed in container on bench-base:python-3.12.",
+    "dependency_pins": {},
+    "install_recipe": "apt-get install -y git && pip install setuptools pbr wheel && pip install --no-build-isolation -e . && pip install --no-build-isolation -e '.[baseline]' && pip install coverage fixtures stestr testscenarios testtools beautifulsoup4. (Plain 'pip install -e .' fails because pbr needs the git repo + a git binary to compute the dev version; setup.py uses pbr so git must exist in the image.)",
+    "issue_paraphrase": "Scanning a file that calls a subprocess helper with an empty argument list causes the analyzer to log an internal error with a list-index-out-of-range traceback during the scan. It keeps going, but a noisy, unexplained internal error is a sign the analyzer cannot handle valid Python that passes an empty list to these helpers; such calls should scan without any internal error.",
+    "fix_summary": "Added 'and node.elts' to the isinstance(ast.List) guard in start_process_with_partial_path in the injection_shell plugin so an empty list argument is not indexed, avoiding the IndexError; also added the example line subprocess.check_output([], stdout=None).",
+    "difficulty_guess": "easy",
+    "notes": "The project's regression test for this commit only bumps expected counts in test_subprocess_shell and does not catch the removed crash; an authoring oracle should grep the bandit stderr for 'Bandit internal error' / 'list index out of range' rather than rely on unittest counts. Scan of a 2-line file takes <1s at 1 CPU. No network needed."
+  }
+]

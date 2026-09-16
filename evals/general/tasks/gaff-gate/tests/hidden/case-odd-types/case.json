@@ -1,0 +1,12 @@
+{
+  "method": "status",
+  "invalid": [
+    { "in": "500", "type": "TypeError" },
+    { "in": "abc", "type": "TypeError" },
+    { "in": "", "type": "TypeError" },
+    { "in": true, "type": "TypeError" },
+    { "in": false, "type": "TypeError" },
+    { "in": [], "type": "TypeError" },
+    { "in": {}, "type": "TypeError" }
+  ]
+}

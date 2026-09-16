@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 30,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on junit-team/junit5 at parent commit 8307cd49221d90413c66918c7b094274078a6809 (real upstream issue #4839, fix commit cb577cf95050cd7b2f64090261fe5a48acb326bc). Class#getDeclaredClasses() order is unspecified by the JVM, so findNestedClasses/streamNestedClasses (and thereby test suites that declare several nested test classes in one enclosing class) return/run nested classes in a different order per JDK/machine. The fix must apply the ordering convention the same class already applies to methods and fields (fully-qualified name String.hashCode(), lexicographic tie-break) to the one reflection source that is still unsorted: the declared-classes loop inside visitAllNestedClasses in junit-platform-commons/.../util/ReflectionUtils.java. The instruction names the observable symptom and the codebase's existing convention but never the issue, the commit or the file to change; the verifier runs the project's own regression test (findNestedClassesWithMultipleNestedClasses, 8 nested classes, expected deterministic order) extracted from the fix commit into /opt/golden at build time, the tree's own ReflectionUtilsTests + ReflectionSupportTests, and two authored hidden cases (different multi-nested-class inputs, predicate filtering, inheritance, interfaces, stream API, ReflectionSupport facade) whose expected orders were computed from the real fully-qualified class-name hashes. Both directions re-confirmed inside the task image before shipping: at parent the golden test fails ('expected Beta but was Theta'-style assertion), at fix it passes. Toolchain pinned: JDK 24.0.2+12 daemon/toolchain (gradle-daemon-jvm.properties toolchainVersion=24), JDK 25.0.4.1+1 and apt JDK 21 exported as JDK24/JDK25/JDK21 for Gradle's fromEnv toolchain discovery; Gradle 9.0.0-bin wrapper is SHA256-pinned in the tree; gradle.properties discovers JDKs via org.gradle.java.installations.fromEnv. Warm layer compiles the full platform-tests test graph once at build time; trial runs --offline."
+}

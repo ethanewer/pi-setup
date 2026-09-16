@@ -1,0 +1,37 @@
+---
+title: Contributing
+order: 85
+tags: [development]
+---
+
+## Workflow
+
+- Fork the repository and create a branch from `main`.
+- Keep changes small and covered: the suite is the contract.
+- Run the full suite before pushing:
+
+```console
+$ python3 -m pytest -q tests
+```
+
+## Code layout
+
+| module | what it owns |
+|---|---|
+| `quaydoc/lexer.py`, `quaydoc/parser.py` | source text to document tree |
+| `quaydoc/inline.py` | inline markup |
+| `quaydoc/slugs.py` | canonical anchors (the single source of truth) |
+| `quaydoc/links.py` | reference resolution and fragment targets |
+| `quaydoc/toc.py` | heading ids and the table of contents |
+| `quaydoc/blocks.py`, `quaydoc/html.py` | rendering |
+| `quaydoc/check.py` | the integrity checker |
+| `quaydoc/cli.py` | the command line |
+
+## Invariants
+
+The most important invariant in the codebase is that heading ids and link
+fragments are computed by two different modules that must produce identical
+output. When a change touches either side, the other side must change with
+it — the checker is the guard that catches drift. The release-notes history
+(see the CHANGELOG) documents one incident where this invariant was broken
+and every fragment link on affected pages stopped working.

@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 75,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on spf13/cobra at parent 6bf8cd85825800c5cbc63009b1fb2c54185f05ed (upstream issue #1771, fixed by 7790bf97fd40e285913066cf65387ad281cd6c2e: 'correct command path in see_also for YAML doc'). The YAML doc generator lists child subcommands in the see_also section by bare Name() instead of CommandPath(), so nested subcommands get ambiguous see_also entries while the man/HTML/REST/MD generators print the full path. The agent is NOT handed a reproduction: instruction describes only the user-visible symptom and requires the agent to author /app/repro.sh (its own failing reproduction, verified to fail on a pristine copy of the tree and pass on the repaired one) before fixing, then the verifier additionally overlays the upstream golden regression test (doc/yaml_docs_test.go extracted from the fix commit at build time, never vendored) and runs it, runs the full upstream suite (green before and after the fix; only the buggy+golden combination fails), and runs two authored hidden Go tests that build their own command trees (three-level nesting; sibling subtrees) with command names the upstream test never uses, verified to fail at the parent and pass at the fix. Go 1.24.0 tarball from go.dev/dl is platform-pinned; module deps (pflag v1.0.5, yaml.v2 v2.4.0, mousetrap v1.0.1, go-md2man v2.0.2, blackfriday v2.1.0, check.v1) are locked by the repo's committed go.sum and warmed into the image at build time; full rebuild measured ~28s cold and ~1.4s warm at 1 CPU. Verifier defenses proven: repro-missing, hardcoded repro, golden-test editing, cmd_test.go redefinition, and test-skipping all score 0. (Review hardening: the verifier now `git checkout`s doc/cmd_test.go back to the pristine parent bytes in the deliver snapshot before the golden/full-suite/hidden-case checks, because neutralizing checkStringContains/checkStringOmits in the agent's copy of cmd_test.go previously let a pre-fix tree pass all nine steps with reward 1.)"
+}

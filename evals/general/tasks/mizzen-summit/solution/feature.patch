@@ -1,0 +1,57 @@
+diff --git a/coordinator-common/src/main/java/org/apache/kafka/coordinator/common/runtime/EventAccumulator.java b/coordinator-common/src/main/java/org/apache/kafka/coordinator/common/runtime/EventAccumulator.java
+index 20d2466..2e48bab 100644
+--- a/coordinator-common/src/main/java/org/apache/kafka/coordinator/common/runtime/EventAccumulator.java
++++ b/coordinator-common/src/main/java/org/apache/kafka/coordinator/common/runtime/EventAccumulator.java
+@@ -59,6 +59,12 @@ public class EventAccumulator<K, T extends EventAccumulator.Event<K>> implements
+      */
+     private final Random random;
+ 
++    /**
++     * The maximum number of events this accumulator can hold. Attempts to add
++     * further events are rejected once {@link #size()} would reach this bound.
++     */
++    private final int maxSize;
++
+     /**
+      * The map of queues keyed by K.
+      */
+@@ -96,12 +102,29 @@ public class EventAccumulator<K, T extends EventAccumulator.Event<K>> implements
+     private boolean closed;
+ 
+     public EventAccumulator() {
+-        this(new Random());
++        this(new Random(), Integer.MAX_VALUE);
++    }
++
++    public EventAccumulator(
++        int maxSize
++    ) {
++        this(new Random(), maxSize);
+     }
+ 
+     public EventAccumulator(
+         Random random
+     ) {
++        this(random, Integer.MAX_VALUE);
++    }
++
++    public EventAccumulator(
++        Random random,
++        int maxSize
++    ) {
++        if (maxSize <= 0) {
++            throw new IllegalArgumentException("The maximum size of the accumulator must be positive but it is " + maxSize + ".");
++        }
++        this.maxSize = maxSize;
+         this.random = random;
+         this.queues = new HashMap<>();
+         this.availableKeys = new ArrayList<>();
+@@ -232,6 +255,8 @@ public class EventAccumulator<K, T extends EventAccumulator.Event<K>> implements
+         try {
+             if (closed) throw new RejectedExecutionException("Can't accept an event because the accumulator is closed.");
+ 
++            if (size >= maxSize) throw new RejectedExecutionException("Can't accept an event because the accumulator is full.");
++
+             var key = event.key();
+             var queue = queues.get(key);
+             if (queue == null) {

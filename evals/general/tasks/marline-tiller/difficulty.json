@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 90,
+  "documented_probe": null,
+  "notes": "Medium (12/30). Repair work inside a real Vite+React component-library repository (git history included, generated at image build time). Three components (Counter stepper, QuantityInput numeric entry, TagPicker chips) ship with deliberately regressed state handling: controlled mode ignores the `value` prop and computes from internal state (Counter), arrow stepping skips clamping and the commit path fires onChange for invalid drafts (QuantityInput), and chip toggling splices the selection in place so uncontrolled mode never re-renders and controlled mode passes the caller's own array back (TagPicker). The packaging is regressed too: vite lib mode emits CJS only and tsc runs with noEmit, so no ESM artifact and no type declarations. The instruction names only the outcome contract (npm test green, npm run build emits ESM + declarations, components honour the README API) and never the files or the bugs; the shipped suite is red, the git log is the debugging trail (HEAD commit is the regression). The verifier runs npm run build itself, checks dist/ for the ESM artifact and per-module .d.ts files, then imports the BUILT library into jsdom and renders each component with @testing-library/react across the visible fixture plus three hidden prop-fixture cases (edge clamps/disabled, controlled-mode rerenders + prop-array aliasing, keyboard/draft interplay incl. negative ranges), asserting DOM text/attributes/classes and full onChange callback payloads. Hidden cases genuinely differ in props, actions and expectations; an untouched container fails at the packaging gate. Tool breadth is real: react, vite lib mode, tsc declarations, vitest/jsdom, git."
+}

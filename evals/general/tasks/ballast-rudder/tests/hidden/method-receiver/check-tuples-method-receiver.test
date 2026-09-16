@@ -1,0 +1,22 @@
+[case testMultiAssignmentOverloadReinferredMethodReceiver]
+from typing import Any, TypeVar, overload
+
+T = TypeVar("T")
+
+
+class C:
+    @overload
+    def get(self, key: T) -> tuple[T, int]: ...
+    @overload
+    def get(self, *values: object) -> tuple[Any, ...]: ...
+    def get(self, *args: object, **kwargs: object) -> object: ...
+
+
+def g(c: C) -> None:
+    first: str
+    first, second = c.get(1)  # E: Incompatible types in assignment (expression has type "int", variable has type "str")
+    reveal_type(second)  # N: Revealed type is "builtins.int"
+
+    last: str
+    _, last = c.get(1)  # E: Incompatible types in assignment (expression has type "int", variable has type "str")
+[builtins fixtures/tuple.pyi]

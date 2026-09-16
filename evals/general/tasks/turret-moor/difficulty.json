@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": null,
+  "notes": "Upstream-clone task: agent must operate inside the real yt (yt-project/yt) 182k-LOC tree, load a real boxlib 'pluto' simulation snapshot via yt's own loader and field/derived-quantity machinery, and reproduce total mass and density-weighted mean temperature to rtol 1e-3 against an independent numpy recomputation across the visible fixture plus 3 hidden snapshots differing in grid size, domain extent and physical parameters. Verifier asserts import yt resolves to the pinned clone and that the deliverable calls yt.load rather than reimplementing the loader. Fixture and generator (environment/files/make_dataset.py) are fully authored; no upstream bytes are vendored."
+}

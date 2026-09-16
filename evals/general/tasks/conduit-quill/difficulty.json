@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 2,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 2,
+    "resource_pressure": 1,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 120,
+  "documented_probe": null,
+  "notes": "Hard data_science task: build a full RAG pipeline (chunker -> BM25 + locally computed distributional embedding index -> retriever -> citation-checked answer assembler) over a 400-document corpus and hit declared mean recall@5, cross-wording document hit rate, citation-precision and citation-count thresholds. dependent_stages=3: segmentation/indexing/retrieval/assembling are sequential and a failure at any stage breaks the quality gates. reasoning_depth=3: the retriever must recover documents that state the answer with different wording than the query (pure lexical BM25 reaches recall 0.75 and a ~0 cross-wording hit rate; the embedding-expanded retriever reaches 1.0 on both), so the agent must reason about distributional/semantic retrieval offline. hidden_case_generalization=3: the verifier re-runs the pipeline on 3 unseen query sets (50 hidden queries, disjoint themes) with their own relevance judgements and cross-wording markers. quantitative_correctness=2: binary thresholds on recall@5, cross-wording hit rate and citation precision (every cited span must literally appear in the cited document). adversarial_inputs=2: generated corpus with paraphrased hard documents, citation grounding that rejects invented spans, relevance never derivable from ids/titles/metadata. debugging_ambiguity=2: no named file/bug; mismatches in retrieval or citation formatting only surface through the eval harness. resource_pressure=1: 400 docs, index build plus tens of queries within generous timeouts; no large memory pressure at 4GB. The response illustrates the required-but-underspecified design decision: which semantic index to build and where to place retrieval logic is left to the agent, but the exact CLI and output/citation contract is specified."
+}

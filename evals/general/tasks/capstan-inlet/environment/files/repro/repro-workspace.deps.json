@@ -1,0 +1,71 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v12.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v12.0": {
+      "WebStore/3.0.0": {
+        "dependencies": {
+          "JsonNeat": "2.1.0",
+          "Pay": "1.1.0"
+        },
+        "runtime": {
+          "WebStore.dll": {}
+        }
+      },
+      "JsonNeat/2.1.0": {
+        "runtime": {
+          "lib/net7.0/JsonNeat.dll": {
+            "assemblyVersion": "2.1.0.0",
+            "fileVersion": "2.1.0.0"
+          }
+        }
+      },
+      "Pay/1.1.0": {
+        "dependencies": {
+          "Common": "1.1.0"
+        },
+        "runtime": {
+          "Pay.dll": {
+            "assemblyVersion": "1.1.0.0",
+            "fileVersion": "1.1.0.0"
+          }
+        }
+      },
+      "Common/1.1.0": {
+        "runtime": {
+          "Common.dll": {
+            "assemblyVersion": "1.1.0.0",
+            "fileVersion": "1.1.0.0"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "Pay/1.1.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "Common/1.1.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "JsonNeat/2.1.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-9U7mY0qWg1bK2cD3eF4gH5iJ6kL7mN8oP0qR2sT4uV6wX8yZ=",
+      "path": "jsonneat/2.1.0",
+      "hashPath": "jsonneat.2.1.0.nupkg.sha512"
+    },
+    "WebStore/3.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}

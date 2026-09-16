@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 0,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": null,
+  "notes": "Upstream-clone bugfix in prettier/prettier (v4.2 family): SCSS control-directive conditions (@if/@else if/@while) that chain equality/relational comparisons with and/or/not are line-broken right after the comparison operator (==, !=, <, >, <=, >=), stranding the operator at end of line and pushing its right operand down. The user gives only the symptom; the agent must write its own failing reproduction (input + expected + checker script under /app/repro) BEFORE fixing, then localise the bug in the printCommaSeparatedValueGroup printer (SCSS control directives with logical keywords must treat the comparison operator as a line-break keeper so `a == b and` stays grouped). Verifier: agent's own repro must FAIL on the restored pre-fix tree and PASS on the repaired tree; upstream golden regression test (if-else.scss format 1, fixture+snapshot extracted from the fix commit into /opt/golden at build time, sha256-pinned, re-copied over the tree so edited tests cannot smuggle expectations) via the project's own jest runner; the project's own css+scss format suites; three authored hidden CLI cases (@while with < and == and and, @else if chains with or/>=/!=, `not` with and/or/>) that the upstream test does not use. Scope: exactly one source file may differ from the pinned parent; HEAD pinned; fix commit never fetched into the trial clone. Oracle applies an authored four-line patch mirroring upstream's fix."
+}

@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 1,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on a real codebase: curl/curl checked out at fd8c409d6ab7367051d04646a31e976e3db0c6ed (parent of upstream fix 1143bc9ac6912743a0fef78d5ac81426b172976d, upstream issue #22889). The clone is initialized fresh and a single shallow fetch of the pinned parent SHA is made, so the fix commit is not reachable from the clone at all; the upstream regression test tests/data/test2429 is extracted from the fix commit as a raw file into /opt/golden and never enters the tree. The real bug is present: file2memory() skips comment lines while loading, so a comment-only .netrc leaves the dynbuf empty (content pointer NULL), and netrc_scan_file() still calls netrc_scan(), whose tokenizer dereferences NULL -> deterministic SIGSEGV (exit 139) before any connection. The agent must reproduce (local HTTP server + --netrc-file), localise (gdb backtrace points into the netrc tokenizer), fix it (upstream fix: return NETRC_NO_MATCH when the accumulated buffer is empty), rebuild incrementally, write /app/diagnosis.md, and keep the project's own netrc-relevant tests green (runtests 1304 unit, 2005, 2309, 1). Verifier: incremental make, provenance asserts (HEAD still at parent, fix commit absent, only lib/netrc.c may be modified, no stray untracked files), then CLI repro + 3 authored hidden comment-only/empty variants of the netrc file over a loopback HTTP server, then the golden test 2429 via tests/runtests.pl, then the existing-suite selection. Oracle reward 1, untouched-tree nop reward 0 (the shipped binary crashes: golden test FAILS and CLI repro exits 139). Difficulty is medium: real 50k-LOC C codebase, gdb-driven localisation, deterministic one-line fix."
+}

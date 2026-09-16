@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 2,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 3,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 1,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 75,
+  "documented_probe": null,
+  "notes": "Upstream-clone bugfix in duckdb/duckdb (v4.3 family, duckdb__duckdb.json slot). Issue #24602: CREATE SEQUENCE with NULL for START [WITH] / MINVALUE / MAXVALUE / INCREMENT [BY] crashes with 'INTERNAL Error: Calling GetValue on a value that is NULL' (assertion failure + stack trace) instead of a clean Parser Error. Agent gets the REAL upstream tree at the parent commit b98263558 (single-object clone via git init + one depth-1 fetch; the fix commit 115e593139 is provably unreachable and never fetched), a fully warmed Release build (cmake+ninja, BUILD_UNITTESTS=1) so the fix is a ~1-minute ninja rebuild at 1 CPU, NO reproduction handed to it -- it must author /app/repro.sh (CLI-based, covering all four NULL options plus a composed statement, exits 0 iff every case yields a clean Parser Error and none yields INTERNAL Error) and then localise, fix, rebuild and verify with the project's own unittest runner on test/sql/catalog/sequence/*. Verifier: sha256 pins of the golden regression test (fix-commit test_sequence.test extracted at image build time via a throwaway clone that is rm -rf'd), the pristine pre-fix transform_create_sequence.cpp source and the pristine pre-fix CLI binary (baked into /opt/prefix/tree + /opt/prefix/bin at image build time, because DuckDB's unity build records absolute /app/src include paths so a copied tree cannot be rebuilt faithfully offline); provenance (HEAD==parent, fix commit unreachable via git cat-file -e, blob-level scope permitting ONLY that one source file to differ, no untracked files, bug file must differ); deliverables; incremental ninja rebuild from delivered source; repro run against the repaired tree (must pass) and against the baked pre-fix tree (must fail); golden planted into test/sql/catalog/sequence/test_sequence.test and run with the project's own runner (must reach >=133 assertions, all passed); whole sequence/* suite green; five authored hidden CLI cases (START NULL INCREMENT 3, TEMPORARY SEQUENCE MINVALUE NULL, INCREMENT NULL without BY, lowercase maxvalue null, START WITH NULL CYCLE) each required to PASS on the repaired tree and FAIL on the pre-fix tree. Dependency pins: upstream commits pinned 40-hex; apt toolchain (g++/cmake/ninja) unpinned by design. Measured: full build 2m27s at 64 cores (~96s ninja); incremental single-file rebuild at 1 CPU 68s; repro/CLI checks sub-second; sequence suite 1.3s; image 2.15GB. Difficulty lands medium (rubric total 17): no reproduction provided, real multi-hundred-thousand-LOC tree, message-exact hidden cases both directions, but the bug is localised to one small parser transformer and the fix is a few lines."
+}

@@ -1,0 +1,49 @@
+{
+  "period": "2026-04",
+  "groups": [
+    {
+      "id": "MJ01",
+      "name": "Event ticketing",
+      "entries": [
+        {"ref": "M-0101", "amount_cents": 250000, "status": "settled"},
+        {"ref": "M-0102", "amount_cents": 190000, "status": "settled"}
+      ]
+    },
+    {
+      "id": "MJ02",
+      "name": "Merchant services",
+      "entries": [
+        {"ref": "M-0201", "amount_cents": 400000, "refund_cents": 400000, "status": "adjusted"},
+        {"ref": "M-0202", "amount_cents": 90000, "refund_cents": 90000, "status": "adjusted"}
+      ]
+    },
+    {
+      "id": "MJ03",
+      "name": "Airtime top-ups",
+      "entries": [
+        {"ref": "M-0301", "amount_cents": 30000, "status": "settled"}
+      ]
+    },
+    {
+      "id": "MJ04",
+      "name": "Refunds team",
+      "entries": [
+        {"ref": "M-0401", "amount_cents": 50000, "refund_cents": 10000, "chargeback_cents": 5000, "status": "adjusted"},
+        {"ref": "M-0402", "amount_cents": 70000, "chargeback_cents": 8000, "status": "adjusted"}
+      ]
+    },
+    {
+      "id": "MJ05",
+      "name": "Settlement reserves",
+      "entries": []
+    },
+    {
+      "id": "MJ06",
+      "name": "Marketplace claims",
+      "entries": [
+        {"ref": "M-0601", "amount_cents": 95000, "chargeback_cents": 5000, "status": "adjusted"},
+        {"ref": "M-0602", "amount_cents": 40000, "chargeback_cents": 15000, "status": "adjusted"}
+      ]
+    }
+  ]
+}

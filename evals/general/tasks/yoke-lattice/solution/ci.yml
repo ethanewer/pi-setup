@@ -1,0 +1,35 @@
+name: CI
+on: [push]
+
+jobs:
+  quality:
+    name: Quality gate
+    runs-on: ubuntu-latest
+    steps:
+      - name: lint
+        run: |
+          cd "$GITHUB_WORKSPACE" && make lint
+      - name: test
+        run: |
+          cd "$GITHUB_WORKSPACE" && make test
+  package:
+    name: Package
+    needs: quality
+    steps:
+      - name: build tarball
+        run: |
+          cd "$GITHUB_WORKSPACE" && make dist
+      - name: manifest
+        run: |
+          ls "$GITHUB_WORKSPACE/dist" > manifest.txt
+          echo "$GITHUB_JOB" > who.txt
+  publish:
+    name: Publish
+    needs: package
+    if: "contains(github.ref, 'main') && needs.package.result == 'success'"
+    steps:
+      - name: publish
+        run: |
+          ls "$GITHUB_WORKSPACE/dist" > published.txt
+          echo "$GITHUB_JOB" > who.txt
+          echo done > marker.txt

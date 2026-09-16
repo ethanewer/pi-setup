@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 1,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": null,
+  "notes": "Real upstream bug in tmux/tmux (issue 5576): in cmd-find.c the relative window and pane offset parsers call strtonum(window + 1, 1, INT_MAX, NULL) / strtonum(pane + 1, 1, INT_MAX, NULL), discarding the error result, so malformed offsets like +foo, -0, +1x are silently treated as offset 0 and the command acts on the current window/pane. Fix (upstream 00f3899a, merged on master as d44bfda2): capture the error string, return -1 on a parse/range error so the caller reports 'can't find window: <token>' / 'can't find pane: <token>'. Task image checks out 73db0a54 (buildable master-line parent whose cmd-find.c carries the identical bug), NOT 557967c3: that commit is the openbsd-line twin whose tree has a BSD-only Makefile and no autogen.sh/configure.ac and cannot build on Ubuntu; 73db0a54 is the tree the mining phase verified as the bug tree (d44bfda2^). Golden tests (regress/targets.sh, regress/targets-panes.sh) are extracted at image build time from upstream merge d44bfda2 into /opt/golden from a throwaway clone, so the fix commit is never reachable from /app/tmux's object store and no upstream bytes enter this tree. Hidden cases use token shapes the upstream checks do not use (+1x, +1.5, overflow, -foo0 window side; +2x, -0x, +1.0, overflow pane side) plus positive guards (+, -, +01, -1, +07 index path) so a fix that simply rejects everything fails. Pre-existing suite subset run by the verifier: check-names, command-alias, environ, has-session-return, if-shell-error. Measured in-image at 1 CPU (bench-base:ubuntu-24.04): clean 'make -j1' of the parent tree 30s; incremental one-file rebuild after the fix 0.7s; the agent's documented './autogen.sh && ./configure && make' on the pre-built tree 2.2s; each golden regress script ~1.2s; harbor trial end-to-end (build+oracle+verifier) < 3 min. Build deps via apt (build-essential autoconf automake libtool pkg-config bison byacc libevent-dev libncurses-dev libutempter-dev); no runtime dependency pins (tmux pins none, by design)."
+}

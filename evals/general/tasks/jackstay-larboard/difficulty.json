@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 75,
+  "documented_probe": null,
+  "notes": "Upstream-clone bugfix in librosa/librosa (v4.3 family): display.specshow plots boolean 2D data with the boolean grayscale colormap but a continuous Normalize(0,1), so the colorbar spans the full ramp with dozens of fake intermediate shades even though the data has two values; the image pixels look correct, only the colorbar/legend is misleading (upstream issue #2072). The agent gets the real tree at parent c7aa2ce80a100cd901945589437c5acc55e38739 with the bug intact, must write its own failing reproduction (/app/repro.sh honoring LIBROSA_TREE, run by the verifier both against the repaired tree and against a pristine pre-fix copy of the package baked at /opt/prefix) before fixing, then localise specshow's inferred-cmap/normalizer machinery (ambiguity 2: the drawing itself is unchanged, so the agent must introspect the returned colormesh's `.norm` object rather than compare pixels), inject a matplotlib BoundaryNorm with boundaries [0, 0.5, 1] only when the inferred colormap is the boolean one AND data.dtype.kind=='b', and prove the fix with the project's own pytest-mpl machinery. Verifier: provenance (HEAD==pinned parent, fix commit unreachable, blob-level scope check permitting only librosa/display.py to differ, no untracked files), agent repro both directions, independent norm-type assertions both directions, the upstream regression test test_specshow_boolean_norm extracted from the fix commit at image build time via a throwaway clone (sha256-pinned, planted into a scratch tests/ dir together with its baseline PNG so the original tree's tests/ stays untouched), a 13+-test slice of the project's own existing test_display suite (specshow/colorbar/infer_cmap, all offline, --mpl against the tree's own baseline images), and four authored hidden cases: boolean arrays of sizes/sparsity the upstream test does not use, a float-input guard (fix must not fire on float dtypes), and the explicit-cmap/user-norm override path (must stay untouched). Oracle applies the ~16-line upstream-identical fix via a surgical text edit and verifies both directions itself. matplotlib pinned to 3.11.1 (the version whose rendering matches the upstream baseline PNGs and whose BoundaryNorm boundary semantics are the verified discriminator); measured clone+install 31.3s with warm pip cache layers, rubric total 12 -> medium. Trial runs under an explicit network_mode=no-network pin (task.toml [environment]/[agent]/[verifier]) because harbor's default policy is public; the verifier fail-closes if it can complete a TLS handshake to github.com/raw.githubusercontent.com/pypi.org, so the fix-commit-unreachable property is enforced at trial time, not assumed. Measured clone+install at build time: ~31s on 1 CPU; build_timeout_sec 1800 >= 3x."
+}

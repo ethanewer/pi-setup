@@ -1,0 +1,10 @@
+# Prompt v3 - canonical forms, abstain when the carrier is not stated
+
+Extract the shipment record into JSON with exactly the keys date, amount,
+ref, carrier.
+
+Normalize every present value to canonical form: dates as ISO-8601
+(YYYY-MM-DD), refs as uppercase alphanumeric strings with all separators
+removed, amounts as numbers with two decimal places.
+
+If the record does not state a carrier, the carrier value is exactly UNKNOWN.

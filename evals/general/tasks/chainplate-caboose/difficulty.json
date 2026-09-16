@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 1,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 40,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging/security task on pypa/setuptools at parent commit bb1b38189eed960bdb4f4789926472d05e43d335 (security advisory GHSA-grgh-hr87-3jpw, fixed by 72974110e29d53080dcf23cfa52d9c17299dbae4). unpack_archive()'s path-traversal guard splits member names on '/' alone, so archive members whose names use '\\' instead of '/' (or carry a drive letter or UNC prefix) slip past the '..' check and are extracted: on Windows they resolve outside the extraction directory, on Linux they land as surprising literal backslash names. The fix funnels both tar and zip drivers through one _resolve_dest() helper that rejects backslash/drive/UNC names and, as defense in depth, verifies via os.path.commonpath that the resolved destination is inside the extraction directory; unsafe members are skipped, safe ones still extracted. The image clones the repo at the parent, overlays the project's own regression tests extracted from the FIX commit into setuptools/tests/test_archive_util.py so `python3 -m pytest -q setuptools/tests/test_archive_util.py` fails inside the image exactly as mined (7 failed, 7 passed, 1 xpassed), keeps the fix commit unreachable from /app/src, and installs the stdlib `test` package (CPython 3.12.13 Lib/test) the project's test collection needs via .compat.py39. Agent must localise in setuptools/archive_util.py and fix it. Hidden cases are authored vectors with archive member names the upstream regression tests do not use: a zip with UNC ('\\\\server\\share\\evil.txt'), drive-letter-plus-backslash ('C:\\windows\\evil.txt') and bare drive ('D:evil.txt') members; a tar with deep '..' chains mixed with backslash-relative members plus nested safe directories; and a zip mixing valid exotic names (spaces, non-ASCII, deep nesting) with backslash-relative escapes to prove safe members still extract while unsafe ones are skipped; at parent all three fail (unsafe members leaked into dest), at fix all pass with byte-exact safe content."
+}

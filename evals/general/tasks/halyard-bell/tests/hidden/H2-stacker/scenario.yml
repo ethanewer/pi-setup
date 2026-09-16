@@ -1,0 +1,72 @@
+# H2 — StackerFaultStorm (tightened): fires when a crane's ROLLING fault ratio
+# (rates over a 5m window) breaches the 20% limit, and refuses to fire on a
+# busy-but-healthy crane whose absolute fault count is high only because its
+# pickup volume is high, or on a crane whose lifetime cumulative ratio is low
+# even though its recent rate ratio is above the limit.
+rule_files:
+  - /app/alerting/alerts.yml
+evaluation_interval: 1m
+
+tests:
+  # must fire: fault ratio ~0.5 sustained past the 5m window
+  - interval: 1m
+    input_series:
+      - series: 'yard_crane_pickups_total{crane="crane-3"}'
+        values: '20 26 32 38 44 50 56 62 68 74 80 86 92 98 104'
+      - series: 'yard_crane_faults_total{crane="crane-3"}'
+        values: '0 0 8 16 24 32 40 48 56 64 72 80 88 96 104'
+    alert_rule_test:
+      - eval_time: 14m
+        alertname: StackerFaultStorm
+        exp_alerts:
+          - exp_labels:
+              severity: page
+              crane: crane-3
+            exp_annotations:
+              summary: crane above the 20% fault ratio limit
+
+  # recent-faults burst: busiest crane in the yard by lifetime pickups, and its
+  # last five minutes are 44% faults.  Its LIFETIME cumulative ratio is still
+  # low (0.12), so a rule that divides cumulative counters instead of rate()
+  # windows never fires here and fails.  The rate-based reference fires.
+  - interval: 1m
+    input_series:
+      - series: 'yard_crane_pickups_total{crane="crane-6"}'
+        values: '400 410 420 430 440 450 460 470 480 490 500 510 520 530 540'
+      - series: 'yard_crane_faults_total{crane="crane-6"}'
+        values: '0 0 0 0 0 0 8 16 24 32 40 48 56 64 72'
+    alert_rule_test:
+      - eval_time: 14m
+        alertname: StackerFaultStorm
+        exp_alerts:
+          - exp_labels:
+              severity: page
+              crane: crane-6
+            exp_annotations:
+              summary: crane above the 20% fault ratio limit
+
+  # busy-but-healthy: many pickups, few faults (ratio ~ 1/26).  A rule that
+  # pages on raw fault count or on throughput alone fails here.
+  - interval: 1m
+    input_series:
+      - series: 'yard_crane_pickups_total{crane="crane-4"}'
+        values: '10 210 410 610 810 1010 1210 1410 1610 1810 2010 2210 2410 2610 2810'
+      - series: 'yard_crane_faults_total{crane="crane-4"}'
+        values: '0 4 8 12 16 20 24 28 32 36 40 44 48 52 56'
+    alert_rule_test:
+      - eval_time: 14m
+        alertname: StackerFaultStorm
+        exp_alerts: []
+
+  # ratio just under the limit: 10% — a hard 0.15 threshold would already have
+  # fired.  The reference limit is 0.20.
+  - interval: 1m
+    input_series:
+      - series: 'yard_crane_pickups_total{crane="crane-5"}'
+        values: '50 59 68 77 86 95 104 113 122 131 140 149 158 167 176'
+      - series: 'yard_crane_faults_total{crane="crane-5"}'
+        values: '0 1 2 3 4 5 6 7 8 9 10 11 12 13 14'
+    alert_rule_test:
+      - eval_time: 14m
+        alertname: StackerFaultStorm
+        exp_alerts: []

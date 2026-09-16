@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on semgrep/semgrep at parent e3f9cc50988fb04241c1626e427246538c425314 (real upstream bug, issue semgrep/semgrep#10184, fix commit d7a3e3bd43c77edceeff6e8fa5068005d029dac8). Azure DevOps remotes (https://test@dev.azure.com/test/TestName/_git/Core.Thing) lose the /_git path segment when Semgrep rebuilds the project URL for finding links (get_url_from_sstp_url), so the link 404s; parser stripped '/_git' from the owner without recording it, and the URL was rebuilt as '{protocol}://{resource}/{owner}/{name}'. Difficulty deliberately raised per the v4.2 authoring addendum: the instruction describes the user-visible symptom and an expected-output example but the agent must author its OWN failing reproduction (/app/reproduce.py, a declared deliverable) before fixing, and must reconcile the project's own tracked regression test (cli/tests/default/e2e-pro/test_meta.py at parent encodes the BUGGY expectation; the real upstream fix changed it) so the project's own suite stays green. Hidden cases exercise the same code path from inputs the upstream regression test does not use (no-user Azure URL with %20, Azure URL with .git suffix, deep multi-segment Azure owner, user:pass auth with dotted repo name, trailing-slash Azure form, plus non-Azure negatives incl. ssh:// and scp-like remotes). Verifier additionally enforces tree provenance (HEAD pinned at the parent, fix commit unreachable from the clone, only the two source files + the one tracked test file modified, no untracked files), runs the agent's repro in a pristine pre-fix context (/opt/pristine, sha256-guarded) and in the repaired context with control-cross-check, runs the sha-guarded golden regression test, compileall on the whole package, and >=2 hidden cases. Pure-Python, editable pip install, pytest==8.4.2 pinned, no network needed at trial time; both directions (repro fails at parent / golden 1 failed; passes after fix / golden 1 passed) re-confirmed inside the task image, build ~25 s, image ~0.65 GB unique."
+}

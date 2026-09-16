@@ -1,0 +1,28 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "medium"
+category = "debugging"
+verifier_kind = "executes-deliverable"
+deliverables = ["/app/src", "/app/summary.md"]
+tags = ["capstan-foresheet", "debugging", "clean-room"]
+
+[verifier]
+timeout_sec = 1500.0
+
+[agent]
+timeout_sec = 2400.0
+
+[environment]
+# The trial MUST be offline: the instruction and README-BUILD promise "no
+# network", the warm build cache is the only source of truth, and with egress
+# an agent could clone upstream, find the fix commit in git history
+# ("Fix fp.rem truncation with subnormal divisors") and apply it by lookup
+# instead of debugging. Without this declaration the harness default is
+# PUBLIC egress. Enforced (deny-all) for both agent and verifier phases, which
+# inherit this baseline unless overridden.
+network_mode = "no-network"
+build_timeout_sec = 3600.0
+cpus = 1
+memory_mb = 4096
+storage_mb = 12288

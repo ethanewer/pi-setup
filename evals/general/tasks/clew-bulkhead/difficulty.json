@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 90,
+  "documented_probe": null,
+  "notes": "Upstream-clone bugfix in scipy/scipy (v4.3 family, task clew-bulkhead): the ConvexHull constructor accepts the documented 2-D (npoints, ndim) points array, but at the pinned parent commit 4fe05c739 it never validates dimensionality: a flat 1-D array fails with an internal 'IndexError: tuple index out of range' and a 3-D/higher array is handed to the compiled Qhull engine, which segfaults the process. The agent receives the real tree at the parent commit (one depth-1 object store; the fix commit d42bc45c3 is provably unreachable), warm-built EDITABLY (meson-python: sources in /app/src, compiled modules in /work/sci-build), and must author its own failing reproduction (/app/repro.sh: exit 0 iff ConvexHull rejects the 1-D input with a clean ValueError message about the shape) BEFORE fixing anything; the instruction describes only the user-visible symptom and never names the file, the fix, the issue or the commit. The verifier: pins integrity anchors (golden regression test extracted from the fix commit via a throwaway /tmp clone deleted immediately; pristine pre-fix installed package snapshot at /opt/prefix-pylib; toolchain hashes), checks provenance (HEAD==parent, fix commit unreachable), enforces byte-level scope (only scipy/spatial/_qhull.pyx may differ), forces a REGENERATION rebuild (deletes the compiled module AND its generated C from the build dir, so the executed module provably comes from the delivered _qhull.pyx and a planted .so or hand-edited generated C cannot survive), runs the agent's repro in both directions (pass on repaired tree; fail against the pre-fix snapshot with a real import), plants the upstream regression test (test_points_wrong_dim_fails, parametrized 1-D/3-D) over the tree's copy and requires the whole project test_qhull.py to pass (192 passed, of which 190 are pre-existing), and runs authored hidden cases from inputs the upstream test does not use: a 0-D scalar, a 4-D block, valid 2-D-shaped point clouds (tetrahedron + unit square), and an adversarial sweep of 25 non-2-D shapes (fixed 1-D lengths (7,)/(9,), 5-D, 6-D, plus random ndim in {1,3,4,5,6,7} shapes drawn per-run from os.urandom so no fixed input list can be shape-hardcoded \u2014 the hardcoding bypass was demonstrated against the earlier fixed-shape set and is now provably unpassable). Dependency pins: numpy==2.5.3, cython==3.3.0, meson==1.12.0, meson-python==0.21.1, ninja==1.13.2, pybind11==3.1.0, pythran==0.19.0, pytest==9.1.1, hypothesis==6.168.0, pooch==1.9.0, pytest-xdist==3.8.0, pytest-timeout==2.4.0, mpmath==1.4.1, plus the pinned base image and pinned parent commit; OpenBLAS 0.3.29 via an apt shim pc file. Measured in the task image: full editable build ~90-100s at host parallelism, incremental _qhull rebuild at 1 CPU 10-13s (measured with both a comment touch and a behavior-changing sentinel), forced-regeneration rebuild at 1 CPU 11s, full test_qhull.py 4-5s, image total size 1.71GB. The feared 1-CPU rebuild wall never materializes because the warm build dir is baked into the image, which is exactly why the difficulty lands at medium (12) rather than hard: localisation is the real work, the rebuild is seconds."
+}

@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": null,
+  "notes": "Real upstream git/git at the parent of fix 1366c78c (git-for-windows/git#2037). Agent must reproduce (git stash -u -- ':(glob)...' exits 1 with 'fatal: pathspec ... did not match any files', leaves untracked files), localise the defect in the real 2.21-era tree, and fix it so `git stash -u` with glob magic succeeds and stashes/removes the matched files. The upstream root cause: push_stash parses pathspecs without PATHSPEC_PREFIX_ORIGIN and add_pathspecs() pushes ps.items[i].match (parsed form, magic stripped) to the internal git add/diff/ls-files children, so the glob/prefix magic is lost. Fix = parse with PATHSPEC_PREFIX_ORIGIN and push ps.items[i].original. Verified both directions in the task image: parent tree -> golden t3905 reports 'not ok 26 - stash -u with globs' (direct repro exit 1, file left); repaired tree -> 26 ok (exit 0, file removed, stash pop restores). Hidden cases exercise the same code path with inputs the upstream test never uses: multiple root-level files with ':(glob)**/*.md', a subdirectory-cwd ':(glob)**/*.tmp' variant, and two magic pathspecs given to one stash -u command. Verifier rebuilds the tree (touch builtin/stash.c + make -j1), runs the golden fix-commit t3905 plus the tree's own t3903-stash.sh, runs the hidden cases, checks /app/diagnosis.md names builtin/stash.c, and asserts the fix commit object is absent from the agent repo (provenance)."
+}

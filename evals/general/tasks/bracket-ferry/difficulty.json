@@ -1,0 +1,17 @@
+{
+ "documented_probe": "pypa/pip @ parent b98096615dc25fb9438f87bacfa446589d34e97d (bug present; fix commit 4ab145f7b7e3c4e4617cbff3743fde7dff802ebd, issue #14057). Shallow clone + golden-test extraction. Image builds in a few minutes at 1 CPU (pip install of the pinned test toolchain dominates; pip itself is pure Python). Reproduces in ~1s: PYTHONPATH=src:/tmp/fakepkgs python3 -m pip show demo-pkg on a dist-info dir without Metadata-Version -> ValueError: invalid literal for int() with base 10: '' at src/pip/_internal/commands/show.py:192. Fixed tree prints Name/Version/Summary.",
+ "expected_expert_time_min": 45,
+ "notes": "Upstream-clone debugging task (v4.2 family): pypa/pip at the parent of the fix for issue #14057, where `pip show` crashes with ValueError on distributions whose metadata lacks a Metadata-Version header. The checkout is cloned shallow at the parent commit (fix commit never in the object store; golden extraction happens in a throwaway clone that is deleted). The instruction describes the user-visible symptom and gives a user-level reproduction (fake dist-info without Metadata-Version on sys.path); it names neither the issue, the commit, the source file nor the fix. The verifier (0) pins the interpreter + site-packages (/usr/local; site-packages __pycache__ is pruned at build time so the manifest is a pure content pin, immune to timestamp-py c extraction-mtime drift across rebuilds, and a planted .pyc shows up as a manifest 'new file' at verify time), the /app/src deliverable tree (allowing only src/pip/_internal/commands/show.py to differ; .git/info/exclude hashed so git-exclude cannot hide helpers) and /opt/golden to build-time manifests stored under tests/manifests (harbor re-uploads /tests from the host at verify time, so a root agent cannot forge them; blocks sitecustomize/.pth/interpreter wrappers and golden-test edits); (1) asserts provenance: HEAD still the parent, the only work-tree change is src/pip/_internal/commands/show.py, no untracked files, and the fix commit unreachable; (2) runs the project's own regression test extracted from the fix commit (tests/unit/test_command_show.py::test_print_results_license_for_metadata_version) into /opt/golden; (3) runs a slice of pip's own existing unit suite (tests/unit/test_commands.py, tests/unit/metadata/test_metadata.py) under the project's own pytest config, which needs the pinned pytest==8.4.2 + pytest-socket==0.7.0 pair plus installer/scripttest/virtualenv/werkzeug for the tests/conftest.py import chain; (4) runs four authored hidden cases covering multi-package single-call rendering, verbose/--files rendering of an empty-metadata package, metadata-version boundary values around the 2.4 license-line switch, and the real pip show CLI subprocess against a fabricated legacy dist. Provenance checks block replaying the upstream commit and any fix outside /app/src. Reward is binary with the standard trap.",
+ "rubric": {
+  "adversarial_inputs": 1,
+  "debugging_ambiguity": 1,
+  "dependent_stages": 2,
+  "hidden_case_generalization": 2,
+  "interaction_statefulness": 0,
+  "quantitative_correctness": 1,
+  "reasoning_depth": 1,
+  "resource_pressure": 0,
+  "tool_breadth": 1,
+  "unsafe_action_penalty": 0
+ }
+}

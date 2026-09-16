@@ -1,0 +1,560 @@
+{
+ "note": "Every upstream source repository referenced anywhere in the frozen Terminal-Bench 2.1 reference checkout. Extracted from all text files under original-tasks/ (Dockerfiles, task.yaml, solution.sh, run-tests.sh, tests/, fixture scripts), normalized to host/owner/repo and tolerant of .git suffixes, pinned commits, subdirectory fragments and pip VCS forms. The v4.2 upstream-clone family must not clone, download, submodule, pip-install-from-git or vendor any repository on this list. tools/check_upstream_disjointness.py enforces it; audit_independence_stream.py can consume this file via --reference-provenance.",
+ "frozen_commit": "1a6ffa9674b571da0ed040c470cb40c4d85f9b9b",
+ "reference_root": "/home/ee/tb-ref/terminal-bench/original-tasks",
+ "extracted_at_scope": "every text file under original-tasks/, not only Dockerfiles",
+ "repository_count": 68,
+ "reference_tasks_touching_an_upstream_repository": 79,
+ "tasks": [
+  {
+   "task": "compile-compcert",
+   "repository": "github.com/absint/compcert",
+   "url": "https://github.com/absint/compcert"
+  },
+  {
+   "task": "add-benchmark-lm-eval-harness",
+   "repository": "github.com/amazon-science/esci-data",
+   "url": "https://github.com/amazon-science/esci-data"
+  },
+  {
+   "task": "amuse-install",
+   "repository": "github.com/amusecode/amuse",
+   "url": "https://github.com/amusecode/amuse"
+  },
+  {
+   "task": "add-benchmark-lm-eval-harness",
+   "repository": "github.com/anurag461/lm-evaluation-harness",
+   "url": "https://github.com/anurag461/lm-evaluation-harness"
+  },
+  {
+   "task": "vul-flink",
+   "repository": "github.com/apache/flink",
+   "url": "https://github.com/apache/flink"
+  },
+  {
+   "task": "predicate-pushdown-bench",
+   "repository": "github.com/apache/spark",
+   "url": "https://github.com/apache/spark"
+  },
+  {
+   "task": "swe-bench-astropy-1",
+   "repository": "github.com/astropy/astropy",
+   "url": "https://github.com/astropy/astropy"
+  },
+  {
+   "task": "swe-bench-astropy-2",
+   "repository": "github.com/astropy/astropy",
+   "url": "https://github.com/astropy/astropy"
+  },
+  {
+   "task": "shell-deobfuscation",
+   "repository": "github.com/bashfuscator/bashfuscator",
+   "url": "https://github.com/bashfuscator/bashfuscator"
+  },
+  {
+   "task": "fix-code-vulnerability",
+   "repository": "github.com/bottlepy/bottle",
+   "url": "https://github.com/bottlepy/bottle"
+  },
+  {
+   "task": "caffe-cifar-10",
+   "repository": "github.com/bvlc/caffe",
+   "url": "https://github.com/bvlc/caffe"
+  },
+  {
+   "task": "lean4-proof",
+   "repository": "github.com/bytedance-seed/seed-prover",
+   "url": "https://github.com/bytedance-seed/seed-prover"
+  },
+  {
+   "task": "sam-cell-seg",
+   "repository": "github.com/chaoningzhang/mobilesam",
+   "url": "https://github.com/chaoningzhang/mobilesam"
+  },
+  {
+   "task": "portfolio-optimization",
+   "repository": "github.com/cvxopt/cvxopt",
+   "url": "https://github.com/cvxopt/cvxopt"
+  },
+  {
+   "task": "play-zork",
+   "repository": "github.com/danielricks/textplayer",
+   "url": "https://github.com/danielricks/textplayer"
+  },
+  {
+   "task": "play-zork-easy",
+   "repository": "github.com/danielricks/textplayer",
+   "url": "https://github.com/danielricks/textplayer"
+  },
+  {
+   "task": "magsac-install",
+   "repository": "github.com/danini/magsac",
+   "url": "https://github.com/danini/magsac"
+  },
+  {
+   "task": "filter-js-from-html",
+   "repository": "github.com/davidwagner/html-sanitizer-testbed",
+   "url": "https://github.com/davidwagner/html-sanitizer-testbed"
+  },
+  {
+   "task": "mteb-leaderboard",
+   "repository": "github.com/embeddings-benchmark/mteb",
+   "url": "https://github.com/embeddings-benchmark/mteb"
+  },
+  {
+   "task": "mteb-leaderboard",
+   "repository": "github.com/embeddings-benchmark/results",
+   "url": "https://github.com/embeddings-benchmark/results"
+  },
+  {
+   "task": "find-official-code",
+   "repository": "github.com/facebookresearch/deepcluster",
+   "url": "https://github.com/facebookresearch/deepcluster"
+  },
+  {
+   "task": "train-fasttext",
+   "repository": "github.com/facebookresearch/fasttext",
+   "url": "https://github.com/facebookresearch/fasttext"
+  },
+  {
+   "task": "hydra-debug-slurm-mode",
+   "repository": "github.com/facebookresearch/hydra",
+   "url": "https://github.com/facebookresearch/hydra"
+  },
+  {
+   "task": "find-official-code",
+   "repository": "github.com/facebookresearch/locate-3d",
+   "url": "https://github.com/facebookresearch/locate-3d"
+  },
+  {
+   "task": "find-official-code",
+   "repository": "github.com/facebookresearch/moco",
+   "url": "https://github.com/facebookresearch/moco"
+  },
+  {
+   "task": "find-official-code",
+   "repository": "github.com/facebookresearch/purplellama",
+   "url": "https://github.com/facebookresearch/purplellama"
+  },
+  {
+   "task": "weighted-max-sat-solver",
+   "repository": "github.com/florentavellaneda/evalmaxsat",
+   "url": "https://github.com/florentavellaneda/evalmaxsat"
+  },
+  {
+   "task": "swe-bench-fsspec",
+   "repository": "github.com/fsspec/filesystem_spec",
+   "url": "https://github.com/fsspec/filesystem_spec"
+  },
+  {
+   "task": "find-official-code",
+   "repository": "github.com/gaozhengpei/freqpure",
+   "url": "https://github.com/gaozhengpei/freqpure"
+  },
+  {
+   "task": "custom-memory-heap-crash",
+   "repository": "github.com/gcc-mirror/gcc",
+   "url": "https://github.com/gcc-mirror/gcc"
+  },
+  {
+   "task": "find-official-code",
+   "repository": "github.com/genlm/genlm-bytes",
+   "url": "https://github.com/genlm/genlm-bytes"
+  },
+  {
+   "task": "swe-bench-langcodes",
+   "repository": "github.com/georgkrause/langcodes",
+   "url": "https://github.com/georgkrause/langcodes"
+  },
+  {
+   "task": "tune-mjcf",
+   "repository": "github.com/google-deepmind/mujoco",
+   "url": "https://github.com/google-deepmind/mujoco"
+  },
+  {
+   "task": "find-official-code",
+   "repository": "github.com/hhhhhhao/continuous_tokenizer",
+   "url": "https://github.com/hhhhhhao/continuous_tokenizer"
+  },
+  {
+   "task": "triton-interpret",
+   "repository": "github.com/huggingface/transformers",
+   "url": "https://github.com/huggingface/transformers"
+  },
+  {
+   "task": "3d-model-format-legacy",
+   "repository": "github.com/isegal/mdflib",
+   "url": "https://github.com/isegal/mdflib"
+  },
+  {
+   "task": "implement-eigenvectors-from-eigenvalues-research-paper",
+   "repository": "github.com/jcmgray/quimb",
+   "url": "https://github.com/jcmgray/quimb"
+  },
+  {
+   "task": "sanitize-git-repo",
+   "repository": "github.com/jeffreywpli/test-secret-removal",
+   "url": "https://github.com/jeffreywpli/test-secret-removal"
+  },
+  {
+   "task": "play-lord",
+   "repository": "github.com/jvpoulos/lord_rust",
+   "url": "https://github.com/jvpoulos/lord_rust"
+  },
+  {
+   "task": "find-official-code",
+   "repository": "github.com/kaiminghe/deep-residual-networks",
+   "url": "https://github.com/kaiminghe/deep-residual-networks"
+  },
+  {
+   "task": "unprivileged-headless-pyrender",
+   "repository": "github.com/khronosgroup/gltf-sample-models",
+   "url": "https://github.com/khronosgroup/gltf-sample-models"
+  },
+  {
+   "task": "find-official-code",
+   "repository": "github.com/kjha02/crossenvcooperation",
+   "url": "https://github.com/kjha02/crossenvcooperation"
+  },
+  {
+   "task": "install-klee-minimal",
+   "repository": "github.com/klee/klee",
+   "url": "https://github.com/klee/klee"
+  },
+  {
+   "task": "png-generation",
+   "repository": "github.com/laude-institute/t-bench",
+   "url": "https://github.com/laude-institute/t-bench"
+  },
+  {
+   "task": "recover-obfuscated-files",
+   "repository": "github.com/laude-institute/t-bench",
+   "url": "https://github.com/laude-institute/t-bench"
+  },
+  {
+   "task": "3d-model-format-legacy",
+   "repository": "github.com/laude-institute/terminal-bench",
+   "url": "https://github.com/laude-institute/terminal-bench"
+  },
+  {
+   "task": "accelerate-maximal-square",
+   "repository": "github.com/laude-institute/terminal-bench",
+   "url": "https://github.com/laude-institute/terminal-bench"
+  },
+  {
+   "task": "build-tcc-qemu",
+   "repository": "github.com/laude-institute/terminal-bench",
+   "url": "https://github.com/laude-institute/terminal-bench"
+  },
+  {
+   "task": "chem-rf",
+   "repository": "github.com/laude-institute/terminal-bench",
+   "url": "https://github.com/laude-institute/terminal-bench"
+  },
+  {
+   "task": "cpp-compatibility",
+   "repository": "github.com/laude-institute/terminal-bench",
+   "url": "https://github.com/laude-institute/terminal-bench"
+  },
+  {
+   "task": "cron-broken-network",
+   "repository": "github.com/laude-institute/terminal-bench",
+   "url": "https://github.com/laude-institute/terminal-bench"
+  },
+  {
+   "task": "cross-entropy-method",
+   "repository": "github.com/laude-institute/terminal-bench",
+   "url": "https://github.com/laude-institute/terminal-bench"
+  },
+  {
+   "task": "decommissioning-service-with-sensitive-data",
+   "repository": "github.com/laude-institute/terminal-bench",
+   "url": "https://github.com/laude-institute/terminal-bench"
+  },
+  {
+   "task": "enemy-grid-escape",
+   "repository": "github.com/laude-institute/terminal-bench",
+   "url": "https://github.com/laude-institute/terminal-bench"
+  },
+  {
+   "task": "extract-moves-from-video",
+   "repository": "github.com/laude-institute/terminal-bench",
+   "url": "https://github.com/laude-institute/terminal-bench"
+  },
+  {
+   "task": "find-official-code",
+   "repository": "github.com/laude-institute/terminal-bench",
+   "url": "https://github.com/laude-institute/terminal-bench"
+  },
+  {
+   "task": "gcc-compiler-optimization",
+   "repository": "github.com/laude-institute/terminal-bench",
+   "url": "https://github.com/laude-institute/terminal-bench"
+  },
+  {
+   "task": "get-bitcoin-nodes",
+   "repository": "github.com/laude-institute/terminal-bench",
+   "url": "https://github.com/laude-institute/terminal-bench"
+  },
+  {
+   "task": "git-workflow-hack",
+   "repository": "github.com/laude-institute/terminal-bench",
+   "url": "https://github.com/laude-institute/terminal-bench"
+  },
+  {
+   "task": "gomoku-planner",
+   "repository": "github.com/laude-institute/terminal-bench",
+   "url": "https://github.com/laude-institute/terminal-bench"
+  },
+  {
+   "task": "hdfs-deployment",
+   "repository": "github.com/laude-institute/terminal-bench",
+   "url": "https://github.com/laude-institute/terminal-bench"
+  },
+  {
+   "task": "html-finance-verify",
+   "repository": "github.com/laude-institute/terminal-bench",
+   "url": "https://github.com/laude-institute/terminal-bench"
+  },
+  {
+   "task": "huarong-dao-solver",
+   "repository": "github.com/laude-institute/terminal-bench",
+   "url": "https://github.com/laude-institute/terminal-bench"
+  },
+  {
+   "task": "ilp-solver",
+   "repository": "github.com/laude-institute/terminal-bench",
+   "url": "https://github.com/laude-institute/terminal-bench"
+  },
+  {
+   "task": "implement-eigenvectors-from-eigenvalues-research-paper",
+   "repository": "github.com/laude-institute/terminal-bench",
+   "url": "https://github.com/laude-institute/terminal-bench"
+  },
+  {
+   "task": "leelachess0-pytorch-conversion",
+   "repository": "github.com/laude-institute/terminal-bench",
+   "url": "https://github.com/laude-institute/terminal-bench"
+  },
+  {
+   "task": "magsac-install",
+   "repository": "github.com/laude-institute/terminal-bench",
+   "url": "https://github.com/laude-institute/terminal-bench"
+  },
+  {
+   "task": "matlab-python-conversion",
+   "repository": "github.com/laude-institute/terminal-bench",
+   "url": "https://github.com/laude-institute/terminal-bench"
+  },
+  {
+   "task": "modernize-fortran-build",
+   "repository": "github.com/laude-institute/terminal-bench",
+   "url": "https://github.com/laude-institute/terminal-bench"
+  },
+  {
+   "task": "npm-conflict-resolution",
+   "repository": "github.com/laude-institute/terminal-bench",
+   "url": "https://github.com/laude-institute/terminal-bench"
+  },
+  {
+   "task": "ode-solver-rk4",
+   "repository": "github.com/laude-institute/terminal-bench",
+   "url": "https://github.com/laude-institute/terminal-bench"
+  },
+  {
+   "task": "parallel-particle-simulator",
+   "repository": "github.com/laude-institute/terminal-bench",
+   "url": "https://github.com/laude-institute/terminal-bench"
+  },
+  {
+   "task": "parallelize-compute-squares",
+   "repository": "github.com/laude-institute/terminal-bench",
+   "url": "https://github.com/laude-institute/terminal-bench"
+  },
+  {
+   "task": "postgres-csv-clean",
+   "repository": "github.com/laude-institute/terminal-bench",
+   "url": "https://github.com/laude-institute/terminal-bench"
+  },
+  {
+   "task": "query-optimize",
+   "repository": "github.com/laude-institute/terminal-bench",
+   "url": "https://github.com/laude-institute/terminal-bench"
+  },
+  {
+   "task": "recover-accuracy-log",
+   "repository": "github.com/laude-institute/terminal-bench",
+   "url": "https://github.com/laude-institute/terminal-bench"
+  },
+  {
+   "task": "solana-data",
+   "repository": "github.com/laude-institute/terminal-bench",
+   "url": "https://github.com/laude-institute/terminal-bench"
+  },
+  {
+   "task": "speech-to-text",
+   "repository": "github.com/laude-institute/terminal-bench",
+   "url": "https://github.com/laude-institute/terminal-bench"
+  },
+  {
+   "task": "sudo-llvm-ir",
+   "repository": "github.com/laude-institute/terminal-bench",
+   "url": "https://github.com/laude-institute/terminal-bench"
+  },
+  {
+   "task": "vul-flask",
+   "repository": "github.com/laude-institute/terminal-bench",
+   "url": "https://github.com/laude-institute/terminal-bench"
+  },
+  {
+   "task": "vul-flink",
+   "repository": "github.com/laude-institute/terminal-bench",
+   "url": "https://github.com/laude-institute/terminal-bench"
+  },
+  {
+   "task": "weighted-max-sat-solver",
+   "repository": "github.com/laude-institute/terminal-bench",
+   "url": "https://github.com/laude-institute/terminal-bench"
+  },
+  {
+   "task": "leelachess0-pytorch-conversion",
+   "repository": "github.com/leelachesszero/lc0",
+   "url": "https://github.com/leelachesszero/lc0"
+  },
+  {
+   "task": "protocol-analysis-rs",
+   "repository": "github.com/lostcityrs/server",
+   "url": "https://github.com/lostcityrs/server"
+  },
+  {
+   "task": "find-official-code",
+   "repository": "github.com/lumalabs/imm",
+   "url": "https://github.com/lumalabs/imm"
+  },
+  {
+   "task": "pytorch-model-cli",
+   "repository": "github.com/lvandeve/lodepng",
+   "url": "https://github.com/lvandeve/lodepng"
+  },
+  {
+   "task": "unprivileged-headless-pyrender",
+   "repository": "github.com/mmatl/pyopengl",
+   "url": "https://github.com/mmatl/pyopengl"
+  },
+  {
+   "task": "spinning-up-rl",
+   "repository": "github.com/openai/spinningup",
+   "url": "https://github.com/openai/spinningup"
+  },
+  {
+   "task": "speech-to-text",
+   "repository": "github.com/openai/whisper",
+   "url": "https://github.com/openai/whisper"
+  },
+  {
+   "task": "magsac-install",
+   "repository": "github.com/opencv/opencv",
+   "url": "https://github.com/opencv/opencv"
+  },
+  {
+   "task": "magsac-install",
+   "repository": "github.com/opencv/opencv_contrib",
+   "url": "https://github.com/opencv/opencv_contrib"
+  },
+  {
+   "task": "crack-7z-hash",
+   "repository": "github.com/openwall/john",
+   "url": "https://github.com/openwall/john"
+  },
+  {
+   "task": "make-doom-for-mips",
+   "repository": "github.com/ozkl/doomgeneric",
+   "url": "https://github.com/ozkl/doomgeneric"
+  },
+  {
+   "task": "make-mips-interpreter",
+   "repository": "github.com/ozkl/doomgeneric",
+   "url": "https://github.com/ozkl/doomgeneric"
+  },
+  {
+   "task": "vul-flask",
+   "repository": "github.com/pallets/flask",
+   "url": "https://github.com/pallets/flask"
+  },
+  {
+   "task": "predicate-pushdown-bench",
+   "repository": "github.com/roaringbitmap/roaringbitmap",
+   "url": "https://github.com/roaringbitmap/roaringbitmap"
+  },
+  {
+   "task": "fix-ocaml-gc",
+   "repository": "github.com/sadiqj/ocaml",
+   "url": "https://github.com/sadiqj/ocaml"
+  },
+  {
+   "task": "build-cython-ext",
+   "repository": "github.com/spocknots/pyknotid",
+   "url": "https://github.com/spocknots/pyknotid"
+  },
+  {
+   "task": "rstan-to-pystan",
+   "repository": "github.com/stan-dev/httpstan",
+   "url": "https://github.com/stan-dev/httpstan"
+  },
+  {
+   "task": "build-stp",
+   "repository": "github.com/stp/stp",
+   "url": "https://github.com/stp/stp"
+  },
+  {
+   "task": "install-klee-minimal",
+   "repository": "github.com/stp/stp",
+   "url": "https://github.com/stp/stp"
+  },
+  {
+   "task": "sudo-llvm-ir",
+   "repository": "github.com/sudo-project/sudo",
+   "url": "https://github.com/sudo-project/sudo"
+  },
+  {
+   "task": "fix-git",
+   "repository": "github.com/themikemerrill/personal-site",
+   "url": "https://github.com/themikemerrill/personal-site"
+  },
+  {
+   "task": "find-official-code",
+   "repository": "github.com/thu-ml/stair",
+   "url": "https://github.com/thu-ml/stair"
+  },
+  {
+   "task": "predicate-pushdown-bench",
+   "repository": "github.com/twitter/chill",
+   "url": "https://github.com/twitter/chill"
+  },
+  {
+   "task": "download-youtube",
+   "repository": "github.com/yt-dlp/yt-dlp",
+   "url": "https://github.com/yt-dlp/yt-dlp"
+  },
+  {
+   "task": "setup-custom-dev-env",
+   "repository": "github.com/zsh-users/zsh-autosuggestions",
+   "url": "https://github.com/zsh-users/zsh-autosuggestions"
+  },
+  {
+   "task": "setup-custom-dev-env",
+   "repository": "github.com/zsh-users/zsh-syntax-highlighting",
+   "url": "https://github.com/zsh-users/zsh-syntax-highlighting"
+  },
+  {
+   "task": "play-zork",
+   "repository": "gitlab.com/synchronetbbs/frotz",
+   "url": "https://gitlab.com/synchronetbbs/frotz"
+  },
+  {
+   "task": "play-zork-easy",
+   "repository": "gitlab.com/synchronetbbs/frotz",
+   "url": "https://gitlab.com/synchronetbbs/frotz"
+  }
+ ]
+}

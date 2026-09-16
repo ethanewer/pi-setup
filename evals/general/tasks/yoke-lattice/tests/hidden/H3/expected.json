@@ -1,0 +1,114 @@
+{
+  "jobs": {
+    "alpha": {
+      "needs": [],
+      "outputs": {},
+      "skip_reason": null,
+      "status": "success",
+      "steps": [
+        {
+          "exit_code": 0,
+          "id": null,
+          "index": 1,
+          "name": "init alpha",
+          "status": "success"
+        }
+      ]
+    },
+    "beta": {
+      "needs": [],
+      "outputs": {},
+      "skip_reason": null,
+      "status": "success",
+      "steps": [
+        {
+          "exit_code": 0,
+          "id": null,
+          "index": 1,
+          "name": "init beta",
+          "status": "success"
+        }
+      ]
+    },
+    "delta": {
+      "needs": [
+        "beta"
+      ],
+      "outputs": {},
+      "skip_reason": null,
+      "status": "success",
+      "steps": [
+        {
+          "exit_code": 0,
+          "id": null,
+          "index": 1,
+          "name": "join branch",
+          "status": "success"
+        }
+      ]
+    },
+    "fin": {
+      "needs": [
+        "gamma",
+        "delta",
+        "hub"
+      ],
+      "outputs": {},
+      "skip_reason": null,
+      "status": "success",
+      "steps": [
+        {
+          "exit_code": 0,
+          "id": null,
+          "index": 1,
+          "name": "final gate",
+          "status": "success"
+        }
+      ]
+    },
+    "gamma": {
+      "needs": [
+        "alpha"
+      ],
+      "outputs": {},
+      "skip_reason": null,
+      "status": "success",
+      "steps": [
+        {
+          "exit_code": 0,
+          "id": null,
+          "index": 1,
+          "name": "join branch",
+          "status": "success"
+        }
+      ]
+    },
+    "hub": {
+      "needs": [
+        "alpha",
+        "beta"
+      ],
+      "outputs": {},
+      "skip_reason": null,
+      "status": "success",
+      "steps": [
+        {
+          "exit_code": 0,
+          "id": null,
+          "index": 1,
+          "name": "merge point",
+          "status": "success"
+        }
+      ]
+    }
+  },
+  "order": [
+    "beta",
+    "alpha",
+    "delta",
+    "gamma",
+    "hub",
+    "fin"
+  ],
+  "workflow": "workflow.yml"
+}

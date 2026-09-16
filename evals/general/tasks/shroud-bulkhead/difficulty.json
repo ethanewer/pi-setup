@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": null,
+  "notes": "Upstream-clone bug-fix task on aquasecurity/trivy: the pnpm lockfile parser decodes only the first YAML document of a multi-document pnpm 11 lockfile and so reports the package manager's own environment (pnpm, @pnpm/*, @reflink/*, detect-libc) as the project's dependencies while the real dependency is missing. The agent must (1) write its own failing reproduction (repro.sh + fixture) that drives the project's own go test harness and fails on the pristine tree, (2) fix the parser so the module's own suite (golden regression + 9 pre-existing cases) passes, and (3) survive hidden fixtures the upstream test does not use (2-doc scoped/direct+dev, 3-doc stacked env docs, env-only file). The image ships the parent commit with the bug present (HEAD pinned, fix object proven absent), extracts the golden regression test from the fix commit through a throwaway clone, warms the go1.26.3 build cache under /opt/builder (world-writable for the uid-1000 trial), and leaves a single-document Decode in parse.go. Verifier additionally runs the agent's reproducer against a scratch copy with the parser sources restored to the pre-fix tree (must fail), asserts golden test files byte-match the fix-commit originals (digests) so skipping/editing them fails, requires git HEAD still equal the parent pin, and requires go binary integrity (sha256 + version), blocking wrapping of the test command. cpus=1 via GOMAXPROCS=1. Measured: warm module build 36s at 1 CPU; image ~2.4 GB; build ~2 min."
+}

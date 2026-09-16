@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 0,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": null,
+  "notes": "Upstream-clone bugfix in pylint-dev/pylint (v4.2 family): false-positive protected-access (W0212) when a protected member is read through self.__class__ inside an instance method; the same read via type(self) is already accepted. Build/reproduce/patch/verify chain against the real tree, all offline and pure-Python (no compile time). The agent must find the emitting check (visit_attribute path in the classes checker), understand that self.__class__ is the class of the method's first parameter, and add a guard so only accesses through another object's class still warn. Verifier: provenance (only pylint/checkers/classes/class_checker.py may differ byte-wise), CLI repro asserting the exact remaining W0212 line set, golden functional test access_to_protected_members (extracted from fix commit at build time) planted and run via the project's own pytest harness, the project's own access/ functional-test family, and three authored hidden cases (renamed first parameter, inherited member through the MRO, mixed type(self)/self.__class__ spellings) with byte-exact expected message-line sets. Oracle applies an authored one-hunk patch mirroring the upstream fix."
+}

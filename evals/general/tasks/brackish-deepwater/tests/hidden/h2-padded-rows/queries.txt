@@ -1,0 +1,10 @@
+# Hidden case: authored 10,000-row \r\r\n fixture whose rows are
+# zero-padded to a fixed width (very different buffer geometry from the
+# upstream fixture), read at buffer sizes the upstream regression test does
+# not use. The dual-count line asserts both parallel and sequential agree.
+# Line format: QUERY<TAB>VALUE:<exact csv value(s)>.
+PRAGMA verify_parallelism; SELECT COUNT(*) FROM read_csv('/tests/hidden/h2-padded-rows/fixture.csv', auto_detect=false, header=true, delim=',', columns={'id':'BIGINT','val':'VARCHAR'}, strict_mode=false, ignore_errors=true, max_line_size=2048, buffer_size=2048, parallel=true);	VALUE:10000
+PRAGMA verify_parallelism; SELECT COUNT(*) FROM read_csv('/tests/hidden/h2-padded-rows/fixture.csv', auto_detect=false, header=true, delim=',', columns={'id':'BIGINT','val':'VARCHAR'}, strict_mode=false, ignore_errors=true, max_line_size=2048, buffer_size=4096, parallel=true);	VALUE:10000
+PRAGMA verify_parallelism; SELECT SUM(id) FROM read_csv('/tests/hidden/h2-padded-rows/fixture.csv', auto_detect=false, header=true, delim=',', columns={'id':'BIGINT','val':'VARCHAR'}, strict_mode=false, ignore_errors=true, max_line_size=2048, buffer_size=2048, parallel=true);	VALUE:49995000
+PRAGMA verify_parallelism; SELECT COUNT(*) FROM (SELECT id, COUNT(*) AS cnt FROM read_csv('/tests/hidden/h2-padded-rows/fixture.csv', auto_detect=false, header=true, delim=',', columns={'id':'BIGINT','val':'VARCHAR'}, strict_mode=false, ignore_errors=true, max_line_size=2048, buffer_size=4096, parallel=true) GROUP BY id HAVING cnt > 1);	VALUE:0
+PRAGMA verify_parallelism; SELECT (SELECT COUNT(*) FROM read_csv('/tests/hidden/h2-padded-rows/fixture.csv', auto_detect=false, header=true, delim=',', columns={'id':'BIGINT','val':'VARCHAR'}, strict_mode=false, ignore_errors=true, max_line_size=2048, buffer_size=8192, parallel=true)), (SELECT COUNT(*) FROM read_csv('/tests/hidden/h2-padded-rows/fixture.csv', auto_detect=false, header=true, delim=',', columns={'id':'BIGINT','val':'VARCHAR'}, strict_mode=false, ignore_errors=true, max_line_size=2048, buffer_size=8192, parallel=false));	VALUE:10000,10000

@@ -1,0 +1,10 @@
+# Hidden case: authored 5,000-row \r\r\n fixture (variable-width second
+# column; boundary geometry differs from the 10,000-row upstream fixture),
+# read at buffer sizes the upstream regression test does not use.
+# Line format: QUERY<TAB>VALUE:<exact csv value(s)>.
+# The verifier asserts the value on the repaired engine AND asserts the
+# pre-fix engine snapshot produces a different value.
+PRAGMA verify_parallelism; SELECT COUNT(*) FROM read_csv('/tests/hidden/h1-shifted-rows/fixture.csv', auto_detect=false, header=true, delim=',', columns={'id':'BIGINT','val':'VARCHAR'}, strict_mode=false, ignore_errors=true, max_line_size=2048, buffer_size=2048, parallel=true);	VALUE:5000
+PRAGMA verify_parallelism; SELECT COUNT(*) FROM read_csv('/tests/hidden/h1-shifted-rows/fixture.csv', auto_detect=false, header=true, delim=',', columns={'id':'BIGINT','val':'VARCHAR'}, strict_mode=false, ignore_errors=true, max_line_size=2048, buffer_size=4096, parallel=true);	VALUE:5000
+PRAGMA verify_parallelism; SELECT SUM(id) FROM read_csv('/tests/hidden/h1-shifted-rows/fixture.csv', auto_detect=false, header=true, delim=',', columns={'id':'BIGINT','val':'VARCHAR'}, strict_mode=false, ignore_errors=true, max_line_size=2048, buffer_size=2048, parallel=true);	VALUE:12497500
+PRAGMA verify_parallelism; SELECT COUNT(*) FROM (SELECT id, COUNT(*) AS cnt FROM read_csv('/tests/hidden/h1-shifted-rows/fixture.csv', auto_detect=false, header=true, delim=',', columns={'id':'BIGINT','val':'VARCHAR'}, strict_mode=false, ignore_errors=true, max_line_size=2048, buffer_size=2048, parallel=true) GROUP BY id HAVING cnt > 1);	VALUE:0

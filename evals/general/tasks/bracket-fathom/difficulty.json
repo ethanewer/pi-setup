@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 30,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on psycopg/psycopg at parent commit 7c9b6bee4ea6d7a4da5ce8e4bed9e4cba0c74012 (real upstream bug, issue #1348, fixed upstream in 66e4b33fe271780d0bd02f15e94c66d52ed69cba). The namedtuple row factory lets a bare collections.namedtuple ValueError escape when a result set has duplicate column names (natural in joins) instead of surfacing a psycopg DataError; the task family uses a top-level psycopg/ namespace dir that forces a NON-EDITABLE pip install (an editable install is shadowed by the namespace dir and breaks pytest), so the deliverable is the tree and the verifier force-reinstalls the package from the agent's tree before running tests, which both enforces the tree as the deliverable and matches the mined, verified recipe. Agent must localise the bug in the real tree, fix it keeping the repo's own row-factory tests green, and only modify the minimal source file; verifier also runs the upstream regression test extracted from the fix commit into /opt/golden/ and hidden cases that drive the same code path with inputs the upstream test does not use (identifier-mangled duplicates, latin-1 encodings, end-to-end through the row factory). No PostgreSQL server needed: tests drive the row machinery directly. Both directions re-verified inside the task image before shipping."
+}

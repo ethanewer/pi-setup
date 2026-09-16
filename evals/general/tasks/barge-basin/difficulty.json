@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 75,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on PyCQA/bandit at parent commit ad56c78f1e2f7d56fb3f75e8c2d78da85292d0e0 (real upstream bug, issue #1141, fixed by PR #1146 commit 049eba0). The reproduction is deliberately NOT supplied: the instruction describes the user-visible symptom (bandit logs 'Bandit internal error running: ... list index out of range' on some valid Python and keeps going) and the agent must reverse-engineer the trigger (an empty list passed to a standard-library subprocess helper), author its own failing reproduction as the /app/repro.py deliverable, then repair the real tree so scans show no internal error while every finding and the project's own 268-test suite stay green. The verifier runs the agent's reproduction against a pristine copy of the pre-fix tree (/opt/pretree, sha-pinned) where it must fail, and against the repaired tree where it must pass; runs the upstream regression material extracted from the fix commit (fix-commit test_functional.py::test_subprocess_shell with its example file; note this test is not the discriminator because bandit logs-and-continues the crash, so counts are equal with and without the fix -- the oracle is the absence of the 'Bandit internal error' stderr line); runs the full stestr suite; and runs three authored hidden-case files over trigger shapes the upstream test does not use (all five subprocess helpers + alias/from-import/multiline call styles with empty lists: Popen([]), call([]), check_call([]), run([]), alias and from-import check_output([]), multiline form) plus guards that non-list shapes (str/tuple/variable, non-empty list) are unaffected. Pure Python, offline; measured image build ~31s at 1 CPU, full stestr suite ~14s at 1 CPU. Both directions re-confirmed inside the task image before shipping. Targeted-cheat controls: fix-sha object absent + exactly one commit in the working clone + only bandit/ tracked files modified + no sitecustomize/usercustomize wrappers + sha-pinned golden files + sha-pinned hidden-case files + the fix must live in the source (bare 'if isinstance(node, ast.List):' must be gone and an 'and node.elts' guard present)."
+}

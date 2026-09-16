@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 3,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 90,
+  "documented_probe": null,
+  "notes": "Upstream-clone task (arminbiere/cadical @ c60730422e758ef1cebe7aeddf2dda31c996bf04, version 3.0.1) replacing TB2.1 stp/evalmaxsat. Agent must build the solver with its own build system, then drive it correctly on plain DIMACS CNF and incremental 'p inccnf' (assumption cubes) inputs, emit LRAT proofs for UNSAT instances that the project's proof checker accepts, and report models that actually satisfy every clause. Hidden case 3 has a satisfiable base clause set whose cubes make the joint question unsatisfiable, so solving only the clause part yields the wrong verdict. The image ships only warm object files (no finished solver binary), so the deliverable can only come from the agent running the project's own make; the verifier separately validates each emitted LRAT proof with the project's OWN standalone checker lrat-trim (compiled from the pinned clone into /opt/lrat-trim), so a forged/corrupted/self-authored proof can never pass via the agent's own binary. Rodents: solver must be agent-built in-trial; timeout budget assumes ~2-90 s make relink."
+}

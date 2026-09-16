@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": null,
+  "notes": "Upstream-clone bugfix in BurntSushi/ripgrep (v4.3 family): `rg -w -o -n` with a pattern that can match the empty string (empty pattern `` as the simplest case) crashes (panics with 'assertion failed: self.start <= end' at crates/matcher/src/lib.rs:131, exit 101) partway through output instead of reporting all word-boundary match positions (correct output '1:\\n2:\\n2:\\n' for input '\\n##\\n'). Root cause in crates/regex/src/word.rs fast_find(): after trimming the surrounding \\W characters from a candidate word match, an empty-matchable original pattern inverts the candidate range (new_start > new_end) and the trimmed range trips the Match range assertion; the upstream fix bails out of the fast path (Err(())) and defers to the captures-based slow path, which handles empty matches at word boundaries correctly. The agent gets the real tree at the parent commit (depth-1 object store; fix commit provably unreachable), must author its own failing reproduction (/app/repro.sh, executed against both the rebuilt fixed binary and a pristine pre-fix binary baked at /opt/prefix/rg) before fixing, then localise the defect by reading the word-matching code and patch that single source file. Verifier: provenance (HEAD == parent, fix commit unreachable, blob-level scope check permitting ONLY crates/regex/src/word.rs to differ, no untracked non-ignored files), a clean rebuild from source (cargo clean + cargo build --release -j1, kills planted artifacts; ELF-magic check on the rebuilt binary), the agent's repro in both directions, the upstream regression test r1891 extracted from the fix commit at image build time into /opt/golden/regression.rs (sha256-pinned, replanted over the tree's copy), the full existing integration suite (271 tests at the pinned commit + the planted r1891 = 272) plus unit test suites of the grep-regex and grep-matcher crates, and three authored hidden cases using inputs the upstream test does not use (pattern '' on a two-'##'-line input; pattern 't?' on 'test\\n##\\n' expecting '2:\\n2:\\n'; pattern '^' on '\\n##\\n' expecting '1:\\n2:\\n') each required to pass on the agent's binary and to fail on the pre-fix binary. Dependency pins honoured: rustc/cargo 1.98.1 from the static.rust-lang.org dist tarball (2026-09-03 channel; rustup is not fetchable on this network) and the commit's committed Cargo.lock (no cargo update). Toolchain, golden file and pre-fix binary are sha256-pinned at image build time to detect substitution."
+}

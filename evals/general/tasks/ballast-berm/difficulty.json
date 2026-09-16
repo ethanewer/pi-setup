@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on Mbed-TLS/mbedtls at parent commit dd48f0f23f8b5189031d6f3ac519b2b6113bd9e7 (real upstream issue #9314, fixed by 7b6ddfcd25d95a1c6a452158db9205a6372b4426). psa_cipher_decrypt() special-cases PSA_ALG_CCM_STAR_NO_TAG with an extra guard that rejects any nonce-plus-ciphertext input shorter than one AES block (16 bytes), even though this implementation's CCM* fixed nonce is 13 bytes and the only real minimum is PSA_CIPHER_IV_LENGTH; the fix removes the CCM*-specific check so only the IV-length minimum remains (inputs of 13..15 bytes must now decrypt instead of failing INVALID_ARGUMENT, while sub-nonce inputs still error). The image clones the repo at the parent, overlays the fixed tests/suites/test_suite_psa_crypto.data so `./tests/test_suite_psa_crypto` fails exactly as mined (1947/1949, two CCM*-no-tag NIST DVPT #15 short cases), prebuilds lib+suite so the agent's fix cycle is a single incremental recompile, and keeps the fix commit unreachable. Agent must localise in library/psa_crypto.c and re-enable short-message decrypts without loosening the sub-nonce rejection or other ciphers' checks. Hidden cases: authored vectors generated with the project's own CCM* no-tag primitive, cross-checked byte-exact against NIST DVPT AES-128 #15, driven back through psa_cipher_decrypt: AES-128 at ciphertext lengths 1/4/5/8/15/16 and a second AES-128 key at 0/1/2/6/9, plus AES-256 at 0/1/4/16/40; at parent 6 of 16 vectors are rejected (-135), at fix all pass with exact plaintexts. Whole suite PASSED (1949/1949, 309 skipped) after fix, ~4s to run, ~15s full clean 1-CPU rebuild on host."
+}

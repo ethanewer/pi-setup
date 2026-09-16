@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 90,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on duckdb/duckdb at parent commit c54cb2c29b2fda8c78d278e62629bce08291daad (real upstream issue #24616, fixed by upstream commit cf77bda5a15e7d3c8c0222a31c9ad84eec77e6c5, a one-line fun.SetFallible() on the ListReduceFun registration in extension/core_functions/scalar/list/list_reduce.cpp). When the reduction lambda passed to list_reduce raises at runtime (error() call, failing cast, ...), the user sees 'INTERNAL Error: Scalar function \"list_reduce\" threw an execution error, but the function is not marked as fallible - the function must call SetFallible()' plus a stack trace, instead of the lambda's own clean Invalid Input / Conversion error. The image clones the repo at the parent (single-commit object store, fix commit never fetched and provably unreachable), extracts the project's OWN regression test added by the fix commit (the two trailing statement-error blocks of test/sql/function/list/lambdas/reduce.test) via a throwaway bare clone into /opt/golden (harness-owned; the copy shipped in the image has the concluding comment's issue reference stripped, because the trial container has outbound network and naming the issue would turn the task into a lookup; it is never overlaid into the shipped tree, so the agent writes its own reproduction without seeing the expected outputs; the verifier re-plants it, sha256-pinned), prebuilds the release engine and unittest runner as cached layers so the agent's fix cycle is a one-file recompile + relink (~32 s measured on 1 CPU), and ships a pre-fix engine snapshot at /opt/pre-fix/duckdb for the verifier's pre-fix-direction checks. Agent must write its own failing reproduction (/app/repro.sh, checked against both the pre-fix snapshot and the repaired engine) before fixing, then fix the tree so the golden test and the whole project's lambdas suite pass, and hidden cases (authored list_reduce lambda-error queries: error() with distinct custom messages on INT/BOOLEAN/mixed lists, mid-reduction failure on a 12-element list, BIGINT/HUGEINT cast failures, plus successful-reduction VALUE guards `21`/`3`/`3628800`/'abc' that lock normal behavior) pass on the repaired engine and each CLEAN case additionally must show the INTERNAL error on the pre-fix snapshot. Difficulty lands medium: the symptom text itself names the mechanism (SetFallible), localisation is a quick grep across the sibling list-lambda registrations (list_transform/list_filter mark fallible, list_reduce does not), the change is one line, and the fix cycle is ~30 s; the harder shape comes from the write-your-own-reproduction deliverable, the strict single-modified-file provenance gate, forced relink from source, and hidden generalizations on inputs the upstream test does not use. Rubric total 12 -> medium, matching metadata.difficulty; expected expert time 90 min is comfortable."
+}

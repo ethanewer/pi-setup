@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 90,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on libvips/libvips at parent commit f0c38f9a7d4bea39e1e1718db2b441c91880a871 (real upstream issue #5123, 'icc: fix black output when transforming float images', fixed by 736059b2e8e3ca84012b68a9ffdc3528bdeb1e8f). The image shallow-clones the repo pinned and detached on the parent, builds it with meson/ninja and installs it system-wide, so the pristine parent build is /usr; the fix commit is fetched only into a throwaway bare clone (deleted) that yields the project's regression test (test_icc_float_input from the fix commit's test/test-suite/test_colour.py) into root-owned /opt/golden, so the fix object is never reachable from /app/src. The agent gets NO reproduction and NO file hint: the instruction is a user-style symptom report (icc_import of a float 0..1 RGB image yields all-black output, no error), and the agent must first author /app/reproduce.py, a pyvips script that exits non-zero against the parent build (/usr, no LD_LIBRARY_PATH) and exits 0 against the repaired in-tree build (LD_LIBRARY_PATH=/app/src/build/libvips). The bug is in the input-format pick in vips_icc_build (libvips/colour/icc_transform.c): float/double device-space input fell into the uchar branch and was cast to uchar before the lcms transform, clipping all 0..1 values to 0 (whole image black); the upstream fix uses an lcms per-channel float pixel format (FLOAT_SH) instead. The verifier: checks provenance (HEAD==parent, fix SHA not reachable, porcelain limited to modified files under libvips/, no untracked files, /usr libvips.so.42 byte-identical to the parent build, /opt/golden hash checked), runs the agent's reproduction against the pristine parent build (must fail) and against `ninja -C build clean && ninja -C build -j1` from the agent's tree (must pass), runs the extracted golden test overlaid as test_golden_float.py (must pass, then removed), runs the project's own test_colour.py + test_conversion.py against the rebuilt library (must be fully green), and two authored hidden cases (case-png: sample.png fixture converted to FLOAT, float import must be non-black and within max-diff < 3 of the 8-bit import; case-double: DOUBLE band format constant colours incl. dark and near-black inputs, distinct colour mappings must stay distinct, dark double import non-black and within max-diff < 3 of the 8-bit path) against both the pristine parent build (must fail, non-vacuous) and the repaired build (must pass). Measured on host: 1-CPU full ninja build 95s (throwaway), incremental edit-to-relink ~30-40s at 1 CPU; full clean rebuild in verifier ~90s at 1 CPU; pyvips 3.2.0 + pytest 8.3.5 pins. libvips is not a Terminal-Bench 2.1 source repository (checked against specs/tb21_source_repositories.json)."
+}

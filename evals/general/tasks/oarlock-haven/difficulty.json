@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on pytest-dev/pytest at parent commit efa117ad49ce197c5971b12310d53b73ed678d92 (real upstream bug, issue #14909). Failed monkeypatch mutations (setitem/delitem on types.MappingProxyType or a guarded dict subclass; delattr of a property without a deleter or a slot class attribute) leave a stale rollback entry, so monkeypatch.undo() re-raises the original TypeError/AttributeError at teardown instead of being a harmless no-op. The agent must author its own failing reproduction (/app/repro_failed_undo.py), localise and fix the real tree. The verifier asserts provenance (HEAD still the pinned parent, fix commit a88e91bacaa98b68fe80e07a138ce40994bd8797 unreachable, exactly one commit in the object store, only src/_pytest/ sources modified, nothing under testing/ touched, no untracked files inside the repository, import resolution, no sitecustomize wrapper, append-after-mutation ordering in the source), runs the agent's repro against both the pristine pre-fix tree and the repaired tree, runs the upstream regression test extracted from the fix commit into /opt/golden at image build time with sha256 pinning, runs the project's own battery (testing/test_monkeypatch.py, testing/test_pytester.py, testing/test_tmpdir.py, testing/test_pathlib.py, testing/test_recwarn.py), and runs three authored hidden-case files on failure shapes and rollback orderings the upstream test does not use (readonly-property delattr, guarded-dict setitem/delitem, mixed failed/successful undo orderings). Pure Python, offline; the entire verification battery is under a minute at 1 CPU. Both directions and all cheat vectors re-confirmed inside the task image before shipping."
+}

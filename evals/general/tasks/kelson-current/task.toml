@@ -1,0 +1,20 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "medium"
+category = "debugging"
+verifier_kind = "executes-deliverable"
+deliverables = ["/app/src", "/app/repro.sh", "/app/summary.md"]
+tags = ["kelson-current", "debugging", "clean-room"]
+
+[verifier]
+timeout_sec = 900.0
+
+[agent]
+timeout_sec = 2400.0
+
+[environment]
+build_timeout_sec = 1800.0
+cpus = 1
+memory_mb = 8192
+storage_mb = 8192

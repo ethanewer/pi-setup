@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": null,
+  "notes": "Upstream-clone bugfix in BurntSushi/ripgrep (v4.3 family, issue #1765): with --crlf combined with --color always, printing a matched EMPTY line (e.g. a blank line in the file, matched by a zero-width pattern like 'x?') panics because the printer's CRLF trim logic indexes buf[end - 1] when end is 0, underflowing the index (release: 'index out of bounds: the len is 1 but the index is 18446744073709551615', debug: 'attempt to subtract with overflow'; exit 101, no output). The agent gets the real tree at the parent commit (one depth-1 object store, fix commit provably unreachable), must author its own failing reproduction (/app/repro.sh, executed against both the rebuilt fixed binary and a pristine pre-fix binary baked at /opt/prefix/rg) before fixing, then localise the defect in the printer crate by reading the code and patch that single source file (the upstream fix bounds-checks the look-behind: require end > 0 and use buf.get(end - 1)). Verifier: provenance (HEAD == parent, fix unreachable, blob-level scope check permitting ONLY crates/printer/src/standard.rs to differ), a forced relink that throws away any planted binary (touch source + remove binary + cargo build --release --locked, offline via warm /opt/cargo), the agent's repro in both directions, the upstream regression test r1765 extracted from the fix commit at image build time into /opt/golden (sha256-pinned, planted over the tree's tests/regression.rs), the whole pre-existing regression module (72 tests incl. r1765) plus the printer crate's own unit suite, and three authored hidden cases using inputs the upstream test does not use (blank line mid-file, all-blank file, stdin input) - plus a fourth that asserts the byte-exact COLORED output of a real CRLF file with a non-empty match, pinning the carriage-return trim that a lazy 'delete the CR-trim branch' fix would otherwise byte-identically mask on LF-only inputs - all asserted BYTE-EXACT against the fixed binary; the byte-exact assertions are what reject that degenerate fix, which passes the non-empty-stdout golden test. Dependency pins: Rust 1.98.1 (from the official dist tarball, channel 2026-09-03), committed Cargo.lock with --locked; no cargo update ever. Deliberately-raised difficulty: the reproduction is NOT in the instruction; the agent must write it."
+}

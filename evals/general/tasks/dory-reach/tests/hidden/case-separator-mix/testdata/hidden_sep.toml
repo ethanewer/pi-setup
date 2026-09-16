@@ -1,0 +1,12 @@
+[project]
+name = "hidden-normalize-separators"
+version = "0.3.0"
+description = "hidden case: separator runs, spacing variants, already-normalized names"
+requires-python = ">=3.10"
+dependencies = [
+    "Psycopg2_binary>=2.9",
+    "Pillow",
+    "ruamel_yaml.clib (>=0.2)",
+    "imageio-ffmpeg==0.4",
+    "six",
+]

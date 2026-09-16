@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 90,
+  "documented_probe": null,
+  "notes": "Upstream-clone bugfix in python/mypy (v4.3 family): a function parameter annotated with a TypeVar declared with an explicit value list (TypeVar('S', B, C), C <: B) rejects a LEGAL default value whose type is one of the value types (a proper subtype of all the others) with 'Incompatible default for parameter', while genuinely invalid defaults are still caught - mypy's _is_subtype has no special case for a TypeVarType with values on the right when the left is not itself a TypeVar. The agent gets the real tree at the parent commit (one depth-1 object store, fix commit provably unreachable), must author its own failing reproduction (/app/repro.py + /app/repro.sh honouring MYPY_DIR, executed against both the repaired tree and a pristine pre-fix tree baked at /opt/mypy-parent) before fixing, then localise the defect by reading the checker/subtype machinery and patch the single source file (the upstream fix adds a TypeVar-with-values subtyping rule in _is_subtype). Verifier: provenance (HEAD == parent, fix commit unreachable, blob-level scope check permitting ONLY mypy/subtypes.py to differ, no untracked files), the agent's repro in both directions (direct mypy runs plus the agent's runner), the upstream regression test extracted from the fix commit at image build time into /opt/golden and planted at verify time (sha256-pinned), the full existing type-variable data sweep (-k check-typevar: 219 existing cases across check-typevar-values/defaults/tuple/unbound) required to pass on the repaired tree, and three authored hidden cases (three-level value list, multiple-inheritance default subtype not listed among the values, multi-parameter signature with keyword-only defaults) each proven to fail on the pristine pre-fix tree copy and pass on the repaired tree. Dependency pins: mypy's own test-requirements.txt at the pinned commit (pytest 8.4.2, pytest-xdist 3.8.0, lxml 6.0.2, typing-extensions 4.15.0, mypy-extensions 1.1.0, pathspec 1.0.0, librt 0.10.0, ast-serialize 0.3.0, attrs 25.4.0); completely offline at trial time."
+}

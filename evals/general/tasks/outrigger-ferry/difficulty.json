@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on python-poetry/poetry at parent commit 378c693f0e63da2c4669b2158c31ecadfa619587 (real upstream bug #10804, fixed by 35eb5025dc7374db74ef26ce32a0e70f54d2e3b6). When an install fails during the build step, Executor's error path renders the remediation pip-wheel command from installer.build-config-settings; iteration `for setting_value in config_settings[setting]:` over a plain-str value yields one per-character flag ('CC=gcc' -> --config-settings='CC=g'). The upstream fix wraps str values in a list before iterating. Agent must write its own failing reproduction (/app/repro.py: drives poetry's real Executor through the IsolatedBuildBackendError branch via a stubbed Chef.prepare, prints the remediation pip command, exits 0 iff the whole-string flag is present), localise, fix the real tree, and write /app/summary.md. poetry-core pinned to git b9663e42c808543377ae523611c4cfad68016f30; all other deps exact-pinned from the base image's own resolver. Runtime is fully offline at trial time (verified both directions under --network none: the golden/hidden tests use the tree's fixture-mocked repositories; no external fetch). Verifier asserts provenance (HEAD pinned parent, fix commit unreachable, exactly one commit, only src/poetry/installation/executor.py may differ from the parent blobs), runs the agent's repro against the repaired tree (must pass) and against a pristine pre-fix package bake at /opt/pre-fix-poetry under PYTHONPATH (must fail, with the per-character garbage observable), plants the upstream regression test (fix-commit tests/installation/test_executor.py extracted at build time into /opt/golden, sha256-pinned in test.sh) and requires it to pass on the repaired tree, requires the same golden test to FAIL against the pre-fix copy, runs the previously-green suite slice (tests/installation/test_chooser.py test_chooser_errors.py test_installer.py test_wheel_installer.py + tests/packages + test_executor.py minus 3 environment-broken embedded-wheel tests) ~940 tests, and runs three authored hidden cases (multi-string settings incl. a value with a space; an empty-string value; a punctuation/digit-heavy value) both on the repaired tree (must pass) and on the pre-fix copy (must fail). Both directions re-confirmed inside the task image at build time (golden FAIL at parent with 'CC=g' garbage; golden + repro PASS on a throwaway fixed copy). Difficulty: medium; the raised shape (agent-authored reproduction, no repro in the instruction) keeps this out of easy."
+}

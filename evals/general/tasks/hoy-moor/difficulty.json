@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 3,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 90,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on junit-team/junit5 at parent commit f5b43ce4e82796d225fe6ecbbfe8a0ad1bed27c4 (real upstream issue #5098, fix commit 1866c0c21b177f10364aafb17d6b61dd7c80e476). Symptom: a package-private test method inherited from a superclass in a DIFFERENT package is silently dropped from discovery/execution as soon as a subclass declares a same-name same-parameter-list method, because method selectors deduplicate on class-name+method-name+parameter-type-names without regard to the declaring class (MethodSelector/NestedMethodSelector equals key), so a two-level (or deeper) same-signature package-private chain collapses to a single test with no error. Deliberately harder than the v4.2 shape: the instruction describes the user-visible symptom and the Java visibility rules but contains no reproduction, no issue number, no commit, and no file names; the agent must author its own failing demonstration (/app/reproduce.sh) as a deliverable BEFORE fixing, and the verifier runs the agent's own reproduction against a pristine pre-fix worktree (must exit non-zero) and against the repaired tree (must exit zero), then overlays the project's own regression tests extracted from the fix commit into /opt/golden at build time (TestMethodOverridingTests: bothPackagePrivateTestMethodsAreDiscovered + bothPackagePrivateTestMethodsAreExecuted), plus three authored hidden cases exercising the same discovery path from inputs the upstream test does not use (a no-argument same-signature chain with a third unrelated test in the subclass; a three-level hierarchy in three different packages; and a genuine public-override guard asserting the fix does not over-generalise). The verifier requires the tree's own engine slice (LifecycleMethodOverridingTests, OverloadedTestMethodTests, DiscoverySelectorResolverTests, DiscoveryTests) to stay green, requires at least one of the seven upstream-fix source files to actually change, and asserts provenance (HEAD pinned, fix commit unreachable, no .git mutations, no new files). Both directions re-confirmed inside the task image before shipping: at parent the golden overlay fails with the exact 'expected 2 but was 1' symptoms captured by mining; at fix it passes. Toolchain pinned: JDK 25.0.4.1+1 daemon/toolchain (gradle-daemon-jvm.properties toolchainVersion=25), JDK 24.0.2+12 and apt JDK 21 exported as JDK24/JDK25/JDK21 for Gradle's fromEnv toolchain discovery; Gradle 9.2.0-bin wrapper is SHA256-pinned in the tree. Warm layer compiles the full :jupiter-tests test graph once at build time; trial runs --offline."
+}

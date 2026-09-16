@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on duckdb/duckdb at parent commit 8616efa9da9921b9111fe46373af7936a5d96d16 (real upstream issue #25084, fixed by b94555b59e58941bf42da1aeb8f3251850b85e8f). SubtractTimeOperator::Operation negates right.micros with no bounds check, so subtracting an interval whose microseconds component is INT64_MIN (e.g. INTERVAL '-4611686018427387904 microseconds -4611686018427387904 microseconds') from a TIME or TIMETZ value silently wraps (signed negation overflow) and returns a wrong time (07:59:05.224192 for 12:00:00) instead of raising an out-of-range error. Interval::Invert has the same unchecked negation for days/micros/months and is on the DATE/TIMESTAMP minus interval path. The image clones the repo at the parent, overlays the upstream regression test added by the fix commit (test/sql/types/test_interval_negation_overflow.test) into the tree so build/release/test/unittest 'test_interval_negation_overflow' fails exactly as mined, prebuilds the release engine + unittest runner so the agent's fix cycle is an incremental recompile/relink of two files, and keeps the fix commit unreachable. Agent must make the regression test pass and all interval/date/time subtraction correct, without naming fixed: verified both directions inside the task image (see report). Hidden cases: CLI-driven vectors the upstream test does not use - TIME '00:00:00' and '23:59:59.999999' minus the INT64_MIN-microseconds interval, TIMETZ '12:00:00+05:30' minus it, DATE/TIMESTAMP minus it (Interval::Invert path), DATE minus INTERVAL '-2147483648 days' (days == INT32_MIN), plus a normal-arithmetic sanity case; each asserts the exact 'Interval ... value out of range' Out of Range Error rather than a wrong value, and the sanity case asserts the arithmetic still produces the correct time."
+}

@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": "encode/httpx @ df5345140e09ac6c2de0d9589bcd6f3e31c6aa3f (parent of upstream fix for issue #3116; shallow clone ~5MB, pure-Python hatchling project). Full image builds in ~32s on an unrestricted host at 2-4 cores (pip wheel downloads dominate); the relevant pytest suites run in ~1-4s per module. Measured both directions inside the built image: at the pinned parent the reproduction prints 'SENT OK' (timeout ignored) and the extracted upstream regression test fails on both anyio backends; after applying the equivalent fix the reproduction raises ReadTimeout ~0.05s and the regression test passes 2/2.",
+  "notes": "Upstream-clone debugging task (v4.2 family) on encode/httpx 0.27.0. The image ships the real buggy tree at /app/src (SHAs df53451 -> 6d852d3, GitHub issue #3116), with the fix object provably unreachable inside the shipped clone (verified with git cat-file and a _set_timeout grep count of 0) and the project's own regression test for the bug extracted from the FIX commit via a throwaway /tmp clone and dropped into the shipped tests tree so it fails on the pristine checkout. The instruction describes the symptom as a user would report it (client timeout silently ignored for manually built requests passed to send(), sync and async) and does not name the issue, the PR, the fix, or the file to change. The agent must author its own failing reproduction (/app/reproduce.py, exact OK/BUG exit contract) as the first deliverable; the verifier runs that reproduction against a pristine non-editable parent install in a root-owned venv (/opt/parent-venv) requiring the bug to show, and against the repaired tree requiring it to be gone, so a canned reproduction cannot pass. Assertions also include the extracted golden test (test_async_client_new_request_send_timeout), the client suites, and two authored hidden case sets (sync + async manual-request paths, request-level timeout overrides, repeated sends) that the upstream test does not cover. Test-tree and site-packages integrity is pinned in a build-time manifest and re-verified, so editing/skipping the golden test, weakening the conftest server or dropping a sitecustomize shim all fail; the nop container scores 0 on the missing deliverable. Difficulty lands at 13 = medium: a competent agent with the described symptom and a failing in-tree regression test can do this in about an hour."
+}

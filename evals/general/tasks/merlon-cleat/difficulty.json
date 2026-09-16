@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 1,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": null,
+  "notes": "Medium. The agent is given a real Rust crate (pennant, wired to a fixed binary protocol) whose frame encoder hot path performs heap allocations on every call, and must remove them for the common case while keeping the documented public API source-compatible. Verification is three dependent stages: (a) the crate's own cargo suite must stay green, (b) two hidden consumer crates compiled unchanged against the crate must build and pass behavioral assertions (round-trips, boundary varints, corrupt-input errors, per-tag aggregation), (c) a benchmark harness linking both the crate under test and a pristine reference copy (baked into the image at /opt/reference) measures, per common-case hot-loop call, the heap-allocation count via an LD_PRELOAD malloc interposer and a same-process wall-clock ratio; the candidate must measure near-zero allocations and be >=3x faster than the reference, which measures millions of allocations. The improvement gate is deterministic (allocation counting with a fixed-seed single-threaded corpus) with a wall-clock gate carrying a >4x measured margin. Resource_pressure=1 because the graded quantity is per-call heap behavior, measured directly. The design decision (how to make a sink-style byte encoder allocation-free: direct single-pass writes, no scratch buffers, capacity coming from the caller) is left to the agent; scratch-buffer, per-call-reserve, or do-nothing implementations are caught by the allocation counter."
+}

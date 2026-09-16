@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on pytest-dev/pytest at parent commit dde81b1948d1592b0156c2fdb79522ade6b4b857 (real upstream bug, issue #719). ParameterSet._parse_parametrize_args sets force_tuple=True whenever a string argnames splits to exactly one name, so 'arg,' (a comma-terminated single name that must behave like ('arg',)) wraps each one-element tuple value as a whole value instead of unpacking it: every test invocation receives ('a',)/('b',) instead of 'a'/'b'. Agent must reproduce via the shipped probe, localise the parse decision in the real tree, and make only the minimal source change so 'arg,' unpacks exactly like the tuple form while the no-comma forms keep their semantics; verifier runs the project's own parametrize test module testing/python/metafunc.py, the upstream regression tests extracted from the fix commit (3fc824a6), and three authored hidden cases (whitespace/type variants, no-comma guards against over-generalisation, indirect/ids forms) that the upstream test does not use. Both directions re-confirmed inside the task image before shipping. No network needed; deps pinned."
+}

@@ -1,0 +1,21 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 80,
+  "documented_probe": "rust-lang/regex pinned at parent 5ea3eb1e95f0338e283f5f0b4681f0891a1cd836 (shallow single-commit clone; the fix commit 4733e28ba4f281f643ce93e4089eccbb9a9d5a5a is never fetched into /app/src and is provably absent from its object store). rustup toolchain 1.98.1 pinned. Probe (measured inside the task image): warm offline `cargo test --no-run -p regex-automata --test integration` reports up-to-date in ~1s; the onepass suite run `cargo test -p regex-automata --test integration -- dfa::onepass` is seconds after a one-file incremental rebuild. At the parent commit the planted upstream regression tests dfa::onepass::regression::zero_repetition_capture_group and ::too_many_slots_normal_pattern FAIL (panic: 'range end index 4 out of range for slice of length 2' / 'range end index 2 out of range for slice of length 0' at regex-automata/src/dfa/onepass.rs, Cache::explicit_slots); after the two-hunk fix (cap the scratch-slot length at the cache's allocation and copy back only that many entries) the regression tests and the hidden variants pass and the existing dfa::onepass::suite stays green. Image size: 2.83 GB (docker build of the task Dockerfile on bench-base:ubuntu-24.04 + rustup 1.98.1 + warm cargo test --no-run build of regex-automata's integration target). Image build wall time: ~360 s observed (apt upgrade ~3 min, rustup ~1 min, warm build ~13 s on 64 cores). Offline-clean confirmed by running the oracle+verifier with no network (docker --network none and harbor network_mode: none): cargo resolves everything from the warm cache and the pinned Cargo.lock written at image build time.",
+  "notes": "v4.2 upstream-clone task. The agent gets the REAL rust-lang/regex tree (the regex-automata crate, Rust-dialect) at the parent commit, sees only the user-visible symptom (searching a one-pass DFA with MORE capture slots than the pattern compiled to panics with a slice range error instead of succeeding, e.g. 'abc' with 4 slots, or '(abc)(ABC){0}' with 6 slots), and must reproduce, localise and fix the bug in regex-automata/src/dfa/onepass.rs's slot-accounting without being told the file, function, issue number or commit (the fix commit is not reachable from the clone and there is no network). The verifier plants the project's OWN regression test (extracted from the fix commit at image build time into /opt/golden, never vendored into this task tree) plus 3 authored hidden modules (a multi-pattern one-pass DFA with a large caller slot buffer; a zero-repetition capture group amid other groups with slots sized for every group; an empty-match UTF-8 pattern with extra slots), rebuilds offline, then executes the rebuilt integration test binary DIRECTLY (never via cargo, so no wrapper/shim can fake a run), proving the binary's --list contains every relevant test, and demands explicit 'ok' lines for each required test. Review hardening: a fake /opt/cargo/bin/cargo shim printing the demanded 'ok' lines earned reward 1 on an untouched tree under the old grep-cargo-output verifier; the direct-binary verifier scores that shim 0 (both directions re-proved). The golden /opt/golden/regression.rs is byte-pinned by sha256 (matches the fix-commit blob). Provenance is enforced at the blob level (every tracked file except the one allowed source file must hash to the pinned commit's blob; no untracked non-ignored files) so a scratch file left behind, a reformat commit, or a sabotaged test file all fail. The over-fix direction is guarded: every hidden case and the upstream regression test assert exact slot contents, so a fix that clears or truncates the caller's buffer fails. Nop container scores 0 (regression and hidden tests panic at parent; summary.md missing).",
+  "upstream_repository": "rust-lang/regex",
+  "parent_commit": "5ea3eb1e95f0338e283f5f0b4681f0891a1cd836",
+  "fix_commit": "4733e28ba4f281f643ce93e4089eccbb9a9d5a5a",
+  "upstream_issue_ref": "rust-lang/regex#1327"
+}

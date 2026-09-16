@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 2,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 3,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 90,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on sqlalchemy/sqlalchemy at parent 16177b8c73e492e5adaad8f51095f9981831da41 (real upstream bug, issue #13439). ORM UPDATE/DELETE that uses .returning() whose column order differs from the table-declared column order, executed with execution_options={'synchronize_session':'fetch'}, returns mislabeled columns on the SECOND execution of the same statement shape: on a compiled-cache hit the raw (Core-level) cursor result metadata is positionally adapted against the cached user-requested column order, so Column-object lookup and string-name lookup diverge (row[T.a] returns T.b's value). Symptom is masked by ORM-level row access and cached row getters; the deterministic observation is the raw result _metadata index-by-Column vs index-by-string, and the [delete] shape even passes at the parent, so only the UPDATE variant points at the defect. Agent is given NO reproduction: it must author /app/repro.py (contract: fresh sqlite, declared order != returning order, execute the same shape twice on one engine with synchronize_session=fetch, assert raw keymap consistency and raw.mappings() values on both executions, exit 0 iff correct), then localise and fix the real tree (the upstream fix merges context._orm_load_exec_options, the ORM load exec options that disable result-level adapt_to_context, into the effective execution options in _BulkUDCompileState._or_create_orm_setting; the same merge already exists in the INSERT path, so a naive search for the attribute name in the file is not sufficient - it must appear in the _BulkUDCompileState class). Verifier asserts provenance (HEAD == parent, fix commit bd0da4263052b4571f3b16eda3552e134b9b1689 unreachable from the clone, exactly one commit object, only lib/sqlalchemy/orm/bulk_persistence.py modified and at least one modification present, class-scoped source shape check, import sqlalchemy resolves to /app/src/lib, no untracked files), runs /app/repro.py against the repaired tree (must pass) and against a pristine pre-fix copy at /opt/pristine-lib via PYTHONPATH (must fail), plants the upstream regression test (CacheAdaptReturningOrderTest, extracted from the fix commit into /opt/golden at image build time, sha256-pinned) and runs it plus the whole test_orm_upd_del_assorted.py, runs the project's own test/orm/dml suite (~958 tests, 5s at 1 CPU), and three authored hidden cases that reach the same code path from inputs the upstream test does not use (4-column UPDATE with a different column scramble and a two-column SET; DELETE with three consecutive cache hits plus post-delete row-count; UPDATE returning only a SUBSET of columns with a two-row id.in_ where clause). Both directions (parent fails / fix passes for golden [update] and each hidden case) re-confirmed in the throwaway build images with the pinned deps (greenlet 3.5.5, pytest 9.1.1, pytest-xdist 3.8.0) before shipping. Lands at the top of the medium band (17/30); a genuinely hard-to-reproduce masked cache-dependent framework bug, kept medium only because the instrumented evidence narrows the search once the agent writes a raw-metadata repro."
+}

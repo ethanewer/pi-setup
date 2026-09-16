@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": null,
+  "notes": "Real upstream git/git (2.46 era) checked out at the parent of fix 8b426c8 (upstream_issue_ref ddiss/icyci#12). Agent must reproduce (git notes add -C <empty-blob> --allow-empty / -m \"\" / -F /dev/null with --allow-empty invokes the configured editor; with GIT_EDITOR=false it errors 'there was a problem with the editor' and exits 128 storing no note), localise the defect in the real 2.46 tree and fix it so contents supplied via -m/-F/-c/-C never open the editor and --allow-empty stores the empty note. Root cause: the editor decision in the notes add/append path was switched (by 90bc19b3ae, 2023) from 'was any -m/-F/-c/-C supplied' to a zero-length-buffer check (the d.given flag); the fix decides on d.msg_nr instead and removes the flag. Re-confirmed both directions in the task image: parent tree -> direct repro exits 128 with the editor error, and the golden fix-commit t3301-notes.sh reports 'not ok 149 - empty notes do not invoke the editor' with the other 148 tests ok; repaired tree -> direct repro exits 0 storing the empty blob note, golden t3301 fully ok (149 ok). Verifier rebuilds the tree (touch builtin/notes.c + make -j1), runs the golden fix-commit t3301-notes.sh in full (the project's own notes suite; the regression test postdates the checked-out tree) plus hidden cases, checks /app/diagnosis.md names builtin/notes.c, and asserts the fix commit object is absent from the agent repo (provenance, since the trial container has no network the fix cannot be fetched at trial time either). Hidden cases exercise the same code path from inputs the upstream test never uses: -C <empty-blob> --allow-empty on a tagged non-HEAD commit, -f overwrite of an existing non-empty note with -F /dev/null --allow-empty, and -m \"\" --allow-empty from a subdirectory cwd; all three use an editor script that records invocation and fails, proving the editor was literally never launched."
+}

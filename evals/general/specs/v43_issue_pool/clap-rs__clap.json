@@ -1,0 +1,83 @@
+[
+ {
+  "repository": "clap-rs/clap",
+  "upstream_issue_ref": "#4710",
+  "fix_commit": "473cf175a2fa973b62c79dabf00892d6feff453a",
+  "parent_commit": "62da8f94b9aef9f08679e72190f222c84c974af4",
+  "base_image": "bench-base:ubuntu-24.04",
+  "source_files_changed": [
+   "src/builder/command.rs"
+  ],
+  "golden_test_paths": [
+   "tests/builder/hidden_args.rs"
+  ],
+  "golden_test_names": [
+   "hidden_arg_with_possible_value_with_help"
+  ],
+  "reproduction": "In a container on bench-base:ubuntu-24.04 with build-essential + rustup stable (rustc 1.98.1) installed (see install_recipe):\n  cd <repo>\n  git reset --hard 62da8f94b9aef9f08679e72190f222c84c974af4 && git clean -fd\n  git checkout 473cf175a2fa973b62c79dabf00892d6feff453a -- tests/builder/hidden_args.rs   # bring in the project's own regression test\n  export PATH=\"$HOME/.cargo/bin:$PATH\"\n  cargo test --no-run -p clap     # builds the trybuild test binaries (network needed only for the first crates.io fetch)\n  BIN=$(ls -t target/debug/deps/builder-* | head -1); \"$BIN\" --test hidden_arg_with_possible_value_with_help\nAt the parent the test exits 101 and prints 'Eq failed' with the help text diff (long-help layout used for a hidden arg). Then:\n  git reset --hard 473cf175a2fa973b62c79dabf00892d6feff453a && git clean -fd\n  cargo test --no-run -p clap; BIN=$(ls -t target/debug/deps/builder-* | head -1); \"$BIN\" --test hidden_arg_with_possible_value_with_help\nAt the fix commit the test prints 'ok ... 1 passed' and exits 0.",
+  "observed_failure_at_parent": "test result: FAILED. 0 passed; 1 failed. Thread panicked at tests/builder/hidden_args.rs:303:5 with 'Eq failed:' diff: expected '  -h, --help  Print help' but actual is '  -h, --help' + '          Print help (see a summary with '-h')', i.e. an argument that is completely hidden still triggers the long-help layout because its possible values carry help texts. Buggy code confirmed present at parent by inspection: src/builder/command.rs should_long is 'v.get_long_help().is_some() || v.is_hide_long_help_set() || v.is_hide_short_help_set() || v.get_possible_values().iter().any(PossibleValue::should_show_help)' with no is_hide_set() guard (grep of the should_long block for is_hide_set returns 0).",
+  "verified": "Both directions observed on bench-base:ubuntu-24.04 + rustc 1.98.1/cargo 1.98.1 + clap Cargo.lock. Parent direction: git reset --hard <parent> + git clean -fd, regression test checked out from the fix commit, buggy should_long (no is_hide_set guard) confirmed in the working tree, golden test FAILED with the Eq failed diff above (exit 101). Fix direction: git reset --hard <fix> + git clean -fd, same test 'ok' (exit 0); full builder suite 811/811 pass.",
+  "dependency_pins": {
+   "rust": "1.98.1"
+  },
+  "install_recipe": "apt-get update && apt-get install -y build-essential curl\ngit config --global --add safe.directory /work/<repo>   # required, else every git command dies with 'dubious ownership'\ncurl -sSf https://sh.rustup.rs -o /tmp/rustup.sh && sh /tmp/rustup.sh -y --default-toolchain stable\n# 'stable' currently resolves to 1.98.1; pin with 'rustup toolchain install 1.98.1 && rustup default 1.98.1' for byte-identical builds\nexport PATH=\"$HOME/.cargo/bin:$PATH\"\ncd <repo>   # checked out at the parent commit; Cargo.lock from that commit pins every crate\ncargo test --no-run -p clap   # first run downloads all dependencies from crates.io (network egress required once)",
+  "issue_paraphrase": "An argument that is marked hidden for help output can still change the layout of the plain --help text: if the hidden argument carries a list of possible values and any of those values has a description (which the derive-based API fills in automatically from documentation), --help switches from the compact one-line option listing to the long help layout. The hidden argument's option suddenly wraps its help onto two lines and appends a '(see a summary with '-h')' hint, even though the whole point of hiding is that the argument should not influence help at all.",
+  "fix_summary": "The should_long predicate that decides whether an argument forces the long help layout now first checks !arg.is_hide_set() \u2014 a completely hidden argument can no longer trigger long help regardless of possible-value help texts. For the author only; must not leak into instruction.md.",
+  "difficulty_guess": "easy",
+  "notes": "Tested in bench-base:ubuntu-24.04 (root) + rustc/cargo 1.98.1. Build: 'cargo test --no-run -p clap' compiles the clap lib and the trybuild test binaries; once the crates.io cache is warm this takes ~13 s with 64 cores (the clap lib itself ~6 s), the equivalents at 1 CPU are roughly 2-5 minutes cold; the actual test binary run is 0.00-0.2 s. Run ONLY the single test via '<globbing target/debug/deps/builder-* binary> --test <fn name>'; the test binary name includes a content hash so use ls -t target/debug/deps/builder-* . Do not gate on plain 'cargo test' (it executes every test binary incl. examples/ui/macros); the builder suite is what matters and passes fully at the fix (811/811). No network needed at test time. Non-ASCII/terminal width/env vars are not needed. Note the parent commit is a merge commit ('Merge pull request #4711'); its tree builds fine."
+ },
+ {
+  "repository": "clap-rs/clap",
+  "upstream_issue_ref": "#4712",
+  "fix_commit": "8c92ef6c76686a642e748919f33587561c2a0280",
+  "parent_commit": "fb9435d026ab011c9071ca92eeab738b9b30ca13",
+  "base_image": "bench-base:ubuntu-24.04",
+  "source_files_changed": [
+   "src/builder/command.rs"
+  ],
+  "golden_test_paths": [
+   "tests/builder/help.rs"
+  ],
+  "golden_test_names": [
+   "hidden_possible_vals"
+  ],
+  "reproduction": "In a container on bench-base:ubuntu-24.04 with build-essential + rustup stable (rustc 1.98.1) installed (see install_recipe):\n  cd <repo>\n  git reset --hard fb9435d026ab011c9071ca92eeab738b9b30ca13 && git clean -fd\n  git checkout 8c92ef6c76686a642e748919f33587561c2a0280 -- tests/builder/help.rs   # bring in the project's own regression test\n  export PATH=\"$HOME/.cargo/bin:$PATH\"\n  cargo test --no-run -p clap\n  BIN=$(ls -t target/debug/deps/builder-* | head -1); \"$BIN\" --test hidden_possible_vals\nAt the parent the test exits 101 and prints 'Eq failed' (expected '  -h, --help  Print help', actual two-line long-help with '(see a summary with '-h')'). Then:\n  git reset --hard 8c92ef6c76686a642e748919f33587561c2a0280 && git clean -fd\n  cargo test --no-run -p clap; BIN=$(ls -t target/debug/deps/builder-* | head -1); \"$BIN\" --test hidden_possible_vals\nAt the fix commit the test prints 'ok ... 1 passed' and exits 0.",
+  "observed_failure_at_parent": "test result: FAILED. 0 passed; 1 failed. Thread panicked at tests/builder/help.rs:699:5 with 'Eq failed:' diff: expected one line '  -h, --help  Print help', actual two lines '  -h, --help' / '          Print help (see a summary with '-h')' for an argument whose possible values are hidden but described. Buggy code confirmed present at parent by inspection: in src/builder/command.rs the should_long block has no check for hide_possible_values (grep for hide_possible_values_set inside the should_long block returns 0), so an argument with hidden-but-described possible values still forces the long help layout.",
+  "verified": "Both directions observed on bench-base:ubuntu-24.04 + rustc 1.98.1/cargo 1.98.1 + clap Cargo.lock. Parent direction: git reset --hard <parent> + git clean -fd, regression test checked out from the fix commit, absence of the hide_possible_values_set guard confirmed in the working tree, golden test FAILED with the Eq failed diff above (exit 101). Fix direction: git reset --hard <fix> + git clean -fd, same test 'ok' (exit 0); full builder suite 812/812 pass at the fix.",
+  "dependency_pins": {
+   "rust": "1.98.1"
+  },
+  "install_recipe": "apt-get update && apt-get install -y build-essential curl\ngit config --global --add safe.directory /work/<repo>\ncurl -sSf https://sh.rustup.rs -o /tmp/rustup.sh && sh /tmp/rustup.sh -y --default-toolchain stable\n# 'stable' currently resolves to 1.98.1; pin with 'rustup toolchain install 1.98.1 && rustup default 1.98.1' for byte-identical builds\nexport PATH=\"$HOME/.cargo/bin:$PATH\"\ncd <repo>\ncargo test --no-run -p clap",
+  "issue_paraphrase": "When an argument's possible values are explicitly hidden but some of those values still carry help descriptions, the plain --help output of the command suddenly switches from the compact one-line listing to the long help layout for any involved option. The option's help text is wrapped onto two lines and a dangling '(see a summary with '-h')' hint is appended, so users who hid the value list to keep help concise are shown an expanded, two-line layout anyway.",
+  "fix_summary": "The should_long predicate that decides whether an argument forces the long help layout now also requires !arg.is_hide_possible_values_set() before the presence of possible-value help texts counts, so arguments whose value list is hidden no longer force long help. For the author only; must not leak into instruction.md.",
+  "difficulty_guess": "easy",
+  "notes": "Tested in bench-base:ubuntu-24.04 (root) + rustc/cargo 1.98.1. Same build/run mechanics as the sibling #4710 entry (trybuild test binaries under target/debug/deps/builder-*; run with --test <fn name>, never plain cargo test). Test binary runs in 0.00-0.2 s once built; no runtime network. Parent commit is a 'chore: Release' commit whose tree only bumps version metadata over its own parent, so the source is exactly the state right before the fix. Full builder suite 812/812 green at the fix."
+ },
+ {
+  "repository": "clap-rs/clap",
+  "upstream_issue_ref": "#3815",
+  "fix_commit": "3eacf5b8b0f1e79955a0e7f94dc18b1f6a6b6502",
+  "parent_commit": "8bb3853eb5e19e9190d142ebb9ae230312da89f1",
+  "base_image": "bench-base:ubuntu-24.04",
+  "source_files_changed": [
+   "src/builder/arg.rs"
+  ],
+  "golden_test_paths": [
+   "tests/builder/arg_settings.rs"
+  ],
+  "golden_test_names": [
+   "default_value_ifs_os"
+  ],
+  "reproduction": "In a container on bench-base:ubuntu-24.04 with build-essential + rustup stable (rustc 1.98.1) installed (see install_recipe):\n  cd <repo>\n  git reset --hard 8bb3853eb5e19e9190d142ebb9ae230312da89f1 && git clean -fd\n  git checkout 3eacf5b8b0f1e79955a0e7f94dc18b1f6a6b6502 -- tests/builder/arg_settings.rs   # bring in the project's own regression test\n  export PATH=\"$HOME/.cargo/bin:$PATH\"\n  cargo test --no-run -p clap\n  BIN=$(ls -t target/debug/deps/builder-* | head -1); \"$BIN\" --test default_value_ifs_os\nAt the parent the test exits 101 with 'assertion `left == right` failed, left: None right: Some(\"flag=\u6807\u8bb02\")'. Then:\n  git reset --hard 3eacf5b8b0f1e79955a0e7f94dc18b1f6a6b6502 && git clean -fd\n  cargo test --no-run -p clap; BIN=$(ls -t target/debug/deps/builder-* | head -1); \"$BIN\" --test default_value_ifs_os\nAt the fix commit the test prints 'ok ... 1 passed' and exits 0.",
+  "observed_failure_at_parent": "test result: FAILED. 0 passed; 1 failed. Thread panicked at tests/builder/arg_settings.rs:76:13: 'assertion `left == right` failed, left: None right: Some(\"flag=\u6807\u8bb02\")' - a conditional default value declared on one argument (keyed off the presence of another argument given by a plain string id) is never applied, so the argument reads as unset after parsing ('--flag \u6807\u8bb02' is consumed fine, the second argument is not). Buggy code confirmed present at parent by inspection: src/builder/arg.rs:3310 still reads 'self = self.default_value_if_os(arg.key(), *val, *default);' (double id hashing of the condition key), matching the working tree.",
+  "verified": "Both directions observed on bench-base:ubuntu-24.04 + rustc 1.98.1/cargo 1.98.1 + the commit's Cargo.lock. Parent direction: git reset --hard <parent> + git clean -fd, regression test checked out from the fix commit, 'arg.key()' call confirmed present at src/builder/arg.rs:3310 in the working tree, golden test FAILED with the left:None/right:Some diff above (exit 101). Fix direction: git reset --hard <fix> + git clean -fd, same test 'ok' (exit 0); full builder suite 1577/1577 pass at the fix.",
+  "dependency_pins": {
+   "rust": "1.98.1"
+  },
+  "install_recipe": "apt-get update && apt-get install -y build-essential curl\ngit config --global --add safe.directory /work/<repo>\ncurl -sSf https://sh.rustup.rs -o /tmp/rustup.sh && sh /tmp/rustup.sh -y --default-toolchain stable\n# 'stable' currently resolves to 1.98.1; pin with 'rustup toolchain install 1.98.1 && rustup default 1.98.1' for byte-identical builds\nexport PATH=\"$HOME/.cargo/bin:$PATH\"\ncd <repo>\ncargo test --no-run -p clap",
+  "issue_paraphrase": "A CLI defined through the builder API can attach a default value to one argument that is conditional on another argument's presence, listing several such conditions at once through the OS-string flavor of the API. When the condition is named by a plain argument id string, the conditional defaults silently never trigger: parsing succeeds, the triggering flag keeps its value, but the dependent argument reports having no value at all, as if the condition had never been registered. The same conditions supplied through the non-OS API work, which makes the failure appear data-dependent and hard to diagnose.",
+  "fix_summary": "Arg::default_value_ifs_os now forwards each conditional key directly (arg instead of arg.key()) to default_value_if_os, avoiding hashing the argument id twice, so the stored conditional id matches the parsed argument's id and the default applies. For the author only; must not leak into instruction.md.",
+  "difficulty_guess": "easy",
+  "notes": "Tested in bench-base:ubuntu-24.04 (root) + rustc/cargo 1.98.1. This parent/fix pair is from the pre-4.0 development line (Cargo.toml reports version 3.1.18 / MSRV 1.56) but the tree is self-contained and builds cleanly with modern stable rustc; the test framework (trybuild) is identical to the 4.1-era entries, so run mechanics are the same: build with 'cargo test --no-run -p clap', execute with the target/debug/deps/builder-* binary plus '--test default_value_ifs_os'. 1577 builder tests all pass at the fix. The test contains non-ASCII bytes (\u6807\u8bb02) - the test harness handles them; keep the file byte-identical when extracting it with 'git show <fix>:tests/builder/arg_settings.rs'. No runtime network; compile is the whole cost (~13 s at 64 cores warm, minutes at 1 CPU cold)."
+ }
+]

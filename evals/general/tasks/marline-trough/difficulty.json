@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 3,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 2,
+    "resource_pressure": 3,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": null,
+  "notes": "Hard debugging task: an async Node 22 streaming pipeline (fluxline) whose row-transform stage is shipped with an async concurrency/backpressure regression that buffers unboundedly. On large NDJSON workloads peak RSS grows linearly with input size (206MB at 400k rows, 372MB at 800k, 490MB at 1.2M) against a declared 192MiB ceiling, while the small-data unit suite is green, so the bug is invisible without scale-based reproduction (debugging_ambiguity=3). The fix must keep the documented transform semantics bit-for-bit (independent Python reference in the verifier; quantitative_correctness=2), keep the input read via node:fs createReadStream/node:readline createInterface (static gate, no readFile/readFileSync/toArray), and stay under the RSS ceiling measured from /proc VmHWM, sampled live and confirmed by an exact post-exit read (resource_pressure=3). The verifier regenerates three 800k-row hidden inputs (different sensors/scales/drops/emit orders/seeds) with its own generator, so a buffered or non-streaming fix fails on RSS and a semantics change fails correctness (hidden_case_generalization=3). dependent_stages=2: input stream -> transform -> output stream must be one backpressured chain; fixing the middle changes the contract the entrypoint consumes. tool_breadth=2: node async/streams, git history archaeology, /proc inspection. Resource pressure measured on a deliberate 1 CPU / single container budget."
+}

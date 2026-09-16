@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 3,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 3,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 2,
+    "interaction_statefulness": 2,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 90,
+  "documented_probe": null,
+  "notes": "Debugging-by-measurement on a long-running service. The shipped /app/enrichd checkout (11 modules, unit suite, git history) is functionally correct: every output field matches the enrichment contract and the unit suite is green. But under sustained load the process RSS grows without bound: the profile cache memoises daily behaviour digests keyed by the raw wire spelling of the client identifier, and collector variants (casing / padding / interior whitespace / per-round ~tag) mean the wire spelling is effectively unique per event, so the unbounded memo grows one entry per event. The digest is a pure function of the canonical (normalised) client and day, so normalising the key (and/or bounding the cache) stops the growth while leaving every output byte identical. The verifier streams four workloads (visible + three hidden with different cardinalities/rounds/days) through the running service batch by batch, samples the process-tree RSS from /proc between batches, and requires the median RSS of the second half of the run to grow less than the declared bound over the first half, while outputs must remain correct and the shipped unit suite must still pass. reasoning_depth 3 (root-causing a runtime trend with no file/line clue), debugging_ambiguity 3 (symptom is a growth slope; the store/call-graph is the only lead), tool_breadth 3 (/proc sampling, process control, stdin-driven streaming protocol, git, unittest), resource_pressure 2 (the measured property IS unbounded memory), interaction_statefulness 2 (the deliverable is a long-running feed-driven process the verifier drives interactively)."
+}

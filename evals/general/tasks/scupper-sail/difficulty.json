@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 2,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 3,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 70,
+  "documented_probe": null,
+  "notes": "Hard. A static-architecture CSS task with no renderer in the image: the agent authors /app/dashboard.html and /app/styles.css from a written spec and correctness is decided by a tinycss2-based cascade resolver that (a) parses the stylesheet into media/container/plain layers, (b) resolves declarations per hidden viewport fixture (media bands, container-width bands from engine-reported widths, selector specificity, source order, custom-property inheritance and recursive var() substitution), (c) asserts media-query structure (exact (min-width:1280px)/(max-width:767px) conditions cross-checked against the --scupper-bp-* properties), container-query structure (blocks at 480/720/960px targeting the right classes), the 14 named --scupper-* custom properties with exact values and var() consumption, and the specificity ordering of .sidebar.open over .sidebar, and (d) checks the HTML vocabulary. dependent_stages=3: HTML instantiation, sheet parse, media layer, container layer, specificity, and var resolution are each necessary. reasoning_depth=3: the agent designs where each declaration lives (base vs media vs container layer) so that three viewport regimes and two nested container contexts (stats resolve against the sidebar, cards against the card-grid) all resolve to the contracted values, including source-order requirements among equal-specificity container rules. debugging_ambiguity=3: no browser, no screenshot; the only feedback is normalized resolved-value mismatches, and misplacement, typos in var names, breakpoint literal drift, or a flipped source order each surface as a terse diff the agent must invert mentally. hidden_case_generalization=3: four fixtures covering desktop (1440, container equality at exactly 960px and 480px), tablet (1024, sidebar railed, card-grid 939 < 960), mobile-open (600, open sidebar proving the specificity override), and desktop-mixed (1440 viewport with engine-reported 460px sidebar / 880px card-grid: an expanded media band over sub-threshold containers, so viewport-keyed media approximations cannot satisfy the behavioral table; all four hidden and never shown). quantitative_correctness=2: 4+8, 1+11, 12 column math, and threshold membership at 480/720/960 for widths 640/480/1280/1080/939/600. adversarial_inputs=2: the resolver forgives formatting (case, whitespace, comments, extra rules, unsupported constructs are warnings) but a stylesheet that only passes behaviorally and misses the required media/container structure, a named property, or the specificity ordering fails; boundary fixtures sit exactly on the min-width semantics. Low resource pressure; nothing stateful; no destructive surface."
+}

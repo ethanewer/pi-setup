@@ -1,0 +1,4 @@
+scrape_interval: 15s
+metrics_path: /metrics
+static_configs:
+  - targets: ['app:9090', 'gateway:9091']

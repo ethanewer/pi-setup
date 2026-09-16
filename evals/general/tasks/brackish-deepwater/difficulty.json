@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 2,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 3,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 180,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on duckdb/duckdb at parent commit 916aeeb64b0bd2e0f172266ac485daa929a4af98 (real upstream issue #25164, fixed by 17b972423bc2ed597ab310c7b6369ff0949356ad). The parallel CSV reader double-counts rows at buffer boundaries for files with CR CR LF line endings: StringValueScanner::ProcessOverBufferValue's CARRY_ON newline-consuming loop falls through to the second-buffer loop when the previous buffer already counted the row, so a 10,000-row \\r\\r\\n file yields 10,002 rows (buffer_size=4096), 10,004 at 2048, etc. The image clones the repo at the parent (single-commit object store), overlays the upstream regression test (test/sql/copy/csv/parallel/test_rrrn_parallel.test) and its fixture (data/csv/test/rrrn_parallel_test.csv) from the fix commit into the tree, prebuilds the release engine and unittest runner so the fix cycle is a ~30 s recompile/relink of one file at 1 CPU, keeps the fix commit unreachable, and ships a pre-fix engine snapshot at /opt/pre-fix/ for the verifier's pre-fix-direction checks. Agent must write its own failing reproduction (/app/repro.sh, checked both against the pre-fix snapshot and the repaired engine), then fix the tree so the golden test, the project's own parallel-CSV suites, and authored hidden cases all pass. Hidden cases use MY OWN generated fixtures (5,000-row variable-width values and 10,000-row zero-padded fixed-width rows, both CR CR LF) at buffer sizes the upstream test does not use (2048/4096/8192), asserting exact counts, SUM(id) aggregates and duplicate-id checks; every hidden check was verified to fail on the pre-fix engine snapshot (5002/12502094 vs 5000/12497500 etc.) and pass on the repaired engine. Difficulty lands hard: the root cause sits in ~90 lines of dense two-buffer scanner state-machine C++, the mechanism (boundary carry + CARRY_ON newline consumption + AddRow double count) is nothing like the surface symptom, and the fix must generalize across the whole buffer-geometry family (adversarial hidden fixtures) while leaving \\n and \\r\\n files untouched. hidden_case_generalization is 3 because the fix must be correct for every boundary geometry, not just the golden's: pre-fix the duplicate count differs by geometry (10004 at buffer_size=2048, 10002 at 4096, 10001 at 8192/16384, 0 at >=32768 on the upstream fixture), the hidden fixtures shift every boundary position, and I verified empirically that a geometry-tuned over-broad patch (unconditional early return) fails the golden and 6 of 9 hidden checks — only a fix correct for all boundary positions passes. Rubric total 18 -> hard, matching metadata.difficulty."
+}

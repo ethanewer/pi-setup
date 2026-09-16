@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 0,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": "aio-libs/aiohttp @ 956f140095b21a88e11def934d42de85cc0b2b6b (parent of fix b2b2bce03c17521dc454cdd4a6e19ab0a08bce6b for issue #13229): shallow init+fetch clone, pure-Python editable install (AIOHTTP_NO_EXTENSIONS=1). Repro: python3 -c \"from multidict import CIMultiDict; from aiohttp.test_utils import make_mocked_request; req = make_mocked_request('GET', '/', headers=CIMultiDict({'Forwarded': '; a'})); print(dict(req.forwarded[0]))\" -> hangs forever at parent (timeout 15 -> exit 124), prints {} immediately with the fix. Golden test: test_single_forwarded_header_trailing_bad_value from tests/test_web_request.py at the fix commit, extracted into /opt/golden at build time; at parent it hangs (4 of 5 params), at fix 5 passed. Own-suite gate: tests/test_web_request.py -k forwarded. Hidden cases (trailing-bad single values with empty elements / double separators / quoted-string values with semicolons; multi-header-line scenarios) hang at parent, terminate and parse at fix. Both directions re-confirmed inside the task image at build time.",
+  "notes": "Upstream-clone bug-fix task (v4.2/v4.3 family) on the real aio-libs/aiohttp repo, SHA-pinned at the buggy revision. The bug: BaseRequest.forwarded's parse loop calls field_value.find(';', pos); when it returns -1 the code slices with [pos:-1] and, for a header that ends with an empty-looking token, computes pos = -1 + 1 = 0, so the loop never advances and spins at 100% CPU on the event loop. Any of 'a', '; a', 'for=1.2.3.4; a', 'for=_real; x' (i.e. any value whose tail is empty or a bare token) hangs. Upstream fix b2b2bce adds semi := find(';', pos) and breaks when no separator remains. The instruction names neither the issue number, the commit, nor the file; the agent must localise the hang in the real tree. Environment traps that would kill the bug: none of the positive cases here depend on a specific dependency version, but the whole task needs aiohttp importable, editable (so edits are live), and with working make_mocked_request; the parent-direction build check fails closed if the repro does not hang (exit 124) in the built image. The golden regression test is extracted at build time from a throwaway shallow clone into /opt/golden, so the fix commit is never reachable from /app/src/.git; the verifier asserts HEAD is the pinned parent, the fix commit object is absent, and the working tree differs from upstream in exactly one file (aiohttp/web_request.py). Verifier pytest runs pass explicit --timeout=15 so a mis-fix that still hangs fails fast instead of stalling the verifier; the reproducer probe runs under a subprocess timeout. Difficulty medium (total rubric 10)."
+}

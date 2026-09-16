@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 0,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": null,
+  "notes": "Upstream-clone bugfix in netty/netty (v4.2 family, real repository, shallow clone of pinned parent commit ba8e9e64, JDK 21 + maven 3.8.7, warm /opt/m2, fully offline trial). The bug: DateFormatter.parse1() finalizes the trailing token of a substring parse with txt.length() instead of the requested end, so any bytes past the slice end leak into the last token and HTTP-date parsing of a Set-Cookie Expires value followed by other attributes silently returns null (cookie degrades to session cookie). Upstream issue #16958, fixed by commit 692d23f9 (one-line change); the project's own regression test was added with the fix and is extracted into /opt/golden at image build time, never committed to the task tree. Both directions re-confirmed inside the task image at build time (parent: 13/14 pass with the planted regression test failing with 'expected: <Sun Nov 06 08:49:37 UTC 1994> but was: <null>'; fixed: 14/14 BUILD SUCCESS offline) and again end-to-end by harbor oracle (reward 1) and nop (reward 0). The agent must reproduce via the public parseHttpDate(CharSequence,int,int) API, localise the scan logic, make the smallest source change, and verify through the project's own Maven tooling. Verifier: working-tree provenance (HEAD pinned; every tracked file except the single DateFormatter source file byte-identical to the parent blobs; no untracked non-ignored files), /app/summary.md, the planted upstream regression test run together with eight authored hidden cases (incl. epoch and y2038 expected values) (mid-header slices with non-zero start, time-final RFC1123 ordering, dash-separated two-digit year last -- each with extra trailing attributes), plus a selection of the project's own existing codec-base tests staying green. Binary reward on every exit path."
+}

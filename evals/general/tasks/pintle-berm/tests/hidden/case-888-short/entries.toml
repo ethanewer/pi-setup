@@ -1,0 +1,8 @@
+# Hidden case A: fixed-width digit groups, different haystack (fails at the
+# same reverse-inner path, verified to fail at parent and pass with the
+# upstream fix; inputs not used by the upstream regression test).
+[[test]]
+name = "hidden-888-short"
+regex = '(?:([0-9][0-9][0-9]):)?([0-9][0-9]):([0-9][0-9])'
+haystack = '888:77:66'
+matches = [[[0, 9], [0, 3], [4, 6], [7, 9]]]

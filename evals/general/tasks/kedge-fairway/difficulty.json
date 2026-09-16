@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on mikf/gallery-dl at parent commit 80a402f2673d0c8b5e5204be06fab706ae89e76a (real upstream bug, github issue #8661, fixed in 63b57459483134ecb5bbe85a137736eb69cdf39f: HttpDownloader.download parses Content-Length, and a zero size now releases the connection, logs WARNING 'Empty file' and returns False instead of writing an empty file and recording success). The instruction names the user-visible symptom only (zero-byte responses silently fill the archive with empty files) and does NOT provide a reproduction: the agent must author its own failing reproduction /app/reproduce.py (self-contained local-HTTP-server download against the checked-out downloader) with an exit-code contract, then localise and fix the bug in the real tree. The verifier runs the agent's reproduction against both the pristine source (via git show of the pinned parent -- the bug's own regression test would give the fix away, so nothing is shipped) and the repaired tree; runs the project's own regression test (test/test_downloader.py from the fix commit, extracted into /opt/golden via a throwaway clone deleted at build time: test_http_empty, the ~NUL zero-byte sample) and the in-tree downloader suite (57 tests) to prove nothing else broke; plus two authored hidden cases over inputs the upstream test does not use (zero-byte body with explicit Content-Type and pre-set filename extension; zero-length response via the 206 Partial Content / Content-Range total-0 branch), each asserting refusal, the 'Empty file' warning and that no file is left behind, with a control download that must still succeed. Verified inside the task image in both directions: parent -> golden test_http_empty fails, in-tree suite 57/57 passes; with the 4-line fix -> golden full file 58/58, in-tree 57/57, hidden cases pass; reproduction exits 1 on the pristine tree and 0 on the repaired tree. The public GitHub mirror omits 8 extractor modules (exhentai, nhentai, hitomi, hdoujin, hentaifoundry, hentaihand, hentainexus, schalenetwork) that the released wheel ships and that gallery_dl/extractor/__init__.py still enumerates; an empty-module meta-path finder installed into site-packages at build time (sitecustomize) lets the project's own test suite import cleanly. Self-contained, no network (loopback only), ~1s test suite. Build ~25s, image ~650MB unique."
+}

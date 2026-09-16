@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 0,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 80,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task (syncthing, issue #10709). The brief deliberately withholds the reproduction: the agent must write its own failing regression test in a real Go codebase, localise a one-character semantics bug in the protocol request-size gate (<= 0 vs < 0) without being told which file, fix it, and prove it with the project's own go test runner. Difficulty raised vs the previous wave by requiring the own-repro deliverable and demanding the full existing protocol suite still pass. Hidden cases exercise the same gate with inputs the upstream regression test does not use (different request ids/names, two consecutive zero-count requests, a zero-count request followed by a normal request on the same connection)."
+}

@@ -1,0 +1,239 @@
+{
+  "steps": [
+    {
+      "cmd": "init",
+      "exit": 0
+    },
+    {
+      "cmd": "add-student",
+      "args": [
+        "nicole@nord.example",
+        "Nicole Winter"
+      ],
+      "exit": 0
+    },
+    {
+      "cmd": "add-student",
+      "args": [
+        "ravi@nord.example",
+        "Ravi Khan"
+      ],
+      "exit": 0
+    },
+    {
+      "cmd": "add-student",
+      "args": [
+        "yuki@nord.example",
+        "Yuki Sato"
+      ],
+      "exit": 0
+    },
+    {
+      "cmd": "add-course",
+      "args": [
+        "CS204",
+        "Data Structures",
+        3
+      ],
+      "exit": 0
+    },
+    {
+      "cmd": "add-course",
+      "args": [
+        "STAT300",
+        "Statistical Inference",
+        3
+      ],
+      "exit": 0
+    },
+    {
+      "cmd": "register",
+      "args": [
+        "nicole@nord.example",
+        "CS204",
+        "2024F"
+      ],
+      "exit": 0,
+      "quiet": true
+    },
+    {
+      "cmd": "register",
+      "args": [
+        "ravi@nord.example",
+        "STAT300",
+        "2024F"
+      ],
+      "exit": 0,
+      "quiet": true
+    },
+    {
+      "cmd": "register",
+      "args": [
+        "yuki@nord.example",
+        "CS204",
+        "2024S"
+      ],
+      "exit": 0,
+      "quiet": true
+    },
+    {
+      "cmd": "complete",
+      "args": [
+        "nicole@nord.example",
+        "CS204",
+        "B"
+      ],
+      "exit": 0,
+      "quiet": true
+    },
+    {
+      "cmd": "retake",
+      "args": [
+        "nicole@nord.example",
+        "CS204",
+        "2025S"
+      ],
+      "exit": 0,
+      "quiet": true
+    },
+    {
+      "cmd": "retake",
+      "args": [
+        "nicole@nord.example",
+        "CS204",
+        "2025F"
+      ],
+      "exit": 0,
+      "quiet": true
+    },
+    {
+      "cmd": "attempts",
+      "args": [
+        "nicole@nord.example"
+      ],
+      "exit": 0,
+      "out": [
+        "EVENT\tCODE\tTITLE\tSEMESTER",
+        "registration\tCS204\tData Structures\t2024F",
+        "retake\tCS204\tData Structures\t2025S",
+        "retake\tCS204\tData Structures\t2025F"
+      ]
+    },
+    {
+      "cmd": "retake",
+      "args": [
+        "nicole@nord.example",
+        "CS204",
+        "2025S"
+      ],
+      "exit": 2
+    },
+    {
+      "cmd": "roster",
+      "args": [
+        "CS204"
+      ],
+      "exit": 0,
+      "out": [
+        "EMAIL\tNAME\tSTATUS",
+        "nicole@nord.example\tNicole Winter\tcompleted",
+        "yuki@nord.example\tYuki Sato\tactive"
+      ]
+    },
+    {
+      "cmd": "usage",
+      "exit": 0,
+      "out": [
+        "CODE\tTITLE\tSEATS\tREGISTERED",
+        "CS204\tData Structures\t3\t1",
+        "STAT300\tStatistical Inference\t3\t1"
+      ]
+    },
+    {
+      "cmd": "withdraw",
+      "args": [
+        "yuki@nord.example",
+        "CS204"
+      ],
+      "exit": 0,
+      "quiet": true
+    },
+    {
+      "cmd": "retake",
+      "args": [
+        "yuki@nord.example",
+        "CS204",
+        "2025S"
+      ],
+      "exit": 0,
+      "quiet": true
+    },
+    {
+      "cmd": "attempts",
+      "args": [
+        "yuki@nord.example"
+      ],
+      "exit": 0,
+      "out": [
+        "EVENT\tCODE\tTITLE\tSEMESTER",
+        "registration\tCS204\tData Structures\t2024S",
+        "retake\tCS204\tData Structures\t2025S"
+      ]
+    },
+    {
+      "cmd": "retake",
+      "args": [
+        "ravi@nord.example",
+        "CS204",
+        "2025S"
+      ],
+      "exit": 2
+    },
+    {
+      "cmd": "retake",
+      "args": [
+        "nobody@nord.example",
+        "STAT300",
+        "2025S"
+      ],
+      "exit": 2
+    },
+    {
+      "cmd": "attempts",
+      "args": [
+        "nobody@nord.example"
+      ],
+      "exit": 2
+    },
+    {
+      "cmd": "register",
+      "args": [
+        "nicole@nord.example",
+        "CS204",
+        "2026S"
+      ],
+      "exit": 2
+    },
+    {
+      "cmd": "usage",
+      "exit": 0,
+      "out": [
+        "CODE\tTITLE\tSEATS\tREGISTERED",
+        "CS204\tData Structures\t3\t0",
+        "STAT300\tStatistical Inference\t3\t1"
+      ]
+    },
+    {
+      "cmd": "roster",
+      "args": [
+        "CS204"
+      ],
+      "exit": 0,
+      "out": [
+        "EMAIL\tNAME\tSTATUS",
+        "nicole@nord.example\tNicole Winter\tcompleted",
+        "yuki@nord.example\tYuki Sato\tdropped"
+      ]
+    }
+  ]
+}

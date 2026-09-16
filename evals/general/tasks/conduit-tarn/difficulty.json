@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 3,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 3,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 1
+  },
+  "expected_expert_time_min": 110,
+  "documented_probe": null,
+  "notes": "A git-history debugging task over a self-authored 40-commit Python repository (conduit, a feed normaliser). The agent is handed a working repo (multi-module package, green pytest suite, release tags v0.1.0..v1.0.0) and an incident report for a regression that only shows up on a specific input class (orders spanning multiple feed rows). dependent_stages=3: reproduce the defect -> bisect the 40-commit history to the introducing commit -> read the diff to find the root cause -> fix -> author a regression test that must fail on the shipped commit and pass after the fix -> commit without rewriting history. tool_breadth=3: git bisect, git log/show/diff, worktree/archive, pytest, the conduit CLI, JSON inspection. debugging_ambiguity=3: the symptom (collapsed basket orders) is far from the cause; the introducing commit is disguised as a perf change with a plausible comment; the suite is green at HEAD so no existing test points at it; the agent must reason about the documented multi-row contract. hidden_case_generalization=2: the fixed tool is re-run on three fresh hidden feeds in the affected class (two-fill and four-fill baskets, mixed sides, a rounding edge, a malformed row -> warnings). adversarial_inputs=2: hidden feeds exercise mixed-side baskets, out-of-feed-order timestamps (canonical fill ordering), symbol-rule compliance, and a warnings path. quantitative_correctness=1: expected gross/fee/net and fill counts are exact per the documented contract. unsafe_action_penalty=1: the verifier actively rejects any rewritten history (original commit SHAs must stay reachable), so rebase/amend/reset of the shipped commits is a penalty path. No numeric libs (resource_pressure 0); not stateful across turns (interaction_statefulness 0)."
+}

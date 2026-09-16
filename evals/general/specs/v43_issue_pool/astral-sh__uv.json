@@ -1,0 +1,98 @@
+[
+  {
+    "repository": "astral-sh/uv",
+    "upstream_issue_ref": "#19799",
+    "fix_commit": "48c4357fe2517cce464ffa040d75c92be6a7dc71",
+    "parent_commit": "6353b242d2774244ae2c6b4be1b95c70f84e97ab",
+    "base_image": "bench-base:ubuntu-24.04",
+    "source_files_changed": [
+      "crates/uv-client/src/cached_client.rs"
+    ],
+    "golden_test_paths": [
+      "crates/uv-client/tests/it/cached_client.rs",
+      "crates/uv-client/tests/it/main.rs"
+    ],
+    "golden_test_names": [
+      "cached_client::reject_overflowing_cache_policy_length"
+    ],
+    "reproduction": "cd /work/uv && git reset --hard <sha> && git clean -fd\n# the regression test file is NEW in the fix commit, so overlay it on the parent tree:\n# git checkout 48c4357fe2517cce464ffa040d75c92be6a7dc71 -- crates/uv-client/tests/\ncargo test -p uv-client --test it cached_client::reject_overflowing_cache_policy_length -- --exact",
+    "observed_failure_at_parent": "test FAILED: thread 'cached_client::reject_overflowing_cache_policy_length' panicked at crates/uv-client/src/cached_client.rs:967:26 with `attempt to add with overflow` (test result: FAILED. 0 passed; 1 failed; 26 filtered out). Buggy code confirmed present at parent by inspection: `if bytes.len() < len_usize + 8` where a length marker of `usize::MAX` (8 bytes of 0xFF) makes `len_usize + 8` wrap to 7 so the guard never fires and the caller's later arithmetic overflows; the fix instead compares `len_usize > cache_policy_len_start`.",
+    "verified": "Both directions observed in container bench-base:ubuntu-24.04. At parent 6353b242d (with the fix's crates/uv-client/tests/ overlaid) the single test panics with 'attempt to add with overflow' (FAILED). At fix 48c4357fe the same command reports `ok. 1 passed; 0 failed`. The overlay test file compiles unchanged against the parent tree (it only uses the existing `DataWithCachePolicy::from_reader` / `ErrorKind::ArchiveRead` API); the only wiring change needed is `mod cached_client;` in tests/it/main.rs, which is part of the fix commit.",
+    "dependency_pins": {
+      "rust-toolchain": "1.96.0 (rust-toolchain.toml at this commit; cargo auto-installs the pinned channel)",
+      "Cargo.lock": "committed in-tree, no extra pins needed"
+    },
+    "install_recipe": "apt-get update && apt-get install -y build-essential pkg-config libssl-dev  # openssl for reqwest etc.\ncurl -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable\n# rustup auto-installs the channel pinned in rust-toolchain.toml on first cargo invocation\ncargo test -p uv-client --test it ...",
+    "issue_paraphrase": "If uv's on-disk HTTP cache entry is corrupted so that the trailing length marker encodes an enormous value, the program crashes with a Rust arithmetic-overflow panic (a backtrace ending in 'attempt to add with overflow') instead of treating the entry as corrupt and re-fetching, on any operation that reads the cached HTTP responses such as refreshing package index metadata or resolving dependencies. A user whose cache file got truncated or mangled (crashed disk, interrupted write) can be stuck with startup crashes instead of a graceful recovery.",
+    "fix_summary": "In deserialize_cache_policy_len, replace the `bytes.len() < len_usize + 8` guard (which itself overflows when len_usize == usize::MAX) with a check that the declared policy length fits in the available buffer before any arithmetic, returning the existing ArchiveRead error for malformed entries. Adds a unit test that feeds 8 bytes of 0xFF and asserts an ArchiveRead error kind instead of a panic.",
+    "difficulty_guess": "easy",
+    "notes": "DOMAIN: packaging-release (Python package/environment management). In Terminal-Bench 2.1 terms this stands in for the packaging/CLI-dev-tooling tasks sourced from github.com/laude-institute/terminal-bench that provision Python environments, install packages and manage caches (sibling waves mine pypa/__pip and pypa/__setuptools for the same domain). astral-sh/uv and everything it pulls transitively is absent from specs/tb21_source_repositories.json (checked). 100% offline verification (the one test crafts bytes in memory; no server, no network, no Python). The uv-client `it` test binary compiles the whole reqwest/rustls/tokio stack: ~6-9 min on 64 cores, so budget generously at 1 CPU (20-40 min cold); after the first build re-verification is seconds. Note for the author: tests/it/main.rs must gain `mod cached_client;` (part of the fix commit) and the whole fix-era tests/it/ directory compiles against the parent tree."
+  },
+  {
+    "repository": "astral-sh/uv",
+    "upstream_issue_ref": "#21261",
+    "fix_commit": "fab2c0c0d2992217ff8768d11558f4b668d02501",
+    "parent_commit": "64c73b115b544e8424a8c69f44131e21d66e629c",
+    "base_image": "bench-base:ubuntu-24.04",
+    "source_files_changed": [
+      "crates/uv-cache/src/removal.rs",
+      "crates/uv-cache/src/lib.rs",
+      "crates/uv-fs/src/lib.rs",
+      "crates/uv-fs/src/space.rs",
+      "crates/uv/src/commands/cache_clean.rs",
+      "crates/uv/src/commands/cache_prune.rs"
+    ],
+    "golden_test_paths": [
+      "crates/uv-cache/tests/removal.rs",
+      "crates/uv/tests/build/cache_clean.rs",
+      "crates/uv/tests/build/cache_prune.rs"
+    ],
+    "golden_test_names": [
+      "remove_path_allocated_blocks",
+      "prune_sparse_file",
+      "remove_path_retained_hardlink",
+      "prune_hardlinks_once",
+      "clean_all_hardlinked_file",
+      "prune_hardlinked_file"
+    ],
+    "reproduction": "cd /work/uv && git reset --hard <sha> && git clean -fd && cargo build -p uv\nrm -rf /tmp/cx && mkdir -p /tmp/cx/cache /tmp/cx/home\n# 1 MiB file fully allocated; cache entry is a HARD LINK to it\nprintf 'x%.0s' {1..1048576} > /tmp/cx/retained.bin\nln /tmp/cx/retained.bin /tmp/cx/cache/cached.bin\ncd /tmp/cx && env HOME=/tmp/cx/home UV_CACHE_DIR=/tmp/cx/cache ./target/debug/uv cache clean",
+    "observed_failure_at_parent": "`Clearing cache at: cache` then `Removed 2 files (1.0MiB)`: the cached file (hard link to retained.bin, which stays on disk) reports its full 1.0 MiB as freed even though zero bytes are reclaimed because the retained link keeps the data. Buggy code confirmed at parent by inspection: Removal::add_file does `logical_bytes += metadata.len()` (logical length, not allocated blocks, no hard-link de-dup).",
+    "verified": "Both directions observed in container bench-base:ubuntu-24.04 with a debug `uv` binary (cargo build -p uv): parent 64c73b115 reports `Removed 2 files (1.0MiB)`; fix fab2c0c0d2 reports `Removed 2 files (0B)` for the identical scenario (exit 0 both times, file removed both times; only the reported reclaimed space changes from the wrong 1.0MiB to the correct 0B). The fix tree also passes the project's own crate regression tests: `cargo test -p uv-cache --test removal` => 4 passed (remove_path_allocated_blocks, prune_sparse_file, remove_path_retained_hardlink, prune_hardlinks_once). Fix code confirmed present: crates/uv-cache/src/removal.rs now reads `if metadata.nlink() == 1 { metadata.blocks().saturating_mul(512) } else { 0 }`.",
+    "dependency_pins": {
+      "rust-toolchain": "1.98.0 (rust-toolchain.toml at this commit)",
+      "Cargo.lock": "committed in-tree"
+    },
+    "install_recipe": "apt-get update && apt-get install -y build-essential pkg-config libssl-dev\ncurl -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable\ncargo build -p uv   # produces target/debug/uv",
+    "issue_paraphrase": "The space-savings figure printed by uv's cache cleanup commands is wrong in common situations: when a cached file is a hard link to a file that still exists somewhere else, uv reports the full file size as reclaimed even though no space was actually freed, and it reports the logical length of files instead of the disk blocks they occupy, so sparse files and small files also over- or under-report the real savings. Users running `uv cache clean` or `uv cache prune` see a byte figure such as '(1.0MiB)' that does not match what was actually reclaimed, which makes capacity planning and CI space accounting misleading.",
+    "fix_summary": "Replaces the logical-length accounting (`metadata.len()`) with a block-based estimate (st_blocks * 512 when the link count is 1, 0 otherwise), so storage is counted once for hard-linked files (only when its last link is removed) and holes/non-allocated blocks of sparse files are not charged; renames the summary fields logical_bytes/physical_bytes to coarse_bytes/fine_bytes and the mode enum RemovalMode to RemovalAccounting. Adds crate-level regression tests (crates/uv-cache/tests/removal.rs, 4 tests) plus CLI snapshot updates in crates/uv/tests/build/cache_clean.rs and cache_prune.rs.",
+    "difficulty_guess": "medium",
+    "notes": "DOMAIN: packaging-release (Python package/environment management); stands in for the packaging/CLI-dev-tooling tasks sourced from github.com/laude-institute/terminal-bench (package installation, environment provisioning, cache management); sibling waves mine pypa/__pip and pypa/__setuptools for the same domain. astral-sh/uv absent from specs/tb21_source_repositories.json (checked). 100% offline: the direct CLI repro needs no network, no Python binary. CRITICAL for the author: the fix renamed the summary API (`coarse_bytes`/`fine_bytes` replaces `logical_bytes`/`physical_bytes`), so the crate regression file crates/uv-cache/tests/removal.rs does NOT compile against the parent tree - do not hand it to the agent at the parent commit expecting a compile; use the CLI-observable behavior as the oracle (e.g. the `(X)` suffix on `Removed N files`). Full CLI debug build takes ~1 min at 64 cores; at 1 CPU budget 20-45 min cold. The 'Removed 2 files' count (rather than 1) is the same on both commits for this scenario and is not the point of the bug."
+  },
+  {
+    "repository": "astral-sh/uv",
+    "upstream_issue_ref": "#21529",
+    "fix_commit": "d28a3ee3d0f7122b0da64b0226d2e173e7d23747",
+    "parent_commit": "dbbc4c9a1e05ce37a94b3bf35fde29370429d312",
+    "base_image": "bench-base:ubuntu-24.04",
+    "source_files_changed": [
+      "crates/uv-python/src/version_files.rs"
+    ],
+    "golden_test_paths": [
+      "crates/uv/tests/python/python_pin.rs"
+    ],
+    "golden_test_names": [
+      "python_pin::python_pin_with_comments_and_whitespace"
+    ],
+    "reproduction": "cd /work/uv && git reset --hard <sha> && git clean -fd && cargo build -p uv\nmkdir /tmp/vf && cd /tmp/vf && printf '  python3.12  \\n \\t\\n  # 3.11\\n\\tpython3.10\\t\\n' > .python-version\nenv HOME=/tmp/vf ./target/debug/uv python pin\n# golden test (builds the full uv test binary):\n# cargo test -p uv --test python -- python_pin_with_comments_and_whitespace",
+    "observed_failure_at_parent": "Direct repro prints two warnings and NO pins: `warning: Ignoring unsupported Python request `  python3.12  ` in version file: .../.python-version` (and one for the tab-padded `python3.10`); stdout is empty, so the pinned 3.12/3.10 are silently dropped. The project's own golden test (fix-era python_pin.rs overlaid on the parent tree, per the protocol's overlay step) FAILS with a snapshot mismatch showing exactly those two warnings instead of the expected `3.12\\n3.10` stdout. Buggy code confirmed at parent by inspection: version_files.rs maps raw `content.lines()` through `PythonRequest::parse` without trimming, so padded lines parse as executable names and are filtered out.",
+    "verified": "Both directions observed in container bench-base:ubuntu-24.04. At parent dbbc4c9a1: direct repro exits 0 with empty stdout plus the two 'Ignoring unsupported Python request' warnings; golden test (fix's crates/uv/tests/python/python_pin.rs overlaid) FAILED ('snapshot assertion ... failed', stderr showing the two warnings, stdout empty). At fix d28a3ee3d: direct repro prints `3.12` then `3.10` with no warnings; golden test PASSES ('1 passed; 188 filtered out'). The overlay test file compiles unchanged against the parent tree.",
+    "dependency_pins": {
+      "rust-toolchain": "1.98.1 (rust-toolchain.toml at this commit)"
+    },
+    "install_recipe": "apt-get update && apt-get install -y build-essential pkg-config libssl-dev\ncurl -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable\ncargo build -p uv && cargo test -p uv --test python -- python_pin_with_comments_and_whitespace",
+    "issue_paraphrase": "A Python version file (`.python-version` or `.python-versions`) whose entries carry leading or trailing whitespace - for example lines like \" python3.12 \" or entries separated by tabs - causes uv to silently ignore those entries. Instead of being read as version requests, the padded lines are treated as unsupported executable names, a warning is printed for each, and the requested Python version is never selected, so commands that depend on the pin pick a different interpreter or fail. A version file that is perfectly valid except for incidental indentation behaves as if it were empty, and the only hint is a warning that the request is 'unsupported'.",
+    "fix_summary": "Trim each line of the version file before filtering comments and parsing: `content.lines().map(str::trim).filter(...).map(PythonRequest::parse)` (replacing a per-line `line.trim()` inside the comment check on the raw line), so padded entries parse as version requests, and drops an intermediate allocation. Extends the `python_pin_with_comments` integration test (renamed python_pin_with_comments_and_whitespace) to cover spaces, tabs, whitespace-only lines and indented comments for both version-file names.",
+    "difficulty_guess": "easy",
+    "notes": "DOMAIN: packaging-release (Python package/environment management); stands in for the packaging/CLI-dev-tooling tasks sourced from github.com/laude-institute/terminal-bench (interpreting Python version pins and provisioning environments); sibling waves mine pypa/__pip and pypa/__setuptools for the same domain. astral-sh/uv absent from specs/tb21_source_repositories.json (checked). 100% offline: the direct CLI repro needs no Python interpreter and no network (uv python pin just reads the file; the empty-version test context downloads nothing). The golden test runs in ~0.5 s once the uv test binary is built (~1 min at 64 cores via cargo test -p uv --test python; at 1 CPU budget 15-40 min cold). The fix also renamed the test fn (python_pin_with_comments -> python_pin_with_comments_and_whitespace), so the author must take the whole fix-era python_pin.rs when overlaying."
+  }
+]

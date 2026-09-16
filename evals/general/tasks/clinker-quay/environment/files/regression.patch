@@ -1,0 +1,13 @@
+diff --git a/sympy/discrete/transforms.py b/sympy/discrete/transforms.py
+index cb35508..8edb43c 100644
+--- a/sympy/discrete/transforms.py
++++ b/sympy/discrete/transforms.py
+@@ -56,7 +56,7 @@ def _fourier_transform(seq, dps, inverse=False):
+         hf, ut = h // 2, n // h
+         for i in range(0, n, h):
+             for j in range(hf):
+-                u, v = a[i + j], expand_mul(a[i + j + hf]*w[ut * j])
++                u, v = a[i + j], expand_mul(a[i + j + hf]*w[j])
+                 a[i + j], a[i + j + hf] = u + v, u - v
+         h *= 2
+ 

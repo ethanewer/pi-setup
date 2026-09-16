@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 3,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 3,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 150,
+  "documented_probe": "DOMPurify 3.4.15 pinned at 1d7460c4 (shallow clone + npm ci: ~11s image build; the project's own jsdom suite: 1227 cases in ~36s on 1 CPU, runs offline under network_mode none).",
+  "notes": "Security task standing in for Terminal-Bench 2.1's html-sanitizer-testbed: the agent works inside the real cure53/DOMPurify tree, must run its 1227-case jsdom suite, localize a mutation class the suite does not cover (CSS script/behavior injection surviving inside style attribute values -- a documented DOMPurify gap its own fixtures lock in rather than close), author a bypass regression test, and ship an app-level hardened sanitizer built on the clone's DOMPurify that neutralizes the class while preserving legitimate CSS (including url(#...) SVG fragments), keeping all 1227 existing tests green, and not mutating /app/src. Reasoning/debugging high because neither the gap nor the fix is named and the fix must survive encoding obfuscation and a no-regression constraint; high quantitative correctness (exact absence/presence of directives in output across hidden cases); high hidden-case generalization (four distinct style-attribute injection subclasses -- expression, scheme-case/entity-obfuscated url, legacy behavior/binding, control-character-obfuscated scheme -- each with legitimate CSS that must survive). The verifier proves genuine upstream use two ways: a source-binding check plus a stock-parity probe (byte-identical to the clone's own DOMPurify on all non-style payloads), and a pristine-clone check via git HEAD/status, so a self-contained hand-rolled sanitizer that ignores the library cannot pass."
+}

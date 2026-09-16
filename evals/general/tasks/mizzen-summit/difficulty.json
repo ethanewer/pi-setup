@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 2,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 3,
+    "adversarial_inputs": 3,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 120,
+  "documented_probe": "apache/kafka@4.3.1 pinned to commit 26b251a451ce941d3d7a55e6487bcb7f16b5ad48 (peeled ref of tag 4.3.1; the ref itself points at tag object a07059e). Probe: 58MB shallow, 7,232 files, 1,619,365 LOC, single root Gradle 9.2.1 build. Measured in-image at 1 vCPU (cpuset-cpus=0) with network disabled: cold `:coordinator-common:test` graph 42 tasks all up-to-date in 30s; single-file edit -> incremental recompile + EventAccumulatorTest rerun in 50s; planting two hidden test classes + rerun in 47s. Image build (warm compile of clients+server-common+coordinator-common main+test) ~2.5 min at workers=1; final image 1.93GB.",
+  "notes": "large-jvm-module: the agent must implement a precisely-specified capability (an optional bounded-capacity mode on the coordinator event accumulator: reject RejectedExecutionException when full without state change, non-positive capacities rejected at construction, default constructor unbounded) inside the real apache/kafka 4.3.1 tree WITHOUT being told the module, class, or file; it must navigate 7,232 files, locate the concurrency primitive, and prove its work through Kafka's own Gradle+JUnit machinery offline against a warmed cache. Nothing in the pre-existing 837-task suite requires navigating/building a real 1.6M-LOC upstream JVM tree or running its own module tests; the largest previous codebase is 8,144 self-authored lines. Verifier runs the module's existing targeted test class (EventAccumulatorTest) plus 2 authored hidden test classes (capacity-bound semantics; per-key capacity reclaim after poll) through `:coordinator-common:test --tests ... --offline`, and asserts via git-diff that no source outside the coordinator-common module changed. Nop container scores 0: no capacity mode exists, hidden classes fail to pass, no /app/summary.md. A fresh self-contained script cannot satisfy the hidden tests: they drive the actual kafka class in the actual module build. Offline-clean verified by running the full oracle+verifier in a container launched with --network=none at 1 vCPU (reward 1) and by the nop run under verify_new_task.sh."
+}

@@ -1,0 +1,72 @@
+# H3 — ReeferColdChain (tightened): fires when a unit is outside ITS OWN
+# setpoint tolerance for more than the 5-minute window — in EITHER direction;
+# refuses to fire on a dry unit whose (high) setpoint makes an
+# absolute-temperature rule over-broad, and refuses to fire on a brief
+# door-open dip inside the window.
+rule_files:
+  - /app/alerting/alerts.yml
+evaluation_interval: 1m
+
+tests:
+  # must fire: deviation 4.0C from a frozen setpoint, sustained beyond 5m
+  - interval: 1m
+    input_series:
+      - series: 'reefer_temp_celsius{unit="reefer-02"}'
+        values: '-2 -2 -2 -2 -2 8 8 8 8 8 8 8 8 8 8 8 8 8 8'
+      - series: 'reefer_setpoint_celsius{unit="reefer-02"}'
+        values: '-2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2 -2'
+    alert_rule_test:
+      - eval_time: 18m
+        alertname: ReeferColdChain
+        exp_alerts:
+          - exp_labels:
+              severity: page
+              unit: reefer-02
+            exp_annotations:
+              summary: reefer outside setpoint tolerance
+
+  # must fire BELOW the setpoint too: a unit at setpoint 4.0C holding at -6.0C
+  # deviates by 10C below.  The runbook says ABSOLUTE difference; a rule that
+  # only checks temp - setpoint > 2.0 (signed) misses this and fails here.
+  - interval: 1m
+    input_series:
+      - series: 'reefer_temp_celsius{unit="reefer-06"}'
+        values: '4 4 4 4 4 -6 -6 -6 -6 -6 -6 -6 -6 -6 -6'
+      - series: 'reefer_setpoint_celsius{unit="reefer-06"}'
+        values: '4 4 4 4 4 4 4 4 4 4 4 4 4 4 4'
+    alert_rule_test:
+      - eval_time: 14m
+        alertname: ReeferColdChain
+        exp_alerts:
+          - exp_labels:
+              severity: page
+              unit: reefer-06
+            exp_annotations:
+              summary: reefer outside setpoint tolerance
+
+  # dry (ambient) unit at setpoint 8.0C running at 6.5C: deviation 1.5C is
+  # inside tolerance, because its setpoint is HIGH.  An over-broad rule that
+  # pages on any absolute temperature above ~6C fails here.
+  - interval: 1m
+    input_series:
+      - series: 'reefer_temp_celsius{unit="reefer-05"}'
+        values: '6.5 6.5 6.5 6.5 6.5 6.5 6.5 6.5 6.5 6.5 6.5 6.5 6.5 6.5 6.5'
+      - series: 'reefer_setpoint_celsius{unit="reefer-05"}'
+        values: '8 8 8 8 8 8 8 8 8 8 8 8 8 8 8'
+    alert_rule_test:
+      - eval_time: 14m
+        alertname: ReeferColdChain
+        exp_alerts: []
+
+  # brief door-open dip: deviation only during the last three samples, inside
+  # the 5m window — no alert.  A rule without the sustain window fails here.
+  - interval: 1m
+    input_series:
+      - series: 'reefer_temp_celsius{unit="reefer-01"}'
+        values: '4 4 4 4 4 4 4 4 4 4 4 4 9 9 9'
+      - series: 'reefer_setpoint_celsius{unit="reefer-01"}'
+        values: '4 4 4 4 4 4 4 4 4 4 4 4 4 4 4'
+    alert_rule_test:
+      - eval_time: 14m
+        alertname: ReeferColdChain
+        exp_alerts: []

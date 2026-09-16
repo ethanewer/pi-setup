@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": null,
+  "notes": "Medium systems-programming task in a language the suite has one other task in (Rust 1.75). The agent must implement a documented little-endian binary container codec (19-byte header, variable-length sections, CRC-32 trailer) in a scaffolded cargo crate so a red shipped test suite goes green: fixed wire vector, generated round-trip property tests, and nine locked error variants with a pinned precedence order. Deep work is: byte-exact encode, a total (panic-free) decoder with bounds checks, and CRC-32 correctness. Hidden cases are two fresh test files (gamma: malformed/truncated/adversarial constructions beyond the visible ones; delta: randomized robustness, canonical re-encode of accepted input, and rejection of every single-byte perturbation) that the verifier compiles into the crate, plus a grep that the crate contains no `unsafe` keyword. Difficulty comes from adversarial_inputs (hidden adversarial feed), hidden_case_generalization (2 hidden files), debugging_ambiguity (red suite with subtle precedence/checksum interactions, unhandled error variants fail hidden runs), dependent_stages (encode/decode/crc must all be right or round-trip and fuzz invariants break). Low tool breadth (a single cargo toolchain), no resource pressure or unsafe-action exposure."
+}

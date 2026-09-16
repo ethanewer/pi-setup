@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 0,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on aquasecurity/trivy at parent commit 748a639b1d436a0566d325a4233ca13baf4cbd60 (real upstream bug #11050, fixed by 0012281c8a8adad2eff1889f12fe08a0ca5a7bfc). The PEP 621 pyproject.toml dependency-list parser records each dependency name exactly as typed ('Flask', 'typing_extensions', 'ruamel.yaml') instead of PEP 503-normalized ('flask', 'typing-extensions', 'ruamel-yaml'), so the same package appears under two spellings in one scan and manifest names never match the normalized lockfile names. Unlike the sibling ballast-chartroom task, the working tree here is the PRISTINE parent: its own test suite is green inside the image, so the agent is NOT handed a failing test. The agent must write its own failing reproduction (a Go unit test at pkg/dependency/parser/python/pyproject/repro_test.go plus testdata/repro.toml, exercising at least the case and the separator normalization classes) as a declared deliverable, observe it fail, and then fix the parser so the reproduction, the project's own pyproject parser suite (with the upstream regression test from the fix commit overlaid at verify time), and two authored hidden cases (case+extras+constraints; separator-heavy with an already-normalized name) all pass. The verifier runs the agent's own reproduction against the parent's parser source (must FAIL with a testify 'Not equal' assertion mismatch) and against the repaired tree (must pass), plus the golden regression test and the hidden cases. Fix commit is unreachable from /app/src (single shallow parent commit; golden bytes extracted through a throwaway clone that is deleted); go 1.26.3 toolchain with CGO_ENABLED=0 GOEXPERIMENT=jsonv2; module and build caches relocated to world-writable /opt/gocache (verified: offline `go test` works as root and as uid 1000, no downloads). Both directions re-confirmed inside the probe image: parent fails with the mined 'Not equal' (expected normalized set vs actual as-typed set), fix passes the whole pyproject scope. Verifier hardened against root-trial bypass: go toolchain binary and the three golden files (fix regression test, fix fixture, parent parser source) are sha256-pinned in both the Dockerfile and test.sh."
+}

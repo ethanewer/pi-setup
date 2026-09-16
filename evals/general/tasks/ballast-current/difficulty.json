@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on astral-sh/uv at parent commit 6353b242d2774244ae2c6b4be1b95c70f84e97ab (real upstream issue #19799, fixed by 48c4357fe2517cce464ffa040d75c92be6a7dc71). deserialize_cache_policy_len() guards the trailing cache-policy length with `bytes.len() < len_usize + 8`, but when the 8-byte trailer is 0xFF..FF, len_usize == usize::MAX and the +8 wraps to 7, so the guard never fires and the follow-up slicing panics with 'attempt to add with overflow' at cached_client.rs:967. The fix compares len_usize against the number of bytes before the trailer and returns the existing ArchiveRead error for malformed entries. The image clones uv SHALLOW at the parent, extracts the fix-era regression test (crates/uv-client/tests/it/cached_client.rs + the `mod cached_client;` wiring, both byte-pinned by sha256) into /opt/golden and copies it over tests/it, prebuilds the uv-client `it` test harness (cargo test -p uv-client --test it --no-run) so the agent's fix cycle is one incremental recompile (~10s at 1 CPU), and fails the build if the mined failing state (panic 'attempt to add with overflow', 0 passed; 1 failed; 26 filtered out) is absent. The fix commit is fetched only into a throwaway bare clone that is deleted, so it is never reachable from /app/src/.git; cargo is configured offline. Hidden cases: 4 authored overflow vectors that panic at the parent exactly like the golden test (trailers 0xF8FF..., 0xFEFF..., and 0xFF..FF with 3-byte and 8-byte payload prefixes; all must yield ArchiveRead instead) plus one authored round-trip case: a real on-disk cache entry produced by uv's own cache writer at this revision (7 msgpack payload bytes, 344-byte validated policy archive, LE trailer) that the reader must load intact -- this also catches a reader that errors on everything. Measured host: cold clean 1-CPU build of the it harness ~7 min, incremental ~4s; full offline it suite 26/26 (remote_metadata excluded: it needs files.pythonhosted.org); rustup channel 1.96.0 pinned by the repo's rust-toolchain.toml. DOMAIN: packaging-release; uv is not in specs/tb21_source_repositories.json."
+}

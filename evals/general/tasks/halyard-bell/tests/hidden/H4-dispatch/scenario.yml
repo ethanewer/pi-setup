@@ -1,0 +1,57 @@
+# H4 — DispatchAgeSLA (tightened): fires when outbound wait exceeds the 4h SLA
+# and stays above it across a full 15-minute departure cadence; refuses to fire
+# on a brief self-clearing spike, on a wait sitting exactly at the SLA, or on a
+# wait under the SLA.
+rule_files:
+  - /app/alerting/alerts.yml
+evaluation_interval: 1m
+
+tests:
+  # must fire: wait pinned above SLA for 20 minutes (past the 15m cadence)
+  - interval: 1m
+    input_series:
+      - series: 'yard_dispatch_wait_seconds{depot="west"}'
+        values: '20000 20000 20000 20000 20000 20000 20000 20000 20000 20000 20000 20000 20000 20000 20000 20000 20000 20000 20000 20000 20000 20000 20000'
+    alert_rule_test:
+      - eval_time: 22m
+        alertname: DispatchAgeSLA
+        exp_alerts:
+          - exp_labels:
+              severity: page
+              depot: west
+            exp_annotations:
+              summary: dispatch wait above the 4h SLA
+
+  # brief, self-clearing spike: wait jumps above SLA only in the final sample,
+  # then the next departure is due — no alert.  A rule without the 15m sustain
+  # window fires on this and fails.
+  - interval: 1m
+    input_series:
+      - series: 'yard_dispatch_wait_seconds{depot="east"}'
+        values: '1200 1200 1200 1200 1200 1200 1200 1200 1200 1200 1200 1200 1200 1200 32000'
+    alert_rule_test:
+      - eval_time: 14m
+        alertname: DispatchAgeSLA
+        exp_alerts: []
+
+  # exactly AT the 14400s SLA, sustained for the whole window: the SLA is
+  # exceeded only above 14400, so no alert.  A rule using >= 14400 fires here.
+  - interval: 1m
+    input_series:
+      - series: 'yard_dispatch_wait_seconds{depot="quay"}'
+        values: '14400 14400 14400 14400 14400 14400 14400 14400 14400 14400 14400 14400 14400 14400 14400 14400 14400 14400 14400 14400 14400'
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: DispatchAgeSLA
+        exp_alerts: []
+
+  # just under the SLA: 4h minus a couple of minutes, sustained.  Over-broad
+  # thresholds below the documented 14400s fire here and fail.
+  - interval: 1m
+    input_series:
+      - series: 'yard_dispatch_wait_seconds{depot="yard"}'
+        values: '14200 14200 14200 14200 14200 14200 14200 14200 14200 14200 14200 14200 14200 14200 14200 14200 14200 14200 14200 14200 14200'
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: DispatchAgeSLA
+        exp_alerts: []

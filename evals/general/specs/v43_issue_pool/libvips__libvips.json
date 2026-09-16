@@ -1,0 +1,77 @@
+[
+ {
+  "repository": "libvips/libvips",
+  "upstream_issue_ref": "#5182",
+  "fix_commit": "dbf559add2807037d89a16b7a9e371e8267c0f63",
+  "parent_commit": "92b95531d198abf9ca40aaa3f67dd6d7f4cfa2bd",
+  "base_image": "bench-base:ubuntu-24.04",
+  "source_files_changed": [
+   "libvips/conversion/unpremultiply.c"
+  ],
+  "golden_test_paths": [
+   "test/test-suite/test_conversion.py"
+  ],
+  "golden_test_names": [
+   "test_unpremultiply"
+  ],
+  "reproduction": "Build libvips at the target commit, then: python3 -c \"import pyvips; im = (pyvips.Image.black(1, 1, bands=2) + [20, 10]).cast('uchar'); print(im.unpremultiply(uchar=True)(0, 0))\"\n(parent: [254.0, 10.0]; fix: [255.0, 10.0]) — or the project regression test brought in from the fix commit: python3 -m pytest test/test-suite/test_conversion.py::TestConversion::test_unpremultiply",
+  "observed_failure_at_parent": "pytest: 'assert [254.0, 10.0] == [255, 10]' (AssertionError, 1 failed). Direct repro prints [254.0, 10.0] instead of the expected [255.0, 10.0]: the un-premultiplied value 510 is stored into a uchar without clipping and wraps to 254 instead of saturating at 255. Buggy code confirmed at parent: the fast uchar->uchar path in unpremultiply.c contains no clamp (grep 'VIPS_MIN(value, UCHAR_MAX)' count 0 at parent, 1 at fix; installed libvips.so.42 was string-checked each run).",
+  "verified": "Both directions observed in bench-base:ubuntu-24.04 (libvips 8.19.0 meson build, pyvips from pip, pytest). Parent 92b95531d: pytest test_unpremultiply FAILS (assert [254.0, 10.0] == [255, 10]) and direct repro prints [254.0, 10.0]. Fix dbf559add: pytest PASSES and direct repro prints [255.0, 10.0]. Buggy code absence/presence confirmed by source grep against the reset tree before each build.",
+  "dependency_pins": {},
+  "install_recipe": "apt-get install -y meson ninja-build pkg-config libglib2.0-dev libexpat1-dev libjpeg-dev libpng-dev libtiff-dev liblcms2-dev libfftw3-dev liborc-0.4-dev libwebp-dev libfontconfig1-dev libpango1.0-dev libopenjp2-7-dev librsvg2-dev libgsf-1-dev libexif-dev libzstd-dev liblzma-dev libbz2-dev libxml2-dev python3-dev python3-pip; pip install --break-system-packages pyvips pytest; meson setup build && ninja -C build && ninja -C build install && ldconfig",
+  "issue_paraphrase": "Pixel values that scale past the maximum during conversion of a semi-transparent image are not clamped: instead of saturating to the brightest value, they wrap around and come out dark and corrupted. The wrong result depends on the alpha channel, so colors are visibly inconsistent across pixels, and the output silently differs from what an equivalent 8-bit path produces. The fix is a small clamp in one arithmetic path.",
+  "fix_summary": "In the fast uchar->uchar unpremultiply path, clamp the computed value (in[i]*scale + 128) >> 8 to UCHAR_MAX before storing, fixing a regression introduced by 6fcce4c (Resolves #5182).",
+  "difficulty_guess": "easy",
+  "notes": "Very small, deterministic, no network, no fixtures (image built in memory). The relevant assertion was appended to the pre-existing test_unpremultiply method in the fix commit, so overlay the fix's test/test-suite/test_conversion.py onto the parent tree. NOTE for authors: libvips soname filenames change between release eras (libvips.so.42.20.0 vs 42.21.0); a stale .so with the old symlink can silently shadow a fresh build — after rebuilding, delete /usr/local/lib/x86_64-linux-gnu/libvips.so* / libvips-cpp.so* then re-run ninja install + ldconfig, and verify the installed .so with strings before trusting results. Test suite needs pyvips compiled against the built libvips (python3-dev required)."
+ },
+ {
+  "repository": "libvips/libvips",
+  "upstream_issue_ref": "#4877",
+  "fix_commit": "7cfd70a869de8fe3f3a22b32f755e382130b716c",
+  "parent_commit": "ea7e608844b85f4d296821e59b2483369b301b53",
+  "base_image": "bench-base:ubuntu-24.04",
+  "source_files_changed": [
+   "libvips/draw/draw_flood.c"
+  ],
+  "golden_test_paths": [
+   "test/test-suite/test_draw.py"
+  ],
+  "golden_test_names": [
+   "test_draw_flood_out_of_bounds"
+  ],
+  "reproduction": "Build libvips at the target commit, then: python3 -c \"import pyvips; im = pyvips.Image.black(100, 100); im.draw_flood(100, 200, 50)\" \n(parent: completes silently, no error; fix: raises pyvips.error.Error 'draw_flood: start point out of image') — or the project regression test brought in from the fix commit: python3 -m pytest test/test-suite/test_draw.py::TestDraw::test_draw_flood_out_of_bounds",
+  "observed_failure_at_parent": "pytest: 'Failed: DID NOT RAISE <class \"pyvips.error.Error\">' (1 failed). Direct repro: draw_flood(100, 200, 50) on a 100x100 image completes with no error instead of rejecting the out-of-image start point; negative coordinates fail earlier with a confusing GObject 'parameter x/y not set' property error. Buggy code confirmed at parent: draw_flood.c has no 'start point out of image' check (grep count 0 at parent, 1 at fix; installed .so string-checked after every install).",
+  "verified": "Both directions observed in bench-base:ubuntu-24.04 (libvips 8.18.0 meson build, pyvips from pip, pytest). Parent ea7e60884: pytest test_draw_flood_out_of_bounds FAILS (DID NOT RAISE) and direct repro silently succeeds. Fix 7cfd70a86: pytest PASSES and direct repro raises 'draw_flood: start point out of image'. A soname stale-library shadowing issue was caught and fixed during verification (see notes) -- after removing the stale 42.21.0 files, the parent .so was confirmed to lack the fix string and the fix .so to contain it.",
+  "dependency_pins": {},
+  "install_recipe": "apt-get install -y meson ninja-build pkg-config libglib2.0-dev libexpat1-dev libjpeg-dev libpng-dev libtiff-dev liblcms2-dev libfftw3-dev liborc-0.4-dev libwebp-dev libfontconfig1-dev libpango1.0-dev libopenjp2-7-dev librsvg2-dev libgsf-1-dev libexif-dev libzstd-dev liblzma-dev libbz2-dev libxml2-dev python3-dev python3-pip; pip install --break-system-packages pyvips pytest; meson setup build && ninja -C build && ninja -C build install && ldconfig",
+  "issue_paraphrase": "Starting a flood-fill drawing operation at a point outside the image (past the right or bottom edge) is silently ignored - the call returns success and nothing is drawn, so callers get no signal that their coordinates were invalid. Negative coordinates fail too, but with an opaque 'parameter not set' property error rather than a clear out-of-bounds message. After the fix the operation reports an explicit out-of-bounds error.",
+  "fix_summary": "Add an explicit bounds check in vips_draw_flood_build: if the start point x >= Xsize or y >= Ysize, fail with 'start point out of image' instead of silently doing nothing.",
+  "difficulty_guess": "easy",
+  "notes": "Deterministic, no network, no fixtures. NOTE for authors: this commit is from the 8.18.0 era and builds libvips.so.42.20.0 while newer-era commits build libvips.so.42.21.0; meson leaves the old soname file and symlink in place, so a stale .so (containing the fix) can shadow the parent build and make the parent look fixed. After building the parent, delete /usr/local/lib/x86_64-linux-gnu/libvips.so* and libvips-cpp.so*, re-run ninja install + ldconfig, and verify with `strings <libvips.so> | grep -c 'start point out of image'` (must be 0 at parent). Then overlay the fix's test_draw.py onto the parent tree to run the regression test."
+ },
+ {
+  "repository": "libvips/libvips",
+  "upstream_issue_ref": "#5123",
+  "fix_commit": "736059b2e8e3ca84012b68a9ffdc3528bdeb1e8f",
+  "parent_commit": "f0c38f9a7d4bea39e1e1718db2b441c91880a871",
+  "base_image": "bench-base:ubuntu-24.04",
+  "source_files_changed": [
+   "libvips/colour/icc_transform.c"
+  ],
+  "golden_test_paths": [
+   "test/test-suite/test_colour.py"
+  ],
+  "golden_test_names": [
+   "test_icc_float_input"
+  ],
+  "reproduction": "Build libvips at the target commit, then from test/test-suite/: python3 -c \"import pyvips; t = pyvips.Image.new_from_file('images/sample.jpg'); f = (t / 255).cast('float'); print(f.icc_import(input_profile='images/sRGB.icm').avg())\" \n(parent: 0.0; fix: 19.07) — or the project regression test brought in from the fix commit: python3 -m pytest test/test-suite/test_colour.py::TestColour::test_icc_float_input",
+  "observed_failure_at_parent": "pytest: 'assert 0.0 > 1' (AssertionError, 1 failed). Direct repro: a float (0..1) RGB image with an ICC profile imported via icc_import yields average 0.0 -- the whole image is black, because float pixel values in 0..1 were cast to uchar (clipping to 0) before the lcms transform. Buggy code confirmed at parent: icc_transform.c has no lcms float-format path (grep 'vips_icc_make_lcms_format' count 0 at parent, 11 at fix; installed .so string-checked).",
+  "verified": "Both directions observed in bench-base:ubuntu-24.04 (libvips 8.19.0 meson build with lcms2, pyvips from pip, pytest). Parent f0c38f9a7: pytest test_icc_float_input FAILS (assert 0.0 > 1) and direct repro prints avg 0.0. Fix 736059b2e: pytest PASSES and direct repro prints avg 19.07. The fix's test file was overlaid on the parent tree to run the regression test, per protocol.",
+  "dependency_pins": {},
+  "install_recipe": "apt-get install -y meson ninja-build pkg-config libglib2.0-dev libexpat1-dev libjpeg-dev libpng-dev libtiff-dev liblcms2-dev libfftw3-dev liborc-0.4-dev libwebp-dev libfontconfig1-dev libpango1.0-dev libopenjp2-7-dev librsvg2-dev libgsf-1-dev libexif-dev libzstd-dev liblzma-dev libbz2-dev libxml2-dev python3-dev python3-pip; pip install --break-system-packages pyvips pytest; meson setup build && ninja -C build && ninja -C build install && ldconfig",
+  "issue_paraphrase": "Applying an ICC profile transform to a 32-bit float image whose RGB values are in the usual 0..1 range produces an entirely black result, while the identical image stored as 8-bit bytes transforms correctly. The user-visible symptom is a black image with no indication that the transform failed, and no error is raised.",
+  "fix_summary": "Use lcms per-channel float pixel formats for float input (FLOAT_SH path via a new vips_icc_make_lcms_format helper) instead of casting float input to uchar before the transform and clipping 0..1 values to 0. Also refactors the profile-signature table to use lcms pixel-type constants.",
+  "difficulty_guess": "medium",
+  "notes": "Requires lcms2 (liblcms2-dev); needs the in-repo fixtures images/sample.jpg and images/sRGB.icm (both tracked in test/test-suite/images, no network). The diff is ~120 lines (within the 4-400 window). Watch the soname issue described in the other entries (8.19.0 builds 42.21.0; the parent here is 8.19.0 so same filename, but check .so content anyway)."
+ }
+]

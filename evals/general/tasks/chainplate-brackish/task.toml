@@ -1,0 +1,23 @@
+schema_version = "1.4"
+
+[metadata]
+difficulty = "easy"
+category = "debugging"
+verifier_kind = "executes-deliverable"
+deliverables = ["/app/src", "/app/summary.md"]
+tags = ["chainplate-brackish", "debugging", "clean-room"]
+
+[verifier]
+timeout_sec = 1800.0
+network_mode = "no-network"
+
+[agent]
+timeout_sec = 2400.0
+network_mode = "no-network"
+
+[environment]
+build_timeout_sec = 1800.0
+network_mode = "no-network"
+cpus = 1
+memory_mb = 4096
+storage_mb = 8192

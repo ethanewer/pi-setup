@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": null,
+  "notes": "Real upstream repo (psf/requests) cloned shallow at the exact buggy parent commit 0b401c76b6e80a4eecf3c690085b2553f6e261ca; fix commit 6404f345e562d962abe6700a1c357ec1e7e18232 is never fetched into the shipped clone. The instruction describes only the user-visible symptom (TypeError 'object is not iterable' at prepare time / empty body after a 307 redirect) and requires the agent to author its own failing reproduction at /app/reproduce.py before fixing; the fix location is not named. The upstream regression test (test_getattr_proxy_stream_follows_redirect) is extracted at image-build time from the fix commit into /opt/golden and its SHA-256 is asserted by the verifier. The verifier checks: repro fails against a pristine parent-source copy (/opt/presolve) and passes on the repaired tree; golden test passes; three authored hidden cases (unicode file wrappers, 200KB body, lazy proxy, PUT and POST, offline prepare-level) pass; a subset of the project's own suite (test_utils, test_structures, test_packages, test_hooks) still passes; provenance/scope: HEAD pinned, single commit, no unreachable objects, only src/requests/models.py changed at blob level, no untracked files (repo .gitignore covers egg-info/__pycache__/.pytest_cache). Bug reproduces with the pinned deps (urllib3 2.7.0, pytest 9.1.1) inside the image; golden test fails at parent with TypeError 'AttrProxy' object is not iterable and passes on the fixed tree. Built image 721 MB; cold build measured ~17-45 s (pip layer dominates), build_timeout_sec 1800 gives a large margin. Rubric total 12 -> medium."
+}

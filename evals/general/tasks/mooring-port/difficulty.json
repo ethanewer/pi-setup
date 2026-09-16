@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 3,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 75,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on pylint-dev/pylint at parent commit 92b631fac22e503e9520fb5280929499b6787093 (real upstream bug, issue #11357, fixed upstream in 5e00da601a4c14f8321494db4dcdb4a9e42e92d7). With the typing extension enabled, an empty-tuple type-argument subscript such as collections.abc.Generator[()] makes the checker crash with IndexError (pylint/extensions/typing.py visit_subscript indexes node.slice.elts[0] on an empty tuple; the surrounding guard's all() over elts[1:] is vacuously True), reported as F0002 fatal error with non-zero exit, so the whole file never gets checked. Deliberately raised shape: NO reproduction is provided in the instruction; the agent must author its own failing reproduction (/app/reproduce.py) as a deliverable before fixing, and the reproduction must itself demonstrate the crash on a pristine copy of the un-fixed code and a clean run on the repaired tree. The instruction names the symptom (crash on Generator[()] with the typing extension) but not the issue number, fix, or file to change. Rapid, fully offline at 1 CPU: image builds in ~60s, golden functional test 0.6s, the typing-extension functional subset (25 tests) 3s. Verifier: provenance (HEAD at pin, fix commit unreachable, exactly one commit, only pylint/ sources modified, guard shape present in the source), reproduction against pristine vs repaired tree, upstream regression test extracted into /opt/golden at build time (unnecessary_default_type_args.py fix-commit version, sha256-pinned), the project's own typing functional subset, and 4 authored hidden cases (subscript positions such as return annotations and function bodies, corner shapes with direct imports and nested subscripts, message-preservation guards, and a no-extension guard). The project's full functional suite is NOT used as the own-suite bar because two unrelated recursion_error_3152/3159 functional tests fail at the parent commit on Python 3.12 for environmental reasons independent of this bug (confirmed identical after the fix); the targeted typing subset is green at both commits. Rubric honest total 14 = medium: the empty-tuple/all([]) vacuous-truth root cause plus the extension-gated reproduction requirement raise reasoning/debugging scores, but once reproduced the traceback names the exact frame, so it stays medium rather than hard. Reviewer hardening (v4.4 review wave): hidden-case fixtures under /tests are sha256-pinned and nothing else may exist under /tests (blocks a planted /tests/conftest.py; the verifier re-uploads only test.sh+hidden/, and --confcutdir=/tests would load a planted root conftest); new untracked files in the working tree fail provenance (blocks a planted /app/src/conftest.py pyte test-interception); the source-shape gate strips comments/strings and requires the guard inside visit_subscript (blocks a comment decoy 'guard'); golden and typing-suite pytest runs use --confcutdir=/app/src/tests. Demonstrated bypass chains all score 0 after hardening; honest oracle scores 1."
+}

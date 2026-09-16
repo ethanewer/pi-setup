@@ -1,0 +1,57 @@
+{
+  "name": "mobile-open",
+  "viewport_width": 600,
+  "root": {
+    "tag": "div",
+    "id": "app",
+    "class": "app",
+    "children": [
+      {
+        "tag": "div",
+        "class": "shell",
+        "children": [
+          {
+            "tag": "header",
+            "class": "topbar"
+          },
+          {
+            "tag": "aside",
+            "class": "sidebar open",
+            "width": 90,
+            "children": [
+              {
+                "tag": "div",
+                "class": "stat"
+              },
+              {
+                "tag": "div",
+                "class": "stat"
+              }
+            ]
+          },
+          {
+            "tag": "main",
+            "class": "main",
+            "children": [
+              {
+                "tag": "div",
+                "class": "card-grid",
+                "width": 600,
+                "children": [
+                  {
+                    "tag": "div",
+                    "class": "card"
+                  },
+                  {
+                    "tag": "div",
+                    "class": "card"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

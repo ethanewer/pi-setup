@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on psf/requests at parent commit 4443b1a847b190010c2972a658924b98b5db6360 (real upstream issue #7308, fixed by bc7dd0fc4d56e808bcdd85ac2d797b3107c89259): the header name/value validity regexes in src/requests/_internal_utils.py anchor with '$', which in Python's re matches just before a trailing newline, so a header name or value ending in '\\n' silently passes check_header_validity and requests.get/PreparedRequest.prepare; upstream re-anchors with '\\Z'. The instruction names only the user-visible symptom (trailing-newline headers accepted) and the affected public API (requests.utils.check_header_validity, request preparation), and requires the agent to author a failing reproduction script as a deliverable before fixing; the checker runs the agent's own reproduction against a pristine parent tree captured at build time (must fail there) and against the repaired tree (must pass), then the upstream regression test extracted from the fix commit (13/13 must pass), then an offline unit-suite slice (test_utils/test_hooks/test_structures), then two authored hidden cases: bytes header parts plus newline-after-whitespace value variants, and the full request path (PreparedRequest.prepare and requests.get against a local stdlib HTTP server) asserting InvalidHeader is raised before any bytes are sent. Hidden cases are genuine discriminators: all fail at the parent. Repro contract forbids sys.path or absolute imports so the pristine-tree run cannot be subverted; verifier asserts requests resolves from /app/src/src, HEAD is still the parent, the fix commit object is absent, only _internal_utils.py differs, and /opt/prefix is byte-identical to HEAD. Image: python-3.12 base, requests installed editable with pinned urllib3 2.7.0 / certifi 2026.7.22 / charset_normalizer 3.5.1 / idna 3.19 / PySocks 1.7.1 plus pytest 9.1.1, pytest-httpbin 2.1.0, httpbin 0.10.4, flask 3.1.3, werkzeug 3.1.8 (httpbin stack needed by the upstream regression test's local fixture). Measured ~12 s 1-CPU build, 648 MB unique image. Rubric total 11 -> medium."
+}

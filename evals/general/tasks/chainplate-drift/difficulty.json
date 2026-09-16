@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 30,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on scikit-image/scikit-image at parent commit fff7deabe28fb6039c26588f751e9cad88354f19 (real upstream issue #7648, fixed by 96834cf3d57c4a9bad82a471a5548be3ad53a4fa). EllipseModel.estimate() (skimage/measure/fit.py) has no minimum-points check: with 4 arbitrary points it returns True and fabricates meaningless parameters (the five ellipse parameters xc, yc, a, b, theta are underdetermined by 4 points), and with 3 collinear points it returns False with no warning (silent failure). The upstream fix adds 'if len(data) < 5: warn(\"Need at least 5 data points to estimate an ellipse.\", RuntimeWarning); return False' at the top of estimate(). The image clones the repo with only the parent commit in the object store (fix commit unreachable, rev-list --all --count == 1), installs the project editable with meson-python (numpy==2.1.3, scipy==1.14.1, Cython==3.0.12, meson-python==0.16.0, pythran==0.16.0, python 3.12.13) so edits to /app/src are live, and extracts the upstream regression test skimage/measure/tests/test_fit.py::test_ellipse_model_estimate_failers from the fix commit into /opt/golden at build time. Hash of the golden (fix-commit) test file: 5a8c9222b5ff03a5d4d28a4a80b7b77795ba9a6b2b403f1e342f70c3bcae904a. The Dockerfile smoke re-confirms BOTH directions inside the image: at parent the 4-point repro prints True and the golden test fails with 'DID NOT WARN'; after applying the guard the repro prints False with the RuntimeWarning and the golden test passes, together with the project's own -k 'ellipse or circle' subset of test_fit.py. Verifier: provenance (HEAD == parent, fix commit object absent, exactly one commit, the only modified tracked file is skimage/measure/fit.py, no tracked test doctored, import skimage resolves to /app/src/skimage), runs the golden (fix-era) test_fit.py::test_ellipse_model_estimate_failers and then the whole golden test_fit.py (30 tests, the project's own estimator suite) against the agent's repaired tree, and runs three authored hidden cases the upstream test does not use: 4 arbitrary non-degenerate points (fabricated-fit vector, asserts False + exact warning + params stays None), 3 collinear points plus 2- and 1-point inputs (silent-failure vector, asserts the exact warning is the only diagnostic), and a genuine 5-point ellipse that must still fit True with the true parameters and near-zero residuals (guard against over-fixing; expectations computed from the independent parametric ellipse formula, not from predict_xy). The checked-out test_fit.py is deliberately NOT used for the suite proof: its test_ellipse_model_estimate_failers still asserts the pre-fix contract, so under the project's pytest filterwarnings=[error] config a correct fix makes exactly that outdated test fail (upstream updated it in the same commit). All hidden expectations and the exact warning text were verified standalone (without building skimage) and again inside the built image, in both directions."
+}

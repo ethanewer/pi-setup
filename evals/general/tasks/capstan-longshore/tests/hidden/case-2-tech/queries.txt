@@ -1,0 +1,6 @@
+# hidden case 2: short generated names t1..t7, two different supply sets.
+# Buggy commit reported t1, t6, t3, t4, t7 for the first line; the fixed
+# binary must report the missing names strictly in declaration order.
+PREPARE e AS SELECT $t1, $t2, $t3, $t4, $t5, $t6, $t7; EXECUTE e(t2 := 2, t5 := 5);	ERROR:Values were not provided for the following parameters: t1, t3, t4, t6, t7
+# Only t2 and t5 left over.
+PREPARE e AS SELECT $t1, $t2, $t3, $t4, $t5, $t6, $t7; EXECUTE e(t1 := 1, t3 := 3, t4 := 4, t6 := 6, t7 := 7);	ERROR:Values were not provided for the following parameters: t2, t5

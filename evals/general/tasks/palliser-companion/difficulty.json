@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on pytorch/vision at parent commit 8a5946ed6bce34bfeb26b964fc8875447d841ae8 (real upstream bug, issue #9394). torchvision.transforms.v2 elastic_bounding_boxes computes corner points, ceil()s them, and indexes the inverse displacement grid with the raw long indices, so any bounding box whose corner reaches the canvas width/height (x2==W or y2==H after ceil, including the full-canvas box) raises IndexError (index X is out of bounds for dimension 1 with size X) instead of warping the box; interior boxes work, so the failure is easy to miss. The upstream fix (direct-child commit 3cbf38e82f6d0e35cfa8363b165b5a372fcfbfff, PR #9436) adds index_x.clamp(0, inv_grid.shape[2]-1) / index_y.clamp(0, inv_grid.shape[1]-1) in torchvision/transforms/v2/functional/_geometry.py::elastic_bounding_boxes. Deliberately RAISED shape vs the previous wave: the reproduction is NOT shipped; the agent must write /app/repro_elastic.py (a deliverable) that fails against a pristine pre-fix copy of the module and succeeds against the repaired tree, then find the bug in the real tree. The verifier additionally runs the upstream regression test extracted from the fix commit (test_kernel_bounding_boxes_at_canvas_boundary), the project's own full TestElastic suite (94 pass, 74 cuda-skips, 3 xfail in ~4s), and hidden cases over XYWH/CXCYWH formats, float64 near-boundary coordinates, a batch of edge-touching boxes under a non-identity displacement, and the tv_tensors.BoundingBoxes dispatch path. Environment notes: torch==2.14.0+cpu / torchvision==0.29.0+cpu CPU wheels (repro verified at both commits inside the task image); the checkout's era-matched transforms/v2 sources are overlaid on the wheel because the released wheel strips cvcuda-era imports the project's test helpers need, with functional/_geometry.py symlinked so executed code tracks the deliverable; torch 2.14.0's torch.jit.script deprecation FutureWarning is removed from the pinned torch install because the era's test module runs pytestmark filterwarnings('error') and would otherwise fail every jit-scripted kernel test for environmental reasons (identical pre- and post-fix). Pure CPU, no network, ~10s verifier runs. Both directions (golden fails at parent, passes at fix; suite green at both) verified inside the task image before shipping."
+}

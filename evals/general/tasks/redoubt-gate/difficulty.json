@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 2,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 3,
+    "adversarial_inputs": 3,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 90,
+  "documented_probe": null,
+  "notes": "Hard. The agent receives a Maven project whose JUnit suite dies at runtime with NoSuchMethodError on com.example.formatter.Formatter.format(String, char). Two versions of formatter are reachable transitively through different paths (lib-y -> formatter 2.0.0 at depth 2; greeter -> conventions -> formatter 1.0.0 at depth 3) and Maven's nearest-wins rule picks 2.0.0, which dropped the char-fill API. Everything is offline: /opt/m2repo is pre-seeded at image build time with the five com.example artifacts (authored clean-room for this task, sources shipped at /app/libsrc) plus the JUnit 5.11.4 stack and pinned lifecycle/dependency/enforcer plugins. The agent must reason about Maven's dependency resolution (depth rule, dependencyManagement vs exclusions, effective model) and make the resolution structural in pom.xml. The verifier is multi-stage: (1) deliverable exists; (2) merges two hidden JUnit suites into src/test exercising exactly the previously-missing filled-text format API and the greeting path end to end, then requires `mvn -B -o verify` green with the hidden classes genuinely executed (surefire reports parsed, >=5 tests, 0 failures, GreetingTest may not be deleted); (3) runs `mvn -B -o dependency:tree` and requires exactly one com.example:formatter version, 1.0.0; (4) adversarial: copies the project, surgically restores the conflict (strips formatter exclusions, strips dependencyManagement overrides, re-adds a direct formatter:2.0.0 edge) and requires `mvn -B -o validate` to fail, proving a maven-enforcer rule that fails the build if the conflict returns. No network, cpus=1, no resource pressure, no unsafe actions."
+}

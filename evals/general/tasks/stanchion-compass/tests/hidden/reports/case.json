@@ -1,0 +1,16 @@
+{
+  "label": "hidden-reports",
+  "route": "/reports",
+  "ready": [
+    { "selector": "[data-testid=reports-head]", "contains": "scm_d20a_reports" },
+    { "selector": "[data-testid=reports-list]", "contains": "TMPL-0000" }
+  ],
+  "steps": [
+    {
+      "action": { "kind": "click", "selector": "[data-testid=expand-TMPL-0000]" },
+      "checks": [
+        { "selector": "[data-testid=report-detail]", "nonempty": true }
+      ]
+    }
+  ]
+}

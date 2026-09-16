@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 3,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 3,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 75,
+  "documented_probe": null,
+  "notes": "Upstream-clone legacy C modernisation: id-Software/DOOM linuxdoom-1.10 (1997) must compile against gcc 13/glibc 2.39 and the resulting binary must boot headless under Xvfb and play a fixed recorded demo to completion. The failure surface is broad and unlabelled (missing libc5-era headers, TLS errno clash, pointer-in-int config tables, 64-bit pointer truncation and pointer-array sizing, a fortify-exposed 1-byte overflow in IWAD path) and the -O2 hidden build config exposes a crash that the baseline -g build does not, so flag-blind fixes that merely silence the default build lose the hidden cases. Oracle fixes 7 files with a 29/28 line diff, verified across three flag sets and three demo fixtures."
+}

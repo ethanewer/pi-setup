@@ -1,0 +1,37 @@
+---
+title: Installation
+order: 10
+date: 2025-01-08
+tags: [setup]
+---
+
+quaydoc is a single Python package with no dependencies beyond the standard
+library. Python 3.9 or newer is required.
+
+## Install from source
+
+```console
+$ git clone https://example.invalid/quaydoc && cd quaydoc
+$ python3 -m quaydoc.cli --version
+quaydoc 0.9.0
+```
+
+There is nothing to install to try it: run the CLI with
+`python3 -m quaydoc.cli` straight from the checkout. To install it into
+your environment, use `pip install .` (the project metadata is in
+`pyproject.toml`); that also puts a `quaydoc` console script on your path.
+
+## Verify the install
+
+The test suite exercises the lexer, parser, inline markup, slug and anchor
+logic, link resolution, the table of contents, the renderers, the template
+engine, config loading, the search index, the checker and the CLI:
+
+```console
+$ python3 -m pytest -q tests
+```
+
+## Next steps
+
+- [[Writing pages]] describes the source format.
+- [[Building a site]] shows the build and preview loop.

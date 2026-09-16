@@ -1,0 +1,29 @@
+diff --git a/pylint/checkers/classes/class_checker.py b/pylint/checkers/classes/class_checker.py
+index cad4ba1c..212c8440 100644
+--- a/pylint/checkers/classes/class_checker.py
++++ b/pylint/checkers/classes/class_checker.py
+@@ -1926,6 +1926,11 @@ a metaclass class method.",
+         if self._is_type_self_call(node.expr):
+             return
+ 
++        # If the expression is self.__class__ (or the class of any other
++        # mandatory first method parameter), that's equivalent to type(self).
++        if self._is_self_class_access(node.expr):
++            return
++
+         # Check if we are inside the scope of a class or nested inner class
+         inside_klass = True
+         outer_klass = klass
+@@ -1983,6 +1988,12 @@ a metaclass class method.",
+                 return self._is_mandatory_method_param(arg)
+         return False
+ 
++    def _is_self_class_access(self, expr: nodes.NodeNG) -> bool:
++        match expr:
++            case nodes.Attribute(attrname="__class__", expr=arg):
++                return self._is_mandatory_method_param(arg)
++        return False
++
+     @staticmethod
+     def _is_classmethod(func: nodes.LocalsDictNodeNG) -> bool:
+         """Check if the given *func* node is a class method."""

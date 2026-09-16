@@ -1,0 +1,6 @@
+# Vectorized execution of the same %c path over row sets the upstream
+# regression does not use (upstream uses range(200, 300); here: arithmetic
+# rows, filtered rows, and wider ranges mixing valid and invalid bytes).
+SELECT printf('%c', 128 + i) FROM range(0, 4) t(i);	ERROR:Invalid UTF8 produced by format string
+SELECT printf('%c', i) FROM range(200, 210) t(i) WHERE i % 2 = 0;	ERROR:Invalid UTF8 produced by format string
+SELECT printf('%c', i) FROM range(0, 300) t(i) WHERE i % 3 = 2;	ERROR:Invalid UTF8 produced by format string

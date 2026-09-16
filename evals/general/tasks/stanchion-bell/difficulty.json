@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 75,
+  "documented_probe": null,
+  "notes": "Web/a11y remediation on a self-authored React 18 app. The shipped site carries eight real defects spread across shared components (missing labels, wrong role/name on the menu toggle, aside-before-main focus order, no live region on the announcement, colour-only status dots, no skip link, skipped heading level with brand h1, images without alt). The verifier renders pages under jsdom, runs axe-core (WCAG A/AA + best-practice; color-contrast and target-size excluded as unmeasurable under jsdom) asserting zero moderate+ violations, and adds targeted DOM assertions axe cannot see: skip link first, main-before-complementary tab order, role=status/aria-live announcement, textual non-colour-only state, explicit labels (placeholder alone rejected — axe 4.10's label rule accepts placeholder, so this is asserted directly), exactly one h1, every data-declared form control rendered, and every data-declared content image rendered with its data alt. Three hidden pages render unseen data through the same components, so only root-cause component fixes generalize; the oracle repairs the components and proves the visible suite green. Hidden-case generalization is the core difficulty: axe reports 4 of the 8 categories, the other 4 require the targeted contract to be read and implemented. No stateful interaction and no resource pressure: the verifier is a one-shot jsdom render. Medium bucket (12)."
+}

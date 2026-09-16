@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on falconry/falcon at parent commit 1ae55f7d46f1f210550972366ee68fc62cd9f3d9 (real upstream bug, issue #2667, fix PR #2682 ce0a35b8fd02747cc72710202886874906b0d47a). WSGI apps mounted under a non-ASCII URL prefix get a mojibake root path: Request.root_path returns the SCRIPT_NAME environ value verbatim (the PEP 3333 latin-1 tunnel encoding), so '/café' is reported as '/cafÃ©' and URL reconstruction that uses the mount prefix breaks. The instruction withholds the reproduction and requires the agent to write its own failing reproduction (/app/repro.py, precise output/exit-code contract) BEFORE fixing, then localise the bug in the real tree, keep the project's own full test suite (3786 tests) green, and only modify falcon/request.py (new files inside falcon/ or tests/ are rejected). The verifier runs the agent's repro and the upstream regression test (extracted from the fix commit into /opt/golden) against both the repaired tree and a pristine pre-fix tree baked at /opt/prefix-src, runs the full project suite, and checks module origin under an isolated interpreter (python3 -I -S) so sitecustomize/.pth/pip-installed wrappers are invisible. Four hidden cases use inputs the upstream test does not: Cyrillic multi-byte prefix, U+20AC (3-byte), emoji (4-byte), and a lone 0xA9 byte that forces the PEP 3333 'replace' semantics (guards a strict-decode or hardcoded-string fix). FAIL and FIX directions were both proven inside the task image at build time (the build fails closed otherwise). Pure Python, no compiled extensions, no network at trial time; build ~1 minute, full suite ~31s on one CPU."
+}

@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on semgrep/semgrep at parent commit ae531156ca6f2f692827696723e35b786fb7fa92 (real upstream issue #9943, fixed by c7d2925fbe7495bc9684f61be6212a438e438dd2). The bug: RuleMatch.is_blocking() OR-ed the rule's general dev.semgrep.actions flag into the decision for every finding that went through validation, and is_validation_state_blocking() mapped the NoValidator state to the per-state 'valid' action instead of falling back to the general action. Result: a validator rule whose general action was 'block' blocked EVERY validation state (invalid findings with per-state 'monitor' still blocked CI), and a no-validator finding could be blocked by the per-state map alone. The image clones semgrep at the parent, overlays the fix-commit version of cli/tests/default/unit/test_rule_match.py (which carries the upstream regression test test_validator_rule_blocking, byte-identity sha-checked), so pytest on that file fails exactly as mined: 3 failed / 13 passed (cases: valid+block->False, invalid+block->False, no-validator+all-block+monitor->False). The fix commit is fetched only into a throwaway bare clone under /tmp that is deleted; it is unreachable from /app/src and /opt/pristine (asserted at build and re-asserted by the verifier). A pristine copy of the tree (/opt/pristine) lets the verifier run the agent's own /app/reproduce.py against the pre-fix tree concept (must detect the bug, exit non-zero) and against the repaired tree (must be clean). The agent must author its own failing reproduction as a deliverable before fixing, localize the bug in the Python rule-match layer, and fix the two-function boolean interaction; the verifier additionally requires the project's own 19 tests (test_rule_match.py + test_rule.py) to pass and runs 3 authored hidden-case drivers (11 assertions) using validation states/action maps/absent-general-action inputs the upstream parametrization does not use (ValidationError with per-state monitor and with missing per-state key, NoValidator with per-state-only valid block, and metadata without the dev.semgrep.actions key). Measured: image build 29 s at 1 CPU, image unique size 648 MB (<6 GB budget), pytest runs in ~0.3 s. Difficulty deliberately raised versus the base pool: the reproduction is not handed to the agent, the instruction names neither the source file to change nor the fix.", "probe_note": "Oracle applies the minimal upstream fix (NoValidator -> dev.semgrep.actions fallback; is_blocking validation branch returns is_validation_state_blocking alone), writes a genuine 5-scenario reproduce.py, runs the project's own tests (19 passed) and proves the repro detects the bug on /opt/pristine and reports clean on the repaired tree."
+}

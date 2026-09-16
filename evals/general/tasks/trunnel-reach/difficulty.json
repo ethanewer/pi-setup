@@ -1,0 +1,18 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 3,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 1,
+    "resource_pressure": 1,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 90,
+  "documented_probe": null,
+  "notes": "Binary-analysis task standing in for TB2.1 klee/klee. Agent must recover a 16-byte printable input for an authored crackme binary using the pinned upstream angr symbolic-execution stack (Project + symbolic stdin + exploration/solving), package it as a reusable /app/solve.py, and generalize to hidden binaries compiled from the same generator with different constants. Solving on 1 CPU measures 1.5-3s per binary; verifier asserts angr usage statically and behaviourally that recovered inputs are accepted by each hidden binary. Rubric total 18 = hard.",
+  "fallback": "none"
+}

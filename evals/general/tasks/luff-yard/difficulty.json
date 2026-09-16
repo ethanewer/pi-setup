@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on pallets/werkzeug at parent commit 795f4eaf6ef1fdc2fd1d7114c61ad384ede4322c (real upstream bug, issue #3127, fixed by 051fd66352cf8b3f0797249858068dedaead6d39). WWWAuthenticate.to_header emits a trailing space when a challenge carries neither parameters nor a token ('Bearer ' instead of 'Bearer'), because the no-parameter early return is missing and the parameter join/dump path writes a trailing space; strict HTTP/1.1 stacks (e.g. h11) reject the header. The instruction reports only the user symptom, does NOT name the class, method, file, fix, issue or PR, and does NOT ship a reproduction: the agent must write its own failing reproduction at /app/reproduce_www_authenticate_bug.py (a deliverable with an exit-status contract) before fixing anything, then localise and fix the real tree and keep the project's own test suite green. Dependency pins follow the mining record (pytest 9.1.1, pytest-xprocess 1.0.2, plus the project's declared test extra and the flit build backend, all exact). The verifier asserts provenance (HEAD pinned to parent, single commit, fix commit unreachable from the clone, only src/werkzeug/ modified, source contains the genuine guard inside WWWAuthenticate.to_header so a wrapper cannot fake it), runs the agent's own reproduction against a stash-restored pristine pre-fix tree (must fail) and against the repaired tree (must pass), runs the upstream regression test extracted from the fix commit into /opt/golden at build time (overlaid then restored), runs the project's own tests/test_http.py + tests/test_datastructures.py (247 tests, <1 s at 1 CPU), and two authored hidden cases: a parameterless-scheme matrix (basic/bearer/digest/negotiate/custom-scheme + case variants + strict token grammar) and a guard that parameterised and token challenges serialize exactly as before. Both directions re-confirmed inside the task image before shipping (parent: 'Bearer ' repro + golden FAIL; 3-line fix: 'Bearer' repro + golden + full suite PASS). Pure Python, fully offline, image ~1.5 GB, build ~40 s."
+}

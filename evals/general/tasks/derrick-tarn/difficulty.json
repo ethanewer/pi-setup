@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 2,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 3,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 90,
+  "documented_probe": "mikf/gallery-dl @ 2adf2a8e0041ec55afdcc2211fd5c7ca239a9352 (tag v1.32.11, annotated tag; the release commit it points to, asserted by hash in the Dockerfile): 4MB shallow, 763 files, ~128k LOC, pyproject+setup+Makefile. Pure Python; no compilation. Base python-3.12 + requests==2.32.5. Image builds in <3 min at 1 CPU (clone ~1s, pip ~1-2 min cold). CLI starts and lists extractors offline in well under a second.",
+  "notes": "Upstream-clone extractor task standing in for TB2.1's yt-dlp write-a-new-extractor task, pinned to mikf/gallery-dl v1.32.11. The agent must add a NEW extractor module for the fictional picdrome site to the real gallery-dl tree (128k LOC, ~250 existing extractor modules), register it with the project's own discoverability mechanism, and make the unmodified gallery-dl CLI download galleries served by an offline loopback mock. The verifier starts its own mock-server instance on a different loopback port for three hidden galleries (distinct titles, counts, image formats) and asserts byte-identical downloads, exact NNN.ext naming, and exact -j metadata (title from the page <title>, count). Port-agnosticism and content generality are required; a standalone script that ignores the clone cannot pass because hidden runs go through the gallery-dl CLI only and require the extractor to be listed by the project's own --list-extractors."
+}

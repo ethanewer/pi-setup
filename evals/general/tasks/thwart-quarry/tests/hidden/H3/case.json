@@ -1,0 +1,21 @@
+{
+  "port": 6404,
+  "ttl_seconds": 3,
+  "backend_latency_s": 0.2,
+  "values": {
+    "carboy": "green-glass",
+    "spindle": "boxwood-axle",
+    "dowel": "maple-round",
+    "ferrule": "nickel-collar",
+    "trunnel": "oak-peg",
+    "gimlet": "twist-shank"
+  },
+  "readers_per_key": 10,
+  "rounds": 3,
+  "spend_key": "treasury",
+  "spend_start": 400,
+  "spend_workers": 10,
+  "ops_per_worker": 25,
+  "amount_min": 1,
+  "amount_max": 3
+}

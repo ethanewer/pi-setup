@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 1,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 90,
+  "documented_probe": null,
+  "notes": "Upstream-clone bugfix in Z3Prover/z3 (v4.2 family), upstream issue #10609, fix commit 384d2d881f544e0f3abfa21e0e3ebe6beb9821d7 (parent d1f10234c50a49ee1cc7d08c87a680daf430017c). Image clones the real repository SHALLOW at the parent commit with the bug present; the agent must localise and fix it in the real tree. Bug: fpa2bv_converter::mk_rem() computed a wrong IEEE 754 remainder for fp.rem whenever the divisor is subnormal: the dividend significand was widened by only max_exp_diff = 2^ebits - 3 bits, but a subnormal divisor can lower the normalized exponent such that the exponent difference x_exp + y_leading-zeros exceeds that width, so the high bits of the dividend are shifted out before the remainder computation and the bit-blasted result is wrong (for the pinned half-precision repro: -0.0, encoding #x8000, instead of the true remainder #x000a). With the pinned repro query answered via the check-sat-using (then fpa2bv simplify bit-blast smt) pipeline, the parent returns sat (operands fully pinned -> must be unsat). Fix (upstream): widen both significands by sig_ext_amount = max_exp_diff + sbits - 1, drive the zero-extension loop and the following bit-vector-width arithmetic from sig_ext_amount instead of max_exp_diff. Re-confirmed both directions in this author's own build of the exact commits with the same toolchain (g++ 13.3.0 + cmake 3.28.3 on ubuntu 24.04) and again inside this task's own image: parent build answers sat for the repro, fix build answers unsat; the project's own regression test added by the fix commit (src/test/fpa.cpp, extracted at image build time into /opt/golden, golden sha256 b5bed2720afa7cdbba4ad9ddc22ed68f03f84b758a1f9c9a5a8147d3530ddba9; never part of this task tree) fails with an assertion on the parent build and passes on the fix build; independent exact-rational IEEE-754 computation in Python matches the fixed solver on every probed operand pair. Verifier: provenance (HEAD is the pinned parent, every tracked file except src/ast/fpa/fpa2bv_converter.cpp byte-identical to the parent blobs, no untracked non-ignored files, /app/summary.md non-empty) + incremental rebuild from the warm image (shell binary and, after planting the golden file and the two one-line test-registration edits, the test-z3 harness) + the project's own regression test (test-z3 fpa) + the project's ENTIRE existing unit suite (test-z3 -a; at 1 CPU the whole suite runs in 34s) + three authored hidden SMT cases (half-precision operands with bit patterns, signs and expected encodings different from every visible case; each independently cross-checked by exact rational arithmetic; fail at parent with sat, pass at fix with unsat). Oracle applies the authored fix.patch (a copy of the upstream diff for fpa2bv_converter.cpp). Toolchain: apt g++ cmake make on bench-base:ubuntu-24.04 (no dependency pins)."
+}

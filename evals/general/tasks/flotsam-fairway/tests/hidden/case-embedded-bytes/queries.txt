@@ -1,0 +1,13 @@
+# %c bytes >= 128 at different positions and as continuation/lead bytes.
+# Each of these makes printf return a VARCHAR that is not valid UTF-8; the
+# fixed engine rejects it with the clean 'Invalid UTF8 produced by format
+# string' error (the buggy engine instead surfaces low-level decoding errors,
+# INTERNAL errors or silently-returned invalid bytes).
+SELECT printf('%c%c', 65, 255);	ERROR:Invalid UTF8 produced by format string
+SELECT printf('ab%c', 255);	ERROR:Invalid UTF8 produced by format string
+SELECT printf('x%c%c', 128, 129);	ERROR:Invalid UTF8 produced by format string
+SELECT printf('%c', 128);	ERROR:Invalid UTF8 produced by format string
+SELECT printf('%c', 191);	ERROR:Invalid UTF8 produced by format string
+SELECT printf('%c', 194);	ERROR:Invalid UTF8 produced by format string
+SELECT printf('%c', 233);	ERROR:Invalid UTF8 produced by format string
+SELECT printf('%c%c', 255, 255);	ERROR:Invalid UTF8 produced by format string

@@ -1,0 +1,58 @@
+---
+title: Building a site
+order: 40
+description: The build pipeline, configuration and preview loop.
+---
+
+Building is a single command. From a documentation root containing
+`quaydoc.toml` (optional) and any number of `.qd` or `.md` files:
+
+```console
+$ python3 -m quaydoc.cli build . -o /tmp/site
+ok: built 9 page(s), 3,412 words, 47.1 KB in 0.21s
+```
+
+## What a build does
+
+1. Discover source files (skipping the output directory, hidden
+   directories, and `.quayignore` patterns),
+2. parse every page: front matter, blocks, inline markup, includes,
+3. assign heading anchors and resolve reference targets,
+4. render each page and its navigation,
+5. write the pages plus `assets/`, `search_index.json`, `sitemap.xml` and
+   `feed.xml`.
+
+## Configuration
+
+`quaydoc.toml` holds the settings:
+
+```toml
+[site]
+title = "Quaydoc Manual"
+base_url = "https://docs.example.net/quaydoc"
+pretty_urls = true
+
+[build]
+output_dir = "site"
+search = true
+rss = true
+default_lang = "python"
+```
+
+Unknown keys are reported as warnings by `quaydoc check`. The full key list
+is in the configuration reference.
+
+## Preview loop
+
+`quaydoc serve site` starts a local server on port 8000. When you are
+editing sources, `quaydoc watch .` rebuilds the site whenever a source file
+changes:
+
+```console
+$ python3 -m quaydoc.cli watch .
+```
+
+## Archiving
+
+`quaydoc build --archive manual.tar.gz` bundles the rendered output into a
+gzip tar that reproduces the site root on extraction.

@@ -1,0 +1,60 @@
+:root {
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  color: #1c2430;
+}
+
+body {
+  margin: 0;
+  background: #f5f7fa;
+}
+
+.app {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+.app-header h1 {
+  font-size: 1.4rem;
+}
+
+nav a {
+  margin-right: 1rem;
+  color: #0b5cad;
+  text-decoration: none;
+}
+
+.view {
+  background: #fff;
+  border: 1px solid #dfe4ea;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.row {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+th,
+td {
+  border: 1px solid #e3e8ef;
+  padding: 3px 8px;
+  font-size: 0.85rem;
+  text-align: left;
+}
+
+.rid,
+.aid {
+  font-family: ui-monospace, monospace;
+  font-size: 0.8rem;
+  background: #eef2f7;
+  border-radius: 4px;
+  padding: 1px 5px;
+}

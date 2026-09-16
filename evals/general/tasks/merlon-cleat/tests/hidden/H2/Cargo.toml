@@ -1,0 +1,11 @@
+[package]
+name = "pennagg"
+version = "0.1.0"
+edition = "2021"
+description = "Hidden consumer H2: aggregates a generated frame log via the pennant API"
+
+[dependencies]
+pennant = { path = "/app/pennant" }
+
+[profile.release]
+opt-level = 3

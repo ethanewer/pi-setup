@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 30,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on pypa/pip at parent commit 9d0e2601f8c82765b0fe92001540e9a7ddd4fdf1 (real upstream bug, issue #6385). When a requirement line carries a marker section that is not a valid environment-marker expression (e.g. two marker expressions separated by a semicolon), pip._internal.req.constructors calls Marker() unguarded, so pip._vendor.packaging.markers.InvalidMarker escapes install_req_from_line as an uncontrolled traceback instead of a clean InstallationError('Invalid requirement: ...'), and the command exits without a helpful message. Agent must localise the bug in the real tree (marker parsing in src/pip/_internal/req/constructors.py), fix it, and keep the project's own tests/unit/test_req.py green; the verifier additionally runs the upstream regression test extracted from the fix commit 95ef105f4eea913c09170dab3f4b6efebddf2843 into /opt/golden at image build time, plus authored hidden cases over invalid-marker inputs the upstream test does not use (double marker expressions, unterminated string, unbalanced parenthesis) and a valid-marker regression guard. Pure Python, offline, ~10s test file (81 tests). Both directions re-confirmed inside the task image before shipping."
+}

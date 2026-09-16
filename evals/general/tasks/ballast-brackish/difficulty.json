@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 1,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": null,
+  "notes": "Upstream-clone soundness bugfix in Z3Prover/z3 (v4.2 family): seq_rewriter::mk_seq_nth_i resolves elements of a concatenation by comparing the absolute target offset against the loop index over concat pieces instead of a cumulative character position, so when an ite element is skipped the counters desynchronise, a wrong element is picked, a false equality axiom is asserted and satisfiable (Seq Int) formulas with seq.extract over nested concatenations become spurious UNSAT. Verified in-image at parent 5fcd89bf: reproduction and hidden cases print unsat (wrong); at fix 8fd4b73a they print sat. Upstream's own regression addition to src/test/seq_rewriter.cpp is planted from /opt/golden at verification time (note: that C++ test constructs the concat flat and passes even on the buggy tree; the discriminating gates are the authored nested-concat SMT2 hidden cases, verified parent=unsat/fix=sat). Build is warm in the image (cmake build/ shipped); agent rebuilds incrementally at 1 vCPU. Verifier: provenance (HEAD==parent, byte-identical tree except the one source file), summary.md, planted golden seq_rewriter module (test-z3 seq_rewriter), 3 hidden SMT2 cases expecting sat + 1 expecting unsat through the agent-built build/z3. Oracle applies the authored one-file patch (the real upstream fix)."
+}

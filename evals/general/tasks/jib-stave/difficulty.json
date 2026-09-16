@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": null,
+  "notes": "Medium. The agent inherits an npm-workspaces monorepo whose release pipeline is broken by a deliberate dependency/version skew: scale's own version slipped back to the 1.2.0 line while core/api stayed on 2.1.0, api pins scale to that stale line, and core's published entrypoints (main/types/exports) point at stale 1.4-era packaged artifacts (lib/) instead of the build output. npm ci still installs (all @jibblin ranges resolve to workspace members), but consumers that resolve the published packages compile against 1.4-era declarations (Token as string, mint/validate/ttl instead of issue/verify/ageSeconds), the per-package runtime suites fail through the legacy main, and the manifest versions disagree with the committed lockfile. The agent must repair the workspace layout so one build emits consistent declarations for all three and internal version references resolve on the 2.1.0 line; the verifier runs npm ci --offline, npm run build -ws, the per-package suites, tsc against the visible consumer plus two hidden consumer fixtures, and asserts the emitted .d.ts contents, entrypoint targets, exact manifest versions, an unedited shipped suite and consumer (byte-compared), and a build that must (re)produce dist from scratch (dist/tsbuildinfo removed before the verifier's build). Difficulty from dependent_stages (install -> build -> suite -> consumers -> declaration/content asserts), tool_breadth (npm, tsc project references, node, git, package exports semantics), reasoning_depth+debugging_ambiguity (three co-located skews with a green build masking the published-types mismatch; git history available), hidden_case_generalization (2 hidden downstream consumers importing different surfaces). Low resource pressure, no irreversible actions."
+}

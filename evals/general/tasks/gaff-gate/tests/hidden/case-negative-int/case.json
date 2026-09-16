@@ -1,0 +1,8 @@
+{
+  "method": "status",
+  "invalid": [
+    { "in": -404, "type": "RangeError" },
+    { "in": -1, "type": "RangeError" },
+    { "in": 0, "type": "RangeError" }
+  ]
+}

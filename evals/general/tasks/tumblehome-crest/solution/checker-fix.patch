@@ -1,0 +1,29 @@
+diff --git a/mypy/checker.py b/mypy/checker.py
+index 4d4f376..2d645a7 100644
+--- a/mypy/checker.py
++++ b/mypy/checker.py
+@@ -6778,6 +6778,24 @@ class TypeChecker(NodeVisitor[None], TypeCheckerSharedApi, SplittingVisitor):
+                             expr_indices=[0, 1],
+                             narrowable_indices={0},
+                         )
++                        # Negative narrowing of the LEFT operand (the branch where
++                        # the probe is *not* in the container, e.g. `x not in c`)
++                        # is only sound when the container's contents are statically
++                        # known: a tuple whose items have singleton equality types,
++                        # as in `x not in (None,)`. For any general container the
++                        # probe may simply be absent (a container can be empty), so
++                        # discard the narrowing instead of marking reachable code
++                        # as unreachable.
++                        if else_map and not (
++                            isinstance(p_typ := get_proper_type(iterable_type), TupleType)
++                            and all(
++                                is_singleton_equality_type(get_proper_type(item))
++                                for item in p_typ.items
++                            )
++                        ):
++                            # General containers: the "not found" branch is
++                            # reachable regardless of the probe's type.
++                            else_map = {}
+ 
+                 if right_index in narrowable_operand_index_to_hash:
+                     if_type, else_type = self.conditional_types_for_iterable(

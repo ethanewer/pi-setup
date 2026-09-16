@@ -1,0 +1,11 @@
+{
+  "method": "sendStatus",
+  "invalid": [
+    { "in": -5, "type": "RangeError" },
+    { "in": 77, "type": "RangeError" },
+    { "in": 511.5, "type": "TypeError" },
+    { "in": "404", "type": "TypeError" },
+    { "in": [], "type": "TypeError" }
+  ],
+  "http_valid": [ 200, 418, 599 ]
+}

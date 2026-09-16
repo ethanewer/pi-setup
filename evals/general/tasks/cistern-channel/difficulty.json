@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 0,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 0,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": "falconry/falcon pinned at parent 1f914c5143250c1113089868f30eed67697dc40d (shallow single-commit clone; the fix commit cae50da40454a361fec84e58d4b44bedc5b6c0cd is never fetched into /app/src and is provably absent from its object store). python 3.12.13 + pytest 8.3.5, falcon installed editable from /app/src at image build time so the agent's tree edits are live on import. Probe (measured inside the task image): bare reproduction `MultipartParseOptions(); b=...; a.media_handlers.pop(MEDIA_JSON); print(len(a), len(b))` prints '1 1' at the parent and '1 2' after the one-line fix; the pinned upstream regression test test_multipart_parse_options_default_handlers_unique FAILS at the parent (AssertionError: len(parse_options_two.media_handlers) == 1, expected >= 2) and PASSES after the fix; the whole golden tests/test_media_multipart.py (863 lines) plus tests/test_media_handlers.py, tests/test_media_urlencoded.py and tests/test_mediatypes.py go from 1 failure to fully green. The whole suite slice runs in ~10 s on one core. Image size ~820 MB, build ~3-4 min. Offline-clean confirmed by running the oracle+verifier with no network.",
+  "notes": "v4.2 upstream-clone task. The agent gets the REAL falconry/falcon tree (pure-Python web framework, ~80 source modules; multipart parsing under falcon/media/) at the parent commit, sees only the user-visible symptom (customising which media handlers a multipart parser uses leaks into every other parser created in the same process), and must reproduce, localise and fix it in falcon/media/multipart.py without being told the file, function, issue number or commit (the fix commit is not reachable from the clone and there is no network). The verifier plants the project's OWN regression test (tests/test_media_multipart.py as at the fix commit, extracted at image build time into /opt/golden, never vendored into this task tree) plus 3 authored hidden cases (per-instance handler REPLACEMENT rather than pop; a fresh options instance created AFTER a mutation; the del-operator path through the public MultipartFormHandler.parse_options API), runs the golden file and the project's own media suite (test_media_multipart.py, test_media_handlers.py, test_media_urlencoded.py, test_mediatypes.py) with pytest, and greps per-test PASSED lines so skipped/neutralised runs fail. Provenance is enforced at the blob level: HEAD must stay the pinned parent commit, every tracked file except falcon/media/multipart.py and falcon/media/handlers.py must hash to the pinned commit's blob, no untracked non-ignored files, no unreachable objects, and the installed falcon must import from /app/src. The over-fix direction is guarded: a fix that rebuilds the defaults from Handlers() (which would add MEDIA_MULTIPART to the set) fails the golden test's len==1 assertion, and deleting the mutation API fails every test. Nop container scores 0 (golden test fails at parent; summary.md missing)."
+}

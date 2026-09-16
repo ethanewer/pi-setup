@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 3,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 90,
+  "documented_probe": null,
+  "notes": "Upstream-clone debug task in rust-lang/regex (v4.3 family, issue #1046): a search whose pattern ends in a Unicode word boundary followed by a literal (e.g. '.+\\b\\n' against a haystack that starts with a non-ASCII letter, like the Greek beta) silently returns a truncated match (bytes 3..5 instead of the true 0..5) with misaligned captures. Root cause: the meta engine's ad hoc DFA/hybrid half-reverse and end-of-input search routines return a tentative match when a quit state is entered instead of returning a 'quit' error, so the higher-level engine never diverts to a strategy that handles the Unicode word boundary correctly; eight near-identical quit-shortcut sites across regex-automata/src/meta/{limited,stopat}.rs must lose the 'if mat.is_some() { return ... }' shortcut. Agent gets the real tree at the parent commit (depth-1 object store, fix commit provably unreachable), must AUTHOR its own failing reproduction (/app/repro.sh adding a data-driven regression entry to testdata/regression.toml and running the project's own 'integration' harness filtered via REGEX_TEST) before fixing, then localise and patch. Verifier: provenance (HEAD == parent, fix unreachable, tracked-file scope limited to the two meta source files + testdata/regression.toml, no scratch files), pre-fix direction (revert both source files, rebuild, agent's repro must FAIL with the harness's truncated-match text), post-fix direction (restore, rebuild, repro must PASS), then the upstream regression test planted from /opt/golden (extracted from the fix commit via throwaway clone) plus the full integration harness (all 64 existing tests; string/bytes/set/regression groups), and three authored hidden cases using inputs the upstream test does not use (Greek alpha prefix, an ASCII 'a' before the non-ASCII text, and a tab terminator): each verified to fail at the parent and pass at the fix. Toolchain and golden bytes sha256-pinned. Honest scope note: the forward-half-search quit sites in stopat.rs are the same defect class but are not reachable through any harness-observable input found; the verifier therefore requires the canonical two-file fix (diff must include both files), matching the upstream change exactly. Measured in the task image at 1 CPU: full cargo build ~25s, integration test target build ~33s, incremental rebuild+run after touching two source files ~6s, whole 64-test harness run ~0.1s; image size well under 6 GB; rubric total 16 lands in the medium bucket (deliberately raised from the easy/medium pool by withholding the reproduction and requiring authored reproduction + canonical two-file fix)."
+}

@@ -1,0 +1,9 @@
+# case2: lambda cast failures through types the upstream regression test
+# (INT on ['1','a']) does not use, plus a successful cast guard that must
+# keep returning its exact value on both engines.
+# CLEAN:<substring>  -> clean error containing the substring on the repaired
+#                       engine; INTERNAL error on the pre-fix engine.
+# VALUE:<v>          -> exact value on BOTH engines.
+SELECT list_reduce(['alpha', 'beta'], lambda x, y: (x::BIGINT + y::BIGINT)::VARCHAR);	CLEAN:Conversion Error
+SELECT list_reduce(['x', 'y', 'z'], lambda x, y: (x::HUGEINT + y::HUGEINT)::VARCHAR);	CLEAN:Conversion Error
+SELECT list_reduce(['1', '2'], lambda x, y: (x::INT + y::INT)::VARCHAR);	VALUE:3

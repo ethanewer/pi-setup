@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 120,
+  "documented_probe": null,
+  "notes": "Upstream-clone bugfix in explosion/spaCy v3.8.11 (v4.2/4.3 family). The agent faces the real repo at the pinned parent commit 453732d (issue #13924, fixed upstream at cfa1d3a): the Vocab/StringStore memory-zone context managers only clean up transient strings and restore the normal memory pool when the with-block exits normally; an exception propagating through `yield mem` skips the cleanup entirely, leaving a Vocab that permanently reports in_memory_zone=True, leaks the transient words, and keeps writing to the temp pool afterward. The agent receives ONLY a user-facing symptom description (no issue number, no fix, no file names, no reproduction) and must write its own failing reproduction (/app/repro.py) as a deliverable, diagnose the cleanup-order bug in compiled Cython sources, patch it, and recompile the Cython extension modules (a 1-CPU cycle: first rebuild ~4-5 min, subsequent ~15 s). Verifier: sha256-pinned golden upstream regression test test_memory_zone_exception_cleanup extracted from the fix commit into /opt/golden via a throwaway clone at build time (fix commit never enters /app/src), the project's own existing vocab_vectors suite slice (54 upstream tests: stringstore/vocab_api/lexeme/lookups), the agent's repro run against BOTH the fixed tree and the pre-fix tree (revert + rebuild), plus three authored hidden cases exercising the same exception-cleanup path from inputs the upstream test does not use (StringStore-level direct zone, multi-word Vocab zone failure with later normal zone reuse, a mixed success/failure zone loop). Whole-repo content-hash scope check permits changes only in spacy/strings.pyx and spacy/vocab.pyx; stale-.so planting is defeated by deleting the two extension binaries before every rebuild and probing the actual runtime behavior in both directions."
+}

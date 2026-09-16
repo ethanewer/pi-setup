@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 3,
+    "tool_breadth": 2,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 3,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 2,
+    "resource_pressure": 2,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 1
+  },
+  "expected_expert_time_min": 100,
+  "documented_probe": null,
+  "notes": "Hard. Live PostgreSQL 16 with a 3.2M-row two-table analytical warehouse shipped stopped at /srv/pgdata; nothing named about the index columns, the function-on-column defect in the shipped query, or the migration contents. The agent must (a) deliver a start script that boots the cluster under a documented connection contract, (b) design the right index(es) on BOTH fact tables so month-window tenant reports use index-based plans, (c) rewrite the shipped report with semantics byte-identical to the original (grader compares result rows, hashes the untouched original), and (d) write forward/backward migrations that the grader applies forward -> backward -> forward while fingerprinting the table heap files after every step (any row loss fails). EXPLAIN is run on 3 hidden month-window reports over both tables: index-based plans are required after forward AND the same reports must revert to sequential scans after backward (the migrations must be doing real work). A relative execution-time gate (rewritten report >= 3x faster than the original, measured back-to-back on the same host, plus an absolute cap) is host-calibrated and generous (measured margin 9-90x). Resource pressure is real on this box: on a loaded host a sequential scan of the 239MB events heap takes minutes while the indexed month-window scans take ~seconds, and every data check is a checksum of the live table files. Unsafe-action penalty is structural: any destructive migration (bare DROP TABLE, truncate/reload) or data mutation fails the fingerprint checks outright with a binary 0. os: docker host disk is heavily shared; gates are all relative or EXPLAIN-based so they hold under load. hidden_case_generalization=3: three hidden queries with different tenants/months/tables/groupings and a second fact table the agent must generalize to."
+}

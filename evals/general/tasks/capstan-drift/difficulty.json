@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 120,
+  "documented_probe": null,
+  "notes": "v43 issue-pool task on Mbed-TLS/mbedtls, upstream fix 67e696b43 (PR #1582). Agent is placed in the real 4.x tree at parent 5ca2218a2, must reproduce a glibc double-free abort by reusing one mbedtls_pkcs7 object across parse/free cycles (stale signer records after mbedtls_pkcs7_free only resets raw.p), localise the defect to library/pkcs7.c and fix it so the whole structure is safely reset. Verifier: provenance (only library/pkcs7.c may differ), plants the upstream regression test suite for the reuse case from /opt/golden, requires the full pkcs7 suite PASSED (815/815) plus the project's x509parse suite (888/888), and three authored hidden C programs that reuse the object across different message shapes (3-signer, 1-signer, zero-signer, rejected message) and assert no stale signer state survives; the partial fix 'null signers.next only' passes the golden suite but fails hidden cases. Submodule pins: framework e92a81996, tf-psa-crypto 93fa04691 (nested framework e92a81996). No dependency pins beyond the Ubuntu 24.04 toolchain."
+}

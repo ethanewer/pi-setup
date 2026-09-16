@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on mikf/gallery-dl at parent commit a879e5d468e43fac9daf6bdc4726f853a9c85567 (real upstream bug, github issue #8918, fixed in 12e2113a). The --mtime postprocessor (gallery_dl/postprocessor/mtime.py) only wrote _mtime_meta when the raw metadata value was not None and otherwise returned early, leaving a previous file's _mtime_meta in the shared kwdict so the next file inherits a stale timestamp; the NullDatetime 'no date' sentinel passed the None check and became an absurd year-0001 timestamp. Agent must localise the bug in the real tree, fix it, keep the project's other postprocessor tests green, and only modify the minimal source file; verifier runs the upstream regression tests extracted from the fix commit (test_mtime_none, test_mtime_none_dt, test_mtime_undefined, ...) and authored hidden cases (several-files-one-job stale-metadata sequence; value/key option paths with missing, empty and invalid inputs) that the upstream tests do not cover. The public GitHub mirror omits 8 extractor modules (exhentai, nhentai, hitomi, hdoujin, hentaifoundry, hentaihand, hentainexus, schalenetwork) that the release wheel still ships and that gallery_dl/extractor/__init__.py still enumerates; an empty-module meta-path finder installed into site-packages at build time lets the project's own test suite import cleanly. Self-contained, no network, ~1s test suite. Both directions re-verified inside the task image before shipping: parent probe prints stale 315532800.0 / -62135596800.0, golden MtimeTest 3 failed/5 passed; fix probe prints None / None, golden MtimeTest 8 passed."
+}

@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 20,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on pytorch/vision at parent commit df421b423f714eb3ae22cab2b0e6e7a6f6bb29be (real upstream bug, issue #9357). torchvision.ops.masks_to_boxes computes torch.where(mask != 0) and then unconditionally calls torch.min/torch.max on the extracted coordinate tensors, so any mask with zero foreground pixels raises RuntimeError (min(): Expected reduction dim to be specified for input.numel() == 0) instead of yielding the degenerate [0,0,0,0] box; a batch mixing empty and non-empty masks crashes on the first empty mask. Agent must localise the bug in the real tree (the per-mask bounding-box loop in torchvision/ops/boxes.py), guard the min/max assignments so empty masks keep the pre-initialised zero box, keep the repo's own TestMasksToBoxes green, and only modify the minimal source file; verifier runs the upstream regression tests extracted from the fix commit (test_empty_masks, test_mixed_empty_and_non_empty_masks), the project's own existing masks_to_boxes test, and hidden cases over dtypes, non-contiguous views, single-column degenerate masks and full-foreground masks the upstream test does not cover. Pure CPU wheels, no network, ~10s test run. Fixed directions verified inside the task image before shipping."
+}

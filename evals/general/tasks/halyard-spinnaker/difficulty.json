@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 1,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 105,
+  "documented_probe": null,
+  "notes": "Upstream-clone bugfix in gohugoio/hugo (v4.3 family): a partial that uses a `return` statement aborts the entire site build when called with a falsy argument (empty dict/slice/string, 0, false) with the error 'partial that returns a value needs a non-zero argument'; the partial body is never evaluated so its return value is lost. The agent gets the real 2021 tree at the parent commit (pinned by SHA, depth-1 fetch so the fix commit is unreachable in the clone), must author its own failing reproduction (/app/repro.sh) first, then localise the defect by reading (the error string is greppable to tpl/partials/partials.go, but a correct fix also requires understanding the return-value capture wrapper in tpl/tplimpl/template_ast_transformers.go: the predefined wrapper must execute its body even for falsy arguments, so it is rewritten from a `with .Arg` action to a `range (slice .Arg)` action, and the node-manipulation code follows), patch exactly those two source files (blob-level scope check allows only them), and prove the fix with the project's own test runner (go test ./hugolib). Verifier: sha256 trust anchors (go binary, git, golden test, pre-fix binary), provenance + blob-level scope check, agent repro run against the verifier-rebuilt binary (must pass) and against a pristine pre-fix binary baked at /opt/prefix/hugo (must fail), the upstream regression test TestPartialWithZeroedArgs planted from /opt/golden (post-fix hugolib/template_test.go extracted at build time via a throwaway clone, pinned), a nine-test selection of the project's own partial/template hugolib tests (verified hermetic at parent and at fix; the environment-dependent tests like TestImageOps/TestPageWithDelimiter are excluded), and four authored hidden cases that reach the same code path with falsy inputs the upstream test does not use: empty string via front-matter variable, empty list via a YAML data file, false via a cond expression, and a falsy string returned by another partial. The bug reproduced at the parent and passed at the fix with Go 1.27.1 in this image (both directions measured). NOTE: the parent SHA in the v43c_slots entry (8ee6de6d...f2ad7a172a2686d0) is a transcription error; the true parent of the fix commit is 8ee6de6d96a64395d27416d4f2ad7d172a2686d0 (verified via GitHub API and by cloning), and that is the pinned SHA shipped here."
+}

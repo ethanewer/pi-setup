@@ -1,0 +1,67 @@
+---
+title: Links and references
+order: 30
+description: How internal links, fragments and the table of contents work.
+---
+
+Links are the heart of a documentation site, so quaydoc spends extra care on
+them. Every internal link is validated at build-and-check time, and headings
+are directly linkable by their title.
+
+## Fragment links
+
+Each heading in a page gets an `id` attribute derived from its title. A
+heading titled `Installation` becomes an `<h2 id="installation">`, and you
+can link straight to it with a bare fragment link:
+
+```
+[[Installation]]
+```
+
+The reference resolves to the page that contains a heading with that title
+(after normalising case and whitespace) plus its fragment. If two pages
+contain the same heading, the first page wins in document order.
+
+## Page references
+
+A `[[...]]` reference whose target is a page title — the `title` front
+matter value — links to that page's root URL:
+
+```
+[[Writing pages]]
+```
+
+If the same words name both a page and a heading, the heading wins.
+
+## Relative paths
+
+Explicit paths work too, relative to the current page:
+
+```
+[[../topics/search.qd|Search page]]
+[guide reference](../reference/cli.qd)
+![logo](../../assets/logo.svg)
+```
+
+Paths are resolved against the source tree at build time, and the checker
+verifies that a built page exists for every path link.
+
+## The checker
+
+`quaydoc check` reads the rendered HTML and reports, by page:
+
+- `broken-fragment`: a `#fragment` with no matching id anywhere on the
+  target page,
+- `missing-page`: an internal link whose target page was not built,
+- `missing-image`: an image source that does not exist,
+- `duplicate-id`: an id used more than once on one page.
+
+Keeping heading ids and fragment targets in lock-step is what makes the
+first check pass; the two sides of the pipeline are documented in the
+source as needing to agree exactly.
+
+## Table of contents
+
+Every page with more than one heading gets an "On this page" panel on the
+right, listing its sections as jump links. The same anchor ids are used by
+in-page references, so jumping and linking agree.

@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 2,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": null,
+  "notes": "Upstream-clone bugfix in pallets/jinja (v4.3c family, jinja issue #1448): templates that test membership with `in` / `not in` against an undefined value abort rendering with jinja2.exceptions.UndefinedError instead of evaluating to False/True as in 2.x; strict-undefined membership is supposed to keep raising. Parent 189132094135d4c84414404c3b388500d35dc49e, fix d5f49f5cc135f1a78704dba7db8212be2388b50e (two-line change: drop `__contains__` from Undefined's fail-alias line, add `__contains__ = _fail_with_undefined_error` to StrictUndefined). The agent gets the real tree at the parent commit via a depth-1 single-object-store clone (fix commit provably unreachable), must author its own failing reproduction /app/repro.py (executed against the repaired tree - must pass - and against a pristine pre-fix copy baked at /opt/pre-fix-jinja via PYTHONPATH - must fail), then localise the defect by reading the runtime source and patch it (verifier enforces the tree stays byte-identical to the parent except src/jinja2/runtime.py). Verifier plants the project's own regression test (fix-commit tests/test_api.py extracted at image build time into /opt/golden, sha256-pinned) and runs test_default_undefined + test_strict_undefined, then the previously-existing suite (18 green test files, 732 tests; test_debug.py and test_loader.py excluded for unrelated era issues), plus four authored hidden cases with inputs the upstream test does not use (not-in and conditional forms, chainable undefined, numeric key / missing attribute on a real object / debug undefined, and strict still raising). Dependency pins: pytest==7.4.3 (pytest<8 required: callable form of pytest.raises removed in 8), MarkupSafe==3.0.3, base bench-base:python-3.12."
+}

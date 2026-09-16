@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 3,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 55,
+  "documented_probe": null,
+  "notes": "Total 14 = medium. A data-aggregation task whose instruction deliberately leaves one decision open: a reading taken at the exact instant between two consecutive monitoring periods may defensibly be attributed to the period that just ended or the one that just began. The verifier accepts either convention, but the choice must (a) be applied consistently across the visible fixture plus three fresh hidden fixtures, (b) never double-count or drop a boundary reading, and (c) be documented in /app/decisions.md, which must name the ambiguity, state the chosen convention, and agree with the convention detected from the actual outputs. Difficulty derives from reasoning_depth (spotting an unstated convention decision inside a precise spec; committing to a defensible rule), hidden_case_generalization (3 fresh fixtures with different period counts, boundary instants and date spans, rerun through the deliverable program), debugging_ambiguity (result.json and decisions.md must be mutually consistent with the program; a document/program mismatch scores 0 even when the totals are internally consistent), dependent_stages (argv-driven CLI, exact float sums, strict JSON key contract, decisions document), quantitative_correctness (exact sums, no rounding), adversarial_inputs (reading exactly at a boundary instant, zero-total periods present as explicit keys). Low resource pressure and no dangerous actions; single-CPU, stdlib-only."
+}

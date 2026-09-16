@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": null,
+  "notes": "Upstream-clone bugfix (v4.2 family) in PyCQA/bandit: B608 (SQL injection via string-built queries) misses INSERT statements written as `VALUES(` with no space before the parenthesis, because SIMPLE_SQL_RE requires a whitespace character after VALUES whereas VALUES( is equally valid SQL and equally injectable. The agent gets the real repository at the pinned parent (b790ce22), must reproduce with the bandit CLI, localise the statement-matching regex inside the plugin directory and widen it, and prove the fix with the project's own unittest suite (functional module + unit suite). Verifier: provenance (HEAD pinned, single commit, byte-compare every tracked file except the one bug source file, no untracked files, no unreachable git objects, fix commit absent) + issue reproduction must now yield one B608 Medium finding + project's own successor-revision regression test (fix-version examples/sql_statements.py + tests/functional/test_functional.py extracted into /opt/golden at build) planted and run under unittest + full functional module (79 tests) + full unit suite (178 tests) + three authored hidden CLI scans covering inputs upstream never uses (lowercase %-formatted executemany, f-string and str.format interpolation, implicit-concat multi-line statement) with parameterised good-form control lines that must stay un-flagged. Oracle applies an authored one-line patch (values\\\\s -> values[\\\\s(])."
+}

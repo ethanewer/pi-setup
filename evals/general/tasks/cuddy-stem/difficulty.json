@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 45,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on aio-libs/aiohttp at parent commit 14a1b5427213b5b982922627a44e4c5ae23bc0e3 (real upstream bug, issue #13536, fix 20acdf440b0a39c00054d4a70ea59376b793c83d). A WebSocket Close frame carrying reserved status 1006 (WSCloseCode.ABNORMAL_CLOSURE) is accepted as a normal close instead of raising a protocol error, because the reader's ALLOWED_CLOSE_CODES is built from every member of the WSCloseCode enum - which includes 1006 - while the other reserved codes (1004, 1005, 1015) are not enum members and are already rejected. The agent must write its own reproduction (/app/reproduce_issue.py) that drives the real frame reader and fails on the pre-fix tree, then locate and fix the bug in the real tree with the bare minimum edit surface (aiohttp/_websocket/reader_py.py) and keep the project's own websocket parser tests green. Verifier runs the reproduction against the repaired tree and against a fresh local clone with the agent's change reverted (pre-fix leg must fail), runs the upstream regression test extracted from the fix commit at build time (digest-pinned), runs the project's own tests/test_websocket_parser.py and test_websocket_writer.py, and three authored hidden cases (valid codes 1000-1014+3000-4999 still accepted; masked and extended-length close frames with 1006 rejected; close code split across chunks) that the upstream test does not cover. Difficulty deliberately raised from the mined base by requiring the reproduction deliverable; lands medium (12). Pure-Python build (AIOHTTP_NO_EXTENSIONS=1), ~1s test suite, no runtime dependencies beyond what the image warms."
+}

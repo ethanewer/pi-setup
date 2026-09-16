@@ -1,0 +1,46 @@
+---
+title: Markup cheatsheet
+order: 15
+tags: [reference, markup]
+---
+
+A one-screen reminder of every construct in the quaydoc markup language.
+See [[Writing pages]] for the full reference.
+
+## Blocks
+
+````
+# H1
+## H2
+- unordered item
+1. ordered item
+> quote line
+```
+fenced code
+```
+[note] a callout
+---
+````
+
+## Inline
+
+| source | renders as |
+|---|---|
+| `**bold**` | **bold** |
+| `` `code` `` | `code` |
+| `[[A page title]]` | reference link |
+| `[[A page title|label]]` | labelled reference |
+| `[label](https://example.org)` | external link |
+| `![alt](img.png)` | image |
+| `\\*` | `*` |
+
+## Front matter
+
+```
+---
+title: Page title
+order: 10
+tags: [guide]
+draft: false
+---
+```

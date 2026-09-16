@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 3,
+    "debugging_ambiguity": 3,
+    "adversarial_inputs": 3,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 2,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 1
+  },
+  "expected_expert_time_min": 90,
+  "documented_probe": null,
+  "notes": "Hard. Agent must translate an operational runbook into four real Prometheus alerting rules (deliverable /app/alerting/alerts.yml) and prove them with promtool check + promtool test. reasoning_depth is high because each alert requires composing the right metric(s), the right expression shape and a sustained `for` window, and reading the runbook to distinguish a real failure from a healthy-but-busy episode. Debugging ambiguity is high: the only feedback is pass/fail per scenario, and a failing scenario could be an over-broad rule, an under-sensitive rule, a label mismatch, the per-second rate() unit trap, or a `for` window that is too long or too short; the agent must diagnose which. adversarial_inputs is 3 because two of the four hidden scenarios are explicitly engineered to catch over-broad rules (fire on healthy-but-busy), plus per-scenario traps for stale `for` windows, absolute-temperature vs deviation, raw-fault-count vs ratio, and occupancy-only vs occupancy-and-drain. hidden_case_generalization is 2 (four hidden scenarios that differ from the visible fixture in values and labels and add the negative cases the visible one omits). quantitative_correctness is 2: thresholds, per-second rates, fault ratios and deviation windows must match the runbook exactly. tool_breadth 2: promtool check rules + promtool test rules over multiple fixtures. unsafe_action_penalty 1: an over-broad rule pages people on a healthy system, the very failure the task measures. No resource pressure, no interaction statefulness. expected_expert_time 90 min."
+}

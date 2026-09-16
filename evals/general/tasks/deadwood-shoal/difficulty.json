@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 75,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on apache/commons-lang at parent commit 170e9f28ad2667a9b0c80480c2a5a13cb4a53257 (real upstream issue LANG-1828, fixed by ae85262f04df19b6307de18758cfdcc31cae733d, PR #1736). StringUtils.leftPad/rightPad compute pads = size - str.length() with no size guard, so a requested size inside [Integer.MIN_VALUE, Integer.MIN_VALUE + len - 1] makes the subtraction overflow into a huge positive pad count and the JVM dies with an uncatchable OutOfMemoryError instead of returning the input unchanged; the fix short-circuits `size <= str.length()` in all four overloads. The image clones the repo at the parent, prebuilds main+test classes with Maven 3.9.9 / JDK 21 (offline-warm cache), snapshots the buggy classes to /opt/prefix-classes, and extracts the upstream regression test (StringUtilsTest.java at the fix commit) into /opt/golden through a throwaway bare clone under /tmp that is deleted; the fix commit is never reachable from /app/src/.git. The build itself runs the golden test against the parent tree and fails the build if it does not reproduce the mined OutOfMemoryError. The instruction gives only the user-visible symptom (crash/no-op contract) and requires the agent to author its own failing reproduction deliverable /app/repro/PadRepro.java before fixing; the verifier runs that reproduction against the pre-fix classes (must fail) and against the repaired classes (must pass), then overlays the golden test and runs the project's own StringUtilsTest (173 tests, 0 failures) through Maven, plus two authored hidden cases (overflow-band sizes across many string lengths and both pad kinds; exact boundary sizes, unicode, embedded NUL, null/empty padStr) each required to pass repaired and fail pre-fix. Agent must localize in StringUtils.java, guarded by a provenance check that the working tree differs from the pinned commit in exactly that one library source file."
+}

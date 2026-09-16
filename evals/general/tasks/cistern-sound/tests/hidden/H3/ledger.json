@@ -1,0 +1,58 @@
+{
+  "period": "2026-05",
+  "groups": [
+    {
+      "id": "NX01",
+      "name": "Hardware store",
+      "entries": [
+        {"ref": "N-0101", "amount_cents": 12000, "status": "settled"},
+        {"ref": "N-0102", "amount_cents": 34000, "status": "settled"},
+        {"ref": "N-0103", "amount_cents": 56000, "status": "settled"},
+        {"ref": "N-0104", "amount_cents": 78000, "status": "settled"},
+        {"ref": "N-0105", "amount_cents": 90000, "status": "settled"},
+        {"ref": "N-0106", "amount_cents": 22000, "status": "settled"},
+        {"ref": "N-0107", "amount_cents": 44000, "status": "settled"},
+        {"ref": "N-0108", "amount_cents": 66000, "status": "settled"}
+      ]
+    },
+    {
+      "id": "NX02",
+      "name": "Voucher engine",
+      "entries": [
+        {"ref": "N-0201", "amount_cents": 150000, "refund_cents": 30000, "status": "adjusted"},
+        {"ref": "N-0202", "amount_cents": 250000, "refund_cents": 250000, "status": "adjusted"},
+        {"ref": "N-0203", "amount_cents": 50000, "status": "settled"}
+      ]
+    },
+    {
+      "id": "NX03",
+      "name": "Cross-border fees",
+      "entries": [
+        {"ref": "N-0301", "amount_cents": 99000, "status": "settled"}
+      ]
+    },
+    {
+      "id": "NX04",
+      "name": "Dispute handling",
+      "entries": [
+        {"ref": "N-0401", "amount_cents": 200000, "chargeback_cents": 50000, "status": "adjusted"},
+        {"ref": "N-0402", "amount_cents": 80000, "refund_cents": 10000, "chargeback_cents": 5000, "status": "adjusted"}
+      ]
+    },
+    {
+      "id": "NX05",
+      "name": "Terminal rentals",
+      "entries": [
+        {"ref": "N-0501", "amount_cents": 15000, "status": "settled"},
+        {"ref": "N-0502", "amount_cents": 15000, "status": "settled"}
+      ]
+    },
+    {
+      "id": "NX06",
+      "name": "Gift card float",
+      "entries": [
+        {"ref": "N-0601", "amount_cents": 60000, "refund_cents": 60000, "status": "adjusted"}
+      ]
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 30,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on sqlalchemy/sqlalchemy at parent commit 42ddb1fd5f1e29682bcd6ccc7b835999aafec12e (real upstream bug, issue #12368, fixed by 48ad8c81115bd01d733fe1a4f78c8c30d7c2abbb, PR #12369). SQLiteDDLCompiler.post_create_table concatenates the 'WITHOUT ROWID' and 'STRICT' table-option clauses with a bare newline, so a table defined with both sqlite_with_rowid=False and sqlite_strict=True compiles to 'CREATE TABLE atable (id INTEGER)\\n WITHOUT ROWID\\n STRICT' - DDL that SQLite rejects with 'near \"STRICT\": syntax error'. Agent must localise the bug in the real tree (lib/sqlalchemy/dialects/sqlite/base.py), fix it so the clauses are comma-separated, and keep the project's own SQLite dialect compile tests green; the verifier also runs the upstream regression test extracted from the fix commit into /opt/golden (SQLTest::test_create_table_without_rowid_strict), the project's own SQLTest + OnConflictDDLTest classes, and authored hidden cases: end-to-end DDL execution against in-memory SQLite (sqlite_master/reflection round-trip) and compile-level assertions over other table shapes including single-option regression guards. Pure Python (DISABLE_SQLALCHEMY_CEXT=1), no network, no DB server (bundled sqlite3 3.4x supports STRICT >= 3.37). Both directions were re-confirmed inside the built task image: golden FAILS at parent with the comma-missing AssertionError and the probe raises sqlite3.OperationalError near \"STRICT\"; golden PASSES and the DDL executes at the fix commit applied via the same textual patch the oracle ships."
+}

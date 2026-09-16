@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 60,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on pylint-dev/pylint at parent commit 2ef1766c3923ee7753cea771959227a35e74972c (real upstream bug, issue #6663). The implicit-str-concat check (W1404) fires on an implicit concatenation of a raw string literal with a non-raw one (e.g. [r'\\d' '\\n']); such literals cannot be merged into one literal, so the juxtaposition is deliberate and must not be reported. Agent must reproduce, localise and fix the real tree (strings.py records only str_eval'd 2-tuples of tokens, so the raw token text is unavailable to the check). Verifier asserts provenance (HEAD still the pinned parent, fix commit not reachable from the clone, exactly one commit, only tracked source files under pylint/ modified, nothing deleted), runs the upstream regression test extracted from fix commit 16faa29d6bc6ba6533efe426038da62a81ca272b into /opt/golden at image build time, re-runs the tree's own implicit_str_concat functional test after restoring it, runs the project's own unit tests for the string checker module (tests/checkers/unittest_strings.py), and runs three authored hidden-case files over raw-prefix shapes (R/u/triple-quoted raw, set/dict/call contexts), plain-concatenation guards, and multi-literal chains the upstream test does not use. The full pylint suite is not run: it is 1000+ functional tests that take well over an hour on 1 CPU, so scope is the checker's own unit tests plus both functional variants of the targeted test. Pure Python, offline; both directions re-confirmed inside the task image before shipping."
+}

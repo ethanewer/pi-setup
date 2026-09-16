@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 1,
+    "reasoning_depth": 1,
+    "debugging_ambiguity": 1,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 30,
+  "documented_probe": null,
+  "notes": "Upstream-clone (v4.2 family) debugging task on the real scipy/scipy tree at the parent commit of issue #25893. The crash is user-visible and the reproducer is a one-liner, but the agent must localise it inside a ~700k-line real tree whose compiled build is editable-installed, fix the shared dict-repr helper without guidance about which file holds it, and survive the project's own regression test plus three authored hidden cases that hit the same code path from inputs the upstream test does not use. Difficulty is easy per the issue pool; the dominant cost of the task is the one-time scipy source build baked into the image, not the fix itself."
+}

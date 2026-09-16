@@ -1,0 +1,17 @@
+{
+  "rubric": {
+    "dependent_stages": 2,
+    "tool_breadth": 2,
+    "reasoning_depth": 2,
+    "debugging_ambiguity": 2,
+    "adversarial_inputs": 1,
+    "hidden_case_generalization": 2,
+    "quantitative_correctness": 1,
+    "resource_pressure": 0,
+    "interaction_statefulness": 0,
+    "unsafe_action_penalty": 0
+  },
+  "expected_expert_time_min": 90,
+  "documented_probe": null,
+  "notes": "Upstream-clone debugging task on sharkdp/fd at parent commit 7027d45303b412be6fa9c09d689cc6276748fb38 (fd v10.4.2), real upstream bug (issue #1900), fixed upstream at d3a500af7aee3a9f099b09e1831da3fc39980c61. When the working directory a search was launched from is removed mid-search, fd --full-path calls env::current_dir() (through filesystem::path_absolute_form) for every matched entry; after the cwd is unlinked, getcwd returns NotFound and the `.expect(\"Retrieving absolute path succeeds\")` at src/walk.rs:528-529 panics the whole process (exit 101) instead of finishing, skipping or reporting. The upstream fix adds WorkerResult::FatalError, extracts search_str_for_entry() returning io::Result, and propagates fatal errors through the receiver loop (streaming), the exec job loop (src/exec/job.rs) and the batch path, returning ExitCode::GeneralError, plus the regression unit test full_path_search_returns_error_for_invalid_cwd (which deletes the cwd and asserts the helper errors). The regression test only exists at the fix commit and references the new helper, so the parent-side demonstration is the CLI repro (timing-controlled: fd walks a >=120k-file tree through a symlink in a cwd that is deleted ~0.2s in; reproduced 3/3 at parent in the mining phase and 6/6 in the 1-CPU trial container and re-confirmed inside this task image). The verifier asserts provenance (HEAD pinned parent, exactly one commit object, fix commit not reachable, only tracked source files under src/ modified with at least one modification, nothing deleted, no new files under src/), builds the tree, runs the golden test when the tree accepts it (upstream-shaped fix) or relies on the CLI hidden cases (all three fix handler arms: default streaming receiver loop, -x single-command job loop, -X batch path, each asserting exit 1, no panic, and the engaged '[fd error]: ... No such file or directory' message under --show-errors), runs the project's full unit+integration suite (skipping the 1-CPU timing-sensitive test_exec_nulls, same as sibling fd task capstan-brackish), and three authored hidden CLI cases from inputs the upstream test does not use. Toolchain pinned rust 1.98.1 via rustup; Cargo.lock committed upstream pins every crate (tempfile 3.24 already a dev-dependency); full dep graph prebuilt in the Dockerfile (cargo build + cargo test --no-run) so trial builds are incremental; CARGO_NETWORK=off. Both directions re-confirmed inside this task's own image (parent: CLI panic exit 101; fix: golden unit test passes and CLI exits 1 without panic) and again by the oracle run (solution applies the upstream two-file fix via git apply and rebuilds)."
+}
