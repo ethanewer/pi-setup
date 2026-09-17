@@ -12,6 +12,14 @@ the image identity and logs. It never relaxes the task's network policy.
 Static-only runs are drafts. Missing tools, failed commands, absent evidence,
 stale fingerprints, and missing rewards block acceptance.
 
+Campaign candidates also provide `tests/mutations/manifest.json` with at least
+three distinct mutation kinds and scripts. Each script installs one plausible
+incomplete or incorrect approach into a pristine container. The shared mutation
+stage requires reward 0 and a diagnostic matching that case's `intended_reason`;
+syntax errors, missing files, and duplicate scripts do not establish semantic
+coverage. Independent review still decides whether the selected mutations cover
+the important requirements and plausible shortcuts.
+
 Run `python3 tools/qa_task.py --candidate PATH --static-only` to obtain the package
 fingerprint and task-scoped layout and binary-reward checks. Reviewers then record
 the following gates, with a reviewer identity different from the candidate author,

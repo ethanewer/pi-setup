@@ -27,6 +27,7 @@ Does not commit. Review the diff, run the gates, then commit.
 from __future__ import annotations
 
 import argparse
+import fcntl
 import json
 import re
 import sys
@@ -110,6 +111,11 @@ def build_note(prov: dict, wave: str, extra: str | None) -> str:
 
 
 def main() -> int:
+    # One coordinating host performs additive registration. The lock closes the
+    # read/check/write race between otherwise idempotent concurrent retries.
+    lock_path = ROOT / 'specs' / '.campaign-registration.lock'
+    registration_lock = lock_path.open('a+')
+    fcntl.flock(registration_lock.fileno(), fcntl.LOCK_EX)
     ap = argparse.ArgumentParser()
     g = ap.add_mutually_exclusive_group(required=False)
     g.add_argument('--slots', type=Path, help='slots JSON with name/repository/entry')

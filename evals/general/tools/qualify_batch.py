@@ -6,9 +6,11 @@ import uuid
 from generate_tasks import independent_review, recheck, seal, verify_seal
 from pilot_task import pilot
 from qa_batch import audit
+from mutation_task import mutations
 
 
-def qualify(queue, reference_root, max_jobs=3, workers=1, trials=2, timeout=600):
+def qualify(queue, reference_root, max_jobs=3, workers=1, trials=2, timeout=600,
+            review_reserve=None, pilot_reserve=None):
     if not 1 <= workers <= 4 or max_jobs < 1 or not 1 <= trials <= 3 or timeout < 1:
         raise ValueError('invalid qualification limits')
     with queue.connect() as db:
@@ -29,7 +31,7 @@ def qualify(queue, reference_root, max_jobs=3, workers=1, trials=2, timeout=600)
 
         try:
             unchanged()
-            if independent_review(queue, ident, timeout):
+            if independent_review(queue, ident, timeout, review_reserve):
                 return result
             with queue.connect() as db:
                 row = db.execute('SELECT result FROM reviews WHERE job=? ORDER BY rowid DESC LIMIT 1', (ident,)).fetchone()
@@ -40,13 +42,17 @@ def qualify(queue, reference_root, max_jobs=3, workers=1, trials=2, timeout=600)
             if review.get('author_fingerprint') != fingerprints[ident]:
                 raise ValueError('review refers to a different candidate revision')
             unchanged()
+            result['stage'] = 'semantic_mutations'
+            if mutations(queue, ident, timeout):
+                return result
+            unchanged()
             result['stage'] = 'repeat_runtime'
             if recheck(queue, ident):
                 return result
             result['stage'] = 'blind_pilots'
             for _ in range(trials):
                 unchanged()
-                if pilot(queue, ident, timeout):
+                if pilot(queue, ident, timeout, pilot_reserve):
                     return result
             unchanged()
             result.update(status='evidence_collected', stage='release_review',

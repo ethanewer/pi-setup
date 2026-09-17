@@ -1,0 +1,20 @@
+{
+  "lane": "repo",
+  "repository": "https://github.com/example/project",
+  "revision": "0000000000000000000000000000000000000000",
+  "reference": "",
+  "skill_hash": "",
+  "family": "configuration recovery",
+  "language": "python",
+  "domain": "developer tools",
+  "license": "MIT",
+  "workflow": {
+    "outcome": "restore layered configuration without losing valid overrides",
+    "decisions": ["choose merge behavior for nested values"],
+    "deliverables": ["configuration merge library and command"],
+    "failure_modes": ["nested values are silently discarded"],
+    "distinguishers": ["deletion sentinels and alias cycles"],
+    "test_structure": ["unit properties plus command integration"],
+    "skill_coverage": ["configuration diagnosis", "regression testing"]
+  }
+}

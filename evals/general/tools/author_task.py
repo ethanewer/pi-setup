@@ -13,7 +13,7 @@ COMMON = ('task_id', 'objective', 'acceptance', 'skills', 'source', 'author')
 def validate(candidate):
     if not isinstance(candidate, dict):
         raise ValueError('candidate must be an object')
-    if candidate.get('schema_version') != 1 or candidate.get('pipeline') not in PIPELINES:
+    if candidate.get('schema_version') not in (1, 2) or candidate.get('pipeline') not in PIPELINES:
         raise ValueError('unsupported schema_version or pipeline')
     for key in COMMON:
         if not candidate.get(key):
@@ -45,6 +45,28 @@ def validate(candidate):
             raise ValueError('source.base_commit must be a full immutable commit')
         if 'fix_commit' in source and not re.fullmatch(r'[0-9a-f]{40}', str(source['fix_commit'])):
             raise ValueError('source.fix_commit must be a full immutable commit')
+    if candidate['schema_version'] == 2:
+        if not re.fullmatch(r'cand-[0-9a-f]{32}', str(candidate.get('candidate_id', ''))):
+            raise ValueError('schema 2 requires immutable candidate_id')
+        if not re.fullmatch(r'[0-9a-f]{64}', str(candidate.get('source_identity_sha256', ''))):
+            raise ValueError('schema 2 requires source_identity_sha256')
+        mapping = candidate.get('criterion_tests')
+        if not isinstance(mapping, dict) or set(mapping) != set(candidate['acceptance']):
+            raise ValueError('criterion_tests must map every exact acceptance criterion')
+        if any(not isinstance(v, list) or not v or any(not isinstance(x, str) or not x.strip() for x in v)
+               for v in mapping.values()):
+            raise ValueError('criterion_tests entries must name concrete tests')
+        baseline = candidate.get('baseline')
+        if not isinstance(baseline, list) or not baseline or any(
+                not isinstance(x, dict) or not x.get('command') or 'result' not in x for x in baseline):
+            raise ValueError('schema 2 requires captured baseline commands/results')
+        pins = candidate.get('dependency_pins')
+        if not isinstance(pins, list) or not pins or any(not isinstance(x, str) or not x.strip() for x in pins):
+            raise ValueError('schema 2 requires dependency_pins')
+        limits = candidate.get('resource_limits')
+        if not isinstance(limits, dict) or any(not isinstance(limits.get(k), int) or limits[k] <= 0
+                                               for k in ('cpus', 'memory_mb', 'agent_timeout_sec', 'verifier_timeout_sec')):
+            raise ValueError('schema 2 requires positive explicit resource_limits')
     return candidate
 
 
