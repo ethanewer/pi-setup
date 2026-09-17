@@ -19,6 +19,7 @@ const SCOPE = [
 	"openrouter/moonshotai/kimi-k3",
 	"openrouter/qwen/qwen3.8-flash",
 	"openrouter/qwen/qwen3.8-max-0902",
+	"openrouter/stealth/union-alpha",
 	"openai/gpt-5.6-sol",
 	"openai/gpt-5.6-terra",
 	"openai/gpt-5.6-luna",
@@ -29,6 +30,7 @@ const FORKS_MINUS_WORKFLOWS = [
 	"local/pi-btw-side",
 	"local/pi-context-handoff",
 	"local/pi-cost",
+	"local/pi-last-model-safe",
 ];
 const ALL_FORKS = [
 	"local/pi-voice-stt-safe",
@@ -37,6 +39,7 @@ const ALL_FORKS = [
 	"local/pi-btw-side",
 	"local/pi-context-handoff",
 	"local/pi-cost",
+	"local/pi-last-model-safe",
 ];
 const BROWSER_TOOL = "local/pi-agent-browser-native-safe";
 
@@ -114,11 +117,12 @@ function runWriter() {
 	});
 }
 
-test("the model scope lands on all three profiles", () => {
+test("the model scope lands on all three profiles with each saved default first", () => {
 	runWriter();
-	expect(JSON.parse(readFileSync(mainPath, "utf8")).enabledModels).toEqual(SCOPE);
-	expect(JSON.parse(readFileSync(wfPath, "utf8")).enabledModels).toEqual(SCOPE);
-	expect(JSON.parse(readFileSync(pPath, "utf8")).enabledModels).toEqual(SCOPE);
+	const expectedScope = (selected: string) => [selected, ...SCOPE.filter((model) => model !== selected)];
+	expect(JSON.parse(readFileSync(mainPath, "utf8")).enabledModels).toEqual(expectedScope("openai/gpt-5.6-sol"));
+	expect(JSON.parse(readFileSync(wfPath, "utf8")).enabledModels).toEqual(expectedScope("openrouter/deepseek/deepseek-v4-pro-0813"));
+	expect(JSON.parse(readFileSync(pPath, "utf8")).enabledModels).toEqual(expectedScope("openrouter/deepseek/deepseek-v4-flash-0731"));
 });
 
 test("pi loads every fork except workflows; piwf loads all forks", () => {

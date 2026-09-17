@@ -248,6 +248,19 @@ against pi-tui primitives and would drift on every upstream selector change. `/c
 a one-shot table instead — no picker to keep in sync — and the stale
 `local/pi-model-prices` settings entry it left behind is pruned on reinstall.
 
+## pi-last-model-safe
+
+First-party, not a fork. Pi normally treats `/model` and Ctrl+P changes as
+session-only, and a non-empty `enabledModels` scope makes its first entry win at
+new-session startup. This extension listens for `model_select`, saves the selected
+provider and model through Pi's `SettingsManager`, and moves the canonical model
+reference to the front of `enabledModels`.
+
+`SettingsManager` supplies Pi's file lock and field-level merge behavior, so the
+extension preserves unrelated settings and concurrent settings writes. Session
+restores count as selections. This means resuming a session makes its active model
+the default for the next new session.
+
 ## pi-voice-stt-safe
 
 Based on `pi-voice-stt@0.6.0`.

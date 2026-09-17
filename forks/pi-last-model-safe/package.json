@@ -1,0 +1,29 @@
+{
+  "name": "pi-last-model-safe",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Persist Pi's most recently selected model as the startup model for new sessions.",
+  "type": "module",
+  "license": "MIT",
+  "keywords": [
+    "pi-package",
+    "pi",
+    "pi-coding-agent",
+    "model"
+  ],
+  "files": [
+    "extensions",
+    "README.md"
+  ],
+  "pi": {
+    "extensions": [
+      "./extensions/last-model/index.js"
+    ]
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": ">=0.85.1"
+  },
+  "engines": {
+    "node": ">=22.18"
+  }
+}

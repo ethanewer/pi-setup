@@ -30,6 +30,7 @@ describe("lean p wrapper contract", () => {
       "$MAIN_DIR/local/pi-context-handoff/extensions/context-handoff/index.js",
       "$MAIN_DIR/local/pi-btw-side/extensions/btw/index.js",
       "$MAIN_DIR/local/pi-cost/extensions/cost/index.js",
+      "$MAIN_DIR/local/pi-last-model-safe/extensions/last-model/index.js",
       "$MAIN_DIR/extensions/mlx/index.js",
       "$MAIN_DIR/p/remove-pi-documentation.js",
     ]);
@@ -41,6 +42,7 @@ describe("lean p wrapper contract", () => {
       "pi-voice-stt-safe",
       "pi-context-handoff",
       "pi-btw-side",
+      "pi-last-model-safe",
       "remove-pi-documentation.js",
       "mlx",
     ]) {

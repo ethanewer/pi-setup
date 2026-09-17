@@ -109,6 +109,7 @@ Extension forks and the upstream releases they are based on:
 | `pi-context-handoff` | — | first-party |
 | `pi-btw-side` | — | first-party |
 | `pi-cost` | — | first-party |
+| `pi-last-model-safe` | — | first-party |
 
 `vendor.json` is the machine-readable version of this table and is what the tooling
 reads.
@@ -273,8 +274,8 @@ What they enforce:
   `occ` maps the pinned open-weight models onto Claude Code's tier slots by strength —
   haiku: `glm-5.3-flash`, sonnet: `ds-v4-flash`, opus: `glm-5.3`, fable: `ds-v4-pro`, and
   the custom option: `kimi-k3` — each with a human-readable name in `/model`. Claude
-  Code's picker has no more slots, so the qwen pair is reachable only via `--model`.
-  `ocdx` replaces codex's bundled OpenAI-only catalog with all seven pinned models
+  Code's picker has no more slots, so the qwen pair and Union Alpha are reachable only
+  via `--model`. `ocdx` replaces codex's bundled OpenAI-only catalog with all eight pinned models
   (a setup-managed `models.json` referenced by `model_catalog_json` in its
   `config.toml`), so `/model` lists and names them directly. `--model` still exists for
   a one-off launch on a specific model.
@@ -304,7 +305,7 @@ What they enforce:
 occ --model glm --effort xhigh          # one-off: strongest GLM at xhigh effort
 ocdx --model ds-pro -p "explain this repo"
 occ                                     # no pick needed: /model selects in-session
-occ --list                              # the seven handles
+occ --list                              # the eight handles
 ```
 
 ## Default model scope
@@ -322,6 +323,7 @@ openrouter/z-ai/glm-5.3-flash
 openrouter/moonshotai/kimi-k3
 openrouter/qwen/qwen3.8-flash
 openrouter/qwen/qwen3.8-max-0902
+openrouter/stealth/union-alpha
 openai/gpt-5.6-sol
 openai/gpt-5.6-terra
 openai/gpt-5.6-luna
@@ -332,10 +334,11 @@ consequences of how Pi applies the list are worth knowing:
 
 - It is a managed default: `install.sh` rewrites `enabledModels` on every install, so a
   scope changed through `/scoped-models` reverts at the next reinstall.
-- When a profile's saved default model is **not** in the scope, Pi starts new sessions on
-  the first scoped model (`openrouter/deepseek/deepseek-v4-flash-0731`) instead of the saved default. All
-  three profiles' current defaults are inside the scope, so this only bites if the
-  default is later changed to something outside it.
+- Pi starts a new scoped session on the first model in `enabledModels`. The
+  `pi-last-model-safe` extension saves every `/model`, Ctrl+P, or restored-session model
+  selection as the profile default and moves it to the front of that list. New sessions
+  therefore start on the most recently selected model. Reinstalling keeps the saved
+  default first while restoring the managed membership of the scope.
 
 ## Browser automation
 

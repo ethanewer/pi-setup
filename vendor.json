@@ -48,6 +48,14 @@
       "liveTree": "extensions/cost",
       "patch": null,
       "note": "First-party extension, not a fork. Registers /cost: live OpenRouter rates ($/Mtok) for the pinned models, fetched from openrouter.ai's public /models endpoint at command time; falls back to the cached catalog on fetch failure. The model list comes from the session scope filtered to provider openrouter, so MODEL_SCOPE drives it and OpenAI subscription models are excluded. No upstream to track."
+    },
+    "pi-last-model-safe": {
+      "upstream": null,
+      "version": "1.0.0",
+      "live": "extensions/last-model/index.ts",
+      "liveTree": "extensions/last-model",
+      "patch": null,
+      "note": "First-party extension, not a fork. Persists each selected model as Pi's global startup default and moves it to the front of enabledModels, which controls startup order for scoped sessions. Uses Pi's SettingsManager for locked, merged writes. No upstream to track."
     }
   }
 }
