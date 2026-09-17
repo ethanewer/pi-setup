@@ -1,7 +1,7 @@
 # Plan: generate and release 2,000 new general evaluation tasks
 
 Date: 2026-09-16
-Status: proposed execution plan; this document does not start generation or authorize a spending budget.
+Status: execution started; the first qualification round is paused after static authoring QA.
 
 ## Objective and fixed constraints
 
@@ -41,6 +41,47 @@ all three were held for design revisions. The 24-candidate expansion has not run
 
 Therefore, do not extrapolate throughput from runtime passes or launch thousands
 of jobs on the current implementation. Acceptance yield is not established.
+
+## Progress snapshot — 2026-09-18
+
+The campaign workspace is `/home/ee/general-task-campaign-2000`; it remains
+outside the live suite and is intentionally not committed. Generation is stopped:
+there are no author workers, proxy processes, or billable calls running.
+
+- The supplied CSV was retained with SHA256
+  `bfd194fac66fecc11bc53fab590db53f6991bb37b3187a113aabf23dd1d5da42`.
+  Discovery verified 219 eligible, licensed repositories, clearing the 200-source
+  inventory gate.
+- The pre-campaign baseline records and hashes 17,564 task/candidate files and
+  existing registry entries. Campaign identity, semantic admission, global
+  budget/concurrency, stage fencing, sealed evidence, mutation, portable export,
+  and idempotent promotion controls are implemented. The focused campaign and
+  authoring suite passes 39 tests.
+- Eight reusable skills were generated, validated, content-hashed, and sealed.
+  Two source-planning batches produced eight repository workflows and eight
+  PR/issue workflows with pinned revisions and receipts.
+- The balanced qualification inventory contains 24 admitted candidates: eight
+  skills, eight repository, and eight PR/issue candidates. Seven drafts have
+  passed static package QA and are in `needs_review` (two skills, two repository,
+  three PR/issue); the other 17 remain queued. No candidate has completed runtime
+  QA, independent review, mutations, repeatability, pilots, contamination review,
+  human adjudication, or promotion. Accepted progress is therefore **0 / 2,000**.
+- Six interrupted calls retain conservative uncertain charges. Across 16 author
+  reservations, the ledger currently accounts for `$19.87` against the approved
+  `$100.00` qualification cap; historical reservations total `$41.50`. The
+  campaign occupies about 671 MB.
+- Live qualification exposed and fixed two coordinator defects: nested build
+  stages now share their candidate's fleet slot, and storage accounting tolerates
+  nested scratch directories disappearing during traversal. One unchanged draft
+  was resumed through static QA without paying to reauthor. Long-context pricing
+  corrections are recorded as audited operator events.
+
+The next action is to resume the remaining 17 author jobs at concurrency three,
+then execute the shared runtime and review gates for all viable drafts. Do not
+begin the 120-candidate validation batch until this 24-candidate round produces at
+least four fully accepted tasks per lane with zero unresolved critical defects.
+No completion-date or full-campaign budget projection is yet justified because
+the measured final acceptance yield remains zero.
 
 ## Phase 0 — remove blockers before campaign generation
 
