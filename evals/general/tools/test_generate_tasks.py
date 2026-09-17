@@ -11,7 +11,8 @@ import hashlib
 from generate_tasks import (Queue, canonical_repository, seal, verify_seal,
                             usage_from_events, run_process, verify_record,
                             instruction_shingles, near_duplicates, check_skill_sources,
-                            execute_job, export_batch, verify_export, session_context, normalize_candidate)
+                            execute_job, export_batch, verify_export, session_context,
+                            normalize_candidate, directory_file_bytes)
 
 
 class FactoryTests(unittest.TestCase):
@@ -29,6 +30,13 @@ class FactoryTests(unittest.TestCase):
                     'https://github.com/a/b?x=1'):
             with self.assertRaises(ValueError):
                 canonical_repository(url)
+
+    def test_storage_scan_ignores_broken_symlinks(self):
+        scratch = self.root / 'scratch'
+        scratch.mkdir()
+        (scratch / 'data').write_bytes(b'1234')
+        (scratch / 'vanished').symlink_to(scratch / 'missing')
+        self.assertEqual(directory_file_bytes(scratch), 4)
 
     def test_duplicate_source_across_lanes(self):
         self.queue.enqueue('skills', 'https://github.com/a/b')

@@ -8,10 +8,11 @@ import threading
 import uuid
 
 import _toml_compat
-from generate_tasks import MODEL, EFFORT, run_process, usage_from_events, seal, verify_seal, verify_record, session_context
+from generate_tasks import (MODEL, EFFORT, luna_usage_cost, run_process, usage_from_events,
+                            seal, verify_seal, verify_record, session_context)
 
 
-def pilot(queue, ident, timeout=600):
+def pilot(queue, ident, timeout=600, reserve_dollars=None):
     with queue.connect() as db:
         job = db.execute('SELECT * FROM jobs WHERE id=?', (ident,)).fetchone()
     if job is None or job['state'] != 'needs_review':
@@ -19,6 +20,13 @@ def pilot(queue, ident, timeout=600):
     draft = json.loads(job['result'])
     bundle = Path(draft['bundle'])
     verify_record(queue, bundle)
+    reservation = None
+    if queue.configured():
+        if reserve_dollars is None:
+            raise ValueError('pilot requires an approved dollar reservation')
+        reservation = queue.control.reserve('pilot', job['candidate_id'], reserve_dollars)
+    stage_claim = queue.control.claim_stage(job['candidate_id'], 'pilot',
+                                            max(120, timeout + 1500), reservation)
     task = bundle / 'workspace/tasks' / ident
     config = _toml_compat.loads((task / 'task.toml').read_text())
     if config['environment'].get('network_mode') != 'no-network':
@@ -96,7 +104,15 @@ The task will be graded after you finish. Deliver all requested work inside the 
     (output / 'result.json').write_text(json.dumps(result, indent=2) + '\n')
     (output / 'seal.json').write_text(json.dumps(seal(output), indent=2) + '\n')
     result['seal_sha256'] = verify_seal(output)
+    queue.control.account_storage(output, job['candidate_id'])
     with queue.connect() as db:
         db.execute('INSERT INTO checks VALUES(?,?,?)', (trial, ident, json.dumps(result)))
+    queue.control.finish_stage(stage_claim, 'failed' if result.get('error') else 'passed', result)
+    if reservation:
+        if result['usage']:
+            queue.control.reconcile(reservation, luna_usage_cost(result['usage']))
+        else:
+            queue.control.mark_charge_uncertain(
+                reservation, 'completed pilot has no parseable usage event')
     print(json.dumps(result, indent=2))
     return 1 if result.get('error') else 0
