@@ -12,6 +12,8 @@ and time budget. Author an independent solution and tests, including regressions
 for existing behavior and plausible incomplete implementations.
 
 Fetch pinned source and dependencies at image build time; run evaluation offline.
+Verify that the checkout resolves to the recorded 40-character commit and warm
+the dependency/build caches needed by the declared verifier before trial time.
 Keep only the necessary source snapshot and remove solution artifacts, remotes,
 and history that disclose the answer. Document baseline failures explicitly.
 Reject candidates with unreproducible builds, unclear licensing, or no meaningful

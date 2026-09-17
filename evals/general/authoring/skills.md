@@ -9,6 +9,10 @@ Supply all needed inputs in the environment. Translate workflow outcomes into
 behavioral acceptance criteria and independently authored hidden cases. A task
 should measure successful work, not recall of the skill's wording. Decide whether
 skill instructions are available to the evaluated agent and record that decision.
+Combine related skills only when the outcome genuinely requires dependent stages,
+not to inflate apparent breadth. If an authored scenario needs Git history,
+construct a synthetic repository during the image build rather than copying
+history from an existing evaluation task.
 
 Reject candidates that only rename an existing task, require private credentials,
 depend on live services at evaluation time, or cannot be judged objectively.

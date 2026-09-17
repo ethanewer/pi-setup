@@ -5,6 +5,11 @@ the original reference, source license, affected base commit, reproduction, and
 fix commit when available. An issue without a merged fix is eligible only when
 the author can build a correct independent reference solution.
 
+For discovery, prefer focused non-merge repair commits linked to an issue or pull
+request that change both implementation and regression tests. Treat those diff
+signals as leads only: the observed before/after reproduction, not the commit
+message or changed-file shape, establishes eligibility.
+
 Reproduce the reported behavior on the pinned base. Prove the same reproduction
 passes after the reference repair. Separate desired behavior from incidental
 details of the upstream patch; allow alternative correct implementations.

@@ -40,6 +40,10 @@ resource requirements, and an estimated difficulty rubric before implementation.
 Difficulty follows the work required; do not inflate it with obscure instructions,
 unavailable services, slow downloads, or accidental environment breakage.
 
+Reserve an opaque two-word task ID that does not encode the source, intended
+solution, campaign ordering, or skill ordering. The ID is identity, not a hint;
+repairs retain it and admission rejects reuse for another candidate.
+
 Candidate state progresses from authored to draft-checked to reviewed to accepted.
 Only `qa_task.py` can produce the final acceptance report. Its fingerprint covers
 the normalized candidate, every task file, and executable permissions. A changed
