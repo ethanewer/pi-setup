@@ -543,14 +543,14 @@ non-zero on problems, so it can gate CI.
 ### Run the tests
 
 ```bash
-bun test tests/       # pure logic, no network or model
+bun test tests/*.test.ts # pure logic, no network or model
 tests/fork-suites.sh  # the suites that ship inside the forks
 tests/smoke.sh        # installed setup: tools, bash, /btw, browser, workflow
 tests/tui-btw.sh      # TUI-only: the full-screen /btw view, the main thread behind it, escape (needs tmux)
 tests/linux-install.sh # the published install.sh on a clean Ubuntu container (needs Docker)
 ```
 
-`bun test tests/` covers the pure logic of the first-party extensions: the history
+`bun test tests/*.test.ts` covers the pure logic of the first-party extensions: the history
 sanitizer that keeps a mid-turn `/btw` snapshot valid, prompt assembly and config parsing,
 the voice keybind matcher and its placeholder/cursor rendering, and the compaction file-list
 carry-forward. The two scripts drive the installed setup with real model calls; `tests/smoke.sh

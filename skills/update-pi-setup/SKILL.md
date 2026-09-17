@@ -267,7 +267,7 @@ Run all of this after any change. It is cheap except for the model calls in the 
 cd ~/pi-setup
 bin/pi-setup-doctor              # must exit 0
 bin/pi-setup-vendor --verify --all   # every patch still reproduces its fork
-bun test tests/                  # pure logic of the first-party extensions
+bun test tests/*.test.ts         # pure logic of the first-party extensions
 tests/fork-suites.sh             # the suites that ship inside the forks (84 tests)
 tests/smoke.sh                   # installed setup: tools, bash, /btw, browser, workflow
 tests/tui-btw.sh                 # TUI-only: the /btw side view and escape
@@ -286,7 +286,7 @@ tests/linux-install.sh           # needs Docker; push first, it tests the publis
 
 Linux-only breakage — GNU vs BSD `stat`, a missing `unzip`, assuming `node` exists — is
 invisible without that container. Windows is exercised on a real machine with
-`install.ps1` and `bun test tests/`. That class of bug has shipped before.
+`install.ps1` and `bun test tests/*.test.ts`. That class of bug has shipped before.
 
 `tests/smoke.sh --quick` skips the browser and workflow runs while iterating. The voice
 UI has a test seam for the paths a script cannot reach otherwise:

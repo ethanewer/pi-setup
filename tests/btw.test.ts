@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import type { AssistantMessage, Message, ToolResultMessage, UserMessage } from "@earendil-works/pi-ai";
 
 /**
- * `bun test tests/` is pure logic with no installed dependencies, so Pi itself is loaded
+ * `bun test tests/*.test.ts` is pure logic with no installed dependencies, so Pi itself is loaded
  * only if it happens to be resolvable. When it is — a developer machine, or after
  * install.sh — the contract test below runs against the real Pi; otherwise it is skipped
  * rather than failing a suite that is meant to need nothing.

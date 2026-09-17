@@ -92,7 +92,7 @@ function toolCallIds(message: AssistantMessage): string[] {
  * which is a `switch` over every role and handles all of the above safely — that is the
  * one pi-context-handoff's fold injects, and it is unaffected by any of this. But the
  * function that decides the output budget is pi-ai's, so pi-ai's is the behaviour worth
- * predicting here. Importing either would also cost `bun test tests/` its independence
+ * predicting here. Importing either would also cost `bun test tests/*.test.ts` its independence
  * from an installed Pi, which the suite is deliberately built to run without.
  */
 const CHARS_PER_TOKEN = 4;
