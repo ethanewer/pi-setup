@@ -19,7 +19,7 @@ const workflowToolSchema = Type.Object({
             "Use `await workflow(savedName, childArgs)` to run a saved workflow inline; nesting is limited to one level and shares the parent run's concurrency, agent, and token limits.",
             "Optional quality helpers include verify(), judgePanel(), loopUntilDry(), and completenessCheck().",
             "Optional control helpers include retry() and gate(); budget exposes total, spent(), and remaining(), and phase('Name', { budget: N }) sets a phase token limit.",
-            "All subagents use the single user-configured model. Do not specify model or tier options. The optional `agentType` selects named tools and role instructions; use it only when its name and purpose are provided in context.",
+            "The optional `agentType` selects named tools and role instructions; use it only when its name and purpose are provided in context.",
             "Use plain JavaScript only; imports, require(), filesystem modules, Date.now(), Math.random(), and new Date() are unavailable.",
             "Use phase('Name'), agent(prompt, opts), parallel(arrayOfFunctions), pipeline(items, ...stages), log(message), args, cwd, process.cwd(), and budget. The workflow must call agent() at least once.",
             "parallel() requires functions, not promises, and returns results in input order: await parallel(items.map(item => () => agent(...))).",

@@ -7,11 +7,11 @@ export const WORKFLOW_COMPREHENSION_SCENARIO_IDS = COMPREHENSION_SCENARIOS.map((
 export const WORKFLOW_AUTHORING_FROZEN_FILES = [
     {
         path: "skills/workflow-authoring/SKILL.md",
-        sha256: "a43448a29fc060e7339bb8d3ed82fb4a194ff839a5233faad74f61a9ae49b763",
+        sha256: "a5a250aaf6d211a1c318a4f2e69e7b119d51d13b983e7fa79ffed450cf68da4e",
     },
     {
         path: "skills/workflow-authoring/references/runtime.md",
-        sha256: "2c1bc2a2ef7a80ca7e2261ddb55e225fdd72caf3a2159d3058008ba116f2e43c",
+        sha256: "bdd52db13dba83660f50cc151f9e8b9a71a465e322907d91db9c7be4164f24b9",
     },
     {
         path: "skills/workflow-authoring/references/helpers.md",
@@ -35,15 +35,15 @@ export const WORKFLOW_AUTHORING_FROZEN_FILES = [
     },
     {
         path: "skills/workflow-authoring/references/registry-ownership.md",
-        sha256: "58599dce34b6a943e239bd48355596380d48eb016b0891f47236bf8126cec7d7",
+        sha256: "dd655f994e8bd92e662586a078e3692eacc1782b934e098e5781121763e3da3e",
     },
     {
         path: "skills/workflow-authoring/references/review.md",
-        sha256: "963373f6365e5f52359e6263379255d5f9fcf14e282bcf2f1888768530a9d154",
+        sha256: "323e22167f2615dd1fbb1a3e457339ac31f3c04fd545519dce4bbc0040baec51",
     },
     {
         path: "skills/workflow-authoring/references/debugging.md",
-        sha256: "d1de447c738fdfc305fc4a16dfecc8589743d5a3d076d5a1612f01bd76c918e0",
+        sha256: "781d70be77a0d635e385d6f6ff6afeb9dee05e3e679e5d991bb9e47b9822a402",
     },
     {
         path: "skills/workflow-authoring/examples/classify-and-act.js",
@@ -74,7 +74,7 @@ const HELPER_ROUTE = {
 };
 const ROUTING_ROUTE = {
     path: SKILL_PATH,
-    requiredText: "- **Agent types:** read [registry ownership](references/registry-ownership.md) before using `agentType`; use names only when context supplies them. Scripts do not select models.",
+    requiredText: "- **Agent types:** read [registry ownership](references/registry-ownership.md) before using `agentType`; use names only when context supplies them.",
 };
 const CAPABILITY_SCENARIOS = {
     "workflow.runtime.agent": WORKFLOW_COMPREHENSION_SCENARIO_IDS,

@@ -135,8 +135,6 @@ const capabilities = [
             "a named thread retains its full Pi transcript and session identity only within one uninterrupted workflow invocation",
             "threaded calls are live-execution resume barriers and are never journaled",
             "same-thread calls must be sequential; threads cannot use worktree isolation",
-            "all agents use the single user-configured subagent model; scripts do not select models",
-            "an unavailable configured model throws MODEL_NOT_FOUND instead of falling back",
             "worktree isolation must succeed when requested; a failure fails that agent instead of silently running it in the shared working tree (opt in to the old fallback with isolationFallback / worktreeIsolationFallback)",
         ],
         evidence: ["tests/workflow-runtime.test.ts", "tests/agent-registry.test.ts", "tests/structured-output.test.ts"],

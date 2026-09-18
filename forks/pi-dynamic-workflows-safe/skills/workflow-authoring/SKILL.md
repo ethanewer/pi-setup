@@ -17,7 +17,7 @@ Read only what the task needs:
 - **Helper task:** read [quality helpers](references/quality-helpers.md) only for `verify` or `judgePanel`, the [retry helper](references/retry-helper.md) only for `retry`, and [specialized helpers](references/specialized-helpers.md) only for `completenessCheck`, `loopUntilDry`, `gate`, or `checkpoint`.
 - **Review:** use the [review checklist](references/review.md), plus only the matching [quality](references/quality-helpers.md) or [specialized](references/specialized-helpers.md) helper contracts.
 - **Debug:** use the [debugging map](references/debugging.md).
-- **Agent types:** read [registry ownership](references/registry-ownership.md) before using `agentType`; use names only when context supplies them. Scripts do not select models.
+- **Agent types:** read [registry ownership](references/registry-ownership.md) before using `agentType`; use names only when context supplies them.
 - **Exact lookup or portability:** start with the generated [capability index](references/capabilities.md). Follow its exhaustive-facts pointer only for constraints or support boundaries. Use [versions](references/versions.md) when moving scripts between installations.
 
 ## Invariants

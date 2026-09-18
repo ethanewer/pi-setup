@@ -28,8 +28,6 @@ Every exact fact below is projected from the installed extension's capability co
 - Constraint: a named thread retains its full Pi transcript and session identity only within one uninterrupted workflow invocation
 - Constraint: threaded calls are live-execution resume barriers and are never journaled
 - Constraint: same-thread calls must be sequential; threads cannot use worktree isolation
-- Constraint: all agents use the single user-configured subagent model; scripts do not select models
-- Constraint: an unavailable configured model throws MODEL_NOT_FOUND instead of falling back
 - Constraint: worktree isolation must succeed when requested; a failure fails that agent instead of silently running it in the shared working tree (opt in to the old fallback with isolationFallback / worktreeIsolationFallback)
 
 <a id="parallel"></a>

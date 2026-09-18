@@ -24,10 +24,10 @@ export declare const WORKFLOW_COMPREHENSION_SCENARIO_IDS: string[];
 /** Mixed guidance files that require explicit acceptance while behavioral coverage remains partial. */
 export declare const WORKFLOW_AUTHORING_FROZEN_FILES: readonly [{
     readonly path: "skills/workflow-authoring/SKILL.md";
-    readonly sha256: "a43448a29fc060e7339bb8d3ed82fb4a194ff839a5233faad74f61a9ae49b763";
+    readonly sha256: "a5a250aaf6d211a1c318a4f2e69e7b119d51d13b983e7fa79ffed450cf68da4e";
 }, {
     readonly path: "skills/workflow-authoring/references/runtime.md";
-    readonly sha256: "2c1bc2a2ef7a80ca7e2261ddb55e225fdd72caf3a2159d3058008ba116f2e43c";
+    readonly sha256: "bdd52db13dba83660f50cc151f9e8b9a71a465e322907d91db9c7be4164f24b9";
 }, {
     readonly path: "skills/workflow-authoring/references/helpers.md";
     readonly sha256: "1c8d253649f00412511f17ffc08c6156797b99de72ae037e14f2ea92ac33a11e";
@@ -45,13 +45,13 @@ export declare const WORKFLOW_AUTHORING_FROZEN_FILES: readonly [{
     readonly sha256: "8cdacc3e659c2ce7bab7f73a311dc0d94ce1df5ed6fc7c66515e73e1bb8b157e";
 }, {
     readonly path: "skills/workflow-authoring/references/registry-ownership.md";
-    readonly sha256: "58599dce34b6a943e239bd48355596380d48eb016b0891f47236bf8126cec7d7";
+    readonly sha256: "dd655f994e8bd92e662586a078e3692eacc1782b934e098e5781121763e3da3e";
 }, {
     readonly path: "skills/workflow-authoring/references/review.md";
-    readonly sha256: "963373f6365e5f52359e6263379255d5f9fcf14e282bcf2f1888768530a9d154";
+    readonly sha256: "323e22167f2615dd1fbb1a3e457339ac31f3c04fd545519dce4bbc0040baec51";
 }, {
     readonly path: "skills/workflow-authoring/references/debugging.md";
-    readonly sha256: "d1de447c738fdfc305fc4a16dfecc8589743d5a3d076d5a1612f01bd76c918e0";
+    readonly sha256: "781d70be77a0d635e385d6f6ff6afeb9dee05e3e679e5d991bb9e47b9822a402";
 }, {
     readonly path: "skills/workflow-authoring/examples/classify-and-act.js";
     readonly sha256: "23d0d9f37ee8648cd29ca526b0b23cf55bd3ac57efd02e1b93e227bcd0c18603";

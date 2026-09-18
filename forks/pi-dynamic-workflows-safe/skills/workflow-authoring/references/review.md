@@ -21,8 +21,7 @@ Review author-visible behavior, not formatting preferences. When behavior depend
 
 - Does JavaScript consume structured fields only after a small plain JSON Schema guarantees them?
 - Does synthesis receive complete coverage and failure ledgers?
-- Are model selectors omitted, and is any `agentType` supplied by context?
-- Does each agent type supplied by context have a name and purpose?
+- Is any `agentType` supplied by context, and does it have a name and purpose?
 
 ## Lifecycle
 

@@ -213,7 +213,7 @@ diff -ruN --exclude=node_modules a/README.md b/README.md
  
 diff -ruN --exclude=node_modules a/dist/agent-registry.d.ts b/dist/agent-registry.d.ts
 --- a/dist/agent-registry.d.ts	1985-10-26 03:15:00
-+++ b/dist/agent-registry.d.ts	2026-09-18 10:13:52
++++ b/dist/agent-registry.d.ts	2026-09-18 11:15:30
 @@ -11,13 +11,14 @@
   * discovery convention. The legacy `~/.pi/agents/*.md` location is still scanned as
   * a deprecated fallback (with a one-time warning) so users who followed this repo's
@@ -267,7 +267,7 @@ diff -ruN --exclude=node_modules a/dist/agent-registry.d.ts b/dist/agent-registr
  export declare function resolveAgentType(name: string | undefined, registry: AgentRegistry): AgentDefinition | undefined;
 diff -ruN --exclude=node_modules a/dist/agent-registry.js b/dist/agent-registry.js
 --- a/dist/agent-registry.js	1985-10-26 03:15:00
-+++ b/dist/agent-registry.js	2026-09-18 10:13:52
++++ b/dist/agent-registry.js	2026-09-18 11:15:30
 @@ -11,13 +11,14 @@
   * discovery convention. The legacy `~/.pi/agents/*.md` location is still scanned as
   * a deprecated fallback (with a one-time warning) so users who followed this repo's
@@ -368,7 +368,7 @@ diff -ruN --exclude=node_modules a/dist/agent-registry.js b/dist/agent-registry.
      });
 diff -ruN --exclude=node_modules a/dist/agent.d.ts b/dist/agent.d.ts
 --- a/dist/agent.d.ts	1985-10-26 03:15:00
-+++ b/dist/agent.d.ts	2026-09-18 10:13:52
++++ b/dist/agent.d.ts	2026-09-18 11:15:30
 @@ -3,7 +3,11 @@
  import { type AgentHistoryEntry } from "./agent-history.js";
  import { type AgentUsage } from "./agent-usage.js";
@@ -573,7 +573,7 @@ diff -ruN --exclude=node_modules a/dist/agent.d.ts b/dist/agent.d.ts
       * standard sessions dir, keyed by the runner's project cwd — never a
 diff -ruN --exclude=node_modules a/dist/agent.js b/dist/agent.js
 --- a/dist/agent.js	1985-10-26 03:15:00
-+++ b/dist/agent.js	2026-09-18 10:13:52
++++ b/dist/agent.js	2026-09-18 11:15:30
 @@ -7,8 +7,8 @@
  import { agentUsageEquals, createEmptyAgentUsage, sumAgentUsage } from "./agent-usage.js";
  import { applyToolPolicy } from "./agent-registry.js";
@@ -833,7 +833,7 @@ diff -ruN --exclude=node_modules a/dist/agent.js b/dist/agent.js
                  // Deny recursive-orchestration tools in the subagent (#107). Placed after
 diff -ruN --exclude=node_modules a/dist/builtin-commands.js b/dist/builtin-commands.js
 --- a/dist/builtin-commands.js	1985-10-26 03:15:00
-+++ b/dist/builtin-commands.js	2026-09-18 10:13:52
++++ b/dist/builtin-commands.js	2026-09-18 11:15:30
 @@ -13,7 +13,7 @@
  import { findBuiltinWorkflow } from "./builtin-workflows.js";
  import { MAX_DIFF_CHARS } from "./code-review.js";
@@ -938,7 +938,7 @@ diff -ruN --exclude=node_modules a/dist/builtin-commands.js b/dist/builtin-comma
                  if (!scope || checks.length === 0) {
 diff -ruN --exclude=node_modules a/dist/builtin-workflows.js b/dist/builtin-workflows.js
 --- a/dist/builtin-workflows.js	1985-10-26 03:15:00
-+++ b/dist/builtin-workflows.js	2026-09-18 10:13:52
++++ b/dist/builtin-workflows.js	2026-09-18 11:15:30
 @@ -16,6 +16,7 @@
  import { generateCodeReviewWorkflow } from "./code-review.js";
  import { generateCodebaseAuditWorkflow, generateDeepResearchWorkflow } from "./deep-research.js";
@@ -972,7 +972,7 @@ diff -ruN --exclude=node_modules a/dist/builtin-workflows.js b/dist/builtin-work
          },
 diff -ruN --exclude=node_modules a/dist/code-review.d.ts b/dist/code-review.d.ts
 --- a/dist/code-review.d.ts	1985-10-26 03:15:00
-+++ b/dist/code-review.d.ts	2026-09-18 10:13:52
++++ b/dist/code-review.d.ts	2026-09-18 11:15:30
 @@ -17,10 +17,6 @@
   * The workflow expects `args` to be passed with shape:
   *   { diff: string, diffSource: string }
@@ -987,7 +987,7 @@ diff -ruN --exclude=node_modules a/dist/code-review.d.ts b/dist/code-review.d.ts
  export declare function generateCodeReviewWorkflow(): string;
 diff -ruN --exclude=node_modules a/dist/code-review.js b/dist/code-review.js
 --- a/dist/code-review.js	1985-10-26 03:15:00
-+++ b/dist/code-review.js	2026-09-18 10:13:52
++++ b/dist/code-review.js	2026-09-18 11:15:30
 @@ -17,11 +17,7 @@
   * The workflow expects `args` to be passed with shape:
   *   { diff: string, diffSource: string }
@@ -1061,7 +1061,7 @@ diff -ruN --exclude=node_modules a/dist/code-review.js b/dist/code-review.js
  return { total: allCandidates.length, surviving: surviving.length, findings: top, report: synthesis, diffTruncated }`;
 diff -ruN --exclude=node_modules a/dist/config.d.ts b/dist/config.d.ts
 --- a/dist/config.d.ts	1985-10-26 03:15:00
-+++ b/dist/config.d.ts	2026-09-18 10:13:52
++++ b/dist/config.d.ts	2026-09-18 11:15:30
 @@ -1,14 +1,70 @@
  /**
   * Configuration constants for pi-dynamic-workflows.
@@ -1149,7 +1149,7 @@ diff -ruN --exclude=node_modules a/dist/config.d.ts b/dist/config.d.ts
  /** Default keyword that arms workflows mode from interactive input. */
 diff -ruN --exclude=node_modules a/dist/config.js b/dist/config.js
 --- a/dist/config.js	1985-10-26 03:15:00
-+++ b/dist/config.js	2026-09-18 10:13:52
++++ b/dist/config.js	2026-09-18 11:15:30
 @@ -1,14 +1,70 @@
  /**
   * Configuration constants for pi-dynamic-workflows.
@@ -1237,7 +1237,7 @@ diff -ruN --exclude=node_modules a/dist/config.js b/dist/config.js
  /** Default keyword that arms workflows mode from interactive input. */
 diff -ruN --exclude=node_modules a/dist/effort-command.js b/dist/effort-command.js
 --- a/dist/effort-command.js	1985-10-26 03:15:00
-+++ b/dist/effort-command.js	2026-09-18 10:13:52
++++ b/dist/effort-command.js	2026-09-18 11:15:30
 @@ -16,7 +16,7 @@
      return { level: "off" };
  }
@@ -1258,7 +1258,7 @@ diff -ruN --exclude=node_modules a/dist/effort-command.js b/dist/effort-command.
  }
 diff -ruN --exclude=node_modules a/dist/errors.d.ts b/dist/errors.d.ts
 --- a/dist/errors.d.ts	1985-10-26 03:15:00
-+++ b/dist/errors.d.ts	2026-09-18 10:13:52
++++ b/dist/errors.d.ts	2026-09-18 11:15:30
 @@ -49,7 +49,7 @@
      /** A non-schema agent completed without any assistant text output. */
      AGENT_EMPTY_OUTPUT = "AGENT_EMPTY_OUTPUT",
@@ -1309,7 +1309,7 @@ diff -ruN --exclude=node_modules a/dist/errors.d.ts b/dist/errors.d.ts
   */
 diff -ruN --exclude=node_modules a/dist/errors.js b/dist/errors.js
 --- a/dist/errors.js	1985-10-26 03:15:00
-+++ b/dist/errors.js	2026-09-18 10:13:52
++++ b/dist/errors.js	2026-09-18 11:15:30
 @@ -25,7 +25,7 @@
      /** A non-schema agent completed without any assistant text output. */
      WorkflowErrorCode["AGENT_EMPTY_OUTPUT"] = "AGENT_EMPTY_OUTPUT";
@@ -1413,7 +1413,7 @@ diff -ruN --exclude=node_modules a/dist/errors.js b/dist/errors.js
  }
 diff -ruN --exclude=node_modules a/dist/fs-persistence.d.ts b/dist/fs-persistence.d.ts
 --- a/dist/fs-persistence.d.ts	1985-10-26 03:15:00
-+++ b/dist/fs-persistence.d.ts	2026-09-18 10:13:52
++++ b/dist/fs-persistence.d.ts	2026-09-18 11:15:30
 @@ -13,8 +13,12 @@
   *  3. A missing or unreadable directory degrades to "no files" rather than
   *     throwing — a listing must never crash because one storage location is
@@ -1447,7 +1447,7 @@ diff -ruN --exclude=node_modules a/dist/fs-persistence.d.ts b/dist/fs-persistenc
   * Atomically write JSON to `path`: tmp-write + rename (atomic on the same
 diff -ruN --exclude=node_modules a/dist/fs-persistence.js b/dist/fs-persistence.js
 --- a/dist/fs-persistence.js	1985-10-26 03:15:00
-+++ b/dist/fs-persistence.js	2026-09-18 10:13:52
++++ b/dist/fs-persistence.js	2026-09-18 11:15:30
 @@ -13,8 +13,12 @@
   *  3. A missing or unreadable directory degrades to "no files" rather than
   *     throwing — a listing must never crash because one storage location is
@@ -1505,7 +1505,7 @@ diff -ruN --exclude=node_modules a/dist/fs-persistence.js b/dist/fs-persistence.
          // Backup is best-effort; the primary write already succeeded.
 diff -ruN --exclude=node_modules a/dist/index.d.ts b/dist/index.d.ts
 --- a/dist/index.d.ts	1985-10-26 03:15:00
-+++ b/dist/index.d.ts	2026-09-18 10:13:52
++++ b/dist/index.d.ts	2026-09-18 11:15:30
 @@ -1,6 +1,6 @@
  export type { AdversarialReviewConfig } from "./adversarial-review.js";
  export { generateAdversarialReviewWorkflow, generateMultiPerspectiveWorkflow } from "./adversarial-review.js";
@@ -1575,7 +1575,7 @@ diff -ruN --exclude=node_modules a/dist/index.d.ts b/dist/index.d.ts
 +export { createWorktree, removeWorktree, worktreeId } from "./worktree.js";
 diff -ruN --exclude=node_modules a/dist/index.js b/dist/index.js
 --- a/dist/index.js	1985-10-26 03:15:00
-+++ b/dist/index.js	2026-09-18 10:13:52
++++ b/dist/index.js	2026-09-18 11:15:30
 @@ -8,28 +8,27 @@
  export { generateCodebaseAuditWorkflow, generateDeepResearchWorkflow } from "./deep-research.js";
  export { createToolUpdateWorkflowDisplay, createWidgetWorkflowDisplay, createWorkflowSnapshot, preview, recomputeWorkflowSnapshot, renderWorkflowLines, renderWorkflowText, } from "./display.js";
@@ -1617,7 +1617,7 @@ diff -ruN --exclude=node_modules a/dist/index.js b/dist/index.js
 +export { createWorktree, removeWorktree, worktreeId } from "./worktree.js";
 diff -ruN --exclude=node_modules a/dist/logger.js b/dist/logger.js
 --- a/dist/logger.js	1985-10-26 03:15:00
-+++ b/dist/logger.js	2026-09-18 10:13:52
++++ b/dist/logger.js	2026-09-18 11:15:30
 @@ -3,12 +3,30 @@
   */
  import { appendFileSync, mkdirSync, writeFileSync } from "node:fs";
@@ -1770,7 +1770,7 @@ diff -ruN --exclude=node_modules a/dist/model-routing.js b/dist/model-routing.js
 -}
 diff -ruN --exclude=node_modules a/dist/model-spec.d.ts b/dist/model-spec.d.ts
 --- a/dist/model-spec.d.ts	1985-10-26 03:15:00
-+++ b/dist/model-spec.d.ts	2026-09-18 10:13:52
++++ b/dist/model-spec.d.ts	2026-09-18 11:15:30
 @@ -14,7 +14,7 @@
  export declare function formatModelSpecWithThinking(modelSpec: string, thinkingLevel: ModelThinkingLevel | undefined): string;
  export declare function canonicalModelSpec(model: Model<Api>): string;
@@ -1804,7 +1804,7 @@ diff -ruN --exclude=node_modules a/dist/model-spec.d.ts b/dist/model-spec.d.ts
 +export declare function resolveRunModelStrict(spec: string, modelRegistry: RunModelRegistry): ResolvedModelSpec;
 diff -ruN --exclude=node_modules a/dist/model-spec.js b/dist/model-spec.js
 --- a/dist/model-spec.js	1985-10-26 03:15:00
-+++ b/dist/model-spec.js	2026-09-18 10:13:52
++++ b/dist/model-spec.js	2026-09-18 11:15:30
 @@ -41,7 +41,7 @@
      return `${model.provider}/${model.id}`;
  }
@@ -2257,7 +2257,7 @@ diff -ruN --exclude=node_modules a/dist/model-tier-config.js b/dist/model-tier-c
 -}
 diff -ruN --exclude=node_modules a/dist/run-persistence.d.ts b/dist/run-persistence.d.ts
 --- a/dist/run-persistence.d.ts	1985-10-26 03:15:00
-+++ b/dist/run-persistence.d.ts	2026-09-18 10:13:52
++++ b/dist/run-persistence.d.ts	2026-09-18 11:15:30
 @@ -41,6 +41,10 @@
      model?: string;
  }
@@ -2403,7 +2403,7 @@ diff -ruN --exclude=node_modules a/dist/run-persistence.d.ts b/dist/run-persiste
   * Generate a unique run ID.
 diff -ruN --exclude=node_modules a/dist/run-persistence.js b/dist/run-persistence.js
 --- a/dist/run-persistence.js	1985-10-26 03:15:00
-+++ b/dist/run-persistence.js	2026-09-18 10:13:52
++++ b/dist/run-persistence.js	2026-09-18 11:15:30
 @@ -1,8 +1,9 @@
  /**
   * Workflow run state persistence for pause/resume support.
@@ -3029,7 +3029,7 @@ diff -ruN --exclude=node_modules a/dist/run-persistence.js b/dist/run-persistenc
                  if (existing?.token === lease.token)
 diff -ruN --exclude=node_modules a/dist/saved-commands.d.ts b/dist/saved-commands.d.ts
 --- a/dist/saved-commands.d.ts	1985-10-26 03:15:00
-+++ b/dist/saved-commands.d.ts	2026-09-18 10:13:52
++++ b/dist/saved-commands.d.ts	2026-09-18 11:15:30
 @@ -2,7 +2,7 @@
   * Saved workflows as `/<name>` slash commands. Each saved workflow becomes a
   * command that runs its script, passing parsed arguments through as `args`.
@@ -3063,7 +3063,7 @@ diff -ruN --exclude=node_modules a/dist/saved-commands.d.ts b/dist/saved-command
      ok: false;
 diff -ruN --exclude=node_modules a/dist/saved-commands.js b/dist/saved-commands.js
 --- a/dist/saved-commands.js	1985-10-26 03:15:00
-+++ b/dist/saved-commands.js	2026-09-18 10:13:52
++++ b/dist/saved-commands.js	2026-09-18 11:15:30
 @@ -5,6 +5,7 @@
  import { createCodingTools } from "@earendil-works/pi-coding-agent";
  import { claimCommand, commandOwner, isCommandRegistered } from "./command-registry.js";
@@ -3121,7 +3121,7 @@ diff -ruN --exclude=node_modules a/dist/saved-commands.js b/dist/saved-commands.
                      if (liveManager) {
 diff -ruN --exclude=node_modules a/dist/subagent-model-config.d.ts b/dist/subagent-model-config.d.ts
 --- a/dist/subagent-model-config.d.ts	1969-12-31 18:00:00
-+++ b/dist/subagent-model-config.d.ts	2026-09-18 10:13:52
++++ b/dist/subagent-model-config.d.ts	2026-09-18 11:15:30
 @@ -0,0 +1,17 @@
 +import { type ModelThinkingLevel, type RunModelRegistry } from "./model-spec.js";
 +export declare class ModelRegistryRequiredError extends Error {
@@ -3142,7 +3142,7 @@ diff -ruN --exclude=node_modules a/dist/subagent-model-config.d.ts b/dist/subage
 +export declare function saveSubagentModelConfig(config: SubagentModelConfig, path?: string): void;
 diff -ruN --exclude=node_modules a/dist/subagent-model-config.js b/dist/subagent-model-config.js
 --- a/dist/subagent-model-config.js	1969-12-31 18:00:00
-+++ b/dist/subagent-model-config.js	2026-09-18 10:13:52
++++ b/dist/subagent-model-config.js	2026-09-18 11:15:30
 @@ -0,0 +1,109 @@
 +import { existsSync, mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
 +import { homedir } from "node:os";
@@ -3255,7 +3255,7 @@ diff -ruN --exclude=node_modules a/dist/subagent-model-config.js b/dist/subagent
 +}
 diff -ruN --exclude=node_modules a/dist/subagent-model-snapshot.d.ts b/dist/subagent-model-snapshot.d.ts
 --- a/dist/subagent-model-snapshot.d.ts	1969-12-31 18:00:00
-+++ b/dist/subagent-model-snapshot.d.ts	2026-09-18 10:13:52
++++ b/dist/subagent-model-snapshot.d.ts	2026-09-18 11:15:30
 @@ -0,0 +1,19 @@
 +import { ModelRegistry, type CreateAgentSessionOptions } from "@earendil-works/pi-coding-agent";
 +import { type ModelThinkingLevel } from "./model-spec.js";
@@ -3278,7 +3278,7 @@ diff -ruN --exclude=node_modules a/dist/subagent-model-snapshot.d.ts b/dist/suba
 +export declare function prepareSubagentSnapshot(options: SubagentSnapshotOptions): SubagentSnapshot | Promise<SubagentSnapshot>;
 diff -ruN --exclude=node_modules a/dist/subagent-model-snapshot.js b/dist/subagent-model-snapshot.js
 --- a/dist/subagent-model-snapshot.js	1969-12-31 18:00:00
-+++ b/dist/subagent-model-snapshot.js	2026-09-18 10:13:52
++++ b/dist/subagent-model-snapshot.js	2026-09-18 11:15:30
 @@ -0,0 +1,81 @@
 +import { clampThinkingLevel } from "@earendil-works/pi-ai";
 +import { getAgentDir, SettingsManager, ModelRegistry, ModelRuntime } from "@earendil-works/pi-coding-agent";
@@ -3363,7 +3363,7 @@ diff -ruN --exclude=node_modules a/dist/subagent-model-snapshot.js b/dist/subage
 +}
 diff -ruN --exclude=node_modules a/dist/task-panel.d.ts b/dist/task-panel.d.ts
 --- a/dist/task-panel.d.ts	1985-10-26 03:15:00
-+++ b/dist/task-panel.d.ts	2026-09-18 10:13:52
++++ b/dist/task-panel.d.ts	2026-09-18 11:15:30
 @@ -19,6 +19,7 @@
       */
      loadSettings?: () => WorkflowSettings;
@@ -3385,7 +3385,7 @@ diff -ruN --exclude=node_modules a/dist/task-panel.d.ts b/dist/task-panel.d.ts
  export {};
 diff -ruN --exclude=node_modules a/dist/task-panel.js b/dist/task-panel.js
 --- a/dist/task-panel.js	1985-10-26 03:15:00
-+++ b/dist/task-panel.js	2026-09-18 10:13:52
++++ b/dist/task-panel.js	2026-09-18 11:15:30
 @@ -77,6 +77,27 @@
          return line;
      return truncateToWidth(line, maxWidth);
@@ -3506,7 +3506,7 @@ diff -ruN --exclude=node_modules a/dist/task-panel.js b/dist/task-panel.js
          return comp;
 diff -ruN --exclude=node_modules a/dist/usage-limit-scheduler.d.ts b/dist/usage-limit-scheduler.d.ts
 --- a/dist/usage-limit-scheduler.d.ts	1985-10-26 03:15:00
-+++ b/dist/usage-limit-scheduler.d.ts	2026-09-18 10:13:52
++++ b/dist/usage-limit-scheduler.d.ts	2026-09-18 11:15:30
 @@ -15,7 +15,7 @@
   * (in-memory, best-effort persisted) — it does not rely on manager.stop(), which
   * only operates on in-memory runs.
@@ -3572,7 +3572,7 @@ diff -ruN --exclude=node_modules a/dist/usage-limit-scheduler.d.ts b/dist/usage-
      /**
 diff -ruN --exclude=node_modules a/dist/usage-limit-scheduler.js b/dist/usage-limit-scheduler.js
 --- a/dist/usage-limit-scheduler.js	1985-10-26 03:15:00
-+++ b/dist/usage-limit-scheduler.js	2026-09-18 10:13:52
++++ b/dist/usage-limit-scheduler.js	2026-09-18 11:15:30
 @@ -15,10 +15,13 @@
   * (in-memory, best-effort persisted) — it does not rely on manager.stop(), which
   * only operates on in-memory runs.
@@ -3690,7 +3690,7 @@ diff -ruN --exclude=node_modules a/dist/usage-limit-scheduler.js b/dist/usage-li
      safeLoad(runId) {
 diff -ruN --exclude=node_modules a/dist/web-tools.d.ts b/dist/web-tools.d.ts
 --- a/dist/web-tools.d.ts	1985-10-26 03:15:00
-+++ b/dist/web-tools.d.ts	2026-09-18 10:13:52
++++ b/dist/web-tools.d.ts	2026-09-18 11:15:30
 @@ -3,18 +3,63 @@
   * process (which has network access), not in a subagent sandbox, so they perform
   * genuine HTTP requests via Node's fetch.
@@ -3761,7 +3761,7 @@ diff -ruN --exclude=node_modules a/dist/web-tools.d.ts b/dist/web-tools.d.ts
 +export declare function createWebTools(policy?: WebFetchPolicy): ToolDefinition[];
 diff -ruN --exclude=node_modules a/dist/web-tools.js b/dist/web-tools.js
 --- a/dist/web-tools.js	1985-10-26 03:15:00
-+++ b/dist/web-tools.js	2026-09-18 10:13:52
++++ b/dist/web-tools.js	2026-09-18 11:15:30
 @@ -3,18 +3,236 @@
   * process (which has network access), not in a subagent sandbox, so they perform
   * genuine HTTP requests via Node's fetch.
@@ -4059,17 +4059,17 @@ diff -ruN --exclude=node_modules a/dist/web-tools.js b/dist/web-tools.js
  }
 diff -ruN --exclude=node_modules a/dist/workflow-authoring-coverage.d.ts b/dist/workflow-authoring-coverage.d.ts
 --- a/dist/workflow-authoring-coverage.d.ts	1985-10-26 03:15:00
-+++ b/dist/workflow-authoring-coverage.d.ts	2026-09-18 10:13:52
++++ b/dist/workflow-authoring-coverage.d.ts	2026-09-18 11:15:30
 @@ -24,10 +24,10 @@
  /** Mixed guidance files that require explicit acceptance while behavioral coverage remains partial. */
  export declare const WORKFLOW_AUTHORING_FROZEN_FILES: readonly [{
      readonly path: "skills/workflow-authoring/SKILL.md";
 -    readonly sha256: "7571c9a3d44908b65ef927a208e364395d6379ed66dbfdd8886c900a30612981";
-+    readonly sha256: "a43448a29fc060e7339bb8d3ed82fb4a194ff839a5233faad74f61a9ae49b763";
++    readonly sha256: "a5a250aaf6d211a1c318a4f2e69e7b119d51d13b983e7fa79ffed450cf68da4e";
  }, {
      readonly path: "skills/workflow-authoring/references/runtime.md";
 -    readonly sha256: "5eb9d6f9b7f5403f84cdb2f9e06a0926d87b6292eb01ce5e4ae533393c0b173f";
-+    readonly sha256: "2c1bc2a2ef7a80ca7e2261ddb55e225fdd72caf3a2159d3058008ba116f2e43c";
++    readonly sha256: "bdd52db13dba83660f50cc151f9e8b9a71a465e322907d91db9c7be4164f24b9";
  }, {
      readonly path: "skills/workflow-authoring/references/helpers.md";
      readonly sha256: "1c8d253649f00412511f17ffc08c6156797b99de72ae037e14f2ea92ac33a11e";
@@ -4087,32 +4087,32 @@ diff -ruN --exclude=node_modules a/dist/workflow-authoring-coverage.d.ts b/dist/
  }, {
      readonly path: "skills/workflow-authoring/references/registry-ownership.md";
 -    readonly sha256: "425babf6fa5bd24fa0adef3d9b398661ad1e933d372b3989d22fe99e63f2c7ba";
-+    readonly sha256: "58599dce34b6a943e239bd48355596380d48eb016b0891f47236bf8126cec7d7";
++    readonly sha256: "dd655f994e8bd92e662586a078e3692eacc1782b934e098e5781121763e3da3e";
  }, {
      readonly path: "skills/workflow-authoring/references/review.md";
 -    readonly sha256: "2bd97acb87a8f6e9514892cdf5c431305b3d8952ba9761c1c203c217b08c9e7d";
-+    readonly sha256: "963373f6365e5f52359e6263379255d5f9fcf14e282bcf2f1888768530a9d154";
++    readonly sha256: "323e22167f2615dd1fbb1a3e457339ac31f3c04fd545519dce4bbc0040baec51";
  }, {
      readonly path: "skills/workflow-authoring/references/debugging.md";
 -    readonly sha256: "080cf85ee2d41c064935ed64491a724b24b705dc40a7010af862fa22b733b71e";
-+    readonly sha256: "d1de447c738fdfc305fc4a16dfecc8589743d5a3d076d5a1612f01bd76c918e0";
++    readonly sha256: "781d70be77a0d635e385d6f6ff6afeb9dee05e3e679e5d991bb9e47b9822a402";
  }, {
      readonly path: "skills/workflow-authoring/examples/classify-and-act.js";
      readonly sha256: "23d0d9f37ee8648cd29ca526b0b23cf55bd3ac57efd02e1b93e227bcd0c18603";
 diff -ruN --exclude=node_modules a/dist/workflow-authoring-coverage.js b/dist/workflow-authoring-coverage.js
 --- a/dist/workflow-authoring-coverage.js	1985-10-26 03:15:00
-+++ b/dist/workflow-authoring-coverage.js	2026-09-18 10:13:52
++++ b/dist/workflow-authoring-coverage.js	2026-09-18 11:15:30
 @@ -7,11 +7,11 @@
  export const WORKFLOW_AUTHORING_FROZEN_FILES = [
      {
          path: "skills/workflow-authoring/SKILL.md",
 -        sha256: "7571c9a3d44908b65ef927a208e364395d6379ed66dbfdd8886c900a30612981",
-+        sha256: "a43448a29fc060e7339bb8d3ed82fb4a194ff839a5233faad74f61a9ae49b763",
++        sha256: "a5a250aaf6d211a1c318a4f2e69e7b119d51d13b983e7fa79ffed450cf68da4e",
      },
      {
          path: "skills/workflow-authoring/references/runtime.md",
 -        sha256: "5eb9d6f9b7f5403f84cdb2f9e06a0926d87b6292eb01ce5e4ae533393c0b173f",
-+        sha256: "2c1bc2a2ef7a80ca7e2261ddb55e225fdd72caf3a2159d3058008ba116f2e43c",
++        sha256: "bdd52db13dba83660f50cc151f9e8b9a71a465e322907d91db9c7be4164f24b9",
      },
      {
          path: "skills/workflow-authoring/references/helpers.md",
@@ -4130,17 +4130,17 @@ diff -ruN --exclude=node_modules a/dist/workflow-authoring-coverage.js b/dist/wo
      {
          path: "skills/workflow-authoring/references/registry-ownership.md",
 -        sha256: "425babf6fa5bd24fa0adef3d9b398661ad1e933d372b3989d22fe99e63f2c7ba",
-+        sha256: "58599dce34b6a943e239bd48355596380d48eb016b0891f47236bf8126cec7d7",
++        sha256: "dd655f994e8bd92e662586a078e3692eacc1782b934e098e5781121763e3da3e",
      },
      {
          path: "skills/workflow-authoring/references/review.md",
 -        sha256: "2bd97acb87a8f6e9514892cdf5c431305b3d8952ba9761c1c203c217b08c9e7d",
-+        sha256: "963373f6365e5f52359e6263379255d5f9fcf14e282bcf2f1888768530a9d154",
++        sha256: "323e22167f2615dd1fbb1a3e457339ac31f3c04fd545519dce4bbc0040baec51",
      },
      {
          path: "skills/workflow-authoring/references/debugging.md",
 -        sha256: "080cf85ee2d41c064935ed64491a724b24b705dc40a7010af862fa22b733b71e",
-+        sha256: "d1de447c738fdfc305fc4a16dfecc8589743d5a3d076d5a1612f01bd76c918e0",
++        sha256: "781d70be77a0d635e385d6f6ff6afeb9dee05e3e679e5d991bb9e47b9822a402",
      },
      {
          path: "skills/workflow-authoring/examples/classify-and-act.js",
@@ -4149,7 +4149,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-authoring-coverage.js b/dist/wo
  const ROUTING_ROUTE = {
      path: SKILL_PATH,
 -    requiredText: "- **Routing:** read [registry ownership](references/registry-ownership.md) before using `model`, `tier`, phase models, or `agentType`; use environment-specific names only when context supplies them.",
-+    requiredText: "- **Agent types:** read [registry ownership](references/registry-ownership.md) before using `agentType`; use names only when context supplies them. Scripts do not select models.",
++    requiredText: "- **Agent types:** read [registry ownership](references/registry-ownership.md) before using `agentType`; use names only when context supplies them.",
  };
  const CAPABILITY_SCENARIOS = {
      "workflow.runtime.agent": WORKFLOW_COMPREHENSION_SCENARIO_IDS,
@@ -4173,7 +4173,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-authoring-coverage.js b/dist/wo
  };
 diff -ruN --exclude=node_modules a/dist/workflow-capability-contract.d.ts b/dist/workflow-capability-contract.d.ts
 --- a/dist/workflow-capability-contract.d.ts	1985-10-26 03:15:00
-+++ b/dist/workflow-capability-contract.d.ts	2026-09-18 10:13:52
++++ b/dist/workflow-capability-contract.d.ts	2026-09-18 11:15:30
 @@ -13,7 +13,7 @@
      optional: boolean;
      default: string | null;
@@ -4201,7 +4201,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-capability-contract.d.ts b/dist
      items?: never;
 diff -ruN --exclude=node_modules a/dist/workflow-capability-contract.js b/dist/workflow-capability-contract.js
 --- a/dist/workflow-capability-contract.js	1985-10-26 03:15:00
-+++ b/dist/workflow-capability-contract.js	2026-09-18 10:13:52
++++ b/dist/workflow-capability-contract.js	2026-09-18 11:15:30
 @@ -15,8 +15,6 @@
          option("label", "string", true, "derived from phase and call count"),
          option("phase", "string", true, "current phase"),
@@ -4211,7 +4211,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-capability-contract.js b/dist/w
          option("isolation", '"worktree"', true),
          option("thread", "string", true, null, ["non-empty name; same-name calls must be sequential"]),
          option("agentType", "string", true, null, ["must come from provided context"], "agent-types"),
-@@ -137,10 +135,9 @@
+@@ -137,10 +135,7 @@
              "a named thread retains its full Pi transcript and session identity only within one uninterrupted workflow invocation",
              "threaded calls are live-execution resume barriers and are never journaled",
              "same-thread calls must be sequential; threads cannot use worktree isolation",
@@ -4219,13 +4219,11 @@ diff -ruN --exclude=node_modules a/dist/workflow-capability-contract.js b/dist/w
 -            "an explicit model, agentType model, tier, or phase model that resolves to an unavailable model throws MODEL_NOT_FOUND naming the source (e.g. the tier and what it resolved to) instead of falling back",
 -            "only the implicit default medium tier (no explicit model, tier, agentType, or phase model requested) degrades to the session default when unavailable, logging a one-time run-visible warning instead of throwing",
 -            "worktree isolation is best-effort; failure logs that isolation was ignored and continues without an isolated working directory",
-+            "all agents use the single user-configured subagent model; scripts do not select models",
-+            "an unavailable configured model throws MODEL_NOT_FOUND instead of falling back",
 +            "worktree isolation must succeed when requested; a failure fails that agent instead of silently running it in the shared working tree (opt in to the old fallback with isolationFallback / worktreeIsolationFallback)",
          ],
          evidence: ["tests/workflow-runtime.test.ts", "tests/agent-registry.test.ts", "tests/structured-output.test.ts"],
      }),
-@@ -293,14 +290,14 @@
+@@ -293,14 +288,14 @@
      toolInput("background", "background?: boolean = true", [
          "background workflows are headless; use background false when checkpoint must show foreground confirmation",
      ]),
@@ -4244,7 +4242,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-capability-contract.js b/dist/w
      toolInput("tokenBudget", "tokenBudget?: number = configured default or unlimited", [
          "soft pre-call gate; in-flight work can overshoot",
      ]),
-@@ -317,7 +314,7 @@
+@@ -317,7 +312,7 @@
          discovery: DiscoveryPlacement.WORKFLOW_AUTHORING_SKILL,
          origin: CapabilityOrigin.PROJECT,
          lifecycle: PRESENT_AT,
@@ -4253,7 +4251,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-capability-contract.js b/dist/w
          optionShape: null,
          constraints: [
              "must be the first statement",
-@@ -403,23 +400,6 @@
+@@ -403,23 +398,6 @@
          dynamicReference: null,
      },
      {
@@ -4277,7 +4275,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-capability-contract.js b/dist/w
          id: "workflow.dynamic.agent-types",
          label: "agent types",
          classification: CapabilityClassification.DYNAMIC_REFERENCE,
-@@ -456,12 +436,6 @@
+@@ -456,12 +434,6 @@
      ],
      capabilities,
      dynamicReferences: [
@@ -4292,7 +4290,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-capability-contract.js b/dist/w
              owner: "agent-registry",
 diff -ruN --exclude=node_modules a/dist/workflow-commands.js b/dist/workflow-commands.js
 --- a/dist/workflow-commands.js	1985-10-26 03:15:00
-+++ b/dist/workflow-commands.js	2026-09-18 10:13:52
++++ b/dist/workflow-commands.js	2026-09-18 11:15:30
 @@ -4,6 +4,7 @@
   */
  import { fmtFull, fmtTokenSegment, recomputeWorkflowSnapshot, renderWorkflowText, tokenFigures, } from "./display.js";
@@ -4403,7 +4401,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-commands.js b/dist/workflow-com
                  default:
 diff -ruN --exclude=node_modules a/dist/workflow-editor.js b/dist/workflow-editor.js
 --- a/dist/workflow-editor.js	1985-10-26 03:15:00
-+++ b/dist/workflow-editor.js	2026-09-18 10:13:52
++++ b/dist/workflow-editor.js	2026-09-18 11:15:30
 @@ -236,15 +236,18 @@
      };
      registerWorkflowTriggerCommand(pi, state, settingsStore);
@@ -4474,7 +4472,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-editor.js b/dist/workflow-edito
      return state;
 diff -ruN --exclude=node_modules a/dist/workflow-manager.d.ts b/dist/workflow-manager.d.ts
 --- a/dist/workflow-manager.d.ts	1985-10-26 03:15:00
-+++ b/dist/workflow-manager.d.ts	2026-09-18 10:13:52
++++ b/dist/workflow-manager.d.ts	2026-09-18 11:15:30
 @@ -9,6 +9,7 @@
  import { WorkflowError } from "./errors.js";
  import { type PendingDeliveryMarker, type PersistedRunState, type RunLease, type RunPersistence, type RunStatus } from "./run-persistence.js";
@@ -4689,7 +4687,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-manager.d.ts b/dist/workflow-ma
       *
 diff -ruN --exclude=node_modules a/dist/workflow-manager.js b/dist/workflow-manager.js
 --- a/dist/workflow-manager.js	1985-10-26 03:15:00
-+++ b/dist/workflow-manager.js	2026-09-18 10:13:52
++++ b/dist/workflow-manager.js	2026-09-18 11:15:30
 @@ -3,11 +3,13 @@
   */
  import { EventEmitter } from "node:events";
@@ -5078,7 +5076,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-manager.js b/dist/workflow-mana
       * Stop a running workflow.
 diff -ruN --exclude=node_modules a/dist/workflow-model-command.d.ts b/dist/workflow-model-command.d.ts
 --- a/dist/workflow-model-command.d.ts	1969-12-31 18:00:00
-+++ b/dist/workflow-model-command.d.ts	2026-09-18 10:13:52
++++ b/dist/workflow-model-command.d.ts	2026-09-18 11:15:30
 @@ -0,0 +1,17 @@
 +import type { ExtensionAPI, ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
 +import { type ModelThinkingLevel } from "./model-spec.js";
@@ -5099,7 +5097,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-model-command.d.ts b/dist/workf
 +}): void;
 diff -ruN --exclude=node_modules a/dist/workflow-model-command.js b/dist/workflow-model-command.js
 --- a/dist/workflow-model-command.js	1969-12-31 18:00:00
-+++ b/dist/workflow-model-command.js	2026-09-18 10:13:52
++++ b/dist/workflow-model-command.js	2026-09-18 11:15:30
 @@ -0,0 +1,78 @@
 +import { THINKING_LEVELS } from "./model-spec.js";
 +import { loadSubagentModelConfig, saveSubagentModelConfig } from "./subagent-model-config.js";
@@ -5181,7 +5179,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-model-command.js b/dist/workflo
 +}
 diff -ruN --exclude=node_modules a/dist/workflow-paths.d.ts b/dist/workflow-paths.d.ts
 --- a/dist/workflow-paths.d.ts	1985-10-26 03:15:00
-+++ b/dist/workflow-paths.d.ts	2026-09-18 10:13:52
++++ b/dist/workflow-paths.d.ts	2026-09-18 11:15:30
 @@ -7,6 +7,7 @@
   */
  export declare const WORKFLOW_HOME_RELATIVE_DIR = ".pi/workflows";
@@ -5208,7 +5206,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-paths.d.ts b/dist/workflow-path
  export declare function workflowProjectPaths(cwd: string): WorkflowProjectPaths;
 diff -ruN --exclude=node_modules a/dist/workflow-paths.js b/dist/workflow-paths.js
 --- a/dist/workflow-paths.js	1985-10-26 03:15:00
-+++ b/dist/workflow-paths.js	2026-09-18 10:13:52
++++ b/dist/workflow-paths.js	2026-09-18 11:15:30
 @@ -5,12 +5,15 @@
   * scattered `.pi/workflows` directories. Project-scoped state is still isolated
   * by a stable cwd-derived namespace.
@@ -5283,7 +5281,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-paths.js b/dist/workflow-paths.
          .toLowerCase()
 diff -ruN --exclude=node_modules a/dist/workflow-saved.d.ts b/dist/workflow-saved.d.ts
 --- a/dist/workflow-saved.d.ts	1985-10-26 03:15:00
-+++ b/dist/workflow-saved.d.ts	2026-09-18 10:13:52
++++ b/dist/workflow-saved.d.ts	2026-09-18 11:15:30
 @@ -25,6 +25,25 @@
      path: string;
      /** When it was saved. */
@@ -5326,7 +5324,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-saved.d.ts b/dist/workflow-save
 +export declare function createWorkflowStorage(cwd: string, fsOverride?: Partial<PersistenceFsLayer>, options?: WorkflowStorageOptions): WorkflowStorage;
 diff -ruN --exclude=node_modules a/dist/workflow-saved.js b/dist/workflow-saved.js
 --- a/dist/workflow-saved.js	1985-10-26 03:15:00
-+++ b/dist/workflow-saved.js	2026-09-18 10:13:52
++++ b/dist/workflow-saved.js	2026-09-18 11:15:30
 @@ -5,6 +5,7 @@
  import { join } from "node:path";
  import { ensureDir as ensureDirFs, listJsonFilesSafe, readJsonWithBackupRecovery, resolvePersistenceFs, writeJsonAtomicWithBackup, writeJsonAtomicWithBackupStrict, } from "./fs-persistence.js";
@@ -5428,7 +5426,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-saved.js b/dist/workflow-saved.
              addDir("user");
 diff -ruN --exclude=node_modules a/dist/workflow-settings.d.ts b/dist/workflow-settings.d.ts
 --- a/dist/workflow-settings.d.ts	1985-10-26 03:15:00
-+++ b/dist/workflow-settings.d.ts	2026-09-18 10:13:52
++++ b/dist/workflow-settings.d.ts	2026-09-18 11:15:30
 @@ -17,6 +17,12 @@
      defaultTokenBudget?: number | null;
      /** Default max concurrent agents per run. Clamped to the runtime maximum. */
@@ -5486,7 +5484,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-settings.d.ts b/dist/workflow-s
      load(): WorkflowSettings;
 diff -ruN --exclude=node_modules a/dist/workflow-settings.js b/dist/workflow-settings.js
 --- a/dist/workflow-settings.js	1985-10-26 03:15:00
-+++ b/dist/workflow-settings.js	2026-09-18 10:13:52
++++ b/dist/workflow-settings.js	2026-09-18 11:15:30
 @@ -6,7 +6,7 @@
   */
  import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -5529,7 +5527,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-settings.js b/dist/workflow-set
      if (deliveredResultMaxChars !== undefined)
 diff -ruN --exclude=node_modules a/dist/workflow-tool.d.ts b/dist/workflow-tool.d.ts
 --- a/dist/workflow-tool.d.ts	1985-10-26 03:15:00
-+++ b/dist/workflow-tool.d.ts	2026-09-18 10:13:52
++++ b/dist/workflow-tool.d.ts	2026-09-18 11:15:30
 @@ -3,7 +3,7 @@
  import { WorkflowManager } from "./workflow-manager.js";
  import { type WorkflowStorage } from "./workflow-saved.js";
@@ -5541,7 +5539,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-tool.d.ts b/dist/workflow-tool.
      name: Type.TOptional<Type.TString>;
 diff -ruN --exclude=node_modules a/dist/workflow-tool.js b/dist/workflow-tool.js
 --- a/dist/workflow-tool.js	1985-10-26 03:15:00
-+++ b/dist/workflow-tool.js	2026-09-18 10:13:52
++++ b/dist/workflow-tool.js	2026-09-18 11:15:30
 @@ -2,7 +2,7 @@
  import { Text } from "@earendil-works/pi-tui";
  import { Type } from "typebox";
@@ -5565,7 +5563,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-tool.js b/dist/workflow-tool.js
              "Optional quality helpers include verify(), judgePanel(), loopUntilDry(), and completenessCheck().",
              "Optional control helpers include retry() and gate(); budget exposes total, spent(), and remaining(), and phase('Name', { budget: N }) sets a phase token limit.",
 -            "The optional `agentType` option selects a named user or project definition that can bind tools, a model, and role instructions; use it only when its name and purpose are provided in context. Its bound model overrides `tier`; an explicit `model` overrides both.",
-+            "All subagents use the single user-configured model. Do not specify model or tier options. The optional `agentType` selects named tools and role instructions; use it only when its name and purpose are provided in context.",
++            "The optional `agentType` selects named tools and role instructions; use it only when its name and purpose are provided in context.",
              "Use plain JavaScript only; imports, require(), filesystem modules, Date.now(), Math.random(), and new Date() are unavailable.",
              "Use phase('Name'), agent(prompt, opts), parallel(arrayOfFunctions), pipeline(items, ...stages), log(message), args, cwd, process.cwd(), and budget. The workflow must call agent() at least once.",
              "parallel() requires functions, not promises, and returns results in input order: await parallel(items.map(item => () => agent(...))).",
@@ -5656,7 +5654,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-tool.js b/dist/workflow-tool.js
          `Track or cancel it with /workflows status ${runId} or /workflows stop ${runId}.`,
 diff -ruN --exclude=node_modules a/dist/workflow-ui.js b/dist/workflow-ui.js
 --- a/dist/workflow-ui.js	1985-10-26 03:15:00
-+++ b/dist/workflow-ui.js	2026-09-18 10:13:52
++++ b/dist/workflow-ui.js	2026-09-18 11:15:30
 @@ -15,6 +15,7 @@
  import { getLanguageFromPath, getMarkdownTheme, renderDiff, } from "@earendil-works/pi-coding-agent";
  import { Markdown, parseKey, truncateToWidth, visibleWidth, wrapTextWithAnsi } from "@earendil-works/pi-tui";
@@ -5763,7 +5761,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-ui.js b/dist/workflow-ui.js
                      }
 diff -ruN --exclude=node_modules a/dist/workflow.d.ts b/dist/workflow.d.ts
 --- a/dist/workflow.d.ts	1985-10-26 03:15:00
-+++ b/dist/workflow.d.ts	2026-09-18 10:13:52
++++ b/dist/workflow.d.ts	2026-09-18 11:15:30
 @@ -8,14 +8,11 @@
  export interface WorkflowMetaPhase {
      title: string;
@@ -5886,7 +5884,7 @@ diff -ruN --exclude=node_modules a/dist/workflow.d.ts b/dist/workflow.d.ts
      /** Override timeout for this specific agent. null means no hard timeout. */
 diff -ruN --exclude=node_modules a/dist/workflow.js b/dist/workflow.js
 --- a/dist/workflow.js	1985-10-26 03:15:00
-+++ b/dist/workflow.js	2026-09-18 10:13:52
++++ b/dist/workflow.js	2026-09-18 11:15:30
 @@ -1,14 +1,14 @@
  import { AsyncLocalStorage } from "node:async_hooks";
 -import { createHash } from "node:crypto";
@@ -6739,7 +6737,7 @@ diff -ruN --exclude=node_modules a/dist/workflows-models-command.js b/dist/workf
 -}
 diff -ruN --exclude=node_modules a/dist/worktree.d.ts b/dist/worktree.d.ts
 --- a/dist/worktree.d.ts	1985-10-26 03:15:00
-+++ b/dist/worktree.d.ts	2026-09-18 10:13:52
++++ b/dist/worktree.d.ts	2026-09-18 11:15:30
 @@ -14,11 +14,29 @@
      repoRoot?: string;
      /** Why isolation was skipped, when isolated === false. */
@@ -6775,7 +6773,7 @@ diff -ruN --exclude=node_modules a/dist/worktree.d.ts b/dist/worktree.d.ts
  /** Remove a worktree and its branch. Best-effort; safe to call on a no-op Worktree. */
 diff -ruN --exclude=node_modules a/dist/worktree.js b/dist/worktree.js
 --- a/dist/worktree.js	1985-10-26 03:15:00
-+++ b/dist/worktree.js	2026-09-18 10:13:52
++++ b/dist/worktree.js	2026-09-18 11:15:30
 @@ -5,32 +5,82 @@
   * the caller to inspect. Falls back to a logged no-op when isolation isn't possible.
   */
@@ -7685,13 +7683,13 @@ diff -ruN --exclude=node_modules a/package.json b/package.json
        "skills/workflow-authoring",
 diff -ruN --exclude=node_modules a/skills/workflow-authoring/SKILL.md b/skills/workflow-authoring/SKILL.md
 --- a/skills/workflow-authoring/SKILL.md	1985-10-26 03:15:00
-+++ b/skills/workflow-authoring/SKILL.md	2026-09-17 12:08:52
++++ b/skills/workflow-authoring/SKILL.md	2026-09-18 11:15:03
 @@ -17,7 +17,7 @@
  - **Helper task:** read [quality helpers](references/quality-helpers.md) only for `verify` or `judgePanel`, the [retry helper](references/retry-helper.md) only for `retry`, and [specialized helpers](references/specialized-helpers.md) only for `completenessCheck`, `loopUntilDry`, `gate`, or `checkpoint`.
  - **Review:** use the [review checklist](references/review.md), plus only the matching [quality](references/quality-helpers.md) or [specialized](references/specialized-helpers.md) helper contracts.
  - **Debug:** use the [debugging map](references/debugging.md).
 -- **Routing:** read [registry ownership](references/registry-ownership.md) before using `model`, `tier`, phase models, or `agentType`; use environment-specific names only when context supplies them.
-+- **Agent types:** read [registry ownership](references/registry-ownership.md) before using `agentType`; use names only when context supplies them. Scripts do not select models.
++- **Agent types:** read [registry ownership](references/registry-ownership.md) before using `agentType`; use names only when context supplies them.
  - **Exact lookup or portability:** start with the generated [capability index](references/capabilities.md). Follow its exhaustive-facts pointer only for constraints or support boundaries. Use [versions](references/versions.md) when moving scripts between installations.
  
  ## Invariants
@@ -7723,7 +7721,7 @@ diff -ruN --exclude=node_modules a/skills/workflow-authoring/references/capabili
  <!-- END GENERATED SUPPORTED WORKFLOW CAPABILITIES -->
 diff -ruN --exclude=node_modules a/skills/workflow-authoring/references/capability-details.md b/skills/workflow-authoring/references/capability-details.md
 --- a/skills/workflow-authoring/references/capability-details.md	1985-10-26 03:15:00
-+++ b/skills/workflow-authoring/references/capability-details.md	2026-09-17 12:13:51
++++ b/skills/workflow-authoring/references/capability-details.md	2026-09-18 11:15:08
 @@ -16,8 +16,6 @@
  - `label`: string (optional; default: derived from phase and call count)
  - `phase`: string (optional; default: current phase)
@@ -7733,7 +7731,7 @@ diff -ruN --exclude=node_modules a/skills/workflow-authoring/references/capabili
  - `isolation`: "worktree" (optional)
  - `thread`: string (optional; non-empty name; same-name calls must be sequential)
  - `agentType`: string (optional; must come from provided context; dynamic reference: agent-types)
-@@ -30,10 +28,9 @@
+@@ -30,10 +28,7 @@
  - Constraint: a named thread retains its full Pi transcript and session identity only within one uninterrupted workflow invocation
  - Constraint: threaded calls are live-execution resume barriers and are never journaled
  - Constraint: same-thread calls must be sequential; threads cannot use worktree isolation
@@ -7741,13 +7739,11 @@ diff -ruN --exclude=node_modules a/skills/workflow-authoring/references/capabili
 -- Constraint: an explicit model, agentType model, tier, or phase model that resolves to an unavailable model throws MODEL_NOT_FOUND naming the source (e.g. the tier and what it resolved to) instead of falling back
 -- Constraint: only the implicit default medium tier (no explicit model, tier, agentType, or phase model requested) degrades to the session default when unavailable, logging a one-time run-visible warning instead of throwing
 -- Constraint: worktree isolation is best-effort; failure logs that isolation was ignored and continues without an isolated working directory
-+- Constraint: all agents use the single user-configured subagent model; scripts do not select models
-+- Constraint: an unavailable configured model throws MODEL_NOT_FOUND instead of falling back
 +- Constraint: worktree isolation must succeed when requested; a failure fails that agent instead of silently running it in the shared working tree (opt in to the old fallback with isolationFallback / worktreeIsolationFallback)
  
  <a id="parallel"></a>
  ## parallel
-@@ -267,8 +264,8 @@
+@@ -267,8 +262,8 @@
  
  - Classification: `workflow-tool-input`
  - Support: `supported`
@@ -7758,7 +7754,7 @@ diff -ruN --exclude=node_modules a/skills/workflow-authoring/references/capabili
  - Constraint: counts logical agent calls across the shared nested run tree, including quality-helper expansion: verify = reviewers, judgePanel = populated attempts × judges (dense input: attempts.length × judges), completenessCheck = 1
  - Constraint: agent execution retries do not consume extra logical slots; retry(), gate(), and loopUntilDry callbacks must be budgeted from their bounded planned calls
  
-@@ -285,7 +282,7 @@
+@@ -285,7 +280,7 @@
  
  - Classification: `workflow-tool-input`
  - Support: `supported`
@@ -7767,7 +7763,7 @@ diff -ruN --exclude=node_modules a/skills/workflow-authoring/references/capabili
  - Constraint: floored and clamped to 0..3
  
  <a id="tool-input-agenttimeoutms"></a>
-@@ -293,7 +290,7 @@
+@@ -293,7 +288,7 @@
  
  - Classification: `workflow-tool-input`
  - Support: `supported`
@@ -7776,7 +7772,7 @@ diff -ruN --exclude=node_modules a/skills/workflow-authoring/references/capabili
  
  <a id="tool-input-tokenbudget"></a>
  ## tokenBudget
-@@ -318,7 +315,7 @@
+@@ -318,7 +313,7 @@
  
  - Classification: `script-contract`
  - Support: `supported`
@@ -7785,7 +7781,7 @@ diff -ruN --exclude=node_modules a/skills/workflow-authoring/references/capabili
  - Constraint: must be the first statement
  - Constraint: name and description must be nonblank strings
  - Constraint: metadata must use literal values; expressions such as string concatenation and template interpolation are rejected
-@@ -348,18 +345,6 @@
+@@ -348,18 +343,6 @@
  - Support: `compatibility`
  - Signature: —
  - Constraint: accepted for compatibility but not recommended
@@ -7806,16 +7802,17 @@ diff -ruN --exclude=node_modules a/skills/workflow-authoring/references/capabili
  ## agent types
 diff -ruN --exclude=node_modules a/skills/workflow-authoring/references/debugging.md b/skills/workflow-authoring/references/debugging.md
 --- a/skills/workflow-authoring/references/debugging.md	1985-10-26 03:15:00
-+++ b/skills/workflow-authoring/references/debugging.md	2026-09-17 12:46:47
-@@ -8,7 +8,7 @@
++++ b/skills/workflow-authoring/references/debugging.md	2026-09-18 11:15:06
+@@ -8,8 +8,7 @@
  | `parallel()` rejects input | Promises were passed instead of thunks | [runtime](runtime.md#topology) |
  | Synthesis starts early | Fan-out was not awaited as one complete result set | [pattern selection](pattern-selection.md#fan-out-and-synthesize) |
  | Coverage silently disappears | `null` results were filtered before IDs were ledgered | [lifecycle](lifecycle.md#retry-and-recoverable-failure) |
 -| Wrong model is used | A higher-priority selector overrides the expected route | [registry ownership](registry-ownership.md#priority) |
-+| Wrong model is used | Check the user's single subagent model with `/workflow-model` | [registry ownership](registry-ownership.md) |
- | Unknown `agentType` log | A live registry name was guessed or is unavailable | [registry ownership](registry-ownership.md#agent-types) |
+-| Unknown `agentType` log | A live registry name was guessed or is unavailable | [registry ownership](registry-ownership.md#agent-types) |
++| Unknown `agentType` log | A live registry name was guessed or is unavailable | [registry ownership](registry-ownership.md) |
  | Budget exceeds the number shown | The budget is a soft pre-call gate and work was in flight | [lifecycle](lifecycle.md#bounds-and-budget) |
  | Later calls rerun on resume | An earlier call missed or changed, ending the replayable prefix | [lifecycle](lifecycle.md#resume) |
+ | Resume reruns a call that already "succeeded" once before | Its only prior attempt(s) ended in a recoverable failure (e.g. `AGENT_EMPTY_OUTPUT`) and were never journaled | [lifecycle](lifecycle.md#resume) |
 diff -ruN --exclude=node_modules a/skills/workflow-authoring/references/lifecycle.md b/skills/workflow-authoring/references/lifecycle.md
 --- a/skills/workflow-authoring/references/lifecycle.md	1985-10-26 03:15:00
 +++ b/skills/workflow-authoring/references/lifecycle.md	2026-08-29 02:21:53
@@ -7830,22 +7827,19 @@ diff -ruN --exclude=node_modules a/skills/workflow-authoring/references/lifecycl
  
 diff -ruN --exclude=node_modules a/skills/workflow-authoring/references/registry-ownership.md b/skills/workflow-authoring/references/registry-ownership.md
 --- a/skills/workflow-authoring/references/registry-ownership.md	1985-10-26 03:15:00
-+++ b/skills/workflow-authoring/references/registry-ownership.md	2026-09-17 14:13:47
-@@ -1,17 +1,11 @@
++++ b/skills/workflow-authoring/references/registry-ownership.md	2026-09-18 11:15:04
+@@ -1,17 +1,3 @@
 -# Dynamic registry ownership
 +# Registry ownership
  
 -Model routes and agent types are dynamic references. Their shape and owner are documented, but available names depend on active user/project configuration and are intentionally absent from static skill files.
-+## Subagent model
- 
+-
 -## Model routes
-+The user chooses one subagent model with `/workflow-model`, from their pinned models. The choice lives in `~/.pi/workflows/subagent-model.json` as `{ "model": "provider/modelId", "thinking": "high" }`. Without a saved choice, agents use the main session model.
- 
+-
 -The model-tier configuration owns route names. Standard routes are `small`, `medium`, and `big`; use another route only when its name and purpose are supplied in context. A route is selected with `tier`. An exact user-requested model is selected with `model`.
-+Every agent in a run uses that choice, including helpers, nested workflows, and follow-up turns on a thread. Scripts cannot override it. Legacy model and tier selectors are ignored. An unavailable configured model fails the call rather than silently switching models.
- 
- ## Agent types
- 
+-
+-## Agent types
+-
 -The agent registry owns agent-type names and their bound instructions, tools, model, and isolation policy. Use `agentType` only when context supplies both its name and purpose. Do not infer an agent type from a role-like label.
 -
 -## Priority
@@ -7853,11 +7847,11 @@ diff -ruN --exclude=node_modules a/skills/workflow-authoring/references/registry
 -Routing priority is explicit `model` > `agentType` model > `tier` > phase model > metadata model > implicit `medium` > session default. Higher priority means selection, not "try this then fall back to the next selector." Avoid specifying competing selectors unless deliberately overriding a lower-priority default.
 -
 -Unavailability is asymmetric by design. An explicit `model`, `agentType` model, `tier`, or phase model that resolves to a model the registry doesn't have throws — it never silently runs a different model instead. A tier failure names its source (for example: `tier "big" from model-tiers.json resolves to "deadprov/x", which is not available`), so the mistake is traceable back to the config that caused it. Only the implicit default `medium` tier — the route an UNTAGGED agent gets routed through when the script requested no `model`, `tier`, `agentType`, or phase model — degrades to the session default when it is unavailable, since that agent never asked for that specific model; the degrade still logs a one-time warning into the run so it stays discoverable instead of silent.
-+The agent registry owns agent-type names and their instructions, tools, and isolation policy. Use `agentType` only when context supplies both its name and purpose. Do not infer an agent type from a role-like label. Model fields in agent definitions are ignored.
++The agent registry owns agent-type names and their instructions, tools, and isolation policy. Use `agentType` only when context supplies both its name and purpose. Do not infer an agent type from a role-like label.
 diff -ruN --exclude=node_modules a/skills/workflow-authoring/references/review.md b/skills/workflow-authoring/references/review.md
 --- a/skills/workflow-authoring/references/review.md	1985-10-26 03:15:00
-+++ b/skills/workflow-authoring/references/review.md	2026-09-17 13:28:53
-@@ -17,12 +17,12 @@
++++ b/skills/workflow-authoring/references/review.md	2026-09-18 11:12:09
+@@ -17,12 +17,11 @@
  - Are stable work-unit IDs retained beside ordered results?
  - Are failed/null identities recorded before any filtering?
  
@@ -7868,14 +7862,13 @@ diff -ruN --exclude=node_modules a/skills/workflow-authoring/references/review.m
  - Does synthesis receive complete coverage and failure ledgers?
 -- Are `model`, `tier`, and `agentType` used according to selector priority?
 -- Did every nonstandard route or agent type come from context with a name and purpose?
-+- Are model selectors omitted, and is any `agentType` supplied by context?
-+- Does each agent type supplied by context have a name and purpose?
++- Is any `agentType` supplied by context, and does it have a name and purpose?
  
  ## Lifecycle
  
 diff -ruN --exclude=node_modules a/skills/workflow-authoring/references/runtime.md b/skills/workflow-authoring/references/runtime.md
 --- a/skills/workflow-authoring/references/runtime.md	1985-10-26 03:15:00
-+++ b/skills/workflow-authoring/references/runtime.md	2026-09-17 12:07:19
++++ b/skills/workflow-authoring/references/runtime.md	2026-09-18 11:15:05
 @@ -4,7 +4,7 @@
  
  ## Script envelope
@@ -7890,14 +7883,15 @@ diff -ruN --exclude=node_modules a/skills/workflow-authoring/references/runtime.
  Call `agent(prompt, { label, schema? })`; it returns text, a schema-validated value, or recoverable `null`. Nonrecoverable limit, validation, and budget failures throw. Record each intended work ID before filtering. A `null` means missing coverage, never a negative finding.
  
 -Use `agent(prompt, { thread: "implementer" })` when the same subagent must receive a later follow-up with its complete conversation intact, such as implementer → separate reviewer → implementer revision. Reuse a thread name sequentially; never put same-thread calls in one `parallel()` batch. Nested workflows share thread names with their parent, so a bare name like `implementer` re-enters the parent's session — use that deliberately for parent→child→parent handoffs, and prefix child-internal threads (e.g. `lint:implementer`) so an independent child cannot silently join a parent thread. Later turns on one thread may change `model`, `tier`, or `agentType`: the transcript is kept and the next turn runs on the newly resolved model, which is intended for mid-loop escalation. Threads exist only during the current uninterrupted workflow invocation, cannot use worktree isolation, and restart from the beginning after pause/resume because threaded results are not journaled.
-+Use `agent(prompt, { thread: "implementer" })` when the same subagent must receive a later follow-up with its complete conversation intact, such as implementer → separate reviewer → implementer revision. Reuse a thread name sequentially; never put same-thread calls in one `parallel()` batch. Nested workflows share thread names with their parent, so a bare name like `implementer` re-enters the parent's session — use that deliberately for parent→child→parent handoffs, and prefix child-internal threads (e.g. `lint:implementer`) so an independent child cannot silently join a parent thread. Later turns keep the same user-configured model and the full transcript. Threads exist only during the current uninterrupted workflow invocation, cannot use worktree isolation, and restart from the beginning after pause/resume because threaded results are not journaled.
++Use `agent(prompt, { thread: "implementer" })` when the same subagent must receive a later follow-up with its complete conversation intact, such as implementer → separate reviewer → implementer revision. Reuse a thread name sequentially; never put same-thread calls in one `parallel()` batch. Nested workflows share thread names with their parent, so a bare name like `implementer` re-enters the parent's session — use that deliberately for parent→child→parent handoffs, and prefix child-internal threads (e.g. `lint:implementer`) so an independent child cannot silently join a parent thread. Later turns keep the full transcript. Threads exist only during the current uninterrupted workflow invocation, cannot use worktree isolation, and restart from the beginning after pause/resume because threaded results are not journaled.
  
  When JavaScript reads fields, pass a small plain JSON Schema. Schema noncompliance after repair throws and bypasses agent retries. Catch it only to return an explicit incomplete outcome without reading missing fields. Return objects, arrays, strings, numbers, booleans, and `null`—not functions, promises, cycles, `BigInt`, or runtime handles.
  
- ## Routing and support
+-## Routing and support
++## Support
  
 -Selector priority is explicit `model` > `agentType` model > `tier` > phase model > metadata model > implicit `medium` > session default. An unavailable EXPLICIT selector (`model`, `agentType` model, `tier`, or phase model) throws instead of falling back — catch it if the script needs to degrade gracefully. Only the implicit default `medium` tier an untagged agent falls into degrades to the session default when unavailable, with a one-time warning logged into the run. Use exact `model`, nonstandard `tier`, or `agentType` only when context supplies its name and purpose. Worktree isolation is best-effort. See [registry ownership](registry-ownership.md).
-+All agents, including nested workflows and threaded calls, use one user-configured subagent model. Scripts cannot select models. An unavailable configured model throws instead of falling back. Use `agentType` only when context supplies its name and purpose. Worktree isolation must succeed when requested: an agent that cannot get a worktree fails rather than running in the shared tree. See [registry ownership](registry-ownership.md).
++Use `agentType` only when context supplies its name and purpose. Worktree isolation must succeed when requested: an agent that cannot get a worktree fails rather than running in the shared tree. See [registry ownership](registry-ownership.md).
  
 -Generated entries marked `supported` are authoring API. `console` and whole-script Markdown fences are compatibility-only. VM realm facilities are internal. Active model routes and agent types are dynamic. Use `log()` in new scripts.
 +Generated entries marked `supported` are authoring API. `console` and whole-script Markdown fences are compatibility-only. VM realm facilities are internal. Agent types are dynamic. Use `log()` in new scripts.
@@ -11277,18 +11271,18 @@ diff -ruN --exclude=node_modules a/src/web-tools.ts b/src/web-tools.ts
  }
 diff -ruN --exclude=node_modules a/src/workflow-authoring-coverage.ts b/src/workflow-authoring-coverage.ts
 --- a/src/workflow-authoring-coverage.ts	1985-10-26 03:15:00
-+++ b/src/workflow-authoring-coverage.ts	2026-09-17 14:14:08
++++ b/src/workflow-authoring-coverage.ts	2026-09-18 11:15:25
 @@ -33,11 +33,11 @@
  export const WORKFLOW_AUTHORING_FROZEN_FILES = [
    {
      path: "skills/workflow-authoring/SKILL.md",
 -    sha256: "7571c9a3d44908b65ef927a208e364395d6379ed66dbfdd8886c900a30612981",
-+    sha256: "a43448a29fc060e7339bb8d3ed82fb4a194ff839a5233faad74f61a9ae49b763",
++    sha256: "a5a250aaf6d211a1c318a4f2e69e7b119d51d13b983e7fa79ffed450cf68da4e",
    },
    {
      path: "skills/workflow-authoring/references/runtime.md",
 -    sha256: "5eb9d6f9b7f5403f84cdb2f9e06a0926d87b6292eb01ce5e4ae533393c0b173f",
-+    sha256: "2c1bc2a2ef7a80ca7e2261ddb55e225fdd72caf3a2159d3058008ba116f2e43c",
++    sha256: "bdd52db13dba83660f50cc151f9e8b9a71a465e322907d91db9c7be4164f24b9",
    },
    {
      path: "skills/workflow-authoring/references/helpers.md",
@@ -11306,17 +11300,17 @@ diff -ruN --exclude=node_modules a/src/workflow-authoring-coverage.ts b/src/work
    {
      path: "skills/workflow-authoring/references/registry-ownership.md",
 -    sha256: "425babf6fa5bd24fa0adef3d9b398661ad1e933d372b3989d22fe99e63f2c7ba",
-+    sha256: "58599dce34b6a943e239bd48355596380d48eb016b0891f47236bf8126cec7d7",
++    sha256: "dd655f994e8bd92e662586a078e3692eacc1782b934e098e5781121763e3da3e",
    },
    {
      path: "skills/workflow-authoring/references/review.md",
 -    sha256: "2bd97acb87a8f6e9514892cdf5c431305b3d8952ba9761c1c203c217b08c9e7d",
-+    sha256: "963373f6365e5f52359e6263379255d5f9fcf14e282bcf2f1888768530a9d154",
++    sha256: "323e22167f2615dd1fbb1a3e457339ac31f3c04fd545519dce4bbc0040baec51",
    },
    {
      path: "skills/workflow-authoring/references/debugging.md",
 -    sha256: "080cf85ee2d41c064935ed64491a724b24b705dc40a7010af862fa22b733b71e",
-+    sha256: "d1de447c738fdfc305fc4a16dfecc8589743d5a3d076d5a1612f01bd76c918e0",
++    sha256: "781d70be77a0d635e385d6f6ff6afeb9dee05e3e679e5d991bb9e47b9822a402",
    },
    {
      path: "skills/workflow-authoring/examples/classify-and-act.js",
@@ -11325,7 +11319,7 @@ diff -ruN --exclude=node_modules a/src/workflow-authoring-coverage.ts b/src/work
    path: SKILL_PATH,
    requiredText:
 -    "- **Routing:** read [registry ownership](references/registry-ownership.md) before using `model`, `tier`, phase models, or `agentType`; use environment-specific names only when context supplies them.",
-+    "- **Agent types:** read [registry ownership](references/registry-ownership.md) before using `agentType`; use names only when context supplies them. Scripts do not select models.",
++    "- **Agent types:** read [registry ownership](references/registry-ownership.md) before using `agentType`; use names only when context supplies them.",
  };
  
  const CAPABILITY_SCENARIOS: Readonly<Record<string, readonly string[]>> = {
@@ -11351,7 +11345,7 @@ diff -ruN --exclude=node_modules a/src/workflow-authoring-coverage.ts b/src/work
  };
 diff -ruN --exclude=node_modules a/src/workflow-capability-contract.ts b/src/workflow-capability-contract.ts
 --- a/src/workflow-capability-contract.ts	1985-10-26 03:15:00
-+++ b/src/workflow-capability-contract.ts	2026-09-17 12:15:37
++++ b/src/workflow-capability-contract.ts	2026-09-18 11:15:07
 @@ -30,7 +30,7 @@
    optional: boolean;
    default: string | null;
@@ -11387,7 +11381,7 @@ diff -ruN --exclude=node_modules a/src/workflow-capability-contract.ts b/src/wor
      option("isolation", '"worktree"', true),
      option("thread", "string", true, null, ["non-empty name; same-name calls must be sequential"]),
      option("agentType", "string", true, null, ["must come from provided context"], "agent-types"),
-@@ -316,10 +314,9 @@
+@@ -316,10 +314,7 @@
        "a named thread retains its full Pi transcript and session identity only within one uninterrupted workflow invocation",
        "threaded calls are live-execution resume barriers and are never journaled",
        "same-thread calls must be sequential; threads cannot use worktree isolation",
@@ -11395,13 +11389,11 @@ diff -ruN --exclude=node_modules a/src/workflow-capability-contract.ts b/src/wor
 -      "an explicit model, agentType model, tier, or phase model that resolves to an unavailable model throws MODEL_NOT_FOUND naming the source (e.g. the tier and what it resolved to) instead of falling back",
 -      "only the implicit default medium tier (no explicit model, tier, agentType, or phase model requested) degrades to the session default when unavailable, logging a one-time run-visible warning instead of throwing",
 -      "worktree isolation is best-effort; failure logs that isolation was ignored and continues without an isolated working directory",
-+      "all agents use the single user-configured subagent model; scripts do not select models",
-+      "an unavailable configured model throws MODEL_NOT_FOUND instead of falling back",
 +      "worktree isolation must succeed when requested; a failure fails that agent instead of silently running it in the shared working tree (opt in to the old fallback with isolationFallback / worktreeIsolationFallback)",
      ],
      evidence: ["tests/workflow-runtime.test.ts", "tests/agent-registry.test.ts", "tests/structured-output.test.ts"],
    }),
-@@ -478,14 +475,14 @@
+@@ -478,14 +473,14 @@
    toolInput("background", "background?: boolean = true", [
      "background workflows are headless; use background false when checkpoint must show foreground confirmation",
    ]),
@@ -11420,7 +11412,7 @@ diff -ruN --exclude=node_modules a/src/workflow-capability-contract.ts b/src/wor
    toolInput("tokenBudget", "tokenBudget?: number = configured default or unlimited", [
      "soft pre-call gate; in-flight work can overshoot",
    ]),
-@@ -503,7 +500,7 @@
+@@ -503,7 +498,7 @@
      origin: CapabilityOrigin.PROJECT,
      lifecycle: PRESENT_AT,
      signature:
@@ -11429,7 +11421,7 @@ diff -ruN --exclude=node_modules a/src/workflow-capability-contract.ts b/src/wor
      optionShape: null,
      constraints: [
        "must be the first statement",
-@@ -589,23 +586,6 @@
+@@ -589,23 +584,6 @@
      dynamicReference: null,
    },
    {
@@ -11453,7 +11445,7 @@ diff -ruN --exclude=node_modules a/src/workflow-capability-contract.ts b/src/wor
      id: "workflow.dynamic.agent-types",
      label: "agent types",
      classification: CapabilityClassification.DYNAMIC_REFERENCE,
-@@ -643,12 +623,6 @@
+@@ -643,12 +621,6 @@
    ],
    capabilities,
    dynamicReferences: [
@@ -12605,7 +12597,7 @@ diff -ruN --exclude=node_modules a/src/workflow-settings.ts b/src/workflow-setti
    if (deliveredResultMaxChars !== undefined) settings.deliveredResultMaxChars = deliveredResultMaxChars;
 diff -ruN --exclude=node_modules a/src/workflow-tool.ts b/src/workflow-tool.ts
 --- a/src/workflow-tool.ts	1985-10-26 03:15:00
-+++ b/src/workflow-tool.ts	2026-09-17 12:02:18
++++ b/src/workflow-tool.ts	2026-09-18 11:15:03
 @@ -2,8 +2,13 @@
  import { Text } from "@earendil-works/pi-tui";
  import { Type } from "typebox";
@@ -12635,7 +12627,7 @@ diff -ruN --exclude=node_modules a/src/workflow-tool.ts b/src/workflow-tool.ts
          "Optional quality helpers include verify(), judgePanel(), loopUntilDry(), and completenessCheck().",
          "Optional control helpers include retry() and gate(); budget exposes total, spent(), and remaining(), and phase('Name', { budget: N }) sets a phase token limit.",
 -        "The optional `agentType` option selects a named user or project definition that can bind tools, a model, and role instructions; use it only when its name and purpose are provided in context. Its bound model overrides `tier`; an explicit `model` overrides both.",
-+        "All subagents use the single user-configured model. Do not specify model or tier options. The optional `agentType` selects named tools and role instructions; use it only when its name and purpose are provided in context.",
++        "The optional `agentType` selects named tools and role instructions; use it only when its name and purpose are provided in context.",
          "Use plain JavaScript only; imports, require(), filesystem modules, Date.now(), Math.random(), and new Date() are unavailable.",
          "Use phase('Name'), agent(prompt, opts), parallel(arrayOfFunctions), pipeline(items, ...stages), log(message), args, cwd, process.cwd(), and budget. The workflow must call agent() at least once.",
          "parallel() requires functions, not promises, and returns results in input order: await parallel(items.map(item => () => agent(...))).",
