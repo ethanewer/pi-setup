@@ -28,7 +28,7 @@ import {
   registerBuiltinWorkflows,
   registerEffortCommand,
   registerWorkflowCommands,
-  registerWorkflowModelsCommand,
+  registerWorkflowModelCommand,
   saveWorkflowSettingsForCwd,
   suspendResultDelivery,
   UsageLimitScheduler,
@@ -296,7 +296,7 @@ export default function extension(pi: ExtensionAPI) {
     getCwd,
     effort,
   });
-  registerWorkflowModelsCommand(pi);
+  registerWorkflowModelCommand(pi);
   registerBuiltinWorkflows(pi, { getManager, getCwd, getStorage });
   // Saved project commands are registered on session_start (after the real
   // ctx.cwd is known and any cross-project rebuild has finished). Registering

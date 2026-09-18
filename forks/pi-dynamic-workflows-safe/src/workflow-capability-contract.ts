@@ -30,7 +30,7 @@ export interface OptionDescriptor {
   optional: boolean;
   default: string | null;
   constraints: readonly string[];
-  dynamicReference: "model-routes" | "agent-types" | null;
+  dynamicReference: "agent-types" | null;
 }
 
 /** Reusable option group referenced by capability descriptors. */
@@ -63,13 +63,13 @@ export interface CapabilityDescriptor {
   runtimeBinding: { global: string; implementation: string; allowsUndefined?: true } | null;
   behaviorEvidence: readonly string[];
   staticReference: { path: string; anchor: string } | null;
-  dynamicReference: "model-routes" | "agent-types" | null;
+  dynamicReference: "agent-types" | null;
 }
 
 /** Ownership and item shape for a live catalogue that static docs must not embed. */
 export interface DynamicReferenceDescriptor {
-  id: "model-routes" | "agent-types";
-  owner: "model-tier-config" | "agent-registry";
+  id: "agent-types";
+  owner: "agent-registry";
   itemShape: string;
   connection: string;
   items?: never;
@@ -177,8 +177,6 @@ const AGENT_OPTIONS: OptionShape = {
     option("label", "string", true, "derived from phase and call count"),
     option("phase", "string", true, "current phase"),
     option("schema", "plain JSON Schema", true),
-    option("model", "string", true, null, ["highest-priority exact model selector"]),
-    option("tier", "string", true, null, ["configured route name"], "model-routes"),
     option("isolation", '"worktree"', true),
     option("thread", "string", true, null, ["non-empty name; same-name calls must be sequential"]),
     option("agentType", "string", true, null, ["must come from provided context"], "agent-types"),
@@ -316,9 +314,8 @@ const capabilities: readonly CapabilityDescriptor[] = [
       "a named thread retains its full Pi transcript and session identity only within one uninterrupted workflow invocation",
       "threaded calls are live-execution resume barriers and are never journaled",
       "same-thread calls must be sequential; threads cannot use worktree isolation",
-      "selector priority is explicit model > agentType model > tier > phase model > metadata model > implicit medium > session default",
-      "an explicit model, agentType model, tier, or phase model that resolves to an unavailable model throws MODEL_NOT_FOUND naming the source (e.g. the tier and what it resolved to) instead of falling back",
-      "only the implicit default medium tier (no explicit model, tier, agentType, or phase model requested) degrades to the session default when unavailable, logging a one-time run-visible warning instead of throwing",
+      "all agents use the single user-configured subagent model; scripts do not select models",
+      "an unavailable configured model throws MODEL_NOT_FOUND instead of falling back",
       "worktree isolation must succeed when requested; a failure fails that agent instead of silently running it in the shared working tree (opt in to the old fallback with isolationFallback / worktreeIsolationFallback)",
     ],
     evidence: ["tests/workflow-runtime.test.ts", "tests/agent-registry.test.ts", "tests/structured-output.test.ts"],
@@ -503,7 +500,7 @@ const capabilities: readonly CapabilityDescriptor[] = [
     origin: CapabilityOrigin.PROJECT,
     lifecycle: PRESENT_AT,
     signature:
-      "export const meta = { name: string, description: string, phases?: Array<{ title: string; detail?: string; model?: string }>, model?: string }",
+      "export const meta = { name: string, description: string, phases?: Array<{ title: string; detail?: string }> }",
     optionShape: null,
     constraints: [
       "must be the first statement",
@@ -589,23 +586,6 @@ const capabilities: readonly CapabilityDescriptor[] = [
     dynamicReference: null,
   },
   {
-    id: "workflow.dynamic.model-routes",
-    label: "model routes",
-    classification: CapabilityClassification.DYNAMIC_REFERENCE,
-    support: CapabilitySupport.SUPPORTED,
-    discovery: DiscoveryPlacement.WORKFLOW_AUTHORING_SKILL,
-    origin: CapabilityOrigin.LIVE_CONFIGURATION,
-    lifecycle: PRESENT_AT,
-    signature: null,
-    optionShape: null,
-    constraints: ["live values must not be copied into static contract data"],
-    enforcementOwner: "model-tier-config",
-    runtimeBinding: null,
-    behaviorEvidence: ["tests/workflows-models-command.test.ts"],
-    staticReference: { path: REFERENCE_PATH, anchor: "model-routes" },
-    dynamicReference: "model-routes",
-  },
-  {
     id: "workflow.dynamic.agent-types",
     label: "agent types",
     classification: CapabilityClassification.DYNAMIC_REFERENCE,
@@ -643,12 +623,6 @@ export const WORKFLOW_CAPABILITY_DEFINITION: WorkflowCapabilityDefinition = {
   ],
   capabilities,
   dynamicReferences: [
-    {
-      id: "model-routes",
-      owner: "model-tier-config",
-      itemShape: "{ name: string; description?: string }",
-      connection: "loadModelTierConfig",
-    },
     {
       id: "agent-types",
       owner: "agent-registry",

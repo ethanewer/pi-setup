@@ -58,6 +58,10 @@ export interface PersistedJournalEntry {
 }
 
 export interface PersistedRunState {
+  /** Model snapshot including thinking, as written to subagent-model.json. */
+  subagentModel?: string;
+  /** Thinking level for the run's model, when one was explicitly chosen. */
+  subagentThinking?: string;
   runId: string;
   workflowName: string;
   script: string;
@@ -392,6 +396,8 @@ export function validatePersistedRunState(value: unknown): { state: PersistedRun
   state.args = value.args;
   state.result = value.result;
   for (const [key, accepts] of [
+    ["subagentModel", isText],
+    ["subagentThinking", isText],
     ["sessionId", isText],
     ["pauseReason", isText],
     ["resetHint", isText],
@@ -548,7 +554,13 @@ export function runScriptOrigin(run: PersistedRunState): string | undefined {
  * resumable by explicit user action.
  */
 export function isAutoResumeEligibleRun(run: PersistedRunState, installId: string): boolean {
-  return isInstallOwnedRun(run, installId) && run.autoResume !== false;
+  if (!isInstallOwnedRun(run, installId) || run.autoResume === false) return false;
+  // Pre-refactor records carry no model snapshot and their journal hashes
+  // predate the single-model hash, so auto-resume would silently rerun
+  // completed agents with no human in the loop. Leave them for explicit
+  // resume(), which warns before executing.
+  if (run.subagentModel === undefined) return false;
+  return true;
 }
 
 export function createRunPersistence(

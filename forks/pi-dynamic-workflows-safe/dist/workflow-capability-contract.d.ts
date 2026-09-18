@@ -13,7 +13,7 @@ export interface OptionDescriptor {
     optional: boolean;
     default: string | null;
     constraints: readonly string[];
-    dynamicReference: "model-routes" | "agent-types" | null;
+    dynamicReference: "agent-types" | null;
 }
 /** Reusable option group referenced by capability descriptors. */
 export interface OptionShape {
@@ -43,12 +43,12 @@ export interface CapabilityDescriptor {
         path: string;
         anchor: string;
     } | null;
-    dynamicReference: "model-routes" | "agent-types" | null;
+    dynamicReference: "agent-types" | null;
 }
 /** Ownership and item shape for a live catalogue that static docs must not embed. */
 export interface DynamicReferenceDescriptor {
-    id: "model-routes" | "agent-types";
-    owner: "model-tier-config" | "agent-registry";
+    id: "agent-types";
+    owner: "agent-registry";
     itemShape: string;
     connection: string;
     items?: never;

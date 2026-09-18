@@ -11,14 +11,14 @@
  * discovery convention. The legacy `~/.pi/agents/*.md` location is still scanned as
  * a deprecated fallback (with a one-time warning) so users who followed this repo's
  * earlier docs are not silently broken; the new location wins on a name collision.
- * Frontmatter binds the subagent's tools, model, and a body prompt; project
+ * Frontmatter binds the subagent's tools and a body prompt; project
  * definitions win over both user-level locations on a name collision, and are
  * read only for a project the user trusts (see loadAgentRegistry). This mirrors
  * Claude Code's `.claude/agents` registry: agentType is a real binding of
- * tools+model+system-prompt, not a prose hint.
+ * tools+system-prompt, not a prose hint.
  *
- * Bound today: `tools` (allowlist), `disallowedTools` (denylist), `model`,
- * and the markdown body (`prompt`). Parsed-but-ignored for now (documented): `mcp`, `skills`, `background`.
+ * Bound today: `tools` (allowlist), `disallowedTools` (denylist),
+ * and the markdown body (`prompt`). Legacy `model` fields are ignored. Parsed-but-ignored for now (documented): `mcp`, `skills`, `background`.
  * Wired: `isolation` ("worktree") → createWorktree() in workflow.ts.
  */
 import { existsSync, readdirSync, readFileSync } from "node:fs";
@@ -70,7 +70,6 @@ export function parseAgentDefinition(content, source, fileName) {
         description: typeof fm.description === "string" ? fm.description.trim() || undefined : undefined,
         tools: toStringArray(fm.tools),
         disallowedTools: toStringArray(fm.disallowedTools),
-        model: typeof fm.model === "string" ? fm.model.trim() || undefined : undefined,
         isolation: typeof fm.isolation === "string" && fm.isolation.toLowerCase().trim() === "worktree" ? "worktree" : undefined,
         prompt,
         source,
@@ -121,7 +120,7 @@ function readDefsFromDir(dir, source) {
  * telling the user to move their files — not one warning per legacy file.
  *
  * The PROJECT directory is part of whatever repository is checked out, and a
- * definition binds a subagent's whole system prompt plus its model and tool
+ * definition binds a subagent's whole system prompt plus its tool
  * policy — so project definitions are read only for a trusted project (see
  * WorkflowSettings.trustProjectLocalWorkflows, the same knob that gates
  * project-local saved workflows). Untrusted, they are skipped with a one-line
@@ -150,7 +149,7 @@ export function loadAgentRegistry(cwd, opts) {
     }
     else if (projectDefs.length > 0) {
         console.warn(`[agent-registry] Ignoring ${projectDefs.length} agent definition(s) in "${projectDir}": they come with the ` +
-            `project and bind a subagent's system prompt, model, and tools. Set trustProjectLocalWorkflows: true ` +
+            `project and bind a subagent's system prompt and tools. Set trustProjectLocalWorkflows: true ` +
             `(globally, or for this project only) to use them.`);
     }
     if (userDir !== projectDir) {
@@ -207,7 +206,6 @@ export function agentDefinitionKey(def) {
     return JSON.stringify({
         tools: def.tools ?? null,
         disallowedTools: def.disallowedTools ?? null,
-        model: def.model ?? null,
         isolation: def.isolation ?? null,
         prompt: def.prompt,
     });

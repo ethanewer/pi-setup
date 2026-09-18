@@ -73,8 +73,8 @@ export declare const WORKFLOW_RUNS_DIR = ".pi/workflows/runs";
 export declare const WORKFLOW_SAVED_DIR = ".pi/workflows/saved";
 /** User-level saved workflows directory. */
 export declare const USER_WORKFLOW_SAVED_DIR = "~/.pi/workflows/saved";
-/** User-level model tiers config file, relative to the home directory. */
-export declare const MODEL_TIERS_FILE = ".pi/workflows/model-tiers.json";
+/** User-level subagent model config file, relative to the home directory. */
+export declare const SUBAGENT_MODEL_FILE = ".pi/workflows/subagent-model.json";
 /** User-level workflow extension settings file, relative to the home directory. */
 export declare const WORKFLOW_SETTINGS_FILE = ".pi/workflows/settings.json";
 /** Default keyword that arms workflows mode from interactive input. */

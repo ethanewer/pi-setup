@@ -7,8 +7,8 @@ import { compactAgentHistory } from "./agent-history.js";
 import { agentUsageEquals, createEmptyAgentUsage, sumAgentUsage } from "./agent-usage.js";
 import { applyToolPolicy } from "./agent-registry.js";
 import { classifyProviderLimit, WorkflowError, WorkflowErrorCode } from "./errors.js";
-import { canonicalModelSpec, resolveModelSpecWithThinking } from "./model-spec.js";
-import { formatTierFallbackNotice, loadModelTierConfig, resolveTierModel, } from "./model-tier-config.js";
+import { canonicalModelSpec, formatModelSpecWithThinking, resolveRunModelStrict } from "./model-spec.js";
+import { prepareSubagentSnapshot } from "./subagent-model-snapshot.js";
 import { createStructuredOutputTool } from "./structured-output.js";
 const LIVE_USAGE_EMIT_INTERVAL_MS = 250;
 /**
@@ -127,41 +127,6 @@ export async function resolveStructuredOutput(session, capture, schema, options,
     throwIfProviderLimit(session.messages, options.label);
     throw new WorkflowError("Subagent did not produce valid structured_output after repair attempts", WorkflowErrorCode.SCHEMA_NONCOMPLIANCE, { recoverable: false, agentLabel: options.label });
 }
-/**
- * Resolve which concrete model spec a subagent should use. Precedence, most
- * specific first:
- *   1. options.model — an explicit per-agent model (also carries agentType /
- *      phase model, which the workflow layer folds into options.model).
- *   2. options.tier  — resolved via the model-tiers config, falling back to the
- *      session's main model when the tier has no configured entry.
- *   3. DEFAULT TIER — when neither is set but the user has a model-tiers config,
- *      untagged agents default to the "medium" tier so a configured tier set
- *      actually affects the whole workflow (not just agents the script tagged).
- *      Fresh-install medium == the session model, so this is a no-op until the
- *      user customizes tiers via /workflows-models.
- * Returns undefined when nothing applies, so the session default is used.
- *
- * `loadConfig` is injectable for testing; it defaults to reading from disk.
- */
-export function resolveAgentModelSpec(options, mainModel, loadConfig = loadModelTierConfig, onTierWithoutConfig) {
-    if (options.model)
-        return options.model;
-    const config = loadConfig();
-    if (options.tier) {
-        // Tier requested but unconfigured → it silently falls back to mainModel.
-        // Let the caller surface that (once) so the no-op is discoverable.
-        if (!config)
-            onTierWithoutConfig?.(options.tier);
-        return (config ? resolveTierModel(options.tier, config) : undefined) ?? mainModel;
-    }
-    // Untagged agent: default to the configured medium tier when one exists.
-    if (config) {
-        const medium = resolveTierModel("medium", config);
-        if (medium)
-            return medium;
-    }
-    return undefined;
-}
 // pi >= 0.80.8: ModelRegistry is a sync facade over an async-created ModelRuntime
 // (AuthStorage/ModelRegistry.create are gone). The disk-backed fallback is built
 // lazily; sync callers see [] until it resolves and real specs on later reads.
@@ -215,9 +180,9 @@ export function runtimeOf(registry) {
 }
 /**
  * List the user's currently available models (those with auth configured) with
- * the minimal fields tier ranking needs: canonical spec, output price, and
+ * the available model fields: canonical spec, output price, and
  * context window. This is the single place the SDK `Model` is projected into
- * the SDK-agnostic `RankableModel`. Best-effort: returns [] if the registry
+ * the SDK-agnostic `AvailableWorkflowModel`. Best-effort: returns [] if the registry
  * can't be built (or while the disk-backed fallback is still initializing).
  */
 export function listAvailableModels(registry) {
@@ -246,24 +211,6 @@ export function listAvailableModels(registry) {
  */
 export function listAvailableModelSpecs(registry) {
     return listAvailableModels(registry).map((model) => model.spec);
-}
-/**
- * Emitted at most once per process: when an agent asks for a tier but no
- * model-tiers.json exists, the tier silently falls back to the session model.
- * Surface that once (with the mapping the user would get by configuring) so the
- * no-op is discoverable. Diagnostics only — never lets a failure break a run.
- */
-let warnedTierUnconfigured = false;
-function warnTierUnconfiguredOnce(mainModel, registry) {
-    if (warnedTierUnconfigured)
-        return;
-    warnedTierUnconfigured = true;
-    try {
-        console.warn(formatTierFallbackNotice(mainModel, listAvailableModels(registry)));
-    }
-    catch {
-        // best-effort diagnostic
-    }
 }
 /**
  * Emitted at most once per process when persistAgentSessions is enabled and a
@@ -392,30 +339,16 @@ export class WorkflowAgent {
     persistAgentSessions;
     instructions;
     mainModel;
+    subagentSnapshot;
     /** Shared registry from the host session, when provided. */
     sharedRegistry;
     /** Lazily built once; shares the SDK's agentDir/auth so resolved models are authed. */
     registry;
     /**
-     * Memoized model-tiers.json snapshot, boxed so a legitimately-null config
-     * (file absent/invalid) is distinguishable from "not loaded yet". See
-     * loadTierConfig() below for why this is scoped per-instance.
-     */
-    tierConfigBox;
-    /**
      * Shared resource loader for every subagent of this run, built once. See
      * getSharedResourceLoader — this is the #109 memory mitigation.
      */
     sharedResourceLoaderPromise;
-    /**
-     * Emitted at most once per instance (~= once per run, see the class-level
-     * lifetime note above): the untagged/default "medium" tier resolved to a
-     * model spec that isn't available. Deliberately per-instance rather than a
-     * MODEL_NOT_FOUND throw — an untagged agent never asked for that specific
-     * model, so a broken default tier shouldn't fail every untagged agent in the
-     * run. See onModelFallback below for the (still-loud) degrade path.
-     */
-    warnedDefaultTierUnavailable = false;
     /**
      * Named conversations live for this WorkflowAgent instance. Production creates
      * one instance per workflow invocation; embedders that inject and reuse an
@@ -431,7 +364,13 @@ export class WorkflowAgent {
         this.persistAgentSessions = options.persistAgentSessions ?? false;
         this.instructions = options.instructions;
         this.mainModel = options.mainModel;
-        this.sharedRegistry = options.modelRegistry;
+        this.sharedRegistry = options.modelRegistry ?? (options.session?.modelRuntime ? new ModelRegistry(options.session.modelRuntime) : undefined);
+        this.subagentSnapshot = prepareSubagentSnapshot({
+            ...options,
+            modelRegistry: options.modelRegistry ?? this.sharedRegistry,
+        });
+        if (this.subagentSnapshot instanceof Promise)
+            void this.subagentSnapshot.catch(() => { });
     }
     /**
      * A resource loader shared by every subagent of this run, built once (#109).
@@ -496,37 +435,6 @@ export class WorkflowAgent {
             this.registry = await ensureFallbackRegistry();
         }
         return this.registry;
-    }
-    /**
-     * Read+parse ~/.pi/workflows/model-tiers.json at most once for this
-     * instance's lifetime, instead of on every run() call. `resolveAgentModelSpec`
-     * previously received `loadModelTierConfig` directly (sync existsSync +
-     * readFileSync + JSON.parse from disk), which it calls unconditionally for
-     * any agent without an explicit options.model — so a large fan-out did N
-     * redundant synchronous disk reads that blocked the event loop and stalled
-     * concurrent agents' I/O.
-     *
-     * `runWorkflow()` constructs a fresh `WorkflowAgent` per run (see
-     * `new WorkflowAgent(options)` in workflow.ts, unless a caller injects its
-     * own `options.agent` runner — a test-only escape hatch per
-     * WorkflowManagerOptions.agent's doc comment), so a WorkflowAgent instance's
-     * lifetime is one run in production. Memoizing on `this` therefore has the
-     * same scope and lifetime as the agentRegistry snapshot workflow.ts already
-     * takes once per run "for determinism" — the config file isn't expected to
-     * change mid-run, and two different runs (= two different WorkflowAgent
-     * instances) each get their own fresh read of whatever is on disk at the
-     * time, so this does not leak stale config across runs or break tests that
-     * construct fresh agents with different configs.
-     *
-     * `loader` is injectable for tests (defaults to the real disk read); it is
-     * only ever consulted once, on the first call, regardless of what is passed
-     * on later calls.
-     */
-    loadTierConfig(loader = loadModelTierConfig) {
-        if (!this.tierConfigBox) {
-            this.tierConfigBox = { value: loader() };
-        }
-        return this.tierConfigBox.value;
     }
     /**
      * Session manager for one subagent run. File-backed (persisted under the
@@ -615,61 +523,26 @@ export class WorkflowAgent {
             customTools.push(createStructuredOutputTool({ schema: options.schema, capture }));
         }
         // Per-run modelRegistry wins over the constructor's shared registry, then
-        // the lazily-built disk fallback. Used for tier diagnostics, model
+        // the lazily-built disk fallback. Used for model
         // resolution, and the subagent session's runtime below.
         const modelRegistry = await this.getRegistry(options.modelRegistry);
-        // Resolve the model spec (explicit model > tier > session default). This
-        // composes with phase-based routing in workflow.ts, which only supplies
-        // options.model when a phase pattern matches — so an explicit model wins.
-        const modelSpec = resolveAgentModelSpec(options, this.mainModel, () => this.loadTierConfig(), () => warnTierUnconfiguredOnce(this.mainModel, modelRegistry));
-        // Resolve a requested model spec to a Model object. Specs use Pi CLI-style
-        // parsing, including an optional :thinking suffix such as gpt-5.5:xhigh.
-        //
-        // A given-but-unresolved spec's behavior is asymmetric by design (#131):
-        //   - options.model or options.tier was explicitly set by the script (or by
-        //     workflow.ts's phase-based routing, which only ever supplies
-        //     options.model when the user configured that phase) → throw
-        //     MODEL_NOT_FOUND naming the source. Resolution is deterministic, so
-        //     retrying the same spec is pointless (recoverable:false), and a silent
-        //     substitution would otherwise run real API calls against a different
-        //     (or unauthenticated) model while the caller believes its pin/tier was
-        //     honored.
-        //   - neither was set: the agent is UNTAGGED and only got routed through
-        //     the implicit default "medium" tier because *some other* agent's tier
-        //     is configured (see resolveAgentModelSpec). This agent never asked for
-        //     that model, so a broken default tier degrades to the session default
-        //     instead of failing every untagged agent in the run — but the degrade
-        //     still needs to be loud (onModelFallback), not a silent continuation.
-        const isExplicitRequest = Boolean(options.model || options.tier);
+        // Every call uses the same host-owned snapshot, including threaded calls.
+        const snapshot = await this.subagentSnapshot;
+        const modelSpec = snapshot.subagentModel;
         let resolvedModel;
         let resolvedThinkingLevel;
-        if (modelSpec) {
-            const resolved = resolveModelSpecWithThinking(modelSpec, modelRegistry, {
-                preferredProvider: this.mainModel?.split("/", 1)[0],
-            });
+        {
+            const resolved = resolveRunModelStrict(modelSpec ?? "", modelRegistry);
             if (resolved.warning)
                 console.warn(`[workflow] ${resolved.warning}`);
             if (!resolved.model) {
-                if (isExplicitRequest) {
-                    // The resolver's error already names the spec and the remedy; the tier
-                    // branch swaps in its own message so the config source is named too.
-                    const message = options.model
-                        ? (resolved.error ?? `Model "${modelSpec}" not found. Use /workflows-models to choose an available model.`)
-                        : `tier "${options.tier}" from model-tiers.json resolves to "${modelSpec}", which is not available. Use /workflows-models to choose an available model.`;
-                    throw new WorkflowError(message, WorkflowErrorCode.MODEL_NOT_FOUND, {
-                        recoverable: false,
-                        agentLabel: options.label,
-                    });
-                }
-                if (!this.warnedDefaultTierUnavailable) {
-                    this.warnedDefaultTierUnavailable = true;
-                    options.onModelFallback?.({ tier: "medium", requestedSpec: modelSpec });
-                }
+                throw new WorkflowError(`Subagent model "${modelSpec}" is unavailable. Use /workflow-model to choose a pinned model.`, WorkflowErrorCode.MODEL_NOT_FOUND, { recoverable: false, agentLabel: options.label });
             }
             else {
                 resolvedModel = resolved.model;
-                resolvedThinkingLevel = resolved.thinkingLevel;
-                options.onModelResolved?.(resolved.resolvedSpec ?? canonicalModelSpec(resolved.model));
+                // Identity is literal; thinking was resolved when the run was created.
+                resolvedThinkingLevel = snapshot.subagentThinking;
+                options.onModelResolved?.(formatModelSpecWithThinking(canonicalModelSpec(resolved.model), resolvedThinkingLevel));
             }
         }
         const agentDir = getAgentDir();
@@ -707,7 +580,7 @@ export class WorkflowAgent {
                 // Named threads must retain their own manager even when an embedder supplied
                 // a default manager for ordinary one-shot calls.
                 ...(options.thread ? { sessionManager } : {}),
-                // Per-call model/thinking wins over any sessionOptions defaults.
+                // The run's model/thinking wins over any sessionOptions defaults.
                 ...(resolvedModel ? { model: resolvedModel } : {}),
                 ...(resolvedThinkingLevel ? { thinkingLevel: resolvedThinkingLevel } : {}),
                 // Deny recursive-orchestration tools in the subagent (#107). Placed after

@@ -8,7 +8,7 @@ import { createAgentCallUsageTracker, sumAgentUsage } from "./agent-usage.js";
 import { AGENT_RETRY_BASE_DELAY_MS, AGENT_RETRY_MAX_DELAY_MS, DEFAULT_AGENT_RETRIES, DEFAULT_AGENT_TIMEOUT_MS, DEFAULT_DRAIN_TIMEOUT_MS, DEFAULT_MAX_AGENTS_PER_RUN, DEFAULT_SCRIPT_TIMEOUT_MS, DRAIN_GRACE_MS, MAX_AGENT_RETRIES, MAX_AGENTS_PER_RUN, MAX_CONCURRENCY, } from "./config.js";
 import { adoptForeignWorkflowError, isWorkflowError, WORKFLOW_ERROR_BRAND, WorkflowError, WorkflowErrorCode, wrapError, } from "./errors.js";
 import { createWorkflowLogger } from "./logger.js";
-import { parseModelRoutingFromMeta, resolveModelForPhase } from "./model-routing.js";
+import { prepareSubagentSnapshot } from "./subagent-model-snapshot.js";
 import { createAgentStoreTools, SharedStore } from "./shared-store.js";
 import { WORKFLOW_CAPABILITY_CONTRACT } from "./workflow-capability-contract.js";
 import { createWorktree, removeWorktree } from "./worktree.js";
@@ -301,8 +301,11 @@ function buildRealmBootstrap(bridgeKey, shapes) {
 export async function runWorkflow(script, options = {}) {
     const started = Date.now();
     const { meta, body } = parseWorkflowScript(script);
-    // Per-phase model routing from meta.phases[].model, with meta.model as the default.
-    const routingConfig = parseModelRoutingFromMeta(meta.phases, meta.model);
+    // Snapshot once for this run and all nested workflows. Script/role model selectors
+    // from older saved workflows are ignored; the user's single choice always wins.
+    const snapshot = await prepareSubagentSnapshot(options);
+    const subagentModel = snapshot.subagentModel;
+    options = { ...options, ...snapshot };
     // An explicit per-run cap is honored up to the hard ceiling; the default is
     // deliberately far below it (see DEFAULT_MAX_AGENTS_PER_RUN).
     const maxAgents = Math.min(MAX_AGENTS_PER_RUN, Math.max(1, options.maxAgents ?? DEFAULT_MAX_AGENTS_PER_RUN));
@@ -529,31 +532,20 @@ export async function runWorkflow(script, options = {}) {
             }
         }
         const requestedLabel = agentOptions.label?.trim();
-        // Resolve a named agentType to its bound definition (tools/model/prompt).
+        // Resolve a named agentType to its bound definition (tools/prompt).
         const agentDef = resolveAgentType(agentOptions.agentType, agentRegistry);
         if (agentOptions.thread && (agentOptions.isolation === "worktree" || agentDef?.isolation === "worktree")) {
             throw new WorkflowError(`agent thread "${agentOptions.thread}" cannot use worktree isolation because worktrees are removed after each call`, WorkflowErrorCode.SCRIPT_VALIDATION_ERROR, { recoverable: false });
         }
         if (agentOptions.agentType && !agentDef) {
-            log(`unknown agentType "${agentOptions.agentType}"; using default tools/model`);
+            log(`unknown agentType "${agentOptions.agentType}"; using default tools`);
         }
-        // Model precedence: explicit agentOptions.model > agentType.model > tier > phase model.
-        // The "explicit-level" model is opts.model, else the definition's model — either
-        // beats tier/phase. When only a tier is set, pass undefined here so the tier (not
-        // the phase model) decides inside WorkflowAgent.run().
-        const explicitModel = agentOptions.model ?? agentDef?.model;
-        const modelSpec = explicitModel ?? (agentOptions.tier ? undefined : resolveModelForPhase(assignedPhase, routingConfig));
-        // For display in /workflows: a PRE-RESOLUTION guess — this agent's explicit/phase
-        // spec, else the session's main model. It is only a guess: a `tier` deliberately
-        // leaves modelSpec undefined so the agent layer picks, and an untagged agent is
-        // implicitly routed through the "medium" tier when model-tiers.json exists. The
-        // real resolved id replaces it via onModelResolved below, which also pushes the
-        // correction out on onAgentModel so a RUNNING agent's row stops showing the guess.
-        let displayModel = modelSpec ?? options.mainModel;
+        const modelSpec = subagentModel;
+        let displayModel = modelSpec;
         // Deterministic resume key: assigned at lexical call time, before the limiter,
         // so parallel()/pipeline() fan-out is reproducible for a fixed script.
         const callIndex = state.callSeq++;
-        const callHash = hashAgentCall(prompt, modelSpec, assignedPhase, agentOptions, agentDefinitionKey(agentDef));
+        const callHash = hashAgentCall(prompt, JSON.stringify(snapshot), assignedPhase, agentOptions, agentDefinitionKey(agentDef));
         // Store delta key: callIndex alone is NOT run-unique. A nested workflow()
         // call (see workflowFn below) shares this run's SharedStore instance but
         // restarts its own callSeq at 0, so a parent agent and a concurrently
@@ -721,8 +713,6 @@ export async function runWorkflow(script, options = {}) {
                             schema: agentOptions.schema,
                             signal: agentController.signal,
                             instructions: buildAgentInstructions(assignedPhase, agentOptions, agentDef, resolvedIsolation),
-                            model: modelSpec,
-                            tier: agentOptions.tier,
                             modelRegistry: options.modelRegistry,
                             toolNames: agentDef?.tools,
                             disallowedToolNames: agentDef?.disallowedTools,
@@ -738,13 +728,6 @@ export async function runWorkflow(script, options = {}) {
                                 // onAgentEnd keeps carrying the same value so late subscribers and
                                 // the persisted snapshot stay consistent with this push.
                                 options.onAgentModel?.({ id: deltaKey, label, phase: assignedPhase, model: id });
-                            },
-                            onModelFallback: ({ tier, requestedSpec }) => {
-                                // Untagged agents' implicit default tier degrading to the session
-                                // default must stay visible in the run's own log/event stream, not
-                                // just a console.warn (#131) — an explicit model/tier pin instead
-                                // throws MODEL_NOT_FOUND and never reaches this callback.
-                                log(`default "${tier}" tier model "${requestedSpec}" unavailable — using the session default`);
                             },
                             onUsageProgress: attemptUsage.reportProgress,
                             onUsage: attemptUsage.reportTerminal,
@@ -1499,8 +1482,6 @@ function validateMeta(meta) {
         throw new Error("meta.name must be a non-empty string");
     if (typeof value.description !== "string" || !value.description.trim())
         throw new Error("meta.description must be a non-empty string");
-    if (value.model !== undefined && typeof value.model !== "string")
-        throw new Error("meta.model must be a string");
     if (value.phases !== undefined) {
         if (!Array.isArray(value.phases))
             throw new Error("meta.phases must be an array");
@@ -1566,7 +1547,6 @@ function hashAgentCall(prompt, model, phase, options, agentDefKey) {
     const identity = JSON.stringify({
         prompt,
         model: model ?? null,
-        tier: options.tier ?? null,
         phase: phase ?? null,
         agentType: options.agentType ?? null,
         ...(options.thread ? { thread: options.thread } : {}),
@@ -1591,7 +1571,6 @@ function buildAgentInstructions(phase, options, def, resolvedIsolation) {
     // the call site or from the agentDef's isolation field.
     if (resolvedIsolation)
         lines.push(`Requested isolation: ${resolvedIsolation}`);
-    // Note: options.model is applied for real via the session, not injected as prose.
     return lines.length ? lines.join("\n\n") : undefined;
 }
 function isEmptyTextAgentResult(result, schema) {

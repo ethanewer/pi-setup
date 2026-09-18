@@ -41,6 +41,10 @@ export interface PersistedJournalEntry {
     model?: string;
 }
 export interface PersistedRunState {
+    /** Model snapshot including thinking, as written to subagent-model.json. */
+    subagentModel?: string;
+    /** Thinking level for the run's model, when one was explicitly chosen. */
+    subagentThinking?: string;
     runId: string;
     workflowName: string;
     script: string;

@@ -16,8 +16,6 @@ Every exact fact below is projected from the installed extension's capability co
 - `label`: string (optional; default: derived from phase and call count)
 - `phase`: string (optional; default: current phase)
 - `schema`: plain JSON Schema (optional)
-- `model`: string (optional; highest-priority exact model selector)
-- `tier`: string (optional; configured route name; dynamic reference: model-routes)
 - `isolation`: "worktree" (optional)
 - `thread`: string (optional; non-empty name; same-name calls must be sequential)
 - `agentType`: string (optional; must come from provided context; dynamic reference: agent-types)
@@ -30,9 +28,8 @@ Every exact fact below is projected from the installed extension's capability co
 - Constraint: a named thread retains its full Pi transcript and session identity only within one uninterrupted workflow invocation
 - Constraint: threaded calls are live-execution resume barriers and are never journaled
 - Constraint: same-thread calls must be sequential; threads cannot use worktree isolation
-- Constraint: selector priority is explicit model > agentType model > tier > phase model > metadata model > implicit medium > session default
-- Constraint: an explicit model, agentType model, tier, or phase model that resolves to an unavailable model throws MODEL_NOT_FOUND naming the source (e.g. the tier and what it resolved to) instead of falling back
-- Constraint: only the implicit default medium tier (no explicit model, tier, agentType, or phase model requested) degrades to the session default when unavailable, logging a one-time run-visible warning instead of throwing
+- Constraint: all agents use the single user-configured subagent model; scripts do not select models
+- Constraint: an unavailable configured model throws MODEL_NOT_FOUND instead of falling back
 - Constraint: worktree isolation must succeed when requested; a failure fails that agent instead of silently running it in the shared working tree (opt in to the old fallback with isolationFallback / worktreeIsolationFallback)
 
 <a id="parallel"></a>
@@ -318,7 +315,7 @@ Every exact fact below is projected from the installed extension's capability co
 
 - Classification: `script-contract`
 - Support: `supported`
-- Signature: `export const meta = { name: string, description: string, phases?: Array<{ title: string; detail?: string; model?: string }>, model?: string }`
+- Signature: `export const meta = { name: string, description: string, phases?: Array<{ title: string; detail?: string }> }`
 - Constraint: must be the first statement
 - Constraint: name and description must be nonblank strings
 - Constraint: metadata must use literal values; expressions such as string concatenation and template interpolation are rejected
@@ -348,18 +345,6 @@ Every exact fact below is projected from the installed extension's capability co
 - Support: `compatibility`
 - Signature: —
 - Constraint: accepted for compatibility but not recommended
-
-<a id="model-routes"></a>
-## model routes
-
-- Classification: `dynamic-reference`
-- Support: `supported`
-- Signature: —
-- Constraint: live values must not be copied into static contract data
-- Dynamic reference owner: `model-tier-config`
-- Item shape: `{ name: string; description?: string }`
-- Future lookup connection: `loadModelTierConfig`
-- Live values are intentionally absent from this static reference.
 
 <a id="agent-types"></a>
 ## agent types

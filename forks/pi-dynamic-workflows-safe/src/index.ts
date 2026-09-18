@@ -1,6 +1,6 @@
 export type { AdversarialReviewConfig } from "./adversarial-review.js";
 export { generateAdversarialReviewWorkflow, generateMultiPerspectiveWorkflow } from "./adversarial-review.js";
-export type { AgentRunOptions, AgentRunResult, WorkflowAgentOptions } from "./agent.js";
+export type { AgentRunOptions, AgentRunResult, AvailableWorkflowModel, WorkflowAgentOptions } from "./agent.js";
 export { listAvailableModelSpecs, listAvailableModels, WorkflowAgent } from "./agent.js";
 export type { AgentHistoryEntry, AgentHistoryKind, AgentHistoryRole } from "./agent-history.js";
 export { compactAgentHistory } from "./agent-history.js";
@@ -47,27 +47,18 @@ export {
 } from "./errors.js";
 export type { WorkflowLogger, WorkflowLoggerOptions } from "./logger.js";
 export { createWorkflowLogger } from "./logger.js";
-export type { ModelRoute, ModelRoutingConfig } from "./model-routing.js";
-export { parseModelRoutingFromMeta, resolveModelForPhase } from "./model-routing.js";
-export type { ModelThinkingLevel, ResolvedModelSpec } from "./model-spec.js";
+export type { ModelThinkingLevel, ResolvedModelSpec, RunModelRegistry } from "./model-spec.js";
 export {
   canonicalModelSpec,
   formatModelSpecWithThinking,
   isThinkingLevel,
   resolveModelSpecWithThinking,
+  resolveRunModelStrict,
   splitModelSpecThinking,
   THINKING_LEVELS,
 } from "./model-spec.js";
-export type { ModelTierConfig, RankableModel } from "./model-tier-config.js";
-export {
-  buildDefaultTierConfig,
-  formatTierFallbackNotice,
-  getModelTierConfigPath,
-  loadModelTierConfig,
-  resolveTierModel,
-  saveModelTierConfig,
-  sortedTierNames,
-} from "./model-tier-config.js";
+export type { SubagentModelConfig } from "./subagent-model-config.js";
+export { getSubagentModelConfigPath, loadSubagentModelConfig, saveSubagentModelConfig } from "./subagent-model-config.js";
 export type { PendingDeliveryMarker, PersistedRunState, RunPersistence, RunStatus } from "./run-persistence.js";
 export {
   createRunPersistence,
@@ -203,6 +194,6 @@ export {
   renderNavigator,
   type ViewKind,
 } from "./workflow-ui.js";
-export { registerWorkflowModelsCommand } from "./workflows-models-command.js";
+export { registerWorkflowModelCommand } from "./workflow-model-command.js";
 export type { Worktree } from "./worktree.js";
 export { createWorktree, removeWorktree, worktreeId } from "./worktree.js";

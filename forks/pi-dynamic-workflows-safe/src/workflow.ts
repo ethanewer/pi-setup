@@ -36,7 +36,7 @@ import {
   wrapError,
 } from "./errors.js";
 import { createWorkflowLogger } from "./logger.js";
-import { parseModelRoutingFromMeta, resolveModelForPhase } from "./model-routing.js";
+import { prepareSubagentSnapshot } from "./subagent-model-snapshot.js";
 import { createAgentStoreTools, SharedStore } from "./shared-store.js";
 import { WORKFLOW_CAPABILITY_CONTRACT, type WorkflowRuntimeImplementations } from "./workflow-capability-contract.js";
 import { createWorktree, removeWorktree, type Worktree } from "./worktree.js";
@@ -88,15 +88,12 @@ function describeRequestedAgent(prompt: unknown, agentOptions: AgentOptions): st
 export interface WorkflowMetaPhase {
   title: string;
   detail?: string;
-  model?: string;
 }
 
 export interface WorkflowMeta {
   name: string;
   description: string;
   phases?: WorkflowMetaPhase[];
-  /** Default model for agents whose phase has no route and that set no model/tier. */
-  model?: string;
 }
 
 /** One cached agent/checkpoint result, keyed by its deterministic workflow call identity. */
@@ -211,7 +208,7 @@ export interface WorkflowAgentRunner {
 export interface WorkflowRunOptions extends WorkflowAgentOptions {
   args?: unknown;
   agent?: WorkflowAgentRunner;
-  /** The session's main model (provider/id), shown in /workflows for default agents. */
+  /** The session's main model, used only before a subagent model is configured. */
   mainModel?: string;
   /**
    * Named subagent definitions for `agent({ agentType })`. Snapshotted once per
@@ -332,18 +329,7 @@ export interface WorkflowRunOptions extends WorkflowAgentOptions {
     committedUsage?: AgentUsage;
   }) => void;
   onAgentHistory?: (event: { id: string; label: string; phase?: string; history: AgentHistoryEntry[] }) => void;
-  /**
-   * The agent's REAL model, pushed the moment WorkflowAgent resolves it — mid-run,
-   * long before onAgentEnd. onAgentStart can only carry the pre-resolution guess
-   * (this call's explicit/phase spec, else the session's main model), which is wrong
-   * for every tier-routed agent: an explicit `tier` deliberately defers the choice to
-   * the agent layer, and an untagged agent is implicitly routed through the "medium"
-   * tier whenever model-tiers.json exists (see resolveAgentModelSpec). Without this
-   * channel those agents display the main session model for their whole lifetime and
-   * only flip to the truth once they finish. Fires once per ATTEMPT (and per turn for
-   * a named thread), so treat it as idempotent, not once-per-agent. `id` is the same
-   * per-CALL id as onAgentStart/onAgentEnd/onAgentHistory/onAgentUsage.
-   */
+  /** Resolved model identity, emitted per attempt or threaded turn for display. */
   onAgentModel?: (event: { id: string; label: string; phase?: string; model: string }) => void;
   onTokenUsage?: (usage: {
     input: number;
@@ -384,20 +370,6 @@ export interface AgentOptions<TSchemaDef extends TSchema | undefined = TSchema |
   label?: string;
   phase?: string;
   schema?: TSchemaDef;
-  /**
-   * Run this agent on a specific model (`provider/modelId` or a bare `modelId`).
-   * The workflow author chooses per-agent models per the routing policy in the
-   * tool guidelines (e.g. a lighter model for exploration, the main model for
-   * analysis). When omitted, the session's main model is used.
-   */
-  model?: string;
-  /**
-   * Coarse model tier ("small" | "medium" | "big"), resolved from the user's
-   * model-tiers config (see /workflows-models). An explicit `model` takes
-   * precedence; a tier takes precedence over the phase model. When the tier has
-   * no configured entry it falls back to the session's main model.
-   */
-  tier?: string;
   isolation?: "worktree";
   /**
    * Re-enter a named subagent conversation during this workflow invocation.
@@ -407,10 +379,9 @@ export interface AgentOptions<TSchemaDef extends TSchema | undefined = TSchema |
   thread?: string;
   /**
    * Name of a registered subagent definition (`.pi/agents/<name>.md`, project >
-   * user). Binds that definition's tool allow/denylist, model, and body prompt
-   * to this agent. An explicit `model` overrides the definition's model; the
-   * definition's model overrides `tier`/phase. An unknown name logs a warning
-   * and falls back to default tools/model (with the name as a prose hint).
+   * user). Binds that definition's tool allow/denylist and body prompt.
+   * An unknown name logs a warning and uses default tools with the name as a prose hint.
+   * Legacy model fields in definitions are ignored.
    */
   agentType?: string;
   /** Override timeout for this specific agent. null means no hard timeout. */
@@ -733,8 +704,11 @@ export async function runWorkflow<T = unknown>(
 ): Promise<WorkflowRunResult<T>> {
   const started = Date.now();
   const { meta, body } = parseWorkflowScript(script);
-  // Per-phase model routing from meta.phases[].model, with meta.model as the default.
-  const routingConfig = parseModelRoutingFromMeta(meta.phases, meta.model);
+  // Snapshot once for this run and all nested workflows. Script/role model selectors
+  // from older saved workflows are ignored; the user's single choice always wins.
+  const snapshot = await prepareSubagentSnapshot(options);
+  const subagentModel = snapshot.subagentModel;
+  options = { ...options, ...snapshot };
   // An explicit per-run cap is honored up to the hard ceiling; the default is
   // deliberately far below it (see DEFAULT_MAX_AGENTS_PER_RUN).
   const maxAgents = Math.min(MAX_AGENTS_PER_RUN, Math.max(1, options.maxAgents ?? DEFAULT_MAX_AGENTS_PER_RUN));
@@ -995,7 +969,7 @@ export async function runWorkflow<T = unknown>(
 
     const requestedLabel = agentOptions.label?.trim();
 
-    // Resolve a named agentType to its bound definition (tools/model/prompt).
+    // Resolve a named agentType to its bound definition (tools/prompt).
     const agentDef = resolveAgentType(agentOptions.agentType, agentRegistry);
     if (agentOptions.thread && (agentOptions.isolation === "worktree" || agentDef?.isolation === "worktree")) {
       throw new WorkflowError(
@@ -1005,28 +979,16 @@ export async function runWorkflow<T = unknown>(
       );
     }
     if (agentOptions.agentType && !agentDef) {
-      log(`unknown agentType "${agentOptions.agentType}"; using default tools/model`);
+      log(`unknown agentType "${agentOptions.agentType}"; using default tools`);
     }
 
-    // Model precedence: explicit agentOptions.model > agentType.model > tier > phase model.
-    // The "explicit-level" model is opts.model, else the definition's model — either
-    // beats tier/phase. When only a tier is set, pass undefined here so the tier (not
-    // the phase model) decides inside WorkflowAgent.run().
-    const explicitModel = agentOptions.model ?? agentDef?.model;
-    const modelSpec =
-      explicitModel ?? (agentOptions.tier ? undefined : resolveModelForPhase(assignedPhase, routingConfig));
-    // For display in /workflows: a PRE-RESOLUTION guess — this agent's explicit/phase
-    // spec, else the session's main model. It is only a guess: a `tier` deliberately
-    // leaves modelSpec undefined so the agent layer picks, and an untagged agent is
-    // implicitly routed through the "medium" tier when model-tiers.json exists. The
-    // real resolved id replaces it via onModelResolved below, which also pushes the
-    // correction out on onAgentModel so a RUNNING agent's row stops showing the guess.
-    let displayModel = modelSpec ?? options.mainModel;
+    const modelSpec = subagentModel;
+    let displayModel = modelSpec;
 
     // Deterministic resume key: assigned at lexical call time, before the limiter,
     // so parallel()/pipeline() fan-out is reproducible for a fixed script.
     const callIndex = state.callSeq++;
-    const callHash = hashAgentCall(prompt, modelSpec, assignedPhase, agentOptions, agentDefinitionKey(agentDef));
+    const callHash = hashAgentCall(prompt, JSON.stringify(snapshot), assignedPhase, agentOptions, agentDefinitionKey(agentDef));
     // Store delta key: callIndex alone is NOT run-unique. A nested workflow()
     // call (see workflowFn below) shares this run's SharedStore instance but
     // restarts its own callSeq at 0, so a parent agent and a concurrently
@@ -1202,8 +1164,6 @@ export async function runWorkflow<T = unknown>(
               schema: agentOptions.schema,
               signal: agentController.signal,
               instructions: buildAgentInstructions(assignedPhase, agentOptions, agentDef, resolvedIsolation),
-              model: modelSpec,
-              tier: agentOptions.tier,
               modelRegistry: options.modelRegistry,
               toolNames: agentDef?.tools,
               disallowedToolNames: agentDef?.disallowedTools,
@@ -1219,13 +1179,6 @@ export async function runWorkflow<T = unknown>(
                 // onAgentEnd keeps carrying the same value so late subscribers and
                 // the persisted snapshot stay consistent with this push.
                 options.onAgentModel?.({ id: deltaKey, label, phase: assignedPhase, model: id });
-              },
-              onModelFallback: ({ tier, requestedSpec }: { tier: string; requestedSpec: string }) => {
-                // Untagged agents' implicit default tier degrading to the session
-                // default must stay visible in the run's own log/event stream, not
-                // just a console.warn (#131) — an explicit model/tier pin instead
-                // throws MODEL_NOT_FOUND and never reaches this callback.
-                log(`default "${tier}" tier model "${requestedSpec}" unavailable — using the session default`);
               },
               onUsageProgress: attemptUsage.reportProgress,
               onUsage: attemptUsage.reportTerminal,
@@ -2055,7 +2008,6 @@ function validateMeta(meta: unknown): asserts meta is WorkflowMeta {
   if (typeof value.name !== "string" || !value.name.trim()) throw new Error("meta.name must be a non-empty string");
   if (typeof value.description !== "string" || !value.description.trim())
     throw new Error("meta.description must be a non-empty string");
-  if (value.model !== undefined && typeof value.model !== "string") throw new Error("meta.model must be a string");
   if (value.phases !== undefined) {
     if (!Array.isArray(value.phases)) throw new Error("meta.phases must be an array");
     for (const phase of value.phases) {
@@ -2128,7 +2080,6 @@ function hashAgentCall(
   const identity = JSON.stringify({
     prompt,
     model: model ?? null,
-    tier: options.tier ?? null,
     phase: phase ?? null,
     agentType: options.agentType ?? null,
     ...(options.thread ? { thread: options.thread } : {}),
@@ -2155,7 +2106,6 @@ function buildAgentInstructions(
   // Use resolvedIsolation so the annotation fires whether isolation came from
   // the call site or from the agentDef's isolation field.
   if (resolvedIsolation) lines.push(`Requested isolation: ${resolvedIsolation}`);
-  // Note: options.model is applied for real via the session, not injected as prose.
   return lines.length ? lines.join("\n\n") : undefined;
 }
 

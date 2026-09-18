@@ -1,5 +1,5 @@
 import { afterAll, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { writeConfig } from "../lib/install.mjs";
@@ -57,6 +57,7 @@ const keybinds = ["agent", "agent-p", "agent-wf"].map((d) => join(dir, d, "keybi
 const modelsStorePath = join(dir, "agent", "models-store.json");
 const modelTiersSrcPath = join(REPO, "config/model-tiers.json");
 const modelTiersDestPath = join(dir, "workflows", "model-tiers.json");
+const subagentModelDestPath = join(dir, "workflows", "subagent-model.json");
 
 for (const d of ["agent", "agent/npm", "agent-p/npm", "agent-wf/npm"]) {
 	mkdirSync(join(dir, d), { recursive: true });
@@ -190,17 +191,21 @@ test("npm-installed fork copies are pruned from all three manifests", () => {
 	expect(wf.dependencies).toEqual({ "left-alone-wf": "3.0.0" });
 });
 
-test("model-tiers.json is seeded when absent", () => {
+test("fresh installs seed only the single-model config", () => {
+	rmSync(modelTiersDestPath, { force: true });
+	rmSync(subagentModelDestPath, { force: true });
 	runWriter();
-	const tiers = JSON.parse(readFileSync(modelTiersDestPath, "utf8"));
-	expect(tiers.tiers).toEqual({
-		small: "openrouter/deepseek/deepseek-v4-flash-0731",
-		medium: "openrouter/deepseek/deepseek-v4-flash-0731",
-		big: "openrouter/deepseek/deepseek-v4-flash-0731",
+	expect(JSON.parse(readFileSync(subagentModelDestPath, "utf8"))).toEqual({
+		model: "openrouter/deepseek/deepseek-v4-flash-0731",
 	});
+	expect(existsSync(modelTiersDestPath)).toBe(false);
+	writeFileSync(subagentModelDestPath, JSON.stringify({ model: "p/user:high" }));
+	runWriter();
+	expect(JSON.parse(readFileSync(subagentModelDestPath, "utf8"))).toEqual({ model: "p/user:high" });
 });
 
-test("an existing model-tiers.json is left alone on reinstall", () => {
+test("an existing model-tiers.json is left for migration, not shadowed by a default", () => {
+	rmSync(subagentModelDestPath, { force: true });
 	mkdirSync(join(dir, "workflows"), { recursive: true });
 	const userCustom = {
 		_comment: "keep mine",
@@ -211,4 +216,5 @@ test("an existing model-tiers.json is left alone on reinstall", () => {
 	const after = JSON.parse(readFileSync(modelTiersDestPath, "utf8"));
 	expect(after.tiers).toEqual(userCustom.tiers);
 	expect(after._comment).toBe("keep mine");
+	expect(existsSync(subagentModelDestPath)).toBe(false);
 });

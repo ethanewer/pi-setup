@@ -41,7 +41,7 @@ export function canonicalModelSpec(model) {
     return `${model.provider}/${model.id}`;
 }
 /**
- * Split a stored tier spec for display/editing. Exact known model specs win, so
+ * Split a stored model spec for display/editing. Exact known model specs win, so
  * model ids that legitimately contain colons are not mistaken for thinking.
  */
 export function splitModelSpecThinking(spec, knownModelSpecs) {
@@ -153,7 +153,7 @@ function buildFallbackModel(provider, modelId, availableModels) {
     return { ...baseModel, id: modelId, name: modelId };
 }
 /**
- * Resolve a workflow model-tier/agent model string with the same user-facing
+ * Resolve a workflow subagent model string with the same user-facing
  * grammar as Pi CLI `--model`: `provider/modelId[:thinking]`, bare model ids,
  * fuzzy patterns, and exact colon-containing model ids. This is a manual port of
  * pi-coding-agent's `resolveCliModel` (core/model-resolver.ts) — kept in sync by
@@ -276,6 +276,40 @@ export function resolveModelSpecWithThinking(spec, modelRegistry, options) {
     return {
         requestedSpec,
         warning,
-        error: `Model "${display}" not found. Use /workflows-models to choose an available model.`,
+        error: `Model "${display}" not found. Use /workflow-model to choose a pinned model.`,
     };
+}
+function literalModelMatches(spec, models) {
+    return models.filter((model) => canonicalModelSpec(model) === spec || model.id === spec);
+}
+function uniqueCanonicalModel(models) {
+    const unique = [...new Map(models.map((model) => [canonicalModelSpec(model), model])).values()];
+    return unique.length === 1 ? unique[0] : undefined;
+}
+/**
+ * Resolve a stored identity: exact `provider/id`, or a unique literal model id
+ * (aggregator `vendor/model` and bare ids). Never parse thinking suffixes or
+ * synthesize ids. When several catalog entries match, the authenticated
+ * snapshot decides; a match that is not available is missing, not a fallback.
+ */
+export function resolveRunModelStrict(spec, modelRegistry) {
+    const requestedSpec = spec.trim();
+    if (!requestedSpec)
+        return { requestedSpec, error: "No model spec provided." };
+    let matches = literalModelMatches(requestedSpec, modelRegistry.getAll());
+    const available = typeof modelRegistry.getAvailable === "function" ? modelRegistry.getAvailable() : undefined;
+    if (matches.length > 1 && available) {
+        const availableKeys = new Set(available.map((model) => canonicalModelSpec(model)));
+        const narrowed = matches.filter((model) => availableKeys.has(canonicalModelSpec(model)));
+        if (narrowed.length > 0)
+            matches = narrowed;
+    }
+    const model = uniqueCanonicalModel(matches);
+    if (!model) {
+        return { requestedSpec, error: `Model "${requestedSpec}" not found. Use /workflow-model to choose a pinned model.` };
+    }
+    if (available && !available.some((entry) => canonicalModelSpec(entry) === canonicalModelSpec(model))) {
+        return { requestedSpec, error: `Model "${requestedSpec}" not found. Use /workflow-model to choose a pinned model.` };
+    }
+    return { requestedSpec, model, resolvedSpec: canonicalModelSpec(model) };
 }

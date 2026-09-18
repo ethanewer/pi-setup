@@ -14,7 +14,7 @@ export declare function isThinkingLevel(value: string): value is ModelThinkingLe
 export declare function formatModelSpecWithThinking(modelSpec: string, thinkingLevel: ModelThinkingLevel | undefined): string;
 export declare function canonicalModelSpec(model: Model<Api>): string;
 /**
- * Split a stored tier spec for display/editing. Exact known model specs win, so
+ * Split a stored model spec for display/editing. Exact known model specs win, so
  * model ids that legitimately contain colons are not mistaken for thinking.
  */
 export declare function splitModelSpecThinking(spec: string | undefined, knownModelSpecs?: readonly string[]): {
@@ -22,7 +22,7 @@ export declare function splitModelSpecThinking(spec: string | undefined, knownMo
     thinkingLevel?: ModelThinkingLevel;
 };
 /**
- * Resolve a workflow model-tier/agent model string with the same user-facing
+ * Resolve a workflow subagent model string with the same user-facing
  * grammar as Pi CLI `--model`: `provider/modelId[:thinking]`, bare model ids,
  * fuzzy patterns, and exact colon-containing model ids. This is a manual port of
  * pi-coding-agent's `resolveCliModel` (core/model-resolver.ts) — kept in sync by
@@ -35,3 +35,12 @@ export declare function splitModelSpecThinking(spec: string | undefined, knownMo
 export declare function resolveModelSpecWithThinking(spec: string, modelRegistry: Pick<ModelRegistry, "getAll"> & Partial<Pick<ModelRegistry, "hasConfiguredAuth">>, options?: {
     preferredProvider?: string;
 }): ResolvedModelSpec;
+/** Catalog plus optional auth snapshot. Availability is used only to disambiguate or reject. */
+export type RunModelRegistry = Pick<ModelRegistry, "getAll"> & Partial<Pick<ModelRegistry, "getAvailable">>;
+/**
+ * Resolve a stored identity: exact `provider/id`, or a unique literal model id
+ * (aggregator `vendor/model` and bare ids). Never parse thinking suffixes or
+ * synthesize ids. When several catalog entries match, the authenticated
+ * snapshot decides; a match that is not available is missing, not a fallback.
+ */
+export declare function resolveRunModelStrict(spec: string, modelRegistry: RunModelRegistry): ResolvedModelSpec;

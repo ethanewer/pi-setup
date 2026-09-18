@@ -121,6 +121,8 @@ export function validatePersistedRunState(value) {
     state.args = value.args;
     state.result = value.result;
     for (const [key, accepts] of [
+        ["subagentModel", isText],
+        ["subagentThinking", isText],
         ["sessionId", isText],
         ["pauseReason", isText],
         ["resetHint", isText],
@@ -286,7 +288,15 @@ export function runScriptOrigin(run) {
  * resumable by explicit user action.
  */
 export function isAutoResumeEligibleRun(run, installId) {
-    return isInstallOwnedRun(run, installId) && run.autoResume !== false;
+    if (!isInstallOwnedRun(run, installId) || run.autoResume === false)
+        return false;
+    // Pre-refactor records carry no model snapshot and their journal hashes
+    // predate the single-model hash, so auto-resume would silently rerun
+    // completed agents with no human in the loop. Leave them for explicit
+    // resume(), which warns before executing.
+    if (run.subagentModel === undefined)
+        return false;
+    return true;
 }
 export function createRunPersistence(cwd, fsOverride, options) {
     const fs = resolvePersistenceFs(fsOverride);

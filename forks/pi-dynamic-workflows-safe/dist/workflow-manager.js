@@ -9,6 +9,7 @@ import { isProviderUsageLimit, WorkflowError, WorkflowErrorCode } from "./errors
 import { createRunPersistence, generateRunId, isInstallOwnedRun, } from "./run-persistence.js";
 import { parseWorkflowScript, runWorkflow } from "./workflow.js";
 import { workflowInstallId } from "./workflow-paths.js";
+import { prepareSubagentSnapshot } from "./subagent-model-snapshot.js";
 const PAUSED_EXECUTION_SETTLE_TIMEOUT_MS = 1_000;
 async function waitForPausedExecutionSettlement(execution) {
     let timer;
@@ -103,8 +104,9 @@ export class WorkflowManager extends EventEmitter {
     concurrency;
     loadSavedWorkflow;
     agent;
-    /** The session's main model (provider/id), for auto-tiering explore agents. */
+    /** Main session model, used when no subagent model is configured. */
     mainModel;
+    subagentModelConfigPath;
     /** The host Pi session's model registry, shared with subagents. */
     modelRegistry;
     /** The current pi session id; runs are stamped with it and listRuns() filters by it. */
@@ -127,6 +129,7 @@ export class WorkflowManager extends EventEmitter {
         this.loadSavedWorkflow = options.loadSavedWorkflow;
         this.agent = options.agent;
         this.mainModel = options.mainModel;
+        this.subagentModelConfigPath = options.subagentModelConfigPath;
         this.modelRegistry = options.modelRegistry;
         this.sessionId = options.sessionId;
         // Explicit null means "no hard timeout" and is honored; only an omitted
@@ -311,7 +314,7 @@ export class WorkflowManager extends EventEmitter {
         this.confirmForeignRun = options.confirmForeignRun;
         this.isolationFallback = options.isolationFallback;
     }
-    /** Set the session's main model (provider/id). Used to auto-tier explore agents. */
+    /** Set the fallback model for runs without a configured subagent model. */
     setMainModel(spec) {
         this.mainModel = spec;
     }
@@ -340,12 +343,17 @@ export class WorkflowManager extends EventEmitter {
                 .slice(0, 40) || "workflow"
             : "";
         const runId = slug ? `${slug}-${generateRunId()}` : generateRunId();
+        const initialSnapshot = prepareSubagentSnapshot({
+            cwd: this.cwd, mainModel: this.mainModel, modelRegistry: this.modelRegistry,
+            subagentModelConfigPath: this.subagentModelConfigPath,
+        });
         const controller = new AbortController();
         const lease = this.persistence.acquireRunLease(runId);
         if (!lease)
             throw new Error(`Could not acquire workflow run lease for ${runId}`);
         const managed = {
             runId,
+            ...(initialSnapshot instanceof Promise ? { pendingSubagentSnapshot: initialSnapshot } : initialSnapshot),
             status: "running",
             snapshot: {
                 name: parsed.meta.name,
@@ -387,6 +395,8 @@ export class WorkflowManager extends EventEmitter {
             this.persistence.save({
                 runId,
                 workflowName: parsed.meta.name,
+                subagentModel: managed.subagentModel,
+                subagentThinking: managed.subagentThinking,
                 script,
                 args,
                 sessionId: managed.sessionId,
@@ -429,6 +439,10 @@ export class WorkflowManager extends EventEmitter {
      */
     async runSync(script, args, exec = {}) {
         const managed = this.createManaged(script, args);
+        Object.assign(managed, await prepareSubagentSnapshot({
+            cwd: this.cwd, mainModel: this.mainModel, modelRegistry: this.modelRegistry,
+            subagentModelConfigPath: this.subagentModelConfigPath,
+        }));
         const lease = this.persistence.acquireRunLease(managed.runId);
         if (!lease)
             throw new Error(`Could not acquire workflow run lease for ${managed.runId}`);
@@ -526,6 +540,11 @@ export class WorkflowManager extends EventEmitter {
         // signal must not retain a settled manager/run closure or abort it later.
         let externalAbortListener;
         try {
+            if (managed.pendingSubagentSnapshot) {
+                Object.assign(managed, await managed.pendingSubagentSnapshot);
+                managed.pendingSubagentSnapshot = undefined;
+                this.persistRun(managed);
+            }
             if (externalSignal) {
                 externalAbortListener = () => this.abortForExternalSignal(managed);
                 if (externalSignal.aborted) {
@@ -550,6 +569,8 @@ export class WorkflowManager extends EventEmitter {
                 runId: managed.runId,
                 agent: this.agent,
                 mainModel: this.mainModel,
+                subagentModel: managed.subagentModel,
+                subagentThinking: managed.subagentThinking,
                 modelRegistry: this.modelRegistry,
                 persistAgentSessions: this.persistAgentSessions,
                 signal: managed.controller.signal,
@@ -1019,6 +1040,8 @@ export class WorkflowManager extends EventEmitter {
                 // in workflow run storage, written 0600 under a 0700 directory (see
                 // fs-persistence.ts) — protected by file permissions, not by blanking.
                 script: managed.script,
+                subagentModel: managed.subagentModel,
+                subagentThinking: managed.subagentThinking,
                 args: managed.args,
                 // Always the run's own frozen owner — never this.sessionId. A mid-flight
                 // setSessionId() (session replacement) must not re-home a still-running
@@ -1146,9 +1169,22 @@ export class WorkflowManager extends EventEmitter {
         // UsageLimitScheduler); this covers the explicit resume paths.
         if (!isInstallOwnedRun(persisted, this.installId) && !(await this.authorizeForeignRun(persisted)))
             return false;
+        // Legacy records choose once on first resume and persist that choice.
+        const { subagentModel, subagentThinking } = persisted.subagentModel !== undefined
+            ? { subagentModel: persisted.subagentModel, subagentThinking: persisted.subagentThinking ?? "medium" }
+            : await prepareSubagentSnapshot({
+                cwd: this.cwd, mainModel: this.mainModel, modelRegistry: this.modelRegistry,
+                subagentModelConfigPath: this.subagentModelConfigPath,
+            });
         const lease = this.persistence.acquireRunLease(runId);
         if (!lease)
             return false;
+        if (persisted.subagentModel === undefined && persisted.journal?.length) {
+            const warning = "Legacy workflow journal: completed agents may run again after the single-model upgrade. " +
+                "Review prior filesystem changes before resuming further work.";
+            console.warn(`[workflow-manager] ${warning}`);
+            persisted.logs = [...(persisted.logs ?? []), warning];
+        }
         // Use the edited script when supplied, else the persisted one (backward-compat).
         const script = opts?.script ?? persisted.script;
         const args = opts?.args !== undefined ? opts.args : persisted.args;
@@ -1207,6 +1243,8 @@ export class WorkflowManager extends EventEmitter {
             // writes them below, so a later resume of this run sees the edited script.
             script,
             args,
+            subagentModel,
+            subagentThinking,
             journal: persisted.journal ?? [],
             background: true,
             // Prefer the frozen owner on disk; fall back to the manager's current

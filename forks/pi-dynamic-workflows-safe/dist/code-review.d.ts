@@ -17,10 +17,6 @@ export declare const MAX_DIFF_CHARS = 200000;
  * The workflow expects `args` to be passed with shape:
  *   { diff: string, diffSource: string }
  *
- * Model tier routing follows the spec:
- *   Finders A/B/C → medium (correctness)
- *   Finders D/E/F → small  (cleanup)
- *   Finder  G     → big    (altitude / abstraction)
- *   Synthesis     → big
+ * All finders and synthesis use the user's single subagent model.
  */
 export declare function generateCodeReviewWorkflow(): string;

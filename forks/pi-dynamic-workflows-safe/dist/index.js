@@ -10,9 +10,8 @@ export { createToolUpdateWorkflowDisplay, createWidgetWorkflowDisplay, createWor
 export { createEffortState, effortDirective, isSubstantive, registerEffortCommand, } from "./effort-command.js";
 export { adoptForeignWorkflowError, isAbortError, isTimeoutError, isWorkflowError, WORKFLOW_ERROR_BRAND, WorkflowError, WorkflowErrorCode, wrapError, } from "./errors.js";
 export { createWorkflowLogger } from "./logger.js";
-export { parseModelRoutingFromMeta, resolveModelForPhase } from "./model-routing.js";
-export { canonicalModelSpec, formatModelSpecWithThinking, isThinkingLevel, resolveModelSpecWithThinking, splitModelSpecThinking, THINKING_LEVELS, } from "./model-spec.js";
-export { buildDefaultTierConfig, formatTierFallbackNotice, getModelTierConfigPath, loadModelTierConfig, resolveTierModel, saveModelTierConfig, sortedTierNames, } from "./model-tier-config.js";
+export { canonicalModelSpec, formatModelSpecWithThinking, isThinkingLevel, resolveModelSpecWithThinking, resolveRunModelStrict, splitModelSpecThinking, THINKING_LEVELS, } from "./model-spec.js";
+export { getSubagentModelConfigPath, loadSubagentModelConfig, saveSubagentModelConfig } from "./subagent-model-config.js";
 export { createRunPersistence, generateRunId, isAutoResumeEligibleRun, isInstallOwnedRun, isSafeRunId, runScriptOrigin, validatePersistedRunState, } from "./run-persistence.js";
 export { confirmRepoLocalWorkflow, parseCommandArgs, registerAllSavedWorkflows, registerSavedWorkflow, } from "./saved-commands.js";
 export { SharedStore } from "./shared-store.js";
@@ -31,5 +30,5 @@ export { assertSafeSavedWorkflowName, createWorkflowStorage, isSafeSavedWorkflow
 export { getWorkflowProjectSettingsPath, getWorkflowSettingsPath, loadWorkflowSettings, saveWorkflowSettings, saveWorkflowSettingsForCwd, } from "./workflow-settings.js";
 export { backgroundStartedText, createWorkflowTool } from "./workflow-tool.js";
 export { keyToAction, NavigatorModel, NavigatorState, openWorkflowNavigator, renderNavigator, } from "./workflow-ui.js";
-export { registerWorkflowModelsCommand } from "./workflows-models-command.js";
+export { registerWorkflowModelCommand } from "./workflow-model-command.js";
 export { createWorktree, removeWorktree, worktreeId } from "./worktree.js";

@@ -25,7 +25,7 @@ export var WorkflowErrorCode;
     /** A non-schema agent completed without any assistant text output. */
     WorkflowErrorCode["AGENT_EMPTY_OUTPUT"] = "AGENT_EMPTY_OUTPUT";
     /**
-     * An agent()'s `model`/`tier` spec did not resolve to any known model. Never
+     * The configured subagent model did not resolve to any available model. Never
      * silently substituted for the session default — resolution is deterministic,
      * so retrying the same spec would fail identically every time.
      */

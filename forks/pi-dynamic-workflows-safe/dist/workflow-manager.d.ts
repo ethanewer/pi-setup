@@ -9,6 +9,7 @@ import { type WorkflowAgentSnapshot, type WorkflowSnapshot } from "./display.js"
 import { WorkflowError } from "./errors.js";
 import { type PendingDeliveryMarker, type PersistedRunState, type RunLease, type RunPersistence, type RunStatus } from "./run-persistence.js";
 import { type JournalEntry, type WorkflowRunResult } from "./workflow.js";
+import { type SubagentSnapshot } from "./subagent-model-snapshot.js";
 /** Per-execution identity for an abort initiated by pause()/stop(). */
 interface LifecycleControl {
     action: "pause" | "stop";
@@ -19,6 +20,20 @@ interface ExternalAbort {
     abortReason: object;
 }
 export interface ManagedRun {
+    /**
+     * Model fixed at start, as written to subagent-model.json (canonical
+     * `provider/id`, or a legacy bare id). Empty string preserves an unset
+     * selection on resume.
+     */
+    subagentModel?: string;
+    /**
+     * Thinking level fixed at start, or undefined for "no explicit override".
+     * Persisted separately from `subagentModel` so ids containing colons stay
+     * unambiguous; passed to every subagent session for the run's lifetime.
+     */
+    subagentThinking?: string;
+    /** Pending SDK registry initialization, completed and persisted before execution. */
+    pendingSubagentSnapshot?: Promise<SubagentSnapshot>;
     runId: string;
     status: RunStatus;
     snapshot: WorkflowSnapshot;
@@ -195,13 +210,15 @@ export interface ExecOptions {
     initialTokenUsage?: AgentUsage;
 }
 export interface WorkflowManagerOptions {
+    /** Alternate user config path for isolated embedders and tests. */
+    subagentModelConfigPath?: string;
     cwd?: string;
     concurrency?: number;
     /** Resolve a saved-workflow name to its script, enabling nested `workflow('name')`. */
     loadSavedWorkflow?: (name: string) => string | undefined;
     /** Inject a custom agent runner (tests); defaults to a real subagent session. */
     agent?: Pick<WorkflowAgent, "run">;
-    /** The session's main model (provider/id), for auto-tiering explore agents. */
+    /** Main session model, used when no subagent model is configured. */
     mainModel?: string;
     /**
      * The host Pi session's model registry. When provided, workflow subagents
@@ -341,8 +358,9 @@ export declare class WorkflowManager extends EventEmitter {
     private concurrency;
     private loadSavedWorkflow?;
     private agent?;
-    /** The session's main model (provider/id), for auto-tiering explore agents. */
+    /** Main session model, used when no subagent model is configured. */
     private mainModel?;
+    private readonly subagentModelConfigPath?;
     /** The host Pi session's model registry, shared with subagents. */
     private modelRegistry?;
     /** The current pi session id; runs are stamped with it and listRuns() filters by it. */
@@ -415,7 +433,7 @@ export declare class WorkflowManager extends EventEmitter {
      * runs and resumes use these refreshed defaults.
      */
     reconfigureAfterReload(options: WorkflowManagerReloadOptions): void;
-    /** Set the session's main model (provider/id). Used to auto-tier explore agents. */
+    /** Set the fallback model for runs without a configured subagent model. */
     setMainModel(spec: string | undefined): void;
     /** Set the host session's model registry so subagents resolve models consistently. */
     setModelRegistry(registry: ModelRegistry): void;

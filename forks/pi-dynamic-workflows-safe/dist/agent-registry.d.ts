@@ -11,14 +11,14 @@
  * discovery convention. The legacy `~/.pi/agents/*.md` location is still scanned as
  * a deprecated fallback (with a one-time warning) so users who followed this repo's
  * earlier docs are not silently broken; the new location wins on a name collision.
- * Frontmatter binds the subagent's tools, model, and a body prompt; project
+ * Frontmatter binds the subagent's tools and a body prompt; project
  * definitions win over both user-level locations on a name collision, and are
  * read only for a project the user trusts (see loadAgentRegistry). This mirrors
  * Claude Code's `.claude/agents` registry: agentType is a real binding of
- * tools+model+system-prompt, not a prose hint.
+ * tools+system-prompt, not a prose hint.
  *
- * Bound today: `tools` (allowlist), `disallowedTools` (denylist), `model`,
- * and the markdown body (`prompt`). Parsed-but-ignored for now (documented): `mcp`, `skills`, `background`.
+ * Bound today: `tools` (allowlist), `disallowedTools` (denylist),
+ * and the markdown body (`prompt`). Legacy `model` fields are ignored. Parsed-but-ignored for now (documented): `mcp`, `skills`, `background`.
  * Wired: `isolation` ("worktree") → createWorktree() in workflow.ts.
  */
 export interface AgentDefinition {
@@ -30,8 +30,6 @@ export interface AgentDefinition {
     tools?: string[];
     /** Denylist of coding-tool names, applied after the allowlist. */
     disallowedTools?: string[];
-    /** Model spec (`provider/modelId` or bare id) for this subagent. */
-    model?: string;
     /** Isolation mode. When "worktree", agents using this type run in a git worktree. */
     isolation?: "worktree";
     /** Markdown body, prepended to the subagent's task as role guidance. */
@@ -56,7 +54,7 @@ export declare function parseAgentDefinition(content: string, source: "project" 
  * telling the user to move their files — not one warning per legacy file.
  *
  * The PROJECT directory is part of whatever repository is checked out, and a
- * definition binds a subagent's whole system prompt plus its model and tool
+ * definition binds a subagent's whole system prompt plus its tool
  * policy — so project definitions are read only for a trusted project (see
  * WorkflowSettings.trustProjectLocalWorkflows, the same knob that gates
  * project-local saved workflows). Untrusted, they are skipped with a one-line

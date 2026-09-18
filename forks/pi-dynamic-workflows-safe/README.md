@@ -14,7 +14,7 @@
   <a href="https://pi.dev/packages/@quintinshaw/pi-dynamic-workflows">Pi package</a>
 </p>
 
-Turn one request into a JavaScript orchestration script that fans work out across isolated subagents, routes each task to the right model, cross-checks the results, and returns one synthesized answer. Intermediate work stays in script variables instead of filling your chat context.
+Turn one request into a JavaScript orchestration script that fans work out across isolated subagents, uses your chosen subagent model, cross-checks the results, and returns one synthesized answer. Intermediate work stays in script variables instead of filling your chat context.
 
 Built for **codebase-wide audits, multi-perspective review, large refactors, and source-checked research**—the jobs that are too broad for one agent and one context window.
 
@@ -41,7 +41,7 @@ Keyword triggering is on by default: use the bounded word **workflow** or **work
 ![A prompt becomes deterministic orchestration, parallel routed agents, verification, and one result](https://raw.githubusercontent.com/QuintinShaw/pi-dynamic-workflows/main/assets/readme/workflow.png)
 
 1. **Orchestrate** — Pi writes a deterministic JavaScript workflow with `agent()`, `parallel()`, `pipeline()`, and `phase()`.
-2. **Fan out** — fresh subagent sessions run concurrently, optionally on different models or isolated git worktrees.
+2. **Fan out** — fresh subagent sessions run concurrently, optionally in isolated git worktrees.
 3. **Verify and return** — the workflow cross-checks findings, journals completed work for resume, and delivers one result.
 
 The orchestration itself is plain JavaScript:
@@ -54,13 +54,12 @@ export const meta = {
 }
 
 phase('Scan')
-const files = await agent('List every route file under src/routes/.', { tier: 'small' })
+const files = await agent('List every route file under src/routes/.')
 
 phase('Review')
 const findings = await parallel(
   files.split('\n').filter(Boolean).map((file) =>
     () => agent(`Audit ${file} for missing auth checks.`, {
-      tier: 'medium',
       isolation: 'worktree',
     }),
   ),
@@ -69,14 +68,13 @@ const findings = await parallel(
 phase('Verify')
 return await agent(
   'Synthesize and double-check these findings:\n' + findings.join('\n\n'),
-  { tier: 'big' },
 )
 ```
 
 ## Why use it
 
 - **Real parallel orchestration** — fan out up to 16 concurrent subagents from one orchestration script, 100 per run by default and up to 1000 when you raise the cap.
-- **Per-agent model routing** — use `small`, `medium`, or `big` tiers, or choose an exact provider/model and thinking level.
+- **One subagent model**. Choose a pinned model and thinking level with `/workflow-model`. Scripts cannot override it.
 - **Journaled resume** — replay completed agents after interruption without rerunning them or spending their tokens again. The orchestrator can also resume with an **edited script** (`resumeFromRunId`): unchanged `agent()` calls replay from cache and only edited/new ones re-run — so a single bad prompt no longer means paying to re-run the whole workflow.
 - **Git worktree isolation** — let parallel agents edit safely on throwaway branches with `isolation: "worktree"`. Each agent gets its own worktree, and an agent that asks for one and cannot get it fails instead of quietly editing the shared tree next to its siblings (`worktreeIsolationFallback: "shared-tree"` restores the old fallback).
 - **Measured usage** — report real tokens and cost from each subagent session; add run, phase, or agent budgets only when you want them.
@@ -91,7 +89,7 @@ The installed extension generates this compact index from its executable capabil
 <!-- BEGIN GENERATED SUPPORTED WORKFLOW CAPABILITIES -->
 | Name | Classification | Signature | Options and defaults |
 | --- | --- | --- | --- |
-| agent | runtime-global | `agent(prompt, options?) => Promise<string \| structured value \| null>` | `label`: string (optional; default: derived from phase and call count)<br>`phase`: string (optional; default: current phase)<br>`schema`: plain JSON Schema (optional)<br>`model`: string (optional)<br>`tier`: string (optional)<br>`isolation`: "worktree" (optional)<br>`thread`: string (optional)<br>`agentType`: string (optional)<br>`timeoutMs`: number \| null (optional; default: run timeout; null disables)<br>`retries`: number (optional; default: run retry count) |
+| agent | runtime-global | `agent(prompt, options?) => Promise<string \| structured value \| null>` | `label`: string (optional; default: derived from phase and call count)<br>`phase`: string (optional; default: current phase)<br>`schema`: plain JSON Schema (optional)<br>`isolation`: "worktree" (optional)<br>`thread`: string (optional)<br>`agentType`: string (optional)<br>`timeoutMs`: number \| null (optional; default: run timeout; null disables)<br>`retries`: number (optional; default: run retry count) |
 | parallel | runtime-global | `parallel(thunks) => Promise<Array<unknown \| null>>` | — |
 | pipeline | runtime-global | `pipeline(items, ...stages) => Promise<Array<unknown \| null>>` | — |
 | workflow | runtime-global | `workflow(savedName, childArgs?) => Promise<unknown>` | — |
@@ -165,7 +163,7 @@ Pi can manage background runs directly with the `workflow_control` tool instead 
 | `/workflows-trigger off\|on\|status` | Control automatic keyword triggering |
 | `/workflows-trigger set <word>\|reset` | Set or reset the trigger word |
 | `/workflows-progress compact\|detailed\|status\|max <N>` | Live-panel detail level (and max agents shown per phase in detailed mode) |
-| `/workflows-models` | Map model tiers and thinking levels |
+| `/workflow-model` | Choose the subagent model from your pins. `/workflows-models` is an alias. |
 | `/ultracode [off]` | Toggle exhaustive automatic workflows |
 | `/effort off\|high\|ultra` | Set the standing orchestration effort |
 
@@ -189,9 +187,7 @@ Agent details use a compact summary by default: completed agents show their fina
 
 | Agent option | Description |
 | --- | --- |
-| `tier` | `small`, `medium`, or `big` model routing |
-| `model` | Exact `provider/modelId` or `provider/modelId:thinking`; overrides `tier` |
-| `agentType` | Named role, tool, and model definition |
+| `agentType` | Named role and tool definition |
 | `isolation` | Use `"worktree"` for conflict-free parallel edits |
 | `schema` | JSON Schema for a validated structured result |
 | `label` / `phase` | Display label and phase override |
@@ -217,21 +213,21 @@ Prefer `schema` (JSON Schema validation with bounded repair) over ad hoc parsing
 The [full documentation](https://quintinshaw.github.io/pi-dynamic-workflows/) covers every option, structured output, determinism, saved workflows, and operational control.
 
 <details>
-<summary><strong>Model tiers and run controls</strong></summary>
+<summary><strong>Subagent model and run controls</strong></summary>
 
-Model tiers live at `~/.pi/workflows/model-tiers.json` and accept Pi CLI-style thinking suffixes:
+The single model lives at `~/.pi/workflows/subagent-model.json`:
 
 ```json
-{
-  "tiers": {
-    "small": "openai-codex/gpt-5.4-mini:low",
-    "medium": "openai-codex/gpt-5.4:medium",
-    "big": "openai-codex/gpt-5.5:xhigh"
-  }
-}
+{ "model": "provider/modelId", "thinking": "high" }
 ```
 
-Use `/workflows-models` to edit them interactively. Without a config, the extension ranks authenticated models by capability hints and assigns distinct models when possible.
+Use `/workflow-model` to choose from your pinned models. With no pins, the command asks you to pin models first instead of opening the full catalogue. The choice applies to new runs, including every helper, nested workflow, and threaded call. Scripts cannot override it through agent options, phase metadata, or agent definitions. An unavailable configured model fails rather than silently switching models.
+
+On first use, an existing `model-tiers.json` migrates its `medium` model to this file. Already-saved short-form ids (`vendor/model` or a bare id) are rewritten to the unique authenticated `provider/id` when exactly one match is available; an ambiguous or unauthenticated identity fails and asks you to run `/workflow-model`. The legacy file stays untouched for rollback and is ignored once the new file exists. Without either config, subagents use the main session model.
+
+The saved file has an optional `thinking` field, stored separately from `model` so ids containing colons stay unambiguous. New runs persist both across pause/resume; the thinking level is resolved once per run and passed to every session, so SDK default-thinking changes cannot alter agents mid-run. Runs saved before this refactor have no model snapshot. Their first resume uses the current choice and warns that completed agents may run again because old journal hashes differ; auto-resume skips them entirely until an explicit resume records the choice. Review prior filesystem changes before resuming those runs.
+
+The setup installer seeds `subagent-model.json` only when neither config exists. Use `/workflow-model` to change it. To restore the setup default, back up and remove both model config files, then reinstall.
 
 Omitted `tokenBudget` and `agentTimeoutMs` values use configured `defaultTokenBudget` and `defaultAgentTimeoutMs` settings; without them, runs are unlimited on spend and each agent gets the default 60-minute timeout (set `defaultAgentTimeoutMs: null` for none). Add per-run or per-agent values when you need explicit gates. `concurrency` is clamped to 16; `agentRetries` retries only recoverable failures, twice by default. A run allows 100 agents unless it asks for more (`maxAgents`, or `defaultMaxAgents` in settings), clamped to the 1000 ceiling. Defaults live in `~/.pi/workflows/settings.json`; `defaultTokenBudget` is a soft pre-call gate, and a project-level override of `null` cancels a global budget.
 
@@ -246,7 +242,7 @@ Pausing and resuming a run keeps the limits it started with — `maxAgents`, `ag
 
 Extension state lives outside the repository under `~/.pi/workflows`:
 
-- global settings and tiers: `~/.pi/workflows/settings.json` and `model-tiers.json`
+- global settings and subagent model: `~/.pi/workflows/settings.json` and `subagent-model.json`
 - project runs, journals, locks, and saved overrides: `~/.pi/workflows/projects/<project>/`
 - older project-local `.pi/workflows/runs` and `.pi/workflows/saved` remain readable as fallbacks
 
@@ -256,7 +252,7 @@ Those project-local fallbacks live inside the repository, so a repository can su
 - a saved workflow there does not resolve by name for the `workflow` tool or a nested `workflow('name')`, and its `/<name>` command confirms at invocation, naming the file — including when it shadows a built-in like `/code-review`
 - set `trustProjectLocalWorkflows: true` (globally, or per project in `~/.pi/workflows/projects/<project>/settings.json`) to resolve them without prompting
 - run files are schema-validated on read; a malformed or ill-typed record is reported and skipped rather than trusted
-- project agent definitions (`<cwd>/.pi/agents/*.md`) bind a subagent's system prompt, model, and tool policy, so they load only under the same `trustProjectLocalWorkflows` setting; your `~/.pi/agent/agents/*.md` definitions always load
+- project agent definitions (`<cwd>/.pi/agents/*.md`) bind a subagent's system prompt and tool policy, so they load only under the same `trustProjectLocalWorkflows` setting; your `~/.pi/agent/agents/*.md` definitions always load
 
 A run record holds the workflow script, every agent prompt and every agent result verbatim, and nothing is redacted — so run/saved files are written `0600` inside `0700` directories. Worktrees created inside the repository (`.pi/worktrees/`) get a `.gitignore` so they cannot be committed by accident.
 
@@ -380,7 +376,7 @@ Features are also verified end-to-end against real Pi subagent sessions before r
 
 ## Credits
 
-The code-mode orchestration idea comes from [Michael Livs' original pi-dynamic-workflows](https://github.com/Michaelliv/pi-dynamic-workflows) and Anthropic's [dynamic workflows in Claude Code](https://claude.com/blog/introducing-dynamic-workflows-in-claude-code). This project adds model routing, journaled resume, worktree isolation, measured usage, an interactive TUI, and built-in research and review workflows.
+The code-mode orchestration idea comes from [Michael Livs' original pi-dynamic-workflows](https://github.com/Michaelliv/pi-dynamic-workflows) and Anthropic's [dynamic workflows in Claude Code](https://claude.com/blog/introducing-dynamic-workflows-in-claude-code). This fork adds a single user-selected subagent model, journaled resume, worktree isolation, measured usage, an interactive TUI, and built-in research and review workflows.
 
 ## License
 

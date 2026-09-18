@@ -8,14 +8,11 @@ import { SharedStore } from "./shared-store.js";
 export interface WorkflowMetaPhase {
     title: string;
     detail?: string;
-    model?: string;
 }
 export interface WorkflowMeta {
     name: string;
     description: string;
     phases?: WorkflowMetaPhase[];
-    /** Default model for agents whose phase has no route and that set no model/tier. */
-    model?: string;
 }
 /** One cached agent/checkpoint result, keyed by its deterministic workflow call identity. */
 export interface JournalEntry {
@@ -139,7 +136,7 @@ export interface WorkflowAgentRunner {
 export interface WorkflowRunOptions extends WorkflowAgentOptions {
     args?: unknown;
     agent?: WorkflowAgentRunner;
-    /** The session's main model (provider/id), shown in /workflows for default agents. */
+    /** The session's main model, used only before a subagent model is configured. */
     mainModel?: string;
     /**
      * Named subagent definitions for `agent({ agentType })`. Snapshotted once per
@@ -271,18 +268,7 @@ export interface WorkflowRunOptions extends WorkflowAgentOptions {
         phase?: string;
         history: AgentHistoryEntry[];
     }) => void;
-    /**
-     * The agent's REAL model, pushed the moment WorkflowAgent resolves it — mid-run,
-     * long before onAgentEnd. onAgentStart can only carry the pre-resolution guess
-     * (this call's explicit/phase spec, else the session's main model), which is wrong
-     * for every tier-routed agent: an explicit `tier` deliberately defers the choice to
-     * the agent layer, and an untagged agent is implicitly routed through the "medium"
-     * tier whenever model-tiers.json exists (see resolveAgentModelSpec). Without this
-     * channel those agents display the main session model for their whole lifetime and
-     * only flip to the truth once they finish. Fires once per ATTEMPT (and per turn for
-     * a named thread), so treat it as idempotent, not once-per-agent. `id` is the same
-     * per-CALL id as onAgentStart/onAgentEnd/onAgentHistory/onAgentUsage.
-     */
+    /** Resolved model identity, emitted per attempt or threaded turn for display. */
     onAgentModel?: (event: {
         id: string;
         label: string;
@@ -326,20 +312,6 @@ export interface AgentOptions<TSchemaDef extends TSchema | undefined = TSchema |
     label?: string;
     phase?: string;
     schema?: TSchemaDef;
-    /**
-     * Run this agent on a specific model (`provider/modelId` or a bare `modelId`).
-     * The workflow author chooses per-agent models per the routing policy in the
-     * tool guidelines (e.g. a lighter model for exploration, the main model for
-     * analysis). When omitted, the session's main model is used.
-     */
-    model?: string;
-    /**
-     * Coarse model tier ("small" | "medium" | "big"), resolved from the user's
-     * model-tiers config (see /workflows-models). An explicit `model` takes
-     * precedence; a tier takes precedence over the phase model. When the tier has
-     * no configured entry it falls back to the session's main model.
-     */
-    tier?: string;
     isolation?: "worktree";
     /**
      * Re-enter a named subagent conversation during this workflow invocation.
@@ -349,10 +321,9 @@ export interface AgentOptions<TSchemaDef extends TSchema | undefined = TSchema |
     thread?: string;
     /**
      * Name of a registered subagent definition (`.pi/agents/<name>.md`, project >
-     * user). Binds that definition's tool allow/denylist, model, and body prompt
-     * to this agent. An explicit `model` overrides the definition's model; the
-     * definition's model overrides `tier`/phase. An unknown name logs a warning
-     * and falls back to default tools/model (with the name as a prose hint).
+     * user). Binds that definition's tool allow/denylist and body prompt.
+     * An unknown name logs a warning and uses default tools with the name as a prose hint.
+     * Legacy model fields in definitions are ignored.
      */
     agentType?: string;
     /** Override timeout for this specific agent. null means no hard timeout. */

@@ -17,12 +17,12 @@ Review author-visible behavior, not formatting preferences. When behavior depend
 - Are stable work-unit IDs retained beside ordered results?
 - Are failed/null identities recorded before any filtering?
 
-## Data and routing
+## Data and agent roles
 
 - Does JavaScript consume structured fields only after a small plain JSON Schema guarantees them?
 - Does synthesis receive complete coverage and failure ledgers?
-- Are `model`, `tier`, and `agentType` used according to selector priority?
-- Did every nonstandard route or agent type come from context with a name and purpose?
+- Are model selectors omitted, and is any `agentType` supplied by context?
+- Does each agent type supplied by context have a name and purpose?
 
 ## Lifecycle
 

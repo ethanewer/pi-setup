@@ -8,7 +8,7 @@ Start from the symptom, then reproduce through the real workflow runtime with de
 | `parallel()` rejects input | Promises were passed instead of thunks | [runtime](runtime.md#topology) |
 | Synthesis starts early | Fan-out was not awaited as one complete result set | [pattern selection](pattern-selection.md#fan-out-and-synthesize) |
 | Coverage silently disappears | `null` results were filtered before IDs were ledgered | [lifecycle](lifecycle.md#retry-and-recoverable-failure) |
-| Wrong model is used | A higher-priority selector overrides the expected route | [registry ownership](registry-ownership.md#priority) |
+| Wrong model is used | Check the user's single subagent model with `/workflow-model` | [registry ownership](registry-ownership.md) |
 | Unknown `agentType` log | A live registry name was guessed or is unavailable | [registry ownership](registry-ownership.md#agent-types) |
 | Budget exceeds the number shown | The budget is a soft pre-call gate and work was in flight | [lifecycle](lifecycle.md#bounds-and-budget) |
 | Later calls rerun on resume | An earlier call missed or changed, ending the replayable prefix | [lifecycle](lifecycle.md#resume) |
