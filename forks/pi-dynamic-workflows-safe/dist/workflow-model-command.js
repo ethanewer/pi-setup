@@ -74,5 +74,4 @@ export function registerWorkflowModelCommand(pi, config = { load: loadSubagentMo
         ctx.ui.notify(`Subagent model saved: ${summary}. Applies to new workflow runs.`, "info");
     };
     pi.registerCommand("workflow-model", { description: "Choose the single subagent model from pinned models", handler });
-    pi.registerCommand("workflows-models", { description: "Alias for /workflow-model", handler });
 }

@@ -163,7 +163,7 @@ Pi can manage background runs directly with the `workflow_control` tool instead 
 | `/workflows-trigger off\|on\|status` | Control automatic keyword triggering |
 | `/workflows-trigger set <word>\|reset` | Set or reset the trigger word |
 | `/workflows-progress compact\|detailed\|status\|max <N>` | Live-panel detail level (and max agents shown per phase in detailed mode) |
-| `/workflow-model` | Choose the subagent model from your pins. `/workflows-models` is an alias. |
+| `/workflow-model` | Choose the subagent model from your pins. |
 | `/ultracode [off]` | Toggle exhaustive automatic workflows |
 | `/effort off\|high\|ultra` | Set the standing orchestration effort |
 

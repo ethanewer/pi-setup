@@ -91,7 +91,7 @@ test("empty pins do not enumerate the catalogue or show a selection dialog", asy
   const commands = new Map<string, any>();
   registerWorkflowModelCommand({ registerCommand: (name: string, cmd: unknown) => commands.set(name, cmd) } as never);
   expect(commands.has("workflow-model")).toBe(true);
-  expect(commands.get("workflow-model").handler).toBe(commands.get("workflows-models").handler);
+  expect(commands.has("workflows-models")).toBe(false);
   const notices: string[] = [];
   await commands.get("workflow-model").handler("", {
     hasUI: true, waitForIdle: async () => {}, scopedModels: [],
