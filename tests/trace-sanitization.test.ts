@@ -1,4 +1,8 @@
 import { expect, test } from "bun:test";
+import { spawnSync } from "node:child_process";
+import { mkdtempSync, readFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const python = String.raw`
@@ -6,7 +10,7 @@ import json, runpy, sys
 module = runpy.run_path("bin/convert-pi-traces")
 row = json.loads(sys.argv[1])
 clean, record = module["sanitize_newline_reasoning"](row)
-print(json.dumps({"clean": clean, "record": record}, sort_keys=True))
+open(sys.argv[2], "w").write(json.dumps({"clean": clean, "record": record}, sort_keys=True))
 `;
 
 function pythonBin(): string {
@@ -18,11 +22,12 @@ function pythonBin(): string {
 }
 
 function sanitize(row: Record<string, unknown>) {
-	const result = Bun.spawnSync([pythonBin(), "-c", python, JSON.stringify(row)], {
+	const outputPath = join(mkdtempSync(join(tmpdir(), "trace-sanitize-")), "output.json");
+	const result = spawnSync(pythonBin(), ["-c", python, JSON.stringify(row), outputPath], {
 		cwd: fileURLToPath(new URL("..", import.meta.url)),
 	});
-	expect(result.exitCode).toBe(0);
-	return JSON.parse(result.stdout.toString());
+	expect(result.status).toBe(0);
+	return JSON.parse(readFileSync(outputPath, "utf8"));
 }
 
 function baseRow(messages: Array<Record<string, unknown>>) {

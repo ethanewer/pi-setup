@@ -1,6 +1,6 @@
 diff -ruN --exclude=node_modules a/README.md b/README.md
 --- a/README.md	1985-10-26 03:15:00
-+++ b/README.md	2026-09-18 09:32:53
++++ b/README.md	2026-09-18 11:32:55
 @@ -14,7 +14,7 @@
    <a href="https://pi.dev/packages/@quintinshaw/pi-dynamic-workflows">Pi package</a>
  </p>
@@ -82,7 +82,7 @@ diff -ruN --exclude=node_modules a/README.md b/README.md
  | `/workflows-trigger set <word>\|reset` | Set or reset the trigger word |
  | `/workflows-progress compact\|detailed\|status\|max <N>` | Live-panel detail level (and max agents shown per phase in detailed mode) |
 -| `/workflows-models` | Map model tiers and thinking levels |
-+| `/workflow-model` | Choose the subagent model from your pins. `/workflows-models` is an alias. |
++| `/workflow-model` | Choose the subagent model from your pins. |
  | `/ultracode [off]` | Toggle exhaustive automatic workflows |
  | `/effort off\|high\|ultra` | Set the standing orchestration effort |
  
@@ -213,7 +213,7 @@ diff -ruN --exclude=node_modules a/README.md b/README.md
  
 diff -ruN --exclude=node_modules a/dist/agent-registry.d.ts b/dist/agent-registry.d.ts
 --- a/dist/agent-registry.d.ts	1985-10-26 03:15:00
-+++ b/dist/agent-registry.d.ts	2026-09-18 11:15:30
++++ b/dist/agent-registry.d.ts	2026-09-18 11:49:24
 @@ -11,13 +11,14 @@
   * discovery convention. The legacy `~/.pi/agents/*.md` location is still scanned as
   * a deprecated fallback (with a one-time warning) so users who followed this repo's
@@ -267,7 +267,7 @@ diff -ruN --exclude=node_modules a/dist/agent-registry.d.ts b/dist/agent-registr
  export declare function resolveAgentType(name: string | undefined, registry: AgentRegistry): AgentDefinition | undefined;
 diff -ruN --exclude=node_modules a/dist/agent-registry.js b/dist/agent-registry.js
 --- a/dist/agent-registry.js	1985-10-26 03:15:00
-+++ b/dist/agent-registry.js	2026-09-18 11:15:30
++++ b/dist/agent-registry.js	2026-09-18 11:49:24
 @@ -11,13 +11,14 @@
   * discovery convention. The legacy `~/.pi/agents/*.md` location is still scanned as
   * a deprecated fallback (with a one-time warning) so users who followed this repo's
@@ -368,7 +368,7 @@ diff -ruN --exclude=node_modules a/dist/agent-registry.js b/dist/agent-registry.
      });
 diff -ruN --exclude=node_modules a/dist/agent.d.ts b/dist/agent.d.ts
 --- a/dist/agent.d.ts	1985-10-26 03:15:00
-+++ b/dist/agent.d.ts	2026-09-18 11:15:30
++++ b/dist/agent.d.ts	2026-09-18 11:49:24
 @@ -3,7 +3,11 @@
  import { type AgentHistoryEntry } from "./agent-history.js";
  import { type AgentUsage } from "./agent-usage.js";
@@ -573,7 +573,7 @@ diff -ruN --exclude=node_modules a/dist/agent.d.ts b/dist/agent.d.ts
       * standard sessions dir, keyed by the runner's project cwd — never a
 diff -ruN --exclude=node_modules a/dist/agent.js b/dist/agent.js
 --- a/dist/agent.js	1985-10-26 03:15:00
-+++ b/dist/agent.js	2026-09-18 11:15:30
++++ b/dist/agent.js	2026-09-18 11:49:24
 @@ -7,8 +7,8 @@
  import { agentUsageEquals, createEmptyAgentUsage, sumAgentUsage } from "./agent-usage.js";
  import { applyToolPolicy } from "./agent-registry.js";
@@ -833,7 +833,7 @@ diff -ruN --exclude=node_modules a/dist/agent.js b/dist/agent.js
                  // Deny recursive-orchestration tools in the subagent (#107). Placed after
 diff -ruN --exclude=node_modules a/dist/builtin-commands.js b/dist/builtin-commands.js
 --- a/dist/builtin-commands.js	1985-10-26 03:15:00
-+++ b/dist/builtin-commands.js	2026-09-18 11:15:30
++++ b/dist/builtin-commands.js	2026-09-18 11:49:24
 @@ -13,7 +13,7 @@
  import { findBuiltinWorkflow } from "./builtin-workflows.js";
  import { MAX_DIFF_CHARS } from "./code-review.js";
@@ -938,7 +938,7 @@ diff -ruN --exclude=node_modules a/dist/builtin-commands.js b/dist/builtin-comma
                  if (!scope || checks.length === 0) {
 diff -ruN --exclude=node_modules a/dist/builtin-workflows.js b/dist/builtin-workflows.js
 --- a/dist/builtin-workflows.js	1985-10-26 03:15:00
-+++ b/dist/builtin-workflows.js	2026-09-18 11:15:30
++++ b/dist/builtin-workflows.js	2026-09-18 11:49:24
 @@ -16,6 +16,7 @@
  import { generateCodeReviewWorkflow } from "./code-review.js";
  import { generateCodebaseAuditWorkflow, generateDeepResearchWorkflow } from "./deep-research.js";
@@ -972,7 +972,7 @@ diff -ruN --exclude=node_modules a/dist/builtin-workflows.js b/dist/builtin-work
          },
 diff -ruN --exclude=node_modules a/dist/code-review.d.ts b/dist/code-review.d.ts
 --- a/dist/code-review.d.ts	1985-10-26 03:15:00
-+++ b/dist/code-review.d.ts	2026-09-18 11:15:30
++++ b/dist/code-review.d.ts	2026-09-18 11:49:24
 @@ -17,10 +17,6 @@
   * The workflow expects `args` to be passed with shape:
   *   { diff: string, diffSource: string }
@@ -987,7 +987,7 @@ diff -ruN --exclude=node_modules a/dist/code-review.d.ts b/dist/code-review.d.ts
  export declare function generateCodeReviewWorkflow(): string;
 diff -ruN --exclude=node_modules a/dist/code-review.js b/dist/code-review.js
 --- a/dist/code-review.js	1985-10-26 03:15:00
-+++ b/dist/code-review.js	2026-09-18 11:15:30
++++ b/dist/code-review.js	2026-09-18 11:49:24
 @@ -17,11 +17,7 @@
   * The workflow expects `args` to be passed with shape:
   *   { diff: string, diffSource: string }
@@ -1061,7 +1061,7 @@ diff -ruN --exclude=node_modules a/dist/code-review.js b/dist/code-review.js
  return { total: allCandidates.length, surviving: surviving.length, findings: top, report: synthesis, diffTruncated }`;
 diff -ruN --exclude=node_modules a/dist/config.d.ts b/dist/config.d.ts
 --- a/dist/config.d.ts	1985-10-26 03:15:00
-+++ b/dist/config.d.ts	2026-09-18 11:15:30
++++ b/dist/config.d.ts	2026-09-18 11:49:24
 @@ -1,14 +1,70 @@
  /**
   * Configuration constants for pi-dynamic-workflows.
@@ -1149,7 +1149,7 @@ diff -ruN --exclude=node_modules a/dist/config.d.ts b/dist/config.d.ts
  /** Default keyword that arms workflows mode from interactive input. */
 diff -ruN --exclude=node_modules a/dist/config.js b/dist/config.js
 --- a/dist/config.js	1985-10-26 03:15:00
-+++ b/dist/config.js	2026-09-18 11:15:30
++++ b/dist/config.js	2026-09-18 11:49:24
 @@ -1,14 +1,70 @@
  /**
   * Configuration constants for pi-dynamic-workflows.
@@ -1237,7 +1237,7 @@ diff -ruN --exclude=node_modules a/dist/config.js b/dist/config.js
  /** Default keyword that arms workflows mode from interactive input. */
 diff -ruN --exclude=node_modules a/dist/effort-command.js b/dist/effort-command.js
 --- a/dist/effort-command.js	1985-10-26 03:15:00
-+++ b/dist/effort-command.js	2026-09-18 11:15:30
++++ b/dist/effort-command.js	2026-09-18 11:49:24
 @@ -16,7 +16,7 @@
      return { level: "off" };
  }
@@ -1258,7 +1258,7 @@ diff -ruN --exclude=node_modules a/dist/effort-command.js b/dist/effort-command.
  }
 diff -ruN --exclude=node_modules a/dist/errors.d.ts b/dist/errors.d.ts
 --- a/dist/errors.d.ts	1985-10-26 03:15:00
-+++ b/dist/errors.d.ts	2026-09-18 11:15:30
++++ b/dist/errors.d.ts	2026-09-18 11:49:24
 @@ -49,7 +49,7 @@
      /** A non-schema agent completed without any assistant text output. */
      AGENT_EMPTY_OUTPUT = "AGENT_EMPTY_OUTPUT",
@@ -1309,7 +1309,7 @@ diff -ruN --exclude=node_modules a/dist/errors.d.ts b/dist/errors.d.ts
   */
 diff -ruN --exclude=node_modules a/dist/errors.js b/dist/errors.js
 --- a/dist/errors.js	1985-10-26 03:15:00
-+++ b/dist/errors.js	2026-09-18 11:15:30
++++ b/dist/errors.js	2026-09-18 11:49:24
 @@ -25,7 +25,7 @@
      /** A non-schema agent completed without any assistant text output. */
      WorkflowErrorCode["AGENT_EMPTY_OUTPUT"] = "AGENT_EMPTY_OUTPUT";
@@ -1413,7 +1413,7 @@ diff -ruN --exclude=node_modules a/dist/errors.js b/dist/errors.js
  }
 diff -ruN --exclude=node_modules a/dist/fs-persistence.d.ts b/dist/fs-persistence.d.ts
 --- a/dist/fs-persistence.d.ts	1985-10-26 03:15:00
-+++ b/dist/fs-persistence.d.ts	2026-09-18 11:15:30
++++ b/dist/fs-persistence.d.ts	2026-09-18 11:49:24
 @@ -13,8 +13,12 @@
   *  3. A missing or unreadable directory degrades to "no files" rather than
   *     throwing — a listing must never crash because one storage location is
@@ -1447,7 +1447,7 @@ diff -ruN --exclude=node_modules a/dist/fs-persistence.d.ts b/dist/fs-persistenc
   * Atomically write JSON to `path`: tmp-write + rename (atomic on the same
 diff -ruN --exclude=node_modules a/dist/fs-persistence.js b/dist/fs-persistence.js
 --- a/dist/fs-persistence.js	1985-10-26 03:15:00
-+++ b/dist/fs-persistence.js	2026-09-18 11:15:30
++++ b/dist/fs-persistence.js	2026-09-18 11:49:24
 @@ -13,8 +13,12 @@
   *  3. A missing or unreadable directory degrades to "no files" rather than
   *     throwing — a listing must never crash because one storage location is
@@ -1505,7 +1505,7 @@ diff -ruN --exclude=node_modules a/dist/fs-persistence.js b/dist/fs-persistence.
          // Backup is best-effort; the primary write already succeeded.
 diff -ruN --exclude=node_modules a/dist/index.d.ts b/dist/index.d.ts
 --- a/dist/index.d.ts	1985-10-26 03:15:00
-+++ b/dist/index.d.ts	2026-09-18 11:15:30
++++ b/dist/index.d.ts	2026-09-18 11:49:24
 @@ -1,6 +1,6 @@
  export type { AdversarialReviewConfig } from "./adversarial-review.js";
  export { generateAdversarialReviewWorkflow, generateMultiPerspectiveWorkflow } from "./adversarial-review.js";
@@ -1575,7 +1575,7 @@ diff -ruN --exclude=node_modules a/dist/index.d.ts b/dist/index.d.ts
 +export { createWorktree, removeWorktree, worktreeId } from "./worktree.js";
 diff -ruN --exclude=node_modules a/dist/index.js b/dist/index.js
 --- a/dist/index.js	1985-10-26 03:15:00
-+++ b/dist/index.js	2026-09-18 11:15:30
++++ b/dist/index.js	2026-09-18 11:49:24
 @@ -8,28 +8,27 @@
  export { generateCodebaseAuditWorkflow, generateDeepResearchWorkflow } from "./deep-research.js";
  export { createToolUpdateWorkflowDisplay, createWidgetWorkflowDisplay, createWorkflowSnapshot, preview, recomputeWorkflowSnapshot, renderWorkflowLines, renderWorkflowText, } from "./display.js";
@@ -1617,7 +1617,7 @@ diff -ruN --exclude=node_modules a/dist/index.js b/dist/index.js
 +export { createWorktree, removeWorktree, worktreeId } from "./worktree.js";
 diff -ruN --exclude=node_modules a/dist/logger.js b/dist/logger.js
 --- a/dist/logger.js	1985-10-26 03:15:00
-+++ b/dist/logger.js	2026-09-18 11:15:30
++++ b/dist/logger.js	2026-09-18 11:49:24
 @@ -3,12 +3,30 @@
   */
  import { appendFileSync, mkdirSync, writeFileSync } from "node:fs";
@@ -1770,7 +1770,7 @@ diff -ruN --exclude=node_modules a/dist/model-routing.js b/dist/model-routing.js
 -}
 diff -ruN --exclude=node_modules a/dist/model-spec.d.ts b/dist/model-spec.d.ts
 --- a/dist/model-spec.d.ts	1985-10-26 03:15:00
-+++ b/dist/model-spec.d.ts	2026-09-18 11:15:30
++++ b/dist/model-spec.d.ts	2026-09-18 11:49:24
 @@ -14,7 +14,7 @@
  export declare function formatModelSpecWithThinking(modelSpec: string, thinkingLevel: ModelThinkingLevel | undefined): string;
  export declare function canonicalModelSpec(model: Model<Api>): string;
@@ -1804,7 +1804,7 @@ diff -ruN --exclude=node_modules a/dist/model-spec.d.ts b/dist/model-spec.d.ts
 +export declare function resolveRunModelStrict(spec: string, modelRegistry: RunModelRegistry): ResolvedModelSpec;
 diff -ruN --exclude=node_modules a/dist/model-spec.js b/dist/model-spec.js
 --- a/dist/model-spec.js	1985-10-26 03:15:00
-+++ b/dist/model-spec.js	2026-09-18 11:15:30
++++ b/dist/model-spec.js	2026-09-18 11:49:24
 @@ -41,7 +41,7 @@
      return `${model.provider}/${model.id}`;
  }
@@ -2257,7 +2257,7 @@ diff -ruN --exclude=node_modules a/dist/model-tier-config.js b/dist/model-tier-c
 -}
 diff -ruN --exclude=node_modules a/dist/run-persistence.d.ts b/dist/run-persistence.d.ts
 --- a/dist/run-persistence.d.ts	1985-10-26 03:15:00
-+++ b/dist/run-persistence.d.ts	2026-09-18 11:15:30
++++ b/dist/run-persistence.d.ts	2026-09-18 11:49:24
 @@ -41,6 +41,10 @@
      model?: string;
  }
@@ -2403,7 +2403,7 @@ diff -ruN --exclude=node_modules a/dist/run-persistence.d.ts b/dist/run-persiste
   * Generate a unique run ID.
 diff -ruN --exclude=node_modules a/dist/run-persistence.js b/dist/run-persistence.js
 --- a/dist/run-persistence.js	1985-10-26 03:15:00
-+++ b/dist/run-persistence.js	2026-09-18 11:15:30
++++ b/dist/run-persistence.js	2026-09-18 11:49:24
 @@ -1,8 +1,9 @@
  /**
   * Workflow run state persistence for pause/resume support.
@@ -3029,7 +3029,7 @@ diff -ruN --exclude=node_modules a/dist/run-persistence.js b/dist/run-persistenc
                  if (existing?.token === lease.token)
 diff -ruN --exclude=node_modules a/dist/saved-commands.d.ts b/dist/saved-commands.d.ts
 --- a/dist/saved-commands.d.ts	1985-10-26 03:15:00
-+++ b/dist/saved-commands.d.ts	2026-09-18 11:15:30
++++ b/dist/saved-commands.d.ts	2026-09-18 11:49:24
 @@ -2,7 +2,7 @@
   * Saved workflows as `/<name>` slash commands. Each saved workflow becomes a
   * command that runs its script, passing parsed arguments through as `args`.
@@ -3063,7 +3063,7 @@ diff -ruN --exclude=node_modules a/dist/saved-commands.d.ts b/dist/saved-command
      ok: false;
 diff -ruN --exclude=node_modules a/dist/saved-commands.js b/dist/saved-commands.js
 --- a/dist/saved-commands.js	1985-10-26 03:15:00
-+++ b/dist/saved-commands.js	2026-09-18 11:15:30
++++ b/dist/saved-commands.js	2026-09-18 11:49:24
 @@ -5,6 +5,7 @@
  import { createCodingTools } from "@earendil-works/pi-coding-agent";
  import { claimCommand, commandOwner, isCommandRegistered } from "./command-registry.js";
@@ -3121,7 +3121,7 @@ diff -ruN --exclude=node_modules a/dist/saved-commands.js b/dist/saved-commands.
                      if (liveManager) {
 diff -ruN --exclude=node_modules a/dist/subagent-model-config.d.ts b/dist/subagent-model-config.d.ts
 --- a/dist/subagent-model-config.d.ts	1969-12-31 18:00:00
-+++ b/dist/subagent-model-config.d.ts	2026-09-18 11:15:30
++++ b/dist/subagent-model-config.d.ts	2026-09-18 11:49:24
 @@ -0,0 +1,17 @@
 +import { type ModelThinkingLevel, type RunModelRegistry } from "./model-spec.js";
 +export declare class ModelRegistryRequiredError extends Error {
@@ -3142,7 +3142,7 @@ diff -ruN --exclude=node_modules a/dist/subagent-model-config.d.ts b/dist/subage
 +export declare function saveSubagentModelConfig(config: SubagentModelConfig, path?: string): void;
 diff -ruN --exclude=node_modules a/dist/subagent-model-config.js b/dist/subagent-model-config.js
 --- a/dist/subagent-model-config.js	1969-12-31 18:00:00
-+++ b/dist/subagent-model-config.js	2026-09-18 11:15:30
++++ b/dist/subagent-model-config.js	2026-09-18 11:49:24
 @@ -0,0 +1,109 @@
 +import { existsSync, mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
 +import { homedir } from "node:os";
@@ -3255,7 +3255,7 @@ diff -ruN --exclude=node_modules a/dist/subagent-model-config.js b/dist/subagent
 +}
 diff -ruN --exclude=node_modules a/dist/subagent-model-snapshot.d.ts b/dist/subagent-model-snapshot.d.ts
 --- a/dist/subagent-model-snapshot.d.ts	1969-12-31 18:00:00
-+++ b/dist/subagent-model-snapshot.d.ts	2026-09-18 11:15:30
++++ b/dist/subagent-model-snapshot.d.ts	2026-09-18 11:49:24
 @@ -0,0 +1,19 @@
 +import { ModelRegistry, type CreateAgentSessionOptions } from "@earendil-works/pi-coding-agent";
 +import { type ModelThinkingLevel } from "./model-spec.js";
@@ -3278,7 +3278,7 @@ diff -ruN --exclude=node_modules a/dist/subagent-model-snapshot.d.ts b/dist/suba
 +export declare function prepareSubagentSnapshot(options: SubagentSnapshotOptions): SubagentSnapshot | Promise<SubagentSnapshot>;
 diff -ruN --exclude=node_modules a/dist/subagent-model-snapshot.js b/dist/subagent-model-snapshot.js
 --- a/dist/subagent-model-snapshot.js	1969-12-31 18:00:00
-+++ b/dist/subagent-model-snapshot.js	2026-09-18 11:15:30
++++ b/dist/subagent-model-snapshot.js	2026-09-18 11:49:24
 @@ -0,0 +1,81 @@
 +import { clampThinkingLevel } from "@earendil-works/pi-ai";
 +import { getAgentDir, SettingsManager, ModelRegistry, ModelRuntime } from "@earendil-works/pi-coding-agent";
@@ -3363,7 +3363,7 @@ diff -ruN --exclude=node_modules a/dist/subagent-model-snapshot.js b/dist/subage
 +}
 diff -ruN --exclude=node_modules a/dist/task-panel.d.ts b/dist/task-panel.d.ts
 --- a/dist/task-panel.d.ts	1985-10-26 03:15:00
-+++ b/dist/task-panel.d.ts	2026-09-18 11:15:30
++++ b/dist/task-panel.d.ts	2026-09-18 11:49:24
 @@ -19,6 +19,7 @@
       */
      loadSettings?: () => WorkflowSettings;
@@ -3385,7 +3385,7 @@ diff -ruN --exclude=node_modules a/dist/task-panel.d.ts b/dist/task-panel.d.ts
  export {};
 diff -ruN --exclude=node_modules a/dist/task-panel.js b/dist/task-panel.js
 --- a/dist/task-panel.js	1985-10-26 03:15:00
-+++ b/dist/task-panel.js	2026-09-18 11:15:30
++++ b/dist/task-panel.js	2026-09-18 11:49:24
 @@ -77,6 +77,27 @@
          return line;
      return truncateToWidth(line, maxWidth);
@@ -3506,7 +3506,7 @@ diff -ruN --exclude=node_modules a/dist/task-panel.js b/dist/task-panel.js
          return comp;
 diff -ruN --exclude=node_modules a/dist/usage-limit-scheduler.d.ts b/dist/usage-limit-scheduler.d.ts
 --- a/dist/usage-limit-scheduler.d.ts	1985-10-26 03:15:00
-+++ b/dist/usage-limit-scheduler.d.ts	2026-09-18 11:15:30
++++ b/dist/usage-limit-scheduler.d.ts	2026-09-18 11:49:24
 @@ -15,7 +15,7 @@
   * (in-memory, best-effort persisted) — it does not rely on manager.stop(), which
   * only operates on in-memory runs.
@@ -3572,7 +3572,7 @@ diff -ruN --exclude=node_modules a/dist/usage-limit-scheduler.d.ts b/dist/usage-
      /**
 diff -ruN --exclude=node_modules a/dist/usage-limit-scheduler.js b/dist/usage-limit-scheduler.js
 --- a/dist/usage-limit-scheduler.js	1985-10-26 03:15:00
-+++ b/dist/usage-limit-scheduler.js	2026-09-18 11:15:30
++++ b/dist/usage-limit-scheduler.js	2026-09-18 11:49:24
 @@ -15,10 +15,13 @@
   * (in-memory, best-effort persisted) — it does not rely on manager.stop(), which
   * only operates on in-memory runs.
@@ -3690,7 +3690,7 @@ diff -ruN --exclude=node_modules a/dist/usage-limit-scheduler.js b/dist/usage-li
      safeLoad(runId) {
 diff -ruN --exclude=node_modules a/dist/web-tools.d.ts b/dist/web-tools.d.ts
 --- a/dist/web-tools.d.ts	1985-10-26 03:15:00
-+++ b/dist/web-tools.d.ts	2026-09-18 11:15:30
++++ b/dist/web-tools.d.ts	2026-09-18 11:49:24
 @@ -3,18 +3,63 @@
   * process (which has network access), not in a subagent sandbox, so they perform
   * genuine HTTP requests via Node's fetch.
@@ -3761,7 +3761,7 @@ diff -ruN --exclude=node_modules a/dist/web-tools.d.ts b/dist/web-tools.d.ts
 +export declare function createWebTools(policy?: WebFetchPolicy): ToolDefinition[];
 diff -ruN --exclude=node_modules a/dist/web-tools.js b/dist/web-tools.js
 --- a/dist/web-tools.js	1985-10-26 03:15:00
-+++ b/dist/web-tools.js	2026-09-18 11:15:30
++++ b/dist/web-tools.js	2026-09-18 11:49:24
 @@ -3,18 +3,236 @@
   * process (which has network access), not in a subagent sandbox, so they perform
   * genuine HTTP requests via Node's fetch.
@@ -4059,7 +4059,7 @@ diff -ruN --exclude=node_modules a/dist/web-tools.js b/dist/web-tools.js
  }
 diff -ruN --exclude=node_modules a/dist/workflow-authoring-coverage.d.ts b/dist/workflow-authoring-coverage.d.ts
 --- a/dist/workflow-authoring-coverage.d.ts	1985-10-26 03:15:00
-+++ b/dist/workflow-authoring-coverage.d.ts	2026-09-18 11:15:30
++++ b/dist/workflow-authoring-coverage.d.ts	2026-09-18 11:49:24
 @@ -24,10 +24,10 @@
  /** Mixed guidance files that require explicit acceptance while behavioral coverage remains partial. */
  export declare const WORKFLOW_AUTHORING_FROZEN_FILES: readonly [{
@@ -4101,7 +4101,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-authoring-coverage.d.ts b/dist/
      readonly sha256: "23d0d9f37ee8648cd29ca526b0b23cf55bd3ac57efd02e1b93e227bcd0c18603";
 diff -ruN --exclude=node_modules a/dist/workflow-authoring-coverage.js b/dist/workflow-authoring-coverage.js
 --- a/dist/workflow-authoring-coverage.js	1985-10-26 03:15:00
-+++ b/dist/workflow-authoring-coverage.js	2026-09-18 11:15:30
++++ b/dist/workflow-authoring-coverage.js	2026-09-18 11:49:24
 @@ -7,11 +7,11 @@
  export const WORKFLOW_AUTHORING_FROZEN_FILES = [
      {
@@ -4173,7 +4173,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-authoring-coverage.js b/dist/wo
  };
 diff -ruN --exclude=node_modules a/dist/workflow-capability-contract.d.ts b/dist/workflow-capability-contract.d.ts
 --- a/dist/workflow-capability-contract.d.ts	1985-10-26 03:15:00
-+++ b/dist/workflow-capability-contract.d.ts	2026-09-18 11:15:30
++++ b/dist/workflow-capability-contract.d.ts	2026-09-18 11:49:24
 @@ -13,7 +13,7 @@
      optional: boolean;
      default: string | null;
@@ -4201,7 +4201,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-capability-contract.d.ts b/dist
      items?: never;
 diff -ruN --exclude=node_modules a/dist/workflow-capability-contract.js b/dist/workflow-capability-contract.js
 --- a/dist/workflow-capability-contract.js	1985-10-26 03:15:00
-+++ b/dist/workflow-capability-contract.js	2026-09-18 11:15:30
++++ b/dist/workflow-capability-contract.js	2026-09-18 11:49:24
 @@ -15,8 +15,6 @@
          option("label", "string", true, "derived from phase and call count"),
          option("phase", "string", true, "current phase"),
@@ -4290,7 +4290,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-capability-contract.js b/dist/w
              owner: "agent-registry",
 diff -ruN --exclude=node_modules a/dist/workflow-commands.js b/dist/workflow-commands.js
 --- a/dist/workflow-commands.js	1985-10-26 03:15:00
-+++ b/dist/workflow-commands.js	2026-09-18 11:15:30
++++ b/dist/workflow-commands.js	2026-09-18 11:49:24
 @@ -4,6 +4,7 @@
   */
  import { fmtFull, fmtTokenSegment, recomputeWorkflowSnapshot, renderWorkflowText, tokenFigures, } from "./display.js";
@@ -4401,7 +4401,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-commands.js b/dist/workflow-com
                  default:
 diff -ruN --exclude=node_modules a/dist/workflow-editor.js b/dist/workflow-editor.js
 --- a/dist/workflow-editor.js	1985-10-26 03:15:00
-+++ b/dist/workflow-editor.js	2026-09-18 11:15:30
++++ b/dist/workflow-editor.js	2026-09-18 11:49:24
 @@ -236,15 +236,18 @@
      };
      registerWorkflowTriggerCommand(pi, state, settingsStore);
@@ -4472,7 +4472,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-editor.js b/dist/workflow-edito
      return state;
 diff -ruN --exclude=node_modules a/dist/workflow-manager.d.ts b/dist/workflow-manager.d.ts
 --- a/dist/workflow-manager.d.ts	1985-10-26 03:15:00
-+++ b/dist/workflow-manager.d.ts	2026-09-18 11:15:30
++++ b/dist/workflow-manager.d.ts	2026-09-18 11:49:24
 @@ -9,6 +9,7 @@
  import { WorkflowError } from "./errors.js";
  import { type PendingDeliveryMarker, type PersistedRunState, type RunLease, type RunPersistence, type RunStatus } from "./run-persistence.js";
@@ -4687,7 +4687,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-manager.d.ts b/dist/workflow-ma
       *
 diff -ruN --exclude=node_modules a/dist/workflow-manager.js b/dist/workflow-manager.js
 --- a/dist/workflow-manager.js	1985-10-26 03:15:00
-+++ b/dist/workflow-manager.js	2026-09-18 11:15:30
++++ b/dist/workflow-manager.js	2026-09-18 11:49:24
 @@ -3,11 +3,13 @@
   */
  import { EventEmitter } from "node:events";
@@ -5076,7 +5076,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-manager.js b/dist/workflow-mana
       * Stop a running workflow.
 diff -ruN --exclude=node_modules a/dist/workflow-model-command.d.ts b/dist/workflow-model-command.d.ts
 --- a/dist/workflow-model-command.d.ts	1969-12-31 18:00:00
-+++ b/dist/workflow-model-command.d.ts	2026-09-18 11:15:30
++++ b/dist/workflow-model-command.d.ts	2026-09-18 11:49:24
 @@ -0,0 +1,17 @@
 +import type { ExtensionAPI, ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
 +import { type ModelThinkingLevel } from "./model-spec.js";
@@ -5097,8 +5097,8 @@ diff -ruN --exclude=node_modules a/dist/workflow-model-command.d.ts b/dist/workf
 +}): void;
 diff -ruN --exclude=node_modules a/dist/workflow-model-command.js b/dist/workflow-model-command.js
 --- a/dist/workflow-model-command.js	1969-12-31 18:00:00
-+++ b/dist/workflow-model-command.js	2026-09-18 11:15:30
-@@ -0,0 +1,78 @@
++++ b/dist/workflow-model-command.js	2026-09-18 11:49:24
+@@ -0,0 +1,77 @@
 +import { THINKING_LEVELS } from "./model-spec.js";
 +import { loadSubagentModelConfig, saveSubagentModelConfig } from "./subagent-model-config.js";
 +/** Use Pi's resolved pins, including --models and pinned thinking levels. Never expand an empty scope. */
@@ -5175,11 +5175,10 @@ diff -ruN --exclude=node_modules a/dist/workflow-model-command.js b/dist/workflo
 +        ctx.ui.notify(`Subagent model saved: ${summary}. Applies to new workflow runs.`, "info");
 +    };
 +    pi.registerCommand("workflow-model", { description: "Choose the single subagent model from pinned models", handler });
-+    pi.registerCommand("workflows-models", { description: "Alias for /workflow-model", handler });
 +}
 diff -ruN --exclude=node_modules a/dist/workflow-paths.d.ts b/dist/workflow-paths.d.ts
 --- a/dist/workflow-paths.d.ts	1985-10-26 03:15:00
-+++ b/dist/workflow-paths.d.ts	2026-09-18 11:15:30
++++ b/dist/workflow-paths.d.ts	2026-09-18 11:49:24
 @@ -7,6 +7,7 @@
   */
  export declare const WORKFLOW_HOME_RELATIVE_DIR = ".pi/workflows";
@@ -5206,7 +5205,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-paths.d.ts b/dist/workflow-path
  export declare function workflowProjectPaths(cwd: string): WorkflowProjectPaths;
 diff -ruN --exclude=node_modules a/dist/workflow-paths.js b/dist/workflow-paths.js
 --- a/dist/workflow-paths.js	1985-10-26 03:15:00
-+++ b/dist/workflow-paths.js	2026-09-18 11:15:30
++++ b/dist/workflow-paths.js	2026-09-18 11:49:24
 @@ -5,12 +5,15 @@
   * scattered `.pi/workflows` directories. Project-scoped state is still isolated
   * by a stable cwd-derived namespace.
@@ -5281,7 +5280,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-paths.js b/dist/workflow-paths.
          .toLowerCase()
 diff -ruN --exclude=node_modules a/dist/workflow-saved.d.ts b/dist/workflow-saved.d.ts
 --- a/dist/workflow-saved.d.ts	1985-10-26 03:15:00
-+++ b/dist/workflow-saved.d.ts	2026-09-18 11:15:30
++++ b/dist/workflow-saved.d.ts	2026-09-18 11:49:24
 @@ -25,6 +25,25 @@
      path: string;
      /** When it was saved. */
@@ -5324,7 +5323,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-saved.d.ts b/dist/workflow-save
 +export declare function createWorkflowStorage(cwd: string, fsOverride?: Partial<PersistenceFsLayer>, options?: WorkflowStorageOptions): WorkflowStorage;
 diff -ruN --exclude=node_modules a/dist/workflow-saved.js b/dist/workflow-saved.js
 --- a/dist/workflow-saved.js	1985-10-26 03:15:00
-+++ b/dist/workflow-saved.js	2026-09-18 11:15:30
++++ b/dist/workflow-saved.js	2026-09-18 11:49:24
 @@ -5,6 +5,7 @@
  import { join } from "node:path";
  import { ensureDir as ensureDirFs, listJsonFilesSafe, readJsonWithBackupRecovery, resolvePersistenceFs, writeJsonAtomicWithBackup, writeJsonAtomicWithBackupStrict, } from "./fs-persistence.js";
@@ -5426,7 +5425,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-saved.js b/dist/workflow-saved.
              addDir("user");
 diff -ruN --exclude=node_modules a/dist/workflow-settings.d.ts b/dist/workflow-settings.d.ts
 --- a/dist/workflow-settings.d.ts	1985-10-26 03:15:00
-+++ b/dist/workflow-settings.d.ts	2026-09-18 11:15:30
++++ b/dist/workflow-settings.d.ts	2026-09-18 11:49:24
 @@ -17,6 +17,12 @@
      defaultTokenBudget?: number | null;
      /** Default max concurrent agents per run. Clamped to the runtime maximum. */
@@ -5484,7 +5483,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-settings.d.ts b/dist/workflow-s
      load(): WorkflowSettings;
 diff -ruN --exclude=node_modules a/dist/workflow-settings.js b/dist/workflow-settings.js
 --- a/dist/workflow-settings.js	1985-10-26 03:15:00
-+++ b/dist/workflow-settings.js	2026-09-18 11:15:30
++++ b/dist/workflow-settings.js	2026-09-18 11:49:24
 @@ -6,7 +6,7 @@
   */
  import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -5527,7 +5526,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-settings.js b/dist/workflow-set
      if (deliveredResultMaxChars !== undefined)
 diff -ruN --exclude=node_modules a/dist/workflow-tool.d.ts b/dist/workflow-tool.d.ts
 --- a/dist/workflow-tool.d.ts	1985-10-26 03:15:00
-+++ b/dist/workflow-tool.d.ts	2026-09-18 11:15:30
++++ b/dist/workflow-tool.d.ts	2026-09-18 11:49:24
 @@ -3,7 +3,7 @@
  import { WorkflowManager } from "./workflow-manager.js";
  import { type WorkflowStorage } from "./workflow-saved.js";
@@ -5539,7 +5538,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-tool.d.ts b/dist/workflow-tool.
      name: Type.TOptional<Type.TString>;
 diff -ruN --exclude=node_modules a/dist/workflow-tool.js b/dist/workflow-tool.js
 --- a/dist/workflow-tool.js	1985-10-26 03:15:00
-+++ b/dist/workflow-tool.js	2026-09-18 11:15:30
++++ b/dist/workflow-tool.js	2026-09-18 11:49:24
 @@ -2,7 +2,7 @@
  import { Text } from "@earendil-works/pi-tui";
  import { Type } from "typebox";
@@ -5654,7 +5653,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-tool.js b/dist/workflow-tool.js
          `Track or cancel it with /workflows status ${runId} or /workflows stop ${runId}.`,
 diff -ruN --exclude=node_modules a/dist/workflow-ui.js b/dist/workflow-ui.js
 --- a/dist/workflow-ui.js	1985-10-26 03:15:00
-+++ b/dist/workflow-ui.js	2026-09-18 11:15:30
++++ b/dist/workflow-ui.js	2026-09-18 11:49:24
 @@ -15,6 +15,7 @@
  import { getLanguageFromPath, getMarkdownTheme, renderDiff, } from "@earendil-works/pi-coding-agent";
  import { Markdown, parseKey, truncateToWidth, visibleWidth, wrapTextWithAnsi } from "@earendil-works/pi-tui";
@@ -5761,7 +5760,7 @@ diff -ruN --exclude=node_modules a/dist/workflow-ui.js b/dist/workflow-ui.js
                      }
 diff -ruN --exclude=node_modules a/dist/workflow.d.ts b/dist/workflow.d.ts
 --- a/dist/workflow.d.ts	1985-10-26 03:15:00
-+++ b/dist/workflow.d.ts	2026-09-18 11:15:30
++++ b/dist/workflow.d.ts	2026-09-18 11:49:24
 @@ -8,14 +8,11 @@
  export interface WorkflowMetaPhase {
      title: string;
@@ -5884,7 +5883,7 @@ diff -ruN --exclude=node_modules a/dist/workflow.d.ts b/dist/workflow.d.ts
      /** Override timeout for this specific agent. null means no hard timeout. */
 diff -ruN --exclude=node_modules a/dist/workflow.js b/dist/workflow.js
 --- a/dist/workflow.js	1985-10-26 03:15:00
-+++ b/dist/workflow.js	2026-09-18 11:15:30
++++ b/dist/workflow.js	2026-09-18 11:49:24
 @@ -1,14 +1,14 @@
  import { AsyncLocalStorage } from "node:async_hooks";
 -import { createHash } from "node:crypto";
@@ -6737,7 +6736,7 @@ diff -ruN --exclude=node_modules a/dist/workflows-models-command.js b/dist/workf
 -}
 diff -ruN --exclude=node_modules a/dist/worktree.d.ts b/dist/worktree.d.ts
 --- a/dist/worktree.d.ts	1985-10-26 03:15:00
-+++ b/dist/worktree.d.ts	2026-09-18 11:15:30
++++ b/dist/worktree.d.ts	2026-09-18 11:49:24
 @@ -14,11 +14,29 @@
      repoRoot?: string;
      /** Why isolation was skipped, when isolated === false. */
@@ -6773,7 +6772,7 @@ diff -ruN --exclude=node_modules a/dist/worktree.d.ts b/dist/worktree.d.ts
  /** Remove a worktree and its branch. Best-effort; safe to call on a no-op Worktree. */
 diff -ruN --exclude=node_modules a/dist/worktree.js b/dist/worktree.js
 --- a/dist/worktree.js	1985-10-26 03:15:00
-+++ b/dist/worktree.js	2026-09-18 11:15:30
++++ b/dist/worktree.js	2026-09-18 11:49:24
 @@ -5,32 +5,82 @@
   * the caller to inspect. Falls back to a logged no-op when isolation isn't possible.
   */
@@ -12186,8 +12185,8 @@ diff -ruN --exclude=node_modules a/src/workflow-manager.ts b/src/workflow-manage
    /**
 diff -ruN --exclude=node_modules a/src/workflow-model-command.ts b/src/workflow-model-command.ts
 --- a/src/workflow-model-command.ts	1969-12-31 18:00:00
-+++ b/src/workflow-model-command.ts	2026-09-17 14:44:52
-@@ -0,0 +1,91 @@
++++ b/src/workflow-model-command.ts	2026-09-18 11:32:53
+@@ -0,0 +1,90 @@
 +import type { ExtensionAPI, ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
 +import { THINKING_LEVELS, type ModelThinkingLevel } from "./model-spec.js";
 +import { loadSubagentModelConfig, saveSubagentModelConfig, type SubagentModelConfig } from "./subagent-model-config.js";
@@ -12277,7 +12276,6 @@ diff -ruN --exclude=node_modules a/src/workflow-model-command.ts b/src/workflow-
 +    ctx.ui.notify(`Subagent model saved: ${summary}. Applies to new workflow runs.`, "info");
 +  };
 +  pi.registerCommand("workflow-model", { description: "Choose the single subagent model from pinned models", handler });
-+  pi.registerCommand("workflows-models", { description: "Alias for /workflow-model", handler });
 +}
 diff -ruN --exclude=node_modules a/src/workflow-paths.ts b/src/workflow-paths.ts
 --- a/src/workflow-paths.ts	1985-10-26 03:15:00

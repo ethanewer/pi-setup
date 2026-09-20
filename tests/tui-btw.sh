@@ -86,16 +86,14 @@ screen | grep -q "Reply with exactly ACK"; check "main transcript is back" $?
 screen | grep -q "side conversation"; [[ $? == 1 ]]; check "side view is gone" $?
 
 printf '\nThe main thread keeps running while the view is open\n'
-# Name the bash tool explicitly: the monitor skill in the system prompt tells the model
-# to background anything over ~30s, and a monitor watcher returns instantly, which ends
-# the main agent's run and makes the header legitimately report idle. The check below
-# needs a main turn that is genuinely mid-run, so pin the blocking tool.
-send "Use the bash tool (not the monitor tool) to run the command 'sleep 40; echo DONE-MAIN' and then reply with its output."
-sleep 10
+# Keep the model streaming without a tool. Long-running tools must use monitor under the
+# installed instructions, and monitor deliberately settles the agent while it works.
+send "Write a detailed essay of at least 2,000 words about the history of Unix. End with exactly DONE-MAIN."
+sleep 2
 send "/btw Reply with exactly SIDE-DURING and nothing else."
+wait_line1 "main thread: working"; check "header reports the main thread running" $?
 # Question and answer both carry the token here, so two lines means it was answered.
 wait_for "SIDE-DURING" 200 2; check "side answered during the main turn" $?
-wait_line1 "main thread: working"; check "header reports the main thread running" $?
 tmux send-keys -t "$SESSION" Escape; sleep 3
 wait_for "DONE-MAIN" 240 2; check "main turn completed behind the view" $?
 
@@ -111,14 +109,21 @@ wait_for "STILL-ALIVE" 180 2; check "pi is healthy afterwards" $?
 printf '\nSession file: nothing from the side thread may reach the main context\n'
 tmux send-keys -t "$SESSION" -l "/exit"; sleep 0.3; tmux send-keys -t "$SESSION" Enter
 sleep 6
-python3 - <<'PY'
-import glob, json, os
+python3 - "$WORK" <<'PY'
+import glob, json, os, sys
 root = os.path.expanduser("~/.pi/agent/sessions")
-files = sorted(glob.glob(os.path.join(root, "**", "*.jsonl"), recursive=True), key=os.path.getmtime)
+work = os.path.realpath(sys.argv[1])
+files = []
+for path in glob.glob(os.path.join(root, "**", "*.jsonl"), recursive=True):
+    with open(path) as stream:
+        first = stream.readline()
+    if first and os.path.realpath(json.loads(first).get("cwd", "")) == work:
+        files.append(path)
 if not files:
-    print("  no session file found"); raise SystemExit(0)
+    print("  no session file found for", work); raise SystemExit(1)
+path = max(files, key=os.path.getmtime)
 messages = []
-for line in open(files[-1]):
+for line in open(path):
     entry = json.loads(line)
     if entry.get("type") == "message":
         messages.append(json.dumps(entry.get("message", {}).get("content")))

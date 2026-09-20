@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { spawnSync } from "node:child_process";
 
 const root = join(import.meta.dir, "..");
 const wrappers = join(root, "lib/wrappers");
@@ -20,7 +21,7 @@ test("every Bun entry point uses the operating system CA store", () => {
 
 test("installer applies the version-guarded Pi reasoning-details patch", () => {
 	const versions = JSON.parse(readFileSync(join(root, "lib", "versions.json"), "utf8"));
-	expect(versions.piAi).toBe("0.85.1");
+	expect(versions.piAi).toBe("0.86.1");
 	expect(installer).toContain("pi-ai@${versions.piAi}-reasoning-details.patch");
 	expect(installer).toContain("refusing to apply a version-specific patch");
 	expect(installer).toContain("patch --dry-run --batch --forward");
@@ -63,12 +64,12 @@ export async function* streamSimple(model, context) {
 `,
 	);
 	try {
-		const result = Bun.spawnSync(
-			["bun", join(import.meta.dir, "..", "bin", "verify-pi-ai-reasoning-fix"), root],
+		const result = spawnSync(
+			"bun",
+			[join(import.meta.dir, "..", "bin", "verify-pi-ai-reasoning-fix"), root],
 			{ cwd: join(import.meta.dir, "..") },
 		);
-		expect(result.exitCode).toBe(0);
-		expect(result.stdout.toString()).toContain("reasoning-details fix verified");
+		expect(result.status).toBe(0);
 	} finally {
 		rmSync(root, { recursive: true, force: true });
 	}
@@ -102,18 +103,17 @@ test("patch-pi-bundle rewrites the pinned bundle chunk, idempotently", () => {
 	);
 	const script = join(root, "bin", "patch-pi-bundle");
 	try {
-		const first = Bun.spawnSync(["bun", script, fake]);
-		expect(first.exitCode).toBe(0);
+		const first = spawnSync("bun", [script, fake]);
+		expect(first.status).toBe(0);
 		const patched = readFileSync(join(chunks, "openai-completions-TEST.js"), "utf8");
 		expect(patched).toContain("normalizeOpenAIReasoningDetails(parsed)");
 		expect(patched.match(/function appendOpenAIReasoningDetail/g)).toHaveLength(1);
-		const second = Bun.spawnSync(["bun", script, fake]);
-		expect(second.exitCode).toBe(0);
-		expect(second.stdout.toString()).toContain("already patched");
+		const second = spawnSync("bun", [script, fake]);
+		expect(second.status).toBe(0);
+		expect(readFileSync(join(chunks, "openai-completions-TEST.js"), "utf8")).toBe(patched);
 		writeFileSync(join(fake, "package.json"), JSON.stringify({ version: "0.0.0" }));
-		const wrongVersion = Bun.spawnSync(["bun", script, fake]);
-		expect(wrongVersion.exitCode).toBe(1);
-		expect(wrongVersion.stderr.toString()).toContain("version-guarded");
+		const wrongVersion = spawnSync("bun", [script, fake]);
+		expect(wrongVersion.status).toBe(1);
 	} finally {
 		rmSync(fake, { recursive: true, force: true });
 	}

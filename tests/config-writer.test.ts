@@ -19,7 +19,6 @@ const SCOPE = [
 	"openrouter/moonshotai/kimi-k3",
 	"openrouter/qwen/qwen3.8-flash",
 	"openrouter/qwen/qwen3.8-max-0902",
-	"openrouter/stealth/union-alpha",
 	"openai/gpt-5.6-sol",
 	"openai/gpt-5.6-terra",
 	"openai/gpt-5.6-luna",
@@ -124,6 +123,19 @@ test("the model scope lands on all three profiles with each saved default first"
 	expect(JSON.parse(readFileSync(mainPath, "utf8")).enabledModels).toEqual(expectedScope("openai/gpt-5.6-sol"));
 	expect(JSON.parse(readFileSync(wfPath, "utf8")).enabledModels).toEqual(expectedScope("openrouter/deepseek/deepseek-v4-pro-0813"));
 	expect(JSON.parse(readFileSync(pPath, "utf8")).enabledModels).toEqual(expectedScope("openrouter/deepseek/deepseek-v4-flash-0731"));
+});
+
+test("a retired Union Alpha default migrates to the main profile default", () => {
+	writeFileSync(pPath, JSON.stringify({ defaultProvider: "openrouter", defaultModel: "stealth/union-alpha" }));
+	runWriter();
+	const lean = JSON.parse(readFileSync(pPath, "utf8"));
+	expect(lean.defaultProvider).toBe("openai");
+	expect(lean.defaultModel).toBe("gpt-5.6-sol");
+	expect(lean.enabledModels).not.toContain("openrouter/stealth/union-alpha");
+	writeFileSync(pPath, JSON.stringify({
+		defaultProvider: "openrouter",
+		defaultModel: "deepseek/deepseek-v4-flash-0731",
+	}));
 });
 
 test("pi loads every fork except workflows; piwf loads all forks", () => {

@@ -124,7 +124,7 @@ The exact historical system prompt was not stored in session JSONL. Tests recons
 ## Repository fix
 
 Upstream `pi-ai` absorbed protection 1 (stream concatenation via
-`appendOpenAIReasoningDetail`) in `0.84.4`. [`patches/pi-ai@0.85.0-reasoning-details.patch`](../../patches/pi-ai@0.85.0-reasoning-details.patch)
+`appendOpenAIReasoningDetail`) in `0.84.4`. [`patches/pi-ai@0.86.1-reasoning-details.patch`](../../patches/pi-ai@0.86.1-reasoning-details.patch)
 adds only protection 2: it introduces `normalizeOpenAIReasoningDetails` on top of the
 upstream merge helpers and routes `parseOpenAIReasoningDetails` through it. The original
 0.84.3-era patch (`pi-ai@0.84.3-reasoning-details.patch`, now removed) carried both
@@ -138,10 +138,13 @@ halves because `0.84.3` shipped neither. The version bump history:
   unchanged — the parse function and helper context in `dist/api/openai-completions.js`
   are identical, and the bundle chunk still carries exactly one occurrence of each
   `bin/patch-pi-bundle` anchor.
-- `pi-ai 0.85.1`: same situation — `dist/api/openai-completions.js` is byte-identical
+- `pi-ai 0.85.1`: same situation. `dist/api/openai-completions.js` is byte-identical
   to `0.85.0`, and the `pi-coding-agent 0.85.1` bundle chunk carries the upstream helper
-  and exactly one `parseOpenAIReasoningDetails` anchor, so the patch and the bundle
-  patcher rebase unchanged (verified against the published tarballs before install).
+  and exactly one `parseOpenAIReasoningDetails` anchor. The patch and bundle patcher
+  rebase unchanged, as verified against the published tarballs before install.
+- `pi-ai 0.86.1`: upstream still omits historical replay normalization. The library
+  patch applies without offsets, and the `pi-coding-agent 0.86.1` bundle has one upstream
+  helper and one parse anchor. Encrypted and unknown entries remain opaque and ordered.
 
 Opaque `reasoning.encrypted` entries remain separate and preserve order. The normalizer carries forward common fields such as `id`, `format`, `index`, and text signatures.
 

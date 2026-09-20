@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
+import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -157,7 +158,7 @@ out["monitor_meta"] = {
     "occ": module["monitor_meta_is_pi"]({"harness": "occ"}),
     "ocdx": module["monitor_meta_is_pi"]({"harness": "ocdx"}),
 }
-print(json.dumps(out))
+Path(sys.argv[5]).write_text(json.dumps(out))
 `;
 
 function pythonBin(): string {
@@ -336,12 +337,14 @@ function runAdapters() {
 	]);
 	writeJsonl(junkPath, [{ hello: "world" }, { type: "message", message: { role: "user" } }]);
 
-	const result = Bun.spawnSync(
-		[pythonBin(), "-c", python, claudePath, codexPath, piPath, junkPath],
+	const outputPath = join(dir, "output.json");
+	const result = spawnSync(
+		pythonBin(),
+		["-c", python, claudePath, codexPath, piPath, junkPath, outputPath],
 		{ cwd: fileURLToPath(new URL("..", import.meta.url)) },
 	);
-	expect(result.exitCode).toBe(0);
-	return JSON.parse(result.stdout.toString());
+	expect(result.status).toBe(0);
+	return JSON.parse(readFileSync(outputPath, "utf8"));
 }
 
 // ---------------------------------------------------------------------------
