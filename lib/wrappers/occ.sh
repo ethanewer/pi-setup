@@ -13,7 +13,7 @@ set -euo pipefail
 # Deliberately bash 3.2 compatible (macOS ships 3.2): no associative arrays,
 # model lookups are case functions.
 
-HANDLES="ds-flash ds-pro glm-flash glm kimi qwen-flash qwen-max"
+HANDLES="ds-flash ds-pro glm-flash glm kimi qwen-max"
 
 slug_for() {
   case "$1" in
@@ -22,7 +22,6 @@ slug_for() {
     glm-flash)  printf '%s' "z-ai/glm-5.3-flash" ;;
     glm)        printf '%s' "z-ai/glm-5.3" ;;
     kimi)       printf '%s' "moonshotai/kimi-k3" ;;
-    qwen-flash) printf '%s' "qwen/qwen3.8-flash" ;;
     qwen-max)   printf '%s' "qwen/qwen3.8-max-0902" ;;
     *) return 1 ;;
   esac
@@ -35,7 +34,7 @@ fast_for() {
     ds-flash|ds-pro)     slug_for ds-flash ;;
     glm-flash|glm)       slug_for glm-flash ;;
     kimi)                slug_for kimi ;;
-    qwen-flash|qwen-max) slug_for qwen-flash ;;
+    qwen-max)            slug_for qwen-max ;;
     *) return 1 ;;
   esac
 }
@@ -46,7 +45,7 @@ full_for() {
     ds-flash|ds-pro)     slug_for ds-pro ;;
     glm-flash|glm)       slug_for glm ;;
     kimi)                slug_for kimi ;;
-    qwen-flash|qwen-max) slug_for qwen-max ;;
+    qwen-max)            slug_for qwen-max ;;
     *) return 1 ;;
   esac
 }
@@ -55,8 +54,8 @@ usage() {
   cat <<'EOF'
 Usage: occ [--model MODEL] [--effort LEVEL] [--family-tiers] [--list] [claude args]
 
-MODEL    Optional. ds-flash | ds-pro | glm-flash | glm | kimi | qwen-flash |
-         qwen-max, or a full OpenRouter slug. Without it, claude starts on the
+MODEL    Optional. ds-flash | ds-pro | glm-flash | glm | kimi | qwen-max,
+         or a full OpenRouter slug. Without it, claude starts on the
          default slot and /model switches between the slot-mapped open-weight
          models (haiku: glm-flash, sonnet: ds-flash, opus: glm, fable: ds-pro).
 LEVEL    low | medium | high | xhigh | max. Default: high. Forwarded to
@@ -190,7 +189,7 @@ if [[ -n "$model" ]]; then
 else
   # /model offers the pinned open-weight models: the four tier slots plus the
   # custom option (claude's picker has no more slots, so kimi rides the custom
-  # entry and the qwen pair stays reachable via --model only).
+  # entry and qwen-max stays reachable via --model only).
   export ANTHROPIC_DEFAULT_MODEL="$(slug_for glm-flash)"
   export ANTHROPIC_DEFAULT_HAIKU_MODEL="$(slug_for glm-flash)"
   export ANTHROPIC_DEFAULT_HAIKU_MODEL_NAME="GLM 5.3 Flash"

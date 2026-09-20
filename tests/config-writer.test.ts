@@ -17,10 +17,8 @@ const SCOPE = [
 	"openrouter/z-ai/glm-5.3",
 	"openrouter/z-ai/glm-5.3-flash",
 	"openrouter/moonshotai/kimi-k3",
-	"openrouter/qwen/qwen3.8-flash",
 	"openrouter/qwen/qwen3.8-max-0902",
 	"openai/gpt-5.6-sol",
-	"openai/gpt-5.6-terra",
 	"openai/gpt-5.6-luna",
 ];
 const FORKS_MINUS_WORKFLOWS = [

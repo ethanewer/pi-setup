@@ -15,7 +15,7 @@ set -euo pipefail
 # Deliberately bash 3.2 compatible (macOS ships 3.2): no associative arrays,
 # model lookups are case functions.
 
-HANDLES="ds-flash ds-pro glm-flash glm kimi qwen-flash qwen-max"
+HANDLES="ds-flash ds-pro glm-flash glm kimi qwen-max"
 
 slug_for() {
   case "$1" in
@@ -24,7 +24,6 @@ slug_for() {
     glm-flash)  printf '%s' "z-ai/glm-5.3-flash" ;;
     glm)        printf '%s' "z-ai/glm-5.3" ;;
     kimi)       printf '%s' "moonshotai/kimi-k3" ;;
-    qwen-flash) printf '%s' "qwen/qwen3.8-flash" ;;
     qwen-max)   printf '%s' "qwen/qwen3.8-max-0902" ;;
     *) return 1 ;;
   esac
@@ -34,8 +33,8 @@ usage() {
   cat <<'EOF'
 Usage: ocdx [--model MODEL] [--effort LEVEL] [--list] [codex args]
 
-MODEL    ds-flash | ds-pro | glm-flash | glm | kimi | qwen-flash | qwen-max,
-         or a full OpenRouter slug. Default: glm-flash.
+MODEL    ds-flash | ds-pro | glm-flash | glm | kimi | qwen-max, or a full
+         OpenRouter slug. Default: glm-flash.
 LEVEL    minimal | low | medium | high. Default: high; passed as
          model_reasoning_effort. /model and /effort still work in-session.
 

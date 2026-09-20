@@ -265,8 +265,8 @@ What they enforce:
   `occ` maps the pinned open-weight models onto Claude Code's tier slots by strength —
   haiku: `glm-5.3-flash`, sonnet: `ds-v4-flash`, opus: `glm-5.3`, fable: `ds-v4-pro`, and
   the custom option: `kimi-k3` — each with a human-readable name in `/model`. Claude
-  Code's picker has no more slots, so the qwen pair and Union Alpha are reachable only
-  via `--model`. `ocdx` replaces codex's bundled OpenAI-only catalog with all eight pinned models
+  Code's picker has no more slots, so Qwen Max is reachable only via `--model`.
+  `ocdx` replaces codex's bundled OpenAI-only catalog with all six pinned models
   (a setup-managed `models.json` referenced by `model_catalog_json` in its
   `config.toml`), so `/model` lists and names them directly. `--model` still exists for
   a one-off launch on a specific model.
@@ -296,7 +296,7 @@ What they enforce:
 occ --model glm --effort xhigh          # one-off: strongest GLM at xhigh effort
 ocdx --model ds-pro -p "explain this repo"
 occ                                     # no pick needed: /model selects in-session
-occ --list                              # the eight handles
+occ --list                              # the six handles
 ```
 
 ## Default model scope
@@ -312,10 +312,8 @@ openrouter/deepseek/deepseek-v4.1-flash
 openrouter/z-ai/glm-5.3
 openrouter/z-ai/glm-5.3-flash
 openrouter/moonshotai/kimi-k3
-openrouter/qwen/qwen3.8-flash
 openrouter/qwen/qwen3.8-max-0902
 openai/gpt-5.6-sol
-openai/gpt-5.6-terra
 openai/gpt-5.6-luna
 ```
 
