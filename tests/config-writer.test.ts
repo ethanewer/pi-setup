@@ -18,8 +18,8 @@ const SCOPE = [
 	"openrouter/z-ai/glm-5.3-flash",
 	"openrouter/moonshotai/kimi-k3",
 	"openrouter/qwen/qwen3.8-max-0902",
-	"openai/gpt-5.6-sol",
-	"openai/gpt-5.6-luna",
+	"openai/gpt-6-sol",
+	"openai/gpt-6-luna",
 ];
 const FORKS_MINUS_WORKFLOWS = [
 	"local/pi-voice-stt-safe",
@@ -61,7 +61,7 @@ for (const d of ["agent", "agent/npm", "agent-p/npm", "agent-wf/npm"]) {
 }
 writeFileSync(mainPath, JSON.stringify({
 	defaultProvider: "openai",
-	defaultModel: "gpt-5.6-sol",
+	defaultModel: "gpt-6-sol",
 	httpProxy: "http://keep-main",
 	// npm:pi-btw is a managed identity that gets dropped; local/unslop is a retired
 	// skills-only package whose stale settings entry must be stripped the same way.
@@ -83,7 +83,7 @@ writeFileSync(npmPkgPath, JSON.stringify({ dependencies: { "pi-btw": "1.0.0", "l
 writeFileSync(pNpmPkgPath, JSON.stringify({ dependencies: { "pi-continue": "1.0.0" } }));
 writeFileSync(wfNpmPkgPath, JSON.stringify({ dependencies: { "left-alone-wf": "3.0.0" } }));
 writeFileSync(modelsStorePath, JSON.stringify({
-	openai: { models: [{ id: "gpt-5.6-sol", contextWindow: 272000 }] },
+	openai: { models: [{ id: "gpt-6-sol", contextWindow: 272000 }] },
 	openrouter: {
 		models: [
 			{ id: "z-ai/glm-5.3", contextWindow: 1048576 },
@@ -118,7 +118,7 @@ function runWriter() {
 test("the model scope lands on all three profiles with each saved default first", () => {
 	runWriter();
 	const expectedScope = (selected: string) => [selected, ...SCOPE.filter((model) => model !== selected)];
-	expect(JSON.parse(readFileSync(mainPath, "utf8")).enabledModels).toEqual(expectedScope("openai/gpt-5.6-sol"));
+	expect(JSON.parse(readFileSync(mainPath, "utf8")).enabledModels).toEqual(expectedScope("openai/gpt-6-sol"));
 	expect(JSON.parse(readFileSync(wfPath, "utf8")).enabledModels).toEqual(expectedScope("openrouter/deepseek/deepseek-v4-pro-0813"));
 	expect(JSON.parse(readFileSync(pPath, "utf8")).enabledModels).toEqual(expectedScope("openrouter/deepseek/deepseek-v4-flash-0731"));
 });
@@ -128,7 +128,7 @@ test("a retired Union Alpha default migrates to the main profile default", () =>
 	runWriter();
 	const lean = JSON.parse(readFileSync(pPath, "utf8"));
 	expect(lean.defaultProvider).toBe("openai");
-	expect(lean.defaultModel).toBe("gpt-5.6-sol");
+	expect(lean.defaultModel).toBe("gpt-6-sol");
 	expect(lean.enabledModels).not.toContain("openrouter/stealth/union-alpha");
 	writeFileSync(pPath, JSON.stringify({
 		defaultProvider: "openrouter",
@@ -166,7 +166,7 @@ test("user-persisted values survive the rewrite", () => {
 	// main keeps its seeded defaults and unrelated keys; the managed npm package is dropped.
 	const main = JSON.parse(readFileSync(mainPath, "utf8"));
 	expect(main.httpProxy).toBe("http://keep-main");
-	expect(main.defaultModel).toBe("gpt-5.6-sol");
+	expect(main.defaultModel).toBe("gpt-6-sol");
 	// piwf keeps its own default model, unrelated keys, and its raised reserve.
 	const wf = JSON.parse(readFileSync(wfPath, "utf8"));
 	expect(wf.defaultModel).toBe("deepseek/deepseek-v4-pro-0813");
@@ -219,7 +219,7 @@ test("an existing model-tiers.json is left for migration, not shadowed by a defa
 	mkdirSync(join(dir, "workflows"), { recursive: true });
 	const userCustom = {
 		_comment: "keep mine",
-		tiers: { small: "openai/gpt-5.6-sol", medium: "openai/gpt-5.6-sol", big: "openai/gpt-5.6-sol" },
+		tiers: { small: "openai/gpt-6-sol", medium: "openai/gpt-6-sol", big: "openai/gpt-6-sol" },
 	};
 	writeFileSync(modelTiersDestPath, JSON.stringify(userCustom));
 	runWriter();

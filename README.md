@@ -313,8 +313,8 @@ openrouter/z-ai/glm-5.3
 openrouter/z-ai/glm-5.3-flash
 openrouter/moonshotai/kimi-k3
 openrouter/qwen/qwen3.8-max-0902
-openai/gpt-5.6-sol
-openai/gpt-5.6-luna
+openai/gpt-6-sol
+openai/gpt-6-luna
 ```
 
 The patterns are canonical `provider/id`, so each matches exactly one model. Two
