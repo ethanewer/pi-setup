@@ -95,8 +95,8 @@ rather than as a supported claim.
 
 | Component | Version |
 |---|---:|
-| `@earendil-works/pi-coding-agent` | `0.86.1` |
-| `agent-browser` | `0.36.0` |
+| `@earendil-works/pi-coding-agent` | `0.87.1` |
+| `agent-browser` | `0.38.1` |
 
 Extension forks and the upstream releases they are based on:
 
@@ -113,13 +113,13 @@ Extension forks and the upstream releases they are based on:
 `vendor.json` is the machine-readable version of this table and is what the tooling
 reads.
 
-Pi `0.86.1` no longer imports the undeclared `@earendil-works/pi-server` package from its
+Pi `0.87.1` no longer imports the undeclared `@earendil-works/pi-server` package from its
 Bun entrypoint graph, so this setup no longer installs a separate `pi-server` pin.
 
-Pi `0.86.1` ships upstream's fix for the stream half of the fragmented OpenAI-compatible
+Pi `0.87.1` ships upstream's fix for the stream half of the fragmented OpenAI-compatible
 `reasoning_details` regression, but still replays historical signatures unnormalized. The
 installer therefore applies
-[`patches/pi-ai@0.86.1-reasoning-details.patch`](patches/pi-ai@0.86.1-reasoning-details.patch)
+[`patches/pi-ai@0.87.1-reasoning-details.patch`](patches/pi-ai@0.87.1-reasoning-details.patch)
 after the version-pinned install. It wraps `parseOpenAIReasoningDetails` in the existing
 upstream merge helpers so adjacent text/summary entries are also normalized when replaying
 historical sessions, and already-affected transcripts no longer send token-fragmented
